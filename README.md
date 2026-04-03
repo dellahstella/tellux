@@ -38,8 +38,8 @@
 - Agriculture régénérative, EM, cycles lunaires, archéoastronomie
 - Voir dossier `corpus/` complet
 
----
+## 📞 Contact
 
-## 🚀 Démarrage rapide
-
-### Online (web)
+**Porteur** : Lucas IANNACCONE (SARL Stella Canis Majoris)  
+**Email** : [stelladluca@proton.me]  
+**GitHub** : https://github.com/dellahstella/tellux  
