@@ -3767,7 +3767,22 @@ function hideSuspiciousAntennas(){
   console.log('Antennes suspectes cachées');
 }
 
-async function loadAnt(){try{const r=await fetch(SB_URL+'/rest/v1/antennas_corse?select=lat,lon,generation,commune,operateur',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});if(!r.ok)throw new Error();const rows=await r.json();
+async function loadAnt(){try{
+  // Chargement paginé — Supabase limite à 1000 par requête, antennas_corse en a ~3985
+  let rows=[], page=0, pageSize=1000;
+  while(true){
+    const r=await fetch(
+      SB_URL+'/rest/v1/antennas_corse?select=lat,lon,generation,commune,operateur&order=id.asc&offset='+(page*pageSize)+'&limit='+pageSize,
+      {headers:{...sbH(),'Range-Unit':'items','Range':page*pageSize+'-'+((page+1)*pageSize-1)}}
+    );
+    if(!r.ok) throw new Error('Supabase HTTP '+r.status);
+    const batch=await r.json();
+    if(!batch||!batch.length) break;
+    rows=rows.concat(batch);
+    if(batch.length<pageSize) break;
+    page++;
+  }
+  console.log('📡 Antennes ANFR chargées: '+rows.length);
 
 // DIAGNOSTIC avant filtrage
 const suspicious=diagnoseAntennasQuality(rows);
@@ -3824,7 +3839,7 @@ console.log('  ✅ Affichées (lAnt): '+(rows.length-nSeaFiltered-nOffshore));
 
 if(nSkipped>0)console.log(nSkipped+' antennes filtrées ('+nOffshore+' offshore · '+(nSkipped-nOffshore)+' hors limites)');
 const hdr=document.getElementById('hdr-status');
-if(hdr)hdr.textContent=(rows.length-nSeaFiltered-nOffshore)+' antennes · '+nOffshore+' offshore';}catch(e){}
+if(hdr)hdr.textContent=(rows.length-nSeaFiltered-nOffshore)+' antennes · '+nOffshore+' offshore';}catch(e){console.error('❌ loadAnt erreur:',e.message);}
 // Émetteurs radiodiffusion majeurs — icône croix ✛
 const EMITTERS=[
   [42.652,9.392,'Serra di Pigno','Émetteur radio/TV','988m altitude · RFI + France Inter + télévision · Couverture toute la Corse · Détecté à 3.78km à Bastia'],
