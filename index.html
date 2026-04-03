@@ -1323,7 +1323,7 @@ function tog(id,cls,btn){
     if(id==='net'&&lNet.getLayers().length===0)buildNets();
     if(id==='intl'&&lIntl.getLayers().length===0)buildIntlLayer();
     if(id==='align'&&lAlign.getLayers().length===0)buildAutoAlignments();
-    if(id==='egl'&&lEgl.getLayers().length===0)buildEglLayer();
+    if(id==='egl'&&lEgl.getLayers().length===0){buildEglLayer().then(()=>{if(ACTIVE.egl)showLegend('egl',true);}); return;}
     showLegend(id,true);
     if(id==='antOffshore')showLegend('ant',true); // antOffshore partage légende ant
   }
@@ -2630,6 +2630,7 @@ const SITES=[
   [42.320,8.980,'Forêt de Valdu Niellu','Remarquable','#8b5cf6','Plus grande forêt de Corse · Pins Laricio · Granit Niolu · Zone humide altitude · Renoso-Cinto'],
   [42.093,9.064,'Cascades du Voile de la mariée','Remarquable','#8b5cf6','Cascade 150m · Granit hercynien · Bocognano · Anomalie piézo potentielle · Haute Gravona'],
   [41.880,9.070,'Plateau du Coscione','Remarquable','#8b5cf6','Plateau granit 1400m · Pozzines sacrées · Bergeries ancestrales · Courants telluriques diffus'],
+  [43.080,9.650,'Anneaux du Cap Corse','Remarquable','#8b5cf6','1 417 formations coralligènes circulaires ~20m Ø · 120m profondeur · 15 km² · Découvertes 2011 (sonar) · Expédition Gombessa 6 (Ballesta 2021-2024) · Datées ~21 000 ans (Bard CEREGE) · Parc naturel marin Cap Corse et Agriate'],
 ]
 
 // ═══════════════════════════════════════════════════════════
@@ -2641,7 +2642,57 @@ const SITES=[
 //          continuité (site antérieur), MH (classé/inscrit), notes
 // GPS : approximatifs pour sites sans relevé publié — ⚠ à vérifier terrain
 // ═══════════════════════════════════════════════════════════
-const CHURCHES=[
+// ═══ CORPUS ÉGLISES ROMANES — chargé depuis Supabase (fallback inline) ═══
+let CHURCHES = [];
+let _churchesLoaded = false;
+
+async function loadChurchesData() {
+  if (_churchesLoaded) return;
+  try {
+    // Chargement Supabase par pages (max 1000 par requête)
+    let all = [];
+    let page = 0;
+    const pageSize = 400;
+    while (true) {
+      const d = await sbGet(
+        'churches_corse?select=lat,lon,name,lieu,pieve,siecle,mat,orient,sub,cont,mh,note' +
+        '&order=id.asc' +
+        `&offset=${page * pageSize}&limit=${pageSize}`
+      );
+      if (!d || !d.length) break;
+      // Normaliser colonnes Supabase → format objet Tellux
+      all = all.concat(d.map(r => ({
+        lat: parseFloat(r.lat),
+        lon: parseFloat(r.lon),
+        name: r.name,
+        lieu: r.lieu || '',
+        pieve: r.pieve || '',
+        s: r.siecle || '',
+        mat: r.mat || '',
+        orient: r.orient || 90,
+        sub: r.sub || '',
+        cont: r.cont || '',
+        mh: r.mh || '',
+        note: r.note || ''
+      })));
+      if (d.length < pageSize) break;
+      page++;
+    }
+    if (all.length > 50) {
+      CHURCHES = all;
+      _churchesLoaded = true;
+      console.log(`✅ CHURCHES chargées depuis Supabase: ${CHURCHES.length} entrées`);
+      return;
+    }
+    throw new Error('Résultat Supabase trop court: ' + all.length);
+  } catch(e) {
+    console.warn('⚠️ Supabase churches indisponible — fallback inline:', e.message);
+    _loadChurchesFallback();
+  }
+}
+
+function _loadChurchesFallback() {
+CHURCHES=[
 // ── CAP CORSE (schistes lustrés, ophiolites) ──
 {lat:42.957,lon:9.418,name:'San Colombano',lieu:'Rogliano',pieve:'Cap Corse',s:'XIIe',mat:'schiste',orient:85,sub:'schiste_lustre',cont:'',mh:'MH',note:'Abside semi-circulaire · Vue mer'},
 {lat:42.968,lon:9.410,name:'Santa Maria della Chiappella',lieu:'Rogliano',pieve:'Cap Corse',s:'XIe',mat:'schiste',orient:90,sub:'schiste_lustre',cont:'paléochrétien',mh:'MH',note:'Ruines · Baptistère VIe s. fouillé'},
@@ -3068,9 +3119,11 @@ const CHURCHES=[
 {lat:42.660,lon:9.192,name:'Oratoire Santa Croce (Bastia haute)',lieu:'Bastia citadelle',pieve:'Bastia',s:'XVIIe',mat:'calcaire+brique',orient:82,sub:'schiste',cont:'',mh:'MH',note:'Baroque géois · Terra Nova · Vue sur port · Importance historique génoise'},
 {lat:42.560,lon:8.758,name:'Sant\'Antoni (Couvent de Calvi)',lieu:'Calvi',pieve:'Balagne',s:'XVe',mat:'granit leucocrate',orient:80,sub:'granit_porphyrique',cont:'',mh:'MH',note:'Couvent franciscain · Intérieur citadelle génoise · Granit leucocrate piézo'},
 {lat:41.388,lon:9.155,name:'San Dominique (Bonifacio)',lieu:'Bonifacio',pieve:'Bonifacio',s:'XIIIe',mat:'calcaire',orient:78,sub:'calcaire_miocene',cont:'',mh:'MH',note:'Seul édifice gothique de Corse · Dominicains · Calcaire de Bonifacio · XIIIe s.'},
-{lat:42.650,lon:9.190,name:'San Cesario d\'Olmeta',lieu:'Olmeta-di-Capocorso',pieve:'Cap Corse',s:'XIIe',mat:'schiste',orient:88,sub:'schiste_lustre',cont:'',mh:'',note:'Chapelle piévane Cap Corse ouest · Schiste lustre · Vue sur golfe'}
-  [43.080,9.650,'Anneaux du Cap Corse','Remarquable','#8b5cf6','1 417 formations coralligènes circulaires ~20m Ø · 120m profondeur · 15 km² · Plaine sableuse · Découvertes 2011 (sonar) · Expédition Gombessa 6 (Ballesta 2021-2024) · Datées ~21 000 ans (Bard CEREGE) · Parc naturel marin Cap Corse et Agriate'],
+{lat:42.650,lon:9.190,name:'San Cesario d\'Olmeta',lieu:'Olmeta-di-Capocorso',pieve:'Cap Corse',s:'XIIe',mat:'schiste',orient:88,sub:'schiste_lustre',cont:'',mh:'',note:'Chapelle piévane Cap Corse ouest · Schiste lustre · Vue sur golfe'},
 ];
+  _churchesLoaded = true;
+  console.log(`📦 CHURCHES fallback inline: ${CHURCHES.length} entrées`);
+}
 
 // ═══ STATISTIQUES ORIENTATION & MATÉRIAUX (H7, H18) ═══
 function analyseChurches(){
@@ -3091,8 +3144,9 @@ function analyseChurches(){
 }
 
 // ═══ LAYER ÉGLISES ROMANES (Phase 2) ═══
-function buildEglLayer(){
+async function buildEglLayer(){
   lEgl.clearLayers();
+  await loadChurchesData();
   const stats=analyseChurches();
   CHURCHES.forEach(c=>{
     const isPiezo=c.sub&&(c.sub.includes('granit_biotite')||c.sub.includes('granit_alcalin')||c.sub.includes('granit_porphyrique'));
@@ -3998,7 +4052,8 @@ function buildHypoList(tab='auto'){
   el.innerHTML=html;
 }
 
-function runAutoTests(){
+async function runAutoTests(){
+  await loadChurchesData();
   _hypoResults={};
   // ═══ H1 — Piézoélectricité granit vs calcaire ═══
   try{
