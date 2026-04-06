@@ -548,7 +548,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:16px;m
     <div class="accordion-cat-content">
       <button class="lbtn" id="b-geo-mode" title="Diagnostic terrain & correction" onclick="openProspecteur()"><span style="font-size:10px">🧭</span>Diagnostic terrain</button>
       <button onclick="togSim(this)" class="lbtn" id="b-sim" title="Simuler impact d'antenne, bâtiment, blindage"><span style="font-size:11px">🏗</span>Simulateur bâtiment</button>
-      <button class="lbtn" id="b-perma" title="Module permaculture — zones calmes EM, itinéraires techniques, associations" onclick="openPerma()"><span style="font-size:10px">🌱</span>Permaculture</button>
+      <button class="lbtn" id="b-perma" title="Module agronomie — diagnostic parcelle EM, cultures adaptées, hypothèses terrain" onclick="openPerma()"><span style="font-size:10px">🌱</span>Agronomie</button>
     </div>
   </div>
 </div>
@@ -556,7 +556,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:16px;m
 <div class="op-row" id="hyd-op-row"><span>Nappes</span><input type="range" min="0.1" max="1" step="0.05" value="0.55" oninput="wmsHyd.setOpacity(+this.value)"><span id="hyd-op-v">55%</span></div>
 <div class="op-row" id="emag-op-row"><span>Anomalie crustale</span><input type="range" min="0.1" max="0.8" step="0.05" value="0.5" oninput="wmsEmag.setOpacity(+this.value)"><span id="emag-op-v">50%</span></div>
 <div class="op-row" id="diagnostic-row" style="display:none;background:#fff3e6;border:1px solid #f5a855">
-  <button onclick="showSuspiciousAntennas()" style="padding:6px 12px;border:1px solid #f5a855;background:#fff3e6;border-radius:var(--r);font-size:11px;cursor:pointer;color:#854d0e;font-weight:500">🔍 Afficher antennes suspectes</button>
+
   <button onclick="hideSuspiciousAntennas()" style="padding:6px 12px;border:1px solid #f5a855;background:#fff3e6;border-radius:var(--r);font-size:11px;cursor:pointer;color:#854d0e;font-weight:500;margin-left:4px">✕ Masquer</button>
 </div>
 
@@ -1873,6 +1873,7 @@ function showInterp(lat,lng,igrf,human,water,nets,score,delta){
 }
 
 map.on('click',e=>{
+  if(e.originalEvent&&e.originalEvent._handled)return;
   _mapClickCount++;_gameState.clicks=_mapClickCount;_saveGameState(_gameState);
   if(_mapClickCount>=10)try{_unlockBadge('10clicks');}catch(e){}
   const{lat,lng}=e.latlng;
@@ -2295,8 +2296,11 @@ function buildHot(){
         });
         rect.on('click',function(e){
           L.DomEvent.stopPropagation(e);
+          e.originalEvent._handled=true;
           const center=L.latLng(a+step/2,o+step/2);
-          info(`<span class="tag" style="background:#fee2e2;color:#991b1b;border:0.5px solid #f87171">Anomalie ${label}</span> Score: <b>${sc}</b> · Humain: ${h}nT · Hydro: ${Math.round(w*.3)}nT`);
+          const rfCorr=calcN_RF_calib(a+step/2,o+step/2);
+          const rfTxt=rfCorr>0.1?` · RF: ${rfCorr.toFixed(2)} V/m`:'';
+          info(`<span class="tag" style="background:#fee2e2;color:#991b1b;border:0.5px solid #f87171">Anomalie ${label}</span> Score: <b>${sc}</b> · Humain: ${h} nT · Hydro: ${Math.round(w*.3)} nT · Géo: ${g} nT${rfTxt}<br><span style="font-size:10px;color:var(--tx3)">${center.lat.toFixed(4)}°N ${center.lng.toFixed(4)}°E</span>`);
         });
         rect.addTo(lHot);
       }
@@ -3692,6 +3696,11 @@ function importCartoRadioCSV(){
 const GC={'2G':'#1a4b8c','3G':'#1a6b5c','4G':'#b85c00','5G':'#991b1b','default':'#4a4f5e'};
 
 // Diagnostic antennes — analyse la cohérence spatiale
+function haversine(lat1,lon1,lat2,lon2){
+  const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
 function diagnoseAntennasQuality(antRows){
   const diagnosis={};
   const SITES_REF=[
@@ -3768,43 +3777,60 @@ function hideSuspiciousAntennas(){
 }
 
 async function loadAnt(){try{
-  // Chargement paginé — Supabase limite à 1000 par requête, antennas_corse en a ~3985
-  let rows=[], page=0, pageSize=1000;
+  // Chargement paginé depuis Supabase (même méthode que CHURCHES — sbGet + offset/limit)
+  let rows=[], page=0, pageSize=500;
   while(true){
-    const r=await fetch(
-      SB_URL+'/rest/v1/antennas_corse?select=lat,lon,generation,commune,operateur&order=id.asc&offset='+(page*pageSize)+'&limit='+pageSize,
-      {headers:{...sbH(),'Range-Unit':'items','Range':page*pageSize+'-'+((page+1)*pageSize-1)}}
+    const batch=await sbGet(
+      'antennas_corse?select=lat,lon,generation,commune,operateur&order=id.asc'+
+      '&offset='+(page*pageSize)+'&limit='+pageSize
     );
-    if(!r.ok) throw new Error('Supabase HTTP '+r.status);
-    const batch=await r.json();
-    if(!batch||!batch.length) break;
+    if(!batch||!batch.length)break;
     rows=rows.concat(batch);
-    if(batch.length<pageSize) break;
+    console.log(`📡 Antennes page ${page+1}: ${batch.length} (total: ${rows.length})`);
+    if(batch.length<pageSize)break;
     page++;
   }
-  console.log('📡 Antennes ANFR chargées: '+rows.length);
+  console.log(`📡 Antennes ANFR chargées: ${rows.length} total`);
 
 // DIAGNOSTIC avant filtrage
 const suspicious=diagnoseAntennasQuality(rows);
 if(suspicious.length>0){
   console.warn('⚠️ '+suspicious.length+' antennes suspectes détectées — voir logs pour détails');
   // Afficher le bouton diagnostic
-  const diagRow=document.getElementById('diagnostic-row');
-  if(diagRow)diagRow.style.display='flex';
+  // diagnostic-row masqué (nettoyé)
 }else{
   console.log('✅ Toutes les antennes semblent bien positionnées');
 }
 
 // Filtre côtier RENFORCÉ — rejette les antennes en mer
 const isLand=(lt,ln)=>{
-  // Bounding box Corse
-  if(lt<41.36||lt>43.03||ln<8.55||ln>9.57)return false;
-  // Cap Corse pointe nord
-  if(lt>42.95&&(ln<9.20||ln>9.45))return false;
-  // Côte ouest Scandola
+  // Bounding box Corse strict
+  if(lt<41.37||lt>43.01||ln<8.56||ln>9.56)return false;
+  // Cap Corse pointe nord (très étroit)
+  if(lt>42.95&&(ln<9.25||ln>9.45))return false;
+  if(lt>42.90&&(ln<9.18||ln>9.48))return false;
+  if(lt>42.85&&ln<9.12)return false;
+  // Cap Corse côte est — bande étroite
+  if(lt>42.75&&ln>9.50)return false;
+  // Cap Corse côte ouest — bande étroite  
+  if(lt>42.75&&lt<42.95&&ln<9.15)return false;
+  // Côte ouest Scandola/Porto
   if(lt>42.15&&lt<42.40&&ln<8.58)return false;
-  // Golfe Porto
   if(lt>42.10&&lt<42.25&&ln<8.60)return false;
+  // Golfe Sagone
+  if(lt>42.05&&lt<42.15&&ln<8.63)return false;
+  // Golfe Ajaccio ouest
+  if(lt>41.80&&lt<42.00&&ln<8.62)return false;
+  // Golfe Valinco 
+  if(lt>41.62&&lt<41.78&&ln<8.80)return false;
+  // Bouches de Bonifacio — resserrer
+  if(lt<41.39)return false;
+  // Côte est — la plaine orientale est étroite au sud
+  if(lt<41.60&&ln>9.30)return false;
+  // Golfe de Porto-Vecchio
+  if(lt>41.55&&lt<41.65&&ln>9.30)return false;
+  // Côte est au large
+  if(ln>9.53)return false;
   return true;
 };
 
@@ -3831,13 +3857,13 @@ rows.forEach(f=>{
   }
 });
 
-console.log('🔧 FILTRAGE ANTENNES ANFR:');
-console.log('  Total chargées: '+rows.length);
-console.log('  ❌ Rejetées bounding box: '+nSeaFiltered);
-console.log('  ⚓ Offshore (isLand): '+nOffshore);
-console.log('  ✅ Affichées (lAnt): '+(rows.length-nSeaFiltered-nOffshore));
-
-if(nSkipped>0)console.log(nSkipped+' antennes filtrées ('+nOffshore+' offshore · '+(nSkipped-nOffshore)+' hors limites)');
+console.group('🔧 FILTRAGE ANTENNES ANFR');
+console.log('  Total chargées:', rows.length);
+console.log('  ❌ Rejetées bounding box:', nSeaFiltered);
+console.log('  ⚓ Offshore (isLand):', nOffshore);
+console.log('  ✅ Affichées (lAnt):', rows.length-nSeaFiltered-nOffshore);
+if(nSeaFiltered>rows.length*0.5) console.error('  🚨 Plus de 50% rejetées — problème de format coordonnées probable (DMS? Lambert93? swap?)');
+console.groupEnd();
 const hdr=document.getElementById('hdr-status');
 if(hdr)hdr.textContent=(rows.length-nSeaFiltered-nOffshore)+' antennes · '+nOffshore+' offshore';}catch(e){console.error('❌ loadAnt erreur:',e.message);}
 // Émetteurs radiodiffusion majeurs — icône croix ✛
@@ -4876,11 +4902,10 @@ loadNOAA();buildNets();loadCEM();
 loadChargeReseau().then(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}}).catch(()=>{});
 buildHot();
 showLegend('hot',true);
-// Démarrage simplifié : 3 couches (anomalies + mégalithes + églises)
+// Démarrage : anomalies EM + calibration mondiale uniquement
 setTimeout(()=>{
-  const bs=document.getElementById('b-sit'),be=document.getElementById('b-egl');
-  if(bs&&!ACTIVE.sit)tog('sit','on-sit',bs);
-  if(be&&!ACTIVE.egl)tog('egl','on-egl',be);
+  const bi=document.getElementById('b-intl');
+  if(bi&&!ACTIVE.intl)tog('intl','on-intl',bi);
 },600);
 let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}},300);}
@@ -5512,13 +5537,13 @@ function runPermaDiag(lat,lon){
 function exportPermaPDF(){
   const results=document.getElementById('perma-results');
   if(!results||!results.innerHTML){info('<span style="color:var(--danger)">Cliquez d\'abord sur une parcelle.</span>');return;}
-  const html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Tellux — Rapport parcelle permaculture</title>'+
+  const html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Tellux — Rapport parcelle agronomie</title>'+
     '<style>body{font-family:sans-serif;max-width:700px;margin:20px auto;padding:20px;color:#333}'+
     'h1{font-size:18px;color:#15803d;border-bottom:2px solid #15803d;padding-bottom:8px}'+
     '.meta{font-size:11px;color:#666;margin-bottom:16px}'+
     '.footer{margin-top:20px;font-size:10px;color:#999;border-top:1px solid #ddd;padding-top:8px}'+
     '@media print{body{margin:0;padding:10px}}</style></head><body>'+
-    '<h1>🌱 Tellux — Rapport parcelle permaculture</h1>'+
+    '<h1>🌱 Tellux — Rapport parcelle agronomie</h1>'+
     '<div class="meta">Généré le '+new Date().toLocaleString('fr-FR')+' · tellux-corse.netlify.app</div>'+
     results.innerHTML+
     '<div class="footer">Tellux v5.1 — Module Permaculture & Agriculture<br>'+
