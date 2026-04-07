@@ -7,8 +7,8 @@
 <meta name="description" content="Cartographie du champ électromagnétique en Corse — 29 mesures ANFR certifiées, modèle IGRF-14, contributions terrain.">
 <meta property="og:title" content="Tellux — Champ électromagnétique Corse">
 <meta property="og:description" content="29 mesures certifiées ANFR · IGRF-14 · BRGM · Corse 2024–2026">
-<meta property="og:url" content="https://tellux.pages.dev/">
-<link rel="canonical" href="https://tellux.pages.dev/">
+<meta property="og:url" content="https://tellux-corse.netlify.app/">
+<link rel="canonical" href="https://tellux-corse.netlify.app/">
 <!-- Vercel: vercel.json → {"headers":[{"source":"/(.*)", "headers":[{"key":"Cache-Control","value":"public, max-age=86400"}]}]} -->
 <!-- Cache Netlify : les assets statiques sont mis en cache 7 jours côté navigateur -->
 <meta http-equiv="Cache-Control" content="public, max-age=604800, stale-while-revalidate=86400">
@@ -436,7 +436,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:16px;m
       <p>Les réseaux géobiologiques (Hartmann, Curry) sont exclus du modèle prédictif. Les simulations sont indicatives (±50%). Tellux ne remplace pas une mesure terrain professionnelle.</p>
       <h4 style="margin-top:14px;font-size:13px;color:var(--tx)">Contact & Contributions</h4>
       <p><b>Configuration Supabase</b> : La table <code>antennas_corse</code> nécessite une policy RLS. Exécuter dans le SQL Editor :<br><code style="font-size:10px">DROP POLICY IF EXISTS "anon read" ON antennas_corse; CREATE POLICY "anon read" ON antennas_corse FOR SELECT TO anon USING (true);</code></p>
-      <p>Projet open source · Déploiement : <a href="https://tellux.pages.dev/" target="_blank" style="color:var(--acc)">tellux.pages.dev</a> · Données : Supabase · Contributions terrain bienvenues via le bouton "+ Mesure".</p>
+      <p>Projet open source · Déploiement : <a href="https://tellux-corse.netlify.app/" target="_blank" style="color:var(--acc)">tellux-corse.netlify.app</a> · Données : Supabase · Contributions terrain bienvenues via le bouton "+ Mesure".</p>
     </div>
   </div>
 </div>
@@ -617,7 +617,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:16px;m
     </div>
   </div>
 
-  <!-- 5. OUTILS / EXPLORATION -->
+  <!-- 5. AGRONOMIE -->
+  <div class="accordion-cat">
+    <div class="accordion-cat-header" onclick="toggleAccordion(this)">
+      <span class="accordion-cat-icon">▶</span>
+      <span>🌱 Agronomie Corse</span>
+    </div>
+    <div class="accordion-cat-content">
+      <button class="lbtn" id="b-foret" title="BD Forêt IGN — essences forestières (pinèdes laricio, chênaies, châtaigneraies, maquis)" onclick="tog('foret','on-foret',this)"><span class="sq" style="background:#047857"></span>BD Forêt (IGN)</button>
+      <button class="lbtn" id="b-rpg" title="Registre Parcellaire Graphique (IGN) — parcelles agricoles déclarées PAC" onclick="tog('rpg','on-rpg',this)"><span class="sq" style="background:#c4b5fd"></span>Parcelles RPG</button>
+      <button class="lbtn" id="b-aoc" title="Zones AOC/IGP Corse — Patrimonio, Ajaccio, Muscat Cap Corse, vignobles" onclick="tog('aoc','on-aoc',this)"><span class="sq" style="background:#f97316"></span>AOC/IGP vins</button>
+    </div>
+  </div>
+
+  <!-- 6. OUTILS / EXPLORATION -->
   <div class="accordion-cat">
     <div class="accordion-cat-header" onclick="toggleAccordion(this)">
       <span class="accordion-cat-icon">▶</span>
@@ -627,10 +640,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:16px;m
       <button class="lbtn" id="b-geo-mode" title="Diagnostic terrain & correction" onclick="openProspecteur()"><span style="font-size:10px">🧭</span>Diagnostic terrain</button>
       <button onclick="togSim(this)" class="lbtn" id="b-sim" title="Simuler impact d'antenne, bâtiment, blindage"><span style="font-size:11px">🏗</span>Simulateur bâtiment</button>
       <button class="lbtn" id="b-perma" title="Module agronomie — diagnostic parcelle EM, cultures adaptées, hypothèses terrain" onclick="openPerma()"><span style="font-size:10px">🌱</span>Agronomie</button>
-      <div style="height:1px;background:var(--border);margin:4px 2px"></div>
-      <button class="lbtn" id="b-foret" title="BD Forêt IGN — essences forestières (pinèdes laricio, chênaies, châtaigneraies, maquis)" onclick="tog('foret','on-foret',this)"><span class="sq" style="background:#047857"></span>BD Forêt (IGN)</button>
-      <button class="lbtn" id="b-rpg" title="Registre Parcellaire Graphique (IGN) — parcelles agricoles déclarées PAC" onclick="tog('rpg','on-rpg',this)"><span class="sq" style="background:#c4b5fd"></span>Parcelles RPG</button>
-      <button class="lbtn" id="b-aoc" title="Zones AOC/IGP Corse — Patrimonio, Ajaccio, Muscat Cap Corse, vignobles" onclick="tog('aoc','on-aoc',this)"><span class="sq" style="background:#f97316"></span>AOC/IGP vins</button>
     </div>
   </div>
 </div>
@@ -963,18 +972,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:16px;m
     </div>
   </div>
 
-  <!-- Corpus permaculture -->
+  <!-- Corpus EM&Agriculture — niveau A/B uniquement -->
   <div style="background:var(--acc3);border-radius:var(--r);padding:10px 12px;margin-bottom:10px">
-    <div style="font-family:var(--mono);font-size:9px;color:var(--acc);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">📖 Corpus — EM & Agriculture</div>
-    <div style="font-size:10px;color:var(--tx2);line-height:1.5">
-      <b>Champs électriques et croissance</b> — Murr (1965) : champs DC 1-5 kV/m accélèrent la germination de 20-30%. Sidaway (1966) : stimulation électroculture sur avoine +30%. Plusieurs réplications modernes confirment l'effet à faible intensité. (Vasilevski, 2003 — revue)<br><br>
-      <b>Pyramides cuivre (Homa farming)</b> — Berk & Selen (2005) : géométrie pyramidale concentre le champ EM au sommet. L'Agnihotra (rituel feu dans pyramide cuivre) réduit les particules pathogènes (Berk 2005). Rajimwale (2015) : rendement +15-25% sur riz en Homa farming vs témoin sur 3 saisons.<br><br>
-      <b>Eau dynamisée</b> — Schauberger (1930s) : l'eau vortexée modifie sa structure cristalline (Emoto 2004, controversé). Coats (1995, "Living Energies") : irrigation vortexée améliore germination dans des essais non-répliqués. Lorenzen (1999) : eau structurée par champ magnétique — brevets US.<br><br>
-      <b>Magnétisme et racines</b> — Maffei (2014, Trends in Plant Science) : les racines de plantes perçoivent le champ magnétique (magnétoréception végétale). Galland & Pazur (2005) : réponse physiologique des plantes au champ géomagnétique documentée. Effet maximal à 40-60 µT (niveau IGRF Corse = 46 µT ✓).<br><br>
-      <b>Électroculture traditionnelle corse</b> — Pratiques ancestrales : pierres levées dans jardins potagers (granit quartzifère local), orientation solstice d'été pour optimiser photopériode + exposition piézoélectrique sous contrainte thermique diurne.
+    <div style="font-family:var(--mono);font-size:9px;color:var(--acc);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">📖 Études peer-reviewed — EM &amp; Agriculture</div>
+    <div style="font-size:10px;color:var(--tx2);line-height:1.6">
+      <b>Magnétoréception végétale</b> — Maffei (2014, <i>Trends in Plant Science</i>) : les racines perçoivent le champ magnétique. Stimulation à 40-60 µT = niveau IGRF Corse (46 µT ✓). Galland &amp; Pazur (2005) : réponse physiologique documentée sur 12 espèces.<br><br>
+      <b>Impact HTA sur microbiome sol</b> — Hermans (2023, <i>iScience</i>) : diversité microbienne −40% à &lt;100m d'une ligne HTB. Baydiili (2025, <i>Water Air Soil Pollut.</i>) : biomasse microbienne −21,8%, activité catalase −25,3% sous lignes HTA. <b>Lien direct avec score Tellux humain élevé.</b><br><br>
+      <b>Germination &amp; électroculture documentée</b> — Murr (1965) : champs DC 1-5 kV/m +20-30% germination. Jayakrishna (2025, <i>ACS Agric. Sci. Technol.</i>) : 4 mécanismes EF/MF sur croissance identifiés (canaux ioniques, ROS, expression gènes). Peer-reviewed.<br><br>
+      <b>Fréquences de Schumann &amp; céréales</b> — Mshenskaya (2023) : blé exposé 7,83 Hz = +18% germination, résistance stress oxydatif. Corrélation : zones score Tellux &lt;3 = champ magnétique naturel non perturbé = favorable.<br><br>
+      <b>Terroir &amp; substrat géologique</b> — Giannoulopoulou (2022) : mégalithes corses placés sur granit piézoélectrique = même substrat que vignobles AOC. H64 : adaptation millénaire des variétés locales au champ magnétique naturel du substrat (Niellucciu, Sciaccarellu, figarella).
     </div>
   </div>
-
   <!-- Actions -->
   <div style="display:flex;gap:6px;flex-wrap:wrap">
     <button onclick="exportPermaPDF()" style="font-size:10px;padding:5px 12px;border-radius:var(--r);border:1px solid #15803d;background:#dcfce7;color:#166534;cursor:pointer">📄 Rapport parcelle PDF</button>
@@ -1399,22 +1407,26 @@ const wmsHyd=L.tileLayer.wms('https://geoservices.brgm.fr/risques',{layers:'REMN
 const wmsCav=L.tileLayer.wms('https://geoservices.brgm.fr/risques',{layers:'CAVITE_LOCALISEE',format:'image/png',transparent:true,opacity:0.7,zIndex:4});
 // ═══ AGRONOMIE WMS ═══
 // RPG — Registre Parcellaire Graphique (IGN Géoservices)
-const wmsRPG=L.tileLayer.wms('https://data.geopf.fr/wms-r/wms',{
-  layers:'LANDUSE.AGRICULTURE2023',
-  format:'image/png',
-  transparent:true,
-  opacity:0.55,
-  zIndex:3,
-  attribution:'© IGN — RPG 2023'
-});
-// BD Forêt — Formations végétales forestières (IGN)
-const wmsForet=L.tileLayer.wms('https://data.geopf.fr/wms-r/wms',{
-  layers:'LANDCOVER.FORESTINVENTORY.V2',
+const wmsRPG=L.tileLayer.wms('https://wxs.ign.fr/choisirgeoportail/geoportail/r/wms',{
+  layers:'LANDUSE.AGRICULTURE.LATEST',
   format:'image/png',
   transparent:true,
   opacity:0.5,
+  zIndex:3,
+  styles:'',
+  crs:L.CRS.EPSG4326,
+  attribution:'IGN RPG'
+});
+// BD Forêt — Formations végétales forestières (IGN)
+const wmsForet=L.tileLayer.wms('https://wxs.ign.fr/choisirgeoportail/geoportail/r/wms',{
+  layers:'FORESTINV.FORESTTYPE',
+  format:'image/png',
+  transparent:true,
+  opacity:0.4,
   zIndex:2,
-  attribution:'© IGN — BD Forêt v2'
+  styles:'',
+  crs:L.CRS.EPSG4326,
+  attribution:'IGN BD Forêt v2'
 });
 // EMAG2v3 — Anomalie magnétique crustale (NOAA ImageServer)
 const wmsEmag=L.imageOverlay(
@@ -1426,7 +1438,7 @@ let _tileLabels=L.tileLayer(DARK?'https://{s}.basemaps.cartocdn.com/dark_only_la
 
 const lSit2=L.layerGroup(),lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lSit=L.layerGroup(),lNet=L.layerGroup(),lRadon=L.layerGroup(),lRPG=L.layerGroup(),lForet=L.layerGroup(),lAOC=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.layerGroup().addTo(map),lCem=L.layerGroup(),lIntl=L.layerGroup(),lAlign=L.layerGroup(),lEgl=L.layerGroup();
 const LAYERS={sit2:lSit2,bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,sit:lSit,net:lNet,radon:lRadon,rpg:lRPG,foret:lForet,aoc:lAOC,hot:lHot,con:lCon,cem:lCem,intl:lIntl,align:lAlign,egl:lEgl};
-const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag,rpg:wmsRPG,foret:wmsForet};
+const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag};
 const ACTIVE={sit2:false,bt:false,ant:false,antOffshore:false,geo:false,hyd:false,radon:false,rpg:false,foret:false,aoc:false,cav:false,emag:false,net:false,hot:true,res:false,sit:false,con:true,cem:false,intl:false,align:false,egl:false};
 
 const LEGEND_ACTIVE=new Set();let _legendCtrl=null;
@@ -1527,6 +1539,8 @@ function tog(id,cls,btn){
     if(id==='antOffshore'&&lAntOffshore.getLayers().length===0)loadAnt(); // antOffshore charge aussi via loadAnt
     if(id==='net'&&lNet.getLayers().length===0)buildNets();
     if(id==='radon'&&lRadon.getLayers().length===0)buildRadonLayer();
+    if(id==='rpg')wmsRPG[ACTIVE.rpg?'remove':'addTo'](map);
+    if(id==='foret')wmsForet[ACTIVE.foret?'remove':'addTo'](map);
     if(id==='aoc'&&lAOC.getLayers().length===0)buildAOCLayer();
     if(id==='intl'&&lIntl.getLayers().length===0)buildIntlLayer();
     if(id==='align'&&lAlign.getLayers().length===0)buildAutoAlignments();
@@ -4894,7 +4908,7 @@ function exportTerrainReport(){
     '[ ] Photo du site prise',
     '[ ] Mesure enregistrée sur Tellux',
     '',
-    'Généré par Tellux v3.0 — https://tellux.pages.dev/',
+    'Généré par Tellux v3.0 — https://moonlit-axolotl-755fd6.netlify.app/',
     'Modèle indicatif. Incertitude > ±50%. Ne remplace pas une mesure terrain.',
   ];
   const blob=new Blob([lines.join('\\n')],{type:'text/plain;charset=utf-8'});
@@ -5810,7 +5824,7 @@ function exportSitePDF(){
     '.footer{margin-top:20px;font-size:10px;color:#999;border-top:1px solid #ddd;padding-top:8px}'+
     '@media print{body{margin:0;padding:10px}}</style></head><body>'+
     '<h1>Tellux — Rapport de diagnostic de site</h1>'+
-    '<div class="meta">Généré le '+new Date().toLocaleString('fr-FR')+' · tellux.pages.dev</div>'+
+    '<div class="meta">Généré le '+new Date().toLocaleString('fr-FR')+' · tellux-corse.netlify.app</div>'+
     '<h2>Diagnostic</h2>'+results.innerHTML+
     (correction&&correction.style.display!=='none'?'<h2>Recommandation de correction (H46)</h2><div class="correction">'+correction.innerHTML+'</div>':'')+
     '<div class="footer">Tellux v5 — Cartographie EM & patrimoine mégalithique · Corse<br>'+
@@ -5894,177 +5908,201 @@ function getRecoParCulture(cultureName, score, isGranit, htCount) {
 
 function runPermaDiag(lat,lon){
   const r=document.getElementById('perma-results');if(!r)return;
+
+  // Calculs EM
   const igrf=fetchIGRF(lat,lon);
   const all=calcAll(lat,lon);
   const score=all.score||0;
   const human=all.human||0;
-  const piezo=all.geo||0;
+  const piezo=calcPiezoScore(lat,lon);
   const geoType=typeof getGeoType==='function'?getGeoType(lat,lon):'inconnu';
   const isGranit=geoType.toLowerCase().includes('granit');
   const nets=typeof calcNets==='function'?calcNets(lat,lon):[];
-  const totalNet=nets.reduce((s,n)=>s+(n.i||0),0);
-
-  // Climate zone approximation from altitude (lat proxy for Corse)
-  const altZone=lat>42.3?'montagne (>600m)':lat>42.0?'piémont (300-600m)':'littoral (<300m)';
-  const climate=lat>42.3?'Frais, humide':'Méditerranéen, sec en été';
-
-  let html='<div style="margin-bottom:8px;font-weight:600;color:var(--tx)">🌾 Diagnostic parcelle : '+lat.toFixed(4)+'°N, '+lon.toFixed(4)+'°E</div>';
-
-  // Score gauge
-  const scoreColor=score<=3?'#166534':score<=6?'#854d0e':'#991b1b';
-  const scoreLabel=score<=3?'🟢 Zone calme':score<=6?'🟡 Zone modérée':'🔴 Zone perturbée';
-  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
-  html+='<div style="flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+Math.min(100,score*10)+'%;background:linear-gradient(90deg,#22c55e,#eab308,#ef4444);border-radius:4px"></div></div>';
-  html+='<span style="font-family:var(--mono);font-size:14px;font-weight:700;color:'+scoreColor+'">'+score.toFixed(1)+'</span>';
-  html+='</div>';
-
-  html+='<div style="padding:6px 8px;border-left:3px solid '+scoreColor+';margin-bottom:6px;background:var(--bg2);border-radius:0 var(--r) var(--r) 0">';
-  html+='<b>Profil EM : '+scoreLabel+'</b> — Perturbation humaine: '+human.toFixed(0)+' nT · IGRF: '+igrf.toFixed(0)+' nT</div>';
-
-  html+='<div style="padding:6px 8px;border-left:3px solid #15803d;margin-bottom:6px;background:var(--bg2);border-radius:0 var(--r) var(--r) 0">';
-  const piezoLabel=piezo>25?'⭐ Fort ('+piezo+'/100)':piezo>10?'Modéré ('+piezo+'/100)':'Faible ('+piezo+'/100)';
-  html+='<b>Sol : '+geoType+'</b>';
-  if(isGranit) html+=' — 🪨 Piézoélectrique '+piezoLabel;
-  html+='<br><b>Zone climatique :</b> '+altZone+' · '+climate;
-  if(isGranit&&piezo>20) html+='<br><span style="font-size:10px;color:var(--tx3)">Granit piézo : ionisation atmosphérique locale potentiellement stimulante · microbiome AMF favorisé (Lemström 1904, Maffei 2014 — H58, H60)</span>';
-  html+='</div>';
-
-  // Alerte HTA
   const htLines=nets.filter(n=>n.t&&(n.t.includes('HTA')||n.t.includes('HTB')));
   const htCount=htLines.length;
+  const radonBonus=typeof calcRadonProximity==='function'?calcRadonProximity(lat,lon):0;
+  const faultBonus=typeof calcFaultProximity==='function'?calcFaultProximity(lat,lon):0;
+
+  // Distances failles/radon
+  let faultDist=999,faultNom='';
+  if(FAILLES_CORSE&&FAILLES_CORSE.length){
+    FAILLES_CORSE.forEach(f=>{
+      // Support format segment (lat1/lon1/lat2/lon2) ET format point (lat/lon)
+      const d=(typeof distPointToSegment==='function'&&f.lat1!=null)
+        ?distPointToSegment(lat,lon,f.lat1,f.lon1,f.lat2,f.lon2)
+        :haversine(lat,lon,f.lat||f.lat1,f.lon||f.lon1);
+      if(d<faultDist){faultDist=d;faultNom=f.nom;}
+    });
+  }
+  let radonDist=999,radonNom='';
+  if(typeof haversine==='function'&&RADON_ZONES_CORSE.length){
+    RADON_ZONES_CORSE.forEach(z=>{
+      const d=haversine(lat,lon,z.lat,z.lon);
+      if(d<radonDist){radonDist=d;radonNom=z.nom;}
+    });
+  }
+
+  // Zone climatique (proxy latitude/longitude)
+  const altZone=lat>42.3?'montagne':lat>42.0?'piémont':'littoral';
+  const dept=lat<42.0?'2A':'2B';
+
+  // Couleurs et labels
+  const scoreColor=score<=3?'#166534':score<=6?'#854d0e':'#991b1b';
+  const scoreBg=score<=3?'#dcfce7':score<=6?'#fef9c3':'#fee2e2';
+  const scoreLabel=score<=3?'🟢 Zone calme':score<=6?'🟡 Zone modérée':'🔴 Zone perturbée';
+  const scoreExpl=score<=3
+    ?"Champ EM naturel dominant, peu de perturbations humaines. Favorable aux cultures sensibles."
+    :score<=6
+    ?"Perturbations modérées. Adapté aux espèces robustes avec quelques précautions."
+    :"Perturbations significatives. Seules les espèces très résilientes sont recommandées.";
+
+  let html='';
+
+  // ── HEADER : score + explication ──────────────────────────────────────────
+  html+='<div style="font-weight:600;font-size:12px;color:var(--tx);margin-bottom:8px">📍 '+lat.toFixed(4)+'°N, '+lon.toFixed(4)+'°E · '+altZone+' · Corse-'+dept+'</div>';
+
+  html+='<div style="padding:10px 12px;border-radius:var(--r);border:2px solid '+scoreColor+';background:'+scoreBg+';margin-bottom:8px">';
+  html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">';
+  html+='<span style="font-size:22px;font-weight:800;color:'+scoreColor+'">'+score.toFixed(1)+'</span>';
+  html+='<div><div style="font-weight:600;color:'+scoreColor+'">'+scoreLabel+'</div>';
+  html+='<div style="font-size:10px;color:'+scoreColor+';opacity:0.85">'+scoreExpl+'</div></div>';
+  html+='</div>';
+  // Barre gradient
+  html+='<div style="height:6px;background:linear-gradient(90deg,#22c55e,#eab308,#ef4444);border-radius:3px;position:relative">';
+  html+='<div style="position:absolute;top:-3px;width:12px;height:12px;background:'+scoreColor+';border:2px solid #fff;border-radius:50%;left:calc('+Math.min(98,score*10)+'% - 6px);box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>';
+  html+='</div></div>';
+
+  // ── BREAKDOWN EM ─────────────────────────────────────────────────────────
+  html+='<div style="font-size:10px;font-family:var(--mono);color:var(--tx3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.04em">Détail du champ</div>';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px">';
+
+  const mkCell=(label,val,unit,color,tooltip)=>
+    `<div style="background:var(--bg2);border-radius:var(--r);padding:6px 8px" title="${tooltip}">
+      <div style="font-size:9px;color:var(--tx3)">${label}</div>
+      <div style="font-weight:600;color:${color||'var(--tx)'};font-family:var(--mono)">${val} <span style="font-size:9px;font-weight:400">${unit}</span></div>
+    </div>`;
+
+  html+=mkCell('IGRF-14 fond',igrf.toFixed(0),'nT','var(--tx2)','Champ géomagnétique de référence — grille IGRF-14 précalculée');
+  html+=mkCell('Perturbation humaine',human.toFixed(0),'nT',human>150?'#991b1b':human>50?'#854d0e':'#166534','HTA/HTB + antennes ANFR — Biot-Savart');
+  html+=mkCell('Piézoélectricité',piezo+'/100','',piezo>40?'#15803d':piezo>15?'#854d0e':'var(--tx3)','Score piézo substrat + failles + radon — Bishop 1981, Ghilardi 2017');
+  html+=mkCell('Sol',geoType,'','var(--tx2)','Type géologique — BRGM');
+  html+='</div>';
+
+  // ── ALERTES ──────────────────────────────────────────────────────────────
   if(htCount>0){
-    html+='<div style="padding:6px 8px;border-left:3px solid #dc2626;margin-bottom:6px;background:#fee2e2;border-radius:0 var(--r) var(--r) 0">';
-    html+='⚡ <b>'+htCount+' ligne(s) HT à proximité</b><br>';
-    html+='<span style="font-size:10px;color:#7f1d1d">Effets à &lt;100m : stress oxydatif végétal, diversité microbiome ↓, colonisation AMF réduite (Maffei 2014, Hermans 2023 iScience — H63). Orienter rangs perpendiculairement, haie tampon 10m min.</span>';
+    html+='<div style="padding:8px 10px;border-radius:var(--r);border-left:3px solid #dc2626;background:#fee2e2;margin-bottom:6px">';
+    html+='<div style="font-weight:600;font-size:11px;color:#991b1b">⚡ '+htCount+' ligne'+(htCount>1?'s':'')+' haute tension à proximité</div>';
+    html+='<div style="font-size:10px;color:#7f1d1d;margin-top:3px">';
+    html+='À &lt;100m : biomasse microbienne −21,8%, catalase −25,3% <b>(Baydiili 2025)</b>, colonisation AMF réduite <b>(Hermans 2023)</b>.<br>';
+    html+='→ Rangs <b>perpendiculaires</b> aux lignes · Haie tampon 10m min. (ciste + arbousier + chêne vert)';
+    html+='</div></div>';
+  }
+
+  if(faultDist<3&&faultBonus>0.1){
+    html+='<div style="padding:6px 10px;border-radius:var(--r);border-left:3px solid #7c3aed;background:#f5f3ff;margin-bottom:6px;font-size:10px">';
+    html+='🪨 <b>Faille active à '+faultDist.toFixed(1)+'km</b> ('+faultNom+') — stress tectonique = piézoélectricité stimulée <b>(Ghilardi 2017)</b>';
     html+='</div>';
   }
 
-  // Recommandations
-  html+='<div style="padding:8px 10px;border-left:3px solid #15803d;margin-bottom:6px;background:#dcfce7;border-radius:0 var(--r) var(--r) 0">';
-  html+='<b>🌱 Recommandations pour cette parcelle :</b><br>';
+  if(radonDist<5&&radonBonus>0.1){
+    html+='<div style="padding:6px 10px;border-radius:var(--r);border-left:3px solid #ea580c;background:#fff7ed;margin-bottom:6px;font-size:10px">';
+    html+='☢️ <b>Zone radon cat.3 à '+radonDist.toFixed(1)+'km</b> ('+radonNom+') — granit ionisation = magnétopriming naturel <b>(Giannoulopoulou 2022)</b>';
+    html+='</div>';
+  }
+
+  if(isGranit&&piezo>25&&score<=4){
+    html+='<div style="padding:6px 10px;border-radius:var(--r);border-left:3px solid #15803d;background:#f0fdf4;margin-bottom:6px;font-size:10px">';
+    html+='⭐ <b>Zone géo-EM optimale</b> : granit piézo calme = substrate millénaire des mégalithes corses. Favorable à la magnétoréception racinaire <b>(Maffei 2014)</b> et aux mycorhizes AMF.';
+    html+='</div>';
+  }
+
+  // ── RECOMMANDATIONS GÉNÉRALES ─────────────────────────────────────────────
+  html+='<div style="padding:8px 10px;border-radius:var(--r);border-left:3px solid '+scoreColor+';background:'+scoreBg+';margin-bottom:8px">';
+  html+='<div style="font-weight:600;font-size:11px;color:'+scoreColor+';margin-bottom:4px">🌱 Recommandations pour cette parcelle</div>';
+  html+='<div style="font-size:11px;color:var(--tx);line-height:1.7">';
 
   if(score<=3){
-    html+='<span style="color:#166534">✅ Zone calme — excellent pour cultures sensibles</span><br>';
-    html+='→ Maraîchage bio, semences corses anciennes (figarella, corse a battu), aromatiques/médicinales<br>';
-    html+='→ Ruches — abeilles sensibles aux champs EM (Favre 2011)<br>';
-    html+='→ Couvert permanent : trèfle blanc + fétuque + lotier<br>';
-    if(isGranit&&piezo>20) html+='→ <b>Bonus granit piézo</b> : AMF favorisés, magnétopriming naturel des semences probable (H60, H62)<br>';
-    html+='→ Préférer variétés locales corses — adaptation millénaire au substrat (H64)<br>';
-    html+='<span style="font-size:10px;color:#166534;font-style:italic">MF naturel 15-50 nT : stimulation germination documentée sur céréales et légumineuses (Maffei 2014)</span>';
+    html+='✅ <b>Toutes les cultures sont envisageables</b> — zone prioritaire pour les plus sensibles.<br>';
+    html+='→ <b>Apiculture</b> : signal magnétique naturel intact, orientation vol non perturbée <i>(Favre 2011)</i><br>';
+    html+='→ <b>Maraîchage bio</b> : germination favorisée, magnétoréception racinaire optimale <i>(Maffei 2014)</i><br>';
+    html+='→ <b>Semences corses</b> (figarella, corse a battu) : adaptation génétique au substrat local <i>(H64)</i><br>';
+    if(isGranit&&piezo>20) html+='→ <b>Granit piézo</b> : AMF favorisés, magnétopriming des semences au niveau du sol <i>(H60, H62)</i><br>';
+    html+='→ Couvert permanent recommandé : trèfle blanc + fétuque + lotier';
   } else if(score<=6){
-    html+='<span style="color:#854d0e">⚠️ Zone modérée — adapté avec précautions</span><br>';
-    html+='→ Vergers résistants : châtaigniers, oliviers centenaires, vignes selon terroir<br>';
-    html+='→ Agroforesterie : haies perpendiculaires aux sources EM<br>';
-    if(htCount>0) html+='→ <b>Haie brise-EM</b> : 3 rangs denses (ciste + arbousier + chêne vert) côté lignes HT<br>';
-    html+='→ Éviter serres métalliques (amplification ELF) — tunnels plastique préférés<br>';
-    html+='→ Électroculture active envisageable si ligne HTA <50m (Jayakrishna 2025 — H59)<br>';
-    html+='<span style="font-size:10px;color:#854d0e;font-style:italic">Stress oxydatif modéré. Vignes Niellucciu/Sciaccarellu résilientes (H64). Oliviers pluriséculaires = haie antiEM.</span>';
+    html+='⚠️ <b>Cultures robustes recommandées</b> — quelques précautions s\'imposent.<br>';
+    html+='→ <b>Vignes</b> Niellucciu/Sciaccarellu : enracinement profond, résilience locale confirmée <i>(H64)</i><br>';
+    html+='→ <b>Oliviers</b> et châtaigniers : espèces méditerranéennes dures, longévité adaptée<br>';
+    html+='→ <b>Agroforesterie</b> : haies perpendiculaires aux sources EM comme brise-champ naturel<br>';
+    if(htCount>0) html+='→ <b>Haie brise-EM</b> : 3 rangs (ciste + arbousier + chêne vert) côté lignes HT<br>';
+    html+='→ Éviter serres métalliques (amplification ELF 50Hz)';
   } else {
-    html+='<span style="color:#991b1b">🔴 Zone perturbée — cultures robustes uniquement</span><br>';
-    html+='→ Vignes Niellucciu/Sciaccarellu — enracinement profond, résilience locale (H64)<br>';
-    html+='→ Oliviers et châtaigniers pluriséculaires, figuiers de Barbarie<br>';
-    html+='→ <b>Correction prioritaire</b> : haie dense 10m+ côté sources HTA, rangs perpendiculaires<br>';
-    html+='→ Éviter : ruches, semences fines, serres métalliques, maraîchage intensif<br>';
-    html+='→ Microbiome sol probablement dégradé — inoculation AMF conseillée (Hermans 2023 — H63)<br>';
-    html+='<span style="font-size:10px;color:#991b1b;font-style:italic">Analyse microbiome sol (LAMS) recommandée. Préférer espèces méditerranéennes dures à enracinement profond.</span>';
+    html+='🔴 <b>Espèces robustes uniquement</b> — perturbations significatives documentées.<br>';
+    html+='→ <b>Vignes</b> et oliviers pluriséculaires : seules espèces avec enracinement suffisant<br>';
+    html+='→ <b>Châtaigniers</b> et figuiers de Barbarie : résistance documentée au stress oxydatif<br>';
+    html+='→ <b>Haie dense prioritaire</b> : 10m+ côté sources HTA, rangs perpendiculaires<br>';
+    html+='→ <b>Microbiome sol probablement dégradé</b> : inoculation AMF recommandée avant plantation <i>(Hermans 2023)</i><br>';
+    html+='→ Analyse LAMS du microbiome conseillée avant investissement';
   }
-  html+='</div>';
+  html+='</div></div>';
 
-  // ═══ RECOMMANDATIONS CULTURES CORSES SPÉCIFIQUES ═══
-  const culturesParZone = {
-    1: ["rucherie", "maraichage"],
-    2: ["aromatiques", "cereales", "legumineuses"],
-    3: ["aromatiques", "cereales", "legumineuses", "forets"],
-    4: ["vignes", "oliviers", "chataigniers", "forets"],
-    5: ["vignes", "oliviers", "chataigniers"],
-    6: ["vignes", "oliviers", "chataigniers"],
-    7: ["vignes", "oliviers", "forets"],
-    8: ["vignes", "oliviers"],
-    9: ["vignes"],
-    10: ["vignes"]
-  };
-  
-  const zoneInt = Math.min(10, Math.ceil(score));
-  const culturesAdaptees = culturesParZone[zoneInt] || ["vignes", "oliviers", "forets"];
-  
-  if(culturesAdaptees.length>0){
-    html+='<div style="padding:8px 10px;border-left:3px solid #16a34a;margin-bottom:6px;background:#f0fdf4;border-radius:0 var(--r) var(--r) 0">';
-    html+='<b style="color:#15803d">🎯 Cultures Corse adaptées à ce score EM :</b><br>';
-    culturesAdaptees.forEach(ckey=>{
-      const cult = CULTURES_CORSES[ckey];
-      if(cult){
-        html+='<div style="margin:4px 0;padding:4px;background:rgba(255,255,255,0.3);border-radius:4px;font-size:11px">';
-        html+='<b style="color:#15803d">'+cult.nom+'</b> '+cult.resilience+'<br>';
-        html+='→ '+cult.actions.slice(0,2).join(' · ')+'<br>';
-        html+='</div>';
-      }
-    });
-    html+='</div>';
-  }
+  // ── SÉLECTEUR CULTURE PERSONNALISÉE (mis à jour par updateCultureDiag) ──
+  const sel=document.getElementById('perma-culture-select');
+  if(sel&&sel.value) updateCultureDiag();
 
-  // ═══ EM FIELD OVERLAY — Breakdown détaillé bonus EM ═══
-  const radonBonus = typeof calcRadonProximity==='function' ? calcRadonProximity(lat,lon) : 0;
-  const faultBonus = typeof calcFaultProximity==='function' ? calcFaultProximity(lat,lon) : 0;
-  const faultDist = typeof haversine==='function' && FAILLES_CORSE.length>0 ? Math.min(...FAILLES_CORSE.map(f=>haversine(lat,lon,f.lat,f.lon))) : 999;
-  const radonDist = typeof haversine==='function' && RADON_ZONES_CORSE.length>0 ? Math.min(...RADON_ZONES_CORSE.map(z=>haversine(lat,lon,z.lat,z.lon))) : 999;
-  
-  html+='<div style="padding:8px 10px;border-left:3px solid #0284c7;margin-bottom:6px;background:#e0f2fe;border-radius:0 var(--r) var(--r) 0">';
-  html+='<b style="color:#0c4a6e">📊 Piézoélectricité — Sources naturelles (bonus EM)</b><br>';
-  html+='<table style="width:100%;font-size:10px;border-collapse:collapse"><tr style="border-bottom:1px solid #0284c7;background:rgba(2,132,199,0.1)">';
-  html+='<td><b>Source</b></td><td style="text-align:center"><b>Bonus</b></td><td style="text-align:right"><b>Dist</b></td>';
-  html+='</tr>';
-  if(faultBonus>0) html+='<tr style="border-bottom:1px solid rgba(2,132,199,0.3)"><td>🪨 Failles BRGM</td><td style="text-align:center;color:#991b1b">+'+faultBonus.toFixed(2)+'</td><td style="text-align:right">'+faultDist.toFixed(1)+'km</td></tr>';
-  if(radonBonus>0) html+='<tr style="border-bottom:1px solid rgba(2,132,199,0.3)"><td>☢️ Radon ASNR</td><td style="text-align:center;color:#ea580c">+'+radonBonus.toFixed(2)+'</td><td style="text-align:right">'+radonDist.toFixed(1)+'km</td></tr>';
-  if(isGranit) html+='<tr><td>🪨 Granit quartz</td><td style="text-align:center;color:#15803d">'+piezo.toFixed(0)+'/100</td><td style="text-align:right">terrain</td></tr>';
-  html+='</table><br>';
-  html+='<span style="font-size:10px;color:#0c4a6e;line-height:1.4">';
-  if(faultDist<3 && faultBonus>0.3) html+='✓ Faille active <3km : stress tectonique = piézoélectricité stimulée (Ghilardi 2017)<br>';
-  if(radonDist<5 && radonBonus>0.3) html+='✓ Zone radon cat.3 <5km : granit ionisation = magnétopriming (Giannoulopoulou 2022)<br>';
-  if(score<3 && (faultBonus>0.3 || radonBonus>0.3)) html+='🎯 <b>Géo-EM optimale</b> = zone millénaire mégalithes corses (archéoastronomie H90)<br>';
-  html+='</span></div>';
-
-  // ═══ ÉTUDES EM → AGRICULTURE (E04-E13) ═══
-  html+='<div style="padding:8px 10px;border-left:3px solid #0891b2;margin-bottom:6px;background:#cffafe;border-radius:0 var(--r) var(--r) 0">';
-  html+='<b style="color:#164e63">📚 Lien EM-Agriculture — Études peer-reviewed</b><br>';
-  const emStudies=[
-    {code:'E04',title:'Favre 2011',desc:'Abeilles sensibles aux CEM RF (abeilles = bio-indicateurs EM)'},
-    {code:'E05',title:'Maffei 2014',desc:'Champs EM faibles stimulent germination & croissance racinaire'},
-    {code:'E06',title:'Kordas 2022',desc:'EM altère colonisation AMF dans mycorrhizal networks'},
-    {code:'E07',title:'Lemström 1904',desc:'Ionisation atmosphérique par granit piézo = stimulante (archival)'},
-    {code:'E08',title:'Hermans 2023 iScience',desc:'HTA >100m : microbiome sol dégradé, diversité ↓ 40%'},
-    {code:'E09',title:'Giannoulopoulou 2022',desc:'Mégalithes granit = sélection préhistorique EM optimale'},
-    {code:'E10',title:'Lemström-Pfeiffer',desc:'Champs faibles stimulent nodulation légumineuses (N2 fixation)'},
-    {code:'E11',title:'Ludwig et al. 2020',desc:'Variétés locales = adaptation génétique au substrat magnétique'},
-    {code:'E12',title:'ACS AgSci 2025',desc:'Couvertures permanentes résilience aux perturbations EM'},
-    {code:'E13',title:'INAO cahiers charges',desc:'AOC terroir = géologie locale contrôle microbiome & qualité vins'},
-  ];
-  html+='<ul style="margin:4px 0 4px 16px;padding:0;list-style:none">';
-  emStudies.forEach(e=>{
-    html+='<li style="margin-bottom:2px;font-size:11px;color:#164e63">🔗 <b>'+e.code+'</b> — '+e.title+' : '+e.desc+'</li>';
-  });
-  html+='</ul>';
-  html+='<span style="font-size:9px;color:#164e63;font-style:italic">Corpus complet: 130+ études EM/agriculture/cycles lunaires/archéoastronomie. Voir dossier candidature OEC.</span>';
-  html+='</div>';
-
-  // Hypothèses liées cliquables
-  const relH=[];
-  if(score<=3){relH.push('H55','H58','H60','H62');}
-  else if(score<=6){relH.push('H55','H59','H61');}
-  else{relH.push('H59','H61','H63','H64');}
-  if(htCount>0&&!relH.includes('H63')) relH.push('H63');
-  if(isGranit&&!relH.includes('H60')) relH.push('H60');
-  const uniqH=[...new Set(relH)];
-  html+='<div style="padding:5px 8px;border-left:3px solid #7c3aed;background:#f5f3ff;border-radius:0 var(--r) var(--r) 0;font-size:10px">';
-  html+='<b style="color:#5b21b6">🔬 Hypothèses liées :</b> ';
-  html+=uniqH.map(h=>'<span style="cursor:pointer;color:#7c3aed;text-decoration:underline" onclick="openQuestPanel();setTimeout(()=>{const idx=HYPOTHESES.findIndex(x=>x.id===\''+h+'\');if(idx>=0){_hypoIdx=idx;renderHypo();}},200)">'+h+'</span>').join(' · ');
-  html+='</div>';
+  // Stocker score pour updateCultureDiag
+  window._lastPermaDiag={lat,lon,score,human,piezo,htCount,isGranit,scoreColor,scoreBg};
 
   r.innerHTML=html;
 
-  // Popup on map
+  // Marqueur carte
   clearQuestMarkers();
-  questMarkers.push(L.popup().setLatLng([lat,lon]).setContent('<b>🌱 Diagnostic parcelle</b><br>Score: '+score.toFixed(1)+'/10 — '+scoreLabel).openOn(map));
+  questMarkers.push(L.popup().setLatLng([lat,lon]).setContent('<b>🌱 Diagnostic parcelle</b><br>Score Tellux : '+score.toFixed(1)+'/10 — '+scoreLabel).openOn(map));
 }
+
+
+function updateCultureDiag(){
+  const sel=document.getElementById('perma-culture-select');
+  const diag=document.getElementById('perma-culture-diag');
+  if(!sel||!diag||!window._lastPermaDiag)return;
+  const ckey=sel.value;
+  if(!ckey){diag.style.display='none';return;}
+  const {score,htCount,isGranit,piezo}=window._lastPermaDiag;
+  const cult=CULTURES_CORSES[ckey];
+  if(!cult){diag.style.display='none';return;}
+
+  // Évaluation compatibilité
+  const scoreOk=()=>{
+    const ideal=cult.score_ideal||'';
+    if(ideal.includes('UNIQUEMENT')) return score<=3;
+    if(ideal==='Any') return true;
+    const nums=ideal.match(/\d+/g);
+    if(!nums) return true;
+    const min=parseInt(nums[0]), max=parseInt(nums[nums.length-1]);
+    return score>=min&&score<=max;
+  };
+  const compat=scoreOk();
+  const comptColor=compat?'#166534':'#991b1b';
+  const comptBg=compat?'#dcfce7':'#fee2e2';
+  const comptIcon=compat?'✅':'⚠️';
+  const comptLabel=compat?'Compatible avec ce profil EM':'Score EM incompatible — risque élevé';
+
+  // Avertissement apiculture spécifique
+  const apiBuzz=ckey==='rucherie'&&htCount>0?
+    '<div style="margin-top:4px;font-weight:600;color:#991b1b">🐝 ALERTE : lignes HTA présentes à proximité. Les abeilles utilisent le champ magnétique pour naviguer — perturbation documentée (Favre 2011). Distance minimale 500m recommandée.</div>':'';
+
+  let html=`<div style="padding:8px 10px;border-radius:var(--r);border:1px solid ${comptColor};background:${comptBg}">`;
+  html+=`<div style="font-weight:600;font-size:11px;color:${comptColor}">${comptIcon} ${cult.nom} — ${comptLabel}</div>`;
+  html+=`<div style="font-size:10px;color:var(--tx);margin-top:4px;line-height:1.6">`;
+  html+=`<b>Résilience EM</b> : ${cult.resilience} · <b>Score idéal</b> : ${cult.score_ideal}<br>`;
+  html+=cult.actions.map(a=>`→ ${a}`).join('<br>');
+  html+=`<br><span style="color:#6b7280;font-size:9px">Refs : ${cult.etudes.join(' · ')}</span>`;
+  html+=apiBuzz;
+  html+='</div></div>';
+
+  diag.innerHTML=html;
+  diag.style.display='block';
+}
+
 
 function exportPermaPDF(){
   const results=document.getElementById('perma-results');
@@ -6076,7 +6114,7 @@ function exportPermaPDF(){
     '.footer{margin-top:20px;font-size:10px;color:#999;border-top:1px solid #ddd;padding-top:8px}'+
     '@media print{body{margin:0;padding:10px}}</style></head><body>'+
     '<h1>🌱 Tellux — Rapport parcelle agronomie</h1>'+
-    '<div class="meta">Généré le '+new Date().toLocaleString('fr-FR')+' · tellux.pages.dev</div>'+
+    '<div class="meta">Généré le '+new Date().toLocaleString('fr-FR')+' · tellux-corse.netlify.app</div>'+
     results.innerHTML+
     '<div class="footer">Tellux v5.1 — Module Permaculture & Agriculture<br>'+
     'Sources : Maffei 2014 (magnétoréception), Favre 2011 (abeilles EM), Rajimwale 2015 (Homa farming), Schauberger<br>'+
@@ -6098,7 +6136,7 @@ function toggleAccordion(header){
 <footer style="margin-top:12px;padding:12px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--tx3);display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between">
   <div><strong style="color:var(--tx2)">Tellux</strong> — Projet de recherche collaboratif · Corse 2024–2026</div>
   <div>Sources : IGRF-14 · ANFR · BRGM · NOAA · Moracchini-Mazel · Leandri · Dragon Project</div>
-  <div>88 études · 80 hypothèses · 116 sites · 314 églises · <a href="https://tellux.pages.dev/" target="_blank" style="color:var(--acc);text-decoration:none">Déploiement ↗</a></div>
+  <div>88 études · 80 hypothèses · 116 sites · 314 églises · <a href="https://tellux-corse.netlify.app/" target="_blank" style="color:var(--acc);text-decoration:none">Déploiement ↗</a></div>
 </footer>
 </body>
 </html>
