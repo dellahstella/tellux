@@ -1744,26 +1744,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <div class="contrib-list" id="contrib-list"></div>
 </div>
 
-<div class="legend" style="flex-direction:column;gap:10px">
-  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-    <span style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-right:4px">COUCHES :</span>
-    <div class="leg"><span class="dot" style="background:#991b1b;opacity:.5"></span>Anomalie (modèle)</div>
-    <div class="leg"><span class="dot" style="background:#5c3a9b"></span>Contribution terrain</div>
-  </div>
-  <div style="border-top:1px solid var(--border);padding-top:8px">
-    <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-bottom:6px">MESURES CEM OFFICIELLES (losanges) · limite légale = 28 V/m :</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px">
-      <div class="leg" style="background:var(--bg2);padding:3px 8px;border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;border-radius:2px;transform:rotate(45deg);margin-right:4px"></span><b style="color:#0f766e">Faible</b> &lt; 0.5 V/m · niveau courant en zone peu dense</div>
-      <div class="leg" style="background:var(--bg2);padding:3px 8px;border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:10px;height:10px;background:#b85c00;border-radius:2px;transform:rotate(45deg);margin-right:4px"></span><b style="color:#b85c00">Modéré</b> 0.5–2 V/m · zone résidentielle avec antennes proches</div>
-      <div class="leg" style="background:var(--bg2);padding:3px 8px;border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:10px;height:10px;background:#991b1b;border-radius:2px;transform:rotate(45deg);margin-right:4px"></span><b style="color:#991b1b">Élevé</b> 2–5 V/m · antenne très proche (&lt;100m)</div>
-      <div class="leg" style="background:var(--bg2);padding:3px 8px;border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:10px;height:10px;background:#5c0000;border-radius:2px;transform:rotate(45deg);margin-right:4px"></span><b style="color:#5c0000">Très élevé</b> 5–28 V/m · immédiatement sous une antenne</div>
-      <div class="leg" style="background:#fff8e6;padding:3px 8px;border-radius:20px;border:1.5px solid #ffd700"><span style="display:inline-block;width:10px;height:10px;background:#7c0000;border:2px solid #ffd700;border-radius:2px;transform:rotate(45deg);margin-right:4px"></span><b style="color:#7c0000">⚠ Non conforme</b> &gt; 28 V/m · dépasse la limite légale (1 cas : Monticello)</div>
-    </div>
-  </div>
-  <div style="font-size:10px;color:var(--tx3);border-top:1px solid var(--border);padding-top:6px">
-    * Réseaux géobiologiques (Hartmann, Curry…) = hypothèses exploratoires, non validées scientifiquement · Modèle magnétique = IGRF-14 + variation diurne Sq + index Kp/Dst · Sources : ANFR, BRGM, BGS, NOAA, ESA Swarm · <a href="#" onclick="event.preventDefault();document.getElementById('disclaimer-overlay').style.display='flex'" style="color:var(--acc);text-decoration:underline">Méthodologie & confidentialité</a>
-  </div>
-</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -3324,7 +3304,31 @@ async function loadChargeReseau(){
   document.getElementById('res-charge').style.color='var(--tx3)';
 }
 // Sites mégalithiques (DRAC Corse) + ouvrages hydrauliques (BRGM) + émetteurs majeurs
-const SITES=[
+let SITES=[];
+let _sitesLoaded=false;
+
+async function loadSitesData() {
+  if (_sitesLoaded) return;
+  try {
+    const resp = await fetch('SITES_REFERENCE.json');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (!data || data.length < 10) throw new Error('JSON trop court: ' + (data ? data.length : 0));
+    // Convertir format JSON [{id,lat,lon,nom,type,couleur,description}] -> [[lat,lon,nom,type,couleur,desc]]
+    SITES = data.map(function(r) {
+      return [r.lat, r.lon, r.nom, r.type, r.couleur, r.description];
+    });
+    _sitesLoaded = true;
+    console.log('\u2705 SITES charg\u00e9s depuis SITES_REFERENCE.json: ' + SITES.length + ' entr\u00e9es');
+    return;
+  } catch(e) {
+    console.warn('\u26a0\ufe0f SITES_REFERENCE.json indisponible \u2014 fallback inline:', e.message);
+    _loadSitesFallback();
+  }
+}
+
+function _loadSitesFallback() {
+  SITES=[
   // ═══ MÉGALITHIQUES — GPS vérifiés Megalithic Portal / Journal of Antiquities / t4t35 / Persée ═══
   // Vallée du Taravo
   [41.7417,8.8695,'Filitosa','Mégalithique','#854d0e','Statues-menhirs ~1500 av. J.-C. · 13 statues · Granit · Site classé · Vallée du Taravo · GPS Megalithic Portal'],
@@ -3471,7 +3475,10 @@ const SITES=[
   [42.093,9.064,'Cascades du Voile de la mariée','Remarquable','#8b5cf6','Cascade 150m · Granit hercynien · Bocognano · Anomalie piézo potentielle · Haute Gravona'],
   [41.880,9.070,'Plateau du Coscione','Remarquable','#8b5cf6','Plateau granit 1400m · Pozzines sacrées · Bergeries ancestrales · Courants telluriques diffus'],
   [43.080,9.650,'Anneaux du Cap Corse','Remarquable','#8b5cf6','1 417 formations coralligènes circulaires ~20m Ø · 120m profondeur · 15 km² · Découvertes 2011 (sonar) · Expédition Gombessa 6 (Ballesta 2021-2024) · Datées ~21 000 ans (Bard CEREGE) · Parc naturel marin Cap Corse et Agriate'],
-]
+];
+  _sitesLoaded = true;
+  console.log('\ud83d\udce6 SITES fallback inline: ' + SITES.length + ' entr\u00e9es');
+}
 
 // ═══════════════════════════════════════════════════════════
 // PHASE 2 — CORPUS ÉGLISES ROMANES DE CORSE
@@ -4014,6 +4021,8 @@ async function buildEglLayer(){
   });
 
 }
+async function buildSitesLayer(){
+  await loadSitesData();
 SITES.forEach(([a,o,n,t,c,desc])=>{
   let shape,sw,sh;
   if(t==='Mégalithique'){
@@ -4044,6 +4053,9 @@ SITES.forEach(([a,o,n,t,c,desc])=>{
     .on('click',()=>info('<span class="tag" style="background:'+tagBg+';color:'+tagColor+';border:0.5px solid '+tagBorder+'">'+t+'</span> <b>'+n+'</b><br><span style="font-size:12px;color:var(--tx2)">'+desc+'</span>'))
     .addTo(targetLayer);
 });
+}
+buildSitesLayer();
+
 
 // ═══ ÉTUDES & ALIGNEMENTS MÉGALITHIQUES ═══
 const MEGA_STUDIES=[
