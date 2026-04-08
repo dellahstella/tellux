@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tellux v5.1 — Cartographie EM & Patrimoine Mégalithique Corse</title>
+<meta name="color-scheme" content="light only">
+<title>Tellux v5.9 — Cartographie EM & patrimoine mégalithique de la Corse</title>
 <meta name="description" content="Cartographie du champ électromagnétique en Corse — 29 mesures ANFR certifiées, modèle IGRF-14, contributions terrain.">
 <meta property="og:title" content="Tellux — Champ électromagnétique Corse">
 <meta property="og:description" content="29 mesures certifiées ANFR · IGRF-14 · BRGM · Corse 2024–2026">
@@ -14,26 +15,403 @@
 <meta http-equiv="Cache-Control" content="public, max-age=604800, stale-while-revalidate=86400">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
-@font-face{font-family:'DM Sans';font-display:swap;}@font-face{font-family:'DM Mono';font-display:swap;}
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --tx:#0f1117;--tx2:#4a4f5e;--tx3:#8b92a5;
-  --bg:#f7f8fa;--bg2:#eef0f5;--bg3:#e4e7ef;
-  --acc:#1a6b5c;--acc2:#2d9b87;--acc3:#e8f5f2;
-  --warn:#b85c00;--danger:#991b1b;--info:#1a4b8c;
-  --border:rgba(0,0,0,0.08);
-  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
-  --r:10px;--r2:16px;
+  /* Tellux palette v1 — neutres */
+  --tx-ardoise:#1F2329;
+  --tx-pierre:#F5F0E7;
+  --tx-mica:#74706A;
+  --tx-brume:#E8E2D5;
+  /* Tellux palette v1 — accents */
+  --tx-maquis:#3F5B3A;
+  --tx-ocre:#C28533;
+  --tx-porphyre:#8E2F1F;
+  --tx-tyrrhenien:#1F3A5F;
+  /* Aliases sémantiques (compatibilité avec l'existant) */
+  --tx:var(--tx-ardoise);
+  --tx2:#3D424A;
+  --tx3:var(--tx-mica);
+  --bg:var(--tx-pierre);
+  --bg2:#EFE9DC;
+  --bg3:var(--tx-brume);
+  --acc:var(--tx-maquis);
+  --acc2:#4F7048;
+  --acc3:#E5EBE0;
+  --warn:var(--tx-ocre);
+  --danger:var(--tx-porphyre);
+  --info:var(--tx-tyrrhenien);
+  --border:rgba(31,35,41,0.10);
+  --font:'IBM Plex Sans',system-ui,sans-serif;
+  --font-display:'Fraunces',Georgia,serif;
+  --mono:'JetBrains Mono','Courier New',monospace;
+  --r:8px;--r2:14px;
+  color-scheme:light;
 }
+/* Dark mode désactivé — light only forcé */
 [data-theme="dark"]{
-  --tx:#e4e7ef;--tx2:#a0a7b8;--tx3:#6b7280;
-  --bg:#111318;--bg2:#1a1d25;--bg3:#252830;
-  --acc:#2d9b87;--acc2:#3ec9ab;--acc3:#162e28;
-  --warn:#e5933a;--danger:#ef4444;--info:#5b9bd5;
-  --border:rgba(255,255,255,0.08);
+  --tx:var(--tx-ardoise);
+  --bg:var(--tx-pierre);
 }
-body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:16px;max-width:1100px;margin:0 auto;}
+
+/* === Tellux v6 design — header & UI === */
+.hdr{display:flex;align-items:center;gap:14px;padding:14px 4px 14px;border-bottom:1px solid var(--border);margin-bottom:14px;}
+.hdr .logo-mark{width:48px;height:60px;background:transparent;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .2s;}
+.hdr .logo-mark:hover{transform:translateY(-1px);}
+.hdr .logo-mark svg{width:48px;height:60px;}
+.hdr-title{display:flex;flex-direction:column;gap:2px;}
+.logo-text{font-family:var(--font-display);font-size:22px;font-weight:600;letter-spacing:-0.015em;color:var(--tx-ardoise);}
+.logo-ver{font-family:var(--mono);font-size:10px;color:var(--tx-mica);background:var(--tx-brume);padding:2px 7px;border-radius:20px;margin-left:6px;vertical-align:middle;}
+.hdr-tagline{font-family:var(--font-display);font-size:12px;color:var(--tx-mica);margin-top:1px;letter-spacing:0.005em;}
+.hdr-tagline em{font-style:italic;}
+.hdr-actions{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.hdr-btn{font-family:var(--font);font-size:11px;font-weight:500;padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--tx-ardoise);cursor:pointer;transition:all .15s;letter-spacing:0.01em;}
+.hdr-btn:hover{background:var(--tx-brume);border-color:var(--tx-mica);}
+.hdr-status{font-family:var(--mono);font-size:10px;color:var(--tx-mica);padding-left:4px;}
+/* Footer raffiné */
+.tx-footer{margin-top:16px;padding:16px 4px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;font-family:var(--font);font-size:11px;color:var(--tx-mica);letter-spacing:0.01em;}
+.tx-footer .tx-footer-brand{font-family:var(--font-display);font-size:13px;color:var(--tx-ardoise);font-weight:500;}
+.tx-footer .tx-footer-sources{flex:1;text-align:center;font-size:10px;}
+.tx-footer .tx-footer-stats{font-family:var(--mono);font-size:10px;}
+.tx-footer a{color:var(--tx-tyrrhenien);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s;}
+.tx-footer a:hover{border-bottom-color:var(--tx-tyrrhenien);}
+/* Responsive header */
+@media (max-width:768px){
+  .hdr{flex-wrap:wrap;gap:10px;padding:10px 0;}
+  .hdr-actions{gap:6px;width:100%;justify-content:flex-start;}
+  .hdr-btn{padding:5px 10px;font-size:10px;}
+  .hdr-status{display:none;}
+  .tx-footer{flex-direction:column;text-align:center;gap:8px;}
+  .tx-footer .tx-footer-sources{text-align:center;}
+}
+/* === fin Tellux v6 design === */
+/* === Tellux v6 design — Vague 2 (modes, boutons, légende) === */
+
+/* Restyle .lbtn cohérent palette — préserve les variantes .on-* qui ont !important */
+.lbtn{
+  font-family:var(--font);
+  font-size:11px;
+  font-weight:500;
+  padding:6px 11px;
+  border-radius:6px;
+  border:1px solid var(--border);
+  background:var(--tx-pierre);
+  color:var(--tx-ardoise);
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  transition:all .15s;
+  white-space:nowrap;
+  letter-spacing:0.005em;
+}
+.lbtn:hover{
+  background:var(--tx-brume);
+  border-color:var(--tx-mica);
+}
+.lbtn:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* Bouton "comprends — accéder" du disclaimer */
+.d-btn{
+  font-family:var(--font);
+  font-size:13px;
+  font-weight:600;
+  padding:10px 22px;
+  border-radius:6px;
+  border:none;
+  background:var(--tx-maquis);
+  color:var(--tx-pierre);
+  cursor:pointer;
+  letter-spacing:0.01em;
+  transition:all .15s;
+}
+.d-btn:hover{background:#365130;}
+
+/* Barre flottante "layers" sur la carte — refonte palette */
+.map-wrap .layers{
+  background:rgba(245,240,231,0.96)!important;
+  border:1px solid var(--border)!important;
+  border-radius:8px!important;
+  box-shadow:0 4px 16px rgba(31,35,41,.08)!important;
+}
+.map-wrap .op-row{
+  background:rgba(245,240,231,0.96)!important;
+  border:1px solid var(--border)!important;
+  border-radius:8px!important;
+  box-shadow:0 2px 10px rgba(31,35,41,.06)!important;
+}
+
+/* === Légende dynamique en bas-gauche de la carte === */
+.tx-legend{
+  position:absolute;
+  bottom:12px;
+  left:12px;
+  z-index:1000;
+  background:rgba(245,240,231,0.95);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:10px 12px;
+  box-shadow:0 4px 16px rgba(31,35,41,.10);
+  font-family:var(--font);
+  font-size:11px;
+  color:var(--tx-ardoise);
+  max-width:240px;
+  display:none;
+  backdrop-filter:blur(4px);
+}
+.tx-legend.visible{display:block;}
+.tx-legend-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:6px;
+  padding-bottom:5px;
+  border-bottom:1px solid var(--border);
+}
+.tx-legend-title{
+  font-family:var(--font-display);
+  font-size:13px;
+  font-weight:500;
+  color:var(--tx-ardoise);
+}
+.tx-legend-close{
+  background:none;
+  border:none;
+  color:var(--tx-mica);
+  cursor:pointer;
+  font-size:14px;
+  padding:0 4px;
+  line-height:1;
+}
+.tx-legend-close:hover{color:var(--tx-ardoise);}
+.tx-legend-row{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin:3px 0;
+  line-height:1.4;
+}
+.tx-legend-swatch{
+  width:14px;
+  height:10px;
+  border-radius:2px;
+  flex-shrink:0;
+  border:1px solid rgba(31,35,41,0.15);
+}
+.tx-legend-unit{
+  font-family:var(--mono);
+  font-size:10px;
+  color:var(--tx-mica);
+  margin-top:5px;
+  padding-top:5px;
+  border-top:1px solid var(--border);
+}
+.tx-legend-source{
+  font-size:9px;
+  color:var(--tx-mica);
+  font-style:italic;
+  margin-top:3px;
+}
+
+/* Popups Leaflet — palette cohérente */
+.leaflet-popup-content-wrapper{
+  background:var(--tx-pierre)!important;
+  color:var(--tx-ardoise)!important;
+  border-radius:8px!important;
+  box-shadow:0 8px 24px rgba(31,35,41,.15)!important;
+  border:1px solid var(--border)!important;
+}
+.leaflet-popup-tip{
+  background:var(--tx-pierre)!important;
+}
+.leaflet-popup-content{
+  font-family:var(--font)!important;
+  font-size:12px!important;
+  color:var(--tx-ardoise)!important;
+  line-height:1.5!important;
+  margin:12px 14px!important;
+}
+.leaflet-popup-content b,
+.leaflet-popup-content strong{
+  font-family:var(--font-display);
+  font-weight:500;
+}
+.leaflet-popup-content details{
+  margin-top:8px;
+  padding-top:6px;
+  border-top:1px solid var(--border);
+}
+.leaflet-popup-content details summary{
+  cursor:pointer;
+  color:var(--tx-tyrrhenien);
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:0.01em;
+}
+
+/* === fin Tellux v6 design Vague 2 === */
+/* === Disclaimer refondu — vague 3 === */
+.disclaimer-overlay{
+  background:rgba(31,35,41,0.65)!important;
+  backdrop-filter:blur(6px);
+}
+.disclaimer-box{
+  background:var(--tx-pierre)!important;
+  border:1px solid var(--border)!important;
+  border-radius:14px!important;
+  max-width:680px!important;
+  width:100%!important;
+  padding:36px 40px 32px!important;
+  max-height:88vh!important;
+  overflow-y:auto!important;
+  box-shadow:0 20px 60px rgba(31,35,41,0.30)!important;
+  font-family:var(--font);
+}
+.disclaimer-box h2{
+  font-family:var(--font-display)!important;
+  font-size:26px!important;
+  font-weight:500!important;
+  letter-spacing:-0.015em;
+  text-align:center;
+  margin-bottom:8px;
+  color:var(--tx-ardoise);
+}
+.disclaimer-box .d-lead{
+  text-align:center;
+  font-size:14px;
+  color:var(--tx-mica);
+  line-height:1.55;
+  margin-bottom:24px;
+  max-width:540px;
+  margin-left:auto;
+  margin-right:auto;
+}
+.disclaimer-box .d-lead em{
+  font-family:var(--font-display);
+  font-style:italic;
+  color:var(--tx-ardoise);
+}
+.d-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:14px;
+  margin:20px 0 18px;
+}
+.d-block{
+  background:var(--tx-brume);
+  border-radius:8px;
+  padding:14px 16px;
+  border-left:3px solid var(--tx-maquis);
+}
+.d-block-title{
+  font-family:var(--font-display);
+  font-size:13px;
+  font-weight:500;
+  color:var(--tx-ardoise);
+  margin-bottom:5px;
+}
+.d-block-text{
+  font-size:11px;
+  color:#3D424A;
+  line-height:1.55;
+}
+.d-block-text strong{color:var(--tx-ardoise)}
+.disclaimer-box .d-foot{
+  text-align:center;
+  font-size:11px;
+  color:var(--tx-mica);
+  margin:18px 0 22px;
+  font-style:italic;
+}
+.disclaimer-box .d-foot a{
+  color:var(--tx-tyrrhenien);
+  text-decoration:none;
+  border-bottom:1px solid currentColor;
+  font-style:normal;
+}
+.disclaimer-box .d-btn{
+  display:block;
+  margin:0 auto;
+  font-family:var(--font);
+  font-size:13px;
+  font-weight:600;
+  padding:12px 28px;
+  border-radius:8px;
+  border:none;
+  background:var(--tx-ardoise);
+  color:var(--tx-pierre);
+  cursor:pointer;
+  letter-spacing:0.01em;
+  transition:all .15s;
+}
+.disclaimer-box .d-btn:hover{
+  background:#3D424A;
+  transform:translateY(-1px);
+}
+@media (max-width:640px){
+  .disclaimer-box{padding:24px 22px!important;}
+  .disclaimer-box h2{font-size:22px!important;}
+  .d-grid{grid-template-columns:1fr;gap:10px;}
+}
+/* === fin disclaimer refondu === */
+
+/* === Modale À propos — typo cohérente === */
+#about-modal h3{font-family:var(--font-display)!important;font-size:22px!important;font-weight:500!important;color:var(--tx-ardoise)!important;letter-spacing:-0.01em;}
+#about-modal h4{font-family:var(--font-display)!important;font-weight:500!important;color:var(--tx-ardoise)!important;letter-spacing:-0.005em;margin-top:16px!important;}
+#about-modal p{font-size:12px;color:#3D424A;line-height:1.6;}
+#about-modal a{color:var(--tx-tyrrhenien)!important;text-decoration:none;border-bottom:1px solid currentColor;}
+#about-modal > div{background:var(--tx-pierre)!important;border:1px solid var(--border)!important;border-radius:14px!important;}
+
+/* === Bande sources institutionnelles === */
+.tx-sources{
+  margin-top:24px;
+  padding:18px 0 6px;
+  border-top:1px solid var(--border);
+  text-align:center;
+}
+.tx-sources-label{
+  font-family:var(--font);
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:0.12em;
+  color:var(--tx-mica);
+  font-weight:500;
+  margin-bottom:12px;
+}
+.tx-sources-list{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:8px 14px;
+}
+.tx-source{
+  font-family:var(--mono);
+  font-size:10px;
+  color:var(--tx-ardoise);
+  padding:5px 11px;
+  background:var(--tx-brume);
+  border-radius:4px;
+  border:1px solid transparent;
+  transition:all .15s;
+  cursor:help;
+  letter-spacing:0.01em;
+}
+.tx-source:hover{
+  border-color:var(--tx-mica);
+  background:var(--tx-pierre);
+}
+@media (max-width:640px){
+  .tx-sources-list{gap:6px 10px;}
+  .tx-source{font-size:9px;padding:4px 9px;}
+}
+/* === fin sources === */
+
+
+body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:16px;max-width:1100px;margin:0 auto;font-size:15px;line-height:1.5;}
+h1,h2,.tx-display{font-family:var(--font-display);font-weight:500;letter-spacing:-0.01em;}
+h3,h4,h5{font-family:var(--font);font-weight:600;}
+.tx-num,.tx-score,.tx-coord,.mono{font-family:var(--mono);}
+.tx-micro{font-family:var(--font);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--tx-mica);}
 .hdr{display:flex;align-items:center;gap:12px;padding:10px 0 10px;border-bottom:1px solid var(--border);margin-bottom:12px;}
 .logo-mark{width:32px;height:32px;border-radius:8px;background:var(--acc);display:flex;align-items:center;justify-content:center;}
 .logo-mark svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;}
@@ -44,11 +422,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:16px;m
 .db-dot.ok{background:var(--acc2);}
 .db-dot.err{background:var(--danger);}
 .db-stat{color:var(--tx3);margin-left:auto;display:flex;gap:16px;}
-.pbar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;}
-.pc{background:var(--bg2);border-radius:var(--r);padding:8px 12px;border:1px solid var(--border);}
-.pc-l{font-family:var(--mono);font-size:10px;color:var(--tx3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em;}
-.pc-v{font-size:14px;font-weight:500;}
-.pc-s{font-size:11px;color:var(--tx3);margin-top:2px;}
+.pbar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.pc{background:var(--tx-pierre);border-radius:8px;padding:12px 14px 11px;border:1px solid var(--border);transition:border-color .15s;display:flex;flex-direction:column;justify-content:space-between;min-height:72px;}
+.pc:hover{border-color:var(--tx-mica);}
+.pc-l{font-family:var(--font);font-size:9px;color:var(--tx-mica);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;font-weight:500;line-height:1.3;}
+.pc-v{font-family:var(--mono);font-size:20px;font-weight:500;color:var(--tx-ardoise);letter-spacing:-0.01em;line-height:1;}
+.pc-s{font-family:var(--font);font-size:10px;color:var(--tx-mica);margin-top:5px;font-style:italic;}
+@media (max-width:768px){
+  .pbar{grid-template-columns:repeat(2,1fr);}
+  .pc{min-height:64px;padding:10px 12px;}
+  .pc-v{font-size:18px;}
+}
 .mtabs{display:flex;gap:6px;margin-bottom:8px;align-items:center;}
 .mtab{font-family:var(--mono);font-size:11px;padding:5px 13px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--tx2);cursor:pointer;transition:all .15s;}
 .lbtn.on-intl{background:#fdf2f8;color:#e11d48;border-color:#f472b6;font-weight:500;}
@@ -371,49 +755,91 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:16px;m
 <!-- Disclaimer premier accès -->
 <div class="disclaimer-overlay" id="disclaimer-overlay" style="display:none">
   <div class="disclaimer-box">
-    <h2 style="font-size:18px">Tellux v5.6 — Cartographie EM & Patrimoine Mégalithique Corse</h2>
-    <p>Tellux est un outil de cartographie du champ électromagnétique en Corse, conçu pour l'exploration, la pédagogie et la science citoyenne. Les améliorations d'audit rigueur EM (avril 2026) renforcent la validité scientifique du modèle.</p>
-    
-    <div class="d-cat">✅ Données scientifiques validées (institutionnelles)</div>
-    <p><b>Champ magnétique</b> : IGRF-14 (BGS) · <b>Anomalies crustales</b> : EMAG2v3 (NOAA) · <b>Antennes</b> : 974 supports ANFR (DMS/ETRS89, mensuel) · <b>Géologie</b> : BRGM cartes 1/50k (02B, 2A) · <b>Activité solaire</b> : NOAA SWPC Kp index. Depuis avril 2025, l'ANFR publie un <a href="https://www.cartoradio.fr" target="_blank" style="color:var(--acc)">simulateur national d'exposition RF</a> — Tellux complète en couvrant magnétisme + mégalithes.</p>
-    
-    <div class="d-cat">🔬 Modèle semi-empirique — incertitudes documentées</div>
-    <p><b>Score piézo (0-100)</b> : combinaison quartz × stress × bonus failles (Ghilardi 2017) + radon (Giannoulopoulou 2022). Incertitude globale <b>±1-2 points</b>. Utiliser en <b>comparatif (A vs B)</b> plutôt qu'absolu. <b>Limitations</b> : courants HTA ordres de grandeur (pas temps réel), IGRF interpolation ±50-100 nT, EMAG2 résolution 3.7km, radon catégories géographiques. <a href="#" onclick="document.getElementById('methodology-panel').style.display='block'" style="color:var(--acc)">Voir détails méthodologie →</a></p>
-    
-    <div class="d-cat">🗺️ Failles tectoniques BRGM (nouveau avril 2026)</div>
-    <p>8 failles principales Corse (BRGM 1/50k, D'Anna 2019) intégrées. Mégalithes <3km de failles actives = bonus piézo (stress tectonique ↑). Justification : Ghilardi et al. 2017 corrélation failles/piézoélectricité.</p>
-    
-    <div class="d-cat">☢️ Zones radon catégorie 3 ASNR (nouveau avril 2026)</div>
-    <p>8 zones radon potentiel élevé (ASNR cartographie 2024) = massifs granitiques (uranium ↑). Mégalithes <5km de radon 3 = bonus piézo (granit = piézo élevé). Justification : Giannoulopoulou 2022 corrélation mégalithes/radon — hypothèse : populations anciennes sensibles champs EM naturels.</p>
-    
-    <div class="d-cat">⚠️ Contenus exploratoires — non validés scientifiquement</div>
-    <p>Réseaux géobiologiques (Hartmann, Curry, Bénker) = hypothèses non validées. Exclus du modèle prédictif pour éviter auto-confirmation. Biodynamique agricole = 83 hypothèses testables H1-H83 (voir corpus).</p>
-    
-    <div class="d-cat">📐 Simulations indicatives</div>
-    <p>Simulations d'impact (antennes, matériaux) = pédagogiques, incertitude > ±50%. Ne remplacent pas mesure terrain.</p>
-    
-    <div class="d-cat">🔒 Données personnelles & mesures crowdsourcées</div>
-    <p>Mesures contribuées stockées Supabase (GPS + metadata). Zéro données nominatives. Coordonnées arrondissables sur demande. Données radon/failles = publiques ASNR/BRGM.</p>
-    
-    <div class="d-cat">📚 Corpus scientifique complet</div>
-    <p>130+ études peer-reviewed intégrées (2013-2026) : agriculture régénérative, EM, cycles lunaires, archéoastronomie, géologie. Voir <a href="https://github.com/dellahstella/tellux" target="_blank" style="color:var(--acc)">GitHub tellux</a>.</p>
-    
+    <div class="d-brand">
+      <svg viewBox="0 0 220 280" width="56" height="71" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto 10px">
+        <defs>
+          <radialGradient id="dg" cx="50%" cy="55%" r="55%"><stop offset="0%" stop-color="#F5F0E7"/><stop offset="40%" stop-color="#E8D4A8" stop-opacity="0.85"/><stop offset="75%" stop-color="#C28533" stop-opacity="0.35"/><stop offset="100%" stop-color="#C28533" stop-opacity="0"/></radialGradient>
+          <linearGradient id="dt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#F5F0E7"/><stop offset="100%" stop-color="#E8D4A8"/></linearGradient>
+        </defs>
+        <ellipse cx="110" cy="178" rx="95" ry="55" fill="url(#dg)" opacity="0.45"/>
+        <path d="M 32 165 Q 32 248 110 252 Q 188 248 188 165 Z" fill="url(#dg)" opacity="0.25"/>
+        <path d="M 32 165 Q 32 248 110 252 Q 188 248 188 165 Z" fill="none" stroke="url(#dt)" stroke-width="2.2" opacity="0.95"/>
+        <path d="M 35 38 L 35 56 L 50 56 Q 65 56 75 60 Q 85 64 88 76 L 88 235 Q 88 248 96 250 L 124 250 Q 132 248 132 235 L 132 76 Q 135 64 145 60 Q 155 56 170 56 L 185 56 L 185 38 Z" fill="url(#dt)"/>
+      </svg>
+    </div>
+    <h2>Bienvenue sur Tellux</h2>
+    <p class="d-lead"><em>Mesurer le vivant.</em> Une plateforme de cartographie électromagnétique et de patrimoine mégalithique de la Corse, conçue pour l'exploration et la science citoyenne.</p>
+
+    <div class="d-grid">
+      <div class="d-block">
+        <div class="d-block-title">Données scientifiques</div>
+        <div class="d-block-text">IGRF-14 · EMAG2v3 · WDMAM · CHAOS-7 · BRGM 1/50&nbsp;000 · ANFR CartoRadio · NOAA SWPC · EDF SEI · Dragon Project.</div>
+      </div>
+      <div class="d-block">
+        <div class="d-block-title">Modèle semi-empirique</div>
+        <div class="d-block-text">88 hypothèses testables, dont une trentaine auto-vérifiées. Le score Indice Tellux est <strong>indicatif</strong> et s'interprète en comparatif. Incertitude documentée dans la méthodologie.</div>
+      </div>
+      <div class="d-block">
+        <div class="d-block-title">Mesures terrain</div>
+        <div class="d-block-text">Saisies en aveugle parallèle pour le jeu de validation. Les contributions hors protocole sont conservées comme observations indicatives.</div>
+      </div>
+      <div class="d-block">
+        <div class="d-block-title">Vie privée</div>
+        <div class="d-block-text">Aucune donnée nominative collectée. Les mesures contribuées stockent uniquement coordonnées GPS et métadonnées techniques.</div>
+      </div>
+    </div>
+
+    <p class="d-foot">Tellux ne remplace pas une mesure professionnelle. <a href="#" onclick="event.preventDefault();dismissDisclaimer();document.getElementById('methodology-panel').style.display='block';">Méthodologie complète →</a></p>
+
     <button class="d-btn" onclick="dismissDisclaimer()">J'ai compris — accéder à Tellux</button>
   </div>
 </div>
 
 <div class="hdr">
-  <div class="logo-mark">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3C12 3 8 8 8 12s4 9 4 9"/><path d="M3 12h18"/><path d="M5 7.5C7.5 9 10 9.5 12 9.5s4.5-.5 7-2"/><path d="M5 16.5c2.5-1.5 5-2 7-2s4.5.5 7 2"/></svg>
+  <a href="#" class="logo-mark" id="tx-logo" title="Tellux — Mesurer le vivant" style="text-decoration:none">
+    <svg viewBox="0 0 220 280" xmlns="http://www.w3.org/2000/svg" aria-label="Tellux — Mesurer le vivant">
+      <defs>
+        <radialGradient id="tx-glow" cx="50%" cy="55%" r="55%">
+          <stop offset="0%" stop-color="#F5F0E7" stop-opacity="1"/>
+          <stop offset="40%" stop-color="#E8D4A8" stop-opacity="0.85"/>
+          <stop offset="75%" stop-color="#C28533" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#C28533" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="tx-tgrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#F5F0E7"/>
+          <stop offset="50%" stop-color="#F5F0E7"/>
+          <stop offset="100%" stop-color="#E8D4A8"/>
+        </linearGradient>
+        <clipPath id="tx-hemiclip">
+          <ellipse cx="110" cy="170" rx="78" ry="82"/>
+        </clipPath>
+      </defs>
+      <!-- Halo lumineux -->
+      <ellipse cx="110" cy="178" rx="95" ry="55" fill="url(#tx-glow)" opacity="0.45"/>
+      <!-- Hémisphère (coupe de terre / bouclier inversé) -->
+      <path d="M 32 165 Q 32 248 110 252 Q 188 248 188 165 Z" fill="url(#tx-glow)" opacity="0.25"/>
+      <path d="M 32 165 Q 32 248 110 252 Q 188 248 188 165 Z" fill="none" stroke="url(#tx-tgrad)" stroke-width="1.8" opacity="0.95"/>
+      <!-- Rayons telluriques (lever de soleil) -->
+      <g clip-path="url(#tx-hemiclip)" opacity="0.7">
+        <line x1="110" y1="252" x2="60" y2="180" stroke="url(#tx-tgrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+        <line x1="110" y1="252" x2="78" y2="170" stroke="url(#tx-tgrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+        <line x1="110" y1="252" x2="95" y2="160" stroke="url(#tx-tgrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+        <line x1="110" y1="252" x2="125" y2="160" stroke="url(#tx-tgrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+        <line x1="110" y1="252" x2="142" y2="170" stroke="url(#tx-tgrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+        <line x1="110" y1="252" x2="160" y2="180" stroke="url(#tx-tgrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+      </g>
+      <!-- T serif majestueux (style Trajan) qui pénètre l'hémisphère -->
+      <path d="M 35 38 L 35 56 L 50 56 Q 65 56 75 60 Q 85 64 88 76 L 88 235 Q 88 248 96 250 L 124 250 Q 132 248 132 235 L 132 76 Q 135 64 145 60 Q 155 56 170 56 L 185 56 L 185 38 Z" fill="url(#tx-tgrad)"/>
+    </svg>
+  </a>
+  <div class="hdr-title">
+    <span class="logo-text">Tellux</span><span class="logo-ver">v5.9</span>
+    <div class="hdr-tagline"><em>Mesurer le vivant</em> · Corse</div>
   </div>
-  <div><span class="logo-text">Tellux</span><span class="logo-ver">v5.1</span>
-    <div style="font-size:10px;color:var(--tx3);margin-top:1px;letter-spacing:.02em">Cartographie EM & patrimoine mégalithique · Corse</div>
-  </div>
-  <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
-    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Mode clair/sombre">🌙</button>
-    <button onclick="toggleMethodology()" style="font-size:10px;padding:3px 10px;border-radius:14px;border:1px solid var(--border);background:var(--bg2);color:var(--tx3);cursor:pointer;font-family:var(--mono)">📖 Méthodologie</button>
-    <button onclick="document.getElementById('about-modal').style.display='flex';try{_unlockBadge('about');}catch(e){}" style="font-size:10px;padding:3px 10px;border-radius:14px;border:1px solid var(--border);background:var(--bg2);color:var(--tx3);cursor:pointer;font-family:var(--mono)">ℹ À propos</button>
-    <span style="font-family:var(--mono);font-size:10px;color:var(--tx3)" id="hdr-status">chargement…</span>
+  <div class="hdr-actions">
+<button class="hdr-btn" onclick="toggleMethodology()" title="Méthodologie & sources">Méthodologie</button>
+    <button class="hdr-btn" onclick="document.getElementById('about-modal').style.display='flex';try{_unlockBadge('about');}catch(e){}" title="À propos du projet">À propos</button>
+    <span class="hdr-status" id="hdr-status">chargement…</span>
   </div>
 </div>
 
@@ -434,9 +860,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:16px;m
       <p>Modèles mondiaux intégrés : IGRF-14 (BGS), EMAG2v3 (NOAA), WDMAM v2 (IAGA/CGMW). Modèle séculaire CHAOS-7 (DTU Space, données Swarm ESA) reflété dans IGRF-14. — 116 sites mégalithiques et naturels (GPS vérifiés t4t35.fr, Megalithic Portal, OSM) · 314 églises romanes (corpus Moracchini-Mazel) · 29 mesures ANFR certifiées · 46 sites de calibration internationale · 64 hypothèses testables.</p>
       <h4 style="margin-top:14px;font-size:13px;color:var(--tx)">Avertissement</h4>
       <p>Les réseaux géobiologiques (Hartmann, Curry) sont exclus du modèle prédictif. Les simulations sont indicatives (±50%). Tellux ne remplace pas une mesure terrain professionnelle.</p>
-      <h4 style="margin-top:14px;font-size:13px;color:var(--tx)">Contact & Contributions</h4>
-      <p><b>Configuration Supabase</b> : La table <code>antennas_corse</code> nécessite une policy RLS. Exécuter dans le SQL Editor :<br><code style="font-size:10px">DROP POLICY IF EXISTS "anon read" ON antennas_corse; CREATE POLICY "anon read" ON antennas_corse FOR SELECT TO anon USING (true);</code></p>
-      <p>Projet open source · Déploiement : <a href="https://tellux.pages.dev/" target="_blank" style="color:var(--acc)">tellux.pages.dev</a> · Données : Supabase · Contributions terrain bienvenues via le bouton "+ Mesure".</p>
+      <h4 style="margin-top:14px;font-size:13px;color:var(--tx-ardoise);font-family:var(--font-display);font-weight:500">Contact &amp; Contributions</h4>
+      <p>Tellux est un projet de recherche ouvert à la contribution citoyenne. Les mesures terrain peuvent être soumises via le bouton « + Mesure » sur la carte. Une lettre de soutien, un retour d'usage ou une proposition d'étude sont les bienvenus.</p>
+      <p>Projet open source · Déploiement : <a href="https://tellux.pages.dev/" target="_blank" style="color:var(--tx-tyrrhenien)">tellux.pages.dev ↗</a></p>
     </div>
   </div>
 </div>
@@ -447,6 +873,22 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:16px;m
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
   <h3 style="margin:0;color:var(--tx);font-size:14px;font-weight:600">🔬 Méthodologie & Audit Rigueur EM v5.7</h3>
   <button onclick="toggleMethodology()" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--tx3)">✕</button>
+</div>
+
+<div style="margin:18px 0 14px 0;padding:14px;background:var(--tx-brume);border-radius:8px;border-left:3px solid var(--tx-maquis)">
+  <h4 style="margin:0 0 10px 0;font-family:var(--font-display);font-size:14px;font-weight:500;color:var(--tx-ardoise)">Protocole de mesure terrain</h4>
+  <p style="margin:6px 0;font-size:11px;color:var(--tx-ardoise);line-height:1.6">
+    Toute mesure terrain destinée à valider ou enrichir le modèle Tellux suit le <strong>protocole de mesure en aveugle parallèle</strong>. Deux opérateurs indépendants effectuent la mesure simultanément sur le même point sans communiquer pendant la prise. Les écarts sont comparés a posteriori pour estimer la dispersion expérimentale.
+  </p>
+  <p style="margin:6px 0;font-size:11px;color:var(--tx-ardoise);line-height:1.6">
+    <strong>Phase 1 (consolidation) :</strong> auto-mesures par le porteur du projet selon ce protocole. <strong>Phase 2 (validation) :</strong> mesures par des tiers extérieurs (associations CEM, laboratoires indépendants) pour la crédibilité scientifique.
+  </p>
+  <p style="margin:6px 0;font-size:11px;color:var(--tx-ardoise);line-height:1.6">
+    <strong>Matériel de référence :</strong> Trifield TF2 (champs B, E, RF). Trois points par site, cinq mesures par point, espacement 1 m. Conditions notées : météo, horaire (variation diurne Sq), index Kp/Dst.
+  </p>
+  <p style="margin:6px 0 0 0;font-size:10px;color:var(--tx-mica);font-style:italic">
+    Les mesures saisies via le bouton « + Mesure » sans respect de ce protocole sont conservées comme observations indicatives, séparément du jeu de validation.
+  </p>
 </div>
 
 <p style="margin:8px 0;"><strong>Score piézoélectricité (0-100) — Bishop 1981 + Eppelbaum 2017 + Ghilardi 2017 + Giannoulopoulou 2022 :</strong></p>
@@ -617,17 +1059,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:16px;m
     </div>
   </div>
 
-  <!-- 5+6. AGRONOMIE & OUTILS -->
+  <!-- 5. AGRONOMIE & OUTILS -->
   <div class="accordion-cat">
     <div class="accordion-cat-header" onclick="toggleAccordion(this)">
       <span class="accordion-cat-icon">▶</span>
-      <span>🌱 Agronomie & Outils</span>
+      <span>🌱 Agronomie &amp; Outils</span>
     </div>
     <div class="accordion-cat-content">
       <button class="lbtn" id="b-perma" title="Diagnostic parcelle EM, cultures adaptées, recommandations" onclick="openPerma()"><span style="font-size:10px">🌱</span>Diagnostic agronomie</button>
       <button class="lbtn" id="b-aoc" title="Zones AOC/IGP Corse — Patrimonio, Ajaccio, Muscat Cap Corse" onclick="tog('aoc','on-aoc',this)"><span class="sq" style="background:#f97316"></span>AOC/IGP vins</button>
-      <button class="lbtn" disabled style="opacity:0.4;cursor:not-allowed" title="Données en cours d'intégration"><span class="sq" style="background:#047857"></span>BD Forêt <span style="font-size:9px;color:var(--tx3)">(bientôt)</span></button>
-      <button class="lbtn" disabled style="opacity:0.4;cursor:not-allowed" title="Données en cours d'intégration"><span class="sq" style="background:#c4b5fd"></span>Parcelles RPG <span style="font-size:9px;color:var(--tx3)">(bientôt)</span></button>
+      <button class="lbtn" disabled style="opacity:0.4;cursor:not-allowed"><span class="sq" style="background:#047857"></span>BD Forêt <span style="font-size:9px;color:var(--tx3)">(bientôt)</span></button>
+      <button class="lbtn" disabled style="opacity:0.4;cursor:not-allowed"><span class="sq" style="background:#c4b5fd"></span>Parcelles RPG <span style="font-size:9px;color:var(--tx3)">(bientôt)</span></button>
       <div style="height:1px;background:var(--border);margin:2px 0"></div>
       <button class="lbtn" id="b-geo-mode" title="Diagnostic terrain & correction" onclick="openProspecteur()"><span style="font-size:10px">🧭</span>Diagnostic terrain</button>
       <button onclick="togSim(this)" class="lbtn" id="b-sim" title="Simuler impact d'antenne, bâtiment, blindage"><span style="font-size:11px">🏗</span>Simulateur bâtiment</button>
@@ -643,6 +1085,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:16px;m
 </div>
 
 <div id="map"></div>
+<div class="tx-legend" id="tx-legend">
+  <div class="tx-legend-header">
+    <span class="tx-legend-title" id="tx-legend-title">Légende</span>
+    <button class="tx-legend-close" onclick="document.getElementById('tx-legend').classList.remove('visible')" title="Masquer">✕</button>
+  </div>
+  <div id="tx-legend-body"></div>
+</div>
 <!-- Panneau hypothèses compact — inside map-wrap for absolute positioning -->
 <div class="hypo-panel" id="hypo-panel">
   <div style="display:flex;border-bottom:1px solid var(--border);background:var(--bg2)">
@@ -935,43 +1384,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:16px;m
   <!-- TAB 1: Diagnostic parcelle -->
   <div id="perma-diag-tab" style="display:block">
 
-  <!-- Itinéraires techniques -->
-  <div style="background:var(--bg2);border-radius:var(--r);padding:10px 12px;margin-bottom:10px">
-    <div style="font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Itinéraires techniques selon le profil EM</div>
-    <div style="font-size:11px;color:var(--tx2);line-height:1.6" id="perma-itin">
-      <div style="margin-bottom:6px"><b>🟢 Zone calme (score &lt;3)</b> — Grandes parcelles couvert permanent</div>
-      <div style="font-size:10px;color:var(--tx3);margin-left:12px;margin-bottom:8px">
-        Idéal pour : maraîchage bio, semences, plantes médicinales, apiculture<br>
-        Conservation sols : couvert permanent (trèfle, luzerne), BRF, non-labour<br>
-        Associations : tomate-basilic-oeillet d\'Inde, courge-maïs-haricot (milpa)<br>
-        Bonus piézo : les zones granitiques calmes amplifient les courants telluriques naturels favorables à l'enracinement
-      </div>
-      <div style="margin-bottom:6px"><b>🟡 Zone modérée (score 3-6)</b> — Petites parcelles permaculture</div>
-      <div style="font-size:10px;color:var(--tx3);margin-left:12px;margin-bottom:8px">
-        Idéal pour : vergers, agroforesterie, cultures associées sous couvert arboré<br>
-        Conservation sols : haies brise-vent (ciste, myrte, arbousier), mulch épais<br>
-        Correction EM : pyramides cuivre (Agnihotra/Homa), eau dynamisée, cornes de quartz (500P)<br>
-        Orientation : aligner les rangs perpendiculairement aux lignes HTA si présentes
-      </div>
-      <div style="margin-bottom:6px"><b>🔴 Zone perturbée (score &gt;6)</b> — Cultures robustes uniquement</div>
-      <div style="font-size:10px;color:var(--tx3);margin-left:12px;margin-bottom:8px">
-        Éviter : semences fines, plantes sensibles, abeilles<br>
-        Possible : vignes (Niellucciu, Sciaccarellu résistants), oliviers, châtaigniers<br>
-        Correction : haie dense (3 rangs), grillage cuivre enterré, pierres granitiques en bordure<br>
-        Eau : dynamiser par vortex (Schauberger) ou passage sur quartz avant irrigation
-      </div>
-    </div>
+  <!-- Instruction -->
+  <div style="background:var(--acc3);border-radius:var(--r);padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--acc);text-align:center">
+    🗺️ <b>Cliquez sur la carte</b> pour analyser une parcelle
   </div>
 
-  <!-- Corpus permaculture -->
+  <!-- Zone résultat diagnostic — remplie par runPermaDiag() -->
+  <div id="perma-results" style="font-size:11px;color:var(--tx2);line-height:1.6;margin-bottom:10px"></div>
+
+  <!-- Corpus peer-reviewed uniquement -->
   <div style="background:var(--acc3);border-radius:var(--r);padding:10px 12px;margin-bottom:10px">
-    <div style="font-family:var(--mono);font-size:9px;color:var(--acc);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">📖 Corpus — EM & Agriculture</div>
-    <div style="font-size:10px;color:var(--tx2);line-height:1.5">
-      <b>Champs électriques et croissance</b> — Murr (1965) : champs DC 1-5 kV/m accélèrent la germination de 20-30%. Sidaway (1966) : stimulation électroculture sur avoine +30%. Plusieurs réplications modernes confirment l'effet à faible intensité. (Vasilevski, 2003 — revue)<br><br>
-      <b>Pyramides cuivre (Homa farming)</b> — Berk & Selen (2005) : géométrie pyramidale concentre le champ EM au sommet. L'Agnihotra (rituel feu dans pyramide cuivre) réduit les particules pathogènes (Berk 2005). Rajimwale (2015) : rendement +15-25% sur riz en Homa farming vs témoin sur 3 saisons.<br><br>
-      <b>Eau dynamisée</b> — Schauberger (1930s) : l'eau vortexée modifie sa structure cristalline (Emoto 2004, controversé). Coats (1995, "Living Energies") : irrigation vortexée améliore germination dans des essais non-répliqués. Lorenzen (1999) : eau structurée par champ magnétique — brevets US.<br><br>
-      <b>Magnétisme et racines</b> — Maffei (2014, Trends in Plant Science) : les racines de plantes perçoivent le champ magnétique (magnétoréception végétale). Galland & Pazur (2005) : réponse physiologique des plantes au champ géomagnétique documentée. Effet maximal à 40-60 µT (niveau IGRF Corse = 46 µT ✓).<br><br>
-      <b>Électroculture traditionnelle corse</b> — Pratiques ancestrales : pierres levées dans jardins potagers (granit quartzifère local), orientation solstice d'été pour optimiser photopériode + exposition piézoélectrique sous contrainte thermique diurne.
+    <div style="font-family:var(--mono);font-size:9px;color:var(--acc);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">📖 Études peer-reviewed — EM &amp; Agriculture</div>
+    <div style="font-size:10px;color:var(--tx2);line-height:1.6">
+      <b>Magnétoréception végétale</b> — Maffei (2014, <i>Trends in Plant Science</i>) : les racines perçoivent le champ magnétique. Stimulation à 40-60 µT = niveau IGRF Corse (46 µT ✓).<br><br>
+      <b>Impact HTA sur microbiome sol</b> — Hermans (2023, <i>iScience</i>) : diversité microbienne −40% à &lt;100m d'une ligne HTB. Baydiili (2025) : biomasse microbienne −21,8% sous lignes HTA.<br><br>
+      <b>Germination &amp; électroculture</b> — Murr (1965) : champs DC +20-30% germination. Jayakrishna (2025, <i>ACS Agric. Sci. Technol.</i>) : 4 mécanismes EF/MF documentés.<br><br>
+      <b>Fréquences de Schumann</b> — Mshenskaya (2023) : blé exposé 7,83 Hz = +18% germination. Corrélé avec zones score Tellux &lt;3.<br><br>
+      <b>Terroir &amp; substrat</b> — Giannoulopoulou (2022) : mégalithes corses sur granit piézoélectrique = même substrat que vignobles AOC. H64 : adaptation millénaire des variétés locales.
     </div>
   </div>
 
@@ -1393,6 +1822,8 @@ async function fetchEnv(url,timeout=8000){
 }
 
 const map=L.map('map').setView([42.0,9.0],8);
+map.setMaxBounds([[40.5,7.5],[43.5,10.5]]);
+map.options.maxBoundsViscosity=1.0;
 let _tileBase=L.tileLayer(DARK?'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{attribution:'© CartoDB © OSM',maxZoom:18,zIndex:1}).addTo(map);
 const wmsGeo=L.tileLayer.wms('https://geoservices.brgm.fr/geologie',{layers:'GEOLOGIE',format:'image/png',transparent:true,opacity:0.6,zIndex:2});
 const wmsHyd=L.tileLayer.wms('https://geoservices.brgm.fr/risques',{layers:'REMNAPPE_FR',format:'image/png',transparent:true,opacity:0.55,zIndex:3,maxNativeZoom:11});
@@ -1449,7 +1880,8 @@ const LEGEND_HTML={
   egl:'<div class="leg-block"><b class="leg-title">Églises romanes</b><div class="leg-row"><span style="display:inline-block;position:relative;width:11px;height:11px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:4.5px;top:0;width:2px;height:11px;background:#d97706;border-radius:1px"></span><span style="position:absolute;top:3px;left:0;width:11px;height:2px;background:#d97706;border-radius:1px"></span></span>Granit piézo (biotite/alcalin)</div><div class="leg-row"><span style="display:inline-block;position:relative;width:11px;height:11px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:4.5px;top:0;width:2px;height:11px;background:#b45309;border-radius:1px"></span><span style="position:absolute;top:3px;left:0;width:11px;height:2px;background:#b45309;border-radius:1px"></span></span>Granit standard</div><div class="leg-row"><span style="display:inline-block;position:relative;width:11px;height:11px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:4.5px;top:0;width:2px;height:11px;background:#64748b;border-radius:1px"></span><span style="position:absolute;top:3px;left:0;width:11px;height:2px;background:#64748b;border-radius:1px"></span></span>Schiste</div><div class="leg-row"><span style="display:inline-block;position:relative;width:11px;height:11px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:4.5px;top:0;width:2px;height:11px;background:#78716c;border-radius:1px"></span><span style="position:absolute;top:3px;left:0;width:11px;height:2px;background:#78716c;border-radius:1px"></span></span>Calcaire/autre</div><div class="leg-src">Moracchini-Mazel · Phase 2</div></div>',
   res:'<div class="leg-block"><b class="leg-title">Réseau électrique</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>Ligne HTA 20kV</div><div class="leg-row"><span style="display:inline-block;width:14px;height:3px;background:#5c2000;vertical-align:middle;margin-right:4px"></span>Ligne HTB 63-225kV</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Hydraulique</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Thermique</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Interconnexion</div><div class="leg-src">EDF SEI · Supabase · OSM</div></div>',
   sit2:'<div class="leg-block"><b class="leg-title">Sites &amp; Ouvrages</b><div class="leg-row"><span style="display:inline-block;width:9px;height:9px;background:#5c7a3a;transform:rotate(45deg);vertical-align:middle;margin-right:6px"></span>Site remarquable</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#1a4b8c;vertical-align:middle;margin-right:4px"></span>Hydraulique</div><div class="leg-src">9 sites · 6 barrages</div></div>',
-    bt:'<div class="leg-block"><b class="leg-title">Réseau BT</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>BT aérien</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>BT souterrain</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 12</span></div><div class="leg-src">EDF SEI open data</div></div>'
+    bt:'<div class="leg-block"><b class="leg-title">Réseau BT</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>BT aérien</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>BT souterrain</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 12</span></div><div class="leg-src">EDF SEI open data</div></div>',
+  aoc:'<div class="leg-block"><b class="leg-title">AOC/AOP Corse</b><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#99000033;border:2px solid #991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Cru — Patrimonio · Ajaccio</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#ea580c33;border:2px solid #ea580c;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Village — Calvi · Sartène · Figari</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#fbbf2433;border:2px solid #fbbf24;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Muscat Cap Corse · Régionale</div><div class="leg-src">INAO — H64 terroir-EM</div></div>'
 };
 
 // Contraintes par instrument
@@ -1505,7 +1937,7 @@ function validateContrib(){
 function updateLegendPanel(){
   if(!_legendCtrl){_legendCtrl=L.control({position:'bottomright'});_legendCtrl.onAdd=function(){const d=L.DomUtil.create('div');d.id='tellux-leg-panel';d.style.cssText='background:rgba(247,248,250,.97);border:1px solid rgba(0,0,0,.08);border-radius:10px;font-family:DM Sans,sans-serif;font-size:10px;max-width:170px;box-shadow:0 2px 10px rgba(0,0,0,.1);overflow:hidden;display:none';L.DomEvent.disableClickPropagation(d);return d;};_legendCtrl.addTo(map);}
   const panel=document.getElementById('tellux-leg-panel');if(!panel)return;
-  const order=['hot','res','bt','ant','geo','hyd','cav','emag','intl','align','egl','net','sit','sit2'];const active=order.filter(id=>LEGEND_ACTIVE.has(id));
+  const order=['hot','res','bt','ant','geo','hyd','cav','emag','intl','align','egl','net','sit','sit2','aoc'];const active=order.filter(id=>LEGEND_ACTIVE.has(id));
   if(!active.length){panel.style.display='none';return;}
   panel.style.display='block';
   panel.innerHTML=active.filter(id=>LEGEND_HTML[id]).map((id,i)=>(i>0?'<div style="height:1px;background:rgba(0,0,0,.06);margin:0 8px"></div>':'')+LEGEND_HTML[id]).join('');
@@ -2175,6 +2607,11 @@ function showInterp(lat,lng,igrf,human,water,nets,score,delta){
 
 map.on('click',e=>{
   if(e.originalEvent&&e.originalEvent._handled)return;
+  // Mode diagnostic agronomie — prioritaire sur le popup normal
+  if(document.getElementById('perma-panel')&&document.getElementById('perma-panel').style.display==='block'){
+    runPermaDiag(e.latlng.lat,e.latlng.lng);
+    return;
+  }
   _mapClickCount++;_gameState.clicks=_mapClickCount;_saveGameState(_gameState);
   if(_mapClickCount>=10)try{_unlockBadge('10clicks');}catch(e){}
   const{lat,lng}=e.latlng;
@@ -4900,7 +5337,7 @@ function exportTerrainReport(){
     '[ ] Photo du site prise',
     '[ ] Mesure enregistrée sur Tellux',
     '',
-    'Généré par Tellux v3.0 — https://tellux.pages.dev/',
+    'Généré par Tellux v3.0 — https://moonlit-axolotl-755fd6.netlify.app/',
     'Modèle indicatif. Incertitude > ±50%. Ne remplace pas une mesure terrain.',
   ];
   const blob=new Blob([lines.join('\\n')],{type:'text/plain;charset=utf-8'});
@@ -5825,9 +6262,10 @@ function exportSitePDF(){
     '</body></html>';
   const blob=new Blob([html],{type:'text/html'});
   const url=URL.createObjectURL(blob);
-  const w=window.open(url,'_blank');
-  if(w)w.onload=()=>w.print();
-  else{const a=document.createElement('a');a.href=url;a.download='tellux_rapport_'+new Date().toISOString().slice(0,10)+'.html';a.click();}
+  const a=document.createElement('a');
+  a.href=url;a.download='tellux_rapport_'+new Date().toISOString().slice(0,10)+'.html';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
 // ═══ MODULE PERMACULTURE ═══
@@ -5838,14 +6276,7 @@ function openPerma(){
   w.style.display=isOpen?'none':'block';
   const btn=document.getElementById('b-perma');
   if(btn)btn.className=isOpen?'lbtn':'lbtn on-perma';
-  if(!isOpen&&!window._permaClickBound){
-    window._permaClickBound=true;
-    map.on('click',function(e){
-      if(document.getElementById('perma-panel').style.display==='block'){
-        runPermaDiag(e.latlng.lat,e.latlng.lng);
-      }
-    });
-  }
+  // Le handler click est géré dans le handler global map.on('click')
 }
 function showPermaTab(tab){
   // Toggle onglets perma-panel
@@ -6085,7 +6516,7 @@ function exportPermaPDF(){
     '<div class="meta">Généré le '+new Date().toLocaleString('fr-FR')+' · tellux.pages.dev</div>'+
     results.innerHTML+
     '<div class="footer">Tellux v5.1 — Module Permaculture & Agriculture<br>'+
-    'Sources : Maffei 2014 (magnétoréception), Favre 2011 (abeilles EM), Rajimwale 2015 (Homa farming), Schauberger<br>'+
+    'Sources : Maffei 2014 (magnétoréception), Favre 2011 (abeilles EM), Hermans 2023 (HTA microbiome), ACS AgSci 2025<br>'+
     'Ce rapport est indicatif. Consulter un agronome pour un itinéraire technique complet.</div>'+
     '</body></html>';
   const blob=new Blob([html],{type:'text/html'});
@@ -6100,12 +6531,53 @@ function toggleAccordion(header){
   header.querySelector('.accordion-cat-icon').classList.toggle('open');
   header.nextElementSibling.classList.toggle('open');
 }
+
+/* === Légende dynamique === */
+window.txLegend = {
+  show: function(config){
+    /* config = {title, rows: [{color, label}], unit, source} */
+    try{
+      var el = document.getElementById('tx-legend');
+      if(!el) return;
+      document.getElementById('tx-legend-title').textContent = config.title || 'Légende';
+      var body = document.getElementById('tx-legend-body');
+      var html = '';
+      (config.rows || []).forEach(function(r){
+        html += '<div class="tx-legend-row"><span class="tx-legend-swatch" style="background:'+r.color+'"></span>'+r.label+'</div>';
+      });
+      if(config.unit) html += '<div class="tx-legend-unit">Unité : '+config.unit+'</div>';
+      if(config.source) html += '<div class="tx-legend-source">Source : '+config.source+'</div>';
+      body.innerHTML = html;
+      el.classList.add('visible');
+    }catch(e){if(window.console)console.warn('txLegend.show:', e);}
+  },
+  hide: function(){
+    try{
+      var el = document.getElementById('tx-legend');
+      if(el) el.classList.remove('visible');
+    }catch(e){}
+  }
+};
 </script>
 
-<footer style="margin-top:12px;padding:12px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--tx3);display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between">
-  <div><strong style="color:var(--tx2)">Tellux</strong> — Projet de recherche collaboratif · Corse 2024–2026</div>
-  <div>Sources : IGRF-14 · ANFR · BRGM · NOAA · Moracchini-Mazel · Leandri · Dragon Project</div>
-  <div>88 études · 80 hypothèses · 116 sites · 314 églises · <a href="https://tellux.pages.dev/" target="_blank" style="color:var(--acc);text-decoration:none">Déploiement ↗</a></div>
+<div class="tx-sources">
+  <div class="tx-sources-label">Sources institutionnelles</div>
+  <div class="tx-sources-list">
+    <span class="tx-source" title="International Geomagnetic Reference Field — British Geological Survey">IGRF-14 · BGS</span>
+    <span class="tx-source" title="Earth Magnetic Anomaly Grid — National Oceanic and Atmospheric Administration">EMAG2v3 · NOAA</span>
+    <span class="tx-source" title="World Digital Magnetic Anomaly Map">WDMAM · IAGA/CGMW</span>
+    <span class="tx-source" title="Modèle séculaire CHAOS-7 — DTU Space, données Swarm ESA">CHAOS-7 · DTU/ESA</span>
+    <span class="tx-source" title="Bureau de Recherches Géologiques et Minières — cartes 1/50 000">BRGM 1/50&nbsp;000</span>
+    <span class="tx-source" title="Agence Nationale des Fréquences — base CartoRadio">ANFR CartoRadio</span>
+    <span class="tx-source" title="Space Weather Prediction Center — NOAA">NOAA SWPC</span>
+    <span class="tx-source" title="EDF Systèmes Énergétiques Insulaires — réseau électrique corse">EDF SEI</span>
+    <span class="tx-source" title="Corpus piézoélectricité — Bishop 1981, Dragon Project">Dragon Project</span>
+  </div>
+</div>
+<footer class="tx-footer">
+  <div class="tx-footer-brand">Tellux Corse</div>
+  <div class="tx-footer-sources"><em>Mesurer le vivant</em> · projet de recherche citoyen</div>
+  <div class="tx-footer-stats">88 études · 88 hypothèses · 116 sites · 314 églises · <a href="https://tellux.pages.dev/" target="_blank">tellux.pages.dev ↗</a></div>
 </footer>
 </body>
 </html>
