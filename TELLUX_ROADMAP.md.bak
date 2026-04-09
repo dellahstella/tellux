@@ -1,0 +1,167 @@
+# TELLUX — Feuille de route
+
+**Dernière mise à jour :** 8 avril 2026
+**Remplace :** ROADMAP.md (7 avril), TELLUX_BRIEFING_SPRINTS.md (sprints C-E)
+
+---
+
+## 1. État au 8 avril 2026
+
+| Composant | Référence | État |
+|---|---|---|
+| Code | `tellux_v6_design.html` | v5.9, design vague 3+, logo V7 intégré |
+| Dossier | `CANDIDATURE_TELLUX_v7.docx` | v7, relecture en cours |
+| Design | `DIRECTION_ARTISTIQUE_v2.md` | Validée et gelée |
+| Déploiement | `tellux.pages.dev` | Cloudflare Pages, actif |
+| Backend | Supabase PostGIS | Actif, connecté via MCP |
+| Cible financement | CTC | Dossier multi-guichets en préparation |
+| Porteur | Soleil (solo) | SARL Stella Canis Majoris, Bastia |
+
+---
+
+## 2. Deux chantiers parallèles
+
+Le projet avance sur deux voies indépendantes. Si la voie B prend du retard, la voie A continue de fonctionner.
+
+### Voie A — Livraison immédiate (gel v6)
+
+**Objectif :** une version stable, déployée, livrable à des partenaires tests (associations CEM, permaculture, utilisateurs terrain) dans les 2 à 3 semaines.
+
+**Base technique :** `tellux_v6_design.html` figé. Aucune migration, aucun refactoring lourd. On corrige les bugs bloquants, on fige, on livre. C'est cette version qui accompagne le dépôt CTC.
+
+### Voie B — Montée en gamme (horizon 3-6 mois)
+
+**Objectif :** migration progressive vers une architecture moderne (landing Framer, stack web modulaire, automatisations N8N).
+
+**Détails :** voir `TELLUX_MONTEE_EN_GAMME.md` pour les 6 axes.
+
+---
+
+## 3. Voie A : problèmes à corriger avant gel
+
+Chaque item doit être audité dans le HTML actuel pour déterminer s'il est déjà réglé ou nouveau.
+
+### A-1. Placement GPS patrimoine sacré / mégalithes — RÉCURRENT
+
+Beaucoup de points de repères sont encore mal placés. Solution : externaliser `SITES[]` dans un fichier JSON de référence (`SITES_REFERENCE.json`) hébergé hors du HTML, chargé via `fetch` avec fallback inline. Une fois ce JSON validé par Soleil, toute régression GPS lors d'une réupload HTML devient impossible.
+
+### A-2. Alignements : chargement lourd qui fait ramer
+
+La sous-couche « Alignements » prend trop de temps à charger et ralentit la carte. Audit requis : quelle fonction est déclenchée, combien de polylines sont tracées, y a-t-il un calcul Broadbent 1980 qui bloque le thread principal. Solutions à envisager : lazy computation, web worker, simplification de l'algorithme.
+
+### A-3. Panneau explicatif Alignements — fermeture non liée au toggle couche
+
+Quand l'utilisateur désactive la couche Alignements, le panneau explicatif reste ouvert. Action générale : auditer toutes les couches qui ouvrent un panneau et s'assurer que la désactivation de la couche ferme automatiquement son panneau. Pattern à factoriser : `tog()` appelle `closeLayerPanel(layerKey)` à chaque désactivation.
+
+### A-4. Audit complet du pattern couche ↔ panneau ↔ légende
+
+Pour chaque couche, vérifier la chaîne complète : toggle ON → couche visible + légende `txLegend.show()` + panneau explicatif si présent ; toggle OFF → couche masquée + `txLegend.hide()` + panneau explicatif fermé. Documenter les exceptions.
+
+### A-5. Marqueur violet de saisie de mesure — pas de bouton d'annulation
+
+Le marqueur violet de saisie d'une mesure n'a pas d'option de disparition autre qu'après soumission. Ajouter un bouton « Annuler » dans le popup du marqueur + auto-dismiss après soumission réussie.
+
+### A-6. Unité anomalie Monticello différente du reste
+
+Auditer la couche anomalies. Si des unités différentes cohabitent : soit les séparer en sous-couches avec légendes dédiées via `txLegend.show()`, soit normaliser dans une unité pivot. Afficher l'unité explicite dans chaque popup.
+
+### A-7. Conflit clic popup quadrillage / carrés colorés
+
+Le clic sur une zone quadrillée de la couche anomalies ne déclenche pas son popup à cause des carrés colorés superposés. Tester `interactive: false` sur la couche du dessous, ou réordonner les `addLayer` + `bringToBack()`.
+
+### A-8. Captures d'écran haute résolution pour dossier CTC
+
+Une fois les corrections A-1 à A-7 appliquées, produire 6 à 8 captures 1920×1080 en light mode pour intégration dans `CANDIDATURE_TELLUX_v7.docx`. Vues attendues : vue d'ensemble, popup site mégalithique avec Indice Tellux, module agronomie, couches réseaux EDF+ANFR, panneau hypothèses, vue mobile.
+
+### Critère de gel voie A
+
+Les 8 items A-1 à A-8 sont traités. La version est taguée, figée et livrée aux partenaires tests.
+
+---
+
+## 4. Validation scientifique (post-gel, pré-voie B)
+
+Ces items renforcent la crédibilité scientifique du projet. Ils peuvent être traités entre le gel voie A et le lancement voie B.
+
+- **E-1.** Refactoring `FAILLES_CORSE` en segments LineString. Gain précision ±300 m.
+- **E-2.** Implémentation tests automatiques H55–H88 (hypothèses auto-testables).
+- **E-3.** Externalisation `SITES[]` dans `SITES_REFERENCE.json` hébergé (recoupe A-1, à traiter ensemble).
+- **E-4.** Protocole calibration Trifield TF2 standardisé (mesures en aveugle parallèle : deux opérateurs indépendants, non communication pendant la mesure).
+
+---
+
+## 5. Voie B : plan de montée en gamme (sommaire)
+
+Détails complets dans `TELLUX_MONTEE_EN_GAMME.md`.
+
+| Axe | Sujet | Complexité |
+|---|---|---|
+| 1 | Exploitation complète de l'écosystème Anthropic | 🟢-🟡 |
+| 2 | Migration design : landing Framer | 🟡 |
+| 3 | Automatisation N8N | 🟡 |
+| 4 | Migration technique du monofichier HTML | 🔴 |
+| 5 | Gouvernance et structure juridique | 🟡 |
+| 6 | Stratégie de subventions | 🟡 |
+
+---
+
+## 6. Chantiers structurels transverses (urgents)
+
+Ces sujets ne sont ni A ni B. Ce sont des décisions qui conditionnent tout le reste.
+
+### S-1. Structure juridique — arbitrage urgent
+
+Comparaison des options (micro-entreprise, SASU, association loi 1901, SCIC, SARL existante) avec implications fiscales, administratives, de responsabilité et de capacité à recevoir des subventions publiques. Voir `TELLUX_STRUCTURE_JURIDIQUE.md`.
+
+**Non tranché.** Soleil décide après lecture du document comparatif.
+
+### S-2. Pérennité technique — risque monofichier HTML
+
+Le fichier `tellux_v6_design.html` fait environ 500 Ko et 6 500 lignes, tout-en-un. Risques : plantage navigateur sur mobile ancien, maintenance difficile, impossibilité de tests unitaires, conflits de merge.
+
+**Mesures immédiates (voie A) :** sauvegardes git versionnées à chaque session, pas de refactor risqué, dépôt GitHub à jour.
+
+**Mesure structurelle (voie B) :** migration vers architecture modulaire (axe 4 de `TELLUX_MONTEE_EN_GAMME.md`).
+
+### S-3. Stratégie de subventions et de financement
+
+Court terme : CTC (en cours). Moyen terme : OEC, ADEME, ANR, LEADER. Long terme : partenariat laboratoire, publication scientifique. Voir `TELLUX_FINANCEMENT.md`.
+
+---
+
+## 7. Items à vérifier (peut-être déjà résolus)
+
+Ces points proviennent de sessions antérieures. À auditer dans le HTML actuel avant de les ajouter au backlog ou de les clore.
+
+- Migration WMS Géoplateforme (anciennement Géoportail).
+- Sélecteur culture personnalisée (module agronomie).
+- Template PDF propre pour `exportPermaPDF`.
+- Lazy-loading couches lourdes (performances mobiles).
+
+---
+
+## 8. Agenda court terme (avril – mi-mai 2026)
+
+| Semaine | Tâche | Responsable | Dépendance |
+|---|---|---|---|
+| S15 (7-13 avr) | Design validé, logo V7 gelé, dossier v7 produit | ✅ fait | — |
+| S16 (14-20 avr) | Audit bugs A-1 à A-7 dans le HTML | Cowork (session code) | Accès au HTML |
+| S16 | Arbitrage structure juridique | Soleil | Lecture `TELLUX_STRUCTURE_JURIDIQUE.md` |
+| S17 (21-27 avr) | Corrections A-1 à A-7 | Cowork (session code) | Résultat audit |
+| S17 | Relecture finale dossier v7 | Soleil | — |
+| S18 (28 avr – 4 mai) | Captures A-8, intégration docx | Cowork | Corrections terminées |
+| S18 | Gel voie A, tag version | Soleil + Cowork | A-1 à A-8 traités |
+| S19 (5-11 mai) | Dépôt CTC | Soleil | Dossier complet |
+| S19-S20 | Validation scientifique E-1 à E-4 | Cowork | Voie A gelée |
+| S20+ | Lancement voie B (axe 1 : instructions projet + Claude Code) | Soleil | Voie A livrée |
+
+---
+
+## 9. Risques ouverts
+
+- **Régression GPS récurrente** — les coordonnées des sites mégalithiques dérivent entre les sessions. Solution proposée en A-1 (JSON externe).
+- **Dépendance fournisseur unique** — Supabase (backend) et Cloudflare (hébergement). Risque faible à court terme, à surveiller.
+- **Charge cognitive monofichier** — 6 500 lignes rendent toute modification risquée. Atténuation par git + tests manuels.
+- **Absence de second relecteur scientifique** — le corpus de 130 études et les 88 hypothèses n'ont pas été relus par un pair. À chercher via partenariat labo (CEREGE, INRAE).
+- **Retard dépôt CTC** — si la voie A prend plus de temps que prévu, le dépôt glisse. Mitigation : découpler les captures du gel complet si nécessaire.
+- **Dépôt nom « Tellux »** — à évaluer selon budget, noter en feuille de route long terme.
