@@ -1352,6 +1352,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <select id="c-unit" style="width:90px;margin-bottom:0">
       <option value="nT">nT (magnéto)</option>
       <option value="µT">µT (magnéto)</option>
+      <option value="mG">mG (magnéto)</option>
       <option value="V/m">V/m (RF)</option>
       <option value="dBm">dBm (signal)</option>
       <option value="µT_50Hz">µT à 50Hz (ELF)</option>
@@ -1359,6 +1360,12 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     </select>
   </div>
   <div id="c-hint-val" style="font-size:11px;color:var(--tx3);margin-bottom:8px;padding:4px 8px;background:var(--bg2);border-radius:var(--r);display:none"></div>
+
+  <div id="c-csv-row" style="display:none;margin-bottom:8px">
+    <input type="file" id="csv-phyphox-input" accept=".csv" style="display:none" onchange="handlePhyphoxCSV(this)">
+    <button type="button" onclick="document.getElementById('csv-phyphox-input').click()" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);color:var(--tx2);cursor:pointer;width:100%">📁 Importer un fichier CSV Phyphox</button>
+    <div id="csv-summary" style="display:none;font-size:11px;color:var(--tx2);margin-top:4px;padding:6px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)"></div>
+  </div>
 
   <!-- ÉTAPE 4 : Contexte intérieur (visible si intérieur sélectionné) -->
   <div class="cform-step" id="c-step4-label" style="display:none">Etape 4 — Details interieur</div>
@@ -2041,10 +2048,12 @@ const LEGEND_HTML={
 
 // Contraintes par instrument
 const INSTRUMENT_CONSTRAINTS = {
-  smartphone_mag:  {unit:'nT',    min:20000, max:80000,  hint:'Magnétomètre smartphone — valeur typique en Corse : 44 000–47 000 nT'},
+  smartphone_mag:  {units:{'µT':{min:20,max:80,pivot:1000},'nT':{min:20000,max:80000,pivot:1}}, defaultUnit:'µT',
+                   hint:'Mesure avec Phyphox → Magnétomètre → lire la magnitude. Valeur typique en Corse : 44–48 µT (44 000–48 000 nT). Sélectionnez l\'unité que votre app affiche.'},
   smartphone_rssi: {unit:'dBm',   min:-120,  max:0,      hint:'Signal réseau — valeur typique : -50 à -100 dBm'},
   smartphone_wifi: {unit:'dBm',   min:-100,  max:0,      hint:'Signal WiFi — valeur typique : -30 à -80 dBm'},
-  trifield:        {unit:'nT',    min:0,     max:200000, hint:'TriField TF2 — nT pour champ magnétique, V/m pour RF'},
+  trifield:        {units:{'nT':{min:0,max:200000,pivot:1},'mG':{min:0,max:2000,pivot:100}}, defaultUnit:'nT',
+                   hint:'TriField TF2 — nT ou mG pour champ magnétique (1 mG = 100 nT), V/m pour RF'},
   cornet:          {unit:'V/m',   min:0,     max:100,    hint:'Cornet ED88T — valeur typique en zone urbaine : 0.1–5 V/m'},
   rtlsdr:          {unit:'description', min:null, max:null, hint:'RTL-SDR — décrivez les fréquences et niveaux observés'},
   autre_capteur:   {unit:null,    min:null,  max:null,   hint:'Précisez l\'unité et la méthode dans la note'},
@@ -2053,27 +2062,95 @@ const INSTRUMENT_CONSTRAINTS = {
   ressenti:        {unit:'description', min:null, max:null, hint:'Ressenti subjectif — décrivez dans la note'},
 };
 
+function parsePhyphoxCSV(text){
+  const lines=text.trim().replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+  if(lines.length<2) throw new Error('CSV vide ou trop court (moins de 2 lignes).');
+  const sep=lines[0].includes(';')?';':',';
+  const cols=lines[0].split(sep).map(s=>s.replace(/^["'\s]+|["'\s]+$/g,'').toLowerCase());
+  const idxAbs=cols.findIndex(c=>/absolute|magnitude|total/.test(c));
+  const idxX=cols.findIndex(c=>/\bx\b/.test(c));
+  const idxY=cols.findIndex(c=>/\by\b/.test(c));
+  const idxZ=cols.findIndex(c=>/\bz\b/.test(c));
+  const idxT=cols.findIndex(c=>/time/.test(c));
+  if(idxAbs<0&&(idxX<0||idxY<0||idxZ<0))
+    throw new Error('Format non reconnu : aucune colonne magnitude ni x/y/z trouvee.');
+  const values=[];let tmin=Infinity,tmax=-Infinity;
+  for(let i=1;i<lines.length;i++){
+    const line=lines[i].trim();if(!line)continue;
+    const row=line.split(sep).map(s=>parseFloat(s.replace(',','.')));
+    let mag;
+    if(idxAbs>=0&&!isNaN(row[idxAbs])) mag=row[idxAbs];
+    else if(idxX>=0&&idxY>=0&&idxZ>=0&&!isNaN(row[idxX])&&!isNaN(row[idxY])&&!isNaN(row[idxZ]))
+      mag=Math.sqrt(row[idxX]**2+row[idxY]**2+row[idxZ]**2);
+    else continue;
+    if(!isNaN(mag)&&mag>0) values.push(mag);
+    if(idxT>=0&&!isNaN(row[idxT])){if(row[idxT]<tmin)tmin=row[idxT];if(row[idxT]>tmax)tmax=row[idxT];}
+  }
+  if(!values.length) throw new Error('Aucune donnee magnetique valide dans le CSV.');
+  const mean=values.reduce((a,b)=>a+b,0)/values.length;
+  const stddev=Math.sqrt(values.reduce((a,b)=>a+(b-mean)**2,0)/values.length);
+  const duree=(tmax>-Infinity&&tmin<Infinity)?Math.round(tmax-tmin):null;
+  return {
+    mean:Math.round(mean*100)/100, stddev:Math.round(stddev*100)/100,
+    min:Math.round(Math.min(...values)*100)/100, max:Math.round(Math.max(...values)*100)/100,
+    n_points:values.length, duree_s:duree, unite_detectee:'µT'
+  };
+}
+
+function handlePhyphoxCSV(input){
+  const file=input.files&&input.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const stats=parsePhyphoxCSV(e.target.result);
+      window._csvStats=stats;
+      const valInp=document.getElementById('c-val');
+      if(valInp) valInp.value=stats.mean;
+      const unitSel=document.getElementById('c-unit');
+      if(unitSel) for(let o of unitSel.options){if(o.value==='µT'){o.selected=true;break;}}
+      const sum=document.getElementById('csv-summary');
+      if(sum){
+        sum.style.display='block';
+        const dureeStr=stats.duree_s!==null?' · duree '+stats.duree_s+'s':'';
+        sum.textContent='📊 Fichier importe : '+stats.n_points+' points · moyenne '+stats.mean+' µT · σ='+stats.stddev+' µT · min '+stats.min+' / max '+stats.max+' µT'+dureeStr;
+      }
+    }catch(err){
+      window._csvStats=null;
+      info('CSV invalide : '+err.message,'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
 function onInstrumentChange(){
   const type = document.getElementById('c-type').value;
   const c = INSTRUMENT_CONSTRAINTS[type];
   const hintEl = document.getElementById('c-hint-val');
   const unitSel = document.getElementById('c-unit');
   const valInput = document.getElementById('c-val');
-  if(!c){hintEl.style.display='none';return;}
-  // Afficher le hint
+  const csvRow = document.getElementById('c-csv-row');
+  if(!c){hintEl.style.display='none';if(csvRow)csvRow.style.display='none';return;}
   hintEl.textContent = c.hint;
   hintEl.style.display = 'block';
-  // Forcer l'unité si applicable
-  if(c.unit && c.unit !== 'description'){
+  // Instruments multi-unites (smartphone_mag, trifield)
+  if(c.units){
+    const def=c.defaultUnit;
+    for(let o of unitSel.options){if(o.value===def){o.selected=true;break;}}
+    unitSel.disabled=false;
+    valInput.placeholder=def==='µT'?'ex: 45.3':'ex: 44800';
+  } else if(c.unit && c.unit !== 'description'){
     for(let o of unitSel.options){ if(o.value===c.unit){o.selected=true;break;} }
     unitSel.disabled = false;
   } else if(c.unit==='description'){
     for(let o of unitSel.options){ if(o.value==='description'){o.selected=true;break;} }
     unitSel.disabled = true;
-    valInput.placeholder = 'Pas de valeur numérique requise';
+    valInput.placeholder = 'Pas de valeur numerique requise';
   } else {
     unitSel.disabled = false;
   }
+  // Bouton CSV uniquement pour smartphone_mag
+  if(csvRow) csvRow.style.display=(type==='smartphone_mag')?'block':'none';
 }
 
 function validateContrib(){
@@ -2083,9 +2160,18 @@ function validateContrib(){
   const unit = document.getElementById('c-unit').value;
   if(!c) return {ok:true};
   if(c.unit==='description') return {ok:true};
-  if(isNaN(val) && c.min!==null) return {ok:false, msg:'Valeur numérique requise pour cet instrument.'};
+  // Instruments multi-unites
+  if(c.units){
+    if(isNaN(val)) return {ok:false, msg:'Valeur numerique requise pour cet instrument.'};
+    const range=c.units[unit];
+    if(range && (val<range.min||val>range.max)){
+      return {ok:false, msg:'Valeur hors plage : attendu '+range.min+'–'+range.max+' '+unit+' pour '+type+'. Valeur saisie : '+val+' '+unit+'.'};
+    }
+    return {ok:true};
+  }
+  if(isNaN(val) && c.min!==null) return {ok:false, msg:'Valeur numerique requise pour cet instrument.'};
   if(c.min!==null && (val < c.min || val > c.max)){
-    return {ok:false, msg:`Valeur hors plage pour ${type} : attendu ${c.min}–${c.max} ${c.unit}. Vérifiez votre saisie.`};
+    return {ok:false, msg:'Valeur hors plage pour '+type+' : attendu '+c.min+'–'+c.max+' '+c.unit+'. Verifiez votre saisie.'};
   }
   return {ok:true};
 }
@@ -2971,17 +3057,26 @@ async function saveContrib(){
   };
   const attenPrevue=mats.reduce((s,m)=>s+(MAT_DB[m]||0),0);
   const unite=document.getElementById('c-unit').value;
+  const instrType=document.getElementById('c-type').value;
+  // Conversion en nT (unite pivot) selon unite saisie
+  let valeurPivot=valeur;
+  const cInstr=INSTRUMENT_CONSTRAINTS[instrType];
+  if(valeur!==null && cInstr && cInstr.units && cInstr.units[unite]){
+    valeurPivot=Math.round(valeur*cInstr.units[unite].pivot*100)/100;
+  }
+  const csvStats=window._csvStats||null;
   const row={
     lat:ll.lat,lon:ll.lng,
-    type:document.getElementById('c-type').value,
-    valeur,unite,
+    type:instrType,
+    valeur:valeurPivot,unite:'nT',unite_saisie:unite,
+    csv_stats:csvStats,
     note:document.getElementById('c-note').value||null,
     kp:parseFloat(curKp)||null,bz:parseFloat(curBz)||null,
     densite_protons:parseFloat(curDensity)||null,flux_protons:parseFloat(curFlux)||null,
     igrf_nt:Math.round(igrf),perturbation_humaine_nt:human,facteur_eau_nt:water,
     reseaux_actifs:nets.map(n=>n.n),
     score_anomalie:human+Math.round(water*0.3)+netVal,
-    delta_nt:valeur&&unite==='nT'?Math.round(valeur-predicted):null,
+    delta_nt:valeurPivot!==null?Math.round(valeurPivot-predicted):null,
     session_id:sessionId,version_app:'2.4',
     // Nouveaux champs contexte bâtiment
     contexte:ctxContrib,
@@ -3002,6 +3097,9 @@ async function saveContrib(){
     map.removeLayer(pending);pending=null;
     document.getElementById('cform').style.display='none';
     document.getElementById('c-val').value='';document.getElementById('c-note').value='';
+    window._csvStats=null;
+    var csvSum=document.getElementById('csv-summary');if(csvSum)csvSum.style.display='none';
+    var csvInp=document.getElementById('csv-phyphox-input');if(csvInp)csvInp.value='';
     const n=contribsDB.length;
     document.getElementById('db-total').textContent=n+' contribution'+(n>1?'s':'')+' en base';
     document.getElementById('contrib-panel').style.display='block';renderList();
@@ -3015,7 +3113,12 @@ async function saveContrib(){
 function renderList(){
   const el=document.getElementById('contrib-list');
   if(!contribsDB.length){el.innerHTML='';return;}
-  el.innerHTML=contribsDB.slice(0,10).map(c=>`<div class="contrib-item"><span class="ci-dot"></span><div><div class="ci-main">${c.type}${c.valeur?' — '+c.valeur+' '+(c.unite||'nT'):''}</div><div class="ci-meta">${c.lat?.toFixed(4)}, ${c.lon?.toFixed(4)} · score:${c.score_anomalie||'—'} · ${c.created_at?new Date(c.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}</div></div></div>`).join('');
+  el.innerHTML=contribsDB.slice(0,10).map(c=>{
+    const csvBadge=c.csv_stats?' 📊':'';
+    const unitInfo=c.unite_saisie&&c.unite_saisie!=='nT'?' (saisi en '+c.unite_saisie+')':'';
+    const valLabel=c.valeur?' — '+c.valeur+' nT'+unitInfo:'';
+    return '<div class="contrib-item"><span class="ci-dot"></span><div><div class="ci-main">'+c.type+valLabel+csvBadge+'</div><div class="ci-meta">'+(c.lat?c.lat.toFixed(4):'')+', '+(c.lon?c.lon.toFixed(4):'')+' · score:'+(c.score_anomalie||'—')+' · '+(c.created_at?new Date(c.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'')+'</div></div></div>';
+  }).join('');
 }
 
 function buildNets(){
@@ -3322,15 +3425,8 @@ function buildHot(){
         const bounds=[[a,o],[a+step,o+step]];
         const rect=L.rectangle(bounds,{
           color:fill, weight:0.5, opacity:0.4,
-          fillColor:fill, fillOpacity:opacity
-        });
-        rect.on('click',function(e){
-          L.DomEvent.stopPropagation(e);
-          e.originalEvent._handled=true;
-          const center=L.latLng(a+step/2,o+step/2);
-          const rfCorr=calcN_RF_calib(a+step/2,o+step/2);
-          const rfTxt=rfCorr>0.1?` · RF: ${rfCorr.toFixed(2)} V/m`:'';
-          info(`<span class="tag" style="background:#fee2e2;color:#991b1b;border:0.5px solid #f87171">Anomalie ${label}</span> Score: <b>${sc}</b> · Humain: ${h} nT · Hydro: ${Math.round(w*.3)} nT · Géo: ${g} nT${rfTxt}<br><span style="font-size:10px;color:var(--tx3)">${center.lat.toFixed(4)}°N ${center.lng.toFixed(4)}°E</span>`);
+          fillColor:fill, fillOpacity:opacity,
+          interactive:false
         });
         rect.addTo(lHot);
       }
@@ -5219,6 +5315,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const hints={
     'nT':'📱 Valeur typique en Corse : 44 000–46 000 nT. Anomalie notable si écart >1 000 nT du modèle IGRF.',
     'µT':'📱 Champ terrestre ~44–46 µT en Corse. ELF 50Hz : < 0.1 µT normal domestique, > 1 µT notable.',
+    'mG':'🔩 TriField TF2 en mode magnetique — valeur typique en Corse : 440–460 mG (1 mG = 100 nT). Converti automatiquement en nT.',
     'V/m':'📡 Référence légale : 28–61 V/m selon fréquence. WiFi routeur à 1m : ~0.1–0.3 V/m. Antenne proche : 1–10 V/m.',
     'dBm':'📶 Signal cellulaire : -50 dBm excellent, -80 dBm correct, -100 dBm faible. Conversion : V/m ≈ 10^((dBm+107)/20) × 10^-3',
     'µT_50Hz':'⚡ Référence ANSES : surveille > 1 µT. Tableau électrique proche : 5–20 µT. Câble sous tension à 10cm : 0.3–1 µT.',
@@ -6895,7 +6992,8 @@ function toggleFabMenu(){
 function closeFabMenu(){
   const menu=document.getElementById('fab-menu');
   if(menu)menu.classList.remove('open');
-  // Ne pas toucher fab-active ici, les fonctions appelees le gerent
+  const fab=document.getElementById('fab-mesure');
+  if(fab)fab.classList.remove('fab-active');
 }
 
 // ═══ PRESCRIPTION DE MESURE ═══
