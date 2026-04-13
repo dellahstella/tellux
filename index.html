@@ -1361,9 +1361,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   </div>
   <div id="c-hint-val" style="font-size:11px;color:var(--tx3);margin-bottom:8px;padding:4px 8px;background:var(--bg2);border-radius:var(--r);display:none"></div>
 
-  <div id="c-csv-row" style="display:none;margin-bottom:8px">
+  <div id="c-csv-row" style="margin-bottom:8px">
     <input type="file" id="csv-phyphox-input" accept=".csv" style="display:none" onchange="handlePhyphoxCSV(this)">
-    <button type="button" onclick="document.getElementById('csv-phyphox-input').click()" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);color:var(--tx2);cursor:pointer;width:100%">📁 Importer un fichier CSV Phyphox</button>
+    <button type="button" onclick="document.getElementById('csv-phyphox-input').click()" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);color:var(--tx2);cursor:pointer;width:100%">📁 Importer un CSV de mesures (Phyphox, Physics Toolbox…)</button>
     <div id="csv-summary" style="display:none;font-size:11px;color:var(--tx2);margin-top:4px;padding:6px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)"></div>
   </div>
 
@@ -1425,7 +1425,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 
   <div class="cform-btns">
     <button class="btn-save" id="btn-save" onclick="saveContrib()">Enregistrer</button>
-    <button class="btn-cancel" onclick="document.getElementById('cform').style.display='none'">Annuler</button>
+    <button class="btn-cancel" onclick="cancelContrib()">Annuler</button>
   </div>
 </div>
 
@@ -1944,7 +1944,7 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 
 let DARK=(function(){try{const s=localStorage.getItem('tellux_theme');if(s)return s==='dark';return matchMedia('(prefers-color-scheme:dark)').matches;}catch(e){return matchMedia('(prefers-color-scheme:dark)').matches;}})();
 if(DARK)document.documentElement.setAttribute('data-theme','dark');
-let contribsDB=[],pending=null,cachedIGRF={};
+let contribsDB=[],pending=null,cachedIGRF={},_contribClickHandler=null;
 let curKp='—',curBz='—',curDensity='—',curFlux='—';
 let meteoData={pression:null,humidite:null,temp:null,precip:0,vent:0};
 let lightningNearby=0,chargeFacteur=1.0;
@@ -2021,10 +2021,10 @@ const wmsEmag=L.imageOverlay(
 );
 let _tileLabels=L.tileLayer(DARK?'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',{zIndex:10,attribution:''}).addTo(map);
 
-const lSit2=L.layerGroup(),lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lSit=L.layerGroup(),lNet=L.layerGroup(),lRadon=L.layerGroup(),lRPG=L.layerGroup(),lForet=L.layerGroup(),lAOC=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.layerGroup().addTo(map),lCem=L.layerGroup(),lIntl=L.layerGroup(),lAlign=L.layerGroup(),lEgl=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
+const lSit2=L.layerGroup(),lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lSit=L.layerGroup(),lNet=L.layerGroup(),lRadon=L.layerGroup(),lRPG=L.layerGroup(),lForet=L.layerGroup(),lAOC=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.layerGroup(),lCem=L.layerGroup(),lIntl=L.layerGroup(),lAlign=L.layerGroup(),lEgl=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
 const LAYERS={sit2:lSit2,bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,sit:lSit,net:lNet,radon:lRadon,rpg:lRPG,foret:lForet,aoc:lAOC,hot:lHot,con:lCon,cem:lCem,intl:lIntl,align:lAlign,egl:lEgl};
 const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag};
-const ACTIVE={sit2:false,bt:false,ant:false,antOffshore:false,geo:false,hyd:false,radon:false,rpg:false,foret:false,aoc:false,cav:false,emag:false,net:false,hot:true,res:false,sit:false,con:true,cem:false,intl:false,align:false,egl:false};
+const ACTIVE={sit2:false,bt:false,ant:false,antOffshore:false,geo:false,hyd:false,radon:false,rpg:false,foret:false,aoc:false,cav:false,emag:false,net:false,hot:true,res:false,sit:false,con:false,cem:false,intl:false,align:false,egl:false};
 
 const LEGEND_ACTIVE=new Set();let _legendCtrl=null;
 const LEGEND_HTML={
@@ -2130,7 +2130,7 @@ function onInstrumentChange(){
   const unitSel = document.getElementById('c-unit');
   const valInput = document.getElementById('c-val');
   const csvRow = document.getElementById('c-csv-row');
-  if(!c){hintEl.style.display='none';if(csvRow)csvRow.style.display='none';return;}
+  if(!c){hintEl.style.display='none';return;}
   hintEl.textContent = c.hint;
   hintEl.style.display = 'block';
   // Instruments multi-unites (smartphone_mag, trifield)
@@ -2149,8 +2149,9 @@ function onInstrumentChange(){
   } else {
     unitSel.disabled = false;
   }
-  // Bouton CSV uniquement pour smartphone_mag
-  if(csvRow) csvRow.style.display=(type==='smartphone_mag')?'block':'none';
+  // Bouton CSV : visible pour instruments magnéto, masqué pour signaux/observation/ressenti
+  const NO_CSV=['smartphone_rssi','smartphone_wifi','cornet','rtlsdr','observation','ressenti'];
+  if(csvRow) csvRow.style.display=NO_CSV.includes(type)?'none':'block';
 }
 
 function validateContrib(){
@@ -2990,8 +2991,19 @@ async function loadDB(){
 function startContrib(){
   document.getElementById('cform').style.display='block';
   if(!ACTIVE.con){tog('con','on-con',document.getElementById('b-con'));}
+  // Initialiser l'etat du formulaire selon l'instrument selectionne par defaut
+  if(typeof onInstrumentChange==='function')onInstrumentChange();
   info('Cliquez sur la carte pour placer votre mesure.','warn');
-  map.once('click',e=>{_placeContribMarker(e.latlng.lat,e.latlng.lng);});
+  _armContribClick();
+}
+function _armContribClick(){
+  // Retirer un éventuel handler précédent pour éviter les doublons
+  if(_contribClickHandler){map.off('click',_contribClickHandler);_contribClickHandler=null;}
+  _contribClickHandler=function(e){
+    _contribClickHandler=null;
+    _placeContribMarker(e.latlng.lat,e.latlng.lng);
+  };
+  map.once('click',_contribClickHandler);
 }
 function _placeContribMarker(lat,lng){
   if(pending)map.removeLayer(pending);
@@ -3010,7 +3022,32 @@ function repositionMarker(){
   var reposBtn=document.getElementById('btn-reposition');
   if(reposBtn)reposBtn.style.display='none';
   info('Cliquez sur la carte pour repositionner votre mesure.','warn');
-  map.once('click',function(e){_placeContribMarker(e.latlng.lat,e.latlng.lng);});
+  _armContribClick();
+}
+
+function cancelContrib(){
+  // Nettoyer le pin violet si présent
+  if(pending){map.removeLayer(pending);pending=null;}
+  // Fermer le formulaire
+  document.getElementById('cform').style.display='none';
+  // Reset des champs saisis
+  var v=document.getElementById('c-val');if(v)v.value='';
+  var n=document.getElementById('c-note');if(n)n.value='';
+  // Reset du CSV Phyphox
+  window._csvStats=null;
+  var csvSum=document.getElementById('csv-summary');if(csvSum){csvSum.style.display='none';csvSum.innerHTML='';}
+  var csvInp=document.getElementById('csv-phyphox-input');if(csvInp)csvInp.value='';
+  // Reset indicateur position
+  var posInfo=document.getElementById('c-position-info');
+  if(posInfo)posInfo.textContent='Cliquez sur la carte pour placer le point';
+  var reposBtn=document.getElementById('btn-reposition');
+  if(reposBtn)reposBtn.style.display='none';
+  // Désactiver le FAB active state
+  var fabEl=document.getElementById('fab-mesure');if(fabEl)fabEl.classList.remove('fab-active');
+  // Désarmer le handler de clic s'il est encore en attente (pas de map.off('click')
+  // global qui casserait les autres handlers)
+  if(_contribClickHandler){map.off('click',_contribClickHandler);_contribClickHandler=null;}
+  info('Mesure annulée.','warn');
 }
 
 async function saveContrib(){
@@ -3614,7 +3651,7 @@ async function loadChargeReseau(){
   document.getElementById('res-charge').style.color='var(--tx3)';
 }
 // Sites mégalithiques (DRAC Corse) + ouvrages hydrauliques (BRGM) + émetteurs majeurs
-const SITES=[
+let SITES=[
   // ═══ MÉGALITHIQUES — GPS vérifiés Megalithic Portal / Journal of Antiquities / t4t35 / Persée ═══
   // Vallée du Taravo
   [41.7417,8.8695,'Filitosa','Mégalithique','#854d0e','Statues-menhirs ~1500 av. J.-C. · 13 statues · Granit · Site classé · Vallée du Taravo · GPS Megalithic Portal'],
@@ -4322,7 +4359,15 @@ async function buildEglLayer(){
   });
 
 }
-SITES.forEach(([a,o,n,t,c,desc],_siteIdx)=>{
+// ═══ CHARGEMENT DES SITES ═══
+// Source de vérité : SITES_REFERENCE.json hébergé au même niveau que ce HTML.
+// Fallback : le tableau SITES inline plus haut, conservé comme filet de sécurité
+// si le fetch échoue (Cloudflare KO, CORS, déploiement décalé, etc.).
+function buildSiteMarkers(){
+  // Vider les couches au cas où on rebuilde après un fetch tardif
+  if(typeof lSit!=='undefined'&&lSit.clearLayers)lSit.clearLayers();
+  if(typeof lSit2!=='undefined'&&lSit2.clearLayers)lSit2.clearLayers();
+  SITES.forEach(([a,o,n,t,c,desc],_siteIdx)=>{
   let shape,sw,sh;
   if(t==='Mégalithique'){
     shape='<div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:13px solid '+c+';filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))"></div>';
@@ -4359,7 +4404,27 @@ SITES.forEach(([a,o,n,t,c,desc],_siteIdx)=>{
       info('<span class="tag" style="background:'+tagBg+';color:'+tagColor+';border:0.5px solid '+tagBorder+'">'+typ+'</span> <b>'+name+'</b>'+orientInfo+'<br><span style="font-size:12px;color:var(--tx2)">'+dsc+'</span>');
     }})(_siteIdx,a,o,n,t,desc))
     .addTo(targetLayer);
-});
+  });
+}
+
+function loadSitesReference(){
+  // Tente de charger SITES_REFERENCE.json (source de vérité hébergée)
+  // En cas d'échec, on retombe sur le SITES inline déjà en mémoire.
+  fetch('SITES_REFERENCE.json',{cache:'no-cache'})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(data){
+      if(!Array.isArray(data)||!data.length)throw new Error('JSON vide ou invalide');
+      // Conversion objet → tableau pour compatibilité avec le code existant
+      SITES=data.map(function(s){return [s.lat,s.lon,s.nom,s.type,s.couleur,s.description];});
+      console.log('[Tellux] SITES_REFERENCE.json chargé : '+SITES.length+' sites');
+      buildSiteMarkers();
+    })
+    .catch(function(err){
+      console.warn('[Tellux] Fallback SITES inline : '+err.message);
+      buildSiteMarkers();
+    });
+}
+loadSitesReference();
 
 // ═══ ÉTUDES & ALIGNEMENTS MÉGALITHIQUES ═══
 const MEGA_STUDIES=[
@@ -6939,6 +7004,7 @@ function startContribFromFAB(){
   if(form&&form.style.display==='block'){
     form.style.display='none';
     if(pending){map.removeLayer(pending);pending=null;}
+    if(_contribClickHandler){map.off('click',_contribClickHandler);_contribClickHandler=null;}
     if(fab)fab.classList.remove('fab-active');
     info('');
     return;
@@ -6948,6 +7014,8 @@ function startContribFromFAB(){
   if(btn&&!ACTIVE.con){tog('con','on-con',btn);}
   // Ouvrir le formulaire directement (pas via startContrib qui re-toggle)
   form.style.display='block';
+  // Initialiser l'etat du formulaire selon l'instrument selectionne par defaut
+  if(typeof onInstrumentChange==='function')onInstrumentChange();
   // Reset position info
   var posInfo=document.getElementById('c-position-info');
   if(posInfo)posInfo.textContent='Cliquez sur la carte pour placer le point';
@@ -6955,11 +7023,7 @@ function startContribFromFAB(){
   if(reposBtn)reposBtn.style.display='none';
   info('Cliquez sur la carte pour placer votre mesure.','warn');
   // Attendre le prochain tick pour que la carte ait fini de traiter le toggle
-  setTimeout(function(){
-    map.once('click',function(e){
-      _placeContribMarker(e.latlng.lat,e.latlng.lng);
-    });
-  },0);
+  setTimeout(function(){_armContribClick();},0);
   if(fab)fab.classList.add('fab-active');
 }
 
