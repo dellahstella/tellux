@@ -147,7 +147,36 @@ Ce bloc sera rempli lors de la prochaine session Opus. Il contiendra les retouch
 - **E-2.** Implémentation tests automatiques H55–H88.
 - **E-3.** Externalisation `SITES[]` dans JSON hébergé.
 - **E-4.** Protocole calibration Trifield TF2 standardisé (mesures en aveugle parallèle).
+- ### 4.4 B-MESURES — Contribution utilisateurs + auto-correction du modèle
 
+**Objectif de fond** : faire passer Tellux de *cartographie théorique* à *instrument scientifique vivant* où les mesures terrain corrigent et affinent le modèle de calcul. Brique pour l'un des objectifs fondateurs du projet.
+
+**Principes :**
+- Lecture de la carte reste 100% anonyme, aucune friction à l'entrée
+- Contribution d'une mesure nécessite un compte (Supabase Auth magic link — pas de mot de passe à retenir)
+- Une mesure contribuée est visible uniquement par son auteur, sauf activation d'une couche globale opt-in
+- Qualification progressive des mesures : score de fiabilité basé sur protocole + placement, expiration automatique des low-score
+- Claude reste hors de la boucle d'ingestion temps réel (coût + non-pertinent). Analyses offline / batch uniquement.
+
+**Sous-tickets :**
+- B-MESURES-1 : Schéma Supabase `mesures` + RLS (lecture perso / couche publique filtrée par score)
+- B-MESURES-2 : Supabase Auth magic link, flow connexion/déconnexion, templates email customisés
+- B-MESURES-3 : UI contribution — zoom minimum requis, placement par clic carte, formulaire (valeur, unité, protocole checkboxes, description lieu)
+- B-MESURES-4 : UI affichage — mesure perso sur carte (auteur uniquement), bouton couche "toutes les mesures" avec cluster Leaflet
+- B-MESURES-5 : Score de fiabilité serveur (fonction Edge ou trigger Postgres), règle d'expiration low-score
+- B-MESURES-6 : Intégration dans `calcHuman()` — pondération locale par mesures validées (méthodologie à définir : gaussienne par distance, recalibration coefficient, etc.)
+- B-MESURES-7 : Protocole de mesure documenté (page dédiée, validée vis-à-vis de la position épistémique)
+- B-MESURES-8 : RGPD — CGU, politique de confidentialité, droits utilisateur, export/suppression compte
+
+**Pré-requis de conception :**
+- La méthodologie d'auto-correction du modèle est un **sujet scientifique**, pas une simple feature. À co-concevoir avec les associations EM partenaires et (idéalement) un relecteur scientifique.
+- Protocole de mesure à stabiliser **avant** l'implémentation, sinon le scoring ne veut rien dire.
+
+**Déclencheur** : après les premiers retours des associations EM sur v6, pour intégrer leurs attentes dans la conception.
+
+**Estimation réaliste** : 3 à 6 semaines de travail concentré + phase de test terrain avant ouverture publique.
+
+**Statut** : voie B, à ouvrir après livraison v6 aux associations et premiers retours.
 ---
 
 ## 5. Voie B : plan de montée en gamme (sommaire)
@@ -161,7 +190,8 @@ Détails complets dans `TELLUX_MONTEE_EN_GAMME.md`.
 | 3 | Automatisation N8N | 🟡 |
 | 4 | Migration technique du monofichier HTML | 🔴 |
 | 5 | Gouvernance et structure juridique | 🟡 |
-| 6 | Stratégie de subventions | 🟡 |
+| 6 | Stratégie subventions | 🟡 |
+| 7 | B-MESURES : contribution + auto-correction modèle | 🔴 |
 
 **Axe 2 — Framer :** Webflow abandonné. Framer retenu. L'app cartographique (HTML/Leaflet) reste indépendante ; Framer = landing page marketing.
 
@@ -226,6 +256,8 @@ Court terme : CTC. Moyen terme : OEC, ADEME, ANR, LEADER. Voir `TELLUX_FINANCEME
 |---|---|---|---|
 | Associations EM (PRIARTEM, CRIIREM, collectifs) | Carte + double indice + disclaimer santé | ✅ PRÊT | `TELLUX_KIT_ENVOI_EM.md` |
 | Agronomie / permaculture | Module parcelle + 3 relevés terrain H63 | ⚠️ Manque terrain | `TELLUX_DOSSIER_AGRO_BIO.md` |
+> **Note B-MESURES** : la co-conception du module contribution avec les associations EM partenaires (PRIARTEM/CRIIREM, LPO Corse, autres) devient un axe stratégique. Le module n'est pas livré dans v6 — il sera conçu avec les retours des premières associations contactées.
+> data: ajout ticket B-MESURES voie B (contribution utilisateurs + auto-correction modèle)
 | Mairies / patrimoine | 5+ fiches B-VISITES + module géométrie opérationnel | ⚠️ Fiches manquantes | `TELLUX_DOSSIER_MAIRIES_PATRIMOINE.md` |
 | Scientifiques — Géophysiciens | Carte + GPS vérifiés + alignements | ⚠️ GPS A-1g | `TELLUX_DOSSIER_SCIENTIFIQUES.md` |
 | Scientifiques — EM & santé | Double indice + corpus A | ✅ PRÊT | `TELLUX_DOSSIER_SCIENTIFIQUES.md` |
