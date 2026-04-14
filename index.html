@@ -4367,7 +4367,7 @@ function buildSiteMarkers(){
   // Vider les couches au cas où on rebuilde après un fetch tardif
   if(typeof lSit!=='undefined'&&lSit.clearLayers)lSit.clearLayers();
   if(typeof lSit2!=='undefined'&&lSit2.clearLayers)lSit2.clearLayers();
-  SITES.forEach(([a,o,n,t,c,desc],_siteIdx)=>{
+  SITES.forEach(([a,o,n,t,c,desc,gpsInfo],_siteIdx)=>{
   let shape,sw,sh;
   if(t==='Mégalithique'){
     shape='<div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:13px solid '+c+';filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))"></div>';
@@ -4394,15 +4394,21 @@ function buildSiteMarkers(){
   const tagBorder=t==='Remarquable'?'#a78bfa':t==='Hydraulique'?'#6b8fd4':t==='Église romane'?'#d97706':'#f59e0b';
   const targetLayer=(t==='Site remarquable'||t==='Hydraulique')?lSit2:lSit;
   L.marker([a,o],{icon})
-    .on('click',(function(idx,lat,lon,name,typ,dsc){return function(){
+    .on('click',(function(idx,lat,lon,name,typ,dsc,gps){return function(){
       // Intercept click when geometry panel is open
       if(_geomSiteClick(idx,lat,lon,name))return;
       var orientInfo='';
       var ori=SITES_ORIENTATION[name];
       if(ori){orientInfo='<br><span style="font-size:11px;color:var(--info)">🧭 Orientation : <b>'+ori.azimut+'\u00b0 ('+_azLabel(ori.azimut)+')</b> \u00b1'+ori.precision+'\u00b0 \u00b7 '+ori.source+'</span>';}
       else{orientInfo='<br><span style="font-size:10px;color:var(--tx3)">🧭 Orientation non documentee \u2014 <a href="#" onclick="event.preventDefault();openOrientContrib(\''+name.replace(/'/g,"\\'")+'\','+lat+','+lon+')" style="color:var(--info)">contribuer ?</a></span>';}
-      info('<span class="tag" style="background:'+tagBg+';color:'+tagColor+';border:0.5px solid '+tagBorder+'">'+typ+'</span> <b>'+name+'</b>'+orientInfo+'<br><span style="font-size:12px;color:var(--tx2)">'+dsc+'</span>');
-    }})(_siteIdx,a,o,n,t,desc))
+      var gpsInfo='';
+      if(gps&&gps.source){
+        gpsInfo='<br><span style="font-size:10px;color:var(--tx3)">📍 GPS vérifié \u00b7 '+gps.source+(gps.audit?' \u00b7 '+gps.audit:'')+'</span>';
+      } else {
+        gpsInfo='<br><span style="font-size:10px;color:var(--tx3)">📍 Coordonnées indicatives \u2014 précision ±100 m, audit terrain en cours</span>';
+      }
+      info('<span class="tag" style="background:'+tagBg+';color:'+tagColor+';border:0.5px solid '+tagBorder+'">'+typ+'</span> <b>'+name+'</b>'+orientInfo+'<br><span style="font-size:12px;color:var(--tx2)">'+dsc+'</span>'+gpsInfo);
+    }})(_siteIdx,a,o,n,t,desc,gpsInfo))
     .addTo(targetLayer);
   });
 }
@@ -4415,7 +4421,8 @@ function loadSitesReference(){
     .then(function(data){
       if(!Array.isArray(data)||!data.length)throw new Error('JSON vide ou invalide');
       // Conversion objet → tableau pour compatibilité avec le code existant
-      SITES=data.map(function(s){return [s.lat,s.lon,s.nom,s.type,s.couleur,s.description];});
+      // Le 7e élément (optionnel) porte les métadonnées GPS {source, audit}
+      SITES=data.map(function(s){return [s.lat,s.lon,s.nom,s.type,s.couleur,s.description,s.gps_source?{source:s.gps_source,audit:s.gps_audit||null}:null];});
       console.log('[Tellux] SITES_REFERENCE.json chargé : '+SITES.length+' sites');
       buildSiteMarkers();
     })
