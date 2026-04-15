@@ -4971,6 +4971,84 @@ function _clearGeomVisuals(){
   GEOM_STATE.labels=[];
 }
 
+// ═══ MONTE CARLO REFERENCE (geom) ═══
+// Test statistique : combien de detections le hasard produit-il pour N sites aleatoires ?
+function _geomMCBbox(){return [41.3,8.5,43.1,9.7];}
+function _geomRandomPts(n){
+  var bb=_geomMCBbox(),pts=[];
+  for(var i=0;i<n;i++) pts.push([bb[0]+Math.random()*(bb[2]-bb[0]),bb[1]+Math.random()*(bb[3]-bb[1])]);
+  return pts;
+}
+function _geomMCRatios(nSites,nSims){
+  var counts=[];
+  for(var s=0;s<nSims;s++){
+    var pts=_geomRandomPts(nSites);
+    var dists=[];
+    for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++){
+      var d=_geomHdist(pts[i],pts[j]);if(d>=500) dists.push(d);
+    }
+    dists.sort(function(a,b){return a-b;});
+    var nR=0;
+    for(var a=0;a<dists.length;a++)for(var b=a+1;b<dists.length;b++){
+      var ratio=dists[b]/dists[a];
+      for(var k=0;k<GEOM_RATIOS.length;k++){if(Math.abs(ratio-GEOM_RATIOS[k].value)/GEOM_RATIOS[k].value<GEOM_RATIOS[k].tol){nR++;break;}}
+    }
+    counts.push(nR);
+  }
+  counts.sort(function(a,b){return a-b;});
+  return counts;
+}
+function _geomMCTriangles(nSites,nSims){
+  var counts=[];
+  for(var s=0;s<nSims;s++){
+    var pts=_geomRandomPts(nSites);
+    var nT=0;
+    for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++)for(var k=j+1;k<pts.length;k++){
+      var dij=_geomHdist(pts[i],pts[j]),djk=_geomHdist(pts[j],pts[k]),dik=_geomHdist(pts[i],pts[k]);
+      if(dij<500||djk<500||dik<500)continue;
+      var angI=Math.acos(Math.min(1,Math.max(-1,(dij*dij+dik*dik-djk*djk)/(2*dij*dik))))*180/Math.PI;
+      var angJ=Math.acos(Math.min(1,Math.max(-1,(dij*dij+djk*djk-dik*dik)/(2*dij*djk))))*180/Math.PI;
+      var angK=180-angI-angJ;
+      var sorted=[angI,angJ,angK].sort(function(a,b){return a-b;});
+      for(var t=0;t<GEOM_TRIANGLES.length;t++){
+        var ref=GEOM_TRIANGLES[t].angles.slice().sort(function(a,b){return a-b;});
+        if(ref.every(function(v,idx){return Math.abs(v-sorted[idx])<=GEOM_TRIANGLES[t].tol;})){nT++;break;}
+      }
+    }
+    counts.push(nT);
+  }
+  counts.sort(function(a,b){return a-b;});
+  return counts;
+}
+function _geomMCOrientations(nSites,nSims){
+  var counts=[];
+  for(var s=0;s<nSims;s++){
+    var pts=_geomRandomPts(nSites);
+    var nO=0;
+    for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++){
+      var az=_geomBearing(pts[i],pts[j]);
+      for(var d=0;d<2;d++){
+        var azCheck=d===0?az:(az+180)%360;
+        for(var a=0;a<GEOM_ASTRAL.length;a++){
+          var diff=Math.min(Math.abs(azCheck-GEOM_ASTRAL[a].az),360-Math.abs(azCheck-GEOM_ASTRAL[a].az));
+          if(diff<=GEOM_ASTRAL[a].tol){nO++;break;}
+        }
+      }
+    }
+    counts.push(nO);
+  }
+  counts.sort(function(a,b){return a-b;});
+  return counts;
+}
+function _geomPValue(observed,mcCounts){
+  return mcCounts.filter(function(c){return c>=observed;}).length/mcCounts.length;
+}
+function _geomStatBadge(p){
+  if(p<0.05) return '<span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:8px;font-size:9px">⭐ Significatif (p='+p.toFixed(3)+')</span>';
+  if(p<0.20) return '<span style="background:#f3f4f6;color:#374151;padding:1px 6px;border-radius:8px;font-size:9px">⚪ Neutre (p='+p.toFixed(3)+')</span>';
+  return '<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:8px;font-size:9px">🌫️ Coincidence probable (p='+p.toFixed(3)+')</span>';
+}
+
 // ═══ MAIN ANALYSIS ═══
 function runGeomAnalysis(){
   const sel=GEOM_STATE.selected;
@@ -5126,11 +5204,21 @@ function runGeomAnalysis(){
   results.orientations=orientations;
   GEOM_STATE.results=results;
 
+  // Monte Carlo reference (200 sims)
+  var mcN=200;
+  var mcRatios=_geomMCRatios(sel.length,mcN);
+  var mcTriangles=_geomMCTriangles(sel.length,mcN);
+  var mcOrient=_geomMCOrientations(sel.length,mcN);
+  var pRatios=_geomPValue(ratiosFound.length,mcRatios);
+  var pTriangles=_geomPValue(trianglesFound.length,mcTriangles);
+  var pOrient=_geomPValue(orientations.length,mcOrient);
+  results.mc={nSims:mcN,pRatios:pRatios,pTriangles:pTriangles,pOrientations:pOrient};
+
   // Render results
-  _renderGeomDistances(dists,ratiosFound);
-  _renderGeomTriangles(trianglesFound);
+  _renderGeomDistances(dists,ratiosFound,pRatios);
+  _renderGeomTriangles(trianglesFound,pTriangles);
   _renderGeomAlignments(alignResults,arcsFound);
-  _renderGeomOrientations(orientations);
+  _renderGeomOrientations(orientations,pOrient);
 
   // Draw on map
   _drawGeomOnMap(dists,trianglesFound,orientations);
@@ -5159,7 +5247,7 @@ function _circumcircle(a,b,c){
 }
 
 // ═══ RENDER FUNCTIONS ═══
-function _renderGeomDistances(dists,ratios){
+function _renderGeomDistances(dists,ratios,pRatios){
   const el=document.getElementById('geom-distances');
   let h='<table><tr><th>Paire</th><th>Distance</th><th>Azimut</th></tr>';
   dists.slice(0,30).forEach(d=>{
@@ -5168,7 +5256,7 @@ function _renderGeomDistances(dists,ratios){
   if(dists.length>30)h+='<tr><td colspan="3" style="color:var(--tx3)">... +'+(dists.length-30)+' autres paires</td></tr>';
   h+='</table>';
   if(ratios.length){
-    h+='<div style="margin-top:8px;font-weight:600;color:var(--tx)">Ratios remarquables detectes (tolerance \u00b13%)</div>';
+    h+='<div style="margin-top:8px;font-weight:600;color:var(--tx)">Ratios remarquables detectes (tolerance \u00b13%) '+_geomStatBadge(pRatios)+'</div>';
     ratios.slice(0,20).forEach(r=>{
       h+='<div style="margin:3px 0;font-size:10px"><span class="geom-ratio-tag '+r.match.cls+'">'+r.match.symbol+' '+r.match.label+'</span> '+
         r.pairA+' ('+r.distA.toFixed(2)+'km) / '+r.pairB+' ('+r.distB.toFixed(2)+'km) = '+r.ratio.toFixed(4)+'</div>';
@@ -5180,13 +5268,14 @@ function _renderGeomDistances(dists,ratios){
   el.innerHTML=h;
 }
 
-function _renderGeomTriangles(triangles){
+function _renderGeomTriangles(triangles,pTriangles){
   const el=document.getElementById('geom-angles');
   if(!triangles.length){
     el.innerHTML='<div style="color:var(--tx3);font-size:10px">Aucun triangle remarquable detecte (tolerance \u00b12\u00b0).</div>';
     return;
   }
-  let h='<table><tr><th>Sites</th><th>Angles</th><th>Type</th><th>Cotes (km)</th></tr>';
+  let h='<div style="margin-bottom:6px">'+_geomStatBadge(pTriangles)+'</div>';
+  h+='<table><tr><th>Sites</th><th>Angles</th><th>Type</th><th>Cotes (km)</th></tr>';
   triangles.forEach(t=>{
     h+='<tr><td>'+t.sites.join(', ')+'</td><td>'+t.angles.join('\u00b0, ')+'\u00b0</td><td style="color:var(--info);font-weight:600">'+t.pattern+'</td><td>'+t.sides.join(', ')+'</td></tr>';
   });
@@ -5216,17 +5305,19 @@ function _renderGeomAlignments(alignments,arcs){
   el.innerHTML=h;
 }
 
-function _renderGeomOrientations(orientations){
+function _renderGeomOrientations(orientations,pOrient){
   const el=document.getElementById('geom-orientations');
   if(!orientations.length){
     el.innerHTML='<div style="color:var(--tx3);font-size:10px">Aucune orientation astrale remarquable detectee (tolerance \u00b12.5\u00b0).</div>';
     return;
   }
-  let h='<table><tr><th>Segment</th><th>Azimut</th><th>Correspondance</th><th>\u0394</th></tr>';
+  let h='<div style="margin-bottom:6px">'+_geomStatBadge(pOrient)+'</div>';
+  h+='<table><tr><th>Segment</th><th>Azimut</th><th>Correspondance</th><th>\u0394</th></tr>';
   orientations.forEach(o=>{
     h+='<tr><td>'+o.pairA+' \u2192 '+o.pairB+'</td><td>'+o.azimuth+'\u00b0</td><td><span class="geom-ratio-tag geom-ratio-astral">'+o.match+'</span></td><td>\u00b1'+o.diff+'\u00b0</td></tr>';
   });
   h+='</table>';
+  h+='<div style="margin-top:10px;font-size:9px;color:var(--tx3);padding:6px 8px;background:var(--bg2);border-radius:4px">Etiquetage statistique : test Monte Carlo, 200 simulations, points aleatoires dans le polygone Corse. Inspire Broadbent 1980. Voir Sources et methodologie.</div>';
   el.innerHTML=h;
 }
 
