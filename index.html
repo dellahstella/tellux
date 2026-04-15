@@ -14,6 +14,8 @@
 <!-- Cache Netlify : les assets statiques sont mis en cache 7 jours côté navigateur -->
 <meta http-equiv="Cache-Control" content="public, max-age=604800, stale-while-revalidate=86400">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css"/>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -1936,6 +1938,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
 <script>
 const SB_URL='https://knckulwghgfrxmbweada.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtuY2t1bHdnaGdmcnhtYndlYWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NTAxMzQsImV4cCI6MjA4OTIyNjEzNH0.Cu9dvxFyn-5pbOP65gowCEQvRti74CLnlNYf92jebis';
@@ -2019,10 +2022,10 @@ const wmsEmag=L.imageOverlay(
 );
 let _tileLabels=L.tileLayer(DARK?'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',{zIndex:10,attribution:''}).addTo(map);
 
-const lSit2=L.layerGroup(),lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lSit=L.layerGroup(),lNet=L.layerGroup(),lRadon=L.layerGroup(),lRPG=L.layerGroup(),lForet=L.layerGroup(),lAOC=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.layerGroup(),lCem=L.layerGroup(),lIntl=L.layerGroup(),lAlign=L.layerGroup(),lEgl=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
+const lSit2=L.layerGroup(),lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lSit=L.layerGroup(),lNet=L.layerGroup(),lRadon=L.layerGroup(),lRPG=L.layerGroup(),lForet=L.layerGroup(),lAOC=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lCem=L.layerGroup(),lIntl=L.layerGroup(),lAlign=L.layerGroup(),lEgl=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
 const LAYERS={sit2:lSit2,bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,prod:lProd,sit:lSit,net:lNet,radon:lRadon,rpg:lRPG,foret:lForet,aoc:lAOC,hot:lHot,con:lCon,cem:lCem,intl:lIntl,align:lAlign,egl:lEgl};
 const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag};
-const ACTIVE={sit2:false,bt:false,ant:false,antOffshore:false,geo:false,hyd:false,radon:false,rpg:false,foret:false,aoc:false,cav:false,emag:false,net:false,hot:true,res:false,prod:false,sit:false,con:false,cem:false,intl:false,align:false,egl:false};
+const ACTIVE={sit2:false,bt:false,ant:false,antOffshore:false,geo:false,hyd:false,radon:false,rpg:false,foret:false,aoc:false,cav:false,emag:false,net:false,hot:true,res:false,prod:false,sit:false,con:true,cem:false,intl:false,align:false,egl:false};
 
 const LEGEND_ACTIVE=new Set();let _legendCtrl=null;
 const LEGEND_HTML={
