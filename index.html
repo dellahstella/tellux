@@ -1228,11 +1228,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 <div class="op-row" id="geo-op-row"><span>Géologie</span><input type="range" min="0.1" max="1" step="0.05" value="0.6" oninput="wmsGeo.setOpacity(+this.value)"><span id="geo-op-v">60%</span></div>
 <div class="op-row" id="hyd-op-row"><span>Nappes</span><input type="range" min="0.1" max="1" step="0.05" value="0.55" oninput="wmsHyd.setOpacity(+this.value)"><span id="hyd-op-v">55%</span></div>
 <div class="op-row" id="emag-op-row"><span>Anomalie crustale</span><input type="range" min="0.1" max="0.8" step="0.05" value="0.5" oninput="wmsEmag.setOpacity(+this.value)"><span id="emag-op-v">50%</span></div>
-<div class="op-row" id="diagnostic-row" style="display:none;background:#fff3e6;border:1px solid #f5a855">
-
-  <button onclick="hideSuspiciousAntennas()" style="padding:6px 12px;border:1px solid #f5a855;background:#fff3e6;border-radius:var(--r);font-size:11px;cursor:pointer;color:#854d0e;font-weight:500;margin-left:4px">✕ Masquer</button>
-</div>
-
 <div id="map"></div>
 <div class="tx-legend" id="tx-legend">
   <div class="tx-legend-header">
@@ -5506,85 +5501,11 @@ function importCartoRadioCSV(){
 // ---- ANTENNES ----
 const GC={'2G':'#1a4b8c','3G':'#1a6b5c','4G':'#b85c00','5G':'#991b1b','infra':'#6b7280','default':'#4a4f5e'};
 
-// Diagnostic antennes — analyse la cohérence spatiale
+// Haversine distance (km) — utilise par calcHuman, failles, radon, etc.
 function haversine(lat1,lon1,lat2,lon2){
   const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
   const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-function diagnoseAntennasQuality(antRows){
-  const diagnosis={};
-  const SITES_REF=[
-    {lat:41.5370,lon:8.9193,name:'Cauria'},
-    {lat:42.0560,lon:9.3000,name:'Poggio-di-Nazza'},
-    {lat:42.6700,lon:9.2590,name:'Monte-Revincu'},
-    {lat:41.7478,lon:8.8713,name:'Filitosa'},
-    {lat:42.3700,lon:9.2800,name:'Caporalino'},
-    {lat:42.4800,lon:9.1600,name:'Piève'},
-    {lat:42.1465,lon:8.6269,name:'Cargèse'},
-  ];
-  
-  const suspiciousAnts=[];
-  antRows.forEach((ant,idx)=>{
-    // Vérifier si l'antenne est trop proche de la côte (même si isLand=true)
-    const distToCosta=Math.min(...SITES_REF.map(s=>haversine(ant.lat,ant.lon,s.lat,s.lon)));
-    const cluster=antRows.filter(a=>haversine(ant.lat,ant.lon,a.lat,a.lon)<0.5).length;
-    
-    // Suspectes : trop isolées (>30km plus proche voisin) ou clusters bizarres (>20 en 500m)
-    if(cluster>15 || distToCosta>35){
-      suspiciousAnts.push({...ant,idx,cluster,distToCosta,flag:cluster>15?'CLUSTER_DENSE':'ISOLATED'});
-    }
-  });
-  
-  console.log('🔍 DIAGNOSTIC ANTENNES:');
-  console.log('Total antennes:', antRows.length);
-  console.log('Suspectes:', suspiciousAnts.length);
-  console.log('Détail suspectes:');
-  suspiciousAnts.forEach(a=>{
-    console.log(`  [${a.idx}] ${a.commune || "?"} | lat:${a.lat.toFixed(4)} lon:${a.lon.toFixed(4)}`);
-    console.log(`        Flag: ${a.flag} | cluster: ${a.cluster} antennes | distMin: ${a.distToCosta.toFixed(1)}km`);
-    console.log(`        Operateur: ${a.operateur || '?'} | Generation: ${a.generation || '?'}`);
-  });
-  
-  return suspiciousAnts;
-}
-
-// Afficher les antennes suspectes sur la carte (pour vérification visuelle)
-let suspiciousLayer=null;
-function showSuspiciousAntennas(){
-  if(suspiciousLayer)map.removeLayer(suspiciousLayer);
-  suspiciousLayer=L.layerGroup();
-  
-  // Récupérer les suspectes depuis le diagnostic précédent
-  // Pour ce faire, re-charger les data et faire le diagnostic
-  fetch(SB_URL+'/rest/v1/antennas_corse?select=lat,lon,generation,commune,operateur',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}})
-    .then(r=>r.json())
-    .then(rows=>{
-      const suspicious=diagnoseAntennasQuality(rows);
-      console.log('📍 Affichage de '+suspicious.length+' antennes suspectes sur la carte');
-      
-      suspicious.forEach(ant=>{
-        const color=ant.flag==='CLUSTER_DENSE'?'#ff00ff':'#ff9900'; // Magenta cluster, Orange isolée
-        const icon=L.divIcon({
-          html:'<div style="width:16px;height:16px;background:'+color+';border:3px solid white;border-radius:50%;box-shadow:0 0 8px '+color+'80"></div>',
-          className:'',
-          iconSize:[16,16],
-          iconAnchor:[8,8]
-        });
-        L.marker([ant.lat,ant.lon],{icon,zIndexOffset:200})
-          .bindPopup('<b style="color:'+color+'">⚠️ SUSPECTE</b><br>'+ant.commune+'<br>Flag: '+ant.flag+'<br>lat: '+ant.lat.toFixed(4)+'<br>lon: '+ant.lon.toFixed(4))
-          .addTo(suspiciousLayer);
-      });
-      
-      suspiciousLayer.addTo(map);
-    })
-    .catch(e=>console.error('Erreur chargement antennes suspectes:',e));
-}
-
-function hideSuspiciousAntennas(){
-  if(suspiciousLayer)map.removeLayer(suspiciousLayer);
-  suspiciousLayer=null;
-  console.log('Antennes suspectes cachées');
 }
 
 async function loadAnt(){try{
@@ -5598,22 +5519,9 @@ async function loadAnt(){try{
     const batch=await r.json();
     if(!batch||!batch.length)break;
     rows=rows.concat(batch);
-    console.log(`📡 Antennes page ${page+1}: ${batch.length} (total: ${rows.length})`);
     if(batch.length<pageSize)break;
     page++;
   }
-  console.log(`📡 Antennes chargées: ${rows.length}`);
-
-// DIAGNOSTIC avant filtrage
-const suspicious=diagnoseAntennasQuality(rows);
-if(suspicious.length>0){
-  console.warn('⚠️ '+suspicious.length+' antennes suspectes détectées — voir logs pour détails');
-  // Afficher le bouton diagnostic
-  // diagnostic-row masqué (nettoyé)
-}else{
-  console.log('✅ Toutes les antennes semblent bien positionnées');
-}
-
 // Filtre côtier RENFORCÉ — rejette les antennes en mer
 const isLand=(lt,ln)=>{
   // Bounding box Corse strict
@@ -5658,7 +5566,6 @@ rows.forEach(f=>{
   if(isLandAnt){
     // Antenne terrestre
     const gen=f.generation||'default';
-    if(rows.indexOf(f)<3) console.log(`🗺️ Antenne placée: [${f.lat},${f.lon}] ${f.commune} ${gen}`);
     L.marker([f.lat,f.lon],{icon:mkIcon(GC[gen]||GC.default,false,9),zIndexOffset:100}).on('click',()=>info((f.commune||'Corse')+' · '+(f.operateur||'?'))).addTo(lAnt);
   }else{
     // Antenne offshore
@@ -5670,13 +5577,7 @@ rows.forEach(f=>{
   }
 });
 
-console.group('🔧 FILTRAGE ANTENNES ANFR');
-console.log('  Total chargées:', rows.length);
-console.log('  ❌ Rejetées bounding box:', nSeaFiltered);
-console.log('  ⚓ Offshore (isLand):', nOffshore);
-console.log('  ✅ Affichées (lAnt):', rows.length-nSeaFiltered-nOffshore);
-if(nSeaFiltered>rows.length*0.5) console.error('  🚨 Plus de 50% rejetées — problème de format coordonnées probable (DMS? Lambert93? swap?)');
-console.groupEnd();
+console.log('Antennes : '+(rows.length-nSeaFiltered-nOffshore)+' affichees, '+nOffshore+' offshore');
 const hdr=document.getElementById('hdr-status');
 if(hdr)hdr.textContent=(rows.length-nSeaFiltered-nOffshore)+' antennes · '+nOffshore+' offshore';}catch(e){console.error('❌ loadAnt erreur:',e.message);}
 // Émetteurs radiodiffusion majeurs — icône croix ✛
