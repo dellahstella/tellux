@@ -4686,6 +4686,7 @@ function drawAlignments(){
 // Méthode : pour chaque paire de sites, compte les points à <maxDev mètres de la droite
 // Filtre : ≥minPts points, longueur ≥minKm km, puis Monte Carlo p-value vs hasard
 
+// utilise en fallback uniquement, voir _scripts/precompute_alignments.mjs
 function detectAlignments(points,maxDev,minPts,minKm){
   maxDev=maxDev||400; minPts=minPts||4; minKm=minKm||8;
   const R=6371000;
@@ -4724,7 +4725,8 @@ function detectAlignments(points,maxDev,minPts,minKm){
   return dedup.slice(0,15);
 }
 
-// Monte Carlo p-value (Broadbent 1980) : combien d'alignements ≥k points dans N random sets ?
+// Monte Carlo p-value (Broadbent 1980) : combien d'alignements >=k points dans N random sets ?
+// utilise en fallback uniquement, voir _scripts/precompute_alignments.mjs
 function monteCarloPvalue(nSites,bbox,maxDev,minPts,minKm,nSims){
   nSims=nSims||500;
   const counts=[];
@@ -4738,42 +4740,70 @@ function monteCarloPvalue(nSites,bbox,maxDev,minPts,minKm,nSims){
 }
 
 // Build & render auto-detected alignments layer
+// Version pre-calculee : charge _data/alignments_precomputed.json (genere par _scripts/precompute_alignments.mjs)
+// Fallback runtime si le fetch echoue (voir buildAutoAlignmentsRuntime ci-dessous)
 let _autoAlignBuilt=false;
+let _alignmentsData=null;
 function buildAutoAlignments(){
   if(_autoAlignBuilt)return;
   _autoAlignBuilt=true;
-  // Collect all site coords
-  const pts=SITES.map(s=>[s[0],s[1]]);
-  if(pts.length<4){info('Pas assez de sites pour détecter des alignements.');return;}
-  const lines=detectAlignments(pts,400,4,8);
-  // Monte Carlo reference (async-like but sync for small n)
-  const bbox=[41.3,8.5,43.1,9.7];
-  let mcRef=null;
-  try{const mc=monteCarloPvalue(pts.length,bbox,400,4,8,50);mcRef=mc;}catch(e){}
-  const mcMedian=mcRef?mcRef[Math.floor(mcRef.length/2)]:null;
-  lines.forEach((l,idx)=>{
-    const pval=mcRef?mcRef.filter(c=>c>=l.count).length/mcRef.length:null;
-    const sig=pval!==null&&pval<0.05;
-    const col=sig?'#e11d48':'#a78bfa';
-    const w=sig?2:1.2;
-    const op=sig?0.7:0.4;
-    const names=l.indices.map(i=>SITES[i]?SITES[i][2]:'?').join(' → ');
-    const pvalStr=pval!==null?'p='+pval.toFixed(3):'p=?';
-    const sigTag=sig?'<span style="background:#fecdd3;color:#9f1239;padding:1px 6px;border-radius:8px;font-size:9px">Significatif</span>':
+  if(_alignmentsData){_renderAlignments(_alignmentsData);return;}
+  fetch('_data/alignments_precomputed.json',{cache:'no-cache'})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(data){
+      _alignmentsData=data;
+      _renderAlignments(data);
+      console.log('[Tellux] Alignements pre-calcules charges : '+data.lines.length+' lignes');
+    })
+    .catch(function(err){
+      console.warn('[Tellux] Fallback runtime alignements : '+err.message);
+      buildAutoAlignmentsRuntime();
+    });
+}
+function _renderAlignments(data){
+  data.lines.forEach(function(l,idx){
+    var sig=l.significant;
+    var col=sig?'#e11d48':'#a78bfa';
+    var w=sig?2:1.2;
+    var op=sig?0.7:0.4;
+    var names=l.names.join(' \u2192 ');
+    var pvalStr='p='+l.p_value.toFixed(3);
+    var sigTag=sig?'<span style="background:#fecdd3;color:#9f1239;padding:1px 6px;border-radius:8px;font-size:9px">Significatif</span>':
       '<span style="background:#f3e8ff;color:#7c3aed;padding:1px 6px;border-radius:8px;font-size:9px">Non significatif (hasard probable)</span>';
     L.polyline(l.points,{color:col,weight:w,opacity:op,dashArray:'8 4'})
-      .bindTooltip('<div style="font-family:DM Sans,sans-serif;max-width:260px"><b>Alignement #'+(idx+1)+'</b> — '+l.count+' sites · '+l.length_km+' km · '+l.azimuth+'°<br>'+
+      .bindTooltip('<div style="font-family:DM Sans,sans-serif;max-width:260px"><b>Alignement #'+(idx+1)+'</b> \u2014 '+l.count+' sites \u00b7 '+l.length_km+' km \u00b7 '+l.azimuth+'\u00b0<br>'+
         sigTag+' '+pvalStr+'<br>'+
         '<span style="font-size:10px;color:#6b7280">'+names+'</span><br>'+
-        '<span style="font-size:9px;color:#9ca3af">Méthode : brute force déviation max 400m · Monte Carlo 50 sims (Broadbent 1980)</span></div>',
+        '<span style="font-size:9px;color:#9ca3af">M\u00e9thode : brute force d\u00e9viation max 400m \u00b7 Monte Carlo '+data.mc_n_sims+' sims (Broadbent 1980)</span></div>',
         {sticky:true,direction:'top'})
       .addTo(lAlign);
   });
-  const nSig=lines.filter((l,i)=>{const pv=mcRef?mcRef.filter(c=>c>=l.count).length/mcRef.length:1;return pv<0.05;}).length;
-  info('\ud83d\udccd <b>'+lines.length+' alignements détectés</b> ('+nSig+' significatifs vs hasard, '+
-    (lines.length-nSig)+' probablement aléatoires) · Méthode Broadbent 1980 · '+
-    (mcMedian!==null?'Médiane Monte Carlo : '+mcMedian+' alignements pour '+pts.length+' points aléatoires':'')+
-    '<br><span style="font-size:10px;color:var(--tx3)">⚠ Les alignements non significatifs sont attendus par la statistique. Seuls les roses sont à investiguer sur le terrain.</span>');
+  var nSig=data.lines.filter(function(l){return l.significant;}).length;
+  info('\ud83d\udccd <b>'+data.lines.length+' alignements d\u00e9tect\u00e9s</b> ('+nSig+' significatifs vs hasard, '+
+    (data.lines.length-nSig)+' probablement al\u00e9atoires) \u00b7 M\u00e9thode Broadbent 1980 \u00b7 '+
+    'M\u00e9diane Monte Carlo : '+data.mc_median+' alignements pour '+data.n_sites+' points al\u00e9atoires'+
+    '<br><span style="font-size:10px;color:var(--tx3)">\u26a0 Les alignements non significatifs sont attendus par la statistique. Seuls les roses sont \u00e0 investiguer sur le terrain.</span>');
+}
+// Fallback runtime — utilise en cas d'echec du fetch JSON (meme logique qu'avant, 50 sims)
+// utilise en fallback uniquement, voir _scripts/precompute_alignments.mjs
+function buildAutoAlignmentsRuntime(){
+  var pts=SITES.map(function(s){return [s[0],s[1]];});
+  if(pts.length<4){info('Pas assez de sites pour d\u00e9tecter des alignements.');return;}
+  var lines=detectAlignments(pts,400,4,8);
+  var bbox=[41.3,8.5,43.1,9.7];
+  var mcRef=null;
+  try{var mc=monteCarloPvalue(pts.length,bbox,400,4,8,50);mcRef=mc;}catch(e){}
+  var mcMedian=mcRef?mcRef[Math.floor(mcRef.length/2)]:null;
+  var fallbackData={lines:[],mc_median:mcMedian,mc_n_sims:50,n_sites:pts.length};
+  lines.forEach(function(l){
+    var pval=mcRef?mcRef.filter(function(c){return c>=l.count;}).length/mcRef.length:null;
+    fallbackData.lines.push({
+      indices:l.indices,points:l.points,count:l.count,azimuth:l.azimuth,
+      length_km:l.length_km,p_value:pval||1,significant:pval!==null&&pval<0.05,
+      names:l.indices.map(function(i){return SITES[i]?SITES[i][2]:'?';})
+    });
+  });
+  _renderAlignments(fallbackData);
 }
 
 // ═══ MODULE GÉOMÉTRIE AVANCÉE ═══
