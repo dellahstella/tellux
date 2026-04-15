@@ -445,7 +445,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .lbtn.on-egl{background:#fff7ed;color:#b45309;border-color:#f59e0b;font-weight:500;}
 .lbtn.on-hypo{background:#e8eef8;color:var(--info);border-color:#6b8fd4;font-weight:500;}
 /* Etat actif partage (Option A — DA v2) pour couches sans variante dediee */
-.lbtn.on-radon,.lbtn.on-emag,.lbtn.on-wdmam{background:var(--tx-brume);color:var(--tx-maquis);border-color:var(--tx-maquis);}
+.lbtn.on-radon,.lbtn.on-emag,.lbtn.on-wdmam,.lbtn.on-prod{background:var(--tx-brume);color:var(--tx-maquis);border-color:var(--tx-maquis);}
 .layers{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;}
 .lbtn{font-size:10px;padding:3px 7px;border-radius:14px;border:1px solid var(--border);background:var(--bg);color:var(--tx2);cursor:pointer;display:inline-flex;align-items:center;gap:3px;transition:all .15s;white-space:nowrap;}
 .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
@@ -1202,6 +1202,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     </div>
     <div class="accordion-cat-content">
       <button class="lbtn" id="b-res" title="Lignes et postes électriques haute tension (50Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Électrique (HT)</button>
+      <button class="lbtn" id="b-prod" title="Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions" onclick="tog('prod','on-prod',this)"><span class="sq" style="background:#1a5c8c"></span>Sources production</button>
       <button class="lbtn" id="b-bt" title="Réseau basse tension BT — EDF SEI · zoom ≥ 12" onclick="tog('bt','on-bt',this)"><span class="ln" style="background:#d97706"></span>Électrique (BT)</button>
       <button class="lbtn" id="b-ant" title="Antennes 2G/3G/4G/5G recensées par l'ANFR" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR</button>
     </div>
@@ -2023,10 +2024,10 @@ const wmsEmag=L.imageOverlay(
 );
 let _tileLabels=L.tileLayer(DARK?'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',{zIndex:10,attribution:''}).addTo(map);
 
-const lSit2=L.layerGroup(),lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lSit=L.layerGroup(),lNet=L.layerGroup(),lRadon=L.layerGroup(),lRPG=L.layerGroup(),lForet=L.layerGroup(),lAOC=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.layerGroup(),lCem=L.layerGroup(),lIntl=L.layerGroup(),lAlign=L.layerGroup(),lEgl=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
-const LAYERS={sit2:lSit2,bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,sit:lSit,net:lNet,radon:lRadon,rpg:lRPG,foret:lForet,aoc:lAOC,hot:lHot,con:lCon,cem:lCem,intl:lIntl,align:lAlign,egl:lEgl};
+const lSit2=L.layerGroup(),lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lSit=L.layerGroup(),lNet=L.layerGroup(),lRadon=L.layerGroup(),lRPG=L.layerGroup(),lForet=L.layerGroup(),lAOC=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.layerGroup(),lCem=L.layerGroup(),lIntl=L.layerGroup(),lAlign=L.layerGroup(),lEgl=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
+const LAYERS={sit2:lSit2,bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,prod:lProd,sit:lSit,net:lNet,radon:lRadon,rpg:lRPG,foret:lForet,aoc:lAOC,hot:lHot,con:lCon,cem:lCem,intl:lIntl,align:lAlign,egl:lEgl};
 const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag};
-const ACTIVE={sit2:false,bt:false,ant:false,antOffshore:false,geo:false,hyd:false,radon:false,rpg:false,foret:false,aoc:false,cav:false,emag:false,net:false,hot:true,res:false,sit:false,con:false,cem:false,intl:false,align:false,egl:false};
+const ACTIVE={sit2:false,bt:false,ant:false,antOffshore:false,geo:false,hyd:false,radon:false,rpg:false,foret:false,aoc:false,cav:false,emag:false,net:false,hot:true,res:false,prod:false,sit:false,con:false,cem:false,intl:false,align:false,egl:false};
 
 const LEGEND_ACTIVE=new Set();let _legendCtrl=null;
 const LEGEND_HTML={
@@ -2202,6 +2203,7 @@ function tog(id,cls,btn){
     if(id==='hot'&&lHot.getLayers().length===0)buildHot();
     if(id==='sit2'&&lSit2.getLayers().length===0)buildSit2();
     if(id==='res'&&lRes.getLayers().length===0)loadReseau();
+    if(id==='prod'&&lProd.getLayers().length===0)loadProd();
     if(id==='bt'&&lBT.getLayers().length===0)loadBT();
     if(id==='ant'&&lAnt.getLayers().length===0)loadAnt();
     if(id==='antOffshore'&&lAntOffshore.getLayers().length===0)loadAnt(); // antOffshore charge aussi via loadAnt
@@ -3508,21 +3510,25 @@ function buildHot(){
   }
 }
 
-// Réseau électrique HTA — données EDF SEI (Supabase) + moyens de production inline
-const PROD_ELECTRIQUE=[{"lat":42.3312,"lon":8.9823,"nom":"Sovenzia","commune":"Calacuccia","type":"Hydraulique / barrage","puissance":15.3,"exploitant":"EDF"},{"lat":41.7523,"lon":8.9634,"nom":"Calzola (pont de)","commune":"Casalabriva","type":"Hydraulique au fil de l eau","puissance":0.4,"exploitant":"SNC Acquaviva"},{"lat":41.6234,"lon":8.9745,"nom":"Sartene","commune":"Sartène","type":"Hydraulique au fil de l eau","puissance":0.6,"exploitant":""},{"lat":42.4289,"lon":9.2134,"nom":"Valle di Rostino","commune":"Valle-di-Rostino","type":"Hydraulique au fil de l eau","puissance":1.5,"exploitant":""},{"lat":42.4534,"lon":8.9023,"nom":"Asco","commune":"Asco","type":"Hydraulique au fil de l eau","puissance":5.4,"exploitant":""},{"lat":41.9712,"lon":8.9089,"nom":"Tolla","commune":"Tolla","type":"Hydraulique / barrage","puissance":15.6,"exploitant":"EDF"},{"lat":42.9734,"lon":9.3589,"nom":"Ersa","commune":"Ersa","type":"Eolien","puissance":7.8,"exploitant":""},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"TAC","puissance":75.0,"exploitant":"EDF"},{"lat":41.3878,"lon":9.1589,"nom":"SARCO","commune":"Bonifacio","type":"Interconnexion","puissance":90.0,"exploitant":"Terna"},{"lat":42.2789,"lon":9.4756,"nom":"Sampolo","commune":"Lugo-di-Nazza","type":"Hydraulique / barrage","puissance":43.0,"exploitant":"EDF"},{"lat":42.1534,"lon":8.8934,"nom":"Soccia","commune":"Soccia","type":"Hydraulique au fil de l eau","puissance":0.8,"exploitant":""},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"Hydraulique au fil de l eau","puissance":1.0,"exploitant":""},{"lat":42.3789,"lon":9.1234,"nom":"Castirla","commune":"Castirla","type":"Hydraulique / barrage","puissance":28.5,"exploitant":"EDF"},{"lat":42.1534,"lon":8.8934,"nom":"Soccia","commune":"Soccia","type":"Hydraulique au fil de l eau","puissance":1.1,"exploitant":""},{"lat":42.5089,"lon":8.8534,"nom":"Calenzana","commune":"Calenzana","type":"Eolien","puissance":6.0,"exploitant":""},{"lat":41.9634,"lon":8.8712,"nom":"Pont de Vanna","commune":"Ocana","type":"Hydraulique / barrage","puissance":8.6,"exploitant":"EDF"},{"lat":42.0934,"lon":9.0623,"nom":"Bocognano","commune":"Bocognano","type":"Hydraulique au fil de l eau","puissance":2.1,"exploitant":""},{"lat":41.8234,"lon":9.1123,"nom":"Olivese","commune":"Olivese","type":"Hydraulique au fil de l eau","puissance":1.5,"exploitant":""},{"lat":42.1523,"lon":9.4789,"nom":"Tallone","commune":"Tallone","type":"Biogaz","puissance":1.7,"exploitant":""},{"lat":42.2312,"lon":9.3145,"nom":"Giuncaggio","commune":"Giuncaggio","type":"Hydraulique au fil de l eau","puissance":2.1,"exploitant":""},{"lat":42.3934,"lon":8.9534,"nom":"Corscia","commune":"Corscia","type":"Hydraulique / barrage","puissance":13.0,"exploitant":"EDF"},{"lat":42.4534,"lon":8.9023,"nom":"Asco 2","commune":"Asco","type":"Hydraulique au fil de l eau","puissance":0.0,"exploitant":""},{"lat":41.9194,"lon":8.7386,"nom":"Vazzio","commune":"Ajaccio","type":"Diesel","puissance":132.3,"exploitant":"EDF"},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"TAC","puissance":40.0,"exploitant":"EDF"},{"lat":41.7834,"lon":9.1823,"nom":"Quenza","commune":"Quenza","type":"Hydraulique au fil de l eau","puissance":0.7,"exploitant":""},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"Diesel","puissance":54.5,"exploitant":"EDF"},{"lat":42.5623,"lon":9.4312,"nom":"SACOI","commune":"Lucciana","type":"Interconnexion","puissance":50.0,"exploitant":"Terna"},{"lat":41.9634,"lon":8.8712,"nom":"Ocana","commune":"Ocana","type":"Hydraulique / barrage","puissance":15.1,"exploitant":"EDF"},{"lat":42.9534,"lon":9.4234,"nom":"Rogliano","commune":"Rogliano","type":"Eolien","puissance":4.2,"exploitant":""},{"lat":42.4534,"lon":8.9023,"nom":"Asco 3","commune":"Asco","type":"Hydraulique au fil de l eau","puissance":0.0,"exploitant":""},{"lat":41.7623,"lon":9.0534,"nom":"Cargiaca","commune":"Cargiaca","type":"Hydraulique au fil de l eau","puissance":3.5,"exploitant":""},{"lat":42.2623,"lon":9.4823,"nom":"San-Giuliano","commune":"San-Giuliano","type":"Hydraulique au fil de l eau","puissance":1.5,"exploitant":""},{"lat":41.8934,"lon":9.1289,"nom":"Zicavo","commune":"Zicavo","type":"Hydraulique au fil de l eau","puissance":2.5,"exploitant":"SAS Centrale hydroélectrique de Zicavo"}];
-
-async function loadReseau(){
-  lRes.clearLayers();
-  // Moyens de production (icônes colorés par type)
+// Sources de production electrique (couche dediee lProd)
+function loadProd(){
+  lProd.clearLayers();
   const TYPE_COLOR={'Hydraulique / barrage':'#1a5c8c','Hydraulique au fil de l eau':'#4a90d9',
     'Eolien':'#2d9b87','Diesel':'#991b1b','TAC':'#b85c00','Interconnexion':'#7c3aed','Biogaz':'#15803d'};
   PROD_ELECTRIQUE.forEach(s=>{
     const color=TYPE_COLOR[s.type]||'#5c5c5c';
     const size=s.puissance>50?12:s.puissance>10?9:7;
-    const popup=`<b>${s.nom}</b> · ${s.commune}<br><span style="color:${color};font-weight:500">${s.type}</span><br>Puissance: <b>${s.puissance} MW</b>`+(s.exploitant?`<br>${s.exploitant}`:'');
+    const popup='<b>'+s.nom+'</b> \u00b7 '+s.commune+'<br><span style="color:'+color+';font-weight:500">'+s.type+'</span><br>Puissance: <b>'+s.puissance+' MW</b>'+(s.exploitant?'<br>'+s.exploitant:'');
     L.marker([s.lat,s.lon],{icon:mkIcon(color,true,size),zIndexOffset:120})
-      .on('click',()=>info(popup)).addTo(lRes);
+      .on('click',function(){info(popup);}).addTo(lProd);
   });
+}
+
+// Réseau électrique HTA — données EDF SEI (Supabase)
+const PROD_ELECTRIQUE=[{"lat":42.3312,"lon":8.9823,"nom":"Sovenzia","commune":"Calacuccia","type":"Hydraulique / barrage","puissance":15.3,"exploitant":"EDF"},{"lat":41.7523,"lon":8.9634,"nom":"Calzola (pont de)","commune":"Casalabriva","type":"Hydraulique au fil de l eau","puissance":0.4,"exploitant":"SNC Acquaviva"},{"lat":41.6234,"lon":8.9745,"nom":"Sartene","commune":"Sartène","type":"Hydraulique au fil de l eau","puissance":0.6,"exploitant":""},{"lat":42.4289,"lon":9.2134,"nom":"Valle di Rostino","commune":"Valle-di-Rostino","type":"Hydraulique au fil de l eau","puissance":1.5,"exploitant":""},{"lat":42.4534,"lon":8.9023,"nom":"Asco","commune":"Asco","type":"Hydraulique au fil de l eau","puissance":5.4,"exploitant":""},{"lat":41.9712,"lon":8.9089,"nom":"Tolla","commune":"Tolla","type":"Hydraulique / barrage","puissance":15.6,"exploitant":"EDF"},{"lat":42.9734,"lon":9.3589,"nom":"Ersa","commune":"Ersa","type":"Eolien","puissance":7.8,"exploitant":""},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"TAC","puissance":75.0,"exploitant":"EDF"},{"lat":41.3878,"lon":9.1589,"nom":"SARCO","commune":"Bonifacio","type":"Interconnexion","puissance":90.0,"exploitant":"Terna"},{"lat":42.2789,"lon":9.4756,"nom":"Sampolo","commune":"Lugo-di-Nazza","type":"Hydraulique / barrage","puissance":43.0,"exploitant":"EDF"},{"lat":42.1534,"lon":8.8934,"nom":"Soccia","commune":"Soccia","type":"Hydraulique au fil de l eau","puissance":0.8,"exploitant":""},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"Hydraulique au fil de l eau","puissance":1.0,"exploitant":""},{"lat":42.3789,"lon":9.1234,"nom":"Castirla","commune":"Castirla","type":"Hydraulique / barrage","puissance":28.5,"exploitant":"EDF"},{"lat":42.1534,"lon":8.8934,"nom":"Soccia","commune":"Soccia","type":"Hydraulique au fil de l eau","puissance":1.1,"exploitant":""},{"lat":42.5089,"lon":8.8534,"nom":"Calenzana","commune":"Calenzana","type":"Eolien","puissance":6.0,"exploitant":""},{"lat":41.9634,"lon":8.8712,"nom":"Pont de Vanna","commune":"Ocana","type":"Hydraulique / barrage","puissance":8.6,"exploitant":"EDF"},{"lat":42.0934,"lon":9.0623,"nom":"Bocognano","commune":"Bocognano","type":"Hydraulique au fil de l eau","puissance":2.1,"exploitant":""},{"lat":41.8234,"lon":9.1123,"nom":"Olivese","commune":"Olivese","type":"Hydraulique au fil de l eau","puissance":1.5,"exploitant":""},{"lat":42.1523,"lon":9.4789,"nom":"Tallone","commune":"Tallone","type":"Biogaz","puissance":1.7,"exploitant":""},{"lat":42.2312,"lon":9.3145,"nom":"Giuncaggio","commune":"Giuncaggio","type":"Hydraulique au fil de l eau","puissance":2.1,"exploitant":""},{"lat":42.3934,"lon":8.9534,"nom":"Corscia","commune":"Corscia","type":"Hydraulique / barrage","puissance":13.0,"exploitant":"EDF"},{"lat":42.4534,"lon":8.9023,"nom":"Asco 2","commune":"Asco","type":"Hydraulique au fil de l eau","puissance":0.0,"exploitant":""},{"lat":41.9194,"lon":8.7386,"nom":"Vazzio","commune":"Ajaccio","type":"Diesel","puissance":132.3,"exploitant":"EDF"},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"TAC","puissance":40.0,"exploitant":"EDF"},{"lat":41.7834,"lon":9.1823,"nom":"Quenza","commune":"Quenza","type":"Hydraulique au fil de l eau","puissance":0.7,"exploitant":""},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"Diesel","puissance":54.5,"exploitant":"EDF"},{"lat":42.5623,"lon":9.4312,"nom":"SACOI","commune":"Lucciana","type":"Interconnexion","puissance":50.0,"exploitant":"Terna"},{"lat":41.9634,"lon":8.8712,"nom":"Ocana","commune":"Ocana","type":"Hydraulique / barrage","puissance":15.1,"exploitant":"EDF"},{"lat":42.9534,"lon":9.4234,"nom":"Rogliano","commune":"Rogliano","type":"Eolien","puissance":4.2,"exploitant":""},{"lat":42.4534,"lon":8.9023,"nom":"Asco 3","commune":"Asco","type":"Hydraulique au fil de l eau","puissance":0.0,"exploitant":""},{"lat":41.7623,"lon":9.0534,"nom":"Cargiaca","commune":"Cargiaca","type":"Hydraulique au fil de l eau","puissance":3.5,"exploitant":""},{"lat":42.2623,"lon":9.4823,"nom":"San-Giuliano","commune":"San-Giuliano","type":"Hydraulique au fil de l eau","puissance":1.5,"exploitant":""},{"lat":41.8934,"lon":9.1289,"nom":"Zicavo","commune":"Zicavo","type":"Hydraulique au fil de l eau","puissance":2.5,"exploitant":"SAS Centrale hydroélectrique de Zicavo"}];
+
+async function loadReseau(){
+  lRes.clearLayers();
   // Lignes HTA depuis Supabase (pagination)
   try{
     let all=[],offset=0,PAGE=1000;
@@ -3544,8 +3550,8 @@ async function loadReseau(){
       L.polyline(pts,{color:'#b85c00',weight:1.2,opacity:0.65,dashArray:'3 2'})
         .on('click',()=>info('Ligne HTA aérienne · EDF SEI open data')).addTo(lRes);
     });
-    setStatus('HTA: '+all.length+' lignes · '+PROD_ELECTRIQUE.length+' sites production');
-    console.log('✅ HTA:',all.length,'lignes prod:',PROD_ELECTRIQUE.length);
+    setStatus('HTA: '+all.length+' lignes');
+    console.log('✅ HTA:',all.length,'lignes');
   }catch(e){
     console.warn('HTA Supabase:',e.message,'→ fallback OSM');
     try{
@@ -3563,7 +3569,7 @@ async function loadReseau(){
       });
       if(n>0){setStatus('Réseau OSM: '+n+' lignes');return;}
     }catch(e2){}
-    setStatus('Réseau: '+PROD_ELECTRIQUE.length+' sites (HTA indisponible)');
+    setStatus('HTA: indisponible');
   }
   loadChargeReseau();
 }
