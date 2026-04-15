@@ -4980,7 +4980,8 @@ function _geomRandomPts(n){
   return pts;
 }
 function _geomMCRatios(nSites,nSims){
-  var counts=[];
+  var totals=[],byType={};
+  GEOM_RATIOS.forEach(function(r){byType[r.name]=[];});
   for(var s=0;s<nSims;s++){
     var pts=_geomRandomPts(nSites);
     var dists=[];
@@ -4988,21 +4989,28 @@ function _geomMCRatios(nSites,nSims){
       var d=_geomHdist(pts[i],pts[j]);if(d>=500) dists.push(d);
     }
     dists.sort(function(a,b){return a-b;});
-    var nR=0;
+    var nR=0,tc={};
+    GEOM_RATIOS.forEach(function(r){tc[r.name]=0;});
     for(var a=0;a<dists.length;a++)for(var b=a+1;b<dists.length;b++){
       var ratio=dists[b]/dists[a];
-      for(var k=0;k<GEOM_RATIOS.length;k++){if(Math.abs(ratio-GEOM_RATIOS[k].value)/GEOM_RATIOS[k].value<GEOM_RATIOS[k].tol){nR++;break;}}
+      for(var k=0;k<GEOM_RATIOS.length;k++){
+        if(Math.abs(ratio-GEOM_RATIOS[k].value)/GEOM_RATIOS[k].value<GEOM_RATIOS[k].tol){nR++;tc[GEOM_RATIOS[k].name]++;break;}
+      }
     }
-    counts.push(nR);
+    totals.push(nR);
+    GEOM_RATIOS.forEach(function(r){byType[r.name].push(tc[r.name]);});
   }
-  counts.sort(function(a,b){return a-b;});
-  return counts;
+  totals.sort(function(a,b){return a-b;});
+  Object.keys(byType).forEach(function(k){byType[k].sort(function(a,b){return a-b;});});
+  return {totals:totals,byType:byType};
 }
 function _geomMCTriangles(nSites,nSims){
-  var counts=[];
+  var totals=[],byType={};
+  GEOM_TRIANGLES.forEach(function(t){byType[t.name]=[];});
   for(var s=0;s<nSims;s++){
     var pts=_geomRandomPts(nSites);
-    var nT=0;
+    var nT=0,tc={};
+    GEOM_TRIANGLES.forEach(function(t){tc[t.name]=0;});
     for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++)for(var k=j+1;k<pts.length;k++){
       var dij=_geomHdist(pts[i],pts[j]),djk=_geomHdist(pts[j],pts[k]),dik=_geomHdist(pts[i],pts[k]);
       if(dij<500||djk<500||dik<500)continue;
@@ -5012,30 +5020,65 @@ function _geomMCTriangles(nSites,nSims){
       var sorted=[angI,angJ,angK].sort(function(a,b){return a-b;});
       for(var t=0;t<GEOM_TRIANGLES.length;t++){
         var ref=GEOM_TRIANGLES[t].angles.slice().sort(function(a,b){return a-b;});
-        if(ref.every(function(v,idx){return Math.abs(v-sorted[idx])<=GEOM_TRIANGLES[t].tol;})){nT++;break;}
+        if(ref.every(function(v,idx){return Math.abs(v-sorted[idx])<=GEOM_TRIANGLES[t].tol;})){nT++;tc[GEOM_TRIANGLES[t].name]++;break;}
       }
     }
-    counts.push(nT);
+    totals.push(nT);
+    GEOM_TRIANGLES.forEach(function(t){byType[t.name].push(tc[t.name]);});
   }
-  counts.sort(function(a,b){return a-b;});
-  return counts;
+  totals.sort(function(a,b){return a-b;});
+  Object.keys(byType).forEach(function(k){byType[k].sort(function(a,b){return a-b;});});
+  return {totals:totals,byType:byType};
 }
 function _geomMCOrientations(nSites,nSims){
-  var counts=[];
+  var totals=[],byTarget={};
+  GEOM_ASTRAL.forEach(function(a){byTarget[a.name]=[];});
   for(var s=0;s<nSims;s++){
     var pts=_geomRandomPts(nSites);
-    var nO=0;
+    var nO=0,tc={};
+    GEOM_ASTRAL.forEach(function(a){tc[a.name]=0;});
     for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++){
       var az=_geomBearing(pts[i],pts[j]);
       for(var d=0;d<2;d++){
         var azCheck=d===0?az:(az+180)%360;
         for(var a=0;a<GEOM_ASTRAL.length;a++){
           var diff=Math.min(Math.abs(azCheck-GEOM_ASTRAL[a].az),360-Math.abs(azCheck-GEOM_ASTRAL[a].az));
-          if(diff<=GEOM_ASTRAL[a].tol){nO++;break;}
+          if(diff<=GEOM_ASTRAL[a].tol){nO++;tc[GEOM_ASTRAL[a].name]++;break;}
         }
       }
     }
-    counts.push(nO);
+    totals.push(nO);
+    GEOM_ASTRAL.forEach(function(a){byTarget[a.name].push(tc[a.name]);});
+  }
+  totals.sort(function(a,b){return a-b;});
+  Object.keys(byTarget).forEach(function(k){byTarget[k].sort(function(a,b){return a-b;});});
+  return {totals:totals,byTarget:byTarget};
+}
+function _geomMCAlignments(nSites,nSims){
+  var counts=[];
+  for(var s=0;s<nSims;s++){
+    var pts=_geomRandomPts(nSites);
+    counts.push(detectAlignments(pts,400,3,3).length);
+  }
+  counts.sort(function(a,b){return a-b;});
+  return counts;
+}
+function _geomMCArcs(nSites,nSims){
+  var counts=[];
+  for(var s=0;s<nSims;s++){
+    var pts=_geomRandomPts(nSites);
+    var nA=0;
+    if(pts.length>=4){
+      var seen=new Set();
+      for(var i=0;i<pts.length&&i<12;i++)for(var j=i+1;j<pts.length&&j<13;j++)for(var k=j+1;k<pts.length&&k<14;k++){
+        var cc=_circumcircle(pts[i],pts[j],pts[k]);
+        if(!cc||cc.r>200000)continue;
+        var on=[i,j,k];
+        for(var m=0;m<pts.length;m++){if(m===i||m===j||m===k)continue;var dist=_geomHdist(cc.center,pts[m]);if(Math.abs(dist-cc.r)/cc.r<0.05)on.push(m);}
+        if(on.length>=4){var key=on.slice().sort().join('-');if(!seen.has(key)){seen.add(key);nA++;}}
+      }
+    }
+    counts.push(nA);
   }
   counts.sort(function(a,b){return a-b;});
   return counts;
@@ -5043,10 +5086,22 @@ function _geomMCOrientations(nSites,nSims){
 function _geomPValue(observed,mcCounts){
   return mcCounts.filter(function(c){return c>=observed;}).length/mcCounts.length;
 }
-function _geomStatBadge(p){
-  if(p<0.05) return '<span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:8px;font-size:9px">⭐ Significatif (p='+p.toFixed(3)+')</span>';
-  if(p<0.20) return '<span style="background:#f3f4f6;color:#374151;padding:1px 6px;border-radius:8px;font-size:9px">⚪ Neutre (p='+p.toFixed(3)+')</span>';
-  return '<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:8px;font-size:9px">🌫️ Coincidence probable (p='+p.toFixed(3)+')</span>';
+function _geomMeanDensityKm(pts){
+  if(pts.length<2)return 999;
+  var total=0,n=0;
+  for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++){total+=_geomHdist(pts[i],pts[j])/1000;n++;}
+  return total/n;
+}
+function _geomStatBadge(p,compact){
+  var pStr=p.toFixed(3);
+  if(compact){
+    if(p<0.05) return '<span style="background:#dcfce7;color:#166534;padding:1px 4px;border-radius:4px;font-size:8px;font-weight:500" title="Au-dela du hasard">⭐'+pStr+'</span>';
+    if(p<0.20) return '<span style="background:#f3f4f6;color:#4b5563;padding:1px 4px;border-radius:4px;font-size:8px;font-weight:500" title="Compatible avec le hasard">⚪'+pStr+'</span>';
+    return '<span style="background:#fef3c7;color:#92400e;padding:1px 4px;border-radius:4px;font-size:8px;font-weight:500" title="Probablement hasard">🌫️'+pStr+'</span>';
+  }
+  if(p<0.05) return '<span style="background:#dcfce7;color:#166534;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:500">⭐ Au-dela du hasard (p='+pStr+')</span>';
+  if(p<0.20) return '<span style="background:#f3f4f6;color:#4b5563;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:500">⚪ Compatible avec le hasard (p='+pStr+')</span>';
+  return '<span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:500">🌫️ Probablement hasard (p='+pStr+')</span>';
 }
 
 // ═══ MAIN ANALYSIS ═══
@@ -5204,21 +5259,38 @@ function runGeomAnalysis(){
   results.orientations=orientations;
   GEOM_STATE.results=results;
 
+  // Density feedback
+  var density=_geomMeanDensityKm(pts);
+  var densityMsg='';
+  if(density<5){
+    densityMsg='<div style="background:#dbeafe;color:#1e40af;padding:8px;border-radius:4px;font-size:12px;margin-bottom:10px">ℹ️ Sites selectionnes tres proches (densite moyenne : '+density.toFixed(1)+' km). A cette concentration, beaucoup de ratios et alignements apparaissent par hasard. Pour des resultats plus discriminants, essayez de selectionner des sites plus eloignes sur l\'ile.</div>';
+  } else if(density<10){
+    densityMsg='<div style="background:#f0fdf4;color:#166534;padding:6px;border-radius:4px;font-size:11px;margin-bottom:8px">Densite moyenne : '+density.toFixed(1)+' km entre sites.</div>';
+  }
+
   // Monte Carlo reference (200 sims)
   var mcN=200;
   var mcRatios=_geomMCRatios(sel.length,mcN);
   var mcTriangles=_geomMCTriangles(sel.length,mcN);
   var mcOrient=_geomMCOrientations(sel.length,mcN);
-  var pRatios=_geomPValue(ratiosFound.length,mcRatios);
-  var pTriangles=_geomPValue(trianglesFound.length,mcTriangles);
-  var pOrient=_geomPValue(orientations.length,mcOrient);
-  results.mc={nSims:mcN,pRatios:pRatios,pTriangles:pTriangles,pOrientations:pOrient};
+  var mcAlign=_geomMCAlignments(sel.length,mcN);
+  var mcArcs=(arcsFound.length>0)?_geomMCArcs(sel.length,mcN):[];
+  var pRatios=_geomPValue(ratiosFound.length,mcRatios.totals);
+  var pTriangles=_geomPValue(trianglesFound.length,mcTriangles.totals);
+  var pOrient=_geomPValue(orientations.length,mcOrient.totals);
+  var pAlign=_geomPValue(alignResults.length,mcAlign);
+  var pArcs=mcArcs.length?_geomPValue(arcsFound.length,mcArcs):1;
+  results.mc={nSims:mcN,pRatios:pRatios,pTriangles:pTriangles,pOrientations:pOrient,pAlignments:pAlign,pArcs:pArcs};
 
   // Render results
-  _renderGeomDistances(dists,ratiosFound,pRatios);
-  _renderGeomTriangles(trianglesFound,pTriangles);
-  _renderGeomAlignments(alignResults,arcsFound);
-  _renderGeomOrientations(orientations,pOrient);
+  var resultsEl=document.getElementById('geom-results');
+  var densityDiv=document.getElementById('geom-density-msg');
+  if(!densityDiv){densityDiv=document.createElement('div');densityDiv.id='geom-density-msg';resultsEl.insertBefore(densityDiv,resultsEl.firstChild);}
+  densityDiv.innerHTML=densityMsg;
+  _renderGeomDistances(dists,ratiosFound,pRatios,mcRatios);
+  _renderGeomTriangles(trianglesFound,pTriangles,mcTriangles);
+  _renderGeomAlignments(alignResults,arcsFound,pAlign,pArcs);
+  _renderGeomOrientations(orientations,pOrient,mcOrient);
 
   // Draw on map
   _drawGeomOnMap(dists,trianglesFound,orientations);
@@ -5247,7 +5319,7 @@ function _circumcircle(a,b,c){
 }
 
 // ═══ RENDER FUNCTIONS ═══
-function _renderGeomDistances(dists,ratios,pRatios){
+function _renderGeomDistances(dists,ratios,pRatios,mcRatios){
   const el=document.getElementById('geom-distances');
   let h='<table><tr><th>Paire</th><th>Distance</th><th>Azimut</th></tr>';
   dists.slice(0,30).forEach(d=>{
@@ -5257,8 +5329,12 @@ function _renderGeomDistances(dists,ratios,pRatios){
   h+='</table>';
   if(ratios.length){
     h+='<div style="margin-top:8px;font-weight:600;color:var(--tx)">Ratios remarquables detectes (tolerance \u00b13%) '+_geomStatBadge(pRatios)+'</div>';
+    // Count per type for per-line p-value
+    var typeCounts={};
+    ratios.forEach(function(r){typeCounts[r.match.name]=(typeCounts[r.match.name]||0)+1;});
     ratios.slice(0,20).forEach(r=>{
-      h+='<div style="margin:3px 0;font-size:10px"><span class="geom-ratio-tag '+r.match.cls+'">'+r.match.symbol+' '+r.match.label+'</span> '+
+      var typeP=mcRatios.byType[r.match.name]?_geomPValue(typeCounts[r.match.name],mcRatios.byType[r.match.name]):1;
+      h+='<div style="margin:3px 0;font-size:10px">'+_geomStatBadge(typeP,true)+' <span class="geom-ratio-tag '+r.match.cls+'">'+r.match.symbol+' '+r.match.label+'</span> '+
         r.pairA+' ('+r.distA.toFixed(2)+'km) / '+r.pairB+' ('+r.distB.toFixed(2)+'km) = '+r.ratio.toFixed(4)+'</div>';
     });
     if(ratios.length>20)h+='<div style="font-size:10px;color:var(--tx3)">... +'+(ratios.length-20)+' autres ratios</div>';
@@ -5268,26 +5344,29 @@ function _renderGeomDistances(dists,ratios,pRatios){
   el.innerHTML=h;
 }
 
-function _renderGeomTriangles(triangles,pTriangles){
+function _renderGeomTriangles(triangles,pTriangles,mcTriangles){
   const el=document.getElementById('geom-angles');
   if(!triangles.length){
     el.innerHTML='<div style="color:var(--tx3);font-size:10px">Aucun triangle remarquable detecte (tolerance \u00b12\u00b0).</div>';
     return;
   }
+  var typeCounts={};
+  triangles.forEach(function(t){typeCounts[t.pattern]=(typeCounts[t.pattern]||0)+1;});
   let h='<div style="margin-bottom:6px">'+_geomStatBadge(pTriangles)+'</div>';
-  h+='<table><tr><th>Sites</th><th>Angles</th><th>Type</th><th>Cotes (km)</th></tr>';
+  h+='<table><tr><th></th><th>Sites</th><th>Angles</th><th>Type</th><th>Cotes (km)</th></tr>';
   triangles.forEach(t=>{
-    h+='<tr><td>'+t.sites.join(', ')+'</td><td>'+t.angles.join('\u00b0, ')+'\u00b0</td><td style="color:var(--info);font-weight:600">'+t.pattern+'</td><td>'+t.sides.join(', ')+'</td></tr>';
+    var typeP=mcTriangles.byType[t.pattern]?_geomPValue(typeCounts[t.pattern],mcTriangles.byType[t.pattern]):1;
+    h+='<tr><td>'+_geomStatBadge(typeP,true)+'</td><td>'+t.sites.join(', ')+'</td><td>'+t.angles.join('\u00b0, ')+'\u00b0</td><td style="color:var(--info);font-weight:600">'+t.pattern+'</td><td>'+t.sides.join(', ')+'</td></tr>';
   });
   h+='</table>';
   el.innerHTML=h;
 }
 
-function _renderGeomAlignments(alignments,arcs){
+function _renderGeomAlignments(alignments,arcs,pAlign,pArcs){
   const el=document.getElementById('geom-alignments');
   let h='';
   if(alignments.length){
-    h+='<div style="font-weight:600;color:var(--tx);margin-bottom:4px">Alignements Broadbent (dev. max 400m)</div>';
+    h+='<div style="font-weight:600;color:var(--tx);margin-bottom:4px">Alignements Broadbent (dev. max 400m) '+_geomStatBadge(pAlign)+'</div>';
     h+='<table><tr><th>Sites</th><th>Azimut</th><th>Longueur</th></tr>';
     alignments.forEach(a=>{
       h+='<tr><td>'+a.sites.join(' \u2192 ')+'</td><td>'+a.azimuth+'\u00b0</td><td>'+a.length_km+' km</td></tr>';
@@ -5297,7 +5376,7 @@ function _renderGeomAlignments(alignments,arcs){
     h+='<div style="color:var(--tx3);font-size:10px">Aucun alignement multi-points detecte.</div>';
   }
   if(arcs.length){
-    h+='<div style="font-weight:600;color:var(--tx);margin-top:8px;margin-bottom:4px">Arcs de cercle (4+ points, tolerance 5%)</div>';
+    h+='<div style="font-weight:600;color:var(--tx);margin-top:8px;margin-bottom:4px">Arcs de cercle (4+ points, tolerance 5%) '+_geomStatBadge(pArcs)+'</div>';
     arcs.forEach(a=>{
       h+='<div style="font-size:10px;margin:2px 0"><span style="color:var(--info);font-weight:600">'+a.count+' sites</span> sur un cercle R='+a.radius_km+' km : '+a.sites.join(', ')+'</div>';
     });
@@ -5305,16 +5384,19 @@ function _renderGeomAlignments(alignments,arcs){
   el.innerHTML=h;
 }
 
-function _renderGeomOrientations(orientations,pOrient){
+function _renderGeomOrientations(orientations,pOrient,mcOrient){
   const el=document.getElementById('geom-orientations');
   if(!orientations.length){
     el.innerHTML='<div style="color:var(--tx3);font-size:10px">Aucune orientation astrale remarquable detectee (tolerance \u00b12.5\u00b0).</div>';
     return;
   }
+  var targetCounts={};
+  orientations.forEach(function(o){targetCounts[o.match]=(targetCounts[o.match]||0)+1;});
   let h='<div style="margin-bottom:6px">'+_geomStatBadge(pOrient)+'</div>';
-  h+='<table><tr><th>Segment</th><th>Azimut</th><th>Correspondance</th><th>\u0394</th></tr>';
+  h+='<table><tr><th></th><th>Segment</th><th>Azimut</th><th>Correspondance</th><th>\u0394</th></tr>';
   orientations.forEach(o=>{
-    h+='<tr><td>'+o.pairA+' \u2192 '+o.pairB+'</td><td>'+o.azimuth+'\u00b0</td><td><span class="geom-ratio-tag geom-ratio-astral">'+o.match+'</span></td><td>\u00b1'+o.diff+'\u00b0</td></tr>';
+    var tgtP=mcOrient.byTarget[o.match]?_geomPValue(targetCounts[o.match],mcOrient.byTarget[o.match]):1;
+    h+='<tr><td>'+_geomStatBadge(tgtP,true)+'</td><td>'+o.pairA+' \u2192 '+o.pairB+'</td><td>'+o.azimuth+'\u00b0</td><td><span class="geom-ratio-tag geom-ratio-astral">'+o.match+'</span></td><td>\u00b1'+o.diff+'\u00b0</td></tr>';
   });
   h+='</table>';
   h+='<div style="margin-top:10px;font-size:9px;color:var(--tx3);padding:6px 8px;background:var(--bg2);border-radius:4px">Etiquetage statistique : test Monte Carlo, 200 simulations, points aleatoires dans le polygone Corse. Inspire Broadbent 1980. Voir Sources et methodologie.</div>';
