@@ -3005,6 +3005,13 @@ function _armContribClick(){
   map.once('click',_contribClickHandler);
 }
 function _placeContribMarker(lat,lng){
+  // Filtre geographique : Tellux est calibre pour la Corse uniquement
+  if(lat<41.3||lat>43.1||lng<8.5||lng>9.7){
+    info('Tellux est calibre pour la Corse uniquement. Cliquez sur l\'ile pour ajouter une mesure.','error');
+    // Re-armer le click pour que l'utilisateur puisse re-cliquer au bon endroit
+    _armContribClick();
+    return;
+  }
   if(pending)map.removeLayer(pending);
   pending=L.marker([lat,lng],{icon:mkIcon('#5c3a9b',false,13)}).addTo(map);
   // Mettre a jour l'info dans le formulaire
@@ -3054,8 +3061,13 @@ async function saveContrib(){
   const vCheck = validateContrib();
   if(!vCheck.ok){info('⚠ '+vCheck.msg,'error');return;}
   if(!pending){info('Cliquez d\'abord sur la carte pour placer votre point de mesure.','warn');return;}
-  const btn=document.getElementById('btn-save');btn.textContent='Sauvegarde…';btn.disabled=true;
   const ll=pending.getLatLng();
+  // Double verification : position dans le bbox Corse
+  if(ll.lat<41.3||ll.lat>43.1||ll.lng<8.5||ll.lng>9.7){
+    info('Position hors Corse — mesure non enregistree.','error');
+    map.removeLayer(pending);pending=null;return;
+  }
+  const btn=document.getElementById('btn-save');btn.textContent='Sauvegarde…';btn.disabled=true;
   const igrf=fetchIGRF(ll.lat,ll.lng);
   const {human,water,geo,scorePhys,score}=calcAll(ll.lat,ll.lng);
   const nets=calcNets(ll.lat,ll.lng);
