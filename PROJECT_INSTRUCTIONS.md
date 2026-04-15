@@ -137,6 +137,40 @@ Toute session Claude doit refuser de :
 - **Typographie** : Fraunces (titres), IBM Plex Sans (corps)
 - **DA v2 gelée** : ne pas revisiter en voie A
 
+## A.11 Test local avant push de PR
+
+Toute modification du HTML qui implique un fetch (JSON, données externes) ne peut PAS être testée en ouvrant index.html directement dans le navigateur via file://. Les navigateurs bloquent les requêtes fetch en protocole file pour raisons de sécurité. Le fetch échoue silencieusement et le code tombe en fallback (ou crashe).
+
+**Workflow de test local obligatoire :**
+
+1. Dans Git Bash, se placer dans le dossier du repo Tellux :
+
+       cd /c/Users/lucas/Documents/Claude/Projects/Tellux
+
+   Vérifier qu'on est au bon endroit avec `ls` — on doit voir index.html, _data/, _scripts/, wrangler.jsonc.
+
+2. Lancer un serveur HTTP local :
+
+       python -m http.server 8000
+
+   (Si Python absent : `npx serve .` ou `php -S localhost:8000`)
+
+3. Ouvrir http://localhost:8000/ dans le navigateur. Tellux doit s'afficher comme en production.
+
+4. Tester la fonctionnalité modifiée. Ouvrir la console développeur (F12) et vérifier l'absence d'erreurs rouges. Pour les fetch, vérifier dans l'onglet Network le statut HTTP 200 et la taille du fichier reçu.
+
+5. Une fois validé en local, push de la branche, création de la PR, vérification sur le preview Cloudflare (URL dans le commentaire automatique de la PR), puis merge.
+
+**Règle :** ne JAMAIS merger une PR qui touche au comportement du HTML sans avoir validé soit en local (serveur HTTP), soit sur le preview Cloudflare. Le merge à l'aveugle dans dev est tolérable pour de la doc pure ; il est interdit pour du code.
+
+**Optionnel — alias bash pour gagner du temps :**
+Ajouter dans ~/.bashrc :
+
+    alias tellux='cd /c/Users/lucas/Documents/Claude/Projects/Tellux'
+    alias telluxserve='cd /c/Users/lucas/Documents/Claude/Projects/Tellux && python -m http.server 8000'
+
+Puis `source ~/.bashrc`. Après ça, taper `telluxserve` lance le serveur en une commande.
+
 ---
 
 # PARTIE B — Règles spécifiques par environnement
@@ -159,6 +193,18 @@ Toute session Claude doit refuser de :
 - Promettre des modifications de code qu'elles ne peuvent pas exécuter elles-mêmes
 - Tenter de deviner l'état du repo sans utiliser les connecteurs disponibles
 - Sauter les vérifications "pour gagner du temps" sur des opérations destructrices
+
+## B.1.bis Posture pédagogique des sessions claude.ai web
+
+Soleil n'est pas développeur professionnel. Les sessions claude.ai web doivent adopter une posture pédagogique constante :
+
+- **Donner les commandes complètes à chaque fois.** Ne jamais écrire "tu connais la procédure" ou "comme d'habitude". Recopier la commande, expliquer ce qu'elle fait, signaler les pièges connus.
+- **Expliquer pourquoi avant de dire quoi faire.** Le contexte aide Soleil à comprendre ce qu'il fait, pas juste exécuter.
+- **Anticiper les frictions.** Si une commande peut produire un message d'erreur courant (404 Cloudflare le temps de la propagation, file:// qui bloque les fetch, gh non installé), le mentionner avant que Soleil tombe dessus.
+- **Ne jamais reprocher l'oubli d'une étape vue précédemment.** Si une étape manque, la rappeler simplement, sans formulation qui suggère que Soleil aurait dû s'en souvenir.
+- **Distinguer ce qui est obligatoire de ce qui est optionnel.** Marquer clairement les étapes "obligatoires" et celles qui sont "pour gagner du temps plus tard".
+
+Cette posture vaut aussi pour les sessions Cowork et Claude Code dans leurs rapports finaux à Soleil : un rapport doit dire ce qui a été fait, ce qui reste à faire côté Soleil, et comment exactement le faire (commandes, URL à cliquer, choix à valider).
 
 ## B.2 Sessions Cowork (Sonnet via interface dédiée)
 
