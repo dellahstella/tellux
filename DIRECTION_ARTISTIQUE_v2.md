@@ -30,7 +30,7 @@ Tellux n'est **ni** un outil scientifique austère, **ni** un site ésotérique.
 - **Bleu nuit tyrrhénien** `#1F3A5F` — liens, mode analytique.
 
 ### Fond logo (référence)
-- **Maquis sombre** `#2A3530` — fond du logo principal.
+- **Pierre** `#F5F0E7` — fond du logo principal (v14).
 
 ### Données cartographiques
 Conserver les échelles de couleur existantes (nT, dBm, scores) mais **harmoniser les rouges/oranges** sur le rouge porphyre et l'ocre myrte pour cohérence globale.
@@ -42,7 +42,7 @@ Conserver les échelles de couleur existantes (nT, dBm, scores) mais **harmonise
 - **Titres & header** : Fraunces (serif contemporaine, caractère, Google Fonts gratuite).
 - **Corps & UI** : IBM Plex Sans (neutre, excellente lisibilité technique).
 - **Données / mono** : JetBrains Mono pour les scores numériques et les coordonnées.
-- **Logo texte** : Cinzel (majuscules élégantes, espacement large).
+- **Logo texte** : Cormorant Bold (serif humaniste, empattements en griffe, élégance classique).
 
 Hiérarchie :
 - H1 Fraunces 32-40px
@@ -53,44 +53,49 @@ Hiérarchie :
 
 ---
 
-## Logo-mark — Monogramme T tellurique (v7, validé)
+## Logo-mark — Monogramme T tellurique (v14, validé)
 
-### Description
+**Statut :** validé — session du 16 avril 2026. Remplace le logo v7 (T-bouclier) devenu obsolète.
 
-Le logo est un **T monumental** dont la structure porte une triple lecture symbolique :
+### Description formelle
 
-**1. Partie haute — Le T-bouclier (plan matériel)**
-La barre horizontale du T a des terminaisons qui descendent en angle (inspiration gothique). C'est cette barre qui **est** le bouclier — forme protectrice explicite. Le fût vertical descend comme une lame ou un clou, élancé et net. La lumière irradie depuis le cœur du fût.
+T majuscule en Cormorant Bold, avec dégradé vertical continu du vert Maquis en haut vers l'ocre myrte en bas. La transition s'opère au niveau médian de la lettre, de manière fluide (sans rupture de ton).
 
-**2. Ligne d'horizon — La courbure terrestre**
-Une courbe convexe (bombée vers le haut) traverse l'axe du T au niveau médian. Elle évoque la **ligne d'horizon de la Terre vue depuis l'espace**. C'est une ligne séparée, structurelle — elle ne forme pas de contour en dessous.
+Deux lignes courbes symétriques en ocre foncé entourent la base du T :
+- Une **ligne d'horizon** convexe au-dessus, traversant toute la largeur du logo, avec fade aux extrémités pour un rendu léger.
+- Son **miroir vertical concave** juste en dessous, dont le sommet (le point le plus bas de la courbe) reste au niveau de la base du T sans la dépasser.
 
-**3. Partie basse — Le reflet éthérique (plan vibratoire)**
-Sous l'horizon, le fût du T continue en miroir mais **flouté, semi-transparent, vibratoire** — c'est le reflet dans les « eaux d'en bas ». Les contours se dissolvent. À la base, une courbe symétrique inversée (convexe vers le bas), plus éthérique, fait écho à l'horizon.
+Les deux courbes ne se rejoignent pas aux extrémités — elles suggèrent un cadre ouvert, un écho, pas une forme fermée.
 
-**4. L'œil**
-Les deux courbes (horizon matériel + courbe basse éthérique) **ne se rejoignent pas**. Ensemble, elles dessinent la forme d'un **œil** — point de convergence entre le visible et l'invisible, le mesuré et le ressenti.
+### Symbolique
+
+Le T tellurique évoque le lien à la terre (tellurique = qui appartient à la Terre, au sol). Le dégradé du vert au ocre figure la transition entre le vivant du maquis (surface visible) et la chaleur minérale du sol corse (profondeur). Les deux courbes symétriques suggèrent l'horizon et son miroir intérieur, sans chercher à imposer une lecture ésotérique.
 
 ### Palette du logo
-- **Corps du T** : dégradé ivoire satiné `#F5EACC` → or chaud `#D4B870`
-- **Fond référence** : maquis sombre `#2A3530`
-- **Lumière intérieure** : or blanc `#FFF8E8` → ocre `#C28533` en radial
-- **Horizon** : blanc lumineux `#FFFCF0` avec fade latéral
-- **Courbe basse** : même teinte mais opacity réduite, flou gaussien
 
-### Variantes de fond validées
-1. **Ardoise** `#1F2329` — contextes neutres, UI
-2. **Maquis** `#2A3530` — référence principale (web)
-3. **Tyrrhénien** `#162540` — contexte nuit/mer
-4. **Porphyre** `#3A1815` — contexte terre/roche
-5. **Pierre** `#F5F0E7` — version claire inversée (exports PDF, impression)
-6. **Crème** `#EFE7D5` — version papier
+- **T, dégradé** : `#3F5B3A` (Maquis) → `#C28533` (Ocre myrte)
+- **Lignes** : `#B47328` (Ocre foncé)
+- **Fond principal** : `#F5F0E7` (Pierre)
 
-### Spécifications techniques
-- Format source : SVG vectoriel inline (viewBox 400×560)
-- Favicon : SVG optimisé 32×32 + PNG 180×180 (Apple Touch)
-- Header app : SVG adapté au viewBox 220×300, 48×60px display
-- `theme-color` meta : `#2E3A36`
+### Typographie
+
+Cormorant Bold (serif humaniste, empattements en griffe, élégance classique proche du Garamond).
+
+### Usage et déclinaisons
+
+- Usage principal : fond Pierre
+- Une déclinaison sur fond Ardoise sera produite ultérieurement si besoin
+- Variante Bodoni Bold disponible dans `assets/logo/tellux_logo_bodoni.png` comme alternative éditoriale, non utilisée en production
+
+### Fichiers disponibles
+
+Tous dans `assets/logo/` :
+- `tellux_logo.svg` — source vectorielle autonome (Cormorant vectorisé, pas de dépendance police)
+- `tellux_logo_1200.png` — 1200×1200, usage web standard
+- `tellux_logo_2400.png` — 2400×2400, impression, affiches
+- `tellux_logo_800x600.png` — format compact
+- `favicon_512.png`, `favicon_128.png` — favicons
+- `tellux_logo_bodoni.png` — variante Bodoni (sauvegarde)
 
 ---
 
@@ -132,7 +137,7 @@ Les deux courbes (horizon matériel + courbe basse éthérique) **ne se rejoigne
 ## Décisions prises (session 8 avril 2026)
 
 1. ✅ Palette : validée (7 couleurs + fond logo maquis).
-2. ✅ Typographie : Fraunces + IBM Plex Sans + JetBrains Mono + Cinzel (logo texte).
-3. ✅ Logo : Piste 1 retenue — Monogramme T tellurique v7.
+2. ✅ Typographie : Fraunces + IBM Plex Sans + JetBrains Mono + Cormorant Bold (logo texte).
+3. ✅ Logo : Monogramme T tellurique v14 (Cormorant Bold, dégradé vert→ocre, validé le 16 avril 2026).
 4. ✅ Tagline : « Mesurer le vivant ».
 5. ✅ Nom affiché : « Tellux » (sans « Corse » dans le logo, « Corse » dans la tagline header).
