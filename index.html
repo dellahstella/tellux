@@ -2167,13 +2167,15 @@ function updateLegendPanel(){
 function showLegend(id,show){show?LEGEND_ACTIVE.add(id):LEGEND_ACTIVE.delete(id);updateLegendPanel();}
 function tog(id,cls,btn){
   if(window.innerWidth<=600){const a=document.getElementById('layers-accordion'),b=document.getElementById('mob-toggle');if(a&&a.classList.contains('mob-open')){a.classList.remove('mob-open');if(b)b.textContent='☰';}}
-  if(ACTIVE[id]){WMS[id]?map.removeLayer(WMS[id]):map.removeLayer(LAYERS[id]);ACTIVE[id]=false;btn.className='lbtn';
+  if(ACTIVE[id]){WMS[id]?map.removeLayer(WMS[id]):map.removeLayer(LAYERS[id]);ACTIVE[id]=false;if(btn)btn.className='lbtn';
+    if(id==='rpg')map.removeLayer(wmsRPG);
+    if(id==='foret')map.removeLayer(wmsForet);
     if(id==='geo')document.getElementById('geo-op-row').style.display='none';
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='none';
     if(id==='emag')document.getElementById('emag-op-row').style.display='none';
     showLegend(id,false);
     if(id==='antOffshore')showLegend('ant',false); // antOffshore partage légende ant
-  }else{WMS[id]?map.addLayer(WMS[id]):map.addLayer(LAYERS[id]);ACTIVE[id]=true;btn.classList.add(cls);
+  }else{WMS[id]?map.addLayer(WMS[id]):map.addLayer(LAYERS[id]);ACTIVE[id]=true;if(btn)btn.classList.add(cls);
     if(id==='geo')document.getElementById('geo-op-row').style.display='flex';
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='flex';
     if(id==='emag')document.getElementById('emag-op-row').style.display='flex';
