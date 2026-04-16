@@ -24,7 +24,7 @@
 ### Dossier
 
 - **Fichier :** `CANDIDATURE_TELLUX_v7.docx`
-- **Version :** v7, logo V7 intégré, palette Tellux appliquée
+- **Version :** v7, logo v14 intégré, palette Tellux appliquée
 - **État :** En relecture, captures d'écran à intégrer après corrections voie A (A-8)
 
 ### Pièces à préparer
