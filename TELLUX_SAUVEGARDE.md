@@ -150,7 +150,7 @@ Soleil doit vérifier que les fichiers suivants sont bien dans le dépôt Git et
 | `tellux_v6_design.html` | Oui — source de vérité code | À vérifier |
 | `CANDIDATURE_TELLUX_v7.docx` | Oui — dossier CTC | À vérifier |
 | `DIRECTION_ARTISTIQUE_v2.md` | Oui — DA gelée | À vérifier |
-| `TELLUX_LOGO_V7.html` | Oui — logo source | À vérifier |
+| `assets/logo/tellux_logo.svg` | Oui — logo source v14 | Dans Git |
 | `TELLUX_BRIEFING.md` | Oui — briefing consolidé | À vérifier |
 | `TELLUX_ROADMAP.md` | Oui — feuille de route | À vérifier |
 | `TELLUX_MONTEE_EN_GAMME.md` | Moyen — plan stratégique | À vérifier |

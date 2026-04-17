@@ -10,10 +10,15 @@
 <meta property="og:description" content="29 mesures certifiées ANFR · IGRF-14 · BRGM · Corse 2024–2026">
 <meta property="og:url" content="https://tellux.pages.dev/">
 <link rel="canonical" href="https://tellux.pages.dev/">
+<link rel="icon" type="image/svg+xml" href="assets/logo/tellux_logo.svg">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/logo/favicon_512.png">
+<link rel="icon" type="image/png" sizes="128x128" href="assets/logo/favicon_128.png">
 <!-- Vercel: vercel.json → {"headers":[{"source":"/(.*)", "headers":[{"key":"Cache-Control","value":"public, max-age=86400"}]}]} -->
 <!-- Cache Netlify : les assets statiques sont mis en cache 7 jours côté navigateur -->
 <meta http-equiv="Cache-Control" content="public, max-age=604800, stale-while-revalidate=86400">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css"/>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -56,9 +61,9 @@
 
 /* === Tellux v6 design — header & UI === */
 .hdr{display:flex;align-items:center;gap:14px;padding:14px 4px 14px;border-bottom:1px solid var(--border);margin-bottom:14px;}
-.hdr .logo-mark{width:44px;height:62px;background:transparent;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .2s;}
+.hdr .logo-mark{width:52px;height:52px;background:transparent;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .2s;}
 .hdr .logo-mark:hover{transform:translateY(-1px);}
-.hdr .logo-mark svg{width:44px;height:62px;}
+.hdr .logo-mark img{width:52px;height:52px;border-radius:6px;}
 .hdr-title{display:flex;flex-direction:column;gap:2px;}
 .logo-text{font-family:var(--font-display);font-size:22px;font-weight:600;letter-spacing:-0.015em;color:var(--tx-ardoise);}
 .logo-ver{font-family:var(--mono);font-size:10px;color:var(--tx-mica);background:var(--tx-brume);padding:2px 7px;border-radius:20px;margin-left:6px;vertical-align:middle;}
@@ -444,6 +449,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .lbtn.on-align{background:#f3e8ff;color:#7c3aed;border-color:#a78bfa;font-weight:500;}
 .lbtn.on-egl{background:#fff7ed;color:#b45309;border-color:#f59e0b;font-weight:500;}
 .lbtn.on-hypo{background:#e8eef8;color:var(--info);border-color:#6b8fd4;font-weight:500;}
+/* Etat actif partage (Option A — DA v2) pour couches sans variante dediee */
+.lbtn.on-emag,.lbtn.on-wdmam,.lbtn.on-prod{background:var(--tx-brume);color:var(--tx-maquis);border-color:var(--tx-maquis);}
 .layers{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;}
 .lbtn{font-size:10px;padding:3px 7px;border-radius:14px;border:1px solid var(--border);background:var(--bg);color:var(--tx2);cursor:pointer;display:inline-flex;align-items:center;gap:3px;transition:all .15s;white-space:nowrap;}
 .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
@@ -456,7 +463,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-geo{background:#e8f5f2!important;color:var(--acc)!important;border-color:var(--acc2)!important;font-weight:500;}
 .on-hyd{background:#e0f0ff!important;color:#1a5c8c!important;border-color:#5ba3d4!important;font-weight:500;}
 .on-cav{background:#f0e8ff!important;color:#5c3a9b!important;border-color:#9b72d4!important;font-weight:500;}
-.on-net{background:#f0e8ff!important;color:#5c3a9b!important;border-color:#9b72d4!important;font-weight:500;}
 .on-hot{background:#fef2f2!important;color:#7f1d1d!important;border-color:#e5a0a0!important;font-weight:500;}
 .on-res{background:#fefaf0!important;color:#78350f!important;border-color:#d4a96a!important;font-weight:500;}
 .on-bt{background:#fff8e6!important;color:#d97706!important;border-color:#f5a855!important;font-weight:500;}
@@ -595,7 +601,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 [data-theme="dark"] #tellux-leg-panel{background:rgba(26,29,37,.97)!important;border-color:rgba(255,255,255,.08)!important;}
 [data-theme="dark"] .on-ant{background:#1a2a3a!important;color:#5b9bd5!important;border-color:#2563eb!important;}
 [data-theme="dark"] .on-ant-offshore{background:#2a2a2a!important;color:#999!important;border-color:#666!important;}
-[data-theme="dark"] .on-net{background:#2a1a3a!important;color:#a78bfa!important;border-color:#7c3aed!important;}
 [data-theme="dark"] .on-hot{background:#2a1a1a!important;color:#ef4444!important;border-color:#991b1b!important;}
 [data-theme="dark"] .on-sit{background:#2a2510!important;color:#e5933a!important;border-color:#854d0e!important;}
 [data-theme="dark"] .on-con{background:#1a2a28!important;color:#3ec9ab!important;border-color:#2d9b87!important;}
@@ -842,7 +847,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       </div>
       <div class="d-block">
         <div class="d-block-title">Modèle semi-empirique</div>
-        <div class="d-block-text">88 hypothèses testables, dont une trentaine auto-vérifiées. Le score Indice Tellux est <strong>indicatif</strong> et s'interprète en comparatif. Incertitude documentée dans la méthodologie.</div>
+        <div class="d-block-text"><span id="count-hypo-disclaimer"></span> hypothèses testables, dont une trentaine auto-vérifiées. Le score Indice Tellux est <strong>indicatif</strong> et s'interprète en comparatif. Incertitude documentée dans la méthodologie.</div>
       </div>
       <div class="d-block">
         <div class="d-block-title">Mesures terrain</div>
@@ -862,31 +867,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 
 <div class="hdr">
   <a href="#" class="logo-mark" id="tx-logo" title="Tellux — Mesurer le vivant" style="text-decoration:none">
-    <svg viewBox="0 0 220 310" xmlns="http://www.w3.org/2000/svg" aria-label="Tellux — Mesurer le vivant">
-      <defs>
-        <linearGradient id="tx-body" x1="50%" y1="0%" x2="50%" y2="100%"><stop offset="0%" stop-color="#F5EACC"/><stop offset="60%" stop-color="#E8D8A0"/><stop offset="100%" stop-color="#D4B870"/></linearGradient>
-        <linearGradient id="tx-ether" x1="50%" y1="0%" x2="50%" y2="100%"><stop offset="0%" stop-color="#E8D8A0" stop-opacity="0.55"/><stop offset="40%" stop-color="#D4B870" stop-opacity="0.30"/><stop offset="100%" stop-color="#C0A050" stop-opacity="0.05"/></linearGradient>
-        <linearGradient id="tx-hz" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#FFF4DC" stop-opacity="0"/><stop offset="20%" stop-color="#F5E8C8" stop-opacity="0.6"/><stop offset="50%" stop-color="#FFFCF0" stop-opacity="1"/><stop offset="80%" stop-color="#F5E8C8" stop-opacity="0.6"/><stop offset="100%" stop-color="#FFF4DC" stop-opacity="0"/></linearGradient>
-        <linearGradient id="tx-hze" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#F5E8C8" stop-opacity="0"/><stop offset="20%" stop-color="#E8D4A0" stop-opacity="0.30"/><stop offset="50%" stop-color="#FFF4DC" stop-opacity="0.55"/><stop offset="80%" stop-color="#E8D4A0" stop-opacity="0.30"/><stop offset="100%" stop-color="#F5E8C8" stop-opacity="0"/></linearGradient>
-        <radialGradient id="tx-eye" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#FFF8E8" stop-opacity="0.40"/><stop offset="40%" stop-color="#EDCF88" stop-opacity="0.18"/><stop offset="100%" stop-color="#C0A050" stop-opacity="0"/></radialGradient>
-        <filter id="tx-bs"><feGaussianBlur stdDeviation="2.2"/></filter>
-        <filter id="tx-bm"><feGaussianBlur stdDeviation="4.5"/></filter>
-        <filter id="tx-be"><feGaussianBlur stdDeviation="1.6"/></filter>
-      </defs>
-      <!-- T-bouclier : barre haute à angles descendants -->
-      <path d="M 40 46 L 180 46 L 180 62 L 160 64 Q 142 66 134 72 Q 127 79 125 90 L 125 168 L 96 168 L 96 90 Q 93 79 87 72 Q 78 66 61 64 L 40 62 Z" fill="url(#tx-body)"/>
-      <!-- Horizon convexe -->
-      <path d="M 44 172 Q 110 156 176 172" fill="none" stroke="url(#tx-hz)" stroke-width="1.4" stroke-linecap="round"/>
-      <path d="M 44 172 Q 110 156 176 172" fill="none" stroke="url(#tx-hz)" stroke-width="5" stroke-linecap="round" opacity="0.25" filter="url(#tx-bs)"/>
-      <!-- Halo oeil -->
-      <ellipse cx="110" cy="206" rx="55" ry="30" fill="url(#tx-eye)"/>
-      <!-- Reflet éthérique du fût -->
-      <path d="M 96 172 L 96 205 Q 95 225 102 242 Q 106 252 110 257 Q 114 252 118 242 Q 125 225 125 205 L 125 172 Z" fill="url(#tx-ether)" filter="url(#tx-be)"/>
-      <path d="M 100 174 L 100 202 Q 100 222 106 238 Q 109 248 110 252 Q 111 248 114 238 Q 120 222 120 202 L 120 174 Z" fill="url(#tx-ether)" opacity="0.6"/>
-      <!-- Courbe basse éthérique -->
-      <path d="M 58 240 Q 110 258 162 240" fill="none" stroke="url(#tx-hze)" stroke-width="1.2" stroke-linecap="round"/>
-      <path d="M 58 240 Q 110 258 162 240" fill="none" stroke="url(#tx-hze)" stroke-width="7" stroke-linecap="round" opacity="0.18" filter="url(#tx-bm)"/>
-    </svg>
+    <img src="assets/logo/tellux_logo.svg" alt="Tellux — Mesurer le vivant" width="52" height="52">
   </a>
   <div class="hdr-title">
     <span class="logo-text">Tellux</span><span class="logo-ver">v5.9</span>
@@ -911,11 +892,11 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <h4 style="margin-top:14px;font-size:13px;color:var(--tx)">Méthodologie</h4>
       <p>Le modèle prédictif combine : champ géomagnétique (IGRF-14, BGS), anomalie crustale (EMAG2v3, NOAA), susceptibilité géologique (BRGM), réseau électrique (EDF SEI, Biot-Savart), antennes (ANFR CartoRadio), et piézoélectricité des substrats (Bishop 1981, Dragon Project).</p>
       <h4 style="margin-top:14px;font-size:13px;color:var(--tx)">Corpus scientifique</h4>
-      <p>84 études de référence intégrées, dont : Leplat (2016, métrologie Cauria), Santucci et al. (2004, archéoastronomie Revincu), Hoskin (1994, orientations dolmens), D'Anna et al. (2007, PCR Cauria), Moracchini-Mazel (1967, églises romanes), Ghilardi (2017, géoarchéologie Taravo), Giannoulopoulou (2022, sélection géophysique mégalithes).</p>
+      <p>Références intégrées : Leplat (2016, métrologie Cauria), Santucci et al. (2004, archéoastronomie Revincu), Hoskin (1994, orientations dolmens), D'Anna et al. (2007, PCR Cauria), Moracchini-Mazel (1967, églises romanes), Ghilardi (2017, géoarchéologie Taravo), Giannoulopoulou (2022, sélection géophysique mégalithes). <button onclick="genererBiblioPDF()" style="display:inline;background:none;border:none;color:var(--acc);cursor:pointer;font-size:12px;text-decoration:underline;padding:0">Bibliographie complète (PDF)</button></p>
       <h4 style="margin-top:14px;font-size:13px;color:var(--tx)">Données</h4>
-      <p>Modèles mondiaux intégrés : IGRF-14 (BGS), EMAG2v3 (NOAA), WDMAM v2 (IAGA/CGMW). Modèle séculaire CHAOS-7 (DTU Space, données Swarm ESA) reflété dans IGRF-14. — 116 sites mégalithiques et naturels (GPS vérifiés t4t35.fr, Megalithic Portal, OSM) · 314 églises romanes (corpus Moracchini-Mazel) · 29 mesures ANFR certifiées · 46 sites de calibration internationale · 64 hypothèses testables.</p>
+      <p>Modèles mondiaux intégrés : IGRF-14 (BGS), EMAG2v3 (NOAA), WDMAM v2 (IAGA/CGMW). Modèle séculaire CHAOS-7 (DTU Space, données Swarm ESA) reflété dans IGRF-14. — <span id="count-sites-about"></span> sites mégalithiques et naturels (GPS vérifiés t4t35.fr, Megalithic Portal, OSM) · <span id="count-egl-about"></span> églises romanes (corpus Moracchini-Mazel) · 29 mesures ANFR certifiées · 46 sites de calibration internationale · <span id="count-hypo-about"></span> hypothèses testables.</p>
       <h4 style="margin-top:14px;font-size:13px;color:var(--tx)">Avertissement</h4>
-      <p>Les réseaux géobiologiques (Hartmann, Curry) sont exclus du modèle prédictif. Les simulations sont indicatives (±50%). Tellux ne remplace pas une mesure terrain professionnelle.</p>
+      <p>Le modèle repose exclusivement sur des données géophysiques mesurables (IGRF-14, EMAG2v3, BRGM, ANFR). Les simulations sont indicatives (±50%). Tellux ne remplace pas une mesure terrain professionnelle.</p>
       <h4 style="margin-top:14px;font-size:13px;color:var(--tx-ardoise);font-family:var(--font-display);font-weight:500">Contact &amp; Contributions</h4>
       <p>Tellux est un projet de recherche ouvert à la contribution citoyenne. Les mesures terrain peuvent être soumises via le bouton « + Mesure » sur la carte. Une lettre de soutien, un retour d'usage ou une proposition d'étude sont les bienvenus.</p>
       <p>Projet open source · Déploiement : <a href="https://tellux.pages.dev/" target="_blank" style="color:var(--tx-tyrrhenien)">tellux.pages.dev ↗</a></p>
@@ -1036,17 +1017,16 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   </p>
 </div>
 
-<p style="margin:8px 0;"><strong>Score piézoélectricité (0-100) — Bishop 1981 + Eppelbaum 2017 + Ghilardi 2017 + Giannoulopoulou 2022 :</strong></p>
+<p style="margin:8px 0;"><strong>Score piézoélectricité (0-100) — Bishop 1981 + Eppelbaum 2017 + Ghilardi 2017 :</strong></p>
 <ul style="margin:6px 0 6px 16px;padding:0">
   <li style="margin-bottom:4px"><strong>Base</strong> = quartz_content × stress_tectonique × facteur (15) [capped 100]</li>
   <li style="margin-bottom:4px"><strong>+ Bonus failles</strong> = +1.5 max si proximité <3km faille active (stress ↑) [×8 pondération]</li>
-  <li><strong>+ Bonus radon</strong> = +1.0 max si zone radon cat.3 <5km (granit = piézo ↑) [×10 pondération]</li>
 </ul>
 
 <p style="margin:10px 0 8px 0;"><strong>Score Indice Tellux — Perturbations vs Naturel (0-10) :</strong></p>
 <ul style="margin:6px 0 6px 16px;padding:0">
   <li style="margin-bottom:4px"><strong>P (humaines)</strong> : Antennes ANFR (±50m GPS, 974 supports), lignes HTA/BT (courants 150-450A fix, modèle Biot-Savart), RF calibrée Friis</li>
-  <li><strong>N (naturelles)</strong> : IGRF-14 (±50-100 nT IDW interp.), EMAG2v3 (3.7km résolution), piézo substrat + failles + radon</li>
+  <li><strong>N (naturelles)</strong> : IGRF-14 (±50-100 nT IDW interp.), EMAG2v3 (3.7km résolution), piézo substrat + failles</li>
 </ul>
 
 <p style="margin:10px 0 8px 0;"><strong style="color:var(--warn)">⚠️ Incertitudes documentées :</strong></p>
@@ -1056,7 +1036,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <li style="margin-bottom:3px"><strong>EMAG2v3 résolution</strong> 2 arc-min (~3.7 km) → lisse anomalies locales</li>
   <li style="margin-bottom:3px"><strong>Piézoélectricité</strong> : facteur 0.5 arbitraire (Bishop 1981), portée 500m = convention. À valider magnétomètre terrain.</li>
   <li style="margin-bottom:3px"><strong>Failles</strong> : 8 principales BRGM, bonus <3km. Quaternaires vs actives = pondération différente (0.7 vs 1.0).</li>
-  <li style="margin-bottom:3px"><strong>Radon</strong> : zones géographiques ASNR, cat.3 vs cat.2. Bonus <5km. Corrélation Giannoulopoulou 2022 = exploratoire.</li>
   <li style="margin-bottom:3px"><strong>RF</strong> : 29 mesures ANFR insuffisantes intérieur Corse. Calibrage = littoral + agglos.</li>
   <li style="margin-bottom:3px"><strong>Incertitude globale</strong> : ±1-2 points sur 0-10. Utiliser en <b>comparatif (site A vs B)</b> plutôt qu'absolu.</li>
 </ul>
@@ -1065,7 +1044,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 <ul style="margin:6px 0 6px 16px;padding:0">
   <li style="margin-bottom:3px"><strong>Antennes ANFR</strong> : 974 supports, DMS/ETRS89, mis à jour mensuellement</li>
   <li style="margin-bottom:3px"><strong>Failles BRGM</strong> : cartes géologiques 1/50k (02B, 2A), D'Anna 2019</li>
-  <li style="margin-bottom:3px"><strong>Radon ASNR</strong> : cartographie potentiel radon 2024 (cat.1/2/3)</li>
   <li style="margin-bottom:3px"><strong>BRGM WMS</strong> : géologie, nappes, cavités = données publiques</li>
   <li style="margin-bottom:3px"><strong>Patrimoine</strong> : mégalithes (Leandri 2023), églises romanes (Moracchini-Mazel 1967-1992)</li>
 </ul>
@@ -1075,17 +1053,16 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <li style="margin-bottom:2px">Ghilardi et al. (2017) — Failles + piézoélectricité, Géomorphologie</li>
   <li style="margin-bottom:2px">Giannoulopoulou (2022) — Mégalithes + sélection géophysique</li>
   <li style="margin-bottom:2px">Bishop (1981) — Quartz piézoélectricité, Jour. Geological Soc.</li>
-  <li style="margin-bottom:2px">130+ études corpus (agriculture, EM, cycles lunaires, archéoastronomie)</li>
+  <li style="margin-bottom:2px"><button onclick="genererBiblioPDF()" style="background:none;border:none;color:var(--acc);cursor:pointer;font-size:inherit;text-decoration:underline;padding:0">Bibliographie complète (PDF)</button></li>
 </ul>
 
-<p style="margin:10px 0 8px 0;"><strong>Roadmap post-candidature (Q3 2026+) :</strong></p>
+<p style="margin:10px 0 8px 0;"><strong>Roadmap (Q3 2026+) :</strong></p>
 <ul style="margin:6px 0 6px 16px;padding:0">
   <li style="margin-bottom:2px">20 mesures magnétomètre terrain Corse = validation prédictions</li>
   <li style="margin-bottom:2px">Courants HTA dynamiques = profils journaliers EDF SEI (si accord)</li>
-  <li style="margin-bottom:2px">Spéciation radon par commune (IRSN données détaillées)</li>
 </ul>
 
-<p style="margin:12px 0 0;font-size:11px;font-style:italic;color:var(--tx3)">📚 Corpus & audit complets : <a href="https://github.com/dellahstella/tellux" target="_blank" style="color:var(--acc);text-decoration:none;">GitHub tellux</a> · Candidature OEC/ADEME avril 2026</p>
+<p style="margin:12px 0 0;font-size:11px;font-style:italic;color:var(--tx3)">📚 Corpus & audit complets : <a href="https://github.com/dellahstella/tellux" target="_blank" style="color:var(--acc);text-decoration:none;">GitHub tellux</a></p>
 
 </div>
   <span class="db-dot" id="db-dot"></span>
@@ -1098,10 +1075,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 </div>
 
 <div style="display:flex;gap:12px;padding:4px 12px;font-family:var(--mono);font-size:10px;color:var(--tx3);margin-bottom:6px;flex-wrap:wrap">
-  <span>🗿 116 sites</span>
-  <span>⛪ 314 églises</span>
-  <span>📚 88 études</span>
-  <span>🔬 80 hypothèses</span>
+  <span>🗿 <span id="count-sites-bar"></span> sites</span>
+  <span>⛪ <span id="count-egl-bar"></span> églises</span>
+  <span>🔬 <span id="count-hypo-bar"></span> hypothèses</span>
   <span>📡 29 mesures ANFR</span>
 </div>
 
@@ -1172,11 +1148,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <div class="accordion-cat-content">
       <button class="lbtn" id="b-geo" title="Carte géologique BRGM — granite, schiste, calcaire" onclick="tog('geo','on-geo',this)"><span class="sq" style="background:#1a6b5c"></span>Géologie BRGM</button>
       <button class="lbtn" id="b-hyd" title="Nappes et cours d'eau souterrains (BRGM)" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Nappes</button>
-      <button class="lbtn" id="b-radon" title="Zones radon catégorie 3 (ASNR) — potentiel radon élevé = massifs granitiques" onclick="tog('radon','on-radon',this)"><span class="sq" style="background:#ea580c"></span>Radon zones (cat.3)</button>
       <button class="lbtn" id="b-cav" title="Cavités souterraines — grottes, mines, karst" onclick="tog('cav','on-cav',this)"><span class="sq" style="background:#5c3a9b"></span>Cavités</button>
       <button class="lbtn" id="b-emag" title="Anomalie magnétique crustale NOAA EMAG2v3 — fond géologique régional" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Crustale (EMAG2)</button>
       <button class="lbtn" id="b-wdmam" title="World Digital Magnetic Anomaly Map — résolution 5km, couverture mondiale (IAGA/CGMW)" onclick="togWDMAM(this)"><span class="sq" style="background:#7c3aed"></span>WDMAM mondial</button>
-      <button class="lbtn" id="b-net" title="Grilles Hartmann/Curry/Bénker — visibles à partir du zoom 13+ (niveau quartier)" onclick="tog('net','on-net',this)"><span class="sq" style="background:#7c5cbf"></span>Grilles telluriques*</button>
     </div>
   </div>
 
@@ -1200,6 +1174,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     </div>
     <div class="accordion-cat-content">
       <button class="lbtn" id="b-res" title="Lignes et postes électriques haute tension (50Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Électrique (HT)</button>
+      <button class="lbtn" id="b-prod" title="Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions" onclick="tog('prod','on-prod',this)"><span class="sq" style="background:#1a5c8c"></span>Sources production</button>
       <button class="lbtn" id="b-bt" title="Réseau basse tension BT — EDF SEI · zoom ≥ 12" onclick="tog('bt','on-bt',this)"><span class="ln" style="background:#d97706"></span>Électrique (BT)</button>
       <button class="lbtn" id="b-ant" title="Antennes 2G/3G/4G/5G recensées par l'ANFR" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR</button>
     </div>
@@ -1225,11 +1200,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 <div class="op-row" id="geo-op-row"><span>Géologie</span><input type="range" min="0.1" max="1" step="0.05" value="0.6" oninput="wmsGeo.setOpacity(+this.value)"><span id="geo-op-v">60%</span></div>
 <div class="op-row" id="hyd-op-row"><span>Nappes</span><input type="range" min="0.1" max="1" step="0.05" value="0.55" oninput="wmsHyd.setOpacity(+this.value)"><span id="hyd-op-v">55%</span></div>
 <div class="op-row" id="emag-op-row"><span>Anomalie crustale</span><input type="range" min="0.1" max="0.8" step="0.05" value="0.5" oninput="wmsEmag.setOpacity(+this.value)"><span id="emag-op-v">50%</span></div>
-<div class="op-row" id="diagnostic-row" style="display:none;background:#fff3e6;border:1px solid #f5a855">
-
-  <button onclick="hideSuspiciousAntennas()" style="padding:6px 12px;border:1px solid #f5a855;background:#fff3e6;border-radius:var(--r);font-size:11px;cursor:pointer;color:#854d0e;font-weight:500;margin-left:4px">✕ Masquer</button>
-</div>
-
 <div id="map"></div>
 <div class="tx-legend" id="tx-legend">
   <div class="tx-legend-header">
@@ -1295,10 +1265,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <div class="md-item"><div class="md-l">Δ anomalie</div><div class="md-v" id="m-delta">—</div></div>
     <div class="md-item" style="grid-column:span 2"><div class="md-l" style="color:var(--acc2)">Note modèle</div><div class="md-v" id="m-note" style="font-size:11px;color:var(--tx3)">—</div></div>
     <div class="md-item"><div class="md-l">Facteur hydro</div><div class="md-v" id="m-water">—</div></div>
-    <div class="md-item"><div class="md-l">Réseaux actifs</div><div class="md-v" id="m-nets">—</div></div>
     <div class="md-item"><div class="md-l">Faisceaux hertziens</div><div class="md-v" id="m-fh" style="color:var(--warn)">—</div></div>
     <div class="md-item"><div class="md-l">Score physique <span style="font-family:var(--mono);font-size:9px;color:var(--acc2)">(mesuré)</span></div><div class="md-v" id="m-score-phys">—</div></div>
-    <div class="md-item"><div class="md-l" style="color:var(--tx3)">Géobio — exploration* </div><div class="md-v" id="m-score-geo" style="color:var(--tx3);font-size:11px" title="Grilles théoriques exclues du modèle — stockées séparément pour analyse de corrélation future">—</div></div>
   </div>
 </div>
 
@@ -1493,7 +1461,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <span style="font-family:var(--mono);font-size:10px;color:var(--tx3);background:var(--bg3);padding:2px 8px;border-radius:10px">prospecteur</span>
     <button onclick="closeProspecteur()" style="margin-left:auto;border:none;background:none;color:var(--tx3);cursor:pointer;font-size:14px">✕</button>
   </div>
-    <!-- Prospecteur diagnostic panel (fusionné avec Mode Géobiologue) -->
+    <!-- Prospecteur diagnostic panel -->
     <div id="prosp-panel" style="display:block">
       <!-- Checklist terrain -->
       <div style="background:var(--bg2);border-radius:var(--r);padding:8px 10px;margin-bottom:8px">
@@ -1672,11 +1640,11 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   </div><!-- FIN perma-cult-tab -->
 
 </div>
-<!-- PANNEAU MODE GÉOBIOLOGUE -->
+<!-- PANNEAU MODE PROSPECTEUR TERRAIN -->
 <div class="geo-panel" id="geo-panel" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px">
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
     <span style="font-size:16px">🧭</span>
-    <span style="font-weight:500;font-size:14px">Mode Géobiologue</span>
+    <span style="font-weight:500;font-size:14px">Mode Prospecteur terrain</span>
     <span style="font-family:var(--mono);font-size:10px;color:var(--tx3);background:var(--bg3);padding:2px 8px;border-radius:10px">protocole terrain</span>
     <button onclick="document.getElementById('geo-panel').style.display='none'" style="margin-left:auto;border:none;background:none;color:var(--tx3);cursor:pointer;font-size:14px">✕</button>
   </div>
@@ -1700,7 +1668,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <b>Δ +200 à +500 nT</b> — Anomalie locale : veine d'eau ou roche magnétique probable<br>
       <b>Δ -200 à -500 nT</b> — Faille ou zone de fracture probable<br>
       <b>Δ &gt; ±500 nT</b> — Anomalie forte : source artificielle (métal, câble) ou structure géologique majeure<br>
-      <span style="color:var(--tx3);font-size:10px">Augmentation progressive = eau souterraine · Chute brutale = faille · Source : FFGéobio 2024, Olifirenko 2015</span>
+      <span style="color:var(--tx3);font-size:10px">Augmentation progressive = eau souterraine · Chute brutale = faille · Source : Olifirenko 2015</span>
     </div>
   </div>
 
@@ -1723,7 +1691,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 <div id="hypo-list-panel" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;margin-bottom:10px;max-height:280px;overflow:hidden;display:flex;flex-direction:column">
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
     <span style="font-size:14px">🔬</span>
-    <span style="font-weight:500;font-size:12px">Hypothèses — 54 au total</span>
+    <span style="font-weight:500;font-size:12px">Hypothèses — <span id="count-hypo-panel"></span> au total</span>
     <button onclick="runAutoTests()" style="margin-left:auto;font-size:9px;padding:3px 10px;border-radius:20px;border:1px solid var(--acc2);background:var(--acc3);color:var(--acc);cursor:pointer;font-family:var(--mono)">▶ Tests auto</button>
     <button onclick="document.getElementById('hypo-list-panel').style.display='none'" style="border:none;background:none;color:var(--tx3);cursor:pointer;font-size:12px;padding:0">✕</button>
   </div>
@@ -1796,7 +1764,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <div class="ib-text" id="ib-geo-text">—</div>
     </div>
   </div>
-  <div id="interp-bio" style="display:none;font-size:12px;color:var(--tx2);line-height:1.6;padding:8px 12px;background:var(--bg2);border-radius:var(--r);border-left:3px solid var(--acc2);margin-bottom:8px"></div>
   <div class="interp-advice">
     <div class="interp-advice-title">Que faire avec cette information ?</div>
     <div id="interp-conseil">—</div>
@@ -1819,7 +1786,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <div class="gterm"><div class="gterm-name">Δ Delta — anomalie</div><div class="gterm-def">La différence entre ce que le modèle prédit et ce qu'on mesure réellement sur le terrain. Delta proche de zéro = tout est cohérent. Delta grand = quelque chose d'inexpliqué est présent. C'est là que la recherche devient intéressante.</div></div>
   <div class="gterm"><div class="gterm-name">nT — nanoTesla</div><div class="gterm-def">L'unité de mesure du champ magnétique. Le champ terrestre naturel est entre 25 000 et 65 000 nT selon les régions. En Corse : 46 150–47 200 nT (IGRF-14 2025). Rôle prouvé dans la navigation des animaux migrateurs (Wiltschko & Wiltschko 2005). Les perturbations que Tellux mesure sont faibles en valeur absolue. Leur effet éventuel sur les organismes vivants est un sujet de recherche actif, sans consensus établi à ce jour.</div></div>
   <div class="gterm"><div class="gterm-name">Zones rouges/orange — heatmap</div><div class="gterm-def">Les zones où le modèle prédit les perturbations électromagnétiques les plus fortes. Ce n'est pas une carte de danger — c'est une carte d'intérêt : les endroits où une mesure terrain aurait le plus de valeur pour valider ou invalider le modèle.</div></div>
-  <div class="gterm"><div class="gterm-name">Réseaux Hartmann, Curry & géobio — pourquoi séparés du modèle ?</div><div class="gterm-def">Grilles théoriques proposées par des radiesthésistes au XXe siècle (Hartmann 2×2.5m, Curry diagonal 5m, Bénker 36m…). Non validées scientifiquement. Tellux les exclut du modèle prédictif pour éviter l'auto-confirmation : si on les inclut dans le modèle puis compare les mesures au modèle, toute corrélation serait un artefact de la méthode. La bonne démarche : mesurer indépendamment du modèle, stocker la position sur grille séparément, analyser les corrélations a posteriori. Si une corrélation émerge sur un grand nombre de mesures, ce sera une vraie découverte.</div></div>
   <div class="gterm"><div class="gterm-name">Indice Kp</div><div class="gterm-def">Un chiffre de 0 à 9 qui mesure l'agitation du champ magnétique terrestre causée par le Soleil. 0-1 = calme. 2-3 = normal. 4-5 = actif. 6+ = tempête géomagnétique. Un Kp élevé peut perturber les mesures instrumentales. Son effet direct sur les organismes est une hypothèse explorée dans certaines recherches, non validée par consensus.</div></div>
   <div class="gterm"><div class="gterm-name">📱 Comment mesurer avec mon téléphone ?</div><div class="gterm-def">Tous les smartphones ont un magnétomètre intégré (la boussole). Applications gratuites : <b>Physics Toolbox Suite</b> (Android) ou <b>Sensor Kinetics</b> (iOS). Tenez le téléphone à bout de bras, loin de votre corps et de tout objet métallique. La valeur normale en Corse est environ 46 000–47 500 nT (IGRF-14 + anomalie lithosphérique). Un écart de plus de 1 000 nT par rapport à la valeur IGRF du point indique une anomalie potentielle.</div></div>
   <div class="gterm"><div class="gterm-name">🎨 Que signifient les couleurs ?</div><div class="gterm-def">Les <b>losanges</b> = mesures officielles ANFR en V/m (champ radio). Vert = faible, orange = modéré, rouge = élevé, bordeaux + contour or = dépassement légal. Les <b>zones colorées sur la carte</b> (heatmap) = prédiction du modèle Tellux, pas des mesures réelles — elles indiquent où mesurer en priorité.</div></div>
@@ -1849,8 +1815,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <b>H11 — Piézo systématique granit (Bishop 1981)</b> : Les zones de granit quartzifère (Cauria, Calvi, Porto) montrent-elles un +Δ systématique par rapport au modèle IGRF+crustal seul ? Corrélation GEO_SUSC_GRID × contributions terrain.<br>
   <b>H12 — Piezoelectric moment (Eppelbaum 2017)</b> : Le moment piézoélectrique calculé à partir du stress tectonique local corrèle-t-il avec les anomalies nT des contributions terrain ? Score piézo calculable par formule.<br>
   <b>H13 — Mécanisme tellurique dominant (Helman 2016)</b> : Parmi les 32 mécanismes classifiés, lequel domine en Corse granitique vs calcaire ? Testable par ratio anomalies granit/calcaire dans la base Supabase.<br>
-  <b>H14 — Gradient géobio vs crustal (FFGéobio 2024)</b> : Le gradient magnétique mesuré par protocole géobiologue (augmentation=eau, chute=faille) correspond-il à la couche anomalie crustale + modèle Tellux ?<br>
-  <b>H15 — Nœuds Hartmann vs zones hot (Olifirenko 2015)</b> : Les nœuds pathogènes détectés au géomagnétomètre coïncident-ils avec les zones hot du modèle Tellux ? Corrélation spatiale mesurable.<br>
   <b>H16 — Antenne Lecher vs Δ Tellux (Birckner 2024)</b> : Les croisements détectés à l'antenne Lecher correspondent-ils aux anomalies Δ prédites par Tellux ? Protocole double aveugle souhaitable.<br>
   <b>H17 — Pattern spirale mégalithique (Brooker 1983)</b> : Les sites corses (Cauria, Palaghju) montrent-ils le même pattern spirale magnétique que Rollright Stones ? Campagne magnétomètre en grille.<br>
   <b>H18 — Amplification église romane (Desborough 2000)</b> : Les églises romanes corses (San Michele, La Canonica) amplifient-elles le champ magnétique comme les dolmens ? Mesure intérieur vs extérieur.<br>
@@ -1883,11 +1847,11 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <b>Approche Tellux</b> : détection automatique (brute force + Monte Carlo p-value). Chaque alignement reçoit un score de significativité. Rose = significatif (p&lt;0.05, à investiguer terrain). Violet = non significatif (hasard probable). Pas de mysticisme — de la statistique.<br>
   <span style="color:var(--tx3)">La couche « Aligns » ne prouve rien à elle seule. C'est un outil exploratoire pour identifier les alignements à vérifier sur le terrain avec un magnétomètre.</span></div></div>
   <div class="gterm"><div class="gterm-name">⚡ Pourquoi les anomalies prédites tombent sur des sites anciens ?</div><div class="gterm-def">Observation clé : le modèle Tellux prédit des zones « hot » (anomalies EM) qui coïncident avec des sites mégalithiques et des églises romanes. Deux explications possibles :<br>
-  <b>1. Les anomalies sont géologiques</b> (failles, quartz piézoélectrique, veines d'eau) → les anciens les détectaient et construisaient dessus volontairement. C'est exactement ce que montre <b>Giannoulopoulou de Leon et al. (2022, Univ. Patras/Ioannina)</b> : en Europe, les mégalithes sont préférentiellement placés sur des zones de radon élevé, les temples grecs sur des failles + eau souterraine. Le <b>Dragon Project (Devereux 1977-1990)</b> a mesuré des anomalies magnétiques réelles sur les cercles de pierres britanniques — conclusion : géologie, pas mystique, mais les pierres ont été <b>sélectionnées</b> pour leurs propriétés magnétiques.<br>
+  <b>1. Les anomalies sont géologiques</b> (failles, quartz piézoélectrique, veines d'eau) → les anciens les détectaient et construisaient dessus volontairement. C'est exactement ce que montre <b>Giannoulopoulou de Leon et al. (2022, Univ. Patras/Ioannina)</b> : en Europe, les mégalithes sont préférentiellement placés sur des zones de granit quartzifère, les temples grecs sur des failles + eau souterraine. Le <b>Dragon Project (Devereux 1977-1990)</b> a mesuré des anomalies magnétiques réelles sur les cercles de pierres britanniques — conclusion : géologie, pas mystique, mais les pierres ont été <b>sélectionnées</b> pour leurs propriétés magnétiques.<br>
   <b>2. Le modèle capture la même géologie</b> que les anciens cherchaient : granit quartzifère (piézo), failles actives, convergence hydrologique. Si cette corrélation est confirmée par les mesures terrain, cela signifie que les anomalies ne sont <b>pas humaines</b> mais <b>géologiques persistantes</b> — et que l'histoire linéaire classique est compatible avec un savoir ancien de détection des lieux.<br>
   <b>Test Tellux (H21)</b> : calculer la distance moyenne entre chaque zone hot et le site ancien le plus proche. Comparer avec la distance moyenne pour des points aléatoires. Si les sites anciens sont significativement plus proches des anomalies → corrélation confirmée.<br>
   <span style="color:var(--acc)">C'est le cœur de la Phase 4 : comprendre pourquoi les anciens bâtissaient là où ils bâtissaient, et en tirer des principes d'implantation modernes.</span></div></div>
-  <div class="gterm"><div class="gterm-name">🧭 Mode Géobiologue — protocole 5 min</div><div class="gterm-def">Protocole simplifié inspiré de la FFGéobiologie (2024) et Olifirenko (2015), adapté pour smartphone :<br>
+  <div class="gterm"><div class="gterm-name">🧭 Mode Prospecteur terrain — protocole 5 min</div><div class="gterm-def">Protocole simplifié inspiré d'Olifirenko (2015), adapté pour smartphone :<br>
   <b>1. Ouvrez</b> votre app magnétomètre (Physics Toolbox ou Sensor Kinetics)<br>
   <b>2. Cliquez</b> sur le point Tellux — notez l'Indice Tellux prédit et la valeur IGRF<br>
   <b>3. Mesurez</b> à 1.5m du sol, bras tendu, loin de tout métal — notez la valeur nT<br>
@@ -1902,10 +1866,10 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <span style="color:var(--tx3)">Phase 4 de la roadmap — en préparation. Les recommandations émergeront des données terrain accumulées.</span></div></div>
   <div class="gterm"><div class="gterm-name">🏗️ Vision long terme — Construction harmonique</div><div class="gterm-def">Tellux ambitionne à terme de fournir un outil d'aide à la <b>construction respectant l'harmonie vibratoire</b> — ce que certains appellent la « science perdue des anciens ». Cela implique :<br>
   <b>Phase 1 (actuelle)</b> : Cartographier les anomalies EM naturelles et humaines en Corse. Croiser mégalithes, géologie, hydrologie, mesures terrain. Modèle géologique intégré. EMAG2v3 NOAA. Calibration internationale (Bangui, Kursk, Vredefort, Ries, Rollright, Carnac, Giza…).<br>
-  <b>Phase 2</b> : Intégrer les <b>églises romanes</b> (Moracchini-Mazel, 300+ sites) + <b>catalogue Leandri 2020</b>. Tester H7 + H18 (continuité orientations + amplification). Mode Géobiologue avec protocole 5 min.<br>
+  <b>Phase 2</b> : Intégrer les <b>églises romanes</b> (Moracchini-Mazel, 300+ sites) + <b>catalogue Leandri 2020</b>. Tester H7 + H18 (continuité orientations + amplification). Mode Prospecteur terrain avec protocole 5 min.<br>
   <b>Phase 3</b> : Modéliser l'effet des <b>matériaux</b>. Susceptibilité magnétique in situ (Ghilardi). Comparer granit quartzifère vs serpentine vs calcaire. Classification EM matériaux construction. Tester H8, H11, H17 (piézo, spirale Brooker).<br>
   <b>Phase 4</b> : <b>Recommandations d'implantation</b> — zones favorables selon substrat, failles, hydrologie, champ EM. Module « Plan vibratoire » (choix site + géométrie + matériaux, inspiré Desborough/Grimaud). Tester H19.<br>
-  <span style="color:var(--tx2)">Sources : Thom 1971, Moracchini-Mazel 1967, Ghilardi 2017, Brooker 1983, Desborough 2000, Grimaud 2024, FFGéobio 2024, Bauval 1994.</span></div></div>
+  <span style="color:var(--tx2)">Sources : Thom 1971, Moracchini-Mazel 1967, Ghilardi 2017, Brooker 1983, Desborough 2000, Grimaud 2024, Bauval 1994.</span></div></div>
 </div>
 
 <div style="margin-top:8px;"><button onclick="importCartoRadioCSV()" style="font-size:11px;padding:5px 14px;border-radius:10px;border:1px solid #2dd4bf;background:#ccfbf1;color:#0f766e;cursor:pointer;font-family:DM Sans,sans-serif;font-weight:500">Importer CSV CartoRadio</button> <span style="font-size:11px;color:#8b92a5;margin-left:6px">Glissez votre export CartoRadio.fr</span></div>
@@ -1932,12 +1896,13 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     </div>
   </div>
   <div style="font-size:10px;color:var(--tx3);border-top:1px solid var(--border);padding-top:6px">
-    * Réseaux géobiologiques (Hartmann, Curry…) = hypothèses exploratoires, non validées scientifiquement · Modèle magnétique = IGRF-14 + variation diurne Sq + index Kp/Dst · Sources : ANFR, BRGM, BGS, NOAA, ESA Swarm · <a href="#" onclick="event.preventDefault();document.getElementById('disclaimer-overlay').style.display='flex'" style="color:var(--acc);text-decoration:underline">Méthodologie & confidentialité</a>
+    Modèle magnétique = IGRF-14 + variation diurne Sq + index Kp/Dst · Sources : ANFR, BRGM, BGS, NOAA, ESA Swarm · <a href="#" onclick="event.preventDefault();document.getElementById('disclaimer-overlay').style.display='flex'" style="color:var(--acc);text-decoration:underline">Méthodologie & confidentialité</a>
   </div>
 </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
 <script>
 const SB_URL='https://knckulwghgfrxmbweada.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtuY2t1bHdnaGdmcnhtYndlYWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NTAxMzQsImV4cCI6MjA4OTIyNjEzNH0.Cu9dvxFyn-5pbOP65gowCEQvRti74CLnlNYf92jebis';
@@ -2021,10 +1986,10 @@ const wmsEmag=L.imageOverlay(
 );
 let _tileLabels=L.tileLayer(DARK?'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',{zIndex:10,attribution:''}).addTo(map);
 
-const lSit2=L.layerGroup(),lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lSit=L.layerGroup(),lNet=L.layerGroup(),lRadon=L.layerGroup(),lRPG=L.layerGroup(),lForet=L.layerGroup(),lAOC=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.layerGroup(),lCem=L.layerGroup(),lIntl=L.layerGroup(),lAlign=L.layerGroup(),lEgl=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
-const LAYERS={sit2:lSit2,bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,sit:lSit,net:lNet,radon:lRadon,rpg:lRPG,foret:lForet,aoc:lAOC,hot:lHot,con:lCon,cem:lCem,intl:lIntl,align:lAlign,egl:lEgl};
+const lSit2=L.layerGroup(),lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lSit=L.layerGroup(),lRPG=L.layerGroup(),lForet=L.layerGroup(),lAOC=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lCem=L.layerGroup(),lIntl=L.layerGroup(),lAlign=L.layerGroup(),lEgl=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
+const LAYERS={sit2:lSit2,bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,prod:lProd,sit:lSit,rpg:lRPG,foret:lForet,aoc:lAOC,hot:lHot,con:lCon,cem:lCem,intl:lIntl,align:lAlign,egl:lEgl};
 const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag};
-const ACTIVE={sit2:false,bt:false,ant:false,antOffshore:false,geo:false,hyd:false,radon:false,rpg:false,foret:false,aoc:false,cav:false,emag:false,net:false,hot:true,res:false,sit:false,con:false,cem:false,intl:false,align:false,egl:false};
+const ACTIVE={sit2:false,bt:false,ant:false,antOffshore:false,geo:false,hyd:false,rpg:false,foret:false,aoc:false,cav:false,emag:false,hot:true,res:false,prod:false,sit:false,con:true,cem:false,intl:false,align:false,egl:false};
 
 const LEGEND_ACTIVE=new Set();let _legendCtrl=null;
 const LEGEND_HTML={
@@ -2032,7 +1997,6 @@ const LEGEND_HTML={
   geo:'<div class="leg-block"><b class="leg-title">Geologie</b><div class="leg-row"><span style="color:#8B4513">&#9632;</span> Granit</div><div class="leg-row"><span style="color:#DAA520">&#9632;</span> Sedimentaire</div><div class="leg-row"><span style="color:#4682B4">&#9632;</span> Metamorphique</div><div class="leg-src">BRGM Geologie</div></div>',
   hyd:'<div class="leg-block"><b class="leg-title">Nappes</b><div class="leg-row"><span style="color:#1a4b8c">&#9632;</span> Affleurante</div><div class="leg-row"><span style="color:#4a90d9">&#9632;</span> Sub-affleurante</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
   cav:'<div class="leg-block"><b class="leg-title">Cavites</b><img src="https://geoservices.brgm.fr/risques?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.1.1&FORMAT=image/png&LAYER=CAVITE_LOCALISEE" style="max-width:150px;display:block;margin:4px 0"><div class="leg-src">BRGM BD Cavites</div></div>',
-  net:'<div class="leg-block"><b class="leg-title">Grilles géobio*</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#7c5cbf;vertical-align:middle"></span> Hartmann (2×2.5m)</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#c47a2a;vertical-align:middle"></span> Curry (diag. 5m)</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#1a6b5c;vertical-align:middle"></span> Bénker (36m)</div><div class="leg-src">* Hypothèses exploratoires</div></div>',
   ant:'<div class="leg-block"><b class="leg-title">Antennes ANFR</b><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a4b8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a4b8c">2G</b> GSM — voix, SMS</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a6b5c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a6b5c">3G</b> UMTS — data mobile</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#b85c00">4G</b> LTE — haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#991b1b">5G</b> NR — très haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#6b7280">Infra</b> FH · TV · FM · PMR</div><div class="leg-row"><span style="display:inline-block;position:relative;width:12px;height:12px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:5px;top:0;width:2px;height:12px;background:#5f5e5a"></span><span style="position:absolute;top:5px;left:0;width:12px;height:2px;background:#5f5e5a"></span></span>Émetteur radio/TV majeur</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Opérateurs : Orange · SFR · Bouygues · Free<br>974 supports · Source ANFR open data</div><div class="leg-src">ANFR · Supabase · SUP_SUPPORT 2026</div></div>',
   sit:'<div class="leg-block"><b class="leg-title">Mégalithes & Sites</b><div class="leg-row"><span style="display:inline-block;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:11px solid #854d0e;vertical-align:middle;margin-right:4px"></span>Mégalithique</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#8b5cf633;border:2px solid #8b5cf6;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Remarquable naturel</div><div class="leg-src">66 mégalithes · 11 naturels</div></div>',
   wdmam:'<div class="leg-block"><b class="leg-title">EMAG2/WDMAM mondial</b><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#dc2626;border-radius:2px"></span> Anomalie positive (magnétique)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#2563eb;border-radius:2px"></span> Anomalie négative (non-magnétique)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#f5f5f5;border:1px solid #ddd;border-radius:2px"></span> Neutre (~0 nT)</div><div class="leg-src">NOAA NCEI · Maus et al. 2009</div></div>',
@@ -2203,6 +2167,7 @@ function tog(id,cls,btn){
     if(id==='hot'&&lHot.getLayers().length===0)buildHot();
     if(id==='sit2'&&lSit2.getLayers().length===0)buildSit2();
     if(id==='res'&&lRes.getLayers().length===0)loadReseau();
+    if(id==='prod'&&lProd.getLayers().length===0)loadProd();
     if(id==='bt'&&lBT.getLayers().length===0)loadBT();
     if(id==='ant'&&lAnt.getLayers().length===0)loadAnt();
     if(id==='antOffshore'&&lAntOffshore.getLayers().length===0)loadAnt(); // antOffshore charge aussi via loadAnt
@@ -2524,18 +2489,9 @@ function calcWater(lat,lon){
     ?Math.min(2.5,1+meteoData.precip/10) // jusqu'à ×2.5 si >25mm
     :1.0;
   let w=0;[[42.70,9.35],[42.42,9.19],[42.08,9.17],[41.98,9.12],[41.85,9.05],[41.73,8.92],[42.30,8.78],[42.15,8.95]].forEach(([a,b])=>{const d=dist(lat,lon,a,b);if(d<3)w+=150*(1-d/3);});[[42.25,9.15,300],[42.10,8.85,250],[41.90,9.00,200]].forEach(([a,b,v])=>{const d=dist(lat,lon,a,b);if(d<2)w+=v*(1-d/2);});return Math.round(w*pluieFactor);}
-function calcNetPosition(lat,lon){
-  const hls=2/111000;
-  const latMod=((lat%hls)+hls)%hls;
-  return Math.round(Math.min(latMod,hls-latMod)/hls*100);
-}
-function calcNets(lat,lon){const nets=[];const hls=2/111000,hlo=2.5/(111000*Math.cos(lat*Math.PI/180));if(Math.min(((lat%hls)+hls)%hls,hls-(((lat%hls)+hls)%hls))<hls*.13&&Math.min(((lon%hlo)+hlo)%hlo,hlo-(((lon%hlo)+hlo)%hlo))<hlo*.13)nets.push({n:'Hartmann',c:'#7c5cbf',i:80});const cm=(((lat+lon)/(5/111000))%1+1)%1;if(cm<.12||cm>.88)nets.push({n:'Curry',c:'#c47a2a',i:60});const gdm=(((lat+lon)/(28/111000))%1+1)%1;if(gdm<.07||gdm>.93)nets.push({n:'Grand diag.',c:'#b85c00',i:40});const blm=(((lat/(36/111000))%1)+1)%1;if(blm<.09)nets.push({n:'Bénker',c:'#1a5c8c',i:35});const pcm=((((lat-lon)/(8/111000))%1)+1)%1;if(pcm<.10||pcm>.90)nets.push({n:'Peyré',c:'#1a6b5c',i:25});const wcm=((((lat+2*lon)/(11/111000))%1)+1)%1;if(wcm<.08||wcm>.92)nets.push({n:'Wissmann',c:'#8c1a4b',i:30});return nets;}
 
 // Calcul groupé — évite de répéter les 4 appels à chaque fois
 // calcAll — modèle physique pur
-// Les réseaux géobiologiques sont EXCLUS du modèle prédictif
-// Ils restent disponibles via calcNets() pour exploration séparée
-// Raison : éviter l'auto-confirmation (biais fondateur)
 function calcAll(lat,lng){
   const human=calcHuman(lat,lng)+calcSimDelta(lat,lng);
   const water=calcWater(lat,lng);
@@ -2693,51 +2649,10 @@ function calcFaultProximity(lat, lon) {
   return bonus;
 }
 
-// ═══ RADON CATÉGORIE 3 CORSE (ASNR/IRSN) ═══
-// Sources: ASNR cartographie potentiel radon, Giannoulopoulou 2022
-// Catégorie 3 = potentiel radon ÉLEVÉ = massifs granitiques (uranium élevé)
-// Données: centres zones radon 3 par région géographique
-const RADON_ZONES_CORSE = [
-  // Corse du Sud - Massif granitique SW (Sartène, Taravo, Alto Rocca)
-  {nom:"Radon zone SW (Sartène)", lat:41.75, lon:8.95, region:"SW", categ:3, src:"ASNR carte"},
-  {nom:"Radon zone Taravo (granite)", lat:41.85, lon:8.90, region:"SW", categ:3, src:"ASNR carte"},
-  {nom:"Radon zone Porto-Vecchio", lat:41.60, lon:9.28, region:"SE", categ:3, src:"ASNR carte"},
-  
-  // Corse intérieure - Massif granitique central (Niolu, Vizzavona)
-  {nom:"Radon zone centre-N (Niolu)", lat:42.15, lon:8.95, region:"centre", categ:3, src:"ASNR carte"},
-  {nom:"Radon zone Vizzavona", lat:42.12, lon:9.10, region:"centre", categ:3, src:"ASNR carte"},
-  {nom:"Radon zone Renoso-Cinto", lat:42.35, lon:9.05, region:"centre", categ:3, src:"ASNR carte"},
-  
-  // Corse du Nord - Massif granitique Balagne + Cap Corse ophiolites
-  {nom:"Radon zone Balagne (granit)", lat:42.55, lon:8.85, region:"N", categ:3, src:"ASNR carte"},
-  {nom:"Radon zone Cap Corse (ophiolite)", lat:42.85, lon:9.30, region:"N", categ:2, src:"ASNR carte"},
-];
-
-function calcRadonProximity(lat, lon) {
-  // Bonus piézoélectricité si zone radon catégorie 3 (<5km)
-  // Justification: Giannoulopoulou 2022 - mégalithes = choix préhistorique zones radon élevé
-  //   Hypothèse: populations anciennes sensibles à champs EM naturels (radon = traceur géo-EM)
-  //   Corrélation: granit (radon 3) = piézo élevé (quartz)
-  // Distance: 5km car zones radon sont géographiques plus vastes que failles
-  let bonus = 0;
-  for (const z of RADON_ZONES_CORSE) {
-    const dist = haversine(lat, lon, z.lat, z.lon); // km
-    if (dist < 5) {
-      // Bonus linéaire: max 1.0 à distance 0, 0 à distance 5km
-      // Catégorie 3 = bonus plein, catégorie 2 = réduit
-      const base_bonus = 1.0 * (1 - dist / 5);
-      const categ_mult = (z.categ === 3) ? 1.0 : 0.6;
-      bonus = Math.max(bonus, base_bonus * categ_mult);
-    }
-  }
-  return bonus;
-}
-
-// Piezo Score (Bishop 1981 + Eppelbaum 2017 + Ghilardi 2017 + Giannoulopoulou 2022)
+// Piezo Score (Bishop 1981 + Eppelbaum 2017 + Ghilardi 2017)
 // Polarisation piézo ∝ quartz_content × stress_tectonique × d33
 // d33 quartz ≈ 2.3 pC/N, stress Corse ~1-5 MPa (post-orogénique)
 // Bonus failles tectoniques (Ghilardi): stress accru près failles actives
-// Bonus radon (Giannoulopoulou): zones radon 3 = granit piézo élevé
 // Score normalisé 0-100
 function calcPiezoScore(lat,lon){
   const t=getGeoType(lat,lon);
@@ -2749,10 +2664,8 @@ function calcPiezoScore(lat,lon){
   const base=Math.min(100,Math.round(qz*stress*15));
   // Bonus faille = +1.5 max si proximité faille active
   const fault_bonus=calcFaultProximity(lat,lon);
-  // Bonus radon = +1.0 max si zone radon 3
-  const radon_bonus=calcRadonProximity(lat,lon);
-  // Score final = base + bonuses pondérés (cap à 100)
-  return Math.min(100,Math.round(base+fault_bonus*8+radon_bonus*10)); // radon pondéré ×10 (traces granit)
+  // Score final = base + bonus faille pondéré (cap à 100)
+  return Math.min(100,Math.round(base+fault_bonus*8));
 }
 
 // ═══ Décomposition multi-échelle : Crustal (régional) vs Local ═══
@@ -2768,9 +2681,6 @@ function calcDecomposition(lat,lon){
   return {crustal,localGeo,human,water,piezo,skinD,tellPct,
     total:crustal+localGeo+human+Math.round(water*0.3)};
 }
-
-// calcNets est gardé séparément pour l'exploration géobiologique
-// NE PAS inclure dans calcAll — maintenir l'indépendance du test
 
 // ═══ MÉTROLOGIE LATITUDE — Stecchini 1971 + Knight/Butler 2004 ═══
 // Coudée royale = 52.36 cm à lat 30°N (Égypte), correction 175/176 par degré
@@ -2820,7 +2730,7 @@ function recommandMateriaux(lat,lon){
 
 // Fermer les panneaux ouverts par un clic carte (sans toucher au popup Leaflet)
 // Panneau interprétation — traduit le modèle en langage accessible
-function showInterp(lat,lng,igrf,human,water,nets,score,delta){
+function showInterp(lat,lng,igrf,human,water,score,delta){
   const panel=document.getElementById('interp');if(!panel)return;
   panel.style.display='block';
   document.getElementById('interp-coords').textContent=lat.toFixed(4)+'°N '+lng.toFixed(4)+'°E';
@@ -2829,7 +2739,6 @@ function showInterp(lat,lng,igrf,human,water,nets,score,delta){
   const fill=document.getElementById('interp-score-fill');
   fill.style.width=pct+'%';
   fill.style.background=pct<20?'var(--acc)':pct<50?'var(--warn)':'var(--danger)'; const natScore=Math.round(water*0.3)+geo;
-  const bioScore=nets.reduce((s,n)=>s+n.i,0);
   let lvl,desc;
   if(absScore<30){lvl='Très calme';desc='Zone peu perturbée — proche de la référence IGRF.';}
   else if(absScore<100){lvl='Modéré';desc='Influence humaine détectable mais modeste.';}
@@ -2837,8 +2746,8 @@ function showInterp(lat,lng,igrf,human,water,nets,score,delta){
   else{lvl='Intense';desc='Forte perturbation — mesure terrain recommandée.';}
   document.getElementById('interp-score-label').textContent=lvl;
   document.getElementById('interp-score-label').style.color=fill.style.background;
-  document.getElementById('interp-score-desc').textContent=desc;const natTotal=natScore+bioScore;
-  document.getElementById('interp-nat-activity').textContent='Activité naturelle : '+natTotal+'/10 (Géo+'+natScore+' · Géobio+'+bioScore+') – signal géologique (piézo/tellurique)';
+  document.getElementById('interp-score-desc').textContent=desc;
+  document.getElementById('interp-nat-activity').textContent='Activité naturelle : '+natScore+'/5 – signal géologique (piézo/tellurique)';
   document.getElementById('interp-emoji').textContent=absScore<30?'🟢':absScore<100?'🟡':absScore<300?'🟠':'🔴';
   const lcs=calcLCS1(lat,lng);
   document.getElementById('ib-naturel-text').textContent=
@@ -2847,9 +2756,6 @@ function showInterp(lat,lng,igrf,human,water,nets,score,delta){
     human>0?'+'+human+' nT (antennes, lignes)':'Aucune influence humaine détectée';
   document.getElementById('ib-geo-text').textContent=
     water>0?'+'+water+' nT — nappe ou cours d\'eau':'Pas d\'influence hydrologique';
-  const bio=document.getElementById('interp-bio');
-  if(nets.length){bio.style.display='block';bio.innerHTML='<b>Géobio (exploration) :</b> '+nets.map(n=>n.n).join(', ')+' · '+calcNetPosition(lat,lng)+'% période <span style="color:var(--tx3);font-size:10px">· Non inclus dans le modèle</span>';}
-  else{bio.style.display='none';}
   const conseil=document.getElementById('interp-conseil');
   if(delta!==null&&Math.abs(delta)>200) conseil.textContent='Anomalie Δ'+delta+' nT — mesure répétée recommandée. Vérifiez Kp/Bz.';
   else if(absScore>200) conseil.textContent='Zone active. Mesurez avec magnétomètre smartphone pour objectiver.';
@@ -2876,9 +2782,7 @@ map.on('click',e=>{
   const piezo=calcPiezoScore(lat,lng);
   const skinD=calcSkinDepth(lat,lng);
   const tellPct=calcTelluricSecondary(lat,lng);
-  const nets=calcNets(lat,lng);
-  const netVal=nets.reduce((s,n)=>s+n.i,0);
-  const predicted=Math.round(igrf+human+water*0.3+geo+netVal);
+  const predicted=Math.round(igrf+human+water*0.3+geo);
   let real=null,bd=999;
   contribsDB.forEach(c=>{const d=dist(lat,lng,c.lat,c.lon);if(d<0.5&&d<bd&&c.valeur&&c.unite==='nT'){bd=d;real=c.valeur;}});
   const delta=real!==null?Math.round(real-predicted):null;
@@ -2956,8 +2860,8 @@ map.on('click',e=>{
     '<div style="font-size:8px;color:#b0b5c0;margin-top:2px;font-style:italic">Perturbation bas = bon \u00b7 Naturel haut = site g\u00e9o int\u00e9ressant</div>'+
     '</div>'
   );
-  document.getElementById('btn-export-model').onclick=()=>exportModel(lat,lng,igrf,human,water,nets,nRFcalib);
-  // Store for Mode Géobiologue export
+  document.getElementById('btn-export-model').onclick=()=>exportModel(lat,lng,igrf,human,water,nRFcalib);
+  // Store for Mode Prospecteur terrain export
   const coudee=calcCoudeeLatitude(lat);
   const myLat=calcMYLatitude(lat);
   const rec=recommandMateriaux(lat,lng);
@@ -3010,6 +2914,13 @@ function _armContribClick(){
   map.once('click',_contribClickHandler);
 }
 function _placeContribMarker(lat,lng){
+  // Filtre geographique : Tellux est calibre pour la Corse uniquement
+  if(lat<41.3||lat>43.1||lng<8.5||lng>9.7){
+    info('Tellux est calibre pour la Corse uniquement. Cliquez sur l\'ile pour ajouter une mesure.','error');
+    // Re-armer le click pour que l'utilisateur puisse re-cliquer au bon endroit
+    _armContribClick();
+    return;
+  }
   if(pending)map.removeLayer(pending);
   pending=L.marker([lat,lng],{icon:mkIcon('#5c3a9b',false,13)}).addTo(map);
   // Mettre a jour l'info dans le formulaire
@@ -3059,14 +2970,17 @@ async function saveContrib(){
   const vCheck = validateContrib();
   if(!vCheck.ok){info('⚠ '+vCheck.msg,'error');return;}
   if(!pending){info('Cliquez d\'abord sur la carte pour placer votre point de mesure.','warn');return;}
-  const btn=document.getElementById('btn-save');btn.textContent='Sauvegarde…';btn.disabled=true;
   const ll=pending.getLatLng();
+  // Double verification : position dans le bbox Corse
+  if(ll.lat<41.3||ll.lat>43.1||ll.lng<8.5||ll.lng>9.7){
+    info('Position hors Corse — mesure non enregistree.','error');
+    map.removeLayer(pending);pending=null;return;
+  }
+  const btn=document.getElementById('btn-save');btn.textContent='Sauvegarde…';btn.disabled=true;
   const igrf=fetchIGRF(ll.lat,ll.lng);
   const {human,water,geo,scorePhys,score}=calcAll(ll.lat,ll.lng);
-  const nets=calcNets(ll.lat,ll.lng);
-  const netVal=nets.reduce((s,n)=>s+n.i,0);
   const valeur=parseFloat(document.getElementById('c-val').value)||null;
-  const predicted=igrf+human+water*0.3+netVal;
+  const predicted=igrf+human+water*0.3;
   // Collecter les matériaux et appareils cochés
   const mats=[...document.querySelectorAll('#c-mats input:checked')].map(i=>i.value);
   const appareils=[...document.querySelectorAll('#c-appareils input:checked')].map(i=>i.value);
@@ -3115,17 +3029,12 @@ async function saveContrib(){
     kp:parseFloat(curKp)||null,bz:parseFloat(curBz)||null,
     densite_protons:parseFloat(curDensity)||null,flux_protons:parseFloat(curFlux)||null,
     igrf_nt:Math.round(igrf),perturbation_humaine_nt:human,facteur_eau_nt:water,
-    reseaux_actifs:nets.map(n=>n.n),
-    score_anomalie:human+Math.round(water*0.3)+netVal,
+    score_anomalie:human+Math.round(water*0.3),
     delta_nt:valeurPivot!==null?Math.round(valeurPivot-predicted):null,
     session_id:sessionId,version_app:'2.4',
     // Nouveaux champs contexte bâtiment
     contexte:ctxContrib,
     etage:etage||null,
-    // Position géobiologique stockée séparément — pour analyse de corrélation future
-    // NE PAS utiliser pour interpréter la mesure individuelle
-    geo_nets:nets.length?nets.map(n=>n.n):null,
-    geo_netval:netVal||null,
     materiaux_murs:mats.length?mats:null,
     appareils_actifs:appareils.length?appareils:null,
     attenuation_prevue_db:attenPrevue||null,
@@ -3161,13 +3070,6 @@ function renderList(){
     return '<div class="contrib-item"><span class="ci-dot"></span><div><div class="ci-main">'+c.type+valLabel+csvBadge+'</div><div class="ci-meta">'+(c.lat?c.lat.toFixed(4):'')+', '+(c.lon?c.lon.toFixed(4):'')+' · score:'+(c.score_anomalie||'—')+' · '+(c.created_at?new Date(c.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'')+'</div></div></div>';
   }).join('');
 }
-
-function buildNets(){
-// Note: Hartmann 2×2.5m, Curry 5m diagonal, Bénker 36m
-// At zoom <13 individual lines are invisible — this is normal
-// The grid becomes visible when zoomed in to neighbourhood level
-  lNet.clearLayers();
-const hls=2/111000*110,hlo=2.5/(111000*Math.cos(42*Math.PI/180))*110;for(let a=41.3;a<43.1;a+=hls)L.polyline([[a,8.5],[a,9.7]],{color:'#7c5cbf',weight:.5,opacity:.2}).addTo(lNet);for(let o=8.5;o<9.7;o+=hlo)L.polyline([[41.3,o],[43.1,o]],{color:'#7c5cbf',weight:.5,opacity:.2}).addTo(lNet);const cs=5/111000*110;for(let i=-8;i<25;i++){L.polyline([[41.3+i*cs*1.414,8.5],[41.3+i*cs*1.414-2.5*cs*1.414,9.7]],{color:'#c47a2a',weight:.7,opacity:.3}).addTo(lNet);L.polyline([[41.3+i*cs*1.414,8.5],[41.3+i*cs*1.414+2.5*cs*1.414,9.7]],{color:'#c47a2a',weight:.7,opacity:.3}).addTo(lNet);}const ps=8/111000*110;for(let i=-5;i<20;i++)L.polyline([[41.3+i*ps*1.414,8.5],[41.3+i*ps*1.414+2.8*ps*1.414,9.7]],{color:'#1a6b5c',weight:.8,opacity:.25}).addTo(lNet);}
 
 // scoreColor : maintenant basé sur le VRAI DELTA
 // Δ_RF = interpolation depuis les 29 mesures CartoRadio (V/m)
@@ -3224,58 +3126,6 @@ function buildIntlLayer(){
     '<div style="font-size:9px;color:#9ca3af;margin-top:4px;border-top:1px solid #e5e7eb;padding-top:3px">Type: ANFR non-conformité</div>'+
     '</div>'
   ).addTo(lIntl);
-}
-
-// ═══ COUCHE RADON ZONES CORSE (ASNR/IRSN) ═══
-// Zones radon catégorie 3 = potentiel radon élevé (massifs granitiques, uranium élevé)
-// Source: ASNR cartographie potentiel radon
-function buildRadonLayer(){
-  lRadon.clearLayers();
-  
-  // Données radon zones (hardcodées = même source que Supabase)
-  const radonZones = [
-    {nom:"Radon SW (Sartène)", lat:41.75, lon:8.95, categ:3},
-    {nom:"Radon Taravo", lat:41.85, lon:8.90, categ:3},
-    {nom:"Radon Porto-Vecchio", lat:41.60, lon:9.28, categ:3},
-    {nom:"Radon Niolu", lat:42.15, lon:8.95, categ:3},
-    {nom:"Radon Vizzavona", lat:42.12, lon:9.10, categ:3},
-    {nom:"Radon Renoso-Cinto", lat:42.35, lon:9.05, categ:3},
-    {nom:"Radon Balagne", lat:42.55, lon:8.85, categ:3},
-    {nom:"Radon Cap Corse", lat:42.85, lon:9.30, categ:2},
-  ];
-  
-  radonZones.forEach(z => {
-    // Couleur selon catégorie
-    const col = z.categ === 3 ? '#ea580c' : '#fbbf24';
-    const opacity = z.categ === 3 ? 0.35 : 0.25;
-    
-    // Cercle radon (rayon ~15km = zone influence)
-    L.circle([z.lat, z.lon], {
-      radius: 15 * 1000,
-      color: col,
-      weight: 1.5,
-      opacity: 0.6,
-      fillColor: col,
-      fillOpacity: opacity,
-      interactive: true
-    }).bindPopup(
-      '<div style="font-family:DM Sans,sans-serif;font-size:12px;min-width:180px">' +
-      '<div style="font-weight:600;color:' + col + '">' + z.nom + '</div>' +
-      '<div style="font-size:11px;color:var(--tx2);margin-top:4px;">' +
-      (z.categ === 3 ? 'Catégorie 3 (potentiel élevé)' : 'Catégorie 2 (potentiel moyen)') +
-      '<br/>Source: ASNR cartographie radon</div>' +
-      '</div>'
-    ).addTo(lRadon);
-    
-    // Marqueur centre zone
-    const icon = L.divIcon({
-      html: '<div style="width:10px;height:10px;background:' + col + '33;border:2px solid ' + col + ';border-radius:50%"></div>',
-      className: '',
-      iconSize: [10, 10],
-      iconAnchor: [5, 5]
-    });
-    L.marker([z.lat, z.lon], {icon, zIndexOffset:200}).addTo(lRadon);
-  });
 }
 
 // ═══ COUCHE AOC/IGP CORSE — Zones viticoles ═══
@@ -3510,21 +3360,25 @@ function buildHot(){
   }
 }
 
-// Réseau électrique HTA — données EDF SEI (Supabase) + moyens de production inline
-const PROD_ELECTRIQUE=[{"lat":42.3312,"lon":8.9823,"nom":"Sovenzia","commune":"Calacuccia","type":"Hydraulique / barrage","puissance":15.3,"exploitant":"EDF"},{"lat":41.7523,"lon":8.9634,"nom":"Calzola (pont de)","commune":"Casalabriva","type":"Hydraulique au fil de l eau","puissance":0.4,"exploitant":"SNC Acquaviva"},{"lat":41.6234,"lon":8.9745,"nom":"Sartene","commune":"Sartène","type":"Hydraulique au fil de l eau","puissance":0.6,"exploitant":""},{"lat":42.4289,"lon":9.2134,"nom":"Valle di Rostino","commune":"Valle-di-Rostino","type":"Hydraulique au fil de l eau","puissance":1.5,"exploitant":""},{"lat":42.4534,"lon":8.9023,"nom":"Asco","commune":"Asco","type":"Hydraulique au fil de l eau","puissance":5.4,"exploitant":""},{"lat":41.9712,"lon":8.9089,"nom":"Tolla","commune":"Tolla","type":"Hydraulique / barrage","puissance":15.6,"exploitant":"EDF"},{"lat":42.9734,"lon":9.3589,"nom":"Ersa","commune":"Ersa","type":"Eolien","puissance":7.8,"exploitant":""},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"TAC","puissance":75.0,"exploitant":"EDF"},{"lat":41.3878,"lon":9.1589,"nom":"SARCO","commune":"Bonifacio","type":"Interconnexion","puissance":90.0,"exploitant":"Terna"},{"lat":42.2789,"lon":9.4756,"nom":"Sampolo","commune":"Lugo-di-Nazza","type":"Hydraulique / barrage","puissance":43.0,"exploitant":"EDF"},{"lat":42.1534,"lon":8.8934,"nom":"Soccia","commune":"Soccia","type":"Hydraulique au fil de l eau","puissance":0.8,"exploitant":""},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"Hydraulique au fil de l eau","puissance":1.0,"exploitant":""},{"lat":42.3789,"lon":9.1234,"nom":"Castirla","commune":"Castirla","type":"Hydraulique / barrage","puissance":28.5,"exploitant":"EDF"},{"lat":42.1534,"lon":8.8934,"nom":"Soccia","commune":"Soccia","type":"Hydraulique au fil de l eau","puissance":1.1,"exploitant":""},{"lat":42.5089,"lon":8.8534,"nom":"Calenzana","commune":"Calenzana","type":"Eolien","puissance":6.0,"exploitant":""},{"lat":41.9634,"lon":8.8712,"nom":"Pont de Vanna","commune":"Ocana","type":"Hydraulique / barrage","puissance":8.6,"exploitant":"EDF"},{"lat":42.0934,"lon":9.0623,"nom":"Bocognano","commune":"Bocognano","type":"Hydraulique au fil de l eau","puissance":2.1,"exploitant":""},{"lat":41.8234,"lon":9.1123,"nom":"Olivese","commune":"Olivese","type":"Hydraulique au fil de l eau","puissance":1.5,"exploitant":""},{"lat":42.1523,"lon":9.4789,"nom":"Tallone","commune":"Tallone","type":"Biogaz","puissance":1.7,"exploitant":""},{"lat":42.2312,"lon":9.3145,"nom":"Giuncaggio","commune":"Giuncaggio","type":"Hydraulique au fil de l eau","puissance":2.1,"exploitant":""},{"lat":42.3934,"lon":8.9534,"nom":"Corscia","commune":"Corscia","type":"Hydraulique / barrage","puissance":13.0,"exploitant":"EDF"},{"lat":42.4534,"lon":8.9023,"nom":"Asco 2","commune":"Asco","type":"Hydraulique au fil de l eau","puissance":0.0,"exploitant":""},{"lat":41.9194,"lon":8.7386,"nom":"Vazzio","commune":"Ajaccio","type":"Diesel","puissance":132.3,"exploitant":"EDF"},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"TAC","puissance":40.0,"exploitant":"EDF"},{"lat":41.7834,"lon":9.1823,"nom":"Quenza","commune":"Quenza","type":"Hydraulique au fil de l eau","puissance":0.7,"exploitant":""},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"Diesel","puissance":54.5,"exploitant":"EDF"},{"lat":42.5623,"lon":9.4312,"nom":"SACOI","commune":"Lucciana","type":"Interconnexion","puissance":50.0,"exploitant":"Terna"},{"lat":41.9634,"lon":8.8712,"nom":"Ocana","commune":"Ocana","type":"Hydraulique / barrage","puissance":15.1,"exploitant":"EDF"},{"lat":42.9534,"lon":9.4234,"nom":"Rogliano","commune":"Rogliano","type":"Eolien","puissance":4.2,"exploitant":""},{"lat":42.4534,"lon":8.9023,"nom":"Asco 3","commune":"Asco","type":"Hydraulique au fil de l eau","puissance":0.0,"exploitant":""},{"lat":41.7623,"lon":9.0534,"nom":"Cargiaca","commune":"Cargiaca","type":"Hydraulique au fil de l eau","puissance":3.5,"exploitant":""},{"lat":42.2623,"lon":9.4823,"nom":"San-Giuliano","commune":"San-Giuliano","type":"Hydraulique au fil de l eau","puissance":1.5,"exploitant":""},{"lat":41.8934,"lon":9.1289,"nom":"Zicavo","commune":"Zicavo","type":"Hydraulique au fil de l eau","puissance":2.5,"exploitant":"SAS Centrale hydroélectrique de Zicavo"}];
-
-async function loadReseau(){
-  lRes.clearLayers();
-  // Moyens de production (icônes colorés par type)
+// Sources de production electrique (couche dediee lProd)
+function loadProd(){
+  lProd.clearLayers();
   const TYPE_COLOR={'Hydraulique / barrage':'#1a5c8c','Hydraulique au fil de l eau':'#4a90d9',
     'Eolien':'#2d9b87','Diesel':'#991b1b','TAC':'#b85c00','Interconnexion':'#7c3aed','Biogaz':'#15803d'};
   PROD_ELECTRIQUE.forEach(s=>{
     const color=TYPE_COLOR[s.type]||'#5c5c5c';
     const size=s.puissance>50?12:s.puissance>10?9:7;
-    const popup=`<b>${s.nom}</b> · ${s.commune}<br><span style="color:${color};font-weight:500">${s.type}</span><br>Puissance: <b>${s.puissance} MW</b>`+(s.exploitant?`<br>${s.exploitant}`:'');
+    const popup='<b>'+s.nom+'</b> \u00b7 '+s.commune+'<br><span style="color:'+color+';font-weight:500">'+s.type+'</span><br>Puissance: <b>'+s.puissance+' MW</b>'+(s.exploitant?'<br>'+s.exploitant:'');
     L.marker([s.lat,s.lon],{icon:mkIcon(color,true,size),zIndexOffset:120})
-      .on('click',()=>info(popup)).addTo(lRes);
+      .on('click',function(){info(popup);}).addTo(lProd);
   });
+}
+
+// Réseau électrique HTA — données EDF SEI (Supabase)
+const PROD_ELECTRIQUE=[{"lat":42.3312,"lon":8.9823,"nom":"Sovenzia","commune":"Calacuccia","type":"Hydraulique / barrage","puissance":15.3,"exploitant":"EDF"},{"lat":41.7523,"lon":8.9634,"nom":"Calzola (pont de)","commune":"Casalabriva","type":"Hydraulique au fil de l eau","puissance":0.4,"exploitant":"SNC Acquaviva"},{"lat":41.6234,"lon":8.9745,"nom":"Sartene","commune":"Sartène","type":"Hydraulique au fil de l eau","puissance":0.6,"exploitant":""},{"lat":42.4289,"lon":9.2134,"nom":"Valle di Rostino","commune":"Valle-di-Rostino","type":"Hydraulique au fil de l eau","puissance":1.5,"exploitant":""},{"lat":42.4534,"lon":8.9023,"nom":"Asco","commune":"Asco","type":"Hydraulique au fil de l eau","puissance":5.4,"exploitant":""},{"lat":41.9712,"lon":8.9089,"nom":"Tolla","commune":"Tolla","type":"Hydraulique / barrage","puissance":15.6,"exploitant":"EDF"},{"lat":42.9734,"lon":9.3589,"nom":"Ersa","commune":"Ersa","type":"Eolien","puissance":7.8,"exploitant":""},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"TAC","puissance":75.0,"exploitant":"EDF"},{"lat":41.3878,"lon":9.1589,"nom":"SARCO","commune":"Bonifacio","type":"Interconnexion","puissance":90.0,"exploitant":"Terna"},{"lat":42.2789,"lon":9.4756,"nom":"Sampolo","commune":"Lugo-di-Nazza","type":"Hydraulique / barrage","puissance":43.0,"exploitant":"EDF"},{"lat":42.1534,"lon":8.8934,"nom":"Soccia","commune":"Soccia","type":"Hydraulique au fil de l eau","puissance":0.8,"exploitant":""},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"Hydraulique au fil de l eau","puissance":1.0,"exploitant":""},{"lat":42.3789,"lon":9.1234,"nom":"Castirla","commune":"Castirla","type":"Hydraulique / barrage","puissance":28.5,"exploitant":"EDF"},{"lat":42.1534,"lon":8.8934,"nom":"Soccia","commune":"Soccia","type":"Hydraulique au fil de l eau","puissance":1.1,"exploitant":""},{"lat":42.5089,"lon":8.8534,"nom":"Calenzana","commune":"Calenzana","type":"Eolien","puissance":6.0,"exploitant":""},{"lat":41.9634,"lon":8.8712,"nom":"Pont de Vanna","commune":"Ocana","type":"Hydraulique / barrage","puissance":8.6,"exploitant":"EDF"},{"lat":42.0934,"lon":9.0623,"nom":"Bocognano","commune":"Bocognano","type":"Hydraulique au fil de l eau","puissance":2.1,"exploitant":""},{"lat":41.8234,"lon":9.1123,"nom":"Olivese","commune":"Olivese","type":"Hydraulique au fil de l eau","puissance":1.5,"exploitant":""},{"lat":42.1523,"lon":9.4789,"nom":"Tallone","commune":"Tallone","type":"Biogaz","puissance":1.7,"exploitant":""},{"lat":42.2312,"lon":9.3145,"nom":"Giuncaggio","commune":"Giuncaggio","type":"Hydraulique au fil de l eau","puissance":2.1,"exploitant":""},{"lat":42.3934,"lon":8.9534,"nom":"Corscia","commune":"Corscia","type":"Hydraulique / barrage","puissance":13.0,"exploitant":"EDF"},{"lat":42.4534,"lon":8.9023,"nom":"Asco 2","commune":"Asco","type":"Hydraulique au fil de l eau","puissance":0.0,"exploitant":""},{"lat":41.9194,"lon":8.7386,"nom":"Vazzio","commune":"Ajaccio","type":"Diesel","puissance":132.3,"exploitant":"EDF"},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"TAC","puissance":40.0,"exploitant":"EDF"},{"lat":41.7834,"lon":9.1823,"nom":"Quenza","commune":"Quenza","type":"Hydraulique au fil de l eau","puissance":0.7,"exploitant":""},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"Diesel","puissance":54.5,"exploitant":"EDF"},{"lat":42.5623,"lon":9.4312,"nom":"SACOI","commune":"Lucciana","type":"Interconnexion","puissance":50.0,"exploitant":"Terna"},{"lat":41.9634,"lon":8.8712,"nom":"Ocana","commune":"Ocana","type":"Hydraulique / barrage","puissance":15.1,"exploitant":"EDF"},{"lat":42.9534,"lon":9.4234,"nom":"Rogliano","commune":"Rogliano","type":"Eolien","puissance":4.2,"exploitant":""},{"lat":42.4534,"lon":8.9023,"nom":"Asco 3","commune":"Asco","type":"Hydraulique au fil de l eau","puissance":0.0,"exploitant":""},{"lat":41.7623,"lon":9.0534,"nom":"Cargiaca","commune":"Cargiaca","type":"Hydraulique au fil de l eau","puissance":3.5,"exploitant":""},{"lat":42.2623,"lon":9.4823,"nom":"San-Giuliano","commune":"San-Giuliano","type":"Hydraulique au fil de l eau","puissance":1.5,"exploitant":""},{"lat":41.8934,"lon":9.1289,"nom":"Zicavo","commune":"Zicavo","type":"Hydraulique au fil de l eau","puissance":2.5,"exploitant":"SAS Centrale hydroélectrique de Zicavo"}];
+
+async function loadReseau(){
+  lRes.clearLayers();
   // Lignes HTA depuis Supabase (pagination)
   try{
     let all=[],offset=0,PAGE=1000;
@@ -3546,8 +3400,8 @@ async function loadReseau(){
       L.polyline(pts,{color:'#b85c00',weight:1.2,opacity:0.65,dashArray:'3 2'})
         .on('click',()=>info('Ligne HTA aérienne · EDF SEI open data')).addTo(lRes);
     });
-    setStatus('HTA: '+all.length+' lignes · '+PROD_ELECTRIQUE.length+' sites production');
-    console.log('✅ HTA:',all.length,'lignes prod:',PROD_ELECTRIQUE.length);
+    setStatus('HTA: '+all.length+' lignes');
+    console.log('✅ HTA:',all.length,'lignes');
   }catch(e){
     console.warn('HTA Supabase:',e.message,'→ fallback OSM');
     try{
@@ -3565,7 +3419,7 @@ async function loadReseau(){
       });
       if(n>0){setStatus('Réseau OSM: '+n+' lignes');return;}
     }catch(e2){}
-    setStatus('Réseau: '+PROD_ELECTRIQUE.length+' sites (HTA indisponible)');
+    setStatus('HTA: indisponible');
   }
   loadChargeReseau();
 }
@@ -4463,7 +4317,6 @@ const MEGA_STUDIES=[
   {id:'kursk',author:'Orlov V.P. et al.',year:1960,source:'Publications géophysiques russes open'},
   {id:'vredefort',author:'Henkel H. & Reimold W.U.',year:1998,source:'Tectonophysics · études sud-africaines'},
   {id:'ries',author:'Pohl J. et al.',year:1977,source:'Geologica Bavarica + Bundesnetzagentur'},
-  {id:'ffgeobio2024',author:'Fédération Française de Géobiologie',year:2024,source:'federation-francaise-de-geobiologie.org'},
   {id:'olifirenko2015',author:'Olifirenko B. / Maison Saine',year:2015,source:'maisonsaine.ca'},
   {id:'birckner2024',author:'Birckner & Institut Eberbach',year:2024,source:'PDF formations + Institut Eberbach (DE)'},
   {id:'brooker1983',author:'Brooker C.',year:1983,source:'J. British Society of Dowsers + Ancient-Origins.net (2024)'},
@@ -4690,6 +4543,7 @@ function drawAlignments(){
 // Méthode : pour chaque paire de sites, compte les points à <maxDev mètres de la droite
 // Filtre : ≥minPts points, longueur ≥minKm km, puis Monte Carlo p-value vs hasard
 
+// utilise en fallback uniquement, voir _scripts/precompute_alignments.mjs
 function detectAlignments(points,maxDev,minPts,minKm){
   maxDev=maxDev||400; minPts=minPts||4; minKm=minKm||8;
   const R=6371000;
@@ -4728,7 +4582,8 @@ function detectAlignments(points,maxDev,minPts,minKm){
   return dedup.slice(0,15);
 }
 
-// Monte Carlo p-value (Broadbent 1980) : combien d'alignements ≥k points dans N random sets ?
+// Monte Carlo p-value (Broadbent 1980) : combien d'alignements >=k points dans N random sets ?
+// utilise en fallback uniquement, voir _scripts/precompute_alignments.mjs
 function monteCarloPvalue(nSites,bbox,maxDev,minPts,minKm,nSims){
   nSims=nSims||500;
   const counts=[];
@@ -4742,42 +4597,70 @@ function monteCarloPvalue(nSites,bbox,maxDev,minPts,minKm,nSims){
 }
 
 // Build & render auto-detected alignments layer
+// Version pre-calculee : charge _data/alignments_precomputed.json (genere par _scripts/precompute_alignments.mjs)
+// Fallback runtime si le fetch echoue (voir buildAutoAlignmentsRuntime ci-dessous)
 let _autoAlignBuilt=false;
+let _alignmentsData=null;
 function buildAutoAlignments(){
   if(_autoAlignBuilt)return;
   _autoAlignBuilt=true;
-  // Collect all site coords
-  const pts=SITES.map(s=>[s[0],s[1]]);
-  if(pts.length<4){info('Pas assez de sites pour détecter des alignements.');return;}
-  const lines=detectAlignments(pts,400,4,8);
-  // Monte Carlo reference (async-like but sync for small n)
-  const bbox=[41.3,8.5,43.1,9.7];
-  let mcRef=null;
-  try{const mc=monteCarloPvalue(pts.length,bbox,400,4,8,50);mcRef=mc;}catch(e){}
-  const mcMedian=mcRef?mcRef[Math.floor(mcRef.length/2)]:null;
-  lines.forEach((l,idx)=>{
-    const pval=mcRef?mcRef.filter(c=>c>=l.count).length/mcRef.length:null;
-    const sig=pval!==null&&pval<0.05;
-    const col=sig?'#e11d48':'#a78bfa';
-    const w=sig?2:1.2;
-    const op=sig?0.7:0.4;
-    const names=l.indices.map(i=>SITES[i]?SITES[i][2]:'?').join(' → ');
-    const pvalStr=pval!==null?'p='+pval.toFixed(3):'p=?';
-    const sigTag=sig?'<span style="background:#fecdd3;color:#9f1239;padding:1px 6px;border-radius:8px;font-size:9px">Significatif</span>':
+  if(_alignmentsData){_renderAlignments(_alignmentsData);return;}
+  fetch('_data/alignments_precomputed.json',{cache:'no-cache'})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(data){
+      _alignmentsData=data;
+      _renderAlignments(data);
+      console.log('[Tellux] Alignements pre-calcules charges : '+data.lines.length+' lignes');
+    })
+    .catch(function(err){
+      console.warn('[Tellux] Fallback runtime alignements : '+err.message);
+      buildAutoAlignmentsRuntime();
+    });
+}
+function _renderAlignments(data){
+  data.lines.forEach(function(l,idx){
+    var sig=l.significant;
+    var col=sig?'#e11d48':'#a78bfa';
+    var w=sig?2:1.2;
+    var op=sig?0.7:0.4;
+    var names=l.names.join(' \u2192 ');
+    var pvalStr='p='+l.p_value.toFixed(3);
+    var sigTag=sig?'<span style="background:#fecdd3;color:#9f1239;padding:1px 6px;border-radius:8px;font-size:9px">Significatif</span>':
       '<span style="background:#f3e8ff;color:#7c3aed;padding:1px 6px;border-radius:8px;font-size:9px">Non significatif (hasard probable)</span>';
     L.polyline(l.points,{color:col,weight:w,opacity:op,dashArray:'8 4'})
-      .bindTooltip('<div style="font-family:DM Sans,sans-serif;max-width:260px"><b>Alignement #'+(idx+1)+'</b> — '+l.count+' sites · '+l.length_km+' km · '+l.azimuth+'°<br>'+
+      .bindTooltip('<div style="font-family:DM Sans,sans-serif;max-width:260px"><b>Alignement #'+(idx+1)+'</b> \u2014 '+l.count+' sites \u00b7 '+l.length_km+' km \u00b7 '+l.azimuth+'\u00b0<br>'+
         sigTag+' '+pvalStr+'<br>'+
         '<span style="font-size:10px;color:#6b7280">'+names+'</span><br>'+
-        '<span style="font-size:9px;color:#9ca3af">Méthode : brute force déviation max 400m · Monte Carlo 50 sims (Broadbent 1980)</span></div>',
+        '<span style="font-size:9px;color:#9ca3af">M\u00e9thode : brute force d\u00e9viation max 400m \u00b7 Monte Carlo '+data.mc_n_sims+' sims (Broadbent 1980)</span></div>',
         {sticky:true,direction:'top'})
       .addTo(lAlign);
   });
-  const nSig=lines.filter((l,i)=>{const pv=mcRef?mcRef.filter(c=>c>=l.count).length/mcRef.length:1;return pv<0.05;}).length;
-  info('\ud83d\udccd <b>'+lines.length+' alignements détectés</b> ('+nSig+' significatifs vs hasard, '+
-    (lines.length-nSig)+' probablement aléatoires) · Méthode Broadbent 1980 · '+
-    (mcMedian!==null?'Médiane Monte Carlo : '+mcMedian+' alignements pour '+pts.length+' points aléatoires':'')+
-    '<br><span style="font-size:10px;color:var(--tx3)">⚠ Les alignements non significatifs sont attendus par la statistique. Seuls les roses sont à investiguer sur le terrain.</span>');
+  var nSig=data.lines.filter(function(l){return l.significant;}).length;
+  info('\ud83d\udccd <b>'+data.lines.length+' alignements d\u00e9tect\u00e9s</b> ('+nSig+' significatifs vs hasard, '+
+    (data.lines.length-nSig)+' probablement al\u00e9atoires) \u00b7 M\u00e9thode Broadbent 1980 \u00b7 '+
+    'M\u00e9diane Monte Carlo : '+data.mc_median+' alignements pour '+data.n_sites+' points al\u00e9atoires'+
+    '<br><span style="font-size:10px;color:var(--tx3)">\u26a0 Les alignements non significatifs sont attendus par la statistique. Seuls les roses sont \u00e0 investiguer sur le terrain.</span>');
+}
+// Fallback runtime — utilise en cas d'echec du fetch JSON (meme logique qu'avant, 50 sims)
+// utilise en fallback uniquement, voir _scripts/precompute_alignments.mjs
+function buildAutoAlignmentsRuntime(){
+  var pts=SITES.map(function(s){return [s[0],s[1]];});
+  if(pts.length<4){info('Pas assez de sites pour d\u00e9tecter des alignements.');return;}
+  var lines=detectAlignments(pts,400,4,8);
+  var bbox=[41.3,8.5,43.1,9.7];
+  var mcRef=null;
+  try{var mc=monteCarloPvalue(pts.length,bbox,400,4,8,50);mcRef=mc;}catch(e){}
+  var mcMedian=mcRef?mcRef[Math.floor(mcRef.length/2)]:null;
+  var fallbackData={lines:[],mc_median:mcMedian,mc_n_sims:50,n_sites:pts.length};
+  lines.forEach(function(l){
+    var pval=mcRef?mcRef.filter(function(c){return c>=l.count;}).length/mcRef.length:null;
+    fallbackData.lines.push({
+      indices:l.indices,points:l.points,count:l.count,azimuth:l.azimuth,
+      length_km:l.length_km,p_value:pval||1,significant:pval!==null&&pval<0.05,
+      names:l.indices.map(function(i){return SITES[i]?SITES[i][2]:'?';})
+    });
+  });
+  _renderAlignments(fallbackData);
 }
 
 // ═══ MODULE GÉOMÉTRIE AVANCÉE ═══
@@ -4871,7 +4754,7 @@ function closeGeomPanel(){
   const panel=document.getElementById('geom-panel');
   panel.classList.remove('open');
   GEOM_STATE.active=false;
-  _clearGeomVisuals();
+  clearGeomSelection();
   info('');
 }
 
@@ -4940,6 +4823,139 @@ function _clearGeomVisuals(){
   GEOM_STATE.lines=[];
   GEOM_STATE.polygons=[];
   GEOM_STATE.labels=[];
+}
+
+// ═══ MONTE CARLO REFERENCE (geom) ═══
+// Test statistique : combien de detections le hasard produit-il pour N sites aleatoires ?
+function _geomMCBbox(){return [41.3,8.5,43.1,9.7];}
+function _geomRandomPts(n){
+  var bb=_geomMCBbox(),pts=[];
+  for(var i=0;i<n;i++) pts.push([bb[0]+Math.random()*(bb[2]-bb[0]),bb[1]+Math.random()*(bb[3]-bb[1])]);
+  return pts;
+}
+function _geomMCRatios(nSites,nSims){
+  var totals=[],byType={};
+  GEOM_RATIOS.forEach(function(r){byType[r.name]=[];});
+  for(var s=0;s<nSims;s++){
+    var pts=_geomRandomPts(nSites);
+    var dists=[];
+    for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++){
+      var d=_geomHdist(pts[i],pts[j]);if(d>=500) dists.push(d);
+    }
+    dists.sort(function(a,b){return a-b;});
+    var nR=0,tc={};
+    GEOM_RATIOS.forEach(function(r){tc[r.name]=0;});
+    for(var a=0;a<dists.length;a++)for(var b=a+1;b<dists.length;b++){
+      var ratio=dists[b]/dists[a];
+      for(var k=0;k<GEOM_RATIOS.length;k++){
+        if(Math.abs(ratio-GEOM_RATIOS[k].value)/GEOM_RATIOS[k].value<GEOM_RATIOS[k].tol){nR++;tc[GEOM_RATIOS[k].name]++;break;}
+      }
+    }
+    totals.push(nR);
+    GEOM_RATIOS.forEach(function(r){byType[r.name].push(tc[r.name]);});
+  }
+  totals.sort(function(a,b){return a-b;});
+  Object.keys(byType).forEach(function(k){byType[k].sort(function(a,b){return a-b;});});
+  return {totals:totals,byType:byType};
+}
+function _geomMCTriangles(nSites,nSims){
+  var totals=[],byType={};
+  GEOM_TRIANGLES.forEach(function(t){byType[t.name]=[];});
+  for(var s=0;s<nSims;s++){
+    var pts=_geomRandomPts(nSites);
+    var nT=0,tc={};
+    GEOM_TRIANGLES.forEach(function(t){tc[t.name]=0;});
+    for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++)for(var k=j+1;k<pts.length;k++){
+      var dij=_geomHdist(pts[i],pts[j]),djk=_geomHdist(pts[j],pts[k]),dik=_geomHdist(pts[i],pts[k]);
+      if(dij<500||djk<500||dik<500)continue;
+      var angI=Math.acos(Math.min(1,Math.max(-1,(dij*dij+dik*dik-djk*djk)/(2*dij*dik))))*180/Math.PI;
+      var angJ=Math.acos(Math.min(1,Math.max(-1,(dij*dij+djk*djk-dik*dik)/(2*dij*djk))))*180/Math.PI;
+      var angK=180-angI-angJ;
+      var sorted=[angI,angJ,angK].sort(function(a,b){return a-b;});
+      for(var t=0;t<GEOM_TRIANGLES.length;t++){
+        var ref=GEOM_TRIANGLES[t].angles.slice().sort(function(a,b){return a-b;});
+        if(ref.every(function(v,idx){return Math.abs(v-sorted[idx])<=GEOM_TRIANGLES[t].tol;})){nT++;tc[GEOM_TRIANGLES[t].name]++;break;}
+      }
+    }
+    totals.push(nT);
+    GEOM_TRIANGLES.forEach(function(t){byType[t.name].push(tc[t.name]);});
+  }
+  totals.sort(function(a,b){return a-b;});
+  Object.keys(byType).forEach(function(k){byType[k].sort(function(a,b){return a-b;});});
+  return {totals:totals,byType:byType};
+}
+function _geomMCOrientations(nSites,nSims){
+  var totals=[],byTarget={};
+  GEOM_ASTRAL.forEach(function(a){byTarget[a.name]=[];});
+  for(var s=0;s<nSims;s++){
+    var pts=_geomRandomPts(nSites);
+    var nO=0,tc={};
+    GEOM_ASTRAL.forEach(function(a){tc[a.name]=0;});
+    for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++){
+      var az=_geomBearing(pts[i],pts[j]);
+      for(var d=0;d<2;d++){
+        var azCheck=d===0?az:(az+180)%360;
+        for(var a=0;a<GEOM_ASTRAL.length;a++){
+          var diff=Math.min(Math.abs(azCheck-GEOM_ASTRAL[a].az),360-Math.abs(azCheck-GEOM_ASTRAL[a].az));
+          if(diff<=GEOM_ASTRAL[a].tol){nO++;tc[GEOM_ASTRAL[a].name]++;break;}
+        }
+      }
+    }
+    totals.push(nO);
+    GEOM_ASTRAL.forEach(function(a){byTarget[a.name].push(tc[a.name]);});
+  }
+  totals.sort(function(a,b){return a-b;});
+  Object.keys(byTarget).forEach(function(k){byTarget[k].sort(function(a,b){return a-b;});});
+  return {totals:totals,byTarget:byTarget};
+}
+function _geomMCAlignments(nSites,nSims){
+  var counts=[];
+  for(var s=0;s<nSims;s++){
+    var pts=_geomRandomPts(nSites);
+    counts.push(detectAlignments(pts,400,3,3).length);
+  }
+  counts.sort(function(a,b){return a-b;});
+  return counts;
+}
+function _geomMCArcs(nSites,nSims){
+  var counts=[];
+  for(var s=0;s<nSims;s++){
+    var pts=_geomRandomPts(nSites);
+    var nA=0;
+    if(pts.length>=4){
+      var seen=new Set();
+      for(var i=0;i<pts.length&&i<12;i++)for(var j=i+1;j<pts.length&&j<13;j++)for(var k=j+1;k<pts.length&&k<14;k++){
+        var cc=_circumcircle(pts[i],pts[j],pts[k]);
+        if(!cc||cc.r>200000)continue;
+        var on=[i,j,k];
+        for(var m=0;m<pts.length;m++){if(m===i||m===j||m===k)continue;var dist=_geomHdist(cc.center,pts[m]);if(Math.abs(dist-cc.r)/cc.r<0.05)on.push(m);}
+        if(on.length>=4){var key=on.slice().sort().join('-');if(!seen.has(key)){seen.add(key);nA++;}}
+      }
+    }
+    counts.push(nA);
+  }
+  counts.sort(function(a,b){return a-b;});
+  return counts;
+}
+function _geomPValue(observed,mcCounts){
+  return mcCounts.filter(function(c){return c>=observed;}).length/mcCounts.length;
+}
+function _geomMeanDensityKm(pts){
+  if(pts.length<2)return 999;
+  var total=0,n=0;
+  for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++){total+=_geomHdist(pts[i],pts[j])/1000;n++;}
+  return total/n;
+}
+function _geomStatBadge(p,compact){
+  var pStr=p.toFixed(3);
+  if(compact){
+    if(p<0.05) return '<span style="background:#dcfce7;color:#166534;padding:1px 4px;border-radius:4px;font-size:8px;font-weight:500" title="Au-dela du hasard">⭐'+pStr+'</span>';
+    if(p<0.20) return '<span style="background:#f3f4f6;color:#4b5563;padding:1px 4px;border-radius:4px;font-size:8px;font-weight:500" title="Compatible avec le hasard">⚪'+pStr+'</span>';
+    return '<span style="background:#fef3c7;color:#92400e;padding:1px 4px;border-radius:4px;font-size:8px;font-weight:500" title="Probablement hasard">🌫️'+pStr+'</span>';
+  }
+  if(p<0.05) return '<span style="background:#dcfce7;color:#166534;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:500">⭐ Au-dela du hasard (p='+pStr+')</span>';
+  if(p<0.20) return '<span style="background:#f3f4f6;color:#4b5563;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:500">⚪ Compatible avec le hasard (p='+pStr+')</span>';
+  return '<span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:500">🌫️ Probablement hasard (p='+pStr+')</span>';
 }
 
 // ═══ MAIN ANALYSIS ═══
@@ -5097,11 +5113,38 @@ function runGeomAnalysis(){
   results.orientations=orientations;
   GEOM_STATE.results=results;
 
+  // Density feedback
+  var density=_geomMeanDensityKm(pts);
+  var densityMsg='';
+  if(density<5){
+    densityMsg='<div style="background:#dbeafe;color:#1e40af;padding:8px;border-radius:4px;font-size:12px;margin-bottom:10px">ℹ️ Sites selectionnes tres proches (densite moyenne : '+density.toFixed(1)+' km). A cette concentration, beaucoup de ratios et alignements apparaissent par hasard. Pour des resultats plus discriminants, essayez de selectionner des sites plus eloignes sur l\'ile.</div>';
+  } else if(density<10){
+    densityMsg='<div style="background:#f0fdf4;color:#166534;padding:6px;border-radius:4px;font-size:11px;margin-bottom:8px">Densite moyenne : '+density.toFixed(1)+' km entre sites.</div>';
+  }
+
+  // Monte Carlo reference (200 sims)
+  var mcN=200;
+  var mcRatios=_geomMCRatios(sel.length,mcN);
+  var mcTriangles=_geomMCTriangles(sel.length,mcN);
+  var mcOrient=_geomMCOrientations(sel.length,mcN);
+  var mcAlign=_geomMCAlignments(sel.length,mcN);
+  var mcArcs=(arcsFound.length>0)?_geomMCArcs(sel.length,mcN):[];
+  var pRatios=_geomPValue(ratiosFound.length,mcRatios.totals);
+  var pTriangles=_geomPValue(trianglesFound.length,mcTriangles.totals);
+  var pOrient=_geomPValue(orientations.length,mcOrient.totals);
+  var pAlign=_geomPValue(alignResults.length,mcAlign);
+  var pArcs=mcArcs.length?_geomPValue(arcsFound.length,mcArcs):1;
+  results.mc={nSims:mcN,pRatios:pRatios,pTriangles:pTriangles,pOrientations:pOrient,pAlignments:pAlign,pArcs:pArcs};
+
   // Render results
-  _renderGeomDistances(dists,ratiosFound);
-  _renderGeomTriangles(trianglesFound);
-  _renderGeomAlignments(alignResults,arcsFound);
-  _renderGeomOrientations(orientations);
+  var resultsEl=document.getElementById('geom-results');
+  var densityDiv=document.getElementById('geom-density-msg');
+  if(!densityDiv){densityDiv=document.createElement('div');densityDiv.id='geom-density-msg';resultsEl.insertBefore(densityDiv,resultsEl.firstChild);}
+  densityDiv.innerHTML=densityMsg;
+  _renderGeomDistances(dists,ratiosFound,pRatios,mcRatios);
+  _renderGeomTriangles(trianglesFound,pTriangles,mcTriangles);
+  _renderGeomAlignments(alignResults,arcsFound,pAlign,pArcs);
+  _renderGeomOrientations(orientations,pOrient,mcOrient);
 
   // Draw on map
   _drawGeomOnMap(dists,trianglesFound,orientations);
@@ -5130,7 +5173,7 @@ function _circumcircle(a,b,c){
 }
 
 // ═══ RENDER FUNCTIONS ═══
-function _renderGeomDistances(dists,ratios){
+function _renderGeomDistances(dists,ratios,pRatios,mcRatios){
   const el=document.getElementById('geom-distances');
   let h='<table><tr><th>Paire</th><th>Distance</th><th>Azimut</th></tr>';
   dists.slice(0,30).forEach(d=>{
@@ -5139,9 +5182,13 @@ function _renderGeomDistances(dists,ratios){
   if(dists.length>30)h+='<tr><td colspan="3" style="color:var(--tx3)">... +'+(dists.length-30)+' autres paires</td></tr>';
   h+='</table>';
   if(ratios.length){
-    h+='<div style="margin-top:8px;font-weight:600;color:var(--tx)">Ratios remarquables detectes (tolerance \u00b13%)</div>';
+    h+='<div style="margin-top:8px;font-weight:600;color:var(--tx)">Ratios remarquables detectes (tolerance \u00b13%) '+_geomStatBadge(pRatios)+'</div>';
+    // Count per type for per-line p-value
+    var typeCounts={};
+    ratios.forEach(function(r){typeCounts[r.match.name]=(typeCounts[r.match.name]||0)+1;});
     ratios.slice(0,20).forEach(r=>{
-      h+='<div style="margin:3px 0;font-size:10px"><span class="geom-ratio-tag '+r.match.cls+'">'+r.match.symbol+' '+r.match.label+'</span> '+
+      var typeP=mcRatios.byType[r.match.name]?_geomPValue(typeCounts[r.match.name],mcRatios.byType[r.match.name]):1;
+      h+='<div style="margin:3px 0;font-size:10px">'+_geomStatBadge(typeP,true)+' <span class="geom-ratio-tag '+r.match.cls+'">'+r.match.symbol+' '+r.match.label+'</span> '+
         r.pairA+' ('+r.distA.toFixed(2)+'km) / '+r.pairB+' ('+r.distB.toFixed(2)+'km) = '+r.ratio.toFixed(4)+'</div>';
     });
     if(ratios.length>20)h+='<div style="font-size:10px;color:var(--tx3)">... +'+(ratios.length-20)+' autres ratios</div>';
@@ -5151,25 +5198,29 @@ function _renderGeomDistances(dists,ratios){
   el.innerHTML=h;
 }
 
-function _renderGeomTriangles(triangles){
+function _renderGeomTriangles(triangles,pTriangles,mcTriangles){
   const el=document.getElementById('geom-angles');
   if(!triangles.length){
     el.innerHTML='<div style="color:var(--tx3);font-size:10px">Aucun triangle remarquable detecte (tolerance \u00b12\u00b0).</div>';
     return;
   }
-  let h='<table><tr><th>Sites</th><th>Angles</th><th>Type</th><th>Cotes (km)</th></tr>';
+  var typeCounts={};
+  triangles.forEach(function(t){typeCounts[t.pattern]=(typeCounts[t.pattern]||0)+1;});
+  let h='<div style="margin-bottom:6px">'+_geomStatBadge(pTriangles)+'</div>';
+  h+='<table><tr><th></th><th>Sites</th><th>Angles</th><th>Type</th><th>Cotes (km)</th></tr>';
   triangles.forEach(t=>{
-    h+='<tr><td>'+t.sites.join(', ')+'</td><td>'+t.angles.join('\u00b0, ')+'\u00b0</td><td style="color:var(--info);font-weight:600">'+t.pattern+'</td><td>'+t.sides.join(', ')+'</td></tr>';
+    var typeP=mcTriangles.byType[t.pattern]?_geomPValue(typeCounts[t.pattern],mcTriangles.byType[t.pattern]):1;
+    h+='<tr><td>'+_geomStatBadge(typeP,true)+'</td><td>'+t.sites.join(', ')+'</td><td>'+t.angles.join('\u00b0, ')+'\u00b0</td><td style="color:var(--info);font-weight:600">'+t.pattern+'</td><td>'+t.sides.join(', ')+'</td></tr>';
   });
   h+='</table>';
   el.innerHTML=h;
 }
 
-function _renderGeomAlignments(alignments,arcs){
+function _renderGeomAlignments(alignments,arcs,pAlign,pArcs){
   const el=document.getElementById('geom-alignments');
   let h='';
   if(alignments.length){
-    h+='<div style="font-weight:600;color:var(--tx);margin-bottom:4px">Alignements Broadbent (dev. max 400m)</div>';
+    h+='<div style="font-weight:600;color:var(--tx);margin-bottom:4px">Alignements Broadbent (dev. max 400m) '+_geomStatBadge(pAlign)+'</div>';
     h+='<table><tr><th>Sites</th><th>Azimut</th><th>Longueur</th></tr>';
     alignments.forEach(a=>{
       h+='<tr><td>'+a.sites.join(' \u2192 ')+'</td><td>'+a.azimuth+'\u00b0</td><td>'+a.length_km+' km</td></tr>';
@@ -5179,7 +5230,7 @@ function _renderGeomAlignments(alignments,arcs){
     h+='<div style="color:var(--tx3);font-size:10px">Aucun alignement multi-points detecte.</div>';
   }
   if(arcs.length){
-    h+='<div style="font-weight:600;color:var(--tx);margin-top:8px;margin-bottom:4px">Arcs de cercle (4+ points, tolerance 5%)</div>';
+    h+='<div style="font-weight:600;color:var(--tx);margin-top:8px;margin-bottom:4px">Arcs de cercle (4+ points, tolerance 5%) '+_geomStatBadge(pArcs)+'</div>';
     arcs.forEach(a=>{
       h+='<div style="font-size:10px;margin:2px 0"><span style="color:var(--info);font-weight:600">'+a.count+' sites</span> sur un cercle R='+a.radius_km+' km : '+a.sites.join(', ')+'</div>';
     });
@@ -5187,17 +5238,22 @@ function _renderGeomAlignments(alignments,arcs){
   el.innerHTML=h;
 }
 
-function _renderGeomOrientations(orientations){
+function _renderGeomOrientations(orientations,pOrient,mcOrient){
   const el=document.getElementById('geom-orientations');
   if(!orientations.length){
     el.innerHTML='<div style="color:var(--tx3);font-size:10px">Aucune orientation astrale remarquable detectee (tolerance \u00b12.5\u00b0).</div>';
     return;
   }
-  let h='<table><tr><th>Segment</th><th>Azimut</th><th>Correspondance</th><th>\u0394</th></tr>';
+  var targetCounts={};
+  orientations.forEach(function(o){targetCounts[o.match]=(targetCounts[o.match]||0)+1;});
+  let h='<div style="margin-bottom:6px">'+_geomStatBadge(pOrient)+'</div>';
+  h+='<table><tr><th></th><th>Segment</th><th>Azimut</th><th>Correspondance</th><th>\u0394</th></tr>';
   orientations.forEach(o=>{
-    h+='<tr><td>'+o.pairA+' \u2192 '+o.pairB+'</td><td>'+o.azimuth+'\u00b0</td><td><span class="geom-ratio-tag geom-ratio-astral">'+o.match+'</span></td><td>\u00b1'+o.diff+'\u00b0</td></tr>';
+    var tgtP=mcOrient.byTarget[o.match]?_geomPValue(targetCounts[o.match],mcOrient.byTarget[o.match]):1;
+    h+='<tr><td>'+_geomStatBadge(tgtP,true)+'</td><td>'+o.pairA+' \u2192 '+o.pairB+'</td><td>'+o.azimuth+'\u00b0</td><td><span class="geom-ratio-tag geom-ratio-astral">'+o.match+'</span></td><td>\u00b1'+o.diff+'\u00b0</td></tr>';
   });
   h+='</table>';
+  h+='<div style="margin-top:10px;font-size:9px;color:var(--tx3);padding:6px 8px;background:var(--bg2);border-radius:4px">Etiquetage statistique : test Monte Carlo, 200 simulations, points aleatoires dans le polygone Corse. Inspire Broadbent 1980. Voir Sources et methodologie.</div>';
   el.innerHTML=h;
 }
 
@@ -5472,85 +5528,11 @@ function importCartoRadioCSV(){
 // ---- ANTENNES ----
 const GC={'2G':'#1a4b8c','3G':'#1a6b5c','4G':'#b85c00','5G':'#991b1b','infra':'#6b7280','default':'#4a4f5e'};
 
-// Diagnostic antennes — analyse la cohérence spatiale
+// Haversine distance (km) — utilise par calcHuman, failles, etc.
 function haversine(lat1,lon1,lat2,lon2){
   const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
   const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-function diagnoseAntennasQuality(antRows){
-  const diagnosis={};
-  const SITES_REF=[
-    {lat:41.5370,lon:8.9193,name:'Cauria'},
-    {lat:42.0560,lon:9.3000,name:'Poggio-di-Nazza'},
-    {lat:42.6700,lon:9.2590,name:'Monte-Revincu'},
-    {lat:41.7478,lon:8.8713,name:'Filitosa'},
-    {lat:42.3700,lon:9.2800,name:'Caporalino'},
-    {lat:42.4800,lon:9.1600,name:'Piève'},
-    {lat:42.1465,lon:8.6269,name:'Cargèse'},
-  ];
-  
-  const suspiciousAnts=[];
-  antRows.forEach((ant,idx)=>{
-    // Vérifier si l'antenne est trop proche de la côte (même si isLand=true)
-    const distToCosta=Math.min(...SITES_REF.map(s=>haversine(ant.lat,ant.lon,s.lat,s.lon)));
-    const cluster=antRows.filter(a=>haversine(ant.lat,ant.lon,a.lat,a.lon)<0.5).length;
-    
-    // Suspectes : trop isolées (>30km plus proche voisin) ou clusters bizarres (>20 en 500m)
-    if(cluster>15 || distToCosta>35){
-      suspiciousAnts.push({...ant,idx,cluster,distToCosta,flag:cluster>15?'CLUSTER_DENSE':'ISOLATED'});
-    }
-  });
-  
-  console.log('🔍 DIAGNOSTIC ANTENNES:');
-  console.log('Total antennes:', antRows.length);
-  console.log('Suspectes:', suspiciousAnts.length);
-  console.log('Détail suspectes:');
-  suspiciousAnts.forEach(a=>{
-    console.log(`  [${a.idx}] ${a.commune || "?"} | lat:${a.lat.toFixed(4)} lon:${a.lon.toFixed(4)}`);
-    console.log(`        Flag: ${a.flag} | cluster: ${a.cluster} antennes | distMin: ${a.distToCosta.toFixed(1)}km`);
-    console.log(`        Operateur: ${a.operateur || '?'} | Generation: ${a.generation || '?'}`);
-  });
-  
-  return suspiciousAnts;
-}
-
-// Afficher les antennes suspectes sur la carte (pour vérification visuelle)
-let suspiciousLayer=null;
-function showSuspiciousAntennas(){
-  if(suspiciousLayer)map.removeLayer(suspiciousLayer);
-  suspiciousLayer=L.layerGroup();
-  
-  // Récupérer les suspectes depuis le diagnostic précédent
-  // Pour ce faire, re-charger les data et faire le diagnostic
-  fetch(SB_URL+'/rest/v1/antennas_corse?select=lat,lon,generation,commune,operateur',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}})
-    .then(r=>r.json())
-    .then(rows=>{
-      const suspicious=diagnoseAntennasQuality(rows);
-      console.log('📍 Affichage de '+suspicious.length+' antennes suspectes sur la carte');
-      
-      suspicious.forEach(ant=>{
-        const color=ant.flag==='CLUSTER_DENSE'?'#ff00ff':'#ff9900'; // Magenta cluster, Orange isolée
-        const icon=L.divIcon({
-          html:'<div style="width:16px;height:16px;background:'+color+';border:3px solid white;border-radius:50%;box-shadow:0 0 8px '+color+'80"></div>',
-          className:'',
-          iconSize:[16,16],
-          iconAnchor:[8,8]
-        });
-        L.marker([ant.lat,ant.lon],{icon,zIndexOffset:200})
-          .bindPopup('<b style="color:'+color+'">⚠️ SUSPECTE</b><br>'+ant.commune+'<br>Flag: '+ant.flag+'<br>lat: '+ant.lat.toFixed(4)+'<br>lon: '+ant.lon.toFixed(4))
-          .addTo(suspiciousLayer);
-      });
-      
-      suspiciousLayer.addTo(map);
-    })
-    .catch(e=>console.error('Erreur chargement antennes suspectes:',e));
-}
-
-function hideSuspiciousAntennas(){
-  if(suspiciousLayer)map.removeLayer(suspiciousLayer);
-  suspiciousLayer=null;
-  console.log('Antennes suspectes cachées');
 }
 
 async function loadAnt(){try{
@@ -5564,22 +5546,9 @@ async function loadAnt(){try{
     const batch=await r.json();
     if(!batch||!batch.length)break;
     rows=rows.concat(batch);
-    console.log(`📡 Antennes page ${page+1}: ${batch.length} (total: ${rows.length})`);
     if(batch.length<pageSize)break;
     page++;
   }
-  console.log(`📡 Antennes chargées: ${rows.length}`);
-
-// DIAGNOSTIC avant filtrage
-const suspicious=diagnoseAntennasQuality(rows);
-if(suspicious.length>0){
-  console.warn('⚠️ '+suspicious.length+' antennes suspectes détectées — voir logs pour détails');
-  // Afficher le bouton diagnostic
-  // diagnostic-row masqué (nettoyé)
-}else{
-  console.log('✅ Toutes les antennes semblent bien positionnées');
-}
-
 // Filtre côtier RENFORCÉ — rejette les antennes en mer
 const isLand=(lt,ln)=>{
   // Bounding box Corse strict
@@ -5624,7 +5593,6 @@ rows.forEach(f=>{
   if(isLandAnt){
     // Antenne terrestre
     const gen=f.generation||'default';
-    if(rows.indexOf(f)<3) console.log(`🗺️ Antenne placée: [${f.lat},${f.lon}] ${f.commune} ${gen}`);
     L.marker([f.lat,f.lon],{icon:mkIcon(GC[gen]||GC.default,false,9),zIndexOffset:100}).on('click',()=>info((f.commune||'Corse')+' · '+(f.operateur||'?'))).addTo(lAnt);
   }else{
     // Antenne offshore
@@ -5636,13 +5604,7 @@ rows.forEach(f=>{
   }
 });
 
-console.group('🔧 FILTRAGE ANTENNES ANFR');
-console.log('  Total chargées:', rows.length);
-console.log('  ❌ Rejetées bounding box:', nSeaFiltered);
-console.log('  ⚓ Offshore (isLand):', nOffshore);
-console.log('  ✅ Affichées (lAnt):', rows.length-nSeaFiltered-nOffshore);
-if(nSeaFiltered>rows.length*0.5) console.error('  🚨 Plus de 50% rejetées — problème de format coordonnées probable (DMS? Lambert93? swap?)');
-console.groupEnd();
+console.log('Antennes : '+(rows.length-nSeaFiltered-nOffshore)+' affichees, '+nOffshore+' offshore');
 const hdr=document.getElementById('hdr-status');
 if(hdr)hdr.textContent=(rows.length-nSeaFiltered-nOffshore)+' antennes · '+nOffshore+' offshore';}catch(e){console.error('❌ loadAnt erreur:',e.message);}
 // Émetteurs radiodiffusion majeurs — icône croix ✛
@@ -5710,7 +5672,7 @@ function togSim(btn){
   btn.className=open?'lbtn':'lbtn on-sim';
 }
 
-// ═══ MODE GÉOBIOLOGUE ═══
+// ═══ MODE PROSPECTEUR TERRAIN ═══
 let _geoLastPoint=null;
 function togGeoMode(btn){
   openProspecteur();
@@ -5753,8 +5715,6 @@ const HYPOTHESES=[
   {id:'H11',title:'Les contributions terrain montrent-elles un Δ systématiquement positif sur granit quartzifère ?',need:'supabase',phase:3,desc:'+Δ systématique sur granit quartzifère vs IGRF+crustal seul ?'},
   {id:'H12',title:'Le moment piézoélectrique calculé corrèle-t-il avec les anomalies Δ mesurées sur le terrain ?',need:'supabase',phase:3,desc:'Piezo moment corrèle avec contributions terrain nT ?'},
   {id:'H13',title:'Le ratio d\'anomalies granit/calcaire dans les données terrain confirme-t-il le mécanisme tellurique ?',need:'supabase',phase:3,desc:'Ratio anomalies granit/calcaire dans Supabase ?'},
-  {id:'H14',title:'Les relevés géobiologiques de terrain corrèlent-ils avec les anomalies crustales du modèle ?',need:'terrain',phase:2,desc:'Protocole géobiologue correspond à modèle Tellux ?'},
-  {id:'H15',title:'Les points de croisement Hartmann coïncident-ils avec les anomalies cartographiées ?',need:'terrain',phase:2,desc:'Nœuds pathogènes coïncident avec zones hot ?'},
   {id:'H16',title:'Les mesures par antenne de Lecher corrèlent-elles avec les écarts Δ du modèle ?',need:'terrain',phase:2,desc:'Croisements Lecher = anomalies Δ Tellux ?'},
   {id:'H17',title:'La spirale magnétique de Rollright existe-t-elle en Corse ?',need:'terrain',phase:3,desc:'Cauria/Palaghju → spirale magnétique comme Rollright ?'},
   {id:'H18',title:'Les mégalithes évitent-ils les antennes modernes ?',need:'auto',phase:2,desc:'Églises sur substrat piézo montrent-elles un score géo supérieur au voisinage ?'},
@@ -5783,7 +5743,7 @@ const HYPOTHESES=[
   {id:'H38',title:'Les églises romanes sont-elles sur d\'anciens sites sacrés ?',need:'auto',phase:2,desc:'Les églises sur site de continuité (baptistère paléochrétien) ont-elles un Indice Tellux plus bas que les églises isolées ?'},
   {id:'H39',title:'La piézoélectricité du sol amplifie-t-elle les ondes radio ?',need:'auto',phase:3,desc:'Le score piézo local modifie-t-il le niveau RF modélisé ? Corrélation piézo × RF sur grille.'},
   {id:'H40',title:'Les basses fréquences pénètrent-elles plus dans le granit ?',need:'auto',phase:3,desc:'Les lobes positifs EMAG2 (granit) augmentent-ils le skin depth 50Hz de +10% vs lobes négatifs ? Croisement crustal × Cagniard.'},
-  {id:'H41',title:'Peut-on réduire les perturbations EM d\'un bâtiment par le choix du site, des matériaux et de l\'orientation ?',need:'terrain',phase:4,desc:'Orientation, matériau, implantation pour minimiser impact piézo/RF/tellurique : éviter axes Hartmann/Curry, utiliser matériaux neutres, orientation ≠ sites anciens.'},
+  {id:'H41',title:'Peut-on réduire les perturbations EM d\'un bâtiment par le choix du site, des matériaux et de l\'orientation ?',need:'terrain',phase:4,desc:'Orientation, matériau, implantation pour minimiser impact piézo/RF/tellurique : utiliser matériaux neutres, orientation ≠ sites anciens.'},
   {id:'H42',title:'Les espacements mégalithiques correspondent-ils à une longueur d\'onde acoustique du granit ?',need:'terrain',phase:3,desc:'Le yard Crowhurst (82.96 cm) correspond-il à λ/4 de la fréquence 110 Hz dans le granit piézo ? Mesurer espacements Cauria + sweep 110 Hz in situ. (Crowhurst-Stecchini-Leplat)'},
   {id:'H43',title:'Les gravures spirales sur les mégalithes concentrent-elles le champ magnétique local ?',need:'terrain',phase:3,desc:'Comparer la mesure magnétomètre sur une face gravée (spirale) vs une face lisse du même menhir. Différence >5 nT = effet de forme. (Lonegren 1996, Brooker Rollright 1983)'},
   {id:'H44',title:'Une structure aux proportions φ en granit quartzifère amplifie-t-elle la piézoélectricité sous contrainte ?',need:'auto',phase:3,desc:'Simulation : comparer stress piézo dans structure φ (1.618) vs rectangulaire sous même charge. Si φ > 20% → géométrie sacrée = optimisation physique. (Charpentier 1966, Gomaa 2015)'},
@@ -6683,7 +6643,7 @@ if(DARK){
   }catch(e){}
 }
 
-loadNOAA();buildNets();loadCEM();
+loadNOAA();loadCEM();
 loadChargeReseau().then(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}}).catch(()=>{});
 buildHot();
 showLegend('hot',true);
@@ -6707,9 +6667,50 @@ setInterval(loadChargeReseau,15*60*1000); // Refresh charge réseau 15min
 setInterval(loadMeteo,30*60*1000);
 setInterval(loadAQU,30*60*1000); // Refresh météo 30min
 setInterval(loadLightning,10*60*1000); // Refresh foudre 5min
+
+// ═══ GENERATEUR PDF BIBLIOGRAPHIE ═══
+function genererBiblioPDF(){
+  const sorted=[...MEGA_STUDIES].sort((a,b)=>a.author.localeCompare(b.author,'fr'));
+  const w=window.open('','biblio','width=800,height=600');
+  if(!w){alert('Popup bloquée — autorisez les popups pour tellux.pages.dev');return;}
+  const date=new Date().toLocaleDateString('fr-FR',{year:'numeric',month:'long',day:'numeric'});
+  let html='<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Tellux — Bibliographie</title>';
+  html+='<style>@media print{@page{size:A4;margin:20mm 15mm}}';
+  html+='body{font-family:Georgia,serif;font-size:11pt;line-height:1.6;color:#1F2329;max-width:700px;margin:0 auto;padding:40px 20px}';
+  html+='h1{font-size:18pt;margin-bottom:4px;color:#3F5B3A}h2{font-size:11pt;color:#74706A;font-weight:normal;margin-bottom:24px}';
+  html+='.entry{margin-bottom:8px;padding-left:24px;text-indent:-24px}';
+  html+='.author{font-weight:bold}.year{color:#C28533}.source{font-style:italic;color:#74706A}';
+  html+='.footer{margin-top:32px;padding-top:12px;border-top:1px solid #E8E2D5;font-size:9pt;color:#74706A}';
+  html+='</style></head><body>';
+  html+='<h1>Tellux — Bibliographie</h1>';
+  html+='<h2>'+sorted.length+' références · Généré le '+date+'</h2>';
+  sorted.forEach(s=>{
+    html+='<div class="entry"><span class="author">'+s.author+'</span> (<span class="year">'+s.year+'</span>). <span class="source">'+s.source+'</span></div>';
+  });
+  html+='<div class="footer">Tellux — Mesurer le vivant · tellux.pages.dev · Projet de recherche citoyen, Corse</div>';
+  html+='</body></html>';
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=>w.print(),500);
+}
+
+// ═══ COMPTAGES DYNAMIQUES ═══
+function initCounts(){
+  const nH=HYPOTHESES.length,nS=SITES.length,nE=CHURCHES.length;
+  const ids={
+    'count-hypo-disclaimer':nH,'count-hypo-about':nH,'count-hypo-bar':nH,
+    'count-hypo-panel':nH,'count-hypo-footer':nH,
+    'count-sites-about':nS,'count-sites-bar':nS,'count-sites-footer':nS,
+    'count-egl-about':nE,'count-egl-bar':nE,'count-egl-footer':nE
+  };
+  for(const[id,v]of Object.entries(ids)){const el=document.getElementById(id);if(el)el.textContent=v;}
+  const tip=document.getElementById('quest-tooltip-text');
+  if(tip)tip.textContent=nH+' quêtes scientifiques';
+}
+initCounts();
 </script>
 <!-- Bouton Quête (Hypothèses) -->
-<button class="quest-btn" id="quest-btn" onclick="toggleHypoPanel()" title="Quêtes & Hypothèses">🔬<span id="quest-badge" class="quest-badge">!</span><span class="quest-tooltip">57 quêtes scientifiques à résoudre</span></button>
+<button class="quest-btn" id="quest-btn" onclick="toggleHypoPanel()" title="Quêtes & Hypothèses">🔬<span id="quest-badge" class="quest-badge">!</span><span class="quest-tooltip" id="quest-tooltip-text">Quêtes scientifiques</span></button>
 <!-- FAB mini-menu -->
 <div class="fab-menu" id="fab-menu">
   <div class="fab-menu-item" onclick="startContribFromFAB();closeFabMenu();">
@@ -6878,8 +6879,6 @@ function renderHypo(){
   rh='<div style="margin-top:8px;padding:6px 8px;border-radius:6px;font-size:10px;background:'+(isSupa?'#e0e7ff':'var(--bg2)')+';color:'+(isSupa?'#3730a3':'var(--tx3)')+';line-height:1.5">'+(isSupa?'☁️ <b>Données requises :</b> ':'📍 <b>Action requise :</b> ');
   const guides={'H3':'Mesurer les espacements entre menhirs à Cauria avec un décamètre. Chercher un module ~50cm.',
     'H9':'Mesurer E et H simultanément avec 2 sondes. Calculer ratio et comparer au modèle Cagniard.',
-    'H14':'Faire appel à un géobiologue certifié FFGéobio pour un relevé parallèle à la carte Tellux.',
-    'H15':'Comparer votre relevé de grille Hartmann au terrain avec les zones hot de la carte.',
     'H16':'Parcourir un transect avec antenne Lecher et noter les croisements. Comparer à la carte Δ.',
     'H17':'Magnétomètre smartphone sur Cauria/Palaghju : faire un relevé en spirale depuis le centre.',
     'H19':'Construire un muret quartz orienté 36.87° et mesurer le champ avant/après.',
@@ -6888,7 +6887,7 @@ function renderHypo(){
     'H25':'Micro + analyseur fréquence dans dolmen Fontanaccia. Chercher pic 90-120 Hz.',
     'H26':'Micro dans église romane (San Michele Murato). Comparer fréquences aux temples maltais.',
     'H28':'Mesurer champ dans structure φ en granit quartzifère vs structure rectangulaire.',
-    'H41':'Cliquer Activer pour voir les grilles et identifier les zones à éviter.'};
+    'H41':'Cliquer Activer pour voir les hotspots et sites anciens, puis choisir site/orientation/matériaux.'};
   const guide=guides[h.id];
   if(guide){rh+=guide;}
   else if(isSupa){rh+='Nécessite 20+ mesures terrain. Actuellement '+(window._contribCount||0)+' contribution(s). '+((window._contribCount||0)>=20?'✅ Données suffisantes !':'Contribuez via + Mesure pour débloquer.');}
@@ -6947,7 +6946,6 @@ function activateHypo(id){
       if(!ACTIVE.hot)tog('hot','on-hot',document.getElementById('b-hot'));
       break;
     case 'H41':
-      if(!ACTIVE.net)tog('net','on-net',document.getElementById('b-net'));
       if(!ACTIVE.hot)tog('hot','on-hot',document.getElementById('b-hot'));
       if(!ACTIVE.sit)tog('sit','on-sit',document.getElementById('b-sit'));
       break;
@@ -7201,44 +7199,29 @@ function runProspDiag(lat,lon){
   html+=(isGranit?' — 🪨 Granit quartzifère = piézoélectrique actif ('+piezoScore+'/100)':' — Piézo: '+piezoScore+'/100');
   html+='</div>';
   
-  // Step 3: Proximity
-  const nets=typeof calcNets==='function'?calcNets(lat,lon):[];
-  const totalNet=nets.reduce((s,n)=>s+(n.i||0),0);
-  const nAnt=nets.filter(n=>n.t&&n.t.includes('ant')).length;
-  const nHT=nets.filter(n=>n.t&&(n.t.includes('HTA')||n.t.includes('HTB'))).length;
-  html+='<div style="padding:6px 8px;border-left:3px solid '+(totalNet>50?'#991b1b':'#166534')+';margin-bottom:6px;background:var(--bg2);border-radius:0 var(--r) var(--r) 0">';
-  html+='<b>3. Réseau : '+nets.length+' sources</b> — '+totalNet.toFixed(0)+' nT cumulés';
-  if(nAnt)html+=' · '+nAnt+' antenne(s)';
-  if(nHT)html+=' · '+nHT+' ligne(s) HT';
-  html+='</div>';
-  
-  // Step 4: Orientation
+  // Step 3: Orientation
   html+='<div style="padding:6px 8px;border-left:3px solid #3730a3;margin-bottom:6px;background:var(--bg2);border-radius:0 var(--r) var(--r) 0">';
-  html+='<b>4. Orientation optimale</b>';
-  if(nHT>0){html+=' — Axe perpendiculaire aux lignes HT pour minimiser induction';}
+  html+='<b>3. Orientation optimale</b>';
+  if(human>150){html+=' — Axe perpendiculaire aux sources humaines (antennes/lignes) pour minimiser induction';}
   else if(isGranit){html+=' — Axe 36.87° (Leplat) pour maximiser résonance piézo';}
   else{html+=' — Orientation libre (pas de contrainte EM dominante)';}
   html+='</div>';
-  
-  // Step 5: Correction H46
-  const needsCorrection=score>4||totalNet>30;
+
+  // Step 4: Correction H46
+  const needsCorrection=score>4;
   html+='<div style="padding:6px 8px;border-left:3px solid var(--acc);margin-bottom:6px;background:var(--bg2);border-radius:0 var(--r) var(--r) 0">';
-  html+='<b>5. Correction H46</b> — '+(needsCorrection?'⚠️ Correction recommandée':'✅ Site naturellement favorable');
+  html+='<b>4. Correction H46</b> — '+(needsCorrection?'⚠️ Correction recommandée':'✅ Site naturellement favorable');
   html+='</div>';
-  
+
   r.innerHTML=html;
-  
+
   // H46 Correction recommendation
   if(needsCorrection){
     corr.style.display='block';
     let corrHtml='';
-    if(totalNet>50){
-      corrHtml+='<b>Perturbation réseau élevée ('+totalNet.toFixed(0)+' nT)</b><br>';
-      corrHtml+='→ Blindage acier ou béton armé dense (28-45 dB) sur les façades orientées vers les lignes<br>';
-      corrHtml+='→ Envisager cage de Faraday partielle pour les pièces de vie<br>';
-    }
-    if(nAnt>0){
-      corrHtml+='<b>'+nAnt+' antenne(s) à proximité</b><br>';
+    if(human>150){
+      corrHtml+='<b>Perturbation humaine élevée ('+human.toFixed(0)+' nT)</b><br>';
+      corrHtml+='→ Blindage acier ou béton armé dense (28-45 dB) sur les façades orientées vers les sources<br>';
       corrHtml+='→ Vitrage athermique traité RF (15-25 dB) sur façades exposées<br>';
       corrHtml+='→ Peinture conductrice carbone sur murs extérieurs (20 dB)<br>';
     }
@@ -7390,8 +7373,6 @@ function runPermaDiag(lat,lon){
   const piezo=all.geo||0;
   const geoType=typeof getGeoType==='function'?getGeoType(lat,lon):'inconnu';
   const isGranit=geoType.toLowerCase().includes('granit');
-  const nets=typeof calcNets==='function'?calcNets(lat,lon):[];
-  const totalNet=nets.reduce((s,n)=>s+(n.i||0),0);
 
   // Climate zone approximation from altitude (lat proxy for Corse)
   const altZone=lat>42.3?'montagne (>600m)':lat>42.0?'piémont (300-600m)':'littoral (<300m)';
@@ -7418,9 +7399,8 @@ function runPermaDiag(lat,lon){
   if(isGranit&&piezo>20) html+='<br><span style="font-size:10px;color:var(--tx3)">Granit piézo : ionisation atmosphérique locale potentiellement stimulante · microbiome AMF favorisé (Lemström 1904, Maffei 2014 — H58, H60)</span>';
   html+='</div>';
 
-  // Alerte HTA
-  const htLines=nets.filter(n=>n.t&&(n.t.includes('HTA')||n.t.includes('HTB')));
-  const htCount=htLines.length;
+  // Alerte HTA — détection via la contribution humaine forte (proxy lignes HT)
+  const htCount=human>200?1:0;
   if(htCount>0){
     html+='<div style="padding:6px 8px;border-left:3px solid #dc2626;margin-bottom:6px;background:#fee2e2;border-radius:0 var(--r) var(--r) 0">';
     html+='⚡ <b>'+htCount+' ligne(s) HT à proximité</b><br>';
@@ -7492,24 +7472,20 @@ function runPermaDiag(lat,lon){
   }
 
   // ═══ EM FIELD OVERLAY — Breakdown détaillé bonus EM ═══
-  const radonBonus = typeof calcRadonProximity==='function' ? calcRadonProximity(lat,lon) : 0;
   const faultBonus = typeof calcFaultProximity==='function' ? calcFaultProximity(lat,lon) : 0;
   const faultDist = typeof haversine==='function' && FAILLES_CORSE.length>0 ? Math.min(...FAILLES_CORSE.map(f=>haversine(lat,lon,f.lat,f.lon))) : 999;
-  const radonDist = typeof haversine==='function' && RADON_ZONES_CORSE.length>0 ? Math.min(...RADON_ZONES_CORSE.map(z=>haversine(lat,lon,z.lat,z.lon))) : 999;
-  
+
   html+='<div style="padding:8px 10px;border-left:3px solid #0284c7;margin-bottom:6px;background:#e0f2fe;border-radius:0 var(--r) var(--r) 0">';
   html+='<b style="color:#0c4a6e">📊 Piézoélectricité — Sources naturelles (bonus EM)</b><br>';
   html+='<table style="width:100%;font-size:10px;border-collapse:collapse"><tr style="border-bottom:1px solid #0284c7;background:rgba(2,132,199,0.1)">';
   html+='<td><b>Source</b></td><td style="text-align:center"><b>Bonus</b></td><td style="text-align:right"><b>Dist</b></td>';
   html+='</tr>';
   if(faultBonus>0) html+='<tr style="border-bottom:1px solid rgba(2,132,199,0.3)"><td>🪨 Failles BRGM</td><td style="text-align:center;color:#991b1b">+'+faultBonus.toFixed(2)+'</td><td style="text-align:right">'+faultDist.toFixed(1)+'km</td></tr>';
-  if(radonBonus>0) html+='<tr style="border-bottom:1px solid rgba(2,132,199,0.3)"><td>☢️ Radon ASNR</td><td style="text-align:center;color:#ea580c">+'+radonBonus.toFixed(2)+'</td><td style="text-align:right">'+radonDist.toFixed(1)+'km</td></tr>';
   if(isGranit) html+='<tr><td>🪨 Granit quartz</td><td style="text-align:center;color:#15803d">'+piezo.toFixed(0)+'/100</td><td style="text-align:right">terrain</td></tr>';
   html+='</table><br>';
   html+='<span style="font-size:10px;color:#0c4a6e;line-height:1.4">';
   if(faultDist<3 && faultBonus>0.3) html+='✓ Faille active <3km : stress tectonique = piézoélectricité stimulée (Ghilardi 2017)<br>';
-  if(radonDist<5 && radonBonus>0.3) html+='✓ Zone radon cat.3 <5km : granit ionisation = magnétopriming (Giannoulopoulou 2022)<br>';
-  if(score<3 && (faultBonus>0.3 || radonBonus>0.3)) html+='🎯 <b>Géo-EM optimale</b> = zone millénaire mégalithes corses (archéoastronomie H90)<br>';
+  if(score<3 && faultBonus>0.3) html+='🎯 <b>Géo-EM optimale</b> = zone millénaire mégalithes corses (archéoastronomie H90)<br>';
   html+='</span></div>';
 
   // ═══ ÉTUDES EM → AGRICULTURE (E04-E13) ═══
@@ -7532,7 +7508,7 @@ function runPermaDiag(lat,lon){
     html+='<li style="margin-bottom:2px;font-size:11px;color:#164e63">🔗 <b>'+e.code+'</b> — '+e.title+' : '+e.desc+'</li>';
   });
   html+='</ul>';
-  html+='<span style="font-size:9px;color:#164e63;font-style:italic">Corpus complet: 130+ études EM/agriculture/cycles lunaires/archéoastronomie. Voir dossier candidature OEC.</span>';
+  html+='<span style="font-size:9px;color:#164e63;font-style:italic">'+MEGA_STUDIES.length+' références bibliographiques (EM, agriculture, cycles lunaires, archéoastronomie). <a href=\"#\" onclick=\"event.preventDefault();genererBiblioPDF()\" style=\"color:#164e63;text-decoration:underline\">Télécharger (PDF)</a></span>';
   html+='</div>';
 
   // Hypothèses liées cliquables
@@ -7629,7 +7605,7 @@ window.txLegend = {
 <footer class="tx-footer">
   <div class="tx-footer-brand">Tellux Corse</div>
   <div class="tx-footer-sources"><em>Mesurer le vivant</em> · projet de recherche citoyen</div>
-  <div class="tx-footer-stats">88 études · 88 hypothèses · 116 sites · 314 églises · <a href="https://tellux.pages.dev/" target="_blank">tellux.pages.dev ↗</a></div>
+  <div class="tx-footer-stats"><span id="count-hypo-footer"></span> hypothèses · <span id="count-sites-footer"></span> sites · <span id="count-egl-footer"></span> églises · <a href="https://tellux.pages.dev/" target="_blank">tellux.pages.dev ↗</a></div>
 </footer>
 </body>
 </html>
