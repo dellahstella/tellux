@@ -90,8 +90,12 @@ Le projet avance sur deux voies indépendantes. Si la voie B prend du retard, la
 | A-1g | Vérification GPS autres sites (session Google Earth) | 🟡 Soleil |
 | A-4b | Audit pattern couche ↔ panneau ↔ légende | 🟡 Cowork |
 | A-8 | Captures d'écran HD pour dossier CTC | 🟡 Cowork |
+| A-16 | Vocabulaire module prescription : retrait résidus UI radon + reformulation cage Faraday | ✅ Cowork — 17 avr 2026 |
+| A-17 | Position épistémique : sections A7 (Kirschvink/Wang) + A8 (vocabulaire interdit) | ✅ Cowork — 17 avr 2026 |
+| A-18 | Hypothèses H84-H88 : magnétoréception, troupeaux, balbuzard, Kp cardio, shinrin-yoku | ✅ Cowork — 17 avr 2026 |
+| A-19 | Corpus scientifique v6 : 5 sections thématiques, ~50 études structurées | ✅ Cowork — 17 avr 2026 |
 
-**Critère de gel :** A-1g + A-4b + A-8 restent. La version peut être taguée après ces 3 items.
+**Critère de gel :** A-1g + A-4b + A-8 + A-16 + A-17 + A-18 + A-19 → tag v6.1.0
 
 ---
 
@@ -177,6 +181,67 @@ Ce bloc sera rempli lors de la prochaine session Opus. Il contiendra les retouch
 **Estimation réaliste** : 3 à 6 semaines de travail concentré + phase de test terrain avant ouverture publique.
 
 **Statut** : voie B, à ouvrir après livraison v6 aux associations et premiers retours.
+
+---
+
+### 4.5 B-PIEZO — Modélisation piézoélectricité substrat corse
+
+**Objectif :** Aller au-delà de l'index binaire piézoélectrique actuel (granit oui/non) pour estimer un gradient de contrainte mécanique × propriétés diélectriques du substrat. Données BRGM (failles actives, géologie détaillée) + modèle Biot-Savart sous contrainte tectonique.
+
+- **B-PIEZO-1 :** Caractérisation diélectrique granit/schiste corse dans le formalisme ITU-R P.2040-2 (hypothèse H91)
+- **B-PIEZO-2 :** Interface cartographique gradients piézo (couche vectorielle couleur continue, non binaire)
+- **B-PIEZO-3 :** Tests terrain mesures ELF sur failles actives identifiées (protocole triple aveugle, partenariat BRGM Corse)
+
+**Statut :** Voie B, post v6.
+
+---
+
+### 4.6 B-CHRONO — Module chronobiologique
+
+**Objectif :** Intégrer les fenêtres temporelles optimales pour la pratique en maquis corse dans le module prescription. Données : CAR matinal, concentration phytoncides après-midi, variabilité Kp géomagnétique.
+
+- **B-CHRONO-1 :** Index de qualité chronobiologique par heure et saison (modèle NOAA Kp + données phénologiques maquis)
+- **B-CHRONO-2 :** UI calendrier : « Fenêtres optimales de la semaine » dans le module prescription
+- **B-CHRONO-3 :** Protocole de validation H88 (partenariat CHU Ajaccio, mesures cortisol salivaire)
+
+**Statut :** Voie B, post v6. Hypothèses H87 + H88.
+
+---
+
+### 4.7 B-HABITAT — Module habitat vernaculaire corse
+
+**Objectif :** Valoriser l'atténuation RF passive des matériaux de construction corses (granit, schiste, murs épais). Données ITU-R P.2040-2 + mesures terrain dans bâti vernaculaire.
+
+- **B-HABITAT-1 :** Calcul d'atténuation estimée par type de bâti (granit 100 cm → 30-50 dB, selon ITU-R P.2040-2)
+- **B-HABITAT-2 :** Couche cartographique bâti dense corse (BDTOPO IGN)
+- **B-HABITAT-3 :** Fiche recommandation « Optimiser son habitat » (vocabulaire A8 obligatoire)
+
+**Statut :** Voie B, post v6. Hypothèse H86 (atténuation passive).
+
+---
+
+### 4.8 B-FAUNE — Module faune sensible
+
+**Objectif :** Croiser les données de distribution de la faune sensible aux CEM avec les scores EM Tellux pour identifier les zones de conflits potentiels.
+
+- **B-FAUNE-1 :** Couche chiroptères (données PGHB Corse) × score EM → carte de pression
+- **B-FAUNE-2 :** Interface LPO Corse : accès données nidification balbuzard Scandola (H86)
+- **B-FAUNE-3 :** Protocole drone ovins/caprins corses (H85) — partenariat chambre d'agriculture
+
+**Statut :** Voie B, post v6. Hypothèses H85 + H86.
+
+---
+
+### 4.9 B-ZONES — Zones à exposition réduite
+
+**Objectif :** Générer automatiquement des zones de récupération (jamais « safe place » ou « sanctuaire EHS » — voir vocabulaire A8) basées sur le score EM combiné. Outil d'aide à la décision, pas un diagnostic.
+
+- **B-ZONES-1 :** Algorithme de sélection zones (score EM ≤ 1/5, couverture végétale, altitude)
+- **B-ZONES-2 :** UI couche « Zones à exposition réduite » avec densimètre et légende explicative
+- **B-ZONES-3 :** Export PDF « Fiche lieu » pour usage terrain (mairies, associations)
+
+**Statut :** Voie B, post v6. Dépend de B-CHRONO pour la dimension temporelle.
+
 ---
 
 ## 5. Voie B : plan de montée en gamme (sommaire)
@@ -192,6 +257,11 @@ Détails complets dans `TELLUX_MONTEE_EN_GAMME.md`.
 | 5 | Gouvernance et structure juridique | 🟡 |
 | 6 | Stratégie subventions | 🟡 |
 | 7 | B-MESURES : contribution + auto-correction modèle | 🔴 |
+| 8 | B-PIEZO : modélisation piézoélectricité substrat corse | 🔴 |
+| 9 | B-CHRONO : module chronobiologique (CAR + phytoncides + maquis) | 🟡 |
+| 10 | B-HABITAT : module habitat vernaculaire corse (atténuation RF passive) | 🟡 |
+| 11 | B-FAUNE : module faune sensible (chiroptères, balbuzard, ovins/caprins) | 🟠 |
+| 12 | B-ZONES : module zones à exposition réduite (recommandation espaces récupération) | 🟡 |
 
 **Axe 2 — Framer :** Webflow abandonné. Framer retenu. L'app cartographique (HTML/Leaflet) reste indépendante ; Framer = landing page marketing.
 
