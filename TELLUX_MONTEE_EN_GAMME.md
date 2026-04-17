@@ -80,7 +80,7 @@ Le projet n'a pas de page d'accueil marketing distincte de l'application cartogr
 
 1. **Définir le contenu de la landing.** Pages envisagées : accueil (hero + tagline + CTA), fonctionnalités (couches EM, patrimoine, agronomie), méthodologie scientifique (corpus de 130 études, 80 hypothèses), à propos (porteur, SARL, territoire). Rédiger le copy en français.
 
-2. **Maquetter dans Figma.** Appliquer la direction artistique v2 : palette Tellux, typographies Fraunces / IBM Plex Sans, logo V7. Respecter le positionnement : rigueur scientifique + sensibilité au territoire.
+2. **Maquetter dans Figma.** Appliquer la direction artistique v2 : palette Tellux, typographies Fraunces / IBM Plex Sans, logo v14. Respecter le positionnement : rigueur scientifique + sensibilité au territoire.
 
 3. **Implémenter dans Framer (choix par défaut) ou Webflow.** Framer est recommandé pour sa rapidité de mise en ligne et ses animations fluides. Si Soleil préfère un contrôle plus fin sur le CSS, passer à Webflow.
 
