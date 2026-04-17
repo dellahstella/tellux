@@ -171,4 +171,50 @@ Toute opposition « humain / naturel » présentée comme deux mondes séparés.
 
 ---
 
+## A7 — Mécanismes biologiques — formulation de référence
+
+### Magnétite biogénique et magnétoréception humaine
+
+La présence de cristaux de magnétite biogénique dans le cerveau humain est bien documentée depuis Kirschvink 1992 (*Science*, ~300 000 cristaux/g en cortex occipital et cérébelleux, confirmation Schultheiss-Grassi 1999, Maher 2016). Wang & Kirschvink 2019 (*eNeuro*, 26 sujets) ont démontré par EEG que le cerveau humain répond à des rotations de champ magnétique dans la gamme terrestre (25–65 µT) : l'onde alpha est supprimée ~300 ms après la perturbation, spécifiquement pour les rotations descendantes en déclinaison. Cet effet ne se produit pas pour les rotations statiques ou ascendantes — ce n'est pas un artefact sensoriel indirect.
+
+**Formulation correcte pour les communications Tellux :**
+> « Tellux mesure les gradients du champ magnétique local. Ces gradients sont dans la gamme (25–65 µT) pour laquelle Wang & Kirschvink (2019) ont démontré une réponse corticale mesurable par EEG chez l'humain. La question n'est pas de savoir si l'organisme détecte le champ — c'est démontré. La question ouverte est : quel effet fonctionnel cette détection a-t-elle, et à quelle intensité devient-elle pertinente pour la santé ? C'est précisément l'objet des hypothèses H84 à H88. »
+
+### Trois pièges rhétoriques à éviter
+
+1. **« Rubin 2005 réfute la sensibilité EM »** — Inexact. Rubin 2005/2010 (46 études, 1 175 sujets) établit que les symptômes attribués aux CEM de faible intensité dans des protocoles de provocation en double aveugle ne sont *pas prédits* par l'exposition mesurée — mais par des facteurs psychobiologiques (nocebo). Cela n'invalide pas la sensibilité biologique au champ magnétique terrestre (mécanisme différent, gamme différente, mesure différente). Ces deux résultats coexistent sans contradiction.
+
+2. **« L'EHS n'existe pas »** — Formulation incorrecte. Ce que les études (OMS 2004, IARC) établissent est que les *symptômes rapportés* ne sont pas prédits par l'exposition dans les protocoles en aveugle. L'existence des symptômes n'est pas niée — leur attribution causale est questionnée. Tellux ne qualifie pas les personnes EHS et ne propose pas de diagnostic.
+
+3. **« La magnétite biogénique prouve les risques des antennes »** — Raccourci non fondé. La magnétoréception documentée (Wang 2019) concerne la gamme DC/ELF du champ magnétique terrestre. Les antennes RF (900 MHz–26 GHz) opèrent dans un régime physique différent (ondes électromagnétiques, non champ magnétostatique). Les mécanismes biologiques ne sont pas directement transposables entre ces régimes.
+
+---
+
+## A8 — Vocabulaire du module prescription — référence
+
+### Mots et expressions interdits
+
+Les termes suivants sont **proscrits** de toute interface Tellux, de toute communication, et de tout document :
+
+| Terme interdit | Raison | Remplacement autorisé |
+|---|---|---|
+| « sanctuaire EHS » | Valide implicitement un diagnostic médical non établi | « espace de récupération » |
+| « cage Faraday personnelle » | Vocabulaire anxiogène, connotation survivaliste | « espace blindé naturellement (ITU-R P.2040-2) » |
+| « safe place » | Anglicisme thérapeutique déplacé dans un outil de mesure | « chambre optimisée pour le sommeil » |
+| « espace safe EM » | Hybride des deux précédents | « zone à exposition réduite » |
+| « dangereux » (qualifiant un site) | Diagnostic de risque sans base médicale | « exposition mesurée élevée » |
+| « sain » (qualifiant un site) | Même problème symétrique | « exposition mesurée faible » |
+
+### Formulations autorisées
+
+- **Pour les espaces de sommeil :** « chambre optimisée pour le sommeil », « hygiène du sommeil numérique », « espace de récupération »
+- **Pour les espaces atténués :** « zone à exposition réduite », « zone d'atténuation passive », « architecture vernaculaire = espace blindé naturellement (ITU-R P.2040-2) »
+- **Pour les recommandations comportementales :** « réduire l'exposition de proximité », « augmenter la distance à la source », « privilégier les périodes de moindre activité réseau »
+
+### Règle générale
+
+Tellux décrit des niveaux de champ mesurables. Il ne prescrit pas de comportements de santé, ne pose pas de diagnostics, et ne valide pas de profils de vulnérabilité individuelle (EHS ou autre). Le module prescription doit rester dans le registre de l'*hygiène environnementale de précaution* — pas de la médecine, pas de l'anxiologie.
+
+---
+
 *Ce document est la référence épistémique de Tellux. Tout dossier, lettre ou support de communication doit être relu à la lumière de ce texte avant envoi.*
