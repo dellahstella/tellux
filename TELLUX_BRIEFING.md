@@ -15,10 +15,10 @@ Tellux est un tableau de bord web interactif, open-source et gratuit, qui superp
 
 | Composant | Fichier / service | État |
 |---|---|---|
-| Code source | `tellux_v6_design.html` | v5.9, vague 3+ design, logo V7 intégré |
+| Code source | `index.html` | v6+, vague 3+ design, logo v14 intégré |
 | Dossier candidature | `CANDIDATURE_TELLUX_v7.docx` | v7, logo clair intégré, styles Tellux, en relecture |
 | Direction artistique | `DIRECTION_ARTISTIQUE_v2.md` | Validée et gelée |
-| Logo | `TELLUX_LOGO_V7.html` + favicons | V7 validé (T-bouclier, horizon, reflet éthérique, oeil) |
+| Logo | `assets/logo/tellux_logo.svg` + favicons | v14 validé (T Cormorant Bold, dégradé vert→ocre, courbes symétriques) |
 | Déploiement | `tellux.pages.dev` (Cloudflare Pages) | Actif |
 | Backend | Supabase PostGIS | Actif, connecté via MCP |
 | Cible financement | CTC (Collectivité Territoriale de Corse) | Dossier en préparation |
@@ -30,9 +30,9 @@ Tellux est un tableau de bord web interactif, open-source et gratuit, qui superp
 
 Ces points sont actés et ne doivent plus être réouverts sauf décision explicite de Soleil.
 
-1. **Palette** — 7 couleurs + fond logo maquis (voir `DIRECTION_ARTISTIQUE_v2.md`).
-2. **Typographie** — Fraunces (titres), IBM Plex Sans (corps), JetBrains Mono (données), Cinzel (logo texte).
-3. **Logo** — Monogramme T tellurique v7. Structure : T-bouclier gothique, horizon convexe, reflet éthérique, motif de l'oeil.
+1. **Palette** — 7 couleurs + fond logo Pierre (voir `DIRECTION_ARTISTIQUE_v2.md`).
+2. **Typographie** — Fraunces (titres), IBM Plex Sans (corps), JetBrains Mono (données), Cormorant Bold (logo texte).
+3. **Logo** — Monogramme T tellurique v14 (Cormorant Bold, dégradé vert Maquis→ocre myrte, courbes symétriques horizon).
 4. **Tagline** — « Mesurer le vivant ».
 5. **Nom affiché** — « Tellux » (sans « Corse » dans le logo, « Corse » dans la tagline du header).
 6. **Positionnement** — Jonction rigueur scientifique et sensibilité au territoire. Ni new-age, ni corporate froid.
@@ -82,16 +82,16 @@ Détails et plan de correction dans `TELLUX_ROADMAP.md` (voie A).
 
 ```
 Tellux/
-├── tellux_v6_design.html          ← source de vérité du code (ne pas toucher hors session code)
+├── index.html                     ← source de vérité du code (fichier unique)
+├── assets/logo/                   ← logo v14 (SVG + PNG + favicons)
 ├── CANDIDATURE_TELLUX_v7.docx     ← dossier candidature CTC
-├── DIRECTION_ARTISTIQUE_v2.md     ← identité visuelle (gelée)
-├── TELLUX_LOGO_V7.html            ← logo source de référence
+├── DIRECTION_ARTISTIQUE_v2.md     ← identité visuelle (mise à jour v14)
 ├── TELLUX_BRIEFING.md             ← CE FICHIER (état du projet)
 ├── TELLUX_ROADMAP.md              ← feuille de route (voie A + voie B)
 ├── TELLUX_MONTEE_EN_GAMME.md      ← plan détaillé montée en gamme (6 axes)
 ├── TELLUX_STRUCTURE_JURIDIQUE.md  ← comparaison options juridiques (à compléter)
 ├── TELLUX_FINANCEMENT.md          ← tableau guichets subventions (à compléter)
-├── favicons/                      ← tellux-v7.svg
+├── assets/logo/favicon_*.png      ← favicons v14
 ├── DATA/                          ← données brutes (antennes, failles, radon, etc.)
 └── _archives/                     ← anciens briefings et recoveries (trace historique)
 ```
