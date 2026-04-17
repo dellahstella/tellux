@@ -468,6 +468,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-bt{background:#fff8e6!important;color:#d97706!important;border-color:#f5a855!important;font-weight:500;}
 .on-sit{background:#fdf8ef!important;color:#713f12!important;border-color:#c9a56c!important;font-weight:500;}
 .on-sit2{background:#e8f5e9!important;color:#2e7d32!important;border-color:#66bb6a!important;font-weight:500;}
+.on-therm{background:#e0f5fe!important;color:#0369a1!important;border-color:#38bdf8!important;font-weight:500;}
 .on-con{background:#f0e8ff!important;color:#5c3a9b!important;border-color:#9b72d4!important;font-weight:500;}
 .on-cem{background:#ccfbf1!important;color:#0f766e!important;border-color:#2dd4bf!important;font-weight:500;}
 .add-btn{font-size:11px;padding:5px 14px;border-radius:var(--r);border:1px solid var(--acc2);background:var(--acc3);color:var(--acc);cursor:pointer;margin-left:auto;font-weight:500;}
@@ -1136,6 +1137,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
         </div>
       </div>
       <button class="lbtn" id="b-sit2" title="Sites remarquables artificiels, tours génoises, barrages" onclick="tog('sit2','on-sit2',this)" style="margin-top:2px"><span class="sq" style="background:#5c7a3a"></span>Sites &amp; Ouvrages</button>
+      <button class="lbtn" id="b-therm" title="Sources thermales et géothermiques — failles actives · H88" onclick="tog('therm','on-therm',this)" style="margin-top:2px"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Thermalisme</button>
     </div>
   </div>
 
@@ -1986,10 +1988,11 @@ const wmsEmag=L.imageOverlay(
 );
 let _tileLabels=L.tileLayer(DARK?'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',{zIndex:10,attribution:''}).addTo(map);
 
+const lTherm=L.layerGroup();
 const lSit2=L.layerGroup(),lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lSit=L.layerGroup(),lRPG=L.layerGroup(),lForet=L.layerGroup(),lAOC=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lCem=L.layerGroup(),lIntl=L.layerGroup(),lAlign=L.layerGroup(),lEgl=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
-const LAYERS={sit2:lSit2,bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,prod:lProd,sit:lSit,rpg:lRPG,foret:lForet,aoc:lAOC,hot:lHot,con:lCon,cem:lCem,intl:lIntl,align:lAlign,egl:lEgl};
+const LAYERS={sit2:lSit2,bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,prod:lProd,sit:lSit,rpg:lRPG,foret:lForet,aoc:lAOC,hot:lHot,con:lCon,cem:lCem,intl:lIntl,align:lAlign,egl:lEgl,therm:lTherm};
 const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag};
-const ACTIVE={sit2:false,bt:false,ant:false,antOffshore:false,geo:false,hyd:false,rpg:false,foret:false,aoc:false,cav:false,emag:false,hot:true,res:false,prod:false,sit:false,con:true,cem:false,intl:false,align:false,egl:false};
+const ACTIVE={sit2:false,bt:false,ant:false,antOffshore:false,geo:false,hyd:false,rpg:false,foret:false,aoc:false,cav:false,emag:false,hot:true,res:false,prod:false,sit:false,con:true,cem:false,intl:false,align:false,egl:false,therm:false};
 
 const LEGEND_ACTIVE=new Set();let _legendCtrl=null;
 const LEGEND_HTML={
@@ -2006,6 +2009,7 @@ const LEGEND_HTML={
   egl:'<div class="leg-block"><b class="leg-title">Églises romanes</b><div class="leg-row"><span style="display:inline-block;position:relative;width:11px;height:11px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:4.5px;top:0;width:2px;height:11px;background:#d97706;border-radius:1px"></span><span style="position:absolute;top:3px;left:0;width:11px;height:2px;background:#d97706;border-radius:1px"></span></span>Granit piézo (biotite/alcalin)</div><div class="leg-row"><span style="display:inline-block;position:relative;width:11px;height:11px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:4.5px;top:0;width:2px;height:11px;background:#b45309;border-radius:1px"></span><span style="position:absolute;top:3px;left:0;width:11px;height:2px;background:#b45309;border-radius:1px"></span></span>Granit standard</div><div class="leg-row"><span style="display:inline-block;position:relative;width:11px;height:11px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:4.5px;top:0;width:2px;height:11px;background:#64748b;border-radius:1px"></span><span style="position:absolute;top:3px;left:0;width:11px;height:2px;background:#64748b;border-radius:1px"></span></span>Schiste</div><div class="leg-row"><span style="display:inline-block;position:relative;width:11px;height:11px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:4.5px;top:0;width:2px;height:11px;background:#78716c;border-radius:1px"></span><span style="position:absolute;top:3px;left:0;width:11px;height:2px;background:#78716c;border-radius:1px"></span></span>Calcaire/autre</div><div class="leg-src">Moracchini-Mazel · Phase 2</div></div>',
   res:'<div class="leg-block"><b class="leg-title">Réseau électrique</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>Ligne HTA 20kV</div><div class="leg-row"><span style="display:inline-block;width:14px;height:3px;background:#5c2000;vertical-align:middle;margin-right:4px"></span>Ligne HTB 63-225kV</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Hydraulique</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Thermique</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Interconnexion</div><div class="leg-src">EDF SEI · Supabase · OSM</div></div>',
   sit2:'<div class="leg-block"><b class="leg-title">Sites &amp; Ouvrages</b><div class="leg-row"><span style="display:inline-block;width:9px;height:9px;background:#5c7a3a;transform:rotate(45deg);vertical-align:middle;margin-right:6px"></span>Site remarquable</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#1a4b8c;vertical-align:middle;margin-right:4px"></span>Hydraulique</div><div class="leg-src">9 sites · 6 barrages</div></div>',
+  therm:'<div class="leg-block"><b class="leg-title">Sources thermales</b><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0ea5e9;border:2px solid white;border-radius:50%;box-shadow:0 0 3px #0ea5e966;vertical-align:middle;margin-right:4px"></span>Source / thermes actifs</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Géothermie · Failles · H88</span></div><div class="leg-src">4 sites · Valinco-Taravo</div></div>',
     bt:'<div class="leg-block"><b class="leg-title">Réseau BT</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>BT aérien</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>BT souterrain</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 12</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Sources production</b><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Hydraulique barrage</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Hydraulique fil de l\'eau</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Biogaz</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:50%;vertical-align:middle;margin-right:4px"></span>TAC (turbine à combustion)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Interconnexion</div><div class="leg-src">EDF SEI · Supabase</div></div>',
   aoc:'<div class="leg-block"><b class="leg-title">AOC/AOP Corse</b><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#99000033;border:2px solid #991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Cru — Patrimonio · Ajaccio</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#ea580c33;border:2px solid #ea580c;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Village — Calvi · Sartène · Figari</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#fbbf2433;border:2px solid #fbbf24;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Muscat Cap Corse · Régionale</div><div class="leg-src">INAO — H64 terroir-EM</div></div>'
@@ -2144,7 +2148,7 @@ function validateContrib(){
 function updateLegendPanel(){
   if(!_legendCtrl){_legendCtrl=L.control({position:'bottomright'});_legendCtrl.onAdd=function(){const d=L.DomUtil.create('div');d.id='tellux-leg-panel';d.style.cssText='background:rgba(247,248,250,.97);border:1px solid rgba(0,0,0,.08);border-radius:10px;font-family:DM Sans,sans-serif;font-size:10px;max-width:170px;box-shadow:0 2px 10px rgba(0,0,0,.1);overflow:hidden;display:none';L.DomEvent.disableClickPropagation(d);return d;};_legendCtrl.addTo(map);}
   const panel=document.getElementById('tellux-leg-panel');if(!panel)return;
-  const order=['hot','res','bt','prod','ant','geo','hyd','cav','emag','wdmam','intl','align','egl','sit','sit2','aoc'];const active=order.filter(id=>LEGEND_ACTIVE.has(id));
+  const order=['hot','res','bt','prod','ant','geo','hyd','cav','emag','wdmam','intl','align','egl','sit','therm','sit2','aoc'];const active=order.filter(id=>LEGEND_ACTIVE.has(id));
   if(!active.length){panel.style.display='none';return;}
   panel.style.display='block';
   panel.innerHTML=active.filter(id=>LEGEND_HTML[id]).map((id,i)=>(i>0?'<div style="height:1px;background:rgba(0,0,0,.06);margin:0 8px"></div>':'')+LEGEND_HTML[id]).join('');
@@ -2166,6 +2170,7 @@ function tog(id,cls,btn){
     if(id==='emag')document.getElementById('emag-op-row').style.display='flex';
     if(id==='hot'&&lHot.getLayers().length===0)buildHot();
     if(id==='sit2'&&lSit2.getLayers().length===0)buildSiteMarkers();
+    if(id==='therm'&&lTherm.getLayers().length===0)buildThermLayer();
     if(id==='res'&&lRes.getLayers().length===0)loadReseau();
     if(id==='prod'&&lProd.getLayers().length===0)loadProd();
     if(id==='bt'&&lBT.getLayers().length===0)loadBT();
@@ -3639,6 +3644,29 @@ let SITES=[
   [42.595,9.395,'Défilé de Lancône','Site remarquable','#5c7a3a','Gorges calcaires · Calcaire noir Jurassique · Anomalie magnétique négative'],
   [41.860,9.000,'Castello della Rocca','Site remarquable','#5c7a3a','Ruines château comtes della Rocca · Granit biotite · Alta Rocca · XIVe s.'],
   [42.698,9.453,'Bastia / Citadelle génoise','Site remarquable','#5c7a3a','Citadelle génoise 1378 · Schiste lustre · Terra Nuova · Vue golfe'],
+  // ── GROUPE A — PROTOHISTORIQUES ──
+  [41.5850,8.9520,'Settiva castrum','Mégalithique','#854d0e','Castrum protohistorique à pierres sèches · Sartenais nord · GPS approx. · D\'Anna PCR'],
+  [41.5680,8.9750,'Vasculacciu castrum','Mégalithique','#854d0e','Castrum / enclos protohistorique · Sartenais · Granit biotite · Leandri 2023'],
+  [41.6430,8.9410,'Cuntorba torre','Mégalithique','#854d0e','Monument torréen · Bronze final · Sartenais-Valinco · GPS approx. · Grosjean 1975'],
+  [41.6720,8.9210,'Monte Barbatu / Petralta','Mégalithique','#854d0e','Complexe castral Bronze · Vallée du Baracci · Granit biotite · D\'Anna PCR'],
+  // ── GROUPE B — CHÂTEAUX MÉDIÉVAUX CINARCHESI ──
+  [41.8440,8.7740,'Castello di Baricci','Site remarquable','#5c7a3a','Château fort Cinarchesi XIIe-XIVe · Crana/Ornano · Ruines · Contrôle vallée Taravo · GPS approx.'],
+  [41.5950,9.0150,'Castello d\'Istria','Site remarquable','#5c7a3a','Château médiéval · Comtes d\'Istria · Sartenais · Granit · XIIe s. · Lié à Castelnovo'],
+  [41.5870,8.9810,'Castelnovo (Bicchisano)','Site remarquable','#5c7a3a','Château Cinarchesi · XIIe s. · Contrôle col · Granit · Bicchisano-Taravo · GPS approx.'],
+  // ── GROUPE C — TOURS GÉNOISES ──
+  [41.6440,8.7990,'Tour de Capu di Muru','Site remarquable','#5c7a3a','Tour génoise XVIe · Cap di Muru · Granit · Réseau surveillance côte W · Vue golfe Valinco'],
+  [41.6800,8.7700,'Tour de Micalona','Site remarquable','#5c7a3a','Tour génoise · Côte W · Granit · Réseau surveillance Valinco · GPS approx.'],
+  [41.6520,8.7940,'Tour de Campomoro','Site remarquable','#5c7a3a','Tour génoise 1586 · La plus grande de Corse · MH · Golfe Valinco · Granit · 14m hauteur'],
+  [41.5548,8.8786,'Tour de Tizzano','Site remarquable','#5c7a3a','Tour génoise · Cala di Tizzano · Granit · Réseau côtier SW · GPS approx.'],
+  [41.5700,8.8480,'Tour de Capu Laurosu','Site remarquable','#5c7a3a','Tour génoise côtière · Sartenais côte SW · Granit · GPS approx.'],
+  [41.6080,8.8050,'Tour de Portigliolo','Site remarquable','#5c7a3a','Tour génoise · Côte Valinco · Granit biotite · GPS approx.'],
+  [41.6320,8.7870,'Tour de Calanca','Site remarquable','#5c7a3a','Tour génoise · Golfe Valinco nord · Granit · GPS approx.'],
+  [41.7680,8.8900,'Tour d\'Arbellara','Site remarquable','#5c7a3a','Tour génoise · Olmeto/Propriano · Granit · Intérieur terres · GPS approx.'],
+  // ── GROUPE D — THERMALISME ──
+  [41.7050,8.8980,'Thermes de Baracci','Thermalisme','#0ea5e9','52°C · Eaux sulfureuses · Valinco · Faille active · Propriano · Usage thérapeutique continu XIXe-2026'],
+  [41.8270,9.0190,'Sources de Guitera','Thermalisme','#0ea5e9','45°C · Pliocène · Haute vallée Taravo · Granit fracturé · Source captée · GPS approx.'],
+  [41.9020,9.0350,'Caldane (Zévaco)','Thermalisme','#0ea5e9','40°C · Sources chaudes · Haute Corse intérieure · Granit · Faille · GPS approx.'],
+  [41.7810,9.0690,'Lac thermal de Tora','Thermalisme','#0ea5e9','Lac thermal naturel · Bocognano-Taravo · Granit · Émergence géothermique · GPS approx.'],
   // ── REMARQUABLES NATURELS supplémentaires ──
   [41.498,8.930,'Lion de Roccapina','Mégalithique','#854d0e','Rocher anthropomorphe granit rose 144m · Site cultuel préhistorique · Côte SW entre Sartène et Bonifacio · Lié à tour génoise'],
   [41.536,8.918,'Sposata (menhir penché)','Mégalithique','#854d0e','Menhir penché unique en Corse · Plateau Cauria · Granit biotite piézo · Même zone que Fontanaccia et Renaghju'],
@@ -4163,6 +4191,9 @@ CHURCHES=[
 {lat:42.560,lon:8.758,name:'Sant\'Antoni (Couvent de Calvi)',lieu:'Calvi',pieve:'Balagne',s:'XVe',mat:'granit leucocrate',orient:80,sub:'granit_porphyrique',cont:'',mh:'MH',note:'Couvent franciscain · Intérieur citadelle génoise · Granit leucocrate piézo'},
 {lat:41.388,lon:9.155,name:'San Dominique (Bonifacio)',lieu:'Bonifacio',pieve:'Bonifacio',s:'XIIIe',mat:'calcaire',orient:78,sub:'calcaire_miocene',cont:'',mh:'MH',note:'Seul édifice gothique de Corse · Dominicains · Calcaire de Bonifacio · XIIIe s.'},
 {lat:42.650,lon:9.190,name:'San Cesario d\'Olmeta',lieu:'Olmeta-di-Capocorso',pieve:'Cap Corse',s:'XIIe',mat:'schiste',orient:88,sub:'schiste_lustre',cont:'',mh:'',note:'Chapelle piévane Cap Corse ouest · Schiste lustre · Vue sur golfe'},
+{lat:41.760,lon:8.967,name:'San Franciscu (Couvent de Petreto-Bicchisano)',lieu:'Petreto-Bicchisano',pieve:'Ornano',s:'XVe',mat:'granit',orient:88,sub:'granit_biotite',cont:'',mh:'',note:'Couvent franciscain fondé 1492 · Sartenais · Granit biotite · Vallée Taravo'},
+{lat:41.762,lon:8.895,name:'Sant\'Antone (Couvent d\'Olmeto)',lieu:'Olmeto',pieve:'Valinco',s:'XVIIIe',mat:'granit',orient:85,sub:'granit_biotite',cont:'',mh:'',note:'Couvent fondé 1717 · Olmeto · Granit biotite · Golfe Valinco · GPS approx.'},
+{lat:41.730,lon:9.080,name:'San Franciscu (Couvent de Sainte-Lucie-de-Tallano)',lieu:'Sainte-Lucie-de-Tallano',pieve:'Alta Rocca',s:'XIIIe',mat:'granit',orient:90,sub:'granit_biotite',cont:'',mh:'MH',note:'Couvent franciscain fondé 1298 · Alta Rocca · Granit biotite · Un des plus anciens de Corse'},
 ];
   _churchesLoaded = true;
   console.log(`📦 CHURCHES fallback inline: ${CHURCHES.length} entrées`);
@@ -4226,6 +4257,7 @@ function buildSiteMarkers(){
   if(typeof lSit!=='undefined'&&lSit.clearLayers)lSit.clearLayers();
   if(typeof lSit2!=='undefined'&&lSit2.clearLayers)lSit2.clearLayers();
   SITES.forEach(([a,o,n,t,c,desc,gpsInfo],_siteIdx)=>{
+  if(t==='Thermalisme')return;
   let shape,sw,sh;
   if(t==='Mégalithique'){
     shape='<div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:13px solid '+c+';filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))"></div>';
@@ -4268,6 +4300,17 @@ function buildSiteMarkers(){
       info('<span class="tag" style="background:'+tagBg+';color:'+tagColor+';border:0.5px solid '+tagBorder+'">'+typ+'</span> <b>'+name+'</b>'+orientInfo+'<br><span style="font-size:12px;color:var(--tx2)">'+dsc+'</span>'+gpsInfo);
     }})(_siteIdx,a,o,n,t,desc,gpsInfo))
     .addTo(targetLayer);
+  });
+}
+
+function buildThermLayer(){
+  lTherm.clearLayers();
+  SITES.forEach(([a,o,n,t,c,desc])=>{
+    if(t!=='Thermalisme')return;
+    const icon=L.divIcon({className:'',html:'<div style="width:12px;height:12px;background:'+c+';border:2px solid white;border-radius:50%;box-shadow:0 0 4px '+c+'99"></div>',iconSize:[12,12],iconAnchor:[6,6]});
+    L.marker([a,o],{icon,interactive:true})
+      .bindPopup('<b>'+n+'</b><br><span style="font-size:12px;color:var(--tx2)">'+desc+'</span>')
+      .addTo(lTherm);
   });
 }
 
