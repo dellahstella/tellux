@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tellux Corse — Mesurer le territoire vivant</title>
+<meta name="description" content="Tellux cartographie les champs électromagnétiques de Corse — naturels et artificiels — et les met en relation avec le patrimoine mégalithique, les alignements historiques et les données agronomiques.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ardoise:#1F2329;--pierre:#F5F0E7;--mica:#74706A;
+  --brume:#E8E2D5;--maquis:#3F5B3A;--ocre:#C28533;
+  --porphyre:#8E2F1F;--tyrrh:#1F3A5F;
+  --ff:'Fraunces',serif;--fu:'IBM Plex Sans',sans-serif;--fm:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
+
+/* NAV */
+.lp-nav{display:flex;align-items:center;justify-content:space-between;padding:16px 40px;background:var(--ardoise);position:sticky;top:0;z-index:50;}
+.lp-nav-logo{display:flex;align-items:center;gap:8px;}
+.lp-nav-t{font-family:var(--ff);font-size:20px;color:var(--ocre);}
+.lp-nav-name{font-family:var(--fu);font-size:12px;font-weight:500;letter-spacing:2.5px;color:var(--pierre);}
+.lp-nav-links{display:flex;gap:28px;}
+.lp-nav-link{font-size:12px;color:var(--mica);cursor:pointer;transition:color .15s;text-decoration:none;}
+.lp-nav-link:hover{color:var(--pierre);}
+.lp-nav-cta{background:var(--maquis);color:var(--ocre);border:none;padding:8px 18px;border-radius:5px;font-size:12px;font-family:var(--fu);font-weight:500;cursor:pointer;transition:background .15s,color .2s;text-decoration:none;display:inline-block;}
+.lp-nav-cta:hover{background:#4d6e47;}
+.lp-nav-cta.clicked{color:#ffffff;}
+
+/* HERO */
+.lp-hero{background:var(--ardoise);padding:80px 40px 72px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;}
+.lp-hero-eyebrow{font-family:var(--fm);font-size:11px;color:var(--ocre);letter-spacing:2px;margin-bottom:20px;display:flex;align-items:center;gap:8px;}
+.lp-hero-eyebrow-line{width:24px;height:1px;background:var(--ocre);}
+.lp-hero-h1{font-family:var(--ff);font-size:44px;line-height:1.1;color:var(--pierre);margin-bottom:20px;font-weight:600;}
+.lp-hero-h1 em{font-style:italic;color:var(--ocre);}
+.lp-hero-sub{font-size:15px;color:var(--mica);line-height:1.7;margin-bottom:36px;max-width:420px;}
+.lp-hero-btns{display:flex;gap:12px;flex-wrap:wrap;}
+.lp-btn-primary{background:var(--maquis);color:var(--pierre);border:none;padding:12px 24px;border-radius:6px;font-size:13px;font-family:var(--fu);font-weight:500;cursor:pointer;transition:background .15s;text-decoration:none;display:inline-block;}
+.lp-btn-primary:hover{background:#4d6e47;}
+.lp-btn-ghost{background:transparent;color:var(--pierre);border:1px solid rgba(255,255,255,0.2);padding:12px 24px;border-radius:6px;font-size:13px;font-family:var(--fu);cursor:pointer;transition:border-color .15s;text-decoration:none;display:inline-block;}
+.lp-btn-ghost:hover{border-color:rgba(255,255,255,0.5);}
+
+/* HERO MAP */
+.lp-hero-map{border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);background:#2a2f37;padding:20px;}
+.lp-map-sim{background:#1a2228;border-radius:8px;height:240px;position:relative;overflow:hidden;}
+.lp-map-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(116,112,106,0.08) 1px,transparent 1px),linear-gradient(90deg,rgba(116,112,106,0.08) 1px,transparent 1px);background-size:28px 28px;}
+.lp-map-pin{position:absolute;transform:translate(-50%,-50%);width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,0.6);}
+.lp-map-pulse{position:absolute;border-radius:50%;border:1px solid rgba(142,47,31,0.4);animation:lppulse 3s ease-out infinite;}
+@keyframes lppulse{0%{transform:translate(-50%,-50%) scale(.5);opacity:.8;}100%{transform:translate(-50%,-50%) scale(2.2);opacity:0;}}
+.lp-map-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;}
+.lp-map-stat{background:#2a2f37;border-radius:6px;padding:10px 12px;border:1px solid rgba(255,255,255,0.06);}
+.lp-map-stat-val{font-family:var(--fm);font-size:16px;color:var(--ocre);}
+.lp-map-stat-label{font-size:10px;color:var(--mica);margin-top:2px;font-family:var(--fu);}
+
+/* NUMBERS */
+.lp-numbers{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--brume);}
+.lp-number-block{background:var(--pierre);padding:28px 20px;text-align:center;}
+.lp-number-val{font-family:var(--ff);font-size:36px;color:var(--ardoise);font-weight:600;line-height:1;}
+.lp-number-val span{font-size:20px;color:var(--ocre);}
+.lp-number-label{font-size:11px;color:var(--mica);margin-top:6px;font-family:var(--fu);}
+
+/* SECTIONS */
+.lp-section{padding:72px 40px;}
+.lp-section-label{font-family:var(--fm);font-size:11px;color:var(--mica);letter-spacing:2px;margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.lp-section-label::after{content:'';flex:1;height:1px;background:var(--brume);}
+.lp-section-h2{font-family:var(--ff);font-size:32px;color:var(--ardoise);line-height:1.2;margin-bottom:12px;font-weight:600;}
+.lp-section-sub{font-size:14px;color:var(--mica);max-width:480px;line-height:1.7;margin-bottom:48px;}
+
+/* FEATURES */
+.lp-features{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.lp-feature-card{background:white;border-radius:10px;border:1px solid var(--brume);padding:24px;transition:transform .2s,box-shadow .2s;}
+.lp-feature-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(31,35,41,0.08);}
+.lp-feature-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+.lp-feature-h3{font-family:var(--ff);font-size:16px;color:var(--ardoise);margin-bottom:8px;font-weight:600;}
+.lp-feature-p{font-size:12px;color:var(--mica);line-height:1.7;}
+.lp-feature-tag{display:inline-block;margin-top:12px;font-family:var(--fm);font-size:9px;padding:3px 8px;border-radius:3px;letter-spacing:1px;}
+
+/* CORPUS */
+.lp-section-dark{background:var(--ardoise);padding:72px 40px;}
+.lp-corpus{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;}
+.lp-corpus-text .lp-section-h2{color:var(--pierre);}
+.lp-corpus-text .lp-section-label{color:var(--mica);}
+.lp-corpus-text .lp-section-label::after{background:rgba(255,255,255,0.1);}
+.lp-corpus-text .lp-section-sub{color:var(--mica);}
+.lp-corpus-refs{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.lp-ref-pill{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:10px 12px;transition:background .2s;}
+.lp-ref-pill:hover{background:rgba(255,255,255,0.09);}
+.lp-ref-author{font-family:var(--fm);font-size:10px;color:var(--ocre);margin-bottom:2px;}
+.lp-ref-title{font-size:11px;color:rgba(245,240,231,0.7);line-height:1.4;}
+
+/* EPI */
+.lp-section-epi{background:var(--brume);padding:48px 40px;}
+.lp-epi-inner{max-width:680px;margin:0 auto;display:flex;gap:20px;align-items:flex-start;}
+.lp-epi-line{width:3px;border-radius:2px;background:var(--ocre);flex-shrink:0;align-self:stretch;}
+.lp-epi-label{font-family:var(--fm);font-size:10px;color:var(--ocre);letter-spacing:1.5px;margin-bottom:8px;}
+.lp-epi-quote{font-family:var(--ff);font-size:18px;color:var(--ardoise);line-height:1.5;margin-bottom:12px;font-style:italic;}
+.lp-epi-sub{font-size:12px;color:var(--mica);line-height:1.6;}
+
+/* CTA */
+.lp-cta-section{padding:80px 40px;text-align:center;background:var(--ardoise);}
+.lp-cta-h2{font-family:var(--ff);font-size:36px;color:var(--pierre);margin-bottom:12px;font-weight:600;}
+.lp-cta-h2 em{font-style:italic;color:var(--ocre);}
+.lp-cta-sub{font-size:14px;color:var(--mica);margin-bottom:32px;max-width:400px;margin-left:auto;margin-right:auto;line-height:1.7;}
+.lp-cta-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+
+/* FOOTER */
+.lp-footer{background:var(--ardoise);border-top:1px solid rgba(255,255,255,0.06);padding:28px 40px;display:flex;align-items:center;justify-content:space-between;}
+.lp-footer-left{display:flex;align-items:center;gap:10px;}
+.lp-footer-t{font-family:var(--ff);font-size:16px;color:var(--ocre);}
+.lp-footer-info{font-size:11px;color:var(--mica);}
+.lp-footer-right{display:flex;gap:20px;}
+.lp-footer-link{font-size:11px;color:var(--mica);text-decoration:none;cursor:pointer;transition:color .15s;}
+.lp-footer-link:hover{color:var(--pierre);}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease;}
+.reveal.visible{opacity:1;transform:translateY(0);}
+
+/* MOBILE */
+@media(max-width:768px){
+  .lp-nav{padding:12px 20px;}
+  .lp-nav-links{display:none;}
+  .lp-hero{grid-template-columns:1fr;padding:48px 20px;}
+  .lp-hero-h1{font-size:32px;}
+  .lp-hero-sub{font-size:14px;}
+  .lp-hero-map{display:none;}
+  .lp-numbers{grid-template-columns:repeat(2,1fr);}
+  .lp-section{padding:48px 20px;}
+  .lp-features{grid-template-columns:1fr;}
+  .lp-section-dark{padding:48px 20px;}
+  .lp-corpus{grid-template-columns:1fr;}
+  .lp-corpus-refs{grid-template-columns:1fr;}
+  .lp-section-epi{padding:32px 20px;}
+  .lp-cta-section{padding:48px 20px;}
+  .lp-footer{flex-direction:column;gap:16px;padding:24px 20px;text-align:center;}
+  .lp-footer-right{flex-wrap:wrap;justify-content:center;}
+}
+</style>
+</head>
+<body>
+
+<nav class="lp-nav">
+  <div class="lp-nav-logo">
+    <span class="lp-nav-t">T</span>
+    <span class="lp-nav-name">TELLUX</span>
+  </div>
+  <div class="lp-nav-links">
+    <a class="lp-nav-link" href="#fonctionnalites">Fonctionnalités</a>
+    <a class="lp-nav-link" href="#corpus">Corpus scientifique</a>
+    <a class="lp-nav-link" href="#patrimoine">Patrimoine</a>
+    <a class="lp-nav-link" href="#apropos">À propos</a>
+  </div>
+  <a class="lp-nav-cta" href="app.html">Accéder à la carte →</a>
+</nav>
+
+<div class="lp-hero">
+  <div class="reveal">
+    <div class="lp-hero-eyebrow"><div class="lp-hero-eyebrow-line"></div>Cartographie électromagnétique · Corse</div>
+    <h1 class="lp-hero-h1">Mesurer le<br><em>territoire vivant</em></h1>
+    <p class="lp-hero-sub">Tellux cartographie les champs électromagnétiques de Corse — naturels et artificiels — et les met en relation avec le patrimoine mégalithique, les alignements historiques et les données agronomiques.</p>
+    <div class="lp-hero-btns">
+      <a class="lp-btn-primary" href="app.html">Explorer la carte →</a>
+      <a class="lp-btn-ghost" href="#corpus">Voir le corpus scientifique</a>
+    </div>
+  </div>
+  <div class="reveal" style="transition-delay:.15s">
+    <div class="lp-hero-map">
+      <div class="lp-map-sim">
+        <div class="lp-map-grid"></div>
+        <div class="lp-map-pulse" style="width:80px;height:80px;top:45%;left:42%;animation-delay:0s"></div>
+        <div class="lp-map-pulse" style="width:56px;height:56px;top:65%;left:63%;animation-delay:1s"></div>
+        <div class="lp-map-pin" style="top:45%;left:42%;background:var(--maquis)"></div>
+        <div class="lp-map-pin" style="top:30%;left:55%;background:var(--maquis)"></div>
+        <div class="lp-map-pin" style="top:65%;left:63%;background:var(--maquis)"></div>
+        <div class="lp-map-pin" style="top:38%;left:28%;background:var(--tyrrh)"></div>
+        <div class="lp-map-pin" style="top:55%;left:48%;background:var(--ocre)"></div>
+      </div>
+      <div class="lp-map-stats">
+        <div class="lp-map-stat"><div class="lp-map-stat-val">116</div><div class="lp-map-stat-label">sites cartographiés</div></div>
+        <div class="lp-map-stat"><div class="lp-map-stat-val">314</div><div class="lp-map-stat-label">églises romanes</div></div>
+        <div class="lp-map-stat"><div class="lp-map-stat-val">~3000</div><div class="lp-map-stat-label">antennes ANFR</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="lp-numbers reveal">
+  <div class="lp-number-block"><div class="lp-number-val">80<span>+</span></div><div class="lp-number-label">hypothèses testables</div></div>
+  <div class="lp-number-block"><div class="lp-number-val">130<span>+</span></div><div class="lp-number-label">études peer-reviewed</div></div>
+  <div class="lp-number-block"><div class="lp-number-val">15</div><div class="lp-number-label">alignements Broadbent</div></div>
+  <div class="lp-number-block"><div class="lp-number-val">8k<span>+</span></div><div class="lp-number-label">km lignes HTA/HTB</div></div>
+</div>
+
+<div class="lp-section reveal" id="fonctionnalites">
+  <div class="lp-section-label">Fonctionnalités</div>
+  <h2 class="lp-section-h2">Un outil, trois lectures<br>du territoire</h2>
+  <p class="lp-section-sub">Chaque couche de la carte révèle une dimension différente — du champ géomagnétique naturel aux infrastructures humaines, jusqu'aux traces mégalithiques.</p>
+  <div class="lp-features">
+    <div class="lp-feature-card">
+      <div class="lp-feature-icon" style="background:rgba(142,47,31,0.08)">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" stroke="#8E2F1F" stroke-width="1.5"/><circle cx="8" cy="8" r="6" stroke="#8E2F1F" stroke-width="1" opacity=".4"/><circle cx="8" cy="8" r="1" fill="#8E2F1F"/></svg>
+      </div>
+      <h3 class="lp-feature-h3">Champs électromagnétiques</h3>
+      <p class="lp-feature-p">Géomagnétisme IGRF-14, anomalies crustales EMAG2, lignes HTA/HTB, antennes ANFR. Modèle physique Biot-Savart pour les lignes électriques.</p>
+      <span class="lp-feature-tag" style="background:rgba(142,47,31,0.08);color:var(--porphyre)">IGRF · EMAG2 · ANFR</span>
+    </div>
+    <div class="lp-feature-card" id="patrimoine">
+      <div class="lp-feature-icon" style="background:rgba(63,91,58,0.08)">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><polygon points="8,2 10,7 15,7 11,10 13,15 8,12 3,15 5,10 1,7 6,7" stroke="#3F5B3A" stroke-width="1.2" fill="none"/></svg>
+      </div>
+      <h3 class="lp-feature-h3">Patrimoine & mégalithes</h3>
+      <p class="lp-feature-p">116 sites mégalithiques, 314 églises romanes, tours génoises, ponts, châteaux. 15 alignements Broadbent et module de géométrie avancée.</p>
+      <span class="lp-feature-tag" style="background:rgba(63,91,58,0.08);color:var(--maquis)">Mégalithes · Alignements · Géométrie</span>
+    </div>
+    <div class="lp-feature-card">
+      <div class="lp-feature-icon" style="background:rgba(194,133,51,0.1)">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="8" width="3" height="6" rx="1" fill="#C28533" opacity=".5"/><rect x="6.5" y="5" width="3" height="9" rx="1" fill="#C28533" opacity=".7"/><rect x="11" y="2" width="3" height="12" rx="1" fill="#C28533"/></svg>
+      </div>
+      <h3 class="lp-feature-h3">Agronomie & diagnostic</h3>
+      <p class="lp-feature-p">Diagnostic parcellaire EM, cultures adaptées à la Corse, indice Tellux par zone. Module en développement — mesures terrain à venir.</p>
+      <span class="lp-feature-tag" style="background:rgba(194,133,51,0.1);color:var(--ocre)">Diagnostic · Parcelle · Terrain</span>
+    </div>
+  </div>
+</div>
+
+<div class="lp-section-dark reveal" id="corpus">
+  <div class="lp-corpus">
+    <div class="lp-corpus-text">
+      <div class="lp-section-label">Corpus scientifique</div>
+      <h2 class="lp-section-h2">Rigueur<br>épistémique</h2>
+      <p class="lp-section-sub">Toutes les données sont issues de sources peer-reviewed ou institutionnelles. Chaque valeur affichée indique son statut : mesuré, modélisé, ou hypothèse en cours de test.</p>
+      <button class="lp-btn-ghost" style="margin-top:8px">Consulter le corpus complet</button>
+    </div>
+    <div class="lp-corpus-refs">
+      <div class="lp-ref-pill"><div class="lp-ref-author">Maffei 2014</div><div class="lp-ref-title">Magnetic fields and the health of living organisms</div></div>
+      <div class="lp-ref-pill"><div class="lp-ref-author">Hermans 2023</div><div class="lp-ref-title">EMF exposure and plant growth responses</div></div>
+      <div class="lp-ref-pill"><div class="lp-ref-author">Baydiili 2025</div><div class="lp-ref-title">Geomagnetic anomalies & biodiversity correlation</div></div>
+      <div class="lp-ref-pill"><div class="lp-ref-author">Bishop 1981</div><div class="lp-ref-title">Dragon Project — field measurements at megalithic sites</div></div>
+      <div class="lp-ref-pill"><div class="lp-ref-author">Broadbent 1980</div><div class="lp-ref-title">Geometrical alignments in prehistoric monuments</div></div>
+      <div class="lp-ref-pill"><div class="lp-ref-author">IGRF-14 · EMAG2v3</div><div class="lp-ref-title">International geomagnetic reference models</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="lp-section-epi reveal">
+  <div class="lp-epi-inner">
+    <div class="lp-epi-line"></div>
+    <div>
+      <div class="lp-epi-label">Position épistémique</div>
+      <div class="lp-epi-quote">Tellux distingue rigoureusement ce qui est mesuré, ce qui est modélisé, et ce qui reste à l'état d'hypothèse.</div>
+      <div class="lp-epi-sub">Le champ électromagnétique est un champ physique unique, soumis au principe de superposition. Tellux n'est pas un outil de diagnostic médical, ni un système d'alerte. C'est un outil de cartographie et de visualisation à destination des chercheurs, des associations et des collectivités.</div>
+    </div>
+  </div>
+</div>
+
+<div class="lp-cta-section reveal" id="apropos">
+  <h2 class="lp-cta-h2">Explorez la <em>Corse<br>électromagnétique</em></h2>
+  <p class="lp-cta-sub">La carte est accessible librement. Aucune inscription requise. Les données sont mises à jour en continu.</p>
+  <div class="lp-cta-btns">
+    <a class="lp-btn-primary" href="app.html" style="padding:13px 28px;font-size:14px">Accéder à la carte →</a>
+    <button class="lp-btn-ghost" style="padding:13px 28px;font-size:14px">Nous contacter</button>
+  </div>
+</div>
+
+<footer class="lp-footer">
+  <div class="lp-footer-left">
+    <span class="lp-footer-t">T</span>
+    <div>
+      <div style="font-family:var(--fu);font-size:12px;font-weight:500;color:var(--pierre);letter-spacing:1.5px">TELLUX CORSE</div>
+      <div class="lp-footer-info">SARL Stella Canis Majoris · Bastia · 2026</div>
+    </div>
+  </div>
+  <div class="lp-footer-right">
+    <a class="lp-footer-link" href="#">Mentions légales</a>
+    <a class="lp-footer-link" href="#">Données & vie privée</a>
+    <a class="lp-footer-link" href="#corpus">Corpus scientifique</a>
+    <a class="lp-footer-link" href="app.html">tellux.pages.dev/app</a>
+  </div>
+</footer>
+
+<script>
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, {threshold:0.1});
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+
+</body>
+</html>
