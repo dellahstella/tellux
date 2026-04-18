@@ -1,21 +1,21 @@
 # TELLUX — Feuille de route
 
-**Dernière mise à jour :** 13 avril 2026 (session Sonnet — Patrimoine)
-**Remplace :** version du 10 avril 2026 (session 5)
+**Dernière mise à jour :** 18 avril 2026 (session Sonnet — corpus R8-R10, GPS, UI, Patrimoine)
+**Remplace :** version du 13 avril 2026 (session Sonnet Patrimoine)
 
 ---
 
-## 1. État au 13 avril 2026
+## 1. État au 18 avril 2026
 
 | Composant | Référence | État |
 |---|---|---|
-| Code | `tellux_CORRECT.html` | Source de vérité. ~7 000 lignes. Module géométrie + orientations ajoutés |
-| Code (dev) | `tellux_v6_design.html` | Branche de travail, contient les mêmes ajouts |
-| Dossier | `CANDIDATURE_TELLUX_v7.docx` | v7, relecture en cours |
+| Code | `index.html` (GitHub main) | v8 — corpus R8-R10 intégré, patrimoine_corse Supabase actif |
+| Code (dev) | `index.html` (branche dev) | 5 commits en avance sur main — UI logo, disclaimer, accordéon |
+| Dossier CTC | `CANDIDATURE_TELLUX_v8.1.docx` | en préparation |
 | Design | `DIRECTION_ARTISTIQUE_v2.md` | Validée et gelée |
 | Déploiement | `tellux.pages.dev` | Cloudflare Pages, actif |
-| Backend | Supabase PostGIS (`knckulwghgfrxmbweada`) | Actif, 3 migrations appliquées |
-| Git | `main` + `dev` | Nettoyé le 13 avril, workflow dans `WORKFLOW_GIT.md` |
+| Backend | Supabase PostGIS (`knckulwghgfrxmbweada`) | Actif, 4 migrations appliquées (004 = patrimoine_corse 39 sites) |
+| Git | `main` + `dev` | Workflow PR dans `WORKFLOW_GIT.md` ; GitLab remote désactivé depuis 14 avril |
 | Cible financement | CTC | Dossier multi-guichets en préparation |
 | Porteur | Soleil (solo) | SARL Stella Canis Majoris, Bastia |
 
@@ -26,6 +26,7 @@
 | 001 | `001_contributions_contexte_batiment.sql` | 7 colonnes contexte bâtiment |
 | 002 | `002_contributions_csv.sql` | Support import CSV Phyphox |
 | 003 | `003_orientations.sql` | Table `orientations_contributions` (9 col, RLS anon) |
+| 004 | `004_patrimoine_corse.sql` | Table `patrimoine_corse` — 39 sites, 5 catégories, RLS select |
 
 ---
 
@@ -83,19 +84,33 @@ Le projet avance sur deux voies indépendantes. Si la voie B prend du retard, la
 | Flux mesure 3 erreurs résiduelles | Corrigés par refonte design formulaire |
 | CSV Phyphox import cassé | Corrigé par refonte du bouton — le bug n'existe plus dans le design actuel |
 
+### Bugs résolus — session 18 avril 2026
+
+| ID | Problème | Résolution |
+|---|---|---|
+| A-16 | Corpus patrimoine R8-R10 (Sagone, Prunelli-Taravo, Ajaccio) | ✅ PR #37 mergée prod |
+| A-17 | Migration patrimoine_corse Supabase | ✅ 39 entrées (5 catégories) — PR #38 mergée prod |
+| A-18 | GPS corrections R8-R10 (6 sites validés) + Pont de Ponte Novu ajouté | ✅ PR #39 + #40 mergées prod |
+| A-19 | Label UI "Thermalisme" → "Sources thermales" | ✅ commité dev |
+| A-20 | Disclaimer : texte refondé 3 blocs + bouton "Accéder à la carte" | ✅ commité dev |
+| A-21 | Logo v14 dans popup disclaimer (remplace v7 T-bouclier) | ✅ commité dev |
+| A-22 | Toggle couche mesures terrain dans accordéon Anomalies | ✅ commité dev |
+| A-23 | Accordéon Patrimoine : 4 boutons plats, fusion alignements+géométrie | ✅ commité dev |
+
 ### Items restants voie A
 
 | ID | Action | Priorité |
 |---|---|---|
 | A-1g | Vérification GPS autres sites (session Google Earth) | 🟡 Soleil |
 | A-4b | Audit pattern couche ↔ panneau ↔ légende | 🟡 Cowork |
-| A-8 | Captures d'écran HD pour dossier CTC | 🟡 Cowork |
-| A-16 | Vocabulaire module prescription : retrait résidus UI radon + reformulation cage Faraday | ✅ Cowork — 17 avr 2026 |
-| A-17 | Position épistémique : sections A7 (Kirschvink/Wang) + A8 (vocabulaire interdit) | ✅ Cowork — 17 avr 2026 |
-| A-18 | Hypothèses H84-H88 : magnétoréception, troupeaux, balbuzard, Kp cardio, shinrin-yoku | ✅ Cowork — 17 avr 2026 |
-| A-19 | Corpus scientifique v6 : 5 sections thématiques, ~50 études structurées | ✅ Cowork — 17 avr 2026 |
+| A-8 | Captures d'écran HD pour dossier CTC | ⏳ Soleil |
+| A-24 | Vocabulaire module prescription : retrait résidus UI radon + reformulation cage Faraday | ✅ Cowork — 17 avr 2026 |
+| A-25 | Position épistémique : sections A7 (Kirschvink/Wang) + A8 (vocabulaire interdit) | ✅ Cowork — 17 avr 2026 |
+| A-26 | Hypothèses H84-H88 : magnétoréception, troupeaux, balbuzard, Kp cardio, shinrin-yoku | ✅ Cowork — 17 avr 2026 |
+| A-27 | Corpus scientifique v6 : 5 sections thématiques, ~50 études structurées | ✅ Cowork — 17 avr 2026 |
+| GPS-WAIT | 3 sites GPS bloqués — source terrain requise (Stèle Ponticellu, Castellu Ficaghjola, San Giovanni Battista Urbalacone) | ⏳ voir `GPS_EN_ATTENTE.md` |
 
-**Critère de gel :** A-1g + A-4b + A-8 + A-16 + A-17 + A-18 + A-19 → tag v6.1.0
+**Critère de gel :** A-1g + A-4b + A-8 → tag v8.1.0
 
 ---
 
@@ -307,12 +322,14 @@ Court terme : CTC. Moyen terme : OEC, ADEME, ANR, LEADER. Voir `TELLUX_FINANCEME
 | S15 (12 avr) | Session 6 : clarification épistémique (7 missions) | ✅ fait | — |
 | S15 (13 avr) | Sonnet Patrimoine : géométrie, orientation, audit corpus | ✅ fait | — |
 | S15 (13 avr) | Mise à jour fichiers contexte (roadmap, recovery, instructions) | ✅ fait | — |
-| **S16 (14 avr)** | **Session Opus : finitions pré-envoi EM** | **Cowork** | `[À COMPLÉTER]` |
+| S16 (14 avr) | Session Opus : corpus épistémique A-24 à A-27 | ✅ fait | — |
+| S16 (18 avr) | Corpus R8-R10, GPS, UI logo/disclaimer, accordéon Patrimoine | ✅ fait | — |
 | S16 (14-20 avr) | Reporter géométrie/orientation dans `tellux_CORRECT.html` | Cowork | — |
 | S16 | Test flux mesure bout en bout (5 scénarios) | Soleil | — |
 | S16 | Arbitrage structure juridique | Soleil | — |
 | S17 (21-27 avr) | A-1g GPS, A-4b audit couches, A-8 captures HD | Cowork + Soleil | — |
-| S18 (28 avr – 4 mai) | Gel voie A, tag v6.1.0 | Soleil + Cowork | Tests OK |
+| S17 | Merger dev → main (PR #41) — UI logo, disclaimer, accordéon | Soleil | 5 commits en attente |
+| S18 (28 avr – 4 mai) | Gel voie A, tag v8.1.0 | Soleil + Cowork | Tests OK |
 | S19 (5-11 mai) | Dépôt CTC | Soleil | Dossier complet |
 | S19-S20 | Validation scientifique E-1 à E-4 | Cowork | Voie A gelée |
 

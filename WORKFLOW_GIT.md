@@ -6,12 +6,12 @@ Mémo opérationnel pour le versioning et le déploiement du projet Tellux.
 
 ## Structure du dépôt
 
-Tellux utilise un dépôt Git unique hébergé sur GitHub (origin) avec un mirror de sauvegarde sur GitLab. Deux branches principales, deux usages distincts :
+Tellux utilise un dépôt Git unique hébergé sur GitHub (origin). Le remote GitLab est désactivé depuis le 14 avril 2026. Deux branches principales, deux usages distincts :
 
-- **`main`** — ce qui est déployé en production sur `https://tellux.pages.dev`. Contient uniquement `index.html`, `README.md`, et les JSON externalisés (`failles-corse.json`, `prod-electrique.json`, `Hypothese.json`). Cloudflare Pages surveille cette branche et redéploie automatiquement à chaque push.
-- **`dev`** — branche de travail complète. Contient tout : `tellux_v6_design.html` (le HTML de travail), la documentation, les briefings, les lettres, les migrations SQL, les archives, les prompts, etc.
+- **`main`** — ce qui est déployé en production sur `https://tellux.pages.dev`. Contient `index.html`, `README.md`, et les JSON externalisés (`failles-corse.json`, `prod-electrique.json`, `Hypothese.json`). Cloudflare Pages surveille cette branche et redéploie automatiquement à chaque push.
+- **`dev`** — branche de travail complète. Contient `index.html` (le HTML de travail, même fichier que main), la documentation, les briefings, les lettres, les migrations SQL, les archives, les prompts, etc.
 
-Le fichier `tellux_v6_design.html` sur `dev` et `index.html` sur `main` sont le même fichier, mais renommé au moment du déploiement.
+Le déploiement se fait par Pull Request dev → main (non-squash merge). Le fichier `index.html` est identique sur les deux branches, dev étant en avance de quelques commits sur main.
 
 ---
 
@@ -220,4 +220,6 @@ Les deux branches vivent en parallèle. Ne jamais les merger l'une dans l'autre 
 
 ---
 
-*Dernière mise à jour : 13 avril 2026, après la consolidation du dépôt Git.*
+*Dernière mise à jour : 18 avril 2026.*
+
+> **Note (14 avril 2026) :** le remote `gitlab` est désactivé. Ne plus pousser vers GitLab. Seul `origin` (GitHub) est actif. Supprimer les lignes `git push gitlab dev` des commandes ci-dessus.
