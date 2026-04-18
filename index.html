@@ -4601,6 +4601,27 @@ function loadSitesReference(){
 }
 loadSitesReference();
 
+// ═══ PATRIMOINE SPÉCIALISÉ — Tours génoises, Ponts, Thermalisme, Châteaux, Mines ═══
+// Chargé depuis Supabase (table patrimoine_corse) ; en cas d'échec, fallback inline silencieux.
+// Option A : filtre SITES[] par catégorie puis concatène les lignes Supabase.
+(function loadPatrimoineData() {
+  const CATS = new Set(['Tour génoise','Pont génois','Thermalisme','Château médiéval','Patrimoine & Ressources']);
+  fetch(SB_URL + '/rest/v1/patrimoine_corse?select=lat,lon,nom,categorie,couleur,description&order=id.asc', {headers: sbH()})
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(data){
+      if(!data||!data.length) throw new Error('résultat vide');
+      SITES = SITES.filter(function(s){ return !CATS.has(s[3]); });
+      data.forEach(function(row){
+        SITES.push([+row.lat, +row.lon, row.nom, row.categorie, row.couleur||'#c8a035', row.description||'']);
+      });
+      buildTourLayer(); buildPontLayer(); buildThermLayer(); buildCastLayer(); buildInduLayer();
+      console.log('[Tellux] patrimoine_corse chargé : '+data.length+' sites');
+    })
+    .catch(function(err){
+      console.warn('[Tellux] patrimoine_corse fallback inline ('+err.message+')');
+    });
+})();
+
 // ═══ ÉTUDES & ALIGNEMENTS MÉGALITHIQUES ═══
 const MEGA_STUDIES=[
   {id:'leplat2016',author:'Leplat Q.',year:2016,source:'messagedelanuitdestemps.org'},
