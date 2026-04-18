@@ -838,6 +838,70 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   font-family:var(--mono);animation:badgePulse 2.5s ease-in-out infinite;
 }
 @keyframes badgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+
+/* === Phase 2 — Layout desktop sidebar fixe (≥ 1200px) === */
+/* Bouton réduire sidebar — caché par défaut (mobile) */
+.sidebar-toggle{display:none;}
+@media (min-width:1200px){
+  body{max-width:none;padding:16px 24px;}
+  .map-wrap{
+    display:flex;
+    gap:16px;
+    align-items:stretch;
+    /* height settée dynamiquement par JS (setDesktopMapHeight) */
+  }
+  .map-wrap .layers-accordion{
+    flex:0 0 420px;
+    overflow-y:auto;
+    max-height:100%;
+    height:100%;
+    padding:4px 8px 8px 4px;
+    border-right:1px solid var(--border);
+    transition:flex-basis .25s ease;
+    /* reset styles drawer mobile */
+    position:static!important;
+    top:auto;left:auto;right:auto;
+    width:auto!important;
+    box-shadow:none;
+    border-radius:0;
+  }
+  .map-wrap .map-col{
+    flex:1;
+    position:relative;
+    min-width:0; /* permet flex shrink */
+  }
+  .map-wrap .map-col #map{
+    height:100%!important;
+    width:100%;
+    border-radius:var(--r2);
+  }
+  .mob-toggle{display:none!important;}
+  /* Bouton réduire sidebar — visible en desktop */
+  .sidebar-toggle{
+    display:flex;align-items:center;justify-content:center;
+    width:28px;height:28px;margin:2px 0 6px auto;
+    border:1px solid var(--border);border-radius:6px;
+    background:var(--bg2);color:var(--tx3);
+    font-size:11px;cursor:pointer;
+    transition:all .15s;
+    position:sticky;top:0;z-index:2;
+  }
+  .sidebar-toggle:hover{background:var(--bg3);color:var(--tx);}
+  /* État collapsed */
+  .map-wrap .layers-accordion.collapsed{
+    flex:0 0 48px;
+    overflow:hidden;
+    padding:4px;
+  }
+  .map-wrap .layers-accordion.collapsed .accordion-cat{display:none;}
+  .map-wrap .layers-accordion.collapsed .sidebar-toggle{
+    margin:2px auto;
+  }
+  .map-wrap .layers-accordion.collapsed .sidebar-toggle-icon{
+    transform:rotate(180deg);
+  }
+}
+/* === fin Phase 2 === */
 </style>
 </head>
 <body>
@@ -1122,6 +1186,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 <div class="map-wrap">
 <button class="mob-toggle" id="mob-toggle" onclick="const a=document.getElementById('layers-accordion');a.classList.toggle('mob-open');this.textContent=a.classList.contains('mob-open')?'✕':'☰'" aria-label="Couches">☰</button>
 <div class="layers-accordion" id="layers-accordion">
+  <!-- Bouton réduire sidebar (desktop uniquement) -->
+  <button class="sidebar-toggle" id="sidebar-toggle" type="button" onclick="toggleSidebar()" aria-label="Réduire la sidebar" title="Réduire la sidebar"><span class="sidebar-toggle-icon">◀</span></button>
   <!-- 1. PATRIMOINE -->
   <div class="accordion-cat">
     <div class="accordion-cat-header" onclick="toggleAccordion(this)">
@@ -1200,6 +1266,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     </div>
   </div>
 </div>
+<!-- .map-col wrapper (desktop sidebar layout phase 2) -->
+<div class="map-col">
 <div class="op-row" id="geo-op-row"><span>Géologie</span><input type="range" min="0.1" max="1" step="0.05" value="0.6" oninput="wmsGeo.setOpacity(+this.value)"><span id="geo-op-v">60%</span></div>
 <div class="op-row" id="hyd-op-row"><span>Nappes</span><input type="range" min="0.1" max="1" step="0.05" value="0.55" oninput="wmsHyd.setOpacity(+this.value)"><span id="hyd-op-v">55%</span></div>
 <div class="op-row" id="emag-op-row"><span>Anomalie crustale</span><input type="range" min="0.1" max="0.8" step="0.05" value="0.5" oninput="wmsEmag.setOpacity(+this.value)"><span id="emag-op-v">50%</span></div>
@@ -1902,6 +1970,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     Modèle magnétique = IGRF-14 + variation diurne Sq + index Kp/Dst · Sources : ANFR, BRGM, BGS, NOAA, ESA Swarm · <a href="#" onclick="event.preventDefault();document.getElementById('disclaimer-overlay').style.display='flex'" style="color:var(--acc);text-decoration:underline">Méthodologie & confidentialité</a>
   </div>
 </div>
+</div><!-- /.map-col -->
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -7916,6 +7985,82 @@ window.txLegend = {
     }catch(e){}
   }
 };
+
+/* === Phase 2 — Layout desktop sidebar fixe (≥ 1200px) === */
+(function(){
+  var DESKTOP_MQ = window.matchMedia('(min-width:1200px)');
+  var BOTTOM_MARGIN_PX = 24;
+
+  function setDesktopMapHeight(){
+    var mw = document.querySelector('.map-wrap');
+    if(!mw) return;
+    if(!DESKTOP_MQ.matches){
+      mw.style.height = '';
+      return;
+    }
+    var top = mw.getBoundingClientRect().top;
+    var h = Math.max(400, window.innerHeight - top - BOTTOM_MARGIN_PX);
+    mw.style.height = h + 'px';
+    try{ if(window.map && typeof window.map.invalidateSize==='function'){ window.map.invalidateSize(); } }catch(e){}
+  }
+
+  function openFirstAccordionDesktop(){
+    if(!DESKTOP_MQ.matches) return;
+    var firstHdr = document.querySelector('.layers-accordion .accordion-cat:first-child .accordion-cat-header');
+    if(firstHdr && !firstHdr.classList.contains('open')){
+      firstHdr.click();
+    }
+  }
+
+  // Expose map globally for invalidateSize hook (L.map var is const local to module scope)
+  try{ if(typeof map!=='undefined') window.map = map; }catch(e){}
+
+  // Debounced resize
+  var rzTimer=null;
+  window.addEventListener('resize', function(){
+    if(rzTimer) clearTimeout(rzTimer);
+    rzTimer = setTimeout(setDesktopMapHeight, 120);
+  });
+
+  // Also listen to media query transitions (mobile↔desktop crossing)
+  try{
+    if(DESKTOP_MQ.addEventListener){
+      DESKTOP_MQ.addEventListener('change', function(){
+        setDesktopMapHeight();
+        openFirstAccordionDesktop();
+      });
+    }
+  }catch(e){}
+
+  function init(){
+    setDesktopMapHeight();
+    openFirstAccordionDesktop();
+  }
+
+  // Toggle sidebar collapsed/expanded (exposé globalement pour onclick HTML)
+  window.toggleSidebar = function(){
+    var la = document.getElementById('layers-accordion');
+    if(!la) return;
+    la.classList.toggle('collapsed');
+    var btn = document.getElementById('sidebar-toggle');
+    if(btn){
+      var isCollapsed = la.classList.contains('collapsed');
+      btn.setAttribute('aria-label', isCollapsed ? 'Agrandir la sidebar' : 'Réduire la sidebar');
+      btn.setAttribute('title', isCollapsed ? 'Agrandir la sidebar' : 'Réduire la sidebar');
+    }
+    // invalidateSize après la fin de transition (0.25s) pour que Leaflet recalcule
+    setTimeout(function(){
+      try{ if(window.map && typeof window.map.invalidateSize==='function') window.map.invalidateSize(); }catch(e){}
+    }, 300);
+  };
+
+  if(document.readyState==='complete' || document.readyState==='interactive'){
+    setTimeout(init, 0);
+  } else {
+    document.addEventListener('DOMContentLoaded', init);
+  }
+})();
+/* === fin Phase 2 JS === */
 </script>
 
 <div class="tx-sources">
