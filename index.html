@@ -469,6 +469,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-sit{background:#fdf8ef!important;color:#713f12!important;border-color:#c9a56c!important;font-weight:500;}
 .on-sit2{background:#e8f5e9!important;color:#2e7d32!important;border-color:#66bb6a!important;font-weight:500;}
 .on-therm{background:#e0f5fe!important;color:#0369a1!important;border-color:#38bdf8!important;font-weight:500;}
+.on-tour{background:#ecf4e4!important;color:#3a5c20!important;border-color:#5c7a3a!important;font-weight:500;}
+.on-indu{background:#fdf0e0!important;color:#78350f!important;border-color:#a85c1a!important;font-weight:500;}
 .on-con{background:#f0e8ff!important;color:#5c3a9b!important;border-color:#9b72d4!important;font-weight:500;}
 .on-cem{background:#ccfbf1!important;color:#0f766e!important;border-color:#2dd4bf!important;font-weight:500;}
 .add-btn{font-size:11px;padding:5px 14px;border-radius:var(--r);border:1px solid var(--acc2);background:var(--acc3);color:var(--acc);cursor:pointer;margin-left:auto;font-weight:500;}
@@ -1138,6 +1140,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       </div>
       <button class="lbtn" id="b-sit2" title="Sites remarquables artificiels, tours génoises, barrages" onclick="tog('sit2','on-sit2',this)" style="margin-top:2px"><span class="sq" style="background:#5c7a3a"></span>Sites &amp; Ouvrages</button>
       <button class="lbtn" id="b-therm" title="Sources thermales et géothermiques — failles actives · H88" onclick="tog('therm','on-therm',this)" style="margin-top:2px"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Thermalisme</button>
+      <button class="lbtn" id="b-tour" title="Tours génoises — réseau surveillance côtière XVIe · 19 tours MH" onclick="tog('tour','on-tour',this)" style="margin-top:2px"><span style="display:inline-block;width:8px;height:8px;background:#5c7a3a;border:1px solid white;transform:rotate(45deg);vertical-align:middle;margin-right:2px"></span>Tours génoises</button>
+      <button class="lbtn" id="b-indu" title="Mines historiques — cibles EM · H85-H87 BRGM" onclick="tog('indu','on-indu',this)" style="margin-top:2px"><span style="display:inline-block;width:8px;height:8px;background:#78350f;border-radius:1px;vertical-align:middle;margin-right:2px"></span>Mines</button>
     </div>
   </div>
 
@@ -1989,10 +1993,12 @@ const wmsEmag=L.imageOverlay(
 let _tileLabels=L.tileLayer(DARK?'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',{zIndex:10,attribution:''}).addTo(map);
 
 const lTherm=L.layerGroup();
+const lTour=L.layerGroup();
+const lIndu=L.layerGroup();
 const lSit2=L.layerGroup(),lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lSit=L.layerGroup(),lRPG=L.layerGroup(),lForet=L.layerGroup(),lAOC=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lCem=L.layerGroup(),lIntl=L.layerGroup(),lAlign=L.layerGroup(),lEgl=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
-const LAYERS={sit2:lSit2,bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,prod:lProd,sit:lSit,rpg:lRPG,foret:lForet,aoc:lAOC,hot:lHot,con:lCon,cem:lCem,intl:lIntl,align:lAlign,egl:lEgl,therm:lTherm};
+const LAYERS={sit2:lSit2,bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,prod:lProd,sit:lSit,rpg:lRPG,foret:lForet,aoc:lAOC,hot:lHot,con:lCon,cem:lCem,intl:lIntl,align:lAlign,egl:lEgl,therm:lTherm,tour:lTour,indu:lIndu};
 const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag};
-const ACTIVE={sit2:false,bt:false,ant:false,antOffshore:false,geo:false,hyd:false,rpg:false,foret:false,aoc:false,cav:false,emag:false,hot:true,res:false,prod:false,sit:false,con:true,cem:false,intl:false,align:false,egl:false,therm:false};
+const ACTIVE={sit2:false,bt:false,ant:false,antOffshore:false,geo:false,hyd:false,rpg:false,foret:false,aoc:false,cav:false,emag:false,hot:true,res:false,prod:false,sit:false,con:true,cem:false,intl:false,align:false,egl:false,therm:false,tour:false,indu:false};
 
 const LEGEND_ACTIVE=new Set();let _legendCtrl=null;
 const LEGEND_HTML={
@@ -2009,7 +2015,9 @@ const LEGEND_HTML={
   egl:'<div class="leg-block"><b class="leg-title">Églises romanes</b><div class="leg-row"><span style="display:inline-block;position:relative;width:11px;height:11px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:4.5px;top:0;width:2px;height:11px;background:#d97706;border-radius:1px"></span><span style="position:absolute;top:3px;left:0;width:11px;height:2px;background:#d97706;border-radius:1px"></span></span>Granit piézo (biotite/alcalin)</div><div class="leg-row"><span style="display:inline-block;position:relative;width:11px;height:11px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:4.5px;top:0;width:2px;height:11px;background:#b45309;border-radius:1px"></span><span style="position:absolute;top:3px;left:0;width:11px;height:2px;background:#b45309;border-radius:1px"></span></span>Granit standard</div><div class="leg-row"><span style="display:inline-block;position:relative;width:11px;height:11px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:4.5px;top:0;width:2px;height:11px;background:#64748b;border-radius:1px"></span><span style="position:absolute;top:3px;left:0;width:11px;height:2px;background:#64748b;border-radius:1px"></span></span>Schiste</div><div class="leg-row"><span style="display:inline-block;position:relative;width:11px;height:11px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:4.5px;top:0;width:2px;height:11px;background:#78716c;border-radius:1px"></span><span style="position:absolute;top:3px;left:0;width:11px;height:2px;background:#78716c;border-radius:1px"></span></span>Calcaire/autre</div><div class="leg-src">Moracchini-Mazel · Phase 2</div></div>',
   res:'<div class="leg-block"><b class="leg-title">Réseau électrique</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>Ligne HTA 20kV</div><div class="leg-row"><span style="display:inline-block;width:14px;height:3px;background:#5c2000;vertical-align:middle;margin-right:4px"></span>Ligne HTB 63-225kV</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Hydraulique</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Thermique</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Interconnexion</div><div class="leg-src">EDF SEI · Supabase · OSM</div></div>',
   sit2:'<div class="leg-block"><b class="leg-title">Sites &amp; Ouvrages</b><div class="leg-row"><span style="display:inline-block;width:9px;height:9px;background:#5c7a3a;transform:rotate(45deg);vertical-align:middle;margin-right:6px"></span>Site remarquable</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#1a4b8c;vertical-align:middle;margin-right:4px"></span>Hydraulique</div><div class="leg-src">9 sites · 6 barrages</div></div>',
-  therm:'<div class="leg-block"><b class="leg-title">Sources thermales</b><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0ea5e9;border:2px solid white;border-radius:50%;box-shadow:0 0 3px #0ea5e966;vertical-align:middle;margin-right:4px"></span>Source / thermes actifs</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Géothermie · Failles · H88</span></div><div class="leg-src">4 sites · Valinco-Taravo</div></div>',
+  therm:'<div class="leg-block"><b class="leg-title">Sources thermales</b><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0ea5e9;border:2px solid white;border-radius:50%;box-shadow:0 0 3px #0ea5e966;vertical-align:middle;margin-right:4px"></span>Source / thermes actifs</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Géothermie · Failles · H88</span></div><div class="leg-src">5 sites · Valinco-Taravo-Fiumorbu</div></div>',
+  tour:'<div class="leg-block"><b class="leg-title">Tours génoises</b><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#5c7a3a;border:2px solid white;transform:rotate(45deg);vertical-align:middle;margin-right:4px"></span>Tour de surveillance MH</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Réseau surveillance côtière XVIe</span></div><div class="leg-src">19 tours · Cap Corse–Corse-du-Sud</div></div>',
+  indu:'<div class="leg-block"><b class="leg-title">Patrimoine industriel</b><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#78350f;border:2px solid white;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Mine historique</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Cibles EM · H85-H87 BRGM</span></div><div class="leg-src">6 mines · Cap Corse–Ghisoni</div></div>',
     bt:'<div class="leg-block"><b class="leg-title">Réseau BT</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>BT aérien</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>BT souterrain</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 12</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Sources production</b><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Hydraulique barrage</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Hydraulique fil de l\'eau</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Biogaz</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:50%;vertical-align:middle;margin-right:4px"></span>TAC (turbine à combustion)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Interconnexion</div><div class="leg-src">EDF SEI · Supabase</div></div>',
   aoc:'<div class="leg-block"><b class="leg-title">AOC/AOP Corse</b><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#99000033;border:2px solid #991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Cru — Patrimonio · Ajaccio</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#ea580c33;border:2px solid #ea580c;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Village — Calvi · Sartène · Figari</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#fbbf2433;border:2px solid #fbbf24;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Muscat Cap Corse · Régionale</div><div class="leg-src">INAO — H64 terroir-EM</div></div>'
@@ -2148,7 +2156,7 @@ function validateContrib(){
 function updateLegendPanel(){
   if(!_legendCtrl){_legendCtrl=L.control({position:'bottomright'});_legendCtrl.onAdd=function(){const d=L.DomUtil.create('div');d.id='tellux-leg-panel';d.style.cssText='background:rgba(247,248,250,.97);border:1px solid rgba(0,0,0,.08);border-radius:10px;font-family:DM Sans,sans-serif;font-size:10px;max-width:170px;box-shadow:0 2px 10px rgba(0,0,0,.1);overflow:hidden;display:none';L.DomEvent.disableClickPropagation(d);return d;};_legendCtrl.addTo(map);}
   const panel=document.getElementById('tellux-leg-panel');if(!panel)return;
-  const order=['hot','res','bt','prod','ant','geo','hyd','cav','emag','wdmam','intl','align','egl','sit','therm','sit2','aoc'];const active=order.filter(id=>LEGEND_ACTIVE.has(id));
+  const order=['hot','res','bt','prod','ant','geo','hyd','cav','emag','wdmam','intl','align','egl','sit','therm','tour','indu','sit2','aoc'];const active=order.filter(id=>LEGEND_ACTIVE.has(id));
   if(!active.length){panel.style.display='none';return;}
   panel.style.display='block';
   panel.innerHTML=active.filter(id=>LEGEND_HTML[id]).map((id,i)=>(i>0?'<div style="height:1px;background:rgba(0,0,0,.06);margin:0 8px"></div>':'')+LEGEND_HTML[id]).join('');
@@ -2171,6 +2179,8 @@ function tog(id,cls,btn){
     if(id==='hot'&&lHot.getLayers().length===0)buildHot();
     if(id==='sit2'&&lSit2.getLayers().length===0)buildSiteMarkers();
     if(id==='therm'&&lTherm.getLayers().length===0)buildThermLayer();
+    if(id==='tour'&&lTour.getLayers().length===0)buildTourLayer();
+    if(id==='indu'&&lIndu.getLayers().length===0)buildInduLayer();
     if(id==='res'&&lRes.getLayers().length===0)loadReseau();
     if(id==='prod'&&lProd.getLayers().length===0)loadProd();
     if(id==='bt'&&lBT.getLayers().length===0)loadBT();
@@ -3684,6 +3694,65 @@ let SITES=[
   [42.093,9.064,'Cascades du Voile de la mariée','Remarquable','#8b5cf6','Cascade 150m · Granit hercynien · Bocognano · Anomalie piézo potentielle · Haute Gravona'],
   [41.880,9.070,'Plateau du Coscione','Remarquable','#8b5cf6','Plateau granit 1400m · Pozzines sacrées · Bergeries ancestrales · Courants telluriques diffus'],
   [43.080,9.650,'Anneaux du Cap Corse','Remarquable','#8b5cf6','1 417 formations coralligènes circulaires ~20m Ø · 120m profondeur · 15 km² · Découvertes 2011 (sonar) · Expédition Gombessa 6 (Ballesta 2021-2024) · Datées ~21 000 ans (Bard CEREGE) · Parc naturel marin Cap Corse et Agriate'],
+  // ── GRAND SUD / ALTA ROCCA–PORTO-VECCHIO ──
+  // ── Groupe A — Torréens / Protohistoriques ──
+  [41.578,9.278,'Tappa (Porto-Vecchio)','Mégalithique','#854d0e','Torra protohistorique Bronze + Néolithique · MH 26/03/2021 · Punta di a Caccia · Fouilles Grosjean 1960-61 · Sépulture Tappa 2 IVe s. av. J.-C.'],
+  [41.583,9.268,'Torre (réseau torréen PV)','Mégalithique','#854d0e','Site torréen · Réseau Bronze Age golfe Porto-Vecchio · Grosjean · Lieu-dit Torre'],
+  [41.598,9.272,'Bruschiccia','Mégalithique','#854d0e','Site torréen · Réseau Bronze Age Porto-Vecchio · Grosjean · GPS approx.'],
+  [41.755,9.175,'Cuciurpula','Mégalithique','#854d0e','Habitat villageois 1er Age du Fer · ~40 structures · Bronze final–VIe s. av. J.-C. · Serra-di-Scopamene · Fouilles Peche-Quilichini 2008-2026 · 1030m alt.'],
+  [41.540,9.112,'Nulachiu (Sotta)','Mégalithique','#854d0e','Sépulture collective Age du Fer · Commune de Sotta · GPS approx. · Peche-Quilichini'],
+  // ── Groupe B — Châteaux médiévaux génois ──
+  [41.528,8.922,'Castellu di u Grecu','Site remarquable','#5c7a3a','Château génois XIIIe · Plateau de Cauria · Domaine agraire privé · Giovanni Stregia 1239 · Chessa 2000'],
+  [41.547,8.952,'Castellu d\'Itali','Site remarquable','#5c7a3a','Château médiéval XIIIe · Même vallée que U Grecu · Plateau de Cauria · GPS approx.'],
+  // ── Groupe C — Tours génoises côte E / PV ──
+  [41.710,9.341,'Tour de Fautéa','Site remarquable','#5c7a3a','Tour génoise 1592 · MH 1989 · Côte E Corse-du-Sud · Granit · Entre PV et Solenzara'],
+  [41.648,9.334,'Tour de Pinarellu','Site remarquable','#5c7a3a','Tour génoise · Côte E · Golfe de Pinarellu · Granit · Réseau surveillance côtière · GPS approx.'],
+  [41.617,9.310,'Tour de San Ciprianu','Site remarquable','#5c7a3a','Tour génoise · Golfe Porto-Vecchio · Granit rose · Réseau côtier · GPS approx.'],
+  [41.524,8.988,'Tour d\'Olmeto (Monacia)','Site remarquable','#5c7a3a','Tour génoise · Surplombant Monacia-d\'Aullene · Granit · Intérieur Corse-du-Sud · GPS approx.'],
+  // ── Groupe D — Urbain / Architectural ──
+  [41.590,9.279,'Porto-Vecchio citadelle','Site remarquable','#5c7a3a','Fondation Banque de Saint-Georges 1539 · 5 bastions + Porte génoise · Bastion de France 1542 · Inscrit MH oct. 2019'],
+  // ── Groupe E — Remarquable naturel ──
+  [41.477,9.018,'Massif de Cagna / Bitalza','Remarquable','#8b5cf6','Chaos granitique hercynien · Couple aigles royaux le plus méridional de France · Pivoine endémique Corsica · Bergeries de Bitalza · 1217m'],
+  // ── FIUM'ORBU–ALÉRIA ──
+  // ── Groupe A — Aléria archéologique ──
+  [42.104,9.513,'Fort Matra / Musée Carcopino','Site remarquable','#5c7a3a','Fort génois XVIe · Musée Jérôme Carcopino · Aléria · MH 12/10/1962 · Collections étrusques et romaines'],
+  [42.103,9.514,'Thermes romains de Santa Laurina','Site remarquable','#5c7a3a','Thermes romains Ier-IVe s. · Caldarium, tepidarium, frigidarium, laconicum · Aléria · Inscrit MH 23/01/2007 (PA2B000005)'],
+  [42.110,9.508,'Nécropole de Casabianda / Lamajone','Site remarquable','#5c7a3a','Unique nécropole étrusque en France · Ve-IIIe s. av. J.-C. · Fouilles Jehasse 1960-1992 · Hypogée IVe s. intact (Lamajone, Inrap 2018) · PA00099151 · 500-1200 sépultures potentielles · Labex Archimede 2018-2026'],
+  // ── Groupe B — Thermalisme ──
+  [42.057,9.388,'Pietrapola (station thermale)','Thermalisme','#0ea5e9','56°C · Sulfurées sodiques hyperthermales · Unique station thermale agréée Corse (RH3 rhumatologie) · 7 sources · 200 000 L/j · Commune Isolaccio-di-Fiumorbo · 700m alt. · Propriété CdC · Rouverture post-travaux 2023'],
+  // ── Groupe C — Tour génoise ──
+  [42.137,9.471,'Tour de Diana','Site remarquable','#5c7a3a','Tour génoise 1582 · Entrée grau de l\'étang de Diana · Signal Barbaresques · Lido · GPS approx.'],
+  // ── Groupe D — Remarquable naturel / lagunaire ──
+  [42.132,9.481,'Étang de Diana','Remarquable','#8b5cf6','570 ha · 11 m profondeur · Dianae portus Ptolémée · Port phocéen 537 av. J.-C. · Ostréiculture huîtres nustrale · Lido · Ghisonaccia'],
+  [42.023,9.477,'Étang d\'Urbino','Remarquable','#8b5cf6','790 ha · Natura 2000 ZPS FR9410098 + ZSC FR9400580 · Ramsar n°1831 (sept. 2008) · Conservatoire Littoral 2007 · 113 espèces oiseaux · Cyprinodonte Aphanius fasciatus (endémique) · Kosteletzkya pentacarpos'],
+  // ── Groupe E — Patrimoine industriel ──
+  [42.007,9.196,'Mine de la Finosa / Kyrie Eleison','Site remarquable','#5c7a3a','Mine plomb-argent-zinc · 1910-1957 · Galène, cérusite, blende, bornite · Écaille volcano-sédimentaire permienne 276 Ma · Concession 17/02/1922 · Réserves BRGM ~400 000 t · Ruines concasseur Morel&Giraud + Decauville · Paganellu · Ghisoni · IA2B000397'],
+  // ── Groupe F — Géologique ──
+  [42.148,9.453,'Linguizzetta (malachites)','Remarquable','#8b5cf6','Gisements de malachite chalcolithiques · Source cuivre Terrina IV IIIe millénaire av. J.-C. · Impuretés périclase retrouvées dans scories · Camps 1975-1988 · GPS approx.'],
+  // ── CAP CORSE–NEBBIO–AGRIATES ──
+  // ── Groupe A — Signatures EM géologiques / mines ──
+  [42.620,9.354,'Col de San Stefano','Remarquable','#8b5cf6','Limite serpentinites ophiolitiques · Anomalie magnétique référence · Métamorphisme alpin 40 Ma · Entre Oletta et Bastia · BRGM feuille Saint-Florent · GPS RP-57748-FR'],
+  [42.820,9.330,'Mine d\'amiante de Canari','Patrimoine industriel','#78350f','1948-1965 · SA Amiante de Corse / Eternit · 300 000 t chrysotile · Serpentinites chrysotilifères · Plages galets noirs Nonza-Albo · Anomalie magnétique locale · Démolition 2025 · BRGM RR-39277-FR · IA2B000939'],
+  [42.880,9.392,'Mine de Luri (antimoine)','Patrimoine industriel','#78350f','District antimonifère Cap Corse · Filons Castello + Spergane · 3400 t · Puits Terra Rossa · Stibine en schiste lustre · Conducteur EM résiduel · Mise en sécurité 2005 · POP IA2B000832'],
+  [42.965,9.430,'Mine de Meria (antimoine)','Patrimoine industriel','#78350f','Plus importante mine Cap Corse · Filons Vallone, San Martino, Fossato · 5600 t · Laverie + centrale électrique 1911 · Travaux noyés · District 11 000 t total Cap Corse · GPS approx.'],
+  [42.990,9.395,'Mine d\'Ersa (antimoine)','Patrimoine industriel','#78350f','Filons Granaggiolo, Castagnone, Guadicello, Sainte-Marie · 2000 t · Fermée 01/01/1919 · GPS approx.'],
+  [42.730,9.332,'Mine de magnétite de Farinole','Patrimoine industriel','#78350f','Gisement de fer magnétite · Versant est Cap Corse · Cible magnétique majeure · BSS BRGM InfoTerre · GPS approx.'],
+  // ── Groupe B — Tours génoises MH ──
+  [42.700,9.268,'Tour de la Mortella','Tour génoise','#5c7a3a','Tour génoise 1563-1564 · Architecte Paleari Fratino · Inscrite MH 08/03/1991 PA00099279 · Modèle des 140+ Martello Towers britanniques (Angleterre, Irlande, Canada, Australie, Afrique du Sud) · Conservatoire du littoral 1980 · Saint-Florent côte ouest · GPS approx.'],
+  [42.888,9.360,'Tour de Sénèque (Pino/Luri)','Tour génoise','#5c7a3a','Donjon seigneurial XVIe · Famille dei Moti · Classée MH 1840 · 564m alt. · Légende exil Sénèque 41-49 ap. J.-C. · Plus ancienne MH Corse · GPS approx.'],
+  [42.627,9.497,'Tour d\'Erbalunga (Brando)','Tour génoise','#5c7a3a','Tour génoise XVe · Détruite 1553, reconstruite · Brando · Vue golfe de Brando · GPS approx.'],
+  [42.983,9.463,'Tour de la Chiappella (Rogliano)','Tour génoise','#5c7a3a','Tour génoise 1549 · Inscrite MH 1991 · Éventrée par Nelson 1796 · Tamarone · Associée piève Santa Maria 1176 · GPS approx.'],
+  [43.028,9.405,'Tour de Giraglia (îlot)','Tour génoise','#5c7a3a','Tour génoise carrée · Îlot Giraglia extrémité nord Cap Corse · Phare actif · Conservatoire du littoral · GPS approx.'],
+  // ── Groupe C — Médiéval / Castelli ──
+  [42.967,9.425,'Castellacciu San Colombano','Site remarquable','#5c7a3a','Château Da Mare 1246 · 32×23m · Détruit Doria 03/03/1554 · Sable construction de Macinaggio · Ermitage colombanien VIIe · Inscrit MH · Rogliano · GPS approx.'],
+  // ── Groupe D — Remarquable naturel ──
+  [42.676,9.198,'Dunes de Saleccia','Remarquable','#8b5cf6','ZNIEFF 2e génération · 150 ha · Dunes boisées pins 4-5m · Juniperus macrocarpa et phoenicea · Agriates · Conservatoire du littoral · Désert des Agriate'],
+  [43.010,9.432,'Archipel de Finocchiarola','Remarquable','#8b5cf6','Réserve naturelle · Conservatoire du littoral · 3 îlots · Colonie grand cormoran · Nord Macinaggio · GPS approx.'],
+  [42.640,9.370,'Grotte de Castiglione (Oletta)','Remarquable','#8b5cf6','Karst miocène · Fossiles Pléistocène moyen 350 000 ans · Découverte 1991 · Commune Oletta · GPS approx.'],
+  // ── Groupe E — Art pariétal préhistorique ──
+  [42.867,9.437,'Grotta scritta d\'Olmeta-Capocorso','Site remarquable','#5c7a3a','Art pariétal préhistorique · Inscrit MH · Olmeta-di-Capocorso · GPS approx. · Unique Corse alpine'],
+  // ── Groupe F — Romanesque prioritaire ──
+  [42.670,9.343,'San Cesariu de Rapale','Site remarquable','#5c7a3a','Unique église romane en serpentine magnétique · Ruinée v.1920 · 500m alt. · Anomalie EM forte · Classée MH 1840 · Cible mesure Tellux priorité 1 · Rapale · Nebbiu'],
 ]
 
 // ═══ ORIENTATIONS DES SITES MÉGALITHIQUES ═══
@@ -4194,6 +4263,7 @@ CHURCHES=[
 {lat:41.760,lon:8.967,name:'San Franciscu (Couvent de Petreto-Bicchisano)',lieu:'Petreto-Bicchisano',pieve:'Ornano',s:'XVe',mat:'granit',orient:88,sub:'granit_biotite',cont:'',mh:'',note:'Couvent franciscain fondé 1492 · Sartenais · Granit biotite · Vallée Taravo'},
 {lat:41.762,lon:8.895,name:'Sant\'Antone (Couvent d\'Olmeto)',lieu:'Olmeto',pieve:'Valinco',s:'XVIIIe',mat:'granit',orient:85,sub:'granit_biotite',cont:'',mh:'',note:'Couvent fondé 1717 · Olmeto · Granit biotite · Golfe Valinco · GPS approx.'},
 {lat:41.730,lon:9.080,name:'San Franciscu (Couvent de Sainte-Lucie-de-Tallano)',lieu:'Sainte-Lucie-de-Tallano',pieve:'Alta Rocca',s:'XIIIe',mat:'granit',orient:90,sub:'granit_biotite',cont:'',mh:'MH',note:'Couvent franciscain fondé 1298 · Alta Rocca · Granit biotite · Un des plus anciens de Corse'},
+{lat:42.670,lon:9.343,name:'San Cesariu',lieu:'Rapale',pieve:'Nebbiu',s:'XIIe',mat:'serpentine',orient:88,sub:'serpentinite',cont:'',mh:'MH',note:'Unique église romane au monde entièrement en serpentine verte · Ruinée v.1920 · 500m alt. · Anomalie magnétique forte · Jumelle San Michele de Murato · Classée MH 1840 · Moracchini-Mazel 1967'},
 ];
   _churchesLoaded = true;
   console.log(`📦 CHURCHES fallback inline: ${CHURCHES.length} entrées`);
@@ -4217,12 +4287,21 @@ function analyseChurches(){
   return {total:CHURCHES.length,avgOrient,stdOrient,onGranit,onSchist,onCalc,withCont,mats,subs,pieves};
 }
 
+// Entrées locales non présentes dans Supabase — survivent au remplacement CHURCHES par loadChurchesData()
+const _CHURCHES_EXTRA=[
+  {lat:41.760,lon:8.967,name:'San Franciscu (Couvent de Petreto-Bicchisano)',lieu:'Petreto-Bicchisano',pieve:'Ornano',s:'XVe',mat:'granit',orient:88,sub:'granit_biotite',cont:'',mh:'',note:'Couvent franciscain fondé 1492 · Sartenais · Granit biotite · Vallée Taravo'},
+  {lat:41.762,lon:8.895,name:'Sant\'Antone (Couvent d\'Olmeto)',lieu:'Olmeto',pieve:'Valinco',s:'XVIIIe',mat:'granit',orient:85,sub:'granit_biotite',cont:'',mh:'',note:'Couvent fondé 1717 · Olmeto · Granit biotite · Golfe Valinco · GPS approx.'},
+  {lat:41.730,lon:9.080,name:'San Franciscu (Couvent de Sainte-Lucie-de-Tallano)',lieu:'Sainte-Lucie-de-Tallano',pieve:'Alta Rocca',s:'XIIIe',mat:'granit',orient:90,sub:'granit_biotite',cont:'',mh:'MH',note:'Couvent franciscain fondé 1298 · Alta Rocca · Granit biotite · Un des plus anciens de Corse'},
+  {lat:42.670,lon:9.343,name:'San Cesariu',lieu:'Rapale',pieve:'Nebbiu',s:'XIIe',mat:'serpentine',orient:88,sub:'serpentinite',cont:'',mh:'MH',note:'Unique église romane au monde entièrement en serpentine verte · Ruinée v.1920 · 500m alt. · Anomalie magnétique forte · Jumelle San Michele de Murato · Classée MH 1840 · Moracchini-Mazel 1967'},
+];
 // ═══ LAYER ÉGLISES ROMANES (Phase 2) ═══
 async function buildEglLayer(){
   lEgl.clearLayers();
   await loadChurchesData();
   const stats=analyseChurches();
-  CHURCHES.forEach(c=>{
+  const _supaNames=new Set(CHURCHES.map(c=>c.name));
+  const _churches=CHURCHES.concat(_CHURCHES_EXTRA.filter(c=>!_supaNames.has(c.name)));
+  _churches.forEach(c=>{
     const isPiezo=c.sub&&(c.sub.includes('granit_biotite')||c.sub.includes('granit_alcalin')||c.sub.includes('granit_porphyrique'));
     const col=isPiezo?'#d97706':c.sub&&c.sub.startsWith('granit')?'#b45309':c.sub&&c.sub.startsWith('schiste')?'#64748b':'#78716c';
     // Cross icon for churches
@@ -4257,7 +4336,7 @@ function buildSiteMarkers(){
   if(typeof lSit!=='undefined'&&lSit.clearLayers)lSit.clearLayers();
   if(typeof lSit2!=='undefined'&&lSit2.clearLayers)lSit2.clearLayers();
   SITES.forEach(([a,o,n,t,c,desc,gpsInfo],_siteIdx)=>{
-  if(t==='Thermalisme')return;
+  if(t==='Thermalisme'||t==='Tour génoise'||t==='Patrimoine industriel')return;
   let shape,sw,sh;
   if(t==='Mégalithique'){
     shape='<div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:13px solid '+c+';filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))"></div>';
@@ -4313,6 +4392,36 @@ function buildThermLayer(){
       .addTo(lTherm);
   });
 }
+function buildTourLayer(){
+  const tourNames=new Set([
+    'Tour génoise Chiappa','Tour d\'Agnello (Cap Corse)','Tour de la Parata (Ajaccio)',
+    'Tour de Capu di Muru','Tour de Micalona','Tour de Campomoro','Tour de Tizzano',
+    'Tour de Capu Laurosu','Tour de Portigliolo','Tour de Calanca','Tour d\'Arbellara',
+    'Tour de Fautéa','Tour de Pinarellu','Tour de San Ciprianu','Tour d\'Olmeto (Monacia)',
+    'Tour de Diana'
+  ]);
+  lTour.clearLayers();
+  SITES.forEach(([a,o,n,t,c,desc])=>{
+    if(t!=='Tour génoise'&&!tourNames.has(n))return;
+    const col=c||'#5c7a3a';
+    const icon=L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:'+col+';border:2px solid white;transform:rotate(45deg);box-shadow:0 0 3px rgba(0,0,0,.3)"></div>',iconSize:[10,10],iconAnchor:[5,5]});
+    L.marker([a,o],{icon,interactive:true})
+      .bindPopup('<b>'+n+'</b><br><span style="font-size:12px;color:var(--tx2)">'+desc+'</span>')
+      .addTo(lTour);
+  });
+}
+function buildInduLayer(){
+  const induNames=new Set(['Mine de la Finosa / Kyrie Eleison']);
+  lIndu.clearLayers();
+  SITES.forEach(([a,o,n,t,c,desc])=>{
+    if(t!=='Patrimoine industriel'&&!induNames.has(n))return;
+    const col=c||'#78350f';
+    const icon=L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:'+col+';border:2px solid white;border-radius:2px;box-shadow:0 0 3px rgba(0,0,0,.3)"></div>',iconSize:[10,10],iconAnchor:[5,5]});
+    L.marker([a,o],{icon,interactive:true})
+      .bindPopup('<b>'+n+'</b><br><span style="font-size:12px;color:var(--tx2)">'+desc+'</span>')
+      .addTo(lIndu);
+  });
+}
 
 function loadSitesReference(){
   // Tente de charger SITES_REFERENCE.json (source de vérité hébergée)
@@ -4321,10 +4430,11 @@ function loadSitesReference(){
     .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
     .then(function(data){
       if(!Array.isArray(data)||!data.length)throw new Error('JSON vide ou invalide');
-      // Conversion objet → tableau pour compatibilité avec le code existant
-      // Le 7e élément (optionnel) porte les métadonnées GPS {source, audit}
-      SITES=data.map(function(s){return [s.lat,s.lon,s.nom,s.type,s.couleur,s.description,s.gps_source?{source:s.gps_source,audit:s.gps_audit||null}:null];});
-      console.log('[Tellux] SITES_REFERENCE.json chargé : '+SITES.length+' sites');
+      var remote=data.map(function(s){return[s.lat,s.lon,s.nom,s.type,s.couleur,s.description,s.gps_source?{source:s.gps_source,audit:s.gps_audit||null}:null];});
+      var remoteNames=new Set(remote.map(function(s){return s[2];}));
+      var localExtra=SITES.filter(function(s){return!remoteNames.has(s[2]);});
+      SITES=remote.concat(localExtra);
+      console.log('[Tellux] SITES_REFERENCE.json chargé : '+remote.length+' sites + '+localExtra.length+' local');
       buildSiteMarkers();
     })
     .catch(function(err){
