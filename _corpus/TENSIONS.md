@@ -133,8 +133,58 @@
 
 ---
 
-**Note épistémique :** ces tensions ne sont pas des "erreurs" du corpus ; ce sont des frontières du savoir où Tellux doit faire des choix informés dans architecture v2. La résolution ou non de ces tensions affecte directement quelles variables du modèle phase 2-3 sont pertinentes.
+## T9. Modèle LNT vs hormesis radiologique
+
+**Statut : Débat actif, institutionnellement stabilisé**
+
+**Positions en présence :**
+- Position A (LNT institutionnelle) : ICRP, ASNR, OMS maintiennent le modèle linéaire sans seuil (LNT) pour la radioprotection ; toute dose, même infime, comporte un risque proportionnel ; le modèle est conservateur et protecteur
+- Position B (hormesis/non-linéarité) : Calabrese, Tubiana, Feinendegen, Cuttler, et la Health Physics Society documentent des effets bénéfiques ou nuls aux faibles doses dans de nombreux systèmes biologiques ; la linéarité à bas dose est une extrapolation non vérifiée et potentiellement erronée
+- Position C (UNSCEAR intermédiaire) : UNSCEAR 2012 reconnaît l'adaptive response comme phénomène biologique réel (Olivieri 1984 et réplications) sans l'intégrer réglementairement ; position épistémiquement honnête mais institutionnellement inerte
+
+**Sources : Axes K, L**
+
+**Implications pour Tellux :**
+- Reformulation honnête de la couche radon en phase 1 : ni alarmisme LNT, ni trivialisation ; documentation du paradoxe empirique (HBRA, adaptive response, zones endémiques sans surmortalité)
+- Le positionnement de Tellux sur cette tension est directement visible dans la communication : choisir la position C (intermédiaire documentée) est scientifiquement défendable et différenciant
 
 ---
 
-*Cartographie créée 2026-04-19. À mettre à jour à chaque révision du corpus.*
+## T10. Programmes de recherche contradictoires sur Tchernobyl
+
+**Statut : Contradiction apparente, objets d'étude probablement compatibles**
+
+**Positions en présence :**
+- Position A (effets négatifs documentés) : Mousseau et Møller documentent sur 20 ans une réduction de 60% de la richesse en oiseaux dans les zones contaminées, des malformations, des anomalies immunitaires, des réductions de fertilité chez espèces sensibles
+- Position B (abondance supérieure documentée) : Beresford, Smith, Webster, Deryabina documentent une abondance de grands mammifères (loups, sangliers, cerfs) supérieure à celle des réserves témoins non contaminées, en l'absence de pression humaine
+
+**Sources : Axe M**
+
+**Implications pour Tellux :**
+- Ces deux positions ne sont probablement pas contradictoires mais reflètent des espèces et des métriques différentes (espèces radiosensibles individuellement vs populations de mégafaune robuste en absence de pression humaine)
+- La variable EM non contrôlée dans les deux programmes de recherche pourrait expliquer une part de la variance résiduelle inexpliquée
+- La méthodologie Tellux (cartographie EM + ionisant en co-exposition) est proposable comme direction de recherche complémentaire à Tchernobyl
+
+---
+
+## T11. Effets transgénérationnels de l'exposition ionisante chez l'humain
+
+**Statut : Controverse ouverte 2026**
+
+**Positions en présence :**
+- Position A (absence d'effet générationnel) : Yeager et al. 2021 (*Science*) concluent à l'absence d'augmentation des mutations de novo chez les enfants de liquidateurs de Tchernobyl ; étude sur génome entier, cohorte robuste, peer-reviewed
+- Position B (signature mutationnelle transgénérationnelle) : études 2025 (*Scientific Reports*) identifient à l'inverse une signature mutationnelle transgénérationnelle spécifique dans des cohortes exposées ; méthodologies et populations différentes
+
+**Sources : Axe M (prolongement Axe K)**
+
+**Implications pour Tellux :**
+- Si les effets transgénérationnels passent non par mutations génétiques mais par mécanismes épigénétiques, le cadre pertinent est l'épigénome de l'exposition — précisément le cadre de l'hypothèse H4 de Tellux
+- Cette tension justifie que Tellux maintienne le cadre épigénétique comme alternatif au cadre génétique classique pour les expositions ionisantes faibles
+
+---
+
+**Note épistémique :** ces tensions ne sont pas des "erreurs" du corpus ; ce sont des frontières du savoir où Tellux doit faire des choix informés dans architecture v2. La résolution ou non de ces tensions affecte directement quelles variables du modèle phase 2-3 sont pertinentes. Tensions T9-T11 ajoutées après intégration axes K-M.
+
+---
+
+*Cartographie créée 2026-04-19. Enrichie axes K-M : 2026-04-19. À mettre à jour à chaque révision du corpus.*

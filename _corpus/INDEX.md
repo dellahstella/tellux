@@ -6,24 +6,29 @@
 
 | Lettre | Titre | Statut | Lignes | Date Cowork | Fichier |
 |--------|-------|--------|--------|-------------|---------|
-| A | Conscience et perception électromagnétique | À copier | ~2000 | 2026-04-19 | `AXE_A_CONSCIENCE_EM.md` |
-| B | Thérapeutiques EM et champ oncologique | À copier | ~2200 | 2026-04-19 | `AXE_B_THERAPEUTIQUES_EM.md` |
-| C | Résonances ambiantes et physiologie | À copier | ~1800 | 2026-04-19 | `AXE_C_RESONANCES_AMBIANT_PHYSIOLOGIE.md` |
-| D | Communication scientifique et controverse | À copier | ~1600 | 2026-04-19 | `AXE_D_COMMUNICATION_SCIENTIFIQUE.md` |
-| E | Science citoyenne et mesures EM participatives | À copier | ~2100 | 2026-04-19 | `AXE_E_SCIENCECITOYENNE_EM.md` |
-| F | Corpus Corse et documentation territoriale | À copier | ~1900 | 2026-04-19 | `AXE_F_CORPUS_CORSE.md` |
-| G | Observatoires EM et modèles de monitoring | À copier | ~2000 | 2026-04-19 | `AXE_G_OBSERVATOIRES_EM.md` |
-| H | Biologie moléculaire et cascades signalisation | Brief prêt, exécution Cowork à venir | — | — | `AXE_H_BIOLOGIE_MOLECULAIRE.md` |
-| I | Modèle de score et cadre d'intégration | Brief prêt, exécution Cowork à venir | — | — | `AXE_I_MODELE_SCORE_CADRE.md` |
-| J | (À définir) | Brief à préparer | — | — | `AXE_J_XXX.md` |
+| A | Conscience et perception électromagnétique | Exécuté | 252 | 2026-04-19 | `AXE_A_CONSCIENCE_EM.md` |
+| B | Thérapeutiques EM et champ oncologique | Exécuté | 523 | 2026-04-19 | `AXE_B_THERAPEUTIQUES_EM.md` |
+| C | Résonances ambiantes et physiologie | Exécuté | 522 | 2026-04-19 | `AXE_C_RESONANCES_AMBIANT_PHYSIOLOGIE.md` |
+| D | Communication scientifique et controverse | Exécuté | 447 | 2026-04-19 | `AXE_D_COMMUNICATION_SCIENTIFIQUE.md` |
+| E | Science citoyenne et mesures EM participatives | Exécuté | 466 | 2026-04-19 | `AXE_E_SCIENCE_CITOYENNE_EM.md` |
+| F | Corpus Corse et documentation territoriale | Exécuté | 515 | 2026-04-19 | `AXE_F_CORPUS_CORSE.md` |
+| G | Observatoires EM et modèles de monitoring | Exécuté | 505 | 2026-04-19 | `AXE_G_OBSERVATOIRES_EM.md` |
+| H | Biologie moléculaire et cascades signalisation EM | Exécuté | 456 | 2026-04-19 | `AXE_H_BIOLOGIE_MOLECULAIRE_EM.md` |
+| I | Environnement, chronobiologie et rythmes biologiques | Exécuté | 414 | 2026-04-19 | `AXE_I_ENVIRONNEMENT_CHRONOBIOLOGIE.md` |
+| J | Géologie, radon et co-exposition ionisante/non-ionisante | Exécuté | 552 | 2026-04-19 | `AXE_J_GEOLOGIE_RADON.md` |
+| K | Hormesis radiologique et réponse adaptative | Exécuté | 598 | 2026-04-19 | `AXE_K_HORMESIS_RADON.md` |
+| L | Paradigme de la radiation — anomalies et reformulation | Exécuté | 421 | 2026-04-19 | `AXE_L_PARADIGME_RADIATION.md` |
+| M | Zones contaminées, laboratoires naturels et évolution | Exécuté | 366 | 2026-04-19 | `AXE_M_ZONES_CONTAMINEES_LABO_EVOLUTION.md` |
+| N | Sites sacrés corses et co-exposition géologique | Exécuté | 351 | 2026-04-19 | `AXE_N_SITES_SACRES_CORSES_CO_EXPOSITION.md` |
+| O | Populations corses — démographie et épidémiologie | Exécuté | 389 | 2026-04-19 | `AXE_O_POPULATIONS_CORSES_DEMOGRAPHIE.md` |
 
-**Total axes documentés : 7 | À documenter : 3**
+**Total axes documentés : 15 | Total lignes corpus axes : 6 777**
 
 ---
 
 ## Tensions actuellement cartographiées
 
-**Nombre total : 8 tensions identifiées en structure**
+**Nombre total : 11 tensions identifiées**
 
 Voir [`TENSIONS.md`](TENSIONS.md) pour détails, évolution historique, implications Tellux.
 
@@ -32,23 +37,28 @@ Voir [`TENSIONS.md`](TENSIONS.md) pour détails, évolution historique, implicat
 2. ICNIRP et effets non-thermiques — structurelle
 3. Expériences Persinger — causalité débattue
 4. Hypersensibilité électromagnétique : symptômes vs causalité — non résolue
-5. Résonances Schumann et fréquences alpha — speculative
+5. Résonances Schumann et fréquences alpha — spéculative
 6. CEMI et IIT EM — fondations méthodologiques divergentes
 7. Études précliniques Tsai vs applicabilité clinique — en cours de résolution
 8. Champs thérapeutiques vs ambients : logiques biologiques opposées — structurelle
+9. Modèle LNT vs hormesis radiologique — débat actif, institutionnellement stabilisé
+10. Programmes de recherche contradictoires sur Tchernobyl — contradiction apparente compatible
+11. Effets transgénérationnels de l'exposition ionisante chez l'humain — controverse ouverte 2026
 
 ---
 
 ## Hypothèses Tellux en chantier
 
-**Nombre total : 3 hypothèses formulées**
+**Nombre total : 5 hypothèses (3 enrichies + 2 nouvelles)**
 
 Voir [`HYPOTHESES.md`](HYPOTHESES.md) pour énoncés complets, testabilité, protocoles envisagés.
 
 **Hypothèses :**
-1. Signature EM territoriale corse comme variable d'intégration contextuelle
-2. Implantation des mégalithes corses corrélée aux signatures géologiques (minéralogie, topographie)
-3. Échelle d'intégration EM variable selon profils biologiques de population
+1. Signature EM territoriale corse comme variable d'intégration contextuelle *(testabilité confirmée axes B-C-H)*
+2. Implantation des mégalithes corses corrélée aux signatures géologiques *(protocole détaillé axe N)*
+3. Échelle d'intégration EM variable selon profils biologiques de population *(protocole transcriptomique axe O)*
+4. EM anthropique comme inhibiteur de l'expression des gènes adaptatifs aux expositions ionisantes naturelles *(nouvelle — axes K-L-M)*
+5. Renversement paradigmatique : radiation naturelle comme condition de l'expression adaptative *(nouvelle — axe L, convergence 4 catégories)*
 
 ---
 
@@ -65,4 +75,4 @@ Voir [`HYPOTHESES.md`](HYPOTHESES.md) pour énoncés complets, testabilité, pro
 
 ---
 
-*Infrastructure corpus créée 2026-04-19. Corpus scientifique vivant du projet Tellux.*
+*Infrastructure corpus créée 2026-04-19. Consolidation axes A-O : 2026-04-19. Corpus scientifique vivant du projet Tellux.*
