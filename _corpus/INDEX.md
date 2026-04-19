@@ -21,14 +21,17 @@
 | M | Zones contaminées, laboratoires naturels et évolution | Exécuté | 366 | 2026-04-19 | `AXE_M_ZONES_CONTAMINEES_LABO_EVOLUTION.md` |
 | N | Sites sacrés corses et co-exposition géologique | Exécuté | 351 | 2026-04-19 | `AXE_N_SITES_SACRES_CORSES_CO_EXPOSITION.md` |
 | O | Populations corses — démographie et épidémiologie | Exécuté | 389 | 2026-04-19 | `AXE_O_POPULATIONS_CORSES_DEMOGRAPHIE.md` |
+| P | Arbres, forêts et interface bio-EM — pont méthodologique | Exécuté | 396 | 2026-04-19 | `AXE_P_FORETS_INTERFACE_BIO_EM.md` |
+| Q | Lacunes méthodologiques des grandes études épidémiologiques environnementales | Exécuté | 432 | 2026-04-19 | `AXE_Q_LACUNES_METHODOLOGIQUES.md` |
+| R | Modélisation multi-échelles et interface humain-environnement | Exécuté | 335 | 2026-04-19 | `AXE_R_MODELISATION_MULTI_ECHELLES.md` |
 
-**Total axes documentés : 15 | Total lignes corpus axes : 6 777**
+**Total axes documentés : 18 | Total lignes corpus axes : 7 940**
 
 ---
 
 ## Tensions actuellement cartographiées
 
-**Nombre total : 11 tensions identifiées**
+**Nombre total : 12 tensions identifiées**
 
 Voir [`TENSIONS.md`](TENSIONS.md) pour détails, évolution historique, implications Tellux.
 
@@ -44,12 +47,13 @@ Voir [`TENSIONS.md`](TENSIONS.md) pour détails, évolution historique, implicat
 9. Modèle LNT vs hormesis radiologique — débat actif, institutionnellement stabilisé
 10. Programmes de recherche contradictoires sur Tchernobyl — contradiction apparente compatible
 11. Effets transgénérationnels de l'exposition ionisante chez l'humain — controverse ouverte 2026
+12. Attribution des effets shinrin-yoku : phytoncides seuls ou complexe environnemental ? — non résolue
 
 ---
 
 ## Hypothèses Tellux en chantier
 
-**Nombre total : 5 hypothèses (3 enrichies + 2 nouvelles)**
+**Nombre total : 6 hypothèses (3 enrichies + 2 nouvelles + H6 depuis axe P)**
 
 Voir [`HYPOTHESES.md`](HYPOTHESES.md) pour énoncés complets, testabilité, protocoles envisagés.
 
@@ -59,6 +63,7 @@ Voir [`HYPOTHESES.md`](HYPOTHESES.md) pour énoncés complets, testabilité, pro
 3. Échelle d'intégration EM variable selon profils biologiques de population *(protocole transcriptomique axe O)*
 4. EM anthropique comme inhibiteur de l'expression des gènes adaptatifs aux expositions ionisantes naturelles *(nouvelle — axes K-L-M)*
 5. Renversement paradigmatique : radiation naturelle comme condition de l'expression adaptative *(nouvelle — axe L, convergence 4 catégories)*
+6. Forêts comme sites d'interface bio-EM optimale *(nouvelle — axe P, protocole 4 volets, sites corses candidats)*
 
 ---
 
@@ -75,4 +80,4 @@ Voir [`HYPOTHESES.md`](HYPOTHESES.md) pour énoncés complets, testabilité, pro
 
 ---
 
-*Infrastructure corpus créée 2026-04-19. Consolidation axes A-O : 2026-04-19. Corpus scientifique vivant du projet Tellux.*
+*Infrastructure corpus créée 2026-04-19. Consolidation axes A-O : 2026-04-19. Intégration axes P-Q-R : 2026-04-19. Corpus scientifique vivant du projet Tellux.*
