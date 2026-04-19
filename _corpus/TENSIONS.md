@@ -183,8 +183,25 @@
 
 ---
 
-**Note épistémique :** ces tensions ne sont pas des "erreurs" du corpus ; ce sont des frontières du savoir où Tellux doit faire des choix informés dans architecture v2. La résolution ou non de ces tensions affecte directement quelles variables du modèle phase 2-3 sont pertinentes. Tensions T9-T11 ajoutées après intégration axes K-M.
+## T12. Attribution des effets shinrin-yoku : phytoncides seuls ou complexe environnemental ?
+
+**Statut : Non résolue — lacune méthodologique transversale**
+
+**Positions en présence :**
+- Position A (phytoncides dominants) : corpus Li Q. et école japonaise (Nippon Medical School) attribuent les effets physiologiques du bain de forêt principalement aux phytoncides (α-pinène, β-pinène, limonène) inhalés ; mécanisme principal : activation NK cells, réduction cortisol, amélioration humeur
+- Position B (complexe environnemental non décomposé) : axe P identifie que les études shinrin-yoku n'ont jamais mesuré le contexte électromagnétique de leurs sites forestiers. Soran et al. 2014 (*Journal of Plant Physiology*, PMC4410321) documentent que l'exposition RF anthropique modifie la production de phytoncides par les plantes elles-mêmes. Pooam et al. 2020 (*Scientific Reports*) montrent que les cryptochromes végétaux répondent aux RF. La production phytochimique d'une forêt n'est donc pas indépendante de son contexte EM, et les effets mesurés sur les humains intègrent vraisemblablement un complexe environnemental (EM + phytoncides modulés par EM + paysage sonore + spectre lumineux) que les études n'ont pas décomposé
+
+**Sources : Axe P**
+
+**Implications pour Tellux :**
+- Légitime le protocole intégré de l'axe P (4 volets) comme direction de recherche originale en contexte corse
+- Ne remet pas en cause les effets observés du bain de forêt ; propose de les décomposer en ajoutant la mesure EM comme variable manquante
+- Les forêts corses à faible exposition RF (Valdu-Niellu, Aïtone, Asco, Coscione) constituent des sites contrôle naturels pour isoler la variable EM
 
 ---
 
-*Cartographie créée 2026-04-19. Enrichie axes K-M : 2026-04-19. À mettre à jour à chaque révision du corpus.*
+**Note épistémique :** ces tensions ne sont pas des "erreurs" du corpus ; ce sont des frontières du savoir où Tellux doit faire des choix informés dans architecture v2. La résolution ou non de ces tensions affecte directement quelles variables du modèle phase 2-3 sont pertinentes. Tensions T9-T11 ajoutées après intégration axes K-M. Tension T12 ajoutée après intégration axe P.
+
+---
+
+*Cartographie créée 2026-04-19. Enrichie axes K-M : 2026-04-19. Enrichie axe P : 2026-04-19. À mettre à jour à chaque révision du corpus.*

@@ -163,8 +163,46 @@
 
 ---
 
-**Note épistémique :** ces cinq hypothèses Tellux émergent du croisement de quinze axes du corpus scientifique. Elles sont formulées à partir des données disponibles en avril 2026, pas nécessairement vraies, et visent à structurer comment les phases 2-3 collecteront des données pour les tester ou les infirmer. H4 et H5 sont particulièrement audacieuses et nécessitent une vigilance épistémique accrue face au risque de confirmation bias.
+## H6. Forêts comme sites d'interface bio-EM optimale
+
+**Statut : Formulée — testable, protocole à quatre volets disponible (axe P), financement à rechercher**
+
+**Énoncé :** Une forêt dense dans un environnement géomagnétique naturel non perturbé et faiblement exposée aux RF anthropiques (atténuation physique par la canopée 10-40 dB selon ITU-R P.833 + éloignement des infrastructures) pourrait constituer un site où arbres et humains bénéficient simultanément d'une interaction cryptochromique fonctionnelle non perturbée. Cette hypothèse articule trois corpus disjoints (shinrin-yoku, cryptochrome végétal, effets EM sur flore) et propose que les effets restaurateurs documentés du bain de forêt intègrent une composante électromagnétique non reconnue.
+
+**Fondement dans corpus :**
+- Axe P (forêts et interface bio-EM) — section 7 pour protocole complet
+- ITU-R P.833 : atténuation RF par canopée forestière documentée entre 10 et 40 dB selon fréquence et densité
+- Soran et al. 2014 (*Journal of Plant Physiology*, PMC4410321) : exposition RF anthropique modifie la production de phytoncides par les plantes
+- Pooam et al. 2020 (*Scientific Reports*) : cryptochrome végétal réactif aux RF
+- Xu et al. 2021 (*Nature*) : cryptochrome humain CRY2 magnétosensible
+- Li Q. 2010 : effets physiologiques du shinrin-yoku (NK cells, cortisol, humeur)
+
+**Testabilité :** Haute — protocole intégré à quatre volets détaillé dans axe P section 7
+
+**Protocole de test envisagé (4 volets) :**
+1. Cartographie EM in situ des sites forestiers corses candidats (RF, ELF, champ géomagnétique)
+2. Mesure de la production de phytoncides en sites contrastés (faible EM vs exposé)
+3. Protocole shinrin-yoku comparatif humains en sites EM contrastés (marqueurs biologiques : NK cells, cortisol, DHEA, VHR)
+4. Transcriptomique végétale comparative (expression cryptochromes, gènes stress oxydatif) selon gradient EM
+
+**Sites corses candidats identifiés :** Valdu-Niellu, Aïtone, Asco, Coscione (forêts intérieures, faible exposition RF documentée par absence d'infrastructures proches)
+
+**Données nécessaires :** Mesures EM participatives Tellux phase 2 pour établir la carte RF/ELF des sites candidats ; partenariat INRAE pour mesures phytochimiques ; CHU Corse ou Inserm pour protocole humain ; Université de Corse pour transcriptomique végétale
+
+**Résultat attendu si vraie :** Corrélation négative entre exposition RF du site et (a) production phytoncides, (b) effets physiologiques restaurateurs chez humains, (c) expression cryptochromes végétaux — gradient cohérent sur les 4 volets
+
+**Résultat attendu si fausse :** Absence de gradient EM sur les mesures biologiques ; effets shinrin-yoku homogènes indépendamment du contexte EM du site
+
+**Implications si vraie pour Tellux :** Tellux devient infrastructure de sélection des sites thérapeutiques optimaux ; ouvre partenariat avec secteur santé et tourisme de bien-être corse ; différenciation scientifique unique
+
+**Implications si fausse pour Tellux :** Les forêts corses restent des sites d'intérêt pour d'autres raisons ; la variable EM n'explique pas les effets shinrin-yoku ; focus sur autres variables (altitude, biodiversité, silence)
+
+**Risques et biais :** Biais de confirmation fort (hypothèse séduisante narrativement) ; variabilité naturelle élevée entre individus dans les protocoles shinrin-yoku ; nécessité de pré-registration du protocole avant collecte de données
 
 ---
 
-*Hypothèses H1-H3 créées 2026-04-19. H4-H5 ajoutées après intégration axes K-M : 2026-04-19. À enrichir et affiner au fil des avancées du projet.*
+**Note épistémique :** ces six hypothèses Tellux émergent du croisement de dix-huit axes du corpus scientifique. Elles sont formulées à partir des données disponibles en avril 2026, pas nécessairement vraies, et visent à structurer comment les phases 2-3 collecteront des données pour les tester ou les infirmer. H4 et H5 sont particulièrement audacieuses sur le plan paradigmatique. H6 est la plus directement actionnable sur le terrain corse.
+
+---
+
+*Hypothèses H1-H3 créées 2026-04-19. H4-H5 ajoutées après intégration axes K-M : 2026-04-19. H6 ajoutée après intégration axe P : 2026-04-19. À enrichir et affiner au fil des avancées du projet.*
