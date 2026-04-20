@@ -3357,6 +3357,73 @@ map.on('click',e=>{
 
 function addMarker(c){L.marker([c.lat,c.lon],{icon:mkIcon('#5c3a9b',false,11),zIndexOffset:200}).on('click',()=>info(`<span class="tag" style="background:#f0e8ff;color:#5c3a9b;border:0.5px solid #9b72d4">DB</span><b>${c.type}</b>${c.valeur?' — '+c.valeur+' '+(c.unite||'nT'):''}${c.note?`<br><i style="font-size:11px;color:var(--tx3)">${c.note}</i>`:''}<br><span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">IGRF:${c.igrf_nt||'—'}nT · score:${c.score_anomalie||'—'} · Kp:${c.kp||'—'} · Bz:${c.bz||'—'}nT</span>`)).addTo(lCon);}
 
+// ── ANFR ANTENNES CORSE — loader Supabase + émetteurs radio/TV majeurs ──
+// Restauré post-v8 (régression cleanup). Domaine EM strict — aucune dépendance patrimoine/agro.
+const GC={'2G':'#1a4b8c','3G':'#1a6b5c','4G':'#b85c00','5G':'#991b1b','infra':'#6b7280','default':'#4a4f5e'};
+
+async function loadAnt(){try{
+  // Chargement paginé — fetch direct sans AbortSignal (évite l'erreur postMessage clonage)
+  let rows=[], page=0, pageSize=500;
+  while(true){
+    const url=SB_URL+'/rest/v1/antennas_corse?select=lat,lon,generation,commune,operateur&order=id.asc'+
+      '&offset='+(page*pageSize)+'&limit='+pageSize;
+    const r=await fetch(url,{headers:sbH()});
+    if(!r.ok) throw new Error('Supabase HTTP '+r.status);
+    const batch=await r.json();
+    if(!batch||!batch.length)break;
+    rows=rows.concat(batch);
+    if(batch.length<pageSize)break;
+    page++;
+  }
+  // Filtre côtier RENFORCÉ — rejette les antennes en mer
+  const isLand=(lt,ln)=>{
+    if(lt<41.37||lt>43.01||ln<8.56||ln>9.56)return false;
+    if(lt>42.95&&(ln<9.25||ln>9.45))return false;
+    if(lt>42.90&&(ln<9.18||ln>9.48))return false;
+    if(lt>42.85&&ln<9.12)return false;
+    if(lt>42.75&&ln>9.50)return false;
+    if(lt>42.75&&lt<42.95&&ln<9.15)return false;
+    if(lt>42.15&&lt<42.40&&ln<8.58)return false;
+    if(lt>42.10&&lt<42.25&&ln<8.60)return false;
+    if(lt>42.05&&lt<42.15&&ln<8.63)return false;
+    if(lt>41.80&&lt<42.00&&ln<8.62)return false;
+    if(lt>41.62&&lt<41.78&&ln<8.80)return false;
+    if(lt<41.39)return false;
+    if(lt<41.60&&ln>9.30)return false;
+    if(lt>41.55&&lt<41.65&&ln>9.30)return false;
+    if(ln>9.53)return false;
+    return true;
+  };
+  let nSkipped=0, nOffshore=0, nSeaFiltered=0;
+  rows.forEach(f=>{
+    if(f.lon<8.30||f.lon>9.65||f.lat<41.35||f.lat>43.03){nSeaFiltered++;return;}
+    const isLandAnt=isLand(f.lat,f.lon);
+    if(isLandAnt){
+      const gen=f.generation||'default';
+      L.marker([f.lat,f.lon],{icon:mkIcon(GC[gen]||GC.default,false,9),zIndexOffset:100}).on('click',()=>info((f.commune||'Corse')+' · '+(f.operateur||'?'))).addTo(lAnt);
+    }else{
+      nOffshore++;
+      L.marker([f.lat,f.lon],{icon:mkIcon('#808080',false,5),zIndexOffset:50,opacity:0.5}).on('click',()=>info('<span style="color:#808080;font-weight:500">⚓ OFFSHORE</span> · '+(f.commune||'Corse')+' · '+(f.operateur||'?'))).addTo(lAntOffshore);
+      nSkipped++;
+    }
+  });
+  console.log('Antennes : '+(rows.length-nSeaFiltered-nOffshore)+' affichees, '+nOffshore+' offshore');
+  const hdr=document.getElementById('hdr-status');
+  if(hdr)hdr.textContent=(rows.length-nSeaFiltered-nOffshore)+' antennes · '+nOffshore+' offshore';
+  // Émetteurs radiodiffusion majeurs — icône croix ✛
+  const EMITTERS=[
+    [42.652,9.392,'Serra di Pigno','Émetteur radio/TV','988m altitude · RFI + France Inter + télévision · Couverture toute la Corse'],
+    [42.415,9.186,'Col de Teghime','Émetteur FH','Faisceau hertzien · Axe principal Nord-Sud · ~200 nT impact modèle'],
+    [42.009,8.827,'Monte Gozzi','Émetteur radio/TV','Relais TV 716m · Corse-du-Sud · Couverture Ajaccio et région'],
+    [42.540,9.445,'Bastia relais','Émetteur radio/TV','Relais TV/FM · Bastia · Couverture plaine orientale nord'],
+  ];
+  EMITTERS.forEach(([lat,lon,nom,type,desc])=>{
+    const shape='<div style="position:relative;width:12px;height:12px"><div style="position:absolute;left:5px;top:0;width:2px;height:12px;background:#5f5e5a"></div><div style="position:absolute;top:5px;left:0;width:12px;height:2px;background:#5f5e5a"></div></div>';
+    const icon=L.divIcon({html:shape,className:'',iconSize:[12,12],iconAnchor:[6,6]});
+    L.marker([lat,lon],{icon,zIndexOffset:150}).on('click',()=>info('<span class="tag" style="background:#f0f0ee;color:#5f5e5a;border:0.5px solid #aaa">'+type+'</span> <b>'+nom+'</b><br><span style="font-size:12px;color:var(--tx2)">'+desc+'</span>')).addTo(lAnt);
+  });
+}catch(e){console.error('❌ loadAnt erreur:',e.message);}}
+
 async function loadDB(){
   // Entièrement silencieux — ne bloque pas l'UI, ne touche pas à info()
   try{
@@ -4619,7 +4686,7 @@ try{if(!localStorage.getItem('tellux_disclaimer')){document.getElementById('disc
 function toggleTheme(){
   DARK=!DARK;
   document.documentElement.setAttribute('data-theme',DARK?'dark':'');
-  document.getElementById('theme-toggle').textContent=DARK?'☀️':'🌙';
+  const _tt=document.getElementById('theme-toggle');if(_tt)_tt.textContent=DARK?'☀️':'🌙';
   // Swap map tiles
   map.removeLayer(_tileBase);map.removeLayer(_tileLabels);
   _tileBase=L.tileLayer(DARK?'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{attribution:'© CartoDB © OSM',maxZoom:19,zIndex:1}).addTo(map);
@@ -4634,7 +4701,7 @@ function toggleMethodology(){
 
 // Init toggle icon
 if(DARK){
-  document.getElementById('theme-toggle').textContent='☀️';
+  const _tt2=document.getElementById('theme-toggle');if(_tt2)_tt2.textContent='☀️';
   document.documentElement.setAttribute('data-theme','dark');
   try{map.removeLayer(_tileBase);map.removeLayer(_tileLabels);
   _tileBase=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{attribution:'© CartoDB © OSM',maxZoom:19,zIndex:1}).addTo(map);
@@ -4642,7 +4709,9 @@ if(DARK){
   }catch(e){}
 }
 
-loadNOAA();loadCEM();
+// Guard: loadNOAA/loadCEM may be absent post-v8 cleanup — ne pas bloquer le reste du chaînage init
+if(typeof loadNOAA==='function')loadNOAA();
+if(typeof loadCEM==='function')loadCEM();
 loadChargeReseau().then(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}}).catch(()=>{});
 buildHot();
 showLegend('hot',true);
@@ -4660,7 +4729,7 @@ setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET L'Aquila — correction externe réelle // Météo + réfractivité troposphérique
 // EMAG2v3 OFF par défaut — toggle manuel via toggleEMAG()
 setTimeout(loadLightning,5000); // Activité orageuse
-setInterval(loadNOAA,15*60*1000);
+if(typeof loadNOAA==='function')setInterval(loadNOAA,15*60*1000);
 setInterval(loadDB,5*60*1000);
 setInterval(loadChargeReseau,15*60*1000); // Refresh charge réseau 15min
 setInterval(loadMeteo,30*60*1000);
