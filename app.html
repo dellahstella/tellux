@@ -1343,12 +1343,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 
   <!-- Agronomie → migrée vers agronomie.html (chore/move-agro-outils) -->
 
-  <!-- Séparateur + Outils EM (simulateur, experts, partager) -->
+  <!-- Séparateur + Outils EM (experts, partager) — Simulateur bâtiment migré vers agronomie.html -->
   <div style="height:1px;background:var(--border);margin:6px 4px 4px"></div>
   <div style="padding:0 4px 8px;display:flex;flex-direction:column;gap:3px">
-    <button onclick="togSim(this)" class="lbtn" id="b-sim" title="Simuler impact d'antenne, de bâtiment ou de blindage (modèle RF ITU-R P.2040-2)" style="font-size:11px;padding:6px 10px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--tx2);cursor:pointer;text-align:left;display:flex;align-items:center;gap:6px" aria-label="Simulateur bâtiment">
-      <span style="font-size:11px">🏗</span><span>Simulateur bâtiment</span>
-    </button>
     <button id="btn-expert" onclick="openExpertMode()" style="font-size:11px;padding:6px 10px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--tx2);cursor:pointer;text-align:left;display:flex;align-items:center;gap:6px" aria-label="Outils experts">
       <span>&#9881;</span><span>Outils experts</span><span style="margin-left:auto;font-size:9px;color:var(--tx3);font-family:var(--mono)">BETA</span>
     </button>
@@ -1603,61 +1600,11 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   </div>
 </div>
 
-<!-- PANNEAU SIMULATION -->
-<div class="sim-panel" id="sim-panel">
-  <div class="sim-panel-title">
-    <span>🏗 Simulateur bâtiment</span>
-    <span style="margin-left:auto;font-size:10px;color:var(--tx3);font-weight:400">Clic droit sur la carte pour placer un objet</span>
-  </div>
-    <!-- Mode selector -->
-    <div style="font-size:11px;color:var(--tx3);padding:6px 10px;background:var(--bg2);border-radius:var(--r);margin:8px 0;line-height:1.4">Placez sources EM et matériaux sur la carte pour simuler l'impact. Utilisez <b>🧭 Diagnostic terrain</b> dans le menu Outils pour le mode prospecteur.</div>
-
-
-  <div class="sim-toolbar">
-    <span style="font-size:10px;color:var(--tx3);font-family:var(--mono);width:100%;margin-bottom:2px">⚡ Sources EM <span style="color:var(--tx3);font-weight:400">(effet sur champ magnétique nT)</span></span>
-    <button class="sim-type-btn perturb" onclick="setSim('ant5g')">📡 Antenne 5G</button>
-    <button class="sim-type-btn perturb" onclick="setSim('ant4g')">📶 Antenne 4G</button>
-    <button class="sim-type-btn perturb" onclick="setSim('htline')">⚡ Ligne HT 63kV</button>
-    <button class="sim-type-btn perturb" onclick="setSim('htline_ht')">⚡ Ligne HT 225kV</button>
-    <button class="sim-type-btn perturb" onclick="setSim('emetteur')">📻 Émetteur radio</button>
-    <button class="sim-type-btn attenu" onclick="setSim('supp_ant')" style="border-color:#f87171;color:#5c0000;background:#fee2e2">🚫 Retirer antenne</button>
-    <button class="sim-type-btn attenu" onclick="setSim('supp_fh')" style="border-color:#c4b5fd;color:#3a005c;background:#ede9fe">🚫 Retirer FH</button>
-    <span style="font-size:10px;color:var(--tx3);font-family:var(--mono);width:100%;margin-top:4px;margin-bottom:2px">🏗 Matériaux bâtiment <span style="color:var(--tx3);font-weight:400">(effet sur champ RF V/m — ITU-R P.2040)</span></span>
-    <button class="sim-type-btn" onclick="startDrawRect()" id="btn-draw-rect" style="border-color:#6b8fd4;color:#1a4b8c;background:#e8eef8">✏ Tracer bâtiment</button>
-    <button class="sim-type-btn attenu" onclick="setSim('verre')">🪟 Vitrage (3 dB)</button>
-    <button class="sim-type-btn attenu" onclick="setSim('bois')">🌲 Bois (5 dB)</button>
-    <button class="sim-type-btn attenu" onclick="setSim('brique')">🧱 Brique (8 dB)</button>
-    <button class="sim-type-btn attenu" onclick="setSim('beton_l')">🏗 Béton léger (12 dB)</button>
-    <button class="sim-type-btn attenu" onclick="setSim('beton_a')">🏗 Béton armé 20cm (18 dB)</button>
-    <button class="sim-type-btn attenu" onclick="setSim('beton_ep')">🏗 Béton armé 40cm (25 dB)</button>
-    <button class="sim-type-btn attenu" onclick="setSim('acier')">🔩 Acier (45 dB)</button>
-    <button class="sim-type-btn attenu" onclick="setSim('alu')">🔲 Aluminium (50 dB)</button>
-    <button class="sim-type-btn attenu" onclick="setSim('faraday')">🛡 Cage Faraday (80 dB)</button>
-    <button class="sim-type-btn" onclick="setSim('granit')">🪨 Granit (µr≈1, RF seul)</button>
-  </div>
-  <div style="font-size:11px;color:var(--acc);background:var(--acc3);padding:6px 10px;border-radius:var(--r);margin-bottom:10px;display:none" id="sim-hint"></div>
-  <div class="sim-objects" id="sim-objects"><div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px">Aucun objet simulé — sélectionnez un type puis cliquez sur la carte</div></div>
-  <div id="corpus-precos" style="margin-top:8px;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);font-size:10px;line-height:1.5;color:var(--tx2)">
-      <div style="font-weight:600;color:var(--tx);margin-bottom:4px">📖 Préconisations du corpus</div>
-      <div style="margin-bottom:4px"><b>Matériaux piézoélectriques</b> — Le granit quartzifère (>25% quartz) génère un champ piézo sous contrainte mécanique. Privilégier en soubassement et murs porteurs. (Bishop 1981, Robins 1982)</div>
-      <div style="margin-bottom:4px"><b>Orientation</b> — Les dolmens corses présentent un axe moyen 115-125° (Hoskin 1994, Santucci 2004). L'angle 36.87° (arctan 3/4) apparaît dans les triangles 3:4:5 mégalithiques (Leplat 2016). Le soubassement en granit orienté sur cet axe maximise la résonance naturelle.</div>
-      <div style="margin-bottom:4px"><b>Proportions</b> — Les structures aux proportions φ (1.618) montrent une réponse piézoélectrique amplifiée sous charge (Charpentier 1966). Appliquer aux ouvertures et volumes principaux.</div>
-      <div style="margin-bottom:4px"><b>Blindage RF</b> — Béton armé dense (ferraillage <10cm) : 28 dB. Peinture carbone intérieure : 20 dB. Vitrage athermique : 15-25 dB. (ITU-R P.2040-2)</div>
-      <div><b>Réseau tellurique</b> — Éviter l'implantation sur croisement de failles (courants telluriques amplifiés). Privilégier les zones de granit homogène à >200m des lignes HTA. (Giannoulopoulou 2022, D'Anna 2007)</div>
-    </div>
-    <div style="font-size:10px;color:var(--warn);background:#fffbeb;padding:5px 8px;border-radius:var(--r);margin-top:6px;border:1px solid #fde68a">📐 Simulation pédagogique indicative · Incertitude > ±50 % · Ne remplace pas une mesure terrain</div>
-  <div class="sim-compare" id="sim-compare" style="display:none">
-    <div class="sim-cmp-box"><div class="sim-cmp-lbl">SANS simulation</div><div class="sim-cmp-val" id="sim-before">—</div></div>
-    <div class="sim-cmp-box"><div class="sim-cmp-lbl">AVEC simulation</div><div class="sim-cmp-val" id="sim-after">—</div></div>
-  </div>
-  <div style="display:flex;gap:8px;margin-top:8px">
-    <button onclick="recalcSim()" style="font-size:11px;padding:5px 14px;border-radius:var(--r);border:1px solid var(--acc2);background:var(--acc3);color:var(--acc);cursor:pointer;font-weight:500">↻ Recalculer la carte</button>
-    <button onclick="clearSim()" style="font-size:11px;padding:5px 14px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--tx3);cursor:pointer">Effacer tout</button>
-    <button onclick="saveScenario()" style="font-size:11px;padding:5px 14px;border-radius:var(--r);border:1px solid #6b8fd4;background:#e8eef8;color:#1a4b8c;cursor:pointer">💾 Scénario</button>
-    <button onclick="loadScenario()" style="font-size:11px;padding:5px 14px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--tx2);cursor:pointer">📂 Charger</button>
-  </div>
-  <div style="font-size:10px;color:var(--tx3);margin-top:8px;font-family:var(--mono)">Modèle indicatif — valeurs physiques approximatives à titre exploratoire. Non validé expérimentalement.</div>
-</div>
+<!-- Simulateur bâtiment (panneau + toolbar + preco corpus) migré vers agronomie.html
+     chore/move-simulateur — réintégration UI au compte-goutte quand le moment viendra.
+     Les fonctions JS (togSim, setSim, startDrawRect, addRectBuilding, recalcSim, clearSim,
+     saveScenario, loadScenario, SIM_TYPES, simObjects, MATÉRIAUX ITU-R P.2040-2) restent
+     dans le fichier comme code dormant — elles seront extraites dans un second temps. -->
 
 <!-- PANNEAU MODE PROSPECTEUR TERRAIN -->
 <div class="geo-panel" id="geo-panel" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px">
@@ -1695,7 +1642,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button onclick="exportTerrainReport()" id="btn-export-terrain" style="font-size:11px;padding:6px 14px;border-radius:var(--r);border:1px solid var(--acc2);background:var(--acc3);color:var(--acc);cursor:pointer;font-weight:500">📋 Exporter rapport du point</button>
     <button onclick="exportTerrainCSV()" id="btn-export-csv" style="font-size:11px;padding:6px 14px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--tx2);cursor:pointer">📊 Export CSV contributions</button>
-    <button onclick="togSim(document.getElementById('b-sim-hidden'))" id="b-sim-hidden" style="font-size:11px;padding:6px 14px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--tx2);cursor:pointer">⚙ Simulateur</button>
+    <!-- bouton ⚙ Simulateur retiré → migré vers agronomie.html -->
   </div>
   <div style="font-size:10px;color:var(--tx3);margin-top:6px">Cliquez d'abord sur un point de la carte pour générer le rapport.</div>
 
@@ -4353,10 +4300,12 @@ function calcSimDelta(lat,lon){
 }
 
 function renderSimObjects(){
+  // Guard : DOM simulateur migré vers agronomie.html
   const el=document.getElementById('sim-objects');
+  if(!el)return;
   if(!simObjects.length){
     el.innerHTML='<div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px">Aucun objet simulé — sélectionnez un type puis cliquez sur la carte</div>';
-    document.getElementById('sim-compare').style.display='none';
+    const _cmp=document.getElementById('sim-compare');if(_cmp)_cmp.style.display='none';
     return;
   }
   el.innerHTML=simObjects.map((o,i)=>{
@@ -4434,21 +4383,29 @@ function addRectBuilding(sw,ne,material){
 }
 
 function updateSimCompare(){
-  if(!lastClickedLatLng||!simObjects.length){document.getElementById('sim-compare').style.display='none';return;}
+  // Simulateur bâtiment migré vers agronomie.html — DOM absent côté app.html.
+  // Guard tolérant : on sort silencieusement si les nœuds ne sont plus là.
+  const _cmp=document.getElementById('sim-compare');
+  if(!_cmp)return;
+  if(!lastClickedLatLng||!simObjects.length){_cmp.style.display='none';return;}
   const {lat,lng}=lastClickedLatLng;
   const {human:beforeNt}=calcAll(lat,lng);
   const deltaNt=calcSimDelta(lat,lng);
   const afterNt=beforeNt+deltaNt;
   const rfDb=calcSimRF(lat,lng);
-  document.getElementById('sim-compare').style.display='grid';
+  _cmp.style.display='grid';
   // Champ nT
-  document.getElementById('sim-before').innerHTML=`<div style="font-size:11px;color:var(--tx3);margin-bottom:2px">Champ magnétique</div>${beforeNt} nT`;
+  const _bef=document.getElementById('sim-before');
+  const _aft=document.getElementById('sim-after');
+  if(_bef)_bef.innerHTML=`<div style="font-size:11px;color:var(--tx3);margin-bottom:2px">Champ magnétique</div>${beforeNt} nT`;
   const colNt=deltaNt>50?'var(--danger)':deltaNt<-50?'var(--acc)':'var(--tx2)';
-  document.getElementById('sim-after').innerHTML=
-    `<div style="font-size:11px;color:var(--tx3);margin-bottom:2px">Champ magnétique</div>`+
-    `<span style="color:${colNt}">${deltaNt>=0?'+':''}${deltaNt} nT → ${afterNt} nT</span>`+
-    (rfDb>0?`<br><div style="font-size:11px;color:var(--tx3);margin-top:4px">Atténuation RF</div><span style="color:var(--acc)">−${rfDb} dB <span style="font-size:10px">(×${(Math.pow(10,-rfDb/20)).toFixed(3)} en V/m)</span></span>`:'');
-  document.getElementById('sim-after').style.color='';
+  if(_aft){
+    _aft.innerHTML=
+      `<div style="font-size:11px;color:var(--tx3);margin-bottom:2px">Champ magnétique</div>`+
+      `<span style="color:${colNt}">${deltaNt>=0?'+':''}${deltaNt} nT → ${afterNt} nT</span>`+
+      (rfDb>0?`<br><div style="font-size:11px;color:var(--tx3);margin-top:4px">Atténuation RF</div><span style="color:var(--acc)">−${rfDb} dB <span style="font-size:10px">(×${(Math.pow(10,-rfDb/20)).toFixed(3)} en V/m)</span></span>`:'');
+    _aft.style.color='';
+  }
 }
 
 function recalcSim(){
