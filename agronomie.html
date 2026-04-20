@@ -877,12 +877,33 @@ function exportPermaPDF(){
 // CARTE LEAFLET
 // ════════════════════════════════════════════════════════════════════════════
 
-const map=L.map('map',{center:[42.0,9.0],zoom:9,maxZoom:19,zoomControl:true});
+const map=L.map('map',{center:[42.0,9.0],zoom:9,maxZoom:22,minZoom:7,zoomControl:true});
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-  attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-  maxZoom:19
+// Fond par défaut : CartoDB Voyager (stretch jusqu'au zoom 22)
+const tLayerCarto=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+  attribution:'© OpenStreetMap contributors, © CARTO · Tellux Agronomie',
+  maxNativeZoom:19,
+  maxZoom:22,
+  subdomains:'abcd'
 }).addTo(map);
+
+// IGN Plan V2 — Géoplateforme (sans clé)
+const tLayerIgnPlan=L.tileLayer(
+  'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+  {attribution:'Plan IGN V2 © IGN/Geoportail',maxNativeZoom:19,maxZoom:22}
+);
+
+// IGN Orthophotos — Géoplateforme (sans clé)
+const tLayerIgnOrtho=L.tileLayer(
+  'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+  {attribution:'Orthophotos © IGN/Geoportail',maxNativeZoom:19,maxZoom:22}
+);
+
+L.control.layers(
+  {'Carte (Voyager)':tLayerCarto,'Plan IGN V2':tLayerIgnPlan,'Orthophotos IGN':tLayerIgnOrtho},
+  null,
+  {position:'topright',collapsed:true}
+).addTo(map);
 
 map.on('click',function(e){
   const lat=e.latlng.lat,lon=e.latlng.lng;
