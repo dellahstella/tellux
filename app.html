@@ -1790,6 +1790,34 @@ async function fetchEnv(url,timeout=8000){
   }catch(e){clearTimeout(timer);return null;}
 }
 
+// ═══ Reverse geocoding commune (api-adresse.data.gouv.fr, sans cle) ═══
+// Resout un point lat/lon vers {code_insee, nom} pour detecter les communes
+// classees radon niveau 3 (decret 2018-434). Cache client par cle 4 decimales.
+const COMMUNE_CACHE = {};
+async function reverseGeocodeCommune(lat, lon) {
+  const key = lat.toFixed(4) + ',' + lon.toFixed(4);
+  if (Object.prototype.hasOwnProperty.call(COMMUNE_CACHE, key)) return COMMUNE_CACHE[key];
+  try {
+    const url = 'https://api-adresse.data.gouv.fr/reverse/?lon=' + lon.toFixed(5) + '&lat=' + lat.toFixed(5);
+    const r = await fetch(url, {signal: AbortSignal.timeout(5000)});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const feat = d && d.features && d.features[0];
+    if (feat && feat.properties) {
+      const info = {
+        code_insee: feat.properties.citycode || null,
+        nom: feat.properties.city || null
+      };
+      COMMUNE_CACHE[key] = info;
+      return info;
+    }
+  } catch (e) {
+    console.warn('[Tellux] Reverse geocode echec : ' + e.message);
+  }
+  COMMUNE_CACHE[key] = null;
+  return null;
+}
+
 const map=L.map('map',{maxZoom:20}).setView([42.0,9.0],8);
 map.setMaxBounds([[40.5,7.5],[43.5,10.5]]);
 map.options.maxBoundsViscosity=1.0;
@@ -2514,7 +2542,7 @@ function calcAll_v2(lat, lon, options) {
   // Domaine I
   const altitudeFallback = options.altitude_m || null; // intégration DEM future
   const gammaResult  = calcGammaAmbient(lat, lon, altitudeFallback);
-  const radonResult  = calcRadonPotential(lat, lon);
+  const radonResult  = calcRadonPotential(lat, lon, {commune_info: options.commune_info || null});
   // Contexte
   const substrateResult = calcSubstrateContext(lat, lon);
   const waterRaw    = calcWater(lat, lon);
@@ -2586,8 +2614,8 @@ function calcAll_v2(lat, lon, options) {
 //
 // Tout nouveau code doit utiliser all.v2 (architecture à domaines séparés).
 // ════════════════════════════════════════════════════════════════════════════
-function calcAll(lat,lng){
-  const v2 = calcAll_v2(lat,lng);
+function calcAll(lat,lng,options){
+  const v2 = calcAll_v2(lat,lng,options);
   // Legacy fields dérivés de v2 (une seule computation)
   const human    = v2.domains.magnetic.elf.B_total_nT + calcSimDelta(lat,lng);
   const water    = v2.context.water.value;
@@ -2731,7 +2759,60 @@ function getGeoType(lat,lon){
 //           Géologie corse : granit hercynien biotite = potentiel fort documenté
 // Seuil action IRSN : 300 Bq/m³ (locaux habitables depuis décret 2018-434)
 // ════════════════════════════════════════════════════════════════════════════
-function calcRadonPotential(lat, lon) {
+
+// ═══ Communes classees radon niveau 3 (decret 2018-434, annexe IV) ═══
+// Chargement asynchrone via loadRadonCommunesL3() puis resolution par reverse
+// geocoding dans le handler de clic. Regle 2A : TOUT le departement 2A
+// (Corse-du-Sud, 124 communes) est classe zone 3 par arrete 27 juin 2018.
+let RADON_2A_APPLIES_ALL = false;
+const RADON_L3_INSEE_SET = new Set();
+const RADON_L3_NAME_SET  = new Set();
+let RADON_L3_SOURCE = 'Decret 2018-434 + Arrete 27 juin 2018';
+
+function normCommuneName(s) {
+  return String(s || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+async function loadRadonCommunesL3() {
+  try {
+    const r = await fetch('public/data/radon_communes_level3_corse.json', {signal: AbortSignal.timeout(5000)});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    RADON_2A_APPLIES_ALL = !!(d.rule_2A && d.rule_2A.applies_to_all_communes);
+    if (d.source) RADON_L3_SOURCE = d.source;
+    (d.communes || []).forEach(c => {
+      if (c.code_insee) RADON_L3_INSEE_SET.add(c.code_insee);
+      if (c.nom) RADON_L3_NAME_SET.add(normCommuneName(c.nom));
+    });
+    console.log('[Tellux] Radon communes L3 charge : '
+      + (RADON_2A_APPLIES_ALL ? 'tout 2A + ' : '')
+      + RADON_L3_INSEE_SET.size + ' INSEE explicites, '
+      + RADON_L3_NAME_SET.size + ' noms indexes');
+  } catch (e) {
+    console.warn('[Tellux] Radon communes L3 indisponible : ' + e.message);
+  }
+}
+
+// Retourne {matched_by, nom, code_insee} si la commune est classee L3, sinon null.
+function isCommuneRadonL3(commune) {
+  if (!commune) return null;
+  const insee = commune.code_insee || '';
+  if (RADON_2A_APPLIES_ALL && insee.startsWith('2A')) {
+    return {matched_by: 'rule_2A_dept_entier', nom: commune.nom || null, code_insee: insee};
+  }
+  if (insee && RADON_L3_INSEE_SET.has(insee)) {
+    return {matched_by: 'insee_explicit', nom: commune.nom || null, code_insee: insee};
+  }
+  if (commune.nom && RADON_L3_NAME_SET.has(normCommuneName(commune.nom))) {
+    return {matched_by: 'name_match', nom: commune.nom, code_insee: insee || null};
+  }
+  return null;
+}
+
+function calcRadonPotential(lat, lon, options) {
+  options = options || {};
   const lithology = getGeoType(lat, lon);
 
   // Classes IRSN 2018 + BRGM RP-50200-FR 2000 — typologies lithologiques corses
@@ -2741,7 +2822,11 @@ function calcRadonPotential(lat, lon) {
     schistes: 2, ophiolite: 2,
     calcaire: 1, alluvions: 1, inconnu: 1
   };
-  const radon_class = RADON_CLASS_BY_LITHOLOGY[lithology] || 1;
+  const lithology_class = RADON_CLASS_BY_LITHOLOGY[lithology] || 1;
+
+  // Boost commune officiellement classee (decret 2018-434)
+  const officialMatch = isCommuneRadonL3(options.commune_info);
+  const final_class = officialMatch ? Math.max(lithology_class, 3) : lithology_class;
 
   // Plages d'activité volumique estimées indoor (Bq/m³) — IRSN note technique 2018
   // Ces plages intègrent la variabilité naturelle et la perméabilité du sol.
@@ -2753,13 +2838,18 @@ function calcRadonPotential(lat, lon) {
   };
 
   return {
-    class: radon_class,
-    activity_estimate_Bq_m3: ACTIVITY_RANGES[radon_class],
+    class: final_class,
+    class_source: officialMatch ? 'official_decree_2018_434' : 'lithology_estimation',
+    official_classification: officialMatch, // {matched_by, nom, code_insee} ou null
+    activity_estimate_Bq_m3: ACTIVITY_RANGES[final_class],
     lithology,
+    lithology_class,
     is_measurement_available: false,
-    source: 'IRSN cartographie radon 2018 + BRGM RP-50200-FR 2000',
+    source: officialMatch
+      ? (RADON_L3_SOURCE + ' + IRSN cartographie radon 2018 + BRGM RP-50200-FR 2000')
+      : 'IRSN cartographie radon 2018 + BRGM RP-50200-FR 2000',
     confidence: 'high',
-    epistemic_note: 'IARC classe 1 (cancérogène pulmonaire confirmé) à partir de seuils d\'exposition chronique. La mesure individuelle indoor (dosimètre 2–3 mois) est la seule base d\'évaluation sanitaire. Ces plages sont des ordres de grandeur géologiques, pas des mesures in situ.'
+    epistemic_note: 'IARC classe 1 (cancérogène pulmonaire confirmé) à partir de seuils d\'exposition chronique. Classement officiel décret 2018-434 lorsque disponible, sinon estimation par lithologie. La mesure individuelle indoor (dosimètre 2–3 mois) est la seule base d\'évaluation sanitaire.'
   };
 }
 
@@ -3032,7 +3122,7 @@ function showInterp(lat,lng,igrf,human,water,score,delta){
   else conseil.textContent='Activité modérée. Une mesure terrain validerait la prédiction.';
 }
 
-map.on('click',e=>{
+map.on('click',async e=>{
   if(e.originalEvent&&e.originalEvent._handled)return;
   _mapClickCount++;_gameState.clicks=_mapClickCount;_saveGameState(_gameState);
   if(_mapClickCount>=10)try{_unlockBadge('10clicks');}catch(e){}
@@ -3040,7 +3130,9 @@ map.on('click',e=>{
   const calcPopup=L.popup({closeButton:true,className:'delta-popup'})
     .setLatLng(e.latlng).setContent('<span style="font-size:12px">\u23f3 calcul\u2026</span>').openOn(map);
   const igrf=fetchIGRF(lat,lng);
-  const {human,water,geo,scorePhys,score,v2}=calcAll(lat,lng);
+  // Resolution commune officielle (decret radon 2018-434) — non bloquante si timeout
+  const commune_info = await reverseGeocodeCommune(lat,lng);
+  const {human,water,geo,scorePhys,score,v2}=calcAll(lat,lng,{commune_info});
   // Mode Expertise — mémoriser le résultat pour recalcul composite via curseurs
   _expertLastResult = v2;
   if (_expertActive) refreshExpertComposite();
@@ -3051,6 +3143,8 @@ map.on('click',e=>{
   const gamma_nSvh    = v2.domains.ionizing.gamma.dose_rate_nSv_h;
   const radon_class   = v2.domains.ionizing.radon.class;
   const radon_range   = v2.domains.ionizing.radon.activity_estimate_Bq_m3;
+  const radon_official = v2.domains.ionizing.radon.official_classification; // {matched_by, nom, code_insee} ou null
+  const radon_source_is_official = v2.domains.ionizing.radon.class_source === 'official_decree_2018_434';
   const geoType=getGeoType(lat,lng);
   const crustal=calcLCS1(lat,lng);
   // B-corpus-hypotheses résolu : piezo → susceptibilité magnétique issue de v2
@@ -3166,9 +3260,12 @@ map.on('click',e=>{
             '<div style="font-size:8px;color:#6b7280;margin-bottom:1px">Radon (potentiel)</div>'+
             '<div style="display:flex;align-items:center;gap:3px">'+
               '<span style="font-size:11px;font-weight:700;color:'+radonColor+'">Classe '+radon_class+'/3</span>'+
-              '<span style="font-size:9px;color:#8b92a5" title="Confiance : haut — classe IRSN 2018 par lithologie">●●●</span>'+
+              '<span style="font-size:9px;color:#8b92a5" title="Confiance : haut — classement officiel decret 2018-434 ou estimation lithologique IRSN 2018">●●●</span>'+
             '</div>'+
             '<div style="font-size:8px;color:'+radonColor+'">'+radonLabel+' · '+radon_range[0]+'–'+radon_range[1]+' Bq/m³</div>'+
+            (radon_source_is_official
+              ? '<div style="font-size:8px;color:'+radonColor+';margin-top:1px;font-style:italic">Commune classee zone 3 (decret 2018-434)'+(radon_official&&radon_official.nom?' : '+radon_official.nom:'')+'</div>'
+              : '')+
           '</div>'+
         '</div>'+
         '<div style="font-size:7.5px;color:#9ca3af;font-style:italic">Fond naturel Corse : 75–150 nSv/h · Seuil action radon : 300 Bq/m³ (IRSN 2018)</div>'+
@@ -4518,7 +4615,7 @@ let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}},300);}
 map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
-setTimeout(()=>Promise.all([loadAnt(),loadDB()]),1500); // Décalé — après rendu complet de la carte
+setTimeout(()=>Promise.all([loadAnt(),loadDB(),loadRadonCommunesL3()]),1500); // Décalé — après rendu complet de la carte
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET L'Aquila — correction externe réelle // Météo + réfractivité troposphérique
 // EMAG2v3 OFF par défaut — toggle manuel via toggleEMAG()
