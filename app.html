@@ -1790,14 +1790,25 @@ async function fetchEnv(url,timeout=8000){
   }catch(e){clearTimeout(timer);return null;}
 }
 
-const map=L.map('map',{maxZoom:22}).setView([42.0,9.0],8);
+const map=L.map('map',{maxZoom:20}).setView([42.0,9.0],8);
 map.setMaxBounds([[40.5,7.5],[43.5,10.5]]);
 map.options.maxBoundsViscosity=1.0;
 // Fond unique : IGN Plan V2 — Géoplateforme (sans clé, depuis bascule 2024).
-// Stretch visuel 19→22 (maxNativeZoom:19 + maxZoom:22) pour placement fin en Corse.
+// Stretch visuel limite a x2 (niveau 20 = zoom natif 19 upscale par CSS).
+// Plafond initialement a 22, abaisse a 20 le 2026-04-20 pour eviter le lag
+// sur couche composite EM active aux zooms extremes.
 // Pas de variante dark (IGN Plan est un rendu papier unique) — toggleTheme ne touche
 // plus aux tuiles, seulement au data-theme du chrome UI.
-const _tileBase=L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',{attribution:'Plan IGN V2 © IGN/Geoportail',maxNativeZoom:19,maxZoom:22,zIndex:1}).addTo(map);
+// ═══ FALLBACK CartoDB Voyager ═══
+// Decommenter et remplacer _tileBase.addTo(map) par tLayerCarto.addTo(map)
+// en cas de panne data.geopf.fr ou pour demo mobile ou la perf IGN serait limitee.
+// const tLayerCarto = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+//   attribution: 'OpenStreetMap contributors, CARTO',
+//   maxNativeZoom: 19,
+//   maxZoom: 20,
+//   subdomains: 'abcd'
+// });
+const _tileBase=L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',{attribution:'Plan IGN V2 © IGN/Geoportail',maxNativeZoom:19,maxZoom:20,zIndex:1}).addTo(map);
 const wmsGeo=L.tileLayer.wms('https://geoservices.brgm.fr/geologie',{layers:'GEOLOGIE',format:'image/png',transparent:true,opacity:0.6,zIndex:2});
 const wmsHyd=L.tileLayer.wms('https://geoservices.brgm.fr/risques',{layers:'REMNAPPE_FR',format:'image/png',transparent:true,opacity:0.55,zIndex:3,maxNativeZoom:11});
 const wmsCav=L.tileLayer.wms('https://geoservices.brgm.fr/risques',{layers:'CAVITE_LOCALISEE',format:'image/png',transparent:true,opacity:0.7,zIndex:4});
