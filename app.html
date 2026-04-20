@@ -902,6 +902,18 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   }
 }
 /* === fin Phase 2 === */
+
+/* === Phase 3 — Mode Expertise === */
+#expert-bandeau{position:absolute;top:0;left:0;right:0;z-index:600;background:#1F2329;color:#F5F0E7;font-family:var(--mono);font-size:10px;padding:5px 12px;display:none;align-items:center;gap:8px;border-bottom:2px solid #C28533;letter-spacing:.02em;flex-wrap:wrap;pointer-events:all;}
+#expert-bandeau.visible{display:flex;}
+#expert-panel{border-top:1px solid var(--border);padding:10px 12px;display:none;background:var(--bg2);margin-top:4px;border-radius:0 0 var(--r) var(--r);}
+#expert-panel.visible{display:block;}
+.expert-slider-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:11px;}
+.expert-slider-row label{min-width:40px;color:var(--tx2);font-family:var(--mono);font-size:10px;}
+.expert-slider-row input[type=range]{flex:1;accent-color:#C28533;}
+.expert-slider-row span.sv{min-width:30px;text-align:right;font-family:var(--mono);color:#C28533;font-size:10px;}
+#expert-index-val{font-size:22px;font-weight:700;font-family:var(--mono);color:#C28533;line-height:1;}
+/* === fin Phase 3 === */
 </style>
 </head>
 <body>
@@ -982,6 +994,24 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <p>Les mesures terrain peuvent être soumises via le bouton « + Mesure » sur la carte. Retours d'usage, propositions d'étude et partenariats institutionnels sont les bienvenus. Déploiement : <a href="https://tellux.pages.dev/" target="_blank" style="color:var(--tx-tyrrhenien)">tellux.pages.dev ↗</a></p>
 
       <p style="font-size:10px;color:var(--tx3);margin-top:12px;border-top:1px solid var(--border);padding-top:8px">Tellux v2 · Cadre scientifique v2.1.1 · Modèle composite conforme à l'audit méthodologique 2026-04-19 · Les pondérations de l'indice composite (mode Expertise) sont provisoires, en attente de relecture par un physicien tiers.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal avertissement Mode Expertise (s'affiche une fois par session) -->
+<div id="expert-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:2100;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:480px;width:100%;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,.25)">
+    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px">
+      <span style="font-size:22px;flex-shrink:0">&#9881;</span>
+      <div>
+        <h3 style="font-size:15px;font-weight:600;margin:0 0 8px;font-family:var(--font-display)">Mode Expertise</h3>
+        <p style="font-size:12px;color:var(--tx2);line-height:1.55;margin:0">Vous entrez dans le mode Expertise de Tellux. Ce mode expose des indicateurs composites et des données techniques destinées à un usage scientifique ou professionnel. Les valeurs présentées ne constituent pas un diagnostic sanitaire. Les pondérations et paramètres de calcul sont documentés dans les notes de chaque couche.</p>
+        <p style="font-size:11px;color:var(--tx3);font-style:italic;margin-top:8px;line-height:1.45">Les pondérations de l'indice composite (w_M=0.40, w_RF=0.40, w_I=0.20) sont provisoires, en attente de validation par relecture méthodologique par un physicien tiers qualifié.</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="document.getElementById('expert-modal').style.display='none'" style="font-size:12px;padding:7px 16px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--tx2);cursor:pointer">Annuler</button>
+      <button onclick="confirmExpertMode()" style="font-size:12px;padding:7px 18px;border-radius:var(--r);border:none;background:#1F2329;color:#F5F0E7;cursor:pointer;font-weight:500">Compris</button>
     </div>
   </div>
 </div>
@@ -1276,9 +1306,59 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <button onclick="togSim(this)" class="lbtn" id="b-sim" title="Simuler impact d'antenne, bâtiment, blindage"><span style="font-size:11px">🏗</span>Simulateur bâtiment</button>
     </div>
   </div>
+
+  <!-- Séparateur + Outils experts / Partager -->
+  <div style="height:1px;background:var(--border);margin:6px 4px 4px"></div>
+  <div style="padding:0 4px 8px;display:flex;flex-direction:column;gap:3px">
+    <button id="btn-expert" onclick="openExpertMode()" style="font-size:11px;padding:6px 10px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--tx2);cursor:pointer;text-align:left;display:flex;align-items:center;gap:6px" aria-label="Outils experts">
+      <span>&#9881;</span><span>Outils experts</span><span style="margin-left:auto;font-size:9px;color:var(--tx3);font-family:var(--mono)">BETA</span>
+    </button>
+    <button onclick="shareURL()" style="font-size:11px;padding:5px 10px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--tx2);cursor:pointer;text-align:left;display:flex;align-items:center;gap:6px" aria-label="Partager la vue">
+      <span>&#128279;</span><span>Partager la vue</span>
+    </button>
+  </div>
+
+  <!-- Sous-panneau Expertise (visible quand mode actif) -->
+  <div id="expert-panel">
+    <div style="font-family:var(--mono);font-size:10px;color:#C28533;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">&#9881; Indice composite</div>
+    <div style="margin-bottom:10px">
+      <div id="expert-index-val">&#x2014;</div>
+      <div style="font-size:10px;color:var(--tx3);margin-top:2px">sur le dernier point analys&#233; &#9670;</div>
+    </div>
+    <div class="expert-slider-row">
+      <label>w_M</label>
+      <input type="range" id="sl-wM" min="0" max="1" step="0.05" value="0.40" oninput="onExpertSlider()">
+      <span class="sv" id="v-wM">0.40</span>
+    </div>
+    <div class="expert-slider-row">
+      <label>w_RF</label>
+      <input type="range" id="sl-wRF" min="0" max="1" step="0.05" value="0.40" oninput="onExpertSlider()">
+      <span class="sv" id="v-wRF">0.40</span>
+    </div>
+    <div class="expert-slider-row">
+      <label>w_I</label>
+      <input type="range" id="sl-wI" min="0" max="1" step="0.05" value="0.20" oninput="onExpertSlider()">
+      <span class="sv" id="v-wI">0.20</span>
+    </div>
+    <div style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:8px;line-height:1.4">&#9670; Pond&#233;rations provisoires en attente de validation m&#233;thodologique par un physicien tiers.</div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button onclick="resetExpertSliders()" style="font-size:10px;padding:4px 10px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--tx2);cursor:pointer">R&#233;initialiser</button>
+      <button onclick="exportExpertCSV()" style="font-size:10px;padding:4px 10px;border-radius:var(--r);border:1px solid var(--acc2);background:var(--acc3);color:var(--acc);cursor:pointer">&#8595; CSV expert</button>
+      <button onclick="closeExpertMode()" style="font-size:10px;padding:4px 8px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--tx3);cursor:pointer">D&#233;sactiver &#10005;</button>
+    </div>
+  </div>
 </div>
 <!-- .map-col wrapper (desktop sidebar layout phase 2) -->
 <div class="map-col">
+<!-- Bandeau mode Expertise permanent (position:absolute au-dessus de la carte) -->
+<div id="expert-bandeau">
+  <span style="color:#C28533">&#9881;</span>
+  <span>Indice composite (mode Expertise)</span>
+  <span id="expert-bandeau-weights" style="color:#C28533">w_M=0.40 w_RF=0.40 w_I=0.20</span>
+  <span style="color:rgba(245,240,231,.4)">|</span>
+  <span style="color:rgba(245,240,231,.65);font-style:italic">Usage exploratoire, aucune signification physique ni sanitaire. Pond&#233;rations provisoires.</span>
+  <button onclick="closeExpertMode()" style="margin-left:auto;background:none;border:none;color:rgba(245,240,231,.7);cursor:pointer;font-size:12px;flex-shrink:0" aria-label="D&#233;sactiver le mode Expertise">&#10005;</button>
+</div>
 <div class="op-row" id="geo-op-row"><span>Géologie</span><input type="range" min="0.1" max="1" step="0.05" value="0.6" oninput="wmsGeo.setOpacity(+this.value)"><span id="geo-op-v">60%</span></div>
 <div class="op-row" id="hyd-op-row"><span>Nappes</span><input type="range" min="0.1" max="1" step="0.05" value="0.55" oninput="wmsHyd.setOpacity(+this.value)"><span id="hyd-op-v">55%</span></div>
 <div class="op-row" id="emag-op-row"><span>Anomalie crustale</span><input type="range" min="0.1" max="0.8" step="0.05" value="0.5" oninput="wmsEmag.setOpacity(+this.value)"><span id="emag-op-v">50%</span></div>
@@ -1993,6 +2073,7 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 let DARK=(function(){try{const s=localStorage.getItem('tellux_theme');if(s)return s==='dark';return matchMedia('(prefers-color-scheme:dark)').matches;}catch(e){return matchMedia('(prefers-color-scheme:dark)').matches;}})();
 if(DARK)document.documentElement.setAttribute('data-theme','dark');
 let contribsDB=[],pending=null,cachedIGRF={},_contribClickHandler=null;
+let _expertActive=false,_expertConsented=false,_expertLastResult=null,_expertThrottle=null;
 let curKp='—',curBz='—',curDensity='—',curFlux='—';
 let meteoData={pression:null,humidite:null,temp:null,precip:0,vent:0};
 let lightningNearby=0,chargeFacteur=1.0;
@@ -2858,6 +2939,36 @@ function calcAll(lat,lng){
   return {human,water,geo,heritage,scorePhys,score:scorePhys,v2};
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// MODE EXPERTISE — Constantes + calcul composite pondéré
+// GELÉ : pondérations (w_M/w_RF/w_I) et bornes sont PROVISOIRES.
+//        En attente de relecture méthodologique par un physicien tiers qualifié.
+//        Ne pas modifier ces valeurs sans résolution explicite du ticket GELE-001.
+// Ref : AUDIT_TELLUX_NIVEAU3 §5.2 + §5.3
+// ════════════════════════════════════════════════════════════════════════════
+const EXPERT_WEIGHTS_DEFAULT = { M: 0.4, RF: 0.4, I: 0.2 }; // GELÉ — GELE-001
+const EXPERT_BOUNDS_DEFAULT  = { ELF_nT: [0, 1000], RF_uW_m2: [0, 1000], GAMMA_nSv_h: [50, 250] }; // GELÉ
+const EXPERT_EPISTEMIC_NOTE  = 'Indice composite conventionnel : agr\u00e9gation lin\u00e9aire pond\u00e9r\u00e9e de trois domaines physiques (M, RF, I) normalis\u00e9s sur leurs plages de r\u00e9f\u00e9rence corses. Les pond\u00e9rations sont provisoires, en attente de validation m\u00e9thodologique par un physicien tiers qualifi\u00e9. Cet indice n\'a aucune signification physique directe ni sanitaire. Source : AUDIT_TELLUX_NIVEAU3 §5.';
+
+function computeExpertComposite(v2, weights, bounds) {
+  weights = weights || EXPERT_WEIGHTS_DEFAULT;
+  bounds  = bounds  || EXPERT_BOUNDS_DEFAULT;
+  const elf_nT = (v2.domains.magnetic.elf.B_total_nT)         || 0;
+  const rf_uW  = (v2.domains.rf.S_total_uW_m2)                || 0;
+  const gamma  = (v2.domains.ionizing.gamma.dose_rate_nSv_h)  || 0;
+  const n_M  = Math.min(1, Math.max(0, (elf_nT - bounds.ELF_nT[0])      / (bounds.ELF_nT[1]      - bounds.ELF_nT[0])));
+  const n_RF = Math.min(1, Math.max(0, (rf_uW  - bounds.RF_uW_m2[0])    / (bounds.RF_uW_m2[1]    - bounds.RF_uW_m2[0])));
+  const n_I  = Math.min(1, Math.max(0, (gamma  - bounds.GAMMA_nSv_h[0]) / (bounds.GAMMA_nSv_h[1] - bounds.GAMMA_nSv_h[0])));
+  const idx  = Math.round((weights.M * n_M + weights.RF * n_RF + weights.I * n_I) * 1000) / 1000;
+  return {
+    index: idx, normalized: { M: n_M, RF: n_RF, I: n_I },
+    weights, bounds,
+    inputs: { elf_nT, rf_uW, gamma_nSv_h: gamma },
+    epistemic_note: EXPERT_EPISTEMIC_NOTE,
+    under_review: true
+  };
+}
+
 // ═══ Susceptibilité géologique ═══
 // Source : Ghilardi et al. 2017 (carte susceptibilité magnétique Taravo)
 //        + Leandri 2023 (corrélation sites / formations géologiques)
@@ -3219,14 +3330,15 @@ function calcFaultProximity(lat, lon) {
 //   calcDecomposition → v2.context.substrate.susceptibility_nT ✓ (via calcAll_v2)
 //   recommandMateriaux → v2.domains.magnetic.elf.B_total_nT ✓ (phase 1)
 //
-// Appelants RESTANTS (NE PAS SUPPRIMER avant résolution) :
-//   calcResonanceHz (prend `longueur_m` + `materiau`, n'utilise pas calcPiezoScore directement
-//                   — à vérifier si référence implicite existe)
-//   popup (line ~3364) : `const piezo=calcPiezoScore(lat,lng)` — utilisé pour piezoBar + solLabel
-//   agro popup line ~8158 : `piezoScore` dans export JSON
+// Appelants migrés (Tâche 4.8, phase 3) :
+//   recommandMateriaux → susc_nT_mat = v2.context.substrate.susceptibility_nT ✓
+//   runProspDiag (popup agro) → susc_nT_diag = all.v2.context.substrate.susceptibility_nT ✓
+//   runPermaDiag → piezo = all.v2.context.substrate.susceptibility_nT (nT) ✓
+//   calcResonanceHz : confirmé indemne (prend longueur_m + materiau, pas de calcPiezoScore)
 //
-// Supprimer quand popup + agro popup + calcResonanceHz migrés.
-// NE PAS SUPPRIMER avant migration complète.
+// MIGRATION COMPLÈTE. calcPiezoScore conservée pour backward-compat uniquement.
+// Appelants directs actifs restants : AUCUN (vérifié 2026-04-20, Tâche 4.8).
+// Peut être supprimée lors d'un refactor futur.
 //
 // Piezo Score (Bishop 1981 + Eppelbaum 2017 + Ghilardi 2017)
 // Polarisation piézo ∝ quartz_content × stress_tectonique × d33
@@ -3301,16 +3413,17 @@ function calcResonanceHz(longueur_m,materiau){
 
 // Recommandation matériaux + orientation (Vitruve, Grimaud 2024, Desborough)
 function recommandMateriaux(lat,lon){
-  const gt=getGeoType(lat,lon),piezo=calcPiezoScore(lat,lon),sol=calcSolsticeAzimuth(lat),coudee=calcCoudeeLatitude(lat);
-  // Migré v2 : human = B_total_nT ELF 50Hz (domaine magnétique anthropique)
+  const gt=getGeoType(lat,lon),sol=calcSolsticeAzimuth(lat),coudee=calcCoudeeLatitude(lat);
+  // Migré v2 — Tâche 4.8 B-corpus-hypotheses : calcPiezoScore → v2.context.substrate.susceptibility_nT
   const v2=calcAll_v2(lat,lon);
   const human=v2.domains.magnetic.elf.B_total_nT;
+  const susc_nT_mat=v2.context.substrate.susceptibility_nT; // nT, remplace piezo score 0-100
   const g=calcGeoSusc(lat,lon);const rf=calcN_RF_calib(lat,lon);
   const idx=Math.min(10,Math.min(4,Math.round(human/100))+Math.min(3,Math.round(Math.abs(g)/15))+(rf>6?3:rf>2?2:rf>0.5?1:0));
-  const mat=gt.includes('granit_biotite')?'Granit quartzifère local (piézo '+piezo+'/100)':gt.includes('granit')?'Granit local (piézo '+piezo+')':gt.includes('schiste')?'Schiste + linteaux granit':gt.includes('calcaire')?'Calcaire + quartz enfoui (Grimaud 2024)':gt.includes('serpentin')?'Serpentine/calcaire bichromes (modèle Murato)':'Pierre locale';
+  const mat=gt.includes('granit_biotite')?'Granit quartzif\u00e8re local (susceptibilit\u00e9 magn\u00e9tique : '+susc_nT_mat+' nT)':gt.includes('granit')?'Granit local (susceptibilit\u00e9 : '+susc_nT_mat+' nT)':gt.includes('schiste')?'Schiste + linteaux granit':gt.includes('calcaire')?'Calcaire + quartz enfoui (Grimaud 2024)':gt.includes('serpentin')?'Serpentine/calcaire bichromes (mod\u00e8le Murato)':'Pierre locale';
   const reso=calcResonanceHz(4,gt.includes('granit')?'granit':'calcaire');
-  const orient=idx<=3?sol.ete+'° (solstice été) ou 90° (E-W)':'90° (E-W classique)';
-  const avis=idx<=3&&piezo>20?'IDÉALE':'FAVORABLE';
+  const orient=idx<=3?sol.ete+'\u00b0 (solstice \u00e9t\u00e9) ou 90\u00b0 (E-W)':'90\u00b0 (E-W classique)';
+  const avis=idx<=3&&susc_nT_mat>12?'ID\u00c9ALE':'FAVORABLE';
   return{substrat:gt,materiau:mat,orientation:orient,coudee:coudee+'cm',resonance:reso.note+' (~'+reso.fondamentale+'Hz pour L=4m)',implantation:avis+' — Indice '+idx+'/10',solstice:sol};
 }
 
@@ -3363,6 +3476,9 @@ map.on('click',e=>{
     .setLatLng(e.latlng).setContent('<span style="font-size:12px">\u23f3 calcul\u2026</span>').openOn(map);
   const igrf=fetchIGRF(lat,lng);
   const {human,water,geo,scorePhys,score,v2}=calcAll(lat,lng);
+  // Mode Expertise — mémoriser le résultat pour recalcul composite via curseurs
+  _expertLastResult = v2;
+  if (_expertActive) refreshExpertComposite();
   // Valeurs v2 structurées — utilisées pour la popup niveau B
   const elf_nT    = v2.domains.magnetic.elf.B_total_nT;
   const static_nT = v2.domains.magnetic.static.B_total_nT;
@@ -7236,6 +7352,194 @@ function exportTerrainCSV(){
   a.click();URL.revokeObjectURL(a.href);
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// MODE EXPERTISE — UI : toggle, curseurs, recalcul (Tâches 4.3–4.5)
+// ════════════════════════════════════════════════════════════════════════════
+function openExpertMode() {
+  if (_expertConsented) { activateExpertMode(); return; }
+  document.getElementById('expert-modal').style.display = 'flex';
+}
+
+function confirmExpertMode() {
+  _expertConsented = true;
+  document.getElementById('expert-modal').style.display = 'none';
+  activateExpertMode();
+}
+
+function activateExpertMode() {
+  _expertActive = true;
+  document.getElementById('expert-panel').classList.add('visible');
+  document.getElementById('expert-bandeau').classList.add('visible');
+  updateExpertBandeau();
+  if (_expertLastResult) refreshExpertComposite();
+}
+
+function closeExpertMode() {
+  _expertActive = false;
+  document.getElementById('expert-panel').classList.remove('visible');
+  document.getElementById('expert-bandeau').classList.remove('visible');
+}
+
+function updateExpertBandeau() {
+  var wM  = parseFloat(document.getElementById('sl-wM').value);
+  var wRF = parseFloat(document.getElementById('sl-wRF').value);
+  var wI  = parseFloat(document.getElementById('sl-wI').value);
+  var bw  = document.getElementById('expert-bandeau-weights');
+  if (bw) bw.textContent = 'w_M=' + wM.toFixed(2) + ' w_RF=' + wRF.toFixed(2) + ' w_I=' + wI.toFixed(2);
+}
+
+function onExpertSlider() {
+  var wM  = parseFloat(document.getElementById('sl-wM').value);
+  var wRF = parseFloat(document.getElementById('sl-wRF').value);
+  var wI  = parseFloat(document.getElementById('sl-wI').value);
+  document.getElementById('v-wM').textContent  = wM.toFixed(2);
+  document.getElementById('v-wRF').textContent = wRF.toFixed(2);
+  document.getElementById('v-wI').textContent  = wI.toFixed(2);
+  updateExpertBandeau();
+  clearTimeout(_expertThrottle);
+  _expertThrottle = setTimeout(refreshExpertComposite, 300);
+}
+
+function resetExpertSliders() {
+  document.getElementById('sl-wM').value  = EXPERT_WEIGHTS_DEFAULT.M;
+  document.getElementById('sl-wRF').value = EXPERT_WEIGHTS_DEFAULT.RF;
+  document.getElementById('sl-wI').value  = EXPERT_WEIGHTS_DEFAULT.I;
+  onExpertSlider();
+}
+
+function refreshExpertComposite() {
+  if (!_expertLastResult) return;
+  var wM  = parseFloat(document.getElementById('sl-wM').value);
+  var wRF = parseFloat(document.getElementById('sl-wRF').value);
+  var wI  = parseFloat(document.getElementById('sl-wI').value);
+  var comp = computeExpertComposite(_expertLastResult, { M: wM, RF: wRF, I: wI });
+  var el = document.getElementById('expert-index-val');
+  if (el) el.textContent = comp.index.toFixed(3);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// EXPORT CSV EXPERT — UTF-8 BOM, séparateur ; (Tâche 4.6)
+// ════════════════════════════════════════════════════════════════════════════
+function exportExpertCSV() {
+  if (!_expertLastResult) {
+    alert('Cliquez d\'abord sur un point de la carte pour g\u00e9n\u00e9rer les donn\u00e9es.');
+    return;
+  }
+  var wM  = parseFloat(document.getElementById('sl-wM').value);
+  var wRF = parseFloat(document.getElementById('sl-wRF').value);
+  var wI  = parseFloat(document.getElementById('sl-wI').value);
+  var v2   = _expertLastResult;
+  var comp = computeExpertComposite(v2, { M: wM, RF: wRF, I: wI });
+  var ts   = new Date().toISOString();
+  var elf  = v2.domains.magnetic.elf;
+  var st   = v2.domains.magnetic.static;
+  var rf   = v2.domains.rf;
+  var gam  = v2.domains.ionizing.gamma;
+  var rad  = v2.domains.ionizing.radon;
+  var sub  = v2.context.substrate;
+  var her  = v2.context.heritage;
+  var rows = [
+    ['Champ', 'Valeur', 'Unite', 'Confiance', 'En_cours_de_validation', 'Source', 'Horodatage'],
+    ['timestamp', ts, '', '', '0', 'Tellux v2', ts],
+    ['elf_B_total_nT', elf.B_total_nT != null ? elf.B_total_nT : '', 'nT', elf.confidence || '', elf.under_review ? '1' : '0', (elf.source || '').replace(/;/g, ','), ts],
+    ['magnetic_static_B_total_nT', st.B_total_nT != null ? st.B_total_nT : '', 'nT', st.confidence || '', '0', (st.source || '').replace(/;/g, ','), ts],
+    ['rf_S_total_uW_m2', rf.S_total_uW_m2 != null ? rf.S_total_uW_m2 : '', 'uW/m2', rf.confidence || '', '0', (rf.source || '').replace(/;/g, ','), ts],
+    ['gamma_dose_rate_nSv_h', gam.dose_rate_nSv_h != null ? gam.dose_rate_nSv_h : '', 'nSv/h', gam.confidence || '', gam.under_review ? '1' : '0', (gam.source || '').replace(/;/g, ','), ts],
+    ['radon_class_IRSN', rad.class != null ? rad.class : '', 'classe_1_3', rad.confidence || '', '0', (rad.source || '').replace(/;/g, ','), ts],
+    ['radon_activity_min_Bq_m3', rad.activity_estimate_Bq_m3 ? rad.activity_estimate_Bq_m3[0] : '', 'Bq/m3', rad.confidence || '', '0', '', ts],
+    ['radon_activity_max_Bq_m3', rad.activity_estimate_Bq_m3 ? rad.activity_estimate_Bq_m3[1] : '', 'Bq/m3', rad.confidence || '', '0', '', ts],
+    ['substrate_susceptibility_nT', sub.susceptibility_nT != null ? sub.susceptibility_nT : '', 'nT', sub.confidence || '', '0', 'BRGM + Ghilardi 2017', ts],
+    ['substrate_lithology', sub.lithology || '', '', sub.confidence || '', '0', 'BRGM RP-50200-FR', ts],
+    ['heritage_density_sites_km2', her.density_sites_km2 != null ? her.density_sites_km2 : '', 'sites/km2', her.confidence || '', '0', 'DRAC Corse', ts],
+    ['expert_composite_index', comp.index, '0-1', 'low', '1', 'Tellux v2 computeExpertComposite', ts],
+    ['expert_w_M', comp.weights.M, '', '', '1', '', ts],
+    ['expert_w_RF', comp.weights.RF, '', '', '1', '', ts],
+    ['expert_w_I', comp.weights.I, '', '', '1', '', ts],
+    ['expert_n_M_normalise', comp.normalized.M.toFixed(4), '0-1', '', '1', '', ts],
+    ['expert_n_RF_normalise', comp.normalized.RF.toFixed(4), '0-1', '', '1', '', ts],
+    ['expert_n_I_normalise', comp.normalized.I.toFixed(4), '0-1', '', '1', '', ts],
+    ['expert_borne_ELF_min', comp.bounds.ELF_nT[0], 'nT', '', '1', '', ts],
+    ['expert_borne_ELF_max', comp.bounds.ELF_nT[1], 'nT', '', '1', '', ts],
+    ['expert_borne_RF_min', comp.bounds.RF_uW_m2[0], 'uW/m2', '', '1', '', ts],
+    ['expert_borne_RF_max', comp.bounds.RF_uW_m2[1], 'uW/m2', '', '1', '', ts],
+    ['expert_note_epistemique', '"' + EXPERT_EPISTEMIC_NOTE.replace(/"/g, '""') + '"', '', '', '1', '', ts],
+  ];
+  var bom = '\uFEFF';
+  var csv = bom + rows.map(function(r) { return r.join(';'); }).join('\r\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tellux_expert_' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PARTAGE URL HASH — format #/z=Z&c=LAT,LNG&m=DOM[&e=1] (Tâche 4.7)
+// ════════════════════════════════════════════════════════════════════════════
+function buildShareHash() {
+  if (typeof map === 'undefined' || !map) return '';
+  var z   = map.getZoom();
+  var c   = map.getCenter();
+  var lat = c.lat.toFixed(5);
+  var lng = c.lng.toFixed(5);
+  var m   = 'all';
+  var hash = '#/z=' + z + '&c=' + lat + ',' + lng + '&m=' + m;
+  if (_expertActive) hash += '&e=1';
+  return hash;
+}
+
+function shareURL() {
+  var hash = buildShareHash();
+  if (!hash) return;
+  var url = window.location.origin + window.location.pathname + hash;
+  // Mettre à jour l'URL sans rechargement
+  if (window.history && window.history.replaceState) {
+    window.history.replaceState(null, '', hash);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(function() {
+      info('Lien copi\u00e9 dans le presse-papiers', 'success');
+    }).catch(function() {
+      prompt('Copiez ce lien :', url);
+    });
+  } else {
+    prompt('Copiez ce lien :', url);
+  }
+}
+
+function applyHashToMap() {
+  var hash = window.location.hash;
+  if (!hash || !hash.startsWith('#/')) return;
+  var params = {};
+  hash.slice(2).split('&').forEach(function(part) {
+    var idx = part.indexOf('=');
+    if (idx > 0) params[part.slice(0, idx)] = part.slice(idx + 1);
+  });
+  if (params.z && params.c) {
+    var parts = params.c.split(',');
+    if (parts.length === 2) {
+      var lat = parseFloat(parts[0]);
+      var lng = parseFloat(parts[1]);
+      var z   = parseInt(params.z, 10);
+      if (isFinite(lat) && isFinite(lng) && isFinite(z) && z >= 1 && z <= 20) {
+        if (typeof map !== 'undefined' && map) {
+          map.setView([lat, lng], z);
+        }
+      }
+    }
+  }
+  if (params.e === '1') {
+    setTimeout(function() { openExpertMode(); }, 600);
+  }
+}
+
+window.addEventListener('hashchange', function() { applyHashToMap(); });
+document.addEventListener('DOMContentLoaded', function() {
+  // Légère temporisation : attendre que Leaflet ait fini l'init
+  setTimeout(applyHashToMap, 800);
+});
+
 function setSim(type){
   simMode=type;
   const t=SIM_TYPES[type];
@@ -8178,15 +8482,15 @@ function runProspDiag(lat,lon){
   html+='<span style="font-family:var(--mono);font-size:14px;font-weight:700;color:'+scoreColor+'">'+score.toFixed(1)+'</span>';
   html+='</div>';
   html+='<b>1. Score Tellux : '+score.toFixed(1)+'/10</b> — '+scoreLabel;
-  html+='<div style="font-size:10px;color:var(--tx3)">ELF 50 Hz : '+human.toFixed(0)+' nT · Contexte substrat : '+piezo.toFixed(0)+'/100 · IGRF : '+igrf.toFixed(0)+' nT</div></div>';
+  html+='<div style="font-size:10px;color:var(--tx3)">ELF 50 Hz : '+human.toFixed(0)+' nT \u00b7 Susceptibilit\u00e9 substrat : '+(all.v2?all.v2.context.substrate.susceptibility_nT:(all.geo||0))+' nT \u00b7 IGRF : '+igrf.toFixed(0)+' nT</div></div>';
   
-  // Step 2: Geology
+  // Step 2: Geology — Migré Tâche 4.8 : calcPiezoScore → v2.context.substrate.susceptibility_nT
   const geoType=typeof getGeoType==='function'?getGeoType(lat,lon):'inconnu';
   const isGranit=geoType.toLowerCase().includes('granit');
-  const piezoScore=typeof calcPiezoScore==='function'?calcPiezoScore(lat,lon):0;
+  const susc_nT_diag=all.v2?all.v2.context.substrate.susceptibility_nT:(all.geo||0);
   html+='<div style="padding:6px 8px;border-left:3px solid '+(isGranit?'#166534':'#6b7280')+';margin-bottom:6px;background:var(--bg2);border-radius:0 var(--r) var(--r) 0">';
   html+='<b>2. Substrat : '+geoType+'</b>';
-  html+=(isGranit?' — 🪨 Granit à forte susceptibilité magnétique (contexte substrat : '+piezoScore+'/100)':' — Contexte substrat : '+piezoScore+'/100');
+  html+=(isGranit?' — \ud83e\udea8 Granit \u00e0 forte susceptibilit\u00e9 magn\u00e9tique ('+susc_nT_diag+' nT)':' — Susceptibilit\u00e9 magn\u00e9tique : '+susc_nT_diag+' nT');
   html+='</div>';
   
   // Step 3: Orientation
@@ -8215,9 +8519,9 @@ function runProspDiag(lat,lon){
       corrHtml+='→ Vitrage athermique traité RF (15-25 dB) sur façades exposées<br>';
       corrHtml+='→ Peinture conductrice carbone sur murs extérieurs (20 dB)<br>';
     }
-    if(!isGranit&&piezoScore<30){
-      corrHtml+='<b>Substrat à faible activité piézoélectrique</b><br>';
-      corrHtml+='→ Intégrer des éléments en granit quartzifère (soubassement, murets) pour apporter une composante piézo naturelle<br>';
+    if(!isGranit&&susc_nT_diag<12){
+      corrHtml+='<b>Substrat \u00e0 faible susceptibilit\u00e9 magn\u00e9tique</b><br>';
+      corrHtml+='\u2192 Int\u00e9grer des \u00e9l\u00e9ments en granit quartzif\u00e8re (soubassement, murets) pour renforcer le contexte g\u00e9ologique local<br>';
     }
     if(isGranit&&score>5){
       corrHtml+='<b>Granit actif mais perturbé</b><br>';
@@ -8360,7 +8664,8 @@ function runPermaDiag(lat,lon){
   const all=calcAll(lat,lon);
   const score=all.score||0;
   const human=all.human||0;
-  const piezo=all.geo||0;
+  // Migré Tâche 4.8 : piezo → susceptibilité magnétique nT (all.geo = susceptibility_nT via calcAll_v2)
+  const piezo=all.v2?all.v2.context.substrate.susceptibility_nT:(all.geo||0); // nT
   const geoType=typeof getGeoType==='function'?getGeoType(lat,lon):'inconnu';
   const isGranit=geoType.toLowerCase().includes('granit');
 
@@ -8382,11 +8687,11 @@ function runPermaDiag(lat,lon){
   html+='<b>Profil EM : '+scoreLabel+'</b> — Perturbation humaine: '+human.toFixed(0)+' nT · IGRF: '+igrf.toFixed(0)+' nT</div>';
 
   html+='<div style="padding:6px 8px;border-left:3px solid #15803d;margin-bottom:6px;background:var(--bg2);border-radius:0 var(--r) var(--r) 0">';
-  const piezoLabel=piezo>25?'⭐ Fort ('+piezo+'/100)':piezo>10?'Modéré ('+piezo+'/100)':'Faible ('+piezo+'/100)';
+  const piezoLabel=piezo>30?'\u2b50 Fort ('+piezo+' nT)':piezo>12?'Mod\u00e9r\u00e9 ('+piezo+' nT)':'Faible ('+piezo+' nT)';
   html+='<b>Sol : '+geoType+'</b>';
-  if(isGranit) html+=' — 🪨 Piézoélectrique '+piezoLabel;
-  html+='<br><b>Zone climatique :</b> '+altZone+' · '+climate;
-  if(isGranit&&piezo>20) html+='<br><span style="font-size:10px;color:var(--tx3)">Granit piézo : ionisation atmosphérique locale potentiellement stimulante · microbiome AMF favorisé (Lemström 1904, Maffei 2014 — H58, H60)</span>';
+  if(isGranit) html+=' \u2014 \ud83e\udea8 Susceptibilit\u00e9 magn\u00e9tique '+piezoLabel;
+  html+='<br><b>Zone climatique :</b> '+altZone+' \u00b7 '+climate;
+  if(isGranit&&piezo>20) html+='<br><span style="font-size:10px;color:var(--tx3)">Granit \u00e0 forte susceptibilit\u00e9 magn\u00e9tique : contexte g\u00e9ologique favorable au microbiome AMF (Lemstr\u00f6m 1904, Maffei 2014 \u2014 H58, H60)</span>';
   html+='</div>';
 
   // Alerte HTA — détection via la contribution humaine forte (proxy lignes HT)
@@ -8407,7 +8712,7 @@ function runPermaDiag(lat,lon){
     html+='→ Maraîchage bio, semences corses anciennes (figarella, corse a battu), aromatiques/médicinales<br>';
     html+='→ Ruches — abeilles sensibles aux champs EM (Favre 2011)<br>';
     html+='→ Couvert permanent : trèfle blanc + fétuque + lotier<br>';
-    if(isGranit&&piezo>20) html+='→ <b>Bonus granit piézo</b> : AMF favorisés, magnétopriming naturel des semences probable (H60, H62)<br>';
+    if(isGranit&&piezo>20) html+='\u2192 <b>Contexte granit favorable</b> : AMF favoris\u00e9s, magn\u00e9topriming naturel des semences probable (H60, H62)<br>';
     html+='→ Préférer variétés locales corses — adaptation millénaire au substrat (H64)<br>';
     html+='<span style="font-size:10px;color:#166534;font-style:italic">MF naturel 15-50 nT : stimulation germination documentée sur céréales et légumineuses (Maffei 2014)</span>';
   } else if(score<=6){
@@ -8466,12 +8771,12 @@ function runPermaDiag(lat,lon){
   const faultDist = typeof haversine==='function' && FAILLES_CORSE.length>0 ? Math.min(...FAILLES_CORSE.map(f=>haversine(lat,lon,f.lat,f.lon))) : 999;
 
   html+='<div style="padding:8px 10px;border-left:3px solid #0284c7;margin-bottom:6px;background:#e0f2fe;border-radius:0 var(--r) var(--r) 0">';
-  html+='<b style="color:#0c4a6e">📊 Piézoélectricité — Sources naturelles (bonus EM)</b><br>';
+  html+='<b style="color:#0c4a6e">&#128202; Susceptibilit\u00e9 magn\u00e9tique &#8212; Contexte g\u00e9ologique</b><br>';
   html+='<table style="width:100%;font-size:10px;border-collapse:collapse"><tr style="border-bottom:1px solid #0284c7;background:rgba(2,132,199,0.1)">';
   html+='<td><b>Source</b></td><td style="text-align:center"><b>Bonus</b></td><td style="text-align:right"><b>Dist</b></td>';
   html+='</tr>';
   if(faultBonus>0) html+='<tr style="border-bottom:1px solid rgba(2,132,199,0.3)"><td>🪨 Failles BRGM</td><td style="text-align:center;color:#991b1b">+'+faultBonus.toFixed(2)+'</td><td style="text-align:right">'+faultDist.toFixed(1)+'km</td></tr>';
-  if(isGranit) html+='<tr><td>🪨 Granit quartz</td><td style="text-align:center;color:#15803d">'+piezo.toFixed(0)+'/100</td><td style="text-align:right">terrain</td></tr>';
+  if(isGranit) html+='<tr><td>\ud83e\udea8 Granit quartz</td><td style="text-align:center;color:#15803d">'+piezo.toFixed(0)+' nT</td><td style="text-align:right">terrain</td></tr>';
   html+='</table><br>';
   html+='<span style="font-size:10px;color:#0c4a6e;line-height:1.4">';
   if(faultDist<3 && faultBonus>0.3) html+='✓ Faille active <3km : stress tectonique = piézoélectricité stimulée (Ghilardi 2017)<br>';
