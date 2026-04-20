@@ -1341,24 +1341,14 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     </div>
   </div>
 
-  <!-- 5. AGRONOMIE & OUTILS -->
-  <div class="accordion-cat">
-    <div class="accordion-cat-header" onclick="toggleAccordion(this)">
-      <span class="accordion-cat-icon">▶</span>
-      <span>🌱 Agronomie &amp; Outils</span>
-    </div>
-    <div class="accordion-cat-content">
-      <button class="lbtn" id="b-aoc" title="Zones AOC/IGP Corse — Patrimonio, Ajaccio, Muscat Cap Corse" onclick="tog('aoc','on-aoc',this)"><span class="sq" style="background:#f97316"></span>AOC/IGP vins</button>
-      <button class="lbtn" disabled style="opacity:0.4;cursor:not-allowed"><span class="sq" style="background:#047857"></span>BD Forêt <span style="font-size:9px;color:var(--tx3)">(bientôt)</span></button>
-      <button class="lbtn" disabled style="opacity:0.4;cursor:not-allowed"><span class="sq" style="background:#c4b5fd"></span>Parcelles RPG <span style="font-size:9px;color:var(--tx3)">(bientôt)</span></button>
-      <div style="height:1px;background:var(--border);margin:2px 0"></div>
-      <button onclick="togSim(this)" class="lbtn" id="b-sim" title="Simuler impact d'antenne, bâtiment, blindage"><span style="font-size:11px">🏗</span>Simulateur bâtiment</button>
-    </div>
-  </div>
+  <!-- Agronomie → migrée vers agronomie.html (chore/move-agro-outils) -->
 
-  <!-- Séparateur + Outils experts / Partager -->
+  <!-- Séparateur + Outils EM (simulateur, experts, partager) -->
   <div style="height:1px;background:var(--border);margin:6px 4px 4px"></div>
   <div style="padding:0 4px 8px;display:flex;flex-direction:column;gap:3px">
+    <button onclick="togSim(this)" class="lbtn" id="b-sim" title="Simuler impact d'antenne, de bâtiment ou de blindage (modèle RF ITU-R P.2040-2)" style="font-size:11px;padding:6px 10px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--tx2);cursor:pointer;text-align:left;display:flex;align-items:center;gap:6px" aria-label="Simulateur bâtiment">
+      <span style="font-size:11px">🏗</span><span>Simulateur bâtiment</span>
+    </button>
     <button id="btn-expert" onclick="openExpertMode()" style="font-size:11px;padding:6px 10px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--tx2);cursor:pointer;text-align:left;display:flex;align-items:center;gap:6px" aria-label="Outils experts">
       <span>&#9881;</span><span>Outils experts</span><span style="margin-left:auto;font-size:9px;color:var(--tx3);font-family:var(--mono)">BETA</span>
     </button>
@@ -1965,10 +1955,11 @@ const lTour=L.layerGroup();
 const lIndu=L.layerGroup();
 const lCast=L.layerGroup();
 const lPont=L.layerGroup();
-const lSit2=L.layerGroup(),lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lSit=L.layerGroup(),lRPG=L.layerGroup(),lForet=L.layerGroup(),lAOC=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lCem=L.layerGroup(),lIntl=L.layerGroup(),lAlign=L.layerGroup(),lEgl=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
-const LAYERS={sit2:lSit2,bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,prod:lProd,sit:lSit,rpg:lRPG,foret:lForet,aoc:lAOC,hot:lHot,con:lCon,cem:lCem,intl:lIntl,align:lAlign,egl:lEgl,therm:lTherm,tour:lTour,indu:lIndu,cast:lCast,pont:lPont};
+const lSit2=L.layerGroup(),lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lSit=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lCem=L.layerGroup(),lIntl=L.layerGroup(),lAlign=L.layerGroup(),lEgl=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
+// lRPG/lForet/lAOC : layers agronomie migrées vers agronomie.html
+const LAYERS={sit2:lSit2,bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,prod:lProd,sit:lSit,hot:lHot,con:lCon,cem:lCem,intl:lIntl,align:lAlign,egl:lEgl,therm:lTherm,tour:lTour,indu:lIndu,cast:lCast,pont:lPont};
 const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag};
-const ACTIVE={sit2:false,bt:false,ant:false,antOffshore:false,geo:false,hyd:false,rpg:false,foret:false,aoc:false,cav:false,emag:false,hot:true,res:false,prod:false,sit:false,con:true,cem:false,intl:false,align:false,egl:false,therm:false,tour:false,indu:false,cast:false,pont:false};
+const ACTIVE={sit2:false,bt:false,ant:false,antOffshore:false,geo:false,hyd:false,cav:false,emag:false,hot:true,res:false,prod:false,sit:false,con:true,cem:false,intl:false,align:false,egl:false,therm:false,tour:false,indu:false,cast:false,pont:false};
 
 const LEGEND_ACTIVE=new Set();let _legendCtrl=null;
 const LEGEND_HTML={
@@ -2161,7 +2152,6 @@ function tog(id,cls,btn){
     if(id==='antOffshore'&&lAntOffshore.getLayers().length===0)loadAnt(); // antOffshore charge aussi via loadAnt
 
 
-    if(id==='aoc'&&lAOC.getLayers().length===0)buildAOCLayer();
     if(id==='intl'&&lIntl.getLayers().length===0)buildIntlLayer();
     if(id==='align'&&lAlign.getLayers().length===0)buildAutoAlignments();
     if(id==='egl'&&lEgl.getLayers().length===0){buildEglLayer().then(()=>{if(ACTIVE.egl)showLegend('egl',true);}); return;}
@@ -3682,60 +3672,8 @@ function scoreColor(sc){
 let RF_CALIB_EXT=[]; // [{lat,lon,ratio,vm,friis,ctx}]
 let RF_METRICS={n:0,rmse:0,bias:0,medianRatio:25,medianRatioDense:25,medianRatioSparse:10};
 
-// ═══ COUCHE CALIBRATION INTERNATIONALE ═══
-function buildAOCLayer(){
-  lAOC.clearLayers();
-  
-  const aocZones = [
-    // AOP Crus (2)
-    {nom:"AOP Patrimonio", lat:42.50, lon:9.15, type:"Cru", communes:7, couleur:"#991b1b", rayon:12},
-    {nom:"AOP Ajaccio", lat:41.92, lon:8.75, type:"Cru", communes:4, couleur:"#7c2d12", rayon:10},
-    
-    // AOP Villages (5)
-    {nom:"AOP Calvi", lat:42.57, lon:8.77, type:"Village", communes:3, couleur:"#c2410c", rayon:8},
-    {nom:"AOP Sartène", lat:41.62, lon:8.95, type:"Village", communes:4, couleur:"#ea580c", rayon:9},
-    {nom:"AOP Figari", lat:41.48, lon:9.18, type:"Village", communes:3, couleur:"#f97316", rayon:8},
-    {nom:"AOP Porto-Vecchio", lat:41.60, lon:9.28, type:"Village", communes:3, couleur:"#fb923c", rayon:8},
-    {nom:"AOP Côteaux Cap Corse", lat:42.85, lon:9.35, type:"Village", communes:4, couleur:"#fda029", rayon:9},
-    
-    // AOP VDN (1)
-    {nom:"AOP Muscat du Cap Corse", lat:42.88, lon:9.32, type:"VDN", communes:2, couleur:"#fbbf24", rayon:7},
-    
-    // Régionale
-    {nom:"AOP Vin de Corse", lat:42.0, lon:9.0, type:"Régionale", communes:0, couleur:"#fcd34d", rayon:20},
-  ];
-  
-  aocZones.forEach(z => {
-    // Cercle zone (rayon en km)
-    L.circle([z.lat, z.lon], {
-      radius: z.rayon * 1000,
-      color: z.couleur,
-      weight: 2,
-      opacity: 0.7,
-      fillColor: z.couleur,
-      fillOpacity: 0.15,
-      interactive: true,
-      zIndex: 3
-    }).bindPopup(
-      '<div style="font-family:var(--font);font-size:12px;min-width:200px">' +
-      '<div style="font-weight:600;color:' + z.couleur + '">' + z.nom + '</div>' +
-      '<div style="font-size:11px;color:var(--tx2);margin-top:4px;">' +
-      'Type: <b>' + z.type + '</b><br/>' +
-      (z.communes > 0 ? 'Communes: ' + z.communes + '<br/>' : '') +
-      'Source: INAO</div>' +
-      '</div>'
-    ).addTo(lAOC);
-    
-    // Marqueur centre
-    const icon = L.divIcon({
-      html: '<div style="width:8px;height:8px;background:' + z.couleur + ';border:1px solid #fff;border-radius:50%;box-shadow:0 0 4px ' + z.couleur + '66"></div>',
-      className: '',
-      iconSize: [8, 8],
-      iconAnchor: [4, 4]
-    });
-    L.marker([z.lat, z.lon], {icon, zIndexOffset:250}).bindPopup('<b>' + z.nom + '</b>').addTo(lAOC);
-  });
-}
+// buildAOCLayer() + données zones AOP viticoles → migrées vers agronomie.html
+// (chore/move-agro-outils — réintégration au compte-goutte quand le moment viendra)
 
 function intlGaugeHTML(localGeo,crustal){
   const total=localGeo+crustal;
