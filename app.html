@@ -2681,7 +2681,8 @@ function calcAll(lat,lng){
   const human    = v2.domains.magnetic.elf.B_total_nT + calcSimDelta(lat,lng);
   const water    = v2.context.water.value;
   const geo      = v2.context.substrate.susceptibility_nT;
-  const heritage = v2.context.heritage._score_legacy;
+  // v8 : contexte patrimoine extrait vers patrimoine.html — legacy heritage = 0
+  const heritage = v2.context.heritage?._score_legacy ?? 0;
   const scorePhys = human + Math.round(water*0.3) + geo + Math.round(heritage*0.5);
   return {human,water,geo,heritage,scorePhys,score:scorePhys,v2};
 }
@@ -3002,6 +3003,22 @@ const FAILLES_CORSE = [
 //   Confiance : MEDIUM pour les failles actives ; LOW pour les quaternaires.
 //   Statut calcAll v2 : contexte.fault.distance_m (Tâche 4.5, via calcSubstrateContext).
 // ────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
+// haversine — distance sphérique entre deux points (km)
+// Utilitaire partagé, restauré après cleanup v8 (la définition originale
+// app.html:6621 avait été supprimée avec le bloc patrimoine alors qu'elle
+// est requise ici par calcFaultProximity).
+// ────────────────────────────────────────────────────────────────────────────
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2
+          + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+          * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function calcFaultProximity(lat, lon) {
   let bonus = 0;
   for (const f of FAILLES_CORSE) {
@@ -3176,7 +3193,7 @@ map.on('click',e=>{
   // INFO BAR — Double score lisible
   info(`${phEmoji} <b style="color:${phColor}">Perturbation ${perturbHumain}/5</b> ${phLabel} \u00b7 ${anEmoji} <b style="color:${anColor}">Activit\u00e9 naturelle ${activNat}/5</b> ${anLabel}<br>`+
     `<span style="font-size:11px;color:var(--tx2)">${itVerdict}</span><br>`+
-    `<span style="font-size:10px;color:var(--tx3)">${implanEmoji} ${implanTip} \u00b7 ${solLabel} \u00b7 ${geoType} \u00b7 Coudée ${calcCoudeeLatitude(lat)}cm \u00b7 <a href="https://www.cartoradio.fr/#/cartographie/point/${lat.toFixed(5)}/${lng.toFixed(5)}" target="_blank" style="color:var(--acc2)">CartoRadio \u2197</a></span>`);
+    `<span style="font-size:10px;color:var(--tx3)">${implanEmoji} ${implanTip} \u00b7 ${solLabel} \u00b7 ${geoType} \u00b7 <a href="https://www.cartoradio.fr/#/cartographie/point/${lat.toFixed(5)}/${lng.toFixed(5)}" target="_blank" style="color:var(--acc2)">CartoRadio \u2197</a></span>`);
 
   // POPUP — Niveau 1 (simple) + Niveau 2 (technique au survol)
   const deltaStr=delta!==null?(delta>0?'+':'')+delta+' nT':'\u2014';
@@ -3276,11 +3293,10 @@ map.on('click',e=>{
     '</div>'
   );
   document.getElementById('btn-export-model').onclick=()=>exportModel(lat,lng,igrf,human,water,nRFcalib);
-  // Store for Mode Prospecteur terrain export
-  const coudee=calcCoudeeLatitude(lat);
-  const myLat=calcMYLatitude(lat);
+  // v8 : coudee/myLat (archaeometrie) extraits vers patrimoine.html
   // piezo → susc_nT (B-corpus-hypotheses résolu) ; tellPct déjà dans v2
-  _geoLastPoint={lat,lng,igrf,human,geo,crustal,susc_nT,skinD,tellPct,geoType,solLabel,indice:indiceTellux,label:itLabel,verdict:itVerdict,implanTip,rf:nRFcalib,coudee,myLat,rec,radon_class,gamma_nSvh};
+  // v8 : rec (recommandation matériaux) extrait vers agronomie.html
+  _geoLastPoint={lat,lng,igrf,human,geo,crustal,susc_nT,skinD,tellPct,geoType,solLabel,indice:indiceTellux,label:itLabel,verdict:itVerdict,implanTip,rf:nRFcalib,radon_class,gamma_nSvh};
 });
 
 function addMarker(c){L.marker([c.lat,c.lon],{icon:mkIcon('#5c3a9b',false,11),zIndexOffset:200}).on('click',()=>info(`<span class="tag" style="background:#f0e8ff;color:#5c3a9b;border:0.5px solid #9b72d4">DB</span><b>${c.type}</b>${c.valeur?' — '+c.valeur+' '+(c.unite||'nT'):''}${c.note?`<br><i style="font-size:11px;color:var(--tx3)">${c.note}</i>`:''}<br><span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">IGRF:${c.igrf_nt||'—'}nT · score:${c.score_anomalie||'—'} · Kp:${c.kp||'—'} · Bz:${c.bz||'—'}nT</span>`)).addTo(lCon);}
@@ -4147,6 +4163,36 @@ document.addEventListener('DOMContentLoaded', function() {
   // Légère temporisation : attendre que Leaflet ait fini l'init
   setTimeout(applyHashToMap, 800);
 });
+
+// ---- MODULE SIMULATION ----
+// SIM_TYPES — deux catégories distinctes selon la physique
+// SOURCES EM (effet sur nT magnétique statique) : antennes, lignes HT
+// MATÉRIAUX (effet sur V/m RF uniquement) : bâtiments — source ITU-R P.2040-2 (2021)
+// Restauré après cleanup v8 (bloc legitime EM supprimé par erreur avec patrimoine).
+const SIM_TYPES = {
+  // --- SOURCES EM (modèle nT, champ magnétique) ---
+  ant5g:    {label:'Antenne 5G',      icon:'📡', signe:+1, intensite:180, rayon:3.0, color:'#991b1b', domaine:'nT'},
+  ant4g:    {label:'Antenne 4G',      icon:'📶', signe:+1, intensite:130, rayon:2.5, color:'#b85c00', domaine:'nT'},
+  htline:   {label:'Ligne HT 63kV',   icon:'⚡', signe:+1, intensite:350, rayon:1.5, color:'#854d0e', domaine:'nT'},
+  htline_ht:{label:'Ligne HT 225kV',  icon:'⚡', signe:+1, intensite:700, rayon:2.5, color:'#5c2000', domaine:'nT'},
+  emetteur: {label:'Émetteur radio',  icon:'📻', signe:+1, intensite:200, rayon:5.0, color:'#1a4b8c', domaine:'nT'},
+  supp_ant: {label:'Retirer antenne', icon:'🚫', signe:-1, intensite:150, rayon:3.0, color:'#5c0000', domaine:'nT'},
+  supp_fh:  {label:'Retirer FH',      icon:'🚫', signe:-1, intensite:120, rayon:2.0, color:'#3a005c', domaine:'nT'},
+  // --- MATÉRIAUX BÂTIMENT (modèle RF en dB, ITU-R P.2040-2) ---
+  verre:    {label:'Vitrage standard', icon:'🪟', signe:-1, atten_db:3,  epaisseur:'4mm',   rayon:0.02, color:'#5ba3d4', domaine:'RF', note:'ITU-R P.2040: 2–5 dB selon fréquence'},
+  bois:     {label:'Paroi bois',       icon:'🌲', signe:-1, atten_db:5,  epaisseur:'20cm',  rayon:0.02, color:'#854d0e', domaine:'RF', note:'ITU-R P.2040: 4–8 dB'},
+  brique:   {label:'Mur brique',       icon:'🧱', signe:-1, atten_db:8,  epaisseur:'10cm',  rayon:0.03, color:'#b85c00', domaine:'RF', note:'ITU-R P.2040: 7–10 dB'},
+  beton_l:  {label:'Béton léger',      icon:'🏗', signe:-1, atten_db:12, epaisseur:'15cm',  rayon:0.04, color:'#0f766e', domaine:'RF', note:'ITU-R P.2040: 10–18 dB'},
+  beton_a:  {label:'Béton armé 20cm',  icon:'🏗', signe:-1, atten_db:18, epaisseur:'20cm',  rayon:0.05, color:'#0a5048', domaine:'RF', note:'ITU-R P.2040: 14–20 dB'},
+  beton_ep: {label:'Béton armé 40cm',  icon:'🏗', signe:-1, atten_db:25, epaisseur:'40cm',  rayon:0.05, color:'#063830', domaine:'RF', note:'ITU-R P.2040: 20–35 dB'},
+  acier:    {label:'Structure acier',  icon:'🔩', signe:-1, atten_db:45, epaisseur:'>1mm',  rayon:0.05, color:'#1a4b8c', domaine:'RF', note:'ITU-R P.2040: 40–60 dB — µr statique élevé si cage fermée'},
+  alu:      {label:'Paroi aluminium',  icon:'🔲', signe:-1, atten_db:50, epaisseur:'1mm',   rayon:0.04, color:'#2d5a8c', domaine:'RF', note:'ITU-R P.2040: 45–65 dB — excellent blindage RF'},
+  faraday:  {label:'Cage Faraday',     icon:'🛡', signe:-1, atten_db:80, epaisseur:'cage',  rayon:0.02, color:'#1a5c8c', domaine:'RF+nT', note:'Blindage RF total + µr acier sur champs BF'},
+  granit:   {label:'Mur granit',       icon:'🪨', signe:0,  atten_db:2,  epaisseur:'>1m',   rayon:0.02, color:'#5c3a9b', domaine:'RF', note:'µr ≈ 1.0 → aucun effet sur champ statique nT. Légère atténuation RF uniquement.'},
+};
+
+let simObjects=[], simMode=null, simMarkers=L.layerGroup(), lastClickedLatLng=null;
+simMarkers.addTo(map);
 
 function setSim(type){
   simMode=type;
