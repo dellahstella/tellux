@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Tellux — Agronomie</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    /* ── DA v2 variables ── */
+    :root{
+      --bg:#F5F0E7; --bg2:#EFE9DC; --bg3:#E8E2D5;
+      --tx:#1F2329; --tx2:#3D424A; --tx3:#74706A;
+      --acc:#3F5B3A; --acc2:#4F7048; --acc3:#E5EBE0;
+      --border:#D8D2C8; --r:6px; --r2:10px;
+      --mono:'IBM Plex Mono',monospace;
+      --warn:#C28533; --danger:#8E2F1F;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{display:flex;height:100vh;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--tx)}
+
+    /* ── Sidebar ── */
+    #sidebar{
+      width:340px;min-width:340px;
+      background:var(--bg);border-right:1px solid var(--border);
+      display:flex;flex-direction:column;height:100vh;overflow:hidden;
+    }
+    #sidebar-header{
+      padding:12px 16px 10px;border-bottom:1px solid var(--border);
+      flex-shrink:0;
+    }
+    #sidebar-header .back{
+      font-size:11px;color:var(--tx3);text-decoration:none;
+      font-family:var(--mono);display:inline-flex;align-items:center;gap:4px;margin-bottom:6px;
+    }
+    #sidebar-header .back:hover{color:var(--acc)}
+    #sidebar-header h1{
+      font-size:15px;font-weight:700;color:var(--acc);
+      display:flex;align-items:center;gap:8px;
+    }
+    #sidebar-header .badge{
+      font-size:9px;font-family:var(--mono);background:var(--acc3);color:var(--acc);
+      padding:2px 7px;border-radius:10px;text-transform:uppercase;letter-spacing:.05em;
+    }
+    #sidebar-header .instr{
+      margin-top:7px;font-size:11px;color:var(--acc);background:var(--acc3);
+      border-radius:var(--r);padding:6px 10px;text-align:center;
+    }
+    #sidebar-scroll{flex:1;overflow-y:auto;padding:10px 12px}
+
+    /* ── Panels ── */
+    .panel{
+      background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);
+      padding:12px 14px;margin-bottom:10px;
+    }
+    .panel-header{
+      display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;
+      user-select:none;
+    }
+    .panel-header .ico{font-size:15px}
+    .panel-header .title{font-weight:600;font-size:13px;flex:1;color:var(--tx)}
+    .panel-header .chev{font-size:11px;color:var(--tx3);transition:transform .2s}
+    .panel-header.collapsed .chev{transform:rotate(-90deg)}
+    .panel-body.collapsed{display:none}
+
+    /* ── Tab strip ── */
+    .tab-strip{display:flex;gap:4px;margin-bottom:8px;background:var(--bg3);border-radius:var(--r);padding:3px}
+    .tab-btn{
+      flex:1;font-size:11px;padding:4px 8px;border:none;background:none;color:var(--tx3);
+      cursor:pointer;border-radius:calc(var(--r) - 2px);font-family:var(--mono);
+      transition:background .15s,color .15s;
+    }
+    .tab-btn.active{background:#fff;color:var(--acc);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+
+    /* ── Instruction box ── */
+    .instr-box{
+      background:var(--acc3);border-radius:var(--r);padding:7px 10px;
+      font-size:11px;color:var(--acc);text-align:center;margin-bottom:8px;
+    }
+
+    /* ── Results zones ── */
+    #prosp-results,#perma-results,#reco-results{font-size:11px;color:var(--tx2);line-height:1.6;margin-bottom:8px}
+    #prosp-correction{
+      display:none;margin-top:8px;padding:10px;
+      background:linear-gradient(135deg,var(--acc3),#e0e7ff);
+      border:1px solid var(--acc);border-radius:var(--r);font-size:11px;line-height:1.6
+    }
+    #prosp-correction-title{font-weight:600;color:var(--acc);margin-bottom:4px}
+
+    /* ── Reco row ── */
+    .reco-row{
+      padding:6px 8px;border-left:3px solid var(--acc);
+      background:var(--bg2);border-radius:0 var(--r) var(--r) 0;
+      margin-bottom:5px;font-size:11px;
+    }
+    .reco-row b{display:block;font-size:10px;color:var(--tx3);margin-bottom:1px;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+
+    /* ── Cultures grid ── */
+    .cult-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+    .cult-card{border-radius:var(--r);padding:8px;font-size:10px}
+    .cult-card .nom{font-weight:600;margin-bottom:3px}
+    .cult-card .detail{line-height:1.4}
+
+    /* ── Buttons ── */
+    .btn-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+    .btn{font-size:10px;padding:5px 12px;border-radius:var(--r);cursor:pointer;font-family:inherit;transition:opacity .15s}
+    .btn:hover{opacity:.85}
+    .btn-green{border:1px solid #15803d;background:#dcfce7;color:#166534}
+    .btn-purple{border:1px solid #7c3aed;background:#ede9fe;color:#5b21b6}
+
+    /* ── Checklist ── */
+    .geo-check{display:flex;align-items:flex-start;gap:6px;padding:3px 0;font-size:10px;color:var(--tx2);cursor:pointer}
+    .geo-check input{margin-top:2px;flex-shrink:0}
+
+    /* ── Guide box ── */
+    .guide-box{background:var(--acc3);border-radius:var(--r);padding:8px 10px;margin-top:8px}
+    .guide-title{font-family:var(--mono);font-size:9px;color:var(--acc);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+    .guide-text{font-size:10px;color:var(--tx2);line-height:1.5}
+
+    /* ── Map ── */
+    #map{flex:1;height:100vh}
+    .leaflet-container{background:#eae4d8}
+  </style>
+</head>
+<body>
+
+<!-- ════════════ SIDEBAR ════════════ -->
+<div id="sidebar">
+  <div id="sidebar-header">
+    <a href="index.html" class="back">← Suite Tellux</a>
+    <h1>🌱 Agronomie Corse <span class="badge">App 3</span></h1>
+    <div class="instr">Cliquez sur la carte pour analyser une parcelle</div>
+  </div>
+
+  <div id="sidebar-scroll">
+
+    <!-- ── PANEL 1 : Diagnostic Prospection EM ── -->
+    <div class="panel" id="panel-prosp">
+      <div class="panel-header" onclick="togglePanel('panel-prosp')">
+        <span class="ico">🧭</span>
+        <span class="title">Diagnostic prospection EM</span>
+        <span class="chev">▼</span>
+      </div>
+      <div class="panel-body">
+        <div style="background:var(--bg2);border-radius:var(--r);padding:8px 10px;margin-bottom:8px">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">📋 Checklist mesure terrain (5 min)</div>
+          <label class="geo-check"><input type="checkbox"> <span>1. App magnétomètre ouverte (Physics Toolbox / Sensor Kinetics)</span></label>
+          <label class="geo-check"><input type="checkbox"> <span>2. Cliquez un point sur la carte → diagnostic auto ci-dessous</span></label>
+          <label class="geo-check"><input type="checkbox"> <span>3. Téléphone à 1,5m du sol, bras tendu, loin de tout métal</span></label>
+          <label class="geo-check"><input type="checkbox"> <span>4. Comparer mesure nT vs prédiction IGRF affichée</span></label>
+          <label class="geo-check"><input type="checkbox"> <span>5. Enregistrer via le bouton + en bas à droite</span></label>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--acc);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">🧭 Diagnostic de site — cliquez sur la carte</div>
+        <div id="prosp-results"></div>
+        <div id="prosp-correction">
+          <div id="prosp-correction-title">🔧 Recommandation correction (H46)</div>
+          <div id="prosp-correction-text"></div>
+        </div>
+        <div class="guide-box">
+          <div class="guide-title">Guide d'interprétation Δ</div>
+          <div class="guide-text">
+            <b>Δ &lt; ±200 nT</b> — Normal, cohérent avec le modèle<br>
+            <b>Δ +200 à +500 nT</b> — Veine d'eau ou roche magnétique<br>
+            <b>Δ -200 à -500 nT</b> — Faille ou fracture probable<br>
+            <b>Δ &gt; ±500 nT</b> — Source artificielle ou géologie majeure
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-purple" onclick="exportSitePDF()">📄 Rapport PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PANEL 2 : Diagnostic Permaculture ── -->
+    <div class="panel" id="panel-perma">
+      <div class="panel-header" onclick="togglePanel('panel-perma')">
+        <span class="ico">🌿</span>
+        <span class="title">Diagnostic permaculture</span>
+        <span class="chev">▼</span>
+      </div>
+      <div class="panel-body" id="perma-panel">
+        <div class="tab-strip">
+          <button class="tab-btn active" id="perma-tab-diag" onclick="showPermaTab('diag')">Diagnostic</button>
+          <button class="tab-btn" id="perma-tab-cult" onclick="showPermaTab('cult')">Cultures Corse</button>
+        </div>
+
+        <!-- TAB Diagnostic -->
+        <div id="perma-diag-tab">
+          <div class="instr-box">🗺️ <b>Cliquez sur la carte</b> pour analyser une parcelle</div>
+          <div id="perma-results"></div>
+          <div style="background:var(--acc3);border-radius:var(--r);padding:10px 12px;margin-bottom:10px">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--acc);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">📖 Études peer-reviewed — EM &amp; Agriculture</div>
+            <div style="font-size:10px;color:var(--tx2);line-height:1.6">
+              <b>Magnétoréception végétale</b> — Maffei (2014, <i>Trends in Plant Science</i>) : les racines perçoivent le champ magnétique. Stimulation à 40-60 µT = niveau IGRF Corse (46 µT ✓).<br><br>
+              <b>Impact HTA sur microbiome sol</b> — Hermans (2023, <i>iScience</i>) : diversité microbienne −40% à &lt;100m d'une ligne HTB. Baydiili (2025) : biomasse microbienne −21,8% sous lignes HTA.<br><br>
+              <b>Germination &amp; électroculture</b> — Murr (1965) : champs DC +20-30% germination. Jayakrishna (2025, <i>ACS Agric. Sci. Technol.</i>) : 4 mécanismes EF/MF documentés.<br><br>
+              <b>Terroir &amp; substrat</b> — Giannoulopoulou (2022) : mégalithes corses sur granit piézoélectrique = même substrat que vignobles AOC.
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-green" onclick="exportPermaPDF()">📄 Rapport parcelle PDF</button>
+          </div>
+        </div>
+
+        <!-- TAB Cultures Corse -->
+        <div id="perma-cult-tab" style="display:none">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--acc);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">🌱 Cultures Corse — Résilience EM &amp; terroir</div>
+          <div class="cult-grid">
+            <div class="cult-card" style="border-left:3px solid #991b1b;background:#fee2e2">
+              <div class="nom" style="color:#7c2d12">🍷 Vignes (AOC)</div>
+              <div class="detail" style="color:#7c2d12"><b>Résilience EM :</b> ⭐⭐⭐⭐⭐<br>Niellucciu · Sciaccarellu<br>Enracinement 2-4m<br>Score idéal : 6-10</div>
+              <div style="font-size:9px;color:#991b1b;font-style:italic;margin-top:3px">Antioxydants = buffer EM</div>
+            </div>
+            <div class="cult-card" style="border-left:3px solid #b45309;background:#fef3c7">
+              <div class="nom" style="color:#92400e">🫒 Oliviers</div>
+              <div class="detail" style="color:#92400e"><b>Résilience EM :</b> ⭐⭐⭐⭐⭐<br>Arbequina · Frantoio<br>Longévité 500+ ans<br>Score idéal : 4-10</div>
+              <div style="font-size:9px;color:#b45309;font-style:italic;margin-top:3px">Huile oleuropéine = antioxydant</div>
+            </div>
+            <div class="cult-card" style="border-left:3px solid #15803d;background:#dcfce7">
+              <div class="nom" style="color:#166534">🌰 Châtaigniers</div>
+              <div class="detail" style="color:#166534"><b>Résilience EM :</b> ⭐⭐⭐⭐<br>Marrona · Pellonda<br>Montagne Corse-du-Sud<br>Score idéal : 3-10</div>
+              <div style="font-size:9px;color:#15803d;font-style:italic;margin-top:3px">Tannins = antioxydants élevés</div>
+            </div>
+            <div class="cult-card" style="border-left:3px solid #ec4899;background:#fce7f3">
+              <div class="nom" style="color:#9f1239">🌿 Aromatiques</div>
+              <div class="detail" style="color:#9f1239"><b>Résilience EM :</b> ⭐⭐⭐⭐<br>Immortelle · Ciste · Romarin<br>Maquis 5000 ans<br>Score idéal : 1-6</div>
+              <div style="font-size:9px;color:#ec4899;font-style:italic;margin-top:3px">Récolte lunaire recommandée</div>
+            </div>
+            <div class="cult-card" style="border-left:3px solid #dc2626;background:#fee2e2">
+              <div class="nom" style="color:#7f1d1d">🐝 Apiculture</div>
+              <div class="detail" style="color:#7f1d1d"><b>Résilience EM :</b> ⭐ ALERTE<br>&gt;50nT désoriente le vol<br>500m antennes min.<br>Score idéal : 0-2</div>
+              <div style="font-size:9px;color:#dc2626;font-style:italic;margin-top:3px">⚠️ UNIQUEMENT zones calmes</div>
+            </div>
+            <div class="cult-card" style="border-left:3px solid #f59e0b;background:#fef3c7">
+              <div class="nom" style="color:#92400e">🥕 Maraîchage bio</div>
+              <div class="detail" style="color:#92400e"><b>Résilience EM :</b> ⭐⭐<br>Figarella · Corse à battu<br>Semences fines sensibles<br>Score idéal : 1-3</div>
+              <div style="font-size:9px;color:#f59e0b;font-style:italic;margin-top:3px">Couvert trèfle obligatoire</div>
+            </div>
+          </div>
+          <div style="background:var(--bg2);border-radius:var(--r);padding:10px;font-size:10px;color:var(--tx2);line-height:1.5">
+            <b>📖 Références :</b><br>
+            E04 Favre 2011 : abeilles désorientées CEM RF<br>
+            E05 Maffei 2014 : MF faible stimule germination<br>
+            E08 Hermans 2023 : microbiome sol stress HTA<br>
+            H64 : terroir-EM corrélation AOC<br><br>
+            <b>🎯 Score EM → Culture :</b><br>
+            Score 0-2 : Ruches · Maraîchage · Aromatiques<br>
+            Score 3-6 : Châtaigniers · Légumineuses · Céréales<br>
+            Score 6+ : Vignes · Oliviers · Foresterie
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PANEL 3 : Recommandations Matériaux ── -->
+    <div class="panel" id="panel-reco">
+      <div class="panel-header" onclick="togglePanel('panel-reco')">
+        <span class="ico">🪨</span>
+        <span class="title">Recommandations matériaux</span>
+        <span class="chev">▼</span>
+      </div>
+      <div class="panel-body">
+        <div class="instr-box" id="reco-instr">Cliquez sur la carte pour les recommandations</div>
+        <div id="reco-results"></div>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+  </div>
+</div>
+
+<!-- ════════════ CARTE ════════════ -->
+<div id="map"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+// TELLUX — AGRONOMIE.HTML — App 3 standalone
+// Extraits de app.html v2 phase 3 (feat/v8-suite-architecture)
+// Fonctions actives : recommandMateriaux · runProspDiag · runPermaDiag
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── État global minimal ──
+let curKp = '—';
+let aquExternalCorr = null;
+let meteoData = {pression:null,humidite:null,temp:null,precip:0,vent:0};
+const EMAG2_CACHE = {};
+let simObjects = [];
+let RF_CALIB_EXT = [];
+let RF_METRICS = {n:0,rmse:0,bias:0,medianRatio:25,medianRatioDense:25,medianRatioSparse:10};
+
+// ── Grilles IGRF-14 et LCS-1 ──
+const IGRF14_GRID=[
+  [41.25,8.5,46150],[41.25,8.75,46200],[41.25,9.0,46250],[41.25,9.25,46300],[41.25,9.5,46350],[41.25,9.75,46400],
+  [41.5,8.5,46250],[41.5,8.75,46300],[41.5,9.0,46350],[41.5,9.25,46400],[41.5,9.5,46450],[41.5,9.75,46500],
+  [41.75,8.5,46350],[41.75,8.75,46400],[41.75,9.0,46450],[41.75,9.25,46500],[41.75,9.5,46550],[41.75,9.75,46600],
+  [42.0,8.5,46450],[42.0,8.75,46500],[42.0,9.0,46560],[42.0,9.25,46610],[42.0,9.5,46650],[42.0,9.75,46700],
+  [42.25,8.5,46550],[42.25,8.75,46600],[42.25,9.0,46660],[42.25,9.25,46710],[42.25,9.5,46750],[42.25,9.75,46800],
+  [42.5,8.5,46650],[42.5,8.75,46700],[42.5,9.0,46760],[42.5,9.25,46810],[42.5,9.5,46850],[42.5,9.75,46900],
+  [42.75,8.5,46750],[42.75,8.75,46800],[42.75,9.0,46860],[42.75,9.25,46910],[42.75,9.5,46960],[42.75,9.75,47000],
+  [43.0,8.5,46850],[43.0,8.75,46900],[43.0,9.0,46960],[43.0,9.25,47010],[43.0,9.5,47060],[43.0,9.75,47100],
+  [43.25,8.5,46950],[43.25,8.75,47000],[43.25,9.0,47060],[43.25,9.25,47110],[43.25,9.5,47160],[43.25,9.75,47200],
+];
+
+const LCS1_GRID=[
+  [41.3,8.5,-8],[41.3,9.0,-5],[41.3,9.5,-3],
+  [41.5,8.5,20],[41.5,9.0,35],[41.5,9.5,40],
+  [41.8,8.5,25],[41.8,9.0,50],[41.8,9.5,55],
+  [42.0,8.5,22],[42.0,9.0,55],[42.0,9.5,60],
+  [42.3,8.5,18],[42.3,9.0,40],[42.3,9.5,50],
+  [42.6,8.5,12],[42.6,9.0,28],[42.6,9.5,32],
+  [42.9,8.5,5],[42.9,9.0,10],[42.9,9.5,8],
+  [43.1,8.5,-5],[43.1,9.0,2],[43.1,9.5,5],
+];
+
+// ── Grille susceptibilité géologique (BRGM + Ghilardi 2017) ──
+const GEO_SUSC_GRID=[
+  [41.38,9.15,-5,'calcaire'],[41.40,9.00,-3,'calcaire'],[41.42,8.90,5,'granit_rose'],
+  [41.50,8.85,25,'granit_biotite'],[41.53,8.92,35,'granit_biotite'],[41.56,8.88,30,'granit_biotite'],
+  [41.50,9.05,20,'granit'],[41.50,9.25,15,'granit'],
+  [41.70,8.80,20,'granit'],[41.75,8.87,30,'granit_biotite'],[41.75,9.00,25,'granit'],
+  [41.75,9.18,22,'granodiorite'],[41.80,9.10,18,'granodiorite'],
+  [41.72,9.12,15,'granit'],[41.72,9.23,12,'gneiss'],
+  [42.00,8.80,18,'granodiorite'],[42.00,9.00,25,'granit_biotite'],[42.00,9.20,20,'granit'],
+  [42.00,9.40,8,'alluvions'],
+  [42.30,9.20,5,'schistes'],[42.30,9.40,3,'schistes'],
+  [42.30,8.80,15,'granit'],[42.30,9.00,18,'granit'],
+  [42.55,9.10,12,'serpentinite'],[42.55,9.30,18,'serpentinite'],[42.55,9.45,5,'alluvions'],
+  [42.65,9.05,10,'granit'],[42.65,9.25,15,'granit'],
+  [42.80,9.30,8,'ophiolite'],[42.80,9.40,5,'schistes'],
+  [42.95,9.35,3,'schistes'],[43.00,9.40,-2,'ophiolite'],
+  [42.55,8.70,12,'granit'],[42.55,8.90,10,'granit'],
+];
+
+// ── Failles tectoniques (BRGM + D'Anna 2019 + Ghilardi 2017) ──
+const FAILLES_CORSE=[
+  {nom:"Faille des cols",lat:42.35,lon:9.0,orient:"N-S",type:"Quaternaire",src:"BRGM Corte"},
+  {nom:"Faille San-Quilico",lat:42.28,lon:9.08,orient:"N-S",type:"Quaternaire",src:"BRGM Corte"},
+  {nom:"Faille Casaluna",lat:42.20,lon:9.15,orient:"NE-SW",type:"Quaternaire",src:"BRGM Corte"},
+  {nom:"Faille Taravo",lat:41.85,lon:8.95,orient:"N-S",type:"Quaternaire",src:"Ghilardi 2017"},
+  {nom:"Faille Propriano",lat:41.70,lon:8.90,orient:"ENE-WSW",type:"active",src:"D'Anna PCR"},
+  {nom:"Faille Monaco-Île Rousse",lat:42.62,lon:8.95,orient:"ENE-OSO",type:"active",src:"BRGM offshore"},
+  {nom:"Faille Cap Corse (nord)",lat:42.98,lon:9.35,orient:"N-S",type:"active",src:"BRGM Cap Corse"},
+  {nom:"Faille Castagniccia",lat:42.40,lon:9.25,orient:"NE-SW",type:"Quaternaire",src:"BRGM Corte"},
+];
+
+// ── Réseau électrique & RF ──
+const CARTORADIO_STATS={'2A':{fh:247},'2B':{fh:311}};
+const DENSITY={'2A':{fh:247/4014},'2B':{fh:311/4666}};
+const FH_POINTS=[
+  [42.40,9.18,'Col de Vizzavona',180],[42.11,9.13,'Col de Verde',160],
+  [42.33,9.05,'Col de Sorba',150],[41.98,8.97,'Col de Bavella',140],
+  [42.52,9.24,'Col de Teghime',200],[42.18,8.85,'Col de Verghio',130],
+  [41.85,8.85,'Col de Sevi',120],[42.65,9.39,'Serra di Pigno',190],
+  [42.01,9.20,'Col de Chiavari',110],[42.28,9.31,'Monte San Petrone',140],
+  [41.74,9.02,'Plateau du Coscione',100],[42.46,9.08,'Monte Cinto zone',130],
+  [42.78,9.43,'Cap Corse Nord',160],[41.55,9.25,'Capo Pertusato',90],
+  [42.09,8.72,'Golfe de Sagone zone',85],[41.91,8.72,'Ajaccio périphérie',120],
+];
+const PROD_ELECTRIQUE=[{"lat":42.3312,"lon":8.9823,"nom":"Sovenzia","puissance":15.3},{"lat":41.9712,"lon":8.9089,"nom":"Tolla","puissance":15.6},{"lat":42.9734,"lon":9.3589,"nom":"Ersa","puissance":7.8},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana TAC","puissance":75.0},{"lat":41.3878,"lon":9.1589,"nom":"SARCO","puissance":90.0},{"lat":42.2789,"lon":9.4756,"nom":"Sampolo","puissance":43.0},{"lat":42.3789,"lon":9.1234,"nom":"Castirla","puissance":28.5},{"lat":41.9634,"lon":8.8712,"nom":"Pont de Vanna","puissance":8.6},{"lat":42.4534,"lon":8.9023,"nom":"Asco","puissance":5.4},{"lat":41.9194,"lon":8.7386,"nom":"Vazzio","puissance":132.3},{"lat":41.9634,"lon":8.8712,"nom":"Ocana","puissance":15.1},{"lat":42.3934,"lon":8.9534,"nom":"Corscia","puissance":13.0}];
+
+const SIGMA_ROCK={granit:0.0001,granit_biotite:0.0003,granit_rose:0.00015,granodiorite:0.0005,gneiss:0.0003,serpentinite:0.001,schistes:0.01,ophiolite:0.005,calcaire:0.0001,alluvions:0.05,inconnu:0.001};
+
+const CULTURES_CORSES={
+  vignes:{nom:"Vignes AOC",resilience:"⭐⭐⭐⭐⭐ Très résiliente",score_ideal:"6-10",actions:["Niellucciu = cépages robustes","Enracinement 2-4m profond","Antioxydants naturels élevés"],etudes:["E11 Ludwig","H64 terroir-EM"]},
+  oliviers:{nom:"Oliviers pluriséculaires",resilience:"⭐⭐⭐⭐⭐ Très résiliente",score_ideal:"4-10",actions:["Enracinement extrêmement profond","Huile riche polyphénols","Longévité 500+ = sélection EM"],etudes:["H63 Hermans","E08 HTA"]},
+  chataigniers:{nom:"Châtaigniers Corse",resilience:"⭐⭐⭐⭐ Résiliente",score_ideal:"3-10",actions:["Enracinement très profond","Tannins = antioxydants","Pluriséculaires Corse-Sud"],etudes:["H64 substrat","E10 légumineuses"]},
+  aromatiques:{nom:"Aromatiques/Médicinales",resilience:"⭐⭐⭐⭐ Résiliente",score_ideal:"1-6",actions:["Immortelle anti-inflammatoire","Ciste = résistance maquis","Huiles essentielles antioxydants"],etudes:["E05 Maffei germination","H55-H58"]},
+  maraichage:{nom:"Maraîchage bio",resilience:"⭐⭐ Sensible",score_ideal:"1-3 UNIQUEMENT",actions:["UNIQUEMENT zones calmes","Figarella tomate ancienne","Semences magnétopriming"],etudes:["E04 Favre sensibilité","H58 semences"]},
+  rucherie:{nom:"Apiculture",resilience:"⭐ TRÈS SENSIBLE",score_ideal:"0-2 strictement",actions:["Bio-indicateurs EM ultra-sensibles","Abeilles désorientées >50nT","500m antennes minimum"],etudes:["E04 Favre 2011","H55 RF désorientation"]},
+  cereales:{nom:"Céréales anciennes",resilience:"⭐⭐ Sensible",score_ideal:"2-5",actions:["MF faible stimule germination","Semis avant équinoxe","Couverture trèfle+seigle"],etudes:["E05 Maffei 2014","E10 nodulation"]},
+  legumineuses:{nom:"Légumineuses (N2)",resilience:"⭐⭐⭐ Moyenne",score_ideal:"2-6",actions:["Nodulation N2 boosted MF","Inoculation Rhizobium naturelle","Éviter HTA <30m"],etudes:["E10 Lemström","E06 Kordas AMF"]},
+  forets:{nom:"Foresterie Corse",resilience:"⭐⭐⭐⭐ Résiliente",score_ideal:"Any",actions:["Haie antiEM naturelle dense","Mycorhizes permanentes","Pinède laricio + maquis"],etudes:["H63 forêt refuge","E09 mégalithes"]}
+};
+
+// ════════════════════════════════════════════════════════════════════════════
+// UTILITAIRES
+// ════════════════════════════════════════════════════════════════════════════
+
+function dist(a,b,c,d){const R=6371,dL=(c-a)*Math.PI/180,dM=(d-b)*Math.PI/180;const x=Math.sin(dL/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dM/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+
+function haversine(lat1,lon1,lat2,lon2){const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
+
+function interpIDW(grid,lat,lon,n=4){
+  const pts=grid.map(p=>({d:Math.max(1e-10,(p[0]-lat)**2+(p[1]-lon)**2),v:p[2]})).sort((a,b)=>a.d-b.d).slice(0,n);
+  const wsum=pts.reduce((s,p)=>s+1/p.d,0);
+  return pts.reduce((s,p)=>s+p.v/p.d,0)/wsum;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MODÈLE GÉOMAGNÉTIQUE (IGRF-14 + LCS-1 + Sq + correction externe)
+// ════════════════════════════════════════════════════════════════════════════
+
+function calcLCS1(lat,lon){
+  const key=Math.round(lat*30)+','+Math.round(lon*30);
+  if(EMAG2_CACHE[key]!==undefined)return EMAG2_CACHE[key];
+  return Math.round(interpIDW(LCS1_GRID,lat,lon));
+}
+
+function igrfFallback(lat,lon){return Math.round(interpIDW(IGRF14_GRID,lat,lon));}
+
+function calcSq(lat){
+  const now=new Date(),t=now.getHours()+now.getMinutes()/60;
+  const A=(now.getMonth()>=4&&now.getMonth()<=8)?25:12;
+  return Math.round(A*Math.sin(2*Math.PI*(t-6)/24)*Math.cos(parseFloat(lat)*Math.PI/180));
+}
+
+function calcExternalCorr(){
+  if(aquExternalCorr!==null)return aquExternalCorr;
+  const kp=parseFloat(curKp)||0;
+  if(kp<2)return 0;if(kp<4)return Math.round((kp-2)*15);
+  if(kp<6)return Math.round(30+(kp-4)*40);
+  return Math.round(110+(kp-6)*80);
+}
+
+function fetchIGRF(lat,lon){return igrfFallback(parseFloat(lat),parseFloat(lon))+calcLCS1(lat,lon)+calcSq(lat)+calcExternalCorr();}
+
+// ════════════════════════════════════════════════════════════════════════════
+// GÉOLOGIE & SUBSTRAT
+// ════════════════════════════════════════════════════════════════════════════
+
+function calcGeoSusc(lat,lon){return Math.round(interpIDW(GEO_SUSC_GRID.map(p=>[p[0],p[1],p[2]]),lat,lon,4));}
+
+function getGeoType(lat,lon){
+  const pts=GEO_SUSC_GRID.map(p=>({d:Math.max(1e-10,(p[0]-lat)**2+(p[1]-lon)**2),t:p[3]})).sort((a,b)=>a.d-b.d);
+  return pts[0]?.t||'inconnu';
+}
+
+function calcFaultProximity(lat,lon){
+  let bonus=0;
+  for(const f of FAILLES_CORSE){
+    const d=haversine(lat,lon,f.lat,f.lon);
+    if(d<3){const pb=1.5*(1-d/3),tm=(f.type==='active')?1.0:0.7;bonus=Math.max(bonus,pb*tm);}
+  }
+  return bonus;
+}
+
+function calcSubstrateContext(lat,lon){
+  const lithology=getGeoType(lat,lon);
+  const susceptibility_nT=calcGeoSusc(lat,lon);
+  const RC={granit:3,granit_biotite:3,granit_rose:3,granodiorite:2,gneiss:2,serpentinite:2,schistes:2,ophiolite:2,calcaire:1,alluvions:1,inconnu:1};
+  const radon_potential_class=RC[lithology]||1;
+  let minFaultDist=Infinity;
+  for(const f of FAILLES_CORSE){const d=dist(lat,lon,f.lat,f.lon)*1000;if(d<minFaultDist)minFaultDist=d;}
+  const RIVER_PTS=[[42.70,9.35],[42.42,9.19],[42.08,9.17],[41.98,9.12],[41.85,9.05],[41.73,8.92],[42.30,8.78],[42.15,8.95]];
+  let minWaterDist=Infinity;
+  for(const[a,b]of RIVER_PTS){const d=dist(lat,lon,a,b)*1000;if(d<minWaterDist)minWaterDist=d;}
+  return{lithology,susceptibility_nT,radon_potential_class,gamma_estimated_nSv_h:null,distance_fault_m:Math.round(minFaultDist),distance_water_m:Math.round(minWaterDist),source:'BRGM + IRSN',confidence:'medium'};
+}
+
+function calcTelluricSecondary(lat,lon){
+  const sigma=SIGMA_ROCK[getGeoType(lat,lon)]||0.001;
+  if(sigma>0.01)return 45;if(sigma>0.001)return 25;if(sigma>0.0003)return 15;return 8;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// DOMAINES ÉLECTROMAGNÉTIQUES
+// ════════════════════════════════════════════════════════════════════════════
+
+function calcMagneticStatic(lat,lon){
+  const la=parseFloat(lat),lo=parseFloat(lon);
+  const B_principal_nT=igrfFallback(la,lo);
+  const B_anomaly_nT=calcLCS1(la,lo);
+  const Sq_correction_nT=calcSq(la);
+  const external_correction_nT=calcExternalCorr();
+  const B_total_nT=B_principal_nT+B_anomaly_nT+Sq_correction_nT+external_correction_nT;
+  return{B_total_nT,B_principal_nT,B_anomaly_nT,Sq_correction_nT,external_correction_nT,source:'IGRF-14+LCS1+Sq',confidence:'medium'};
+}
+
+function calcMagneticELF(lat,lon){
+  const MU0_OVER_2PI=2e-7;let B_total_nT=0;
+  const HTA_SEGS=[[[41.919,8.738],[42.05,8.82],[42.154,9.193],[42.4,9.35],[42.562,9.431]],[[41.919,8.738],[41.86,9.0],[41.73,9.2],[41.578,9.267]],[[42.562,9.431],[42.65,9.45],[42.703,9.45]],[[41.919,8.738],[42.1,8.75],[42.33,8.7],[42.567,8.758]],[[42.154,9.193],[42.3,9.25],[42.45,9.38],[42.562,9.431]],[[42.562,9.431],[42.3,9.4],[42.1,9.5],[41.86,9.44]],[[41.387,9.159],[41.5,9.2],[41.578,9.267]],[[42.562,9.431],[42.62,9.45]]];
+  const HTA_I=[300,200,150,150,80,60,450,250];
+  HTA_SEGS.forEach((seg,si)=>{
+    const I=HTA_I[si];
+    for(let i=0;i<seg.length-1;i++){
+      const a=seg[i],b=seg[i+1];
+      const A=lat-a[0],B=lon-a[1],C=b[0]-a[0],D=b[1]-a[1];
+      const t=Math.max(0,Math.min(1,(A*C+B*D)/(C*C+D*D)));
+      const d=dist(lat,lon,a[0]+t*C,a[1]+t*D);
+      const d_m=Math.max(50,d*1000);
+      const B_nT=MU0_OVER_2PI*I/d_m*1e9;
+      if(B_nT>0.5)B_total_nT+=Math.min(B_nT,600);
+    }
+  });
+  PROD_ELECTRIQUE.forEach(s=>{
+    if(s.puissance<0.5)return;
+    const d=dist(lat,lon,s.lat,s.lon),d_m=Math.max(100,d*1000);
+    const B_nT=MU0_OVER_2PI*(Math.sqrt(s.puissance)*50)/d_m*1e9;
+    if(B_nT>0.5)B_total_nT+=Math.min(B_nT,400);
+  });
+  const BT_ZONES=[[41.919,8.738,80],[42.703,9.45,70],[41.578,9.267,50],[42.567,8.758,45],[42.154,9.193,40],[42.631,8.937,35],[41.387,9.159,35],[42.562,9.431,60],[41.678,8.905,30]];
+  BT_ZONES.forEach(([a,b,intensity])=>{
+    const d=dist(lat,lon,a,b);
+    if(d<0.2)B_total_nT+=intensity*(1-d/0.2);
+    else if(d<0.5)B_total_nT+=intensity*0.3*(1-(d-0.2)/0.3);
+  });
+  return{B_total_nT:Math.round(B_total_nT),source:'Biot-Savart HTA EDF SEI + BT',confidence:'medium'};
+}
+
+function calcRF(lat,lon){
+  let S_total=0;
+  FH_POINTS.forEach(([a,b,name,intensity])=>{
+    const d=dist(lat,lon,a,b);
+    if(d<1.5)S_total+=intensity*(1-d/1.5);
+    else if(d<4)S_total+=intensity*0.2*(1-(d-1.5)/2.5);
+  });
+  S_total+=Math.round(DENSITY[lat<42.0?'2A':'2B'].fh*8);
+  const E_total_V_m=Math.round(Math.sqrt(S_total*1e-6*377)*1000)/1000;
+  return{S_total_uW_m2:Math.round(S_total),E_total_V_m,source:'FH CartoRadio',confidence:'medium'};
+}
+
+function calcGammaAmbient(lat,lon,altitude_m){
+  const alt=(typeof altitude_m==='number'&&isFinite(altitude_m))?altitude_m:200;
+  return{dose_rate_nSv_h:Math.round(35*Math.exp(alt/1500)*10)/10,confidence:'low',in_construction:true};
+}
+
+function calcRadonPotential(lat,lon){
+  const l=getGeoType(lat,lon);
+  const RC={granit:3,granit_biotite:3,granit_rose:3,granodiorite:2,gneiss:2,serpentinite:2,schistes:2,ophiolite:2,calcaire:1,alluvions:1,inconnu:1};
+  const c=RC[l]||1;
+  return{class:c,activity_estimate_Bq_m3:{1:[10,50],2:[50,200],3:[100,600]}[c],lithology:l,source:'IRSN 2018',confidence:'high'};
+}
+
+function calcHeritageDensity(lat,lon){
+  return{density_sites_km2:0,dominant_type:'megalithique',radius_km:2,nearest_site:null,_score_legacy:0};
+}
+
+function calcWater(lat,lon){
+  const pluieFactor=meteoData?.precip>0?Math.min(2.5,1+meteoData.precip/10):1.0;
+  let w=0;
+  [[42.70,9.35],[42.42,9.19],[42.08,9.17],[41.98,9.12],[41.85,9.05],[41.73,8.92],[42.30,8.78],[42.15,8.95]].forEach(([a,b])=>{const d=dist(lat,lon,a,b);if(d<3)w+=150*(1-d/3);});
+  [[42.25,9.15,300],[42.10,8.85,250],[41.90,9.00,200]].forEach(([a,b,v])=>{const d=dist(lat,lon,a,b);if(d<2)w+=v*(1-d/2);});
+  return Math.round(w*pluieFactor);
+}
+
+function calcSimDelta(){return 0;}
+
+function calcN_RF(lat,lon){
+  const EIRP_W=20;let E2=0;
+  [[41.919,8.738],[42.703,9.450],[41.578,9.267],[42.154,9.193],[41.730,8.900],[42.560,9.350],[41.860,9.170],[42.400,8.900],[41.685,9.170],[42.330,8.700],[42.566,8.759],[42.608,8.879],[42.238,8.638],[42.607,9.368],[42.568,8.928],[41.582,9.278],[41.855,8.793],[42.490,9.055],[43.010,9.352],[42.738,9.437]]
+  .forEach(([a,b])=>{const d=Math.max(0.05,dist(lat,lon,a,b))*1000;E2+=30*EIRP_W/(d*d);});
+  return Math.sqrt(E2);
+}
+
+function calcRFcorrFactor(lat,lon){
+  if(!RF_CALIB_EXT.length)return RF_METRICS.medianRatio;
+  const pts=RF_CALIB_EXT.map(p=>({d:Math.max(0.001,(p.lat-lat)**2+(p.lon-lon)**2),ratio:p.ratio})).sort((a,b)=>a.d-b.d).slice(0,6);
+  const wsum=pts.reduce((s,p)=>s+1/p.d,0);
+  return Math.min(500,Math.max(1,pts.reduce((s,p)=>s+p.ratio/p.d,0)/wsum));
+}
+
+function calcN_RF_calib(lat,lon){return calcN_RF(lat,lon)*calcRFcorrFactor(lat,lon);}
+
+// ════════════════════════════════════════════════════════════════════════════
+// calcAll_v2 — Agrégateur v2 (version minimale agronomie)
+// Retourne v2.domains.magnetic.elf.B_total_nT et v2.context.substrate.susceptibility_nT
+// ════════════════════════════════════════════════════════════════════════════
+
+function calcAll_v2(lat,lon,options){
+  options=options||{};
+  return{
+    domains:{
+      magnetic:{
+        static:calcMagneticStatic(lat,lon),
+        elf:calcMagneticELF(lat,lon)
+      },
+      rf:calcRF(lat,lon),
+      ionizing:{
+        gamma:calcGammaAmbient(lat,lon,options.altitude_m||null),
+        radon:calcRadonPotential(lat,lon)
+      }
+    },
+    context:{
+      substrate:calcSubstrateContext(lat,lon),
+      heritage:calcHeritageDensity(lat,lon),
+      water:{value:calcWater(lat,lon),unit:'proxy',confidence:'low'},
+      fault:{value:calcFaultProximity(lat,lon),unit:'dimensionless',confidence:'medium'},
+      telluric:{value:calcTelluricSecondary(lat,lon),unit:'%',confidence:'low'}
+    },
+    metadata:{timestamp:new Date().toISOString(),kp_snapshot:{value:parseFloat(curKp)||null}}
+  };
+}
+
+function calcAll(lat,lng){
+  const v2=calcAll_v2(lat,lng);
+  const human=v2.domains.magnetic.elf.B_total_nT+calcSimDelta();
+  const water=v2.context.water.value;
+  const geo=v2.context.substrate.susceptibility_nT;
+  const heritage=v2.context.heritage._score_legacy;
+  const scorePhys=human+Math.round(water*0.3)+geo+Math.round(heritage*0.5);
+  return{human,water,geo,heritage,scorePhys,score:scorePhys,v2};
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// FONCTIONS AGRONOMIQUES — recommandMateriaux · runProspDiag · runPermaDiag
+// ════════════════════════════════════════════════════════════════════════════
+
+function calcCoudeeLatitude(lat){return Math.round(52.36*Math.pow(175/176,lat-30)*100)/100;}
+
+function calcSolsticeAzimuth(lat){
+  const eps=23.44*Math.PI/180,phi=lat*Math.PI/180;
+  const cosA=-Math.sin(eps)/Math.cos(phi);
+  if(Math.abs(cosA)>1)return{ete:null,hiver:null,equinoxe:90};
+  const azEte=Math.round(Math.acos(cosA)*180/Math.PI*10)/10;
+  return{ete:azEte,hiver:360-azEte,equinoxe:90,amplitude:Math.round((90-azEte)*2*10)/10};
+}
+
+function calcResonanceHz(longueur_m,materiau){
+  const alpha={granit:0.02,calcaire:0.04,schiste:0.05,bois:0.15,beton:0.03}[materiau]||0.05;
+  const f0=Math.round(343/(2*longueur_m));
+  return{fondamentale:f0,note:f0>=90&&f0<=120?'Zone résonance sacrée 90-120Hz':f0>=80&&f0<=130?'Proche zone sacrée':'Hors zone sacrée'};
+}
+
+// ── recommandMateriaux (Vitruve, Grimaud 2024, Desborough) ──
+function recommandMateriaux(lat,lon){
+  const gt=getGeoType(lat,lon),sol=calcSolsticeAzimuth(lat),coudee=calcCoudeeLatitude(lat);
+  const v2=calcAll_v2(lat,lon);
+  const human=v2.domains.magnetic.elf.B_total_nT;
+  const susc_nT_mat=v2.context.substrate.susceptibility_nT;
+  const g=calcGeoSusc(lat,lon);
+  const rf=calcN_RF_calib(lat,lon);
+  const idx=Math.min(10,Math.min(4,Math.round(human/100))+Math.min(3,Math.round(Math.abs(g)/15))+(rf>6?3:rf>2?2:rf>0.5?1:0));
+  const mat=gt.includes('granit_biotite')?'Granit quartzifère local (susceptibilité magnétique : '+susc_nT_mat+' nT)':gt.includes('granit')?'Granit local (susceptibilité : '+susc_nT_mat+' nT)':gt.includes('schiste')?'Schiste + linteaux granit':gt.includes('calcaire')?'Calcaire + quartz enfoui (Grimaud 2024)':gt.includes('serpentin')?'Serpentine/calcaire bichromes (modèle Murato)':'Pierre locale';
+  const reso=calcResonanceHz(4,gt.includes('granit')?'granit':'calcaire');
+  const orient=idx<=3?sol.ete+'° (solstice été) ou 90° (E-W)':'90° (E-W classique)';
+  const avis=idx<=3&&susc_nT_mat>12?'IDÉALE':'FAVORABLE';
+  return{substrat:gt,materiau:mat,orientation:orient,coudee:coudee+'cm',resonance:reso.note+' (~'+reso.fondamentale+'Hz pour L=4m)',implantation:avis+' — Indice '+idx+'/10',solstice:sol,susc_nT:susc_nT_mat,idx};
+}
+
+// ── runProspDiag ──
+function runProspDiag(lat,lon){
+  const r=document.getElementById('prosp-results');
+  const corr=document.getElementById('prosp-correction');
+  const corrText=document.getElementById('prosp-correction-text');
+  if(!r)return;
+  const igrf=fetchIGRF(lat,lon);
+  const all=calcAll(lat,lon);
+  const score=all.score||0,human=all.human||0;
+  const piezo=all.v2?all.v2.context.substrate.susceptibility_nT:(all.geo||0);
+  const geoType=getGeoType(lat,lon);
+  const isGranit=geoType.toLowerCase().includes('granit');
+
+  let html='<div style="margin-bottom:8px;font-weight:600;color:var(--tx)">📍 Diagnostic : '+lat.toFixed(4)+', '+lon.toFixed(4)+'</div>';
+  const scoreColor=score<=3?'#166534':score<=6?'#854d0e':'#991b1b';
+  const scoreLabel=score<=3?'✅ Calme':score<=6?'⚠️ Modéré':'🔴 Perturbé';
+  html+='<div style="padding:8px 10px;border-left:3px solid '+scoreColor+';margin-bottom:6px;background:var(--bg2);border-radius:0 var(--r) var(--r) 0">';
+  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">';
+  html+='<div style="flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+Math.min(100,score*10)+'%;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22);border-radius:4px"></div></div>';
+  html+='<span style="font-family:var(--mono);font-size:14px;font-weight:700;color:'+scoreColor+'">'+score.toFixed(1)+'</span>';
+  html+='</div>';
+  html+='<b>1. Score Tellux : '+score.toFixed(1)+'/10</b> — '+scoreLabel;
+  html+='<div style="font-size:10px;color:var(--tx3)">ELF 50 Hz : '+human.toFixed(0)+' nT · Susceptibilité substrat : '+piezo+' nT · IGRF : '+igrf.toFixed(0)+' nT</div></div>';
+
+  html+='<div style="padding:6px 8px;border-left:3px solid '+(isGranit?'#166534':'#6b7280')+';margin-bottom:6px;background:var(--bg2);border-radius:0 var(--r) var(--r) 0">';
+  html+='<b>2. Substrat : '+geoType+'</b>';
+  html+=(isGranit?' — 🪨 Granit à forte susceptibilité magnétique ('+piezo+' nT)':' — Susceptibilité magnétique : '+piezo+' nT');
+  html+='</div>';
+
+  html+='<div style="padding:6px 8px;border-left:3px solid #3730a3;margin-bottom:6px;background:var(--bg2);border-radius:0 var(--r) var(--r) 0">';
+  html+='<b>3. Orientation optimale</b>';
+  if(human>150)html+=' — Axe perpendiculaire aux sources humaines pour minimiser induction';
+  else if(isGranit)html+=' — Axe 36.87° (Leplat) pour maximiser résonance piézo';
+  else html+=' — Orientation libre (pas de contrainte EM dominante)';
+  html+='</div>';
+
+  const needsCorrection=score>4;
+  html+='<div style="padding:6px 8px;border-left:3px solid var(--acc);margin-bottom:6px;background:var(--bg2);border-radius:0 var(--r) var(--r) 0">';
+  html+='<b>4. Correction H46</b> — '+(needsCorrection?'⚠️ Correction recommandée':'✅ Site naturellement favorable');
+  html+='</div>';
+  r.innerHTML=html;
+
+  if(needsCorrection){
+    corr.style.display='block';
+    let corrHtml='';
+    if(human>150){
+      corrHtml+='<b>Perturbation humaine élevée ('+human.toFixed(0)+' nT)</b><br>';
+      corrHtml+='→ Blindage acier ou béton armé dense (28-45 dB) sur les façades orientées vers les sources<br>';
+      corrHtml+='→ Vitrage athermique traité RF (15-25 dB) sur façades exposées<br>';
+    }
+    if(!isGranit&&piezo<12){
+      corrHtml+='<b>Substrat à faible susceptibilité magnétique</b><br>';
+      corrHtml+='→ Intégrer des éléments en granit quartzifère (soubassement, murets)<br>';
+    }
+    if(isGranit&&score>5){
+      corrHtml+='<b>Granit actif mais perturbé</b><br>';
+      corrHtml+='→ Orientation à 36.87° (Leplat) pour optimiser la résonance piézo<br>';
+      corrHtml+='→ Proportions φ (1.618) dans la structure<br>';
+    }
+    corrHtml+='<div style="margin-top:6px;font-size:10px;color:var(--acc);font-style:italic">Objectif H46 : transformer le spectre EM chaotique en profil cohérent similaire aux sites mégalithiques.</div>';
+    corrText.innerHTML=corrHtml;
+  }else{
+    corr.style.display='none';
+  }
+}
+
+// ── runPermaDiag ──
+function runPermaDiag(lat,lon){
+  const r=document.getElementById('perma-results');if(!r)return;
+  const igrf=fetchIGRF(lat,lon);
+  const all=calcAll(lat,lon);
+  const score=all.score||0,human=all.human||0;
+  const piezo=all.v2?all.v2.context.substrate.susceptibility_nT:(all.geo||0);
+  const geoType=getGeoType(lat,lon);
+  const isGranit=geoType.toLowerCase().includes('granit');
+  const altZone=lat>42.3?'montagne (>600m)':lat>42.0?'piémont (300-600m)':'littoral (<300m)';
+  const climate=lat>42.3?'Frais, humide':'Méditerranéen, sec en été';
+
+  let html='<div style="margin-bottom:8px;font-weight:600;color:var(--tx)">🌾 Diagnostic parcelle : '+lat.toFixed(4)+'°N, '+lon.toFixed(4)+'°E</div>';
+  const scoreColor=score<=3?'#166534':score<=6?'#854d0e':'#991b1b';
+  const scoreLabel=score<=3?'🟢 Zone calme':score<=6?'🟡 Zone modérée':'🔴 Zone perturbée';
+  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+  html+='<div style="flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+Math.min(100,score*10)+'%;background:linear-gradient(90deg,#22c55e,#eab308,#ef4444);border-radius:4px"></div></div>';
+  html+='<span style="font-family:var(--mono);font-size:14px;font-weight:700;color:'+scoreColor+'">'+score.toFixed(1)+'</span>';
+  html+='</div>';
+
+  html+='<div style="padding:6px 8px;border-left:3px solid '+scoreColor+';margin-bottom:6px;background:var(--bg2);border-radius:0 var(--r) var(--r) 0">';
+  html+='<b>Profil EM : '+scoreLabel+'</b> — Perturbation humaine: '+human.toFixed(0)+' nT · IGRF: '+igrf.toFixed(0)+' nT</div>';
+
+  html+='<div style="padding:6px 8px;border-left:3px solid #15803d;margin-bottom:6px;background:var(--bg2);border-radius:0 var(--r) var(--r) 0">';
+  const piezoLabel=piezo>30?'⭐ Fort ('+piezo+' nT)':piezo>12?'Modéré ('+piezo+' nT)':'Faible ('+piezo+' nT)';
+  html+='<b>Sol : '+geoType+'</b>';
+  if(isGranit)html+=' — 🪨 Susceptibilité magnétique '+piezoLabel;
+  html+='<br><b>Zone climatique :</b> '+altZone+' · '+climate;
+  if(isGranit&&piezo>20)html+='<br><span style="font-size:10px;color:var(--tx3)">Granit à forte susceptibilité magnétique : contexte favorable au microbiome AMF (Lemström 1904, Maffei 2014)</span>';
+  html+='</div>';
+
+  const htCount=human>200?1:0;
+  if(htCount>0){
+    html+='<div style="padding:6px 8px;border-left:3px solid #dc2626;margin-bottom:6px;background:#fee2e2;border-radius:0 var(--r) var(--r) 0">';
+    html+='⚡ <b>'+htCount+' ligne(s) HT à proximité</b><br>';
+    html+='<span style="font-size:10px;color:#7f1d1d">Effets à &lt;100m : stress oxydatif végétal, diversité microbiome ↓ (Maffei 2014, Hermans 2023 iScience). Haie tampon 10m min.</span>';
+    html+='</div>';
+  }
+
+  html+='<div style="padding:8px 10px;border-left:3px solid #15803d;margin-bottom:6px;background:#dcfce7;border-radius:0 var(--r) var(--r) 0">';
+  html+='<b>🌱 Recommandations pour cette parcelle :</b><br>';
+  if(score<=3){
+    html+='<span style="color:#166534">✅ Zone calme — excellent pour cultures sensibles</span><br>';
+    html+='→ Maraîchage bio, semences corses anciennes (figarella, corse a battu), aromatiques/médicinales<br>';
+    html+='→ Ruches — abeilles sensibles aux champs EM (Favre 2011)<br>';
+    html+='→ Couvert permanent : trèfle blanc + fétuque + lotier<br>';
+    if(isGranit&&piezo>20)html+='→ <b>Contexte granit favorable</b> : AMF favorisés, magnétopriming naturel des semences probable<br>';
+    html+='<span style="font-size:10px;color:#166534;font-style:italic">MF naturel 15-50 nT : stimulation germination documentée (Maffei 2014)</span>';
+  }else if(score<=6){
+    html+='<span style="color:#854d0e">⚠️ Zone modérée — adapté avec précautions</span><br>';
+    html+='→ Vergers résistants : châtaigniers, oliviers centenaires, vignes selon terroir<br>';
+    html+='→ Agroforesterie : haies perpendiculaires aux sources EM<br>';
+    if(htCount>0)html+='→ <b>Haie brise-EM</b> : 3 rangs denses (ciste + arbousier + chêne vert) côté lignes HT<br>';
+    html+='<span style="font-size:10px;color:#854d0e;font-style:italic">Vignes Niellucciu/Sciaccarellu résilientes (H64). Oliviers pluriséculaires = haie antiEM.</span>';
+  }else{
+    html+='<span style="color:#991b1b">🔴 Zone perturbée — cultures robustes uniquement</span><br>';
+    html+='→ Vignes Niellucciu/Sciaccarellu — enracinement profond, résilience locale (H64)<br>';
+    html+='→ Oliviers et châtaigniers pluriséculaires, figuiers de Barbarie<br>';
+    html+='→ <b>Correction prioritaire</b> : haie dense 10m+ côté sources HTA, rangs perpendiculaires<br>';
+    html+='<span style="font-size:10px;color:#991b1b;font-style:italic">Microbiome sol probablement dégradé — inoculation AMF conseillée (Hermans 2023).</span>';
+  }
+  html+='</div>';
+
+  // Cultures Corse par zone EM
+  const CPZ={1:["rucherie","maraichage"],2:["aromatiques","cereales","legumineuses"],3:["aromatiques","cereales","legumineuses","forets"],4:["vignes","oliviers","chataigniers","forets"],5:["vignes","oliviers","chataigniers"],6:["vignes","oliviers","chataigniers"],7:["vignes","oliviers","forets"],8:["vignes","oliviers"],9:["vignes"],10:["vignes"]};
+  const zoneInt=Math.min(10,Math.ceil(score));
+  const culturesAdaptees=CPZ[zoneInt]||["vignes","oliviers","forets"];
+  html+='<div style="padding:8px 10px;border-left:3px solid #16a34a;margin-bottom:6px;background:#f0fdf4;border-radius:0 var(--r) var(--r) 0">';
+  html+='<b style="color:#15803d">🎯 Cultures Corse adaptées à ce score EM :</b><br>';
+  culturesAdaptees.forEach(ckey=>{
+    const cult=CULTURES_CORSES[ckey];
+    if(cult){
+      html+='<div style="margin:4px 0;padding:4px;background:rgba(255,255,255,0.3);border-radius:4px;font-size:11px">';
+      html+='<b style="color:#15803d">'+cult.nom+'</b> '+cult.resilience+'<br>';
+      html+='→ '+cult.actions.slice(0,2).join(' · ')+'</div>';
+    }
+  });
+  html+='</div>';
+
+  // Contexte géologique faille
+  const faultBonus=calcFaultProximity(lat,lon);
+  const faultDist=Math.min(...FAILLES_CORSE.map(f=>haversine(lat,lon,f.lat,f.lon)));
+  html+='<div style="padding:8px 10px;border-left:3px solid #0284c7;margin-bottom:6px;background:#e0f2fe;border-radius:0 var(--r) var(--r) 0">';
+  html+='<b style="color:#0c4a6e">📊 Susceptibilité magnétique — Contexte géologique</b><br>';
+  html+='<table style="width:100%;font-size:10px;border-collapse:collapse"><tr style="border-bottom:1px solid #0284c7;background:rgba(2,132,199,0.1)"><td><b>Source</b></td><td style="text-align:center"><b>Bonus</b></td><td style="text-align:right"><b>Dist</b></td></tr>';
+  if(faultBonus>0)html+='<tr><td>🪨 Failles BRGM</td><td style="text-align:center;color:#991b1b">+'+faultBonus.toFixed(2)+'</td><td style="text-align:right">'+faultDist.toFixed(1)+'km</td></tr>';
+  if(isGranit)html+='<tr><td>🪨 Granit quartz</td><td style="text-align:center;color:#15803d">'+piezo.toFixed(0)+' nT</td><td style="text-align:right">terrain</td></tr>';
+  html+='</table></div>';
+
+  r.innerHTML=html;
+
+  // Popup carte
+  if(window._agro_marker){window._agro_marker.remove();window._agro_marker=null;}
+  window._agro_marker=L.popup().setLatLng([lat,lon]).setContent('<b>🌱 Diagnostic parcelle</b><br>Score: '+score.toFixed(1)+'/10 — '+scoreLabel).openOn(map);
+}
+
+// ── displayRecoMateriaux ──
+function displayRecoMateriaux(lat,lon){
+  const el=document.getElementById('reco-results');
+  if(!el)return;
+  document.getElementById('reco-instr').style.display='none';
+  const r=recommandMateriaux(lat,lon);
+  const substrColor=r.substrat.includes('calcaire')?'#8E2F1F':r.substrat.includes('granit')?'#C28533':'#3F5B3A';
+  let html='';
+  html+='<div class="reco-row" style="border-left-color:'+substrColor+'"><b>Substrat</b>'+r.substrat+'</div>';
+  html+='<div class="reco-row"><b>Matériau recommandé</b>'+r.materiau+'</div>';
+  html+='<div class="reco-row"><b>Orientation optimale</b>'+r.orientation+'</div>';
+  html+='<div class="reco-row"><b>Coudée locale</b>'+r.coudee+'</div>';
+  html+='<div class="reco-row"><b>Résonance (L=4m)</b>'+r.resonance+'</div>';
+  html+='<div class="reco-row" style="border-left-color:'+(r.implantation.includes('IDÉALE')?'#3F5B3A':'#C28533')+'"><b>Implantation</b>'+r.implantation+'</div>';
+  if(r.solstice.ete)html+='<div class="reco-row"><b>Azimuts solstices</b>Été: '+r.solstice.ete+'° · Hiver: '+r.solstice.hiver+'° · ±'+r.solstice.amplitude+'°</div>';
+  el.innerHTML=html;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// UI HELPERS
+// ════════════════════════════════════════════════════════════════════════════
+
+function togglePanel(id){
+  const panel=document.getElementById(id);if(!panel)return;
+  const header=panel.querySelector('.panel-header');
+  const body=panel.querySelector('.panel-body');
+  if(!header||!body)return;
+  header.classList.toggle('collapsed');
+  body.classList.toggle('collapsed');
+}
+
+function showPermaTab(tab){
+  const diagTab=document.getElementById('perma-diag-tab');
+  const cultTab=document.getElementById('perma-cult-tab');
+  const diagBtn=document.getElementById('perma-tab-diag');
+  const cultBtn=document.getElementById('perma-tab-cult');
+  if(tab==='diag'){
+    if(diagTab)diagTab.style.display='block';if(cultTab)cultTab.style.display='none';
+    if(diagBtn)diagBtn.className='tab-btn active';if(cultBtn)cultBtn.className='tab-btn';
+  }else{
+    if(diagTab)diagTab.style.display='none';if(cultTab)cultTab.style.display='block';
+    if(diagBtn)diagBtn.className='tab-btn';if(cultBtn)cultBtn.className='tab-btn active';
+  }
+}
+
+function exportSitePDF(){
+  const results=document.getElementById('prosp-results');
+  const correction=document.getElementById('prosp-correction');
+  if(!results||!results.innerHTML){alert('Cliquez d\'abord sur un point pour générer le diagnostic.');return;}
+  const html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Tellux Agronomie — Rapport de site</title><style>body{font-family:sans-serif;max-width:700px;margin:20px auto;padding:20px;color:#333}h1{font-size:18px;color:#3F5B3A;border-bottom:2px solid #3F5B3A;padding-bottom:8px}.meta{font-size:11px;color:#666;margin-bottom:16px}.footer{margin-top:20px;font-size:10px;color:#999;border-top:1px solid #ddd;padding-top:8px}@media print{body{margin:0;padding:10px}}</style></head><body><h1>Tellux Agronomie — Rapport de diagnostic de site</h1><div class="meta">Généré le '+new Date().toLocaleString('fr-FR')+' · tellux.pages.dev/agronomie</div>'+results.innerHTML+(correction&&correction.style.display!=='none'?'<h2 style="color:#3F5B3A;font-size:14px;margin-top:16px">Recommandation correction (H46)</h2>'+correction.innerHTML:'')+'<div class="footer">Tellux — Agronomie Corse · Sources : IGRF-14, EMAG2v3, BRGM, EDF SEI<br>Ce rapport est indicatif (±50%). Il ne remplace pas une mesure terrain.</div></body></html>';
+  const blob=new Blob([html],{type:'text/html'});const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='tellux_agro_site_'+new Date().toISOString().slice(0,10)+'.html';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function exportPermaPDF(){
+  const results=document.getElementById('perma-results');
+  if(!results||!results.innerHTML){alert('Cliquez d\'abord sur une parcelle.');return;}
+  const html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Tellux Agronomie — Rapport parcelle</title><style>body{font-family:sans-serif;max-width:700px;margin:20px auto;padding:20px;color:#333}h1{font-size:18px;color:#15803d;border-bottom:2px solid #15803d;padding-bottom:8px}.meta{font-size:11px;color:#666;margin-bottom:16px}.footer{margin-top:20px;font-size:10px;color:#999;border-top:1px solid #ddd;padding-top:8px}@media print{body{margin:0;padding:10px}}</style></head><body><h1>🌱 Tellux Agronomie — Rapport parcelle</h1><div class="meta">Généré le '+new Date().toLocaleString('fr-FR')+' · tellux.pages.dev/agronomie</div>'+results.innerHTML+'<div class="footer">Tellux — Module Permaculture &amp; Agriculture<br>Sources : Maffei 2014, Favre 2011, Hermans 2023 iScience, ACS AgSci 2025<br>Ce rapport est indicatif. Consulter un agronome pour un itinéraire technique complet.</div></body></html>';
+  const blob=new Blob([html],{type:'text/html'});const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='tellux_agro_parcelle_'+new Date().toISOString().slice(0,10)+'.html';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// CARTE LEAFLET
+// ════════════════════════════════════════════════════════════════════════════
+
+const map=L.map('map',{center:[42.0,9.0],zoom:9,maxZoom:19,zoomControl:true});
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  maxZoom:19
+}).addTo(map);
+
+map.on('click',function(e){
+  const lat=e.latlng.lat,lon=e.latlng.lng;
+  runProspDiag(lat,lon);
+  runPermaDiag(lat,lon);
+  displayRecoMateriaux(lat,lon);
+  // Ouvrir les panels fermés
+  ['panel-prosp','panel-perma','panel-reco'].forEach(id=>{
+    const header=document.getElementById(id)?.querySelector('.panel-header');
+    const body=document.getElementById(id)?.querySelector('.panel-body');
+    if(header&&body&&header.classList.contains('collapsed')){
+      header.classList.remove('collapsed');
+      body.classList.remove('collapsed');
+    }
+  });
+});
+</script>
+</body>
+</html>
