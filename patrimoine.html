@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tellux — Patrimoine Corse</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo/tellux_logo.svg">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#F5F0E7; --bg2:#EFE9DC; --bg3:#E8E2D5;
+  --tx:#1F2329; --tx2:#3D424A; --tx3:#74706A;
+  --acc:#3F5B3A; --acc2:#4F7048; --acc3:#E5EBE0;
+  --maquis:#3F5B3A; --porphyre:#8E2F1F; --tyrrh:#1F3A5F;
+  --ocre:#C28533; --warn:#C28533; --danger:#8E2F1F;
+  --border:rgba(31,35,41,0.10);
+  --font:'IBM Plex Sans',system-ui,sans-serif;
+  --font-display:'Fraunces',Georgia,serif;
+  --mono:'IBM Plex Mono','Courier New',monospace;
+  --r:8px; --r2:14px;
+  color-scheme:light;
+}
+html,body{height:100%;overflow:hidden;}
+body{display:flex;flex-direction:column;font-family:var(--font);background:var(--bg);color:var(--tx);}
+
+/* ── Header ── */
+.hdr{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0;z-index:1000;}
+.hdr-brand{display:flex;align-items:center;gap:10px;}
+.hdr-logo{width:36px;height:36px;border-radius:6px;}
+.hdr-title{font-family:var(--font-display);font-size:18px;font-weight:600;color:var(--tx);letter-spacing:-0.01em;}
+.hdr-badge{font-family:var(--mono);font-size:10px;color:var(--tx3);background:var(--bg3);padding:2px 8px;border-radius:20px;margin-left:4px;}
+.hdr-back{margin-left:auto;font-size:11px;color:var(--tyrrh);text-decoration:none;padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-weight:500;transition:background .15s;}
+.hdr-back:hover{background:var(--bg3);}
+
+/* ── Layout ── */
+.layout{display:flex;flex:1;overflow:hidden;}
+
+/* ── Sidebar ── */
+.sidebar{width:300px;flex-shrink:0;background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.sidebar-body{flex:1;overflow-y:auto;padding:14px 12px;}
+
+.sb-title{font-family:var(--font-display);font-size:16px;font-weight:600;color:var(--tx);margin-bottom:4px;}
+.sb-sub{font-size:11px;color:var(--tx3);margin-bottom:14px;line-height:1.5;}
+
+.counters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.counter-chip{flex:1;min-width:80px;padding:6px 10px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);text-align:center;}
+.counter-chip .val{font-family:var(--mono);font-size:16px;font-weight:500;}
+.counter-chip .lbl{font-size:9px;color:var(--tx3);margin-top:2px;letter-spacing:0.02em;}
+.cc-mega .val{color:var(--maquis);}
+.cc-egl .val{color:var(--porphyre);}
+.cc-align .val{color:var(--tyrrh);}
+
+.section{margin-bottom:16px;}
+.section-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--tx3);margin-bottom:8px;}
+
+.btn-layer{width:100%;display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);cursor:pointer;font-family:var(--font);font-size:12px;font-weight:500;color:var(--tx);transition:all .15s;margin-bottom:6px;text-align:left;}
+.btn-layer:hover{background:var(--bg3);}
+.btn-layer.active{background:var(--acc3);border-color:var(--acc2);}
+.btn-layer .dot{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+.btn-layer .dot-circle{border-radius:50%;}
+.btn-layer .dot-cross{position:relative;width:10px;height:10px;flex-shrink:0;}
+.btn-layer .dot-cross::before,.btn-layer .dot-cross::after{content:'';position:absolute;background:currentColor;border-radius:1px;}
+.btn-layer .dot-cross::before{width:2px;height:10px;left:4px;top:0;}
+.btn-layer .dot-cross::after{width:10px;height:2px;left:0;top:4px;}
+.btn-layer .lcount{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--tx3);}
+
+/* Dormant section */
+.dormant-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;font-size:11px;color:var(--tx3);line-height:1.5;}
+.dormant-box .dormant-title{font-weight:600;color:var(--tx2);margin-bottom:4px;display:flex;align-items:center;gap:6px;}
+.dormant-badge{font-family:var(--mono);font-size:9px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;}
+.btn-hypo{width:100%;margin-top:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg3);color:var(--tx3);font-family:var(--font);font-size:11px;cursor:default;text-align:center;}
+
+/* Info bar */
+.info-bar{padding:8px 12px;font-size:11px;color:var(--tx2);background:var(--bg2);border-top:1px solid var(--border);min-height:36px;line-height:1.5;}
+.info-bar b{color:var(--tx);}
+
+/* ── Map ── */
+#map{flex:1;min-width:0;}
+
+/* ── Popup styling (shared with Leaflet) ── */
+.leaflet-popup-content-wrapper{font-family:var(--font);border-radius:var(--r2);box-shadow:0 4px 20px rgba(0,0,0,.12);}
+.leaflet-popup-content{margin:12px 14px;min-width:200px;}
+.pop-name{font-weight:600;font-size:13px;color:var(--tx);}
+.pop-type{font-size:10px;font-weight:500;padding:1px 6px;border-radius:4px;display:inline-block;margin-bottom:4px;}
+.pop-meta{font-size:11px;color:var(--tx2);margin-bottom:4px;}
+.pop-desc{font-size:10px;color:var(--tx3);line-height:1.5;}
+.pop-sub{font-size:10px;color:var(--tx3);margin-top:4px;}
+.tag-mh{background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;font-size:9px;font-weight:500;margin-left:4px;}
+.tag-piezo{background:#fff7ed;color:#c2410c;padding:1px 5px;border-radius:4px;font-size:9px;margin-left:2px;}
+.tag-cont{background:#dcfce7;color:#166534;padding:1px 5px;border-radius:4px;font-size:9px;margin-left:2px;}
+.tag-orient{font-size:11px;color:var(--tyrrh);}
+
+/* ── Legend ── */
+.legend{position:absolute;bottom:20px;left:316px;z-index:1000;background:rgba(245,240,231,0.95);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;font-size:10px;font-family:var(--font);backdrop-filter:blur(4px);min-width:160px;}
+.legend-title{font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--tx3);margin-bottom:6px;}
+.legend-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;color:var(--tx2);}
+.lg-tri{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:11px solid var(--maquis);}
+.lg-cross{position:relative;width:10px;height:10px;flex-shrink:0;}
+.lg-cross::before{content:'';position:absolute;left:4px;top:0;width:2px;height:10px;background:var(--porphyre);border-radius:1px;}
+.lg-cross::after{content:'';position:absolute;top:3px;left:0;width:10px;height:2px;background:var(--porphyre);border-radius:1px;}
+.lg-line{width:18px;height:2px;background:var(--tyrrh);opacity:0.7;}
+.lg-dot{width:9px;height:9px;border-radius:50%;background:var(--tx3);opacity:0.6;}
+
+@media(max-width:768px){
+  .sidebar{width:260px;}
+  .legend{left:276px;}
+}
+@media(max-width:600px){
+  .layout{flex-direction:column;}
+  .sidebar{width:100%;height:200px;border-right:none;border-bottom:1px solid var(--border);}
+  #map{flex:1;}
+  .legend{bottom:8px;left:8px;}
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="hdr">
+  <div class="hdr-brand">
+    <img src="assets/logo/tellux_logo.svg" class="hdr-logo" alt="Tellux" onerror="this.style.display='none'">
+    <span class="hdr-title">Patrimoine Corse<span class="hdr-badge">App 2</span></span>
+  </div>
+  <a href="index.html" class="hdr-back">← Retour</a>
+</header>
+
+<!-- Layout -->
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-body">
+      <div class="sb-title">Patrimoine Corse</div>
+      <div class="sb-sub">Mégalithes · Églises romanes · Alignements<br>Sources : DRAC Corse · Moracchini-Mazel 1967-1992 · Cesari &amp; Magdeleine 2013</div>
+
+      <!-- Counters -->
+      <div class="counters">
+        <div class="counter-chip cc-mega">
+          <div class="val" id="cnt-mega">—</div>
+          <div class="lbl">Mégalithes</div>
+        </div>
+        <div class="counter-chip cc-egl">
+          <div class="val" id="cnt-egl">—</div>
+          <div class="lbl">Églises</div>
+        </div>
+        <div class="counter-chip cc-align">
+          <div class="val" id="cnt-align">3</div>
+          <div class="lbl">Alignements</div>
+        </div>
+      </div>
+
+      <!-- Layers -->
+      <div class="section">
+        <div class="section-title">Couches</div>
+        <button class="btn-layer active" id="b-mega" onclick="toggleLayer('mega')">
+          <span class="dot" style="background:var(--maquis);"></span>
+          Mégalithes
+          <span class="lcount" id="lc-mega"></span>
+        </button>
+        <button class="btn-layer" id="b-egl" onclick="toggleLayer('egl')">
+          <span style="position:relative;width:10px;height:10px;flex-shrink:0;display:inline-block;">
+            <span style="position:absolute;left:4px;top:0;width:2px;height:10px;background:var(--porphyre);border-radius:1px;display:block;"></span>
+            <span style="position:absolute;top:3px;left:0;width:10px;height:2px;background:var(--porphyre);border-radius:1px;display:block;"></span>
+          </span>
+          Églises romanes
+          <span class="lcount" id="lc-egl"></span>
+        </button>
+        <button class="btn-layer" id="b-align" onclick="toggleLayer('align')">
+          <span class="dot" style="background:var(--tyrrh);opacity:0.7;border-radius:1px;"></span>
+          Alignements
+          <span class="lcount" id="lc-align">3</span>
+        </button>
+        <button class="btn-layer" id="b-sites" onclick="toggleLayer('sites')">
+          <span class="dot" style="background:var(--ocre);transform:rotate(45deg);border-radius:1px;"></span>
+          Sites remarquables
+          <span class="lcount" id="lc-sites"></span>
+        </button>
+      </div>
+
+      <!-- Hypothèses (DORMANT) -->
+      <div class="section">
+        <div class="section-title">Hypothèses <span class="dormant-badge">Phase 2</span></div>
+        <div class="dormant-box">
+          <div class="dormant-title">
+            Corpus scientifique
+            <span class="dormant-badge">DORMANT</span>
+          </div>
+          <div>Hypothèses H1–H83 documentées. Tests automatisés en cours de validation méthodologique par un physicien tiers.</div>
+          <button class="btn-hypo" onclick="showDormantMsg()">Tester les hypothèses</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Info bar -->
+    <div class="info-bar" id="info-bar">Cliquez sur un site pour afficher les détails.</div>
+  </aside>
+
+  <!-- Map -->
+  <div id="map"></div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-title">Légende</div>
+    <div class="legend-row"><span class="lg-tri"></span> Mégalithe</div>
+    <div class="legend-row"><span class="lg-cross"></span> Église romane</div>
+    <div class="legend-row"><span class="lg-line"></span> Alignement</div>
+    <div class="legend-row"><span class="lg-dot"></span> Site remarquable</div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// TELLUX — PATRIMOINE CORSE — App 2
+// Extrait de app.html (v5.9) — standalone, pas de module EM cartographique
+// ═══════════════════════════════════════════════════════════════════════════
+
+// === GARDE HYPOTHÈSES DORMANTES ===
+const HERITAGE_HYPOTHESES_ENABLED = false;
+
+// ── Constantes Supabase ──
+const SB_URL='https://knckulwghgfrxmbweada.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtuY2t1bHdnaGdmcnhtYndlYWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NTAxMzQsImV4cCI6MjA4OTIyNjEzNH0.Cu9dvxFyn-5pbOP65gowCEQvRti74CLnlNYf92jebis';
+function sbH(){return{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};}
+async function sbGet(p,timeout=8000){
+  const ctrl=new AbortController();
+  const tid=setTimeout(()=>ctrl.abort(),timeout);
+  const path=p.startsWith('/')?p:'/rest/v1/'+p;
+  try{
+    const r=await fetch(SB_URL+path,{headers:sbH(),signal:ctrl.signal});
+    clearTimeout(tid);
+    if(!r.ok)throw new Error(await r.text());
+    return r.json();
+  }catch(e){clearTimeout(tid);throw e;}
+}
+
+// ── Utilitaires partagés ──
+function dist(a,b,c,d){const R=6371,dL=(c-a)*Math.PI/180,dM=(d-b)*Math.PI/180;const x=Math.sin(dL/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dM/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+
+function interpIDW(grid,lat,lon,n=4){
+  const pts=grid.map(p=>({d:Math.max(1e-10,(p[0]-lat)**2+(p[1]-lon)**2),v:p[2]}))
+    .sort((a,b)=>a.d-b.d).slice(0,n);
+  const wsum=pts.reduce((s,p)=>s+1/p.d,0);
+  return pts.reduce((s,p)=>s+p.v/p.d,0)/wsum;
+}
+
+function haversine(lat1,lon1,lat2,lon2){
+  const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function _azLabel(az){
+  const dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(az/22.5)%16];
+}
+
+// ── Info bar helper ──
+function info(html){
+  const el=document.getElementById('info-bar');
+  if(el)el.innerHTML=html||'Cliquez sur un site pour afficher les détails.';
+}
+
+// ── GEO_SUSC_GRID + calcGeoSusc ──
+const GEO_SUSC_GRID=[
+  [41.38,9.15,-5,'calcaire'],[41.40,9.00,-3,'calcaire'],[41.42,8.90,5,'granit_rose'],
+  [41.50,8.85,25,'granit_biotite'],[41.53,8.92,35,'granit_biotite'],[41.56,8.88,30,'granit_biotite'],
+  [41.50,9.05,20,'granit'],[41.50,9.25,15,'granit'],
+  [41.70,8.80,20,'granit'],[41.75,8.87,30,'granit_biotite'],[41.75,9.00,25,'granit'],
+  [41.75,9.18,22,'granodiorite'],[41.80,9.10,18,'granodiorite'],
+  [41.72,9.12,15,'granit'],[41.72,9.23,12,'gneiss'],
+  [42.00,8.80,18,'granodiorite'],[42.00,9.00,25,'granit_biotite'],[42.00,9.20,20,'granit'],
+  [42.00,9.40,8,'alluvions'],
+  [42.30,9.20,5,'schistes'],[42.30,9.40,3,'schistes'],
+  [42.30,8.80,15,'granit'],[42.30,9.00,18,'granit'],
+  [42.55,9.10,12,'serpentinite'],[42.55,9.30,18,'serpentinite'],[42.55,9.45,5,'alluvions'],
+  [42.65,9.05,10,'granit'],[42.65,9.25,15,'granit'],
+  [42.80,9.30,8,'ophiolite'],[42.80,9.40,5,'schistes'],
+  [42.95,9.35,3,'schistes'],[43.00,9.40,-2,'ophiolite'],
+  [42.55,8.70,12,'granit'],[42.55,8.90,10,'granit'],
+];
+
+function getGeoType(lat,lon){
+  const pts=GEO_SUSC_GRID.map(p=>({d:Math.max(1e-10,(p[0]-lat)**2+(p[1]-lon)**2),t:p[3]}))
+    .sort((a,b)=>a.d-b.d);
+  return pts[0]?.t||'inconnu';
+}
+
+function calcGeoSusc(lat,lon){
+  return Math.round(interpIDW(GEO_SUSC_GRID.map(p=>[p[0],p[1],p[2]]),lat,lon,4));
+}
+
+// ── HERITAGE_SITES_POINTS ──
+const HERITAGE_SITES_POINTS = [[42.968,9.41,8],[42.873,9.348,5],[42.75,9.395,4],[42.93,9.38,4],[42.86,9.315,8],[42.68,9.297,7],[42.583,8.889,28],[42.555,8.855,18],[42.615,8.87,28],[42.578,8.835,18],[42.567,8.757,25],[42.54,8.79,23],[42.6,8.92,18],[42.51,8.85,18],[42.47,9.472,4],[42.465,9.467,4],[42.465,9.452,7],[42.468,9.455,7],[42.445,9.428,4],[42.35,9.322,4],[42.4,9.405,4],[42.34,9.38,4],[42.31,9.249,18],[42.398,9.29,4],[42.305,9.15,10],[42.219,9.152,18],[42.23,9.157,18],[42.285,9.083,18],[42.355,9.246,18],[41.743,9.144,35],[41.768,9.102,35],[41.699,8.931,35],[41.619,8.976,35],[41.715,9.067,35],[41.65,9.03,35],[41.533,9.01,18],[41.393,9.146,7],[41.46,9.23,18],[41.512,9.28,18],[41.592,9.28,18],[42.118,8.686,23],[42.1,8.75,12],[42.08,8.86,12],[42.005,8.92,18],[42.15,8.65,18],[41.918,8.738,18],[41.85,9.39,18],[42.09,9.35,18],[42.25,9.34,4],[42.49,9.1,18],[42.55,9.45,4],[42.48,9.28,18],[42.42,9.2,4],[42.34,9.0,18],[42.33,8.95,18],[42.28,8.93,18],[42.42,9.53,4],[42.44,9.5,4],[42.39,9.52,4],[42.41,9.54,4],[42.27,9.21,18],[42.26,9.245,4],[42.3,9.19,18],[42.29,9.23,4],[42.365,9.4,4],[42.355,9.41,4],[42.345,9.395,4],[42.335,9.42,4],[42.32,9.35,4],[41.83,9.32,35],[41.81,9.29,35],[41.78,9.26,35],[41.87,9.35,18],[41.94,9.33,18],[41.96,9.36,4],[41.83,8.87,12],[41.86,8.84,12],[41.81,8.8,18],[42.06,8.8,12],[42.04,8.77,12],[42.01,8.84,12],[42.12,8.96,18],[42.14,8.92,18],[42.15,8.98,18],[42.18,8.95,18],[42.105,9.513,7],[42.18,9.51,4],[42.2,9.49,4],[42.91,9.39,4],[42.945,9.4,8],[42.89,9.43,4],[42.955,9.35,4],[42.63,8.9,28],[42.55,8.91,28],[42.57,8.93,28],[42.59,8.96,18],[42.52,8.82,28],[41.675,8.87,35],[41.7,8.9,35],[41.58,8.94,35],[41.56,8.9,35],[41.64,8.85,35],[42.35,9.1,18],[42.27,9.13,18],[42.24,9.1,18],[42.33,9.13,18],[42.46,9.14,18],[42.47,9.05,18],[41.99,9.38,4],[42.0,9.42,4],[42.03,9.35,18],[42.27,9.41,4],[42.23,9.43,4],[41.97,8.81,18],[41.95,8.85,18],[41.855,8.793,12],[41.74,9.05,35],[41.76,9.17,35],[41.68,9.1,35],[41.73,9.0,35],[41.76,8.98,35],[41.77,8.87,35],[41.735,8.85,35],[41.805,8.935,35],[41.82,8.975,12],[42.1,8.89,18],[42.06,8.93,18],[42.13,8.89,18],[42.06,8.7,12],[42.09,8.78,12],[42.12,8.76,12],[42.38,9.37,4],[42.31,9.34,4],[42.33,9.3,4],[42.36,9.35,4],[42.54,9.08,18],[42.52,9.15,18],[42.49,9.2,4],[42.35,9.5,4],[42.48,9.46,7],[42.67,9.21,8],[42.84,9.34,4],[42.9,9.35,4],[42.49,8.87,18],[42.52,8.95,18],[42.46,8.93,18],[41.93,8.7,18],[41.88,8.81,12],[41.94,8.77,18],[41.98,9.3,18],[41.92,9.27,18],[42.01,9.35,18],[41.45,9.13,18],[41.5,9.26,18],[41.56,9.22,18],[42.24,9.06,18],[42.2,9.21,18],[42.31,9.07,18],[42.16,9.34,4],[42.43,9.35,4],[42.45,9.38,4],[42.26,9.31,4],[41.393,9.146,7],[42.065,8.72,12],[42.08,8.66,18],[42.095,8.73,12],[42.025,8.75,12],[41.975,8.82,12],[42.045,8.91,18],[42.07,8.96,18],[42.185,8.875,17],[42.135,9.03,18],[42.25,9.05,18],[41.87,9.28,18],[41.905,9.245,4],[41.835,9.35,35],[41.96,9.25,18],[41.605,8.988,35],[41.57,8.968,35],[41.545,9.048,18],[41.475,9.095,18],[42.705,9.448,4],[42.485,9.488,4],[42.415,9.455,4],[42.505,9.48,4],[42.33,9.46,4],[42.36,9.48,4],[42.31,9.38,9],[42.295,9.35,4],[42.285,9.29,18],[42.645,8.943,28],[42.578,8.878,28],[42.598,8.935,28],[42.545,8.97,28],[42.51,8.882,28],[42.625,8.975,28],[42.808,9.452,4],[42.838,9.404,5],[42.958,9.344,4],[42.935,9.41,4],[42.578,8.998,18],[42.555,9.05,18],[42.565,9.135,18],[42.448,9.162,18],[42.425,9.082,18],[41.755,8.92,35],[41.74,8.978,35],[41.815,8.855,35],[41.905,8.798,12],[41.845,8.91,35],[41.728,9.19,35],[41.712,9.078,35],[41.686,9.062,35],[41.66,9.022,35],[42.078,9.29,18],[42.158,9.416,4],[42.248,9.385,4],[42.21,9.39,4],[42.025,9.488,7],[41.968,9.398,4],[41.978,8.753,18],[41.908,8.718,18],[42.032,8.802,12],[42.395,9.305,4],[41.888,9.133,35],[41.875,9.108,35],[41.862,9.088,35],[42.135,8.612,23],[42.152,8.635,25],[42.118,8.6,18],[42.695,9.445,4],[42.688,9.438,4],[42.702,9.452,4],[42.11,8.675,23],[42.098,8.658,18],[42.618,9.002,18],[42.588,9.032,18],[42.572,9.018,18],[41.488,9.108,18],[41.505,9.132,18],[41.525,9.152,18],[42.462,9.548,4],[42.38,9.408,4],[42.368,9.42,4],[42.268,9.065,18],[42.22,9.04,18],[41.378,9.143,7],[42.36,8.968,18],[42.318,8.982,18],[42.312,9.268,4],[42.268,9.255,4],[42.062,9.342,18],[42.108,8.912,12],[42.158,8.9,12],[41.7478,8.8713,40],[41.537,8.9193,40],[41.534,8.917,25],[41.5296,8.9183,25],[41.546,8.876,25],[41.5527,8.9347,25],[41.5582,8.9412,25],[41.5936,8.8766,25],[41.6014,8.8795,25],[41.6087,8.8778,25],[41.63,8.91,25],[41.4979,8.9305,25],[41.719,9.121,25],[41.721,9.113,25],[41.622,8.988,25],[41.73,8.91,25],[41.724,9.168,25],[42.1465,8.6269,25],[42.116,8.693,25],[41.754,8.869,25],[41.759,8.877,25],[42.087,9.078,25],[41.86,8.917,25],[41.941,8.908,25],[42.056,9.3,25],[42.37,9.28,25],[42.66,9.2,25],[42.875,9.34,25],[41.57,8.895,25],[41.545,8.91,25],[41.69,8.85,25],[41.62,9.01,25],[41.71,9.13,25],[41.735,9.1,25],[42.7,9.34,25],[42.75,9.35,25],[42.6,8.85,25],[42.62,8.81,25],[42.35,9.17,25],[42.29,9.2,25],[42.32,9.15,25],[42.1,9.48,25],[42.05,9.37,25],[41.95,9.31,25],[41.43,9.19,25],[41.47,9.25,25],[41.4,9.1,25]];
+
+// ── calcHeritageDensity ──
+function calcHeritageDensity(lat,lon){
+  const RADIUS_KM=2;
+  const AREA_KM2=Math.PI*RADIUS_KM*RADIUS_KM;
+  let count=0,nearestDist=Infinity,nearestSite=null,_legacyAccum=0;
+  for(let i=0;i<HERITAGE_SITES_POINTS.length;i++){
+    const h=HERITAGE_SITES_POINTS[i];
+    const d=dist(lat,lon,h[0],h[1]);
+    if(d<RADIUS_KM)count++;
+    if(d<nearestDist){nearestDist=d;nearestSite={lat:h[0],lon:h[1],weight:h[2],distance_km:Math.round(d*100)/100};}
+    if(d>0.5)continue;
+    const d_m=Math.max(20,d*1000);
+    const B=h[2]*0.8/Math.pow(d_m,0.7);
+    _legacyAccum+=Math.min(B,h[2]);
+  }
+  return{density_sites_km2:Math.round((count/AREA_KM2)*100)/100,dominant_type:'megalithique',radius_km:RADIUS_KM,nearest_site:nearestSite,source:'Cesari & Magdeleine 2013 + DRAC Corse',confidence:'high',epistemic_note:'Indicateur de densité patrimoniale documenté. Pas d\'hypothèse d\'émission EM propre du bâti.',_score_legacy:Math.round(_legacyAccum)};
+}
+
+// ── SITES ──
+let SITES=[
+  [41.7417,8.8695,'Filitosa','Mégalithique','#854d0e','Statues-menhirs ~1500 av. J.-C. · 13 statues · Granit · Site classé · Vallée du Taravo · GPS Megalithic Portal'],
+  [41.5370,8.9193,'I Stantari / Cauria','Mégalithique','#854d0e','11 statues-menhirs armées · Alignement N-S · Plateau granitique · Sartène'],
+  [41.5340,8.9170,'Renaghju','Mégalithique','#854d0e','~50 menhirs alignés N-S · Plateau de Cauria · Fouilles Grosjean 1964'],
+  [41.5296,8.9183,'Dolmen Fontanaccia','Mégalithique','#854d0e','Dolmen le mieux conservé de Corse · Stazzona di u Diavulu · MH 1889 · GPS J.of Antiquities'],
+  [41.5600,8.8844,'Palaggiu / Paddaghju','Mégalithique','#854d0e','258 menhirs · Plus grand alignement de Méditerranée · Âge du Bronze · GPS Persée 41°33\'36"N 8°53\'04"E'],
+  [41.5460,8.8760,'Appazu','Mégalithique','#854d0e','25 menhirs dont 2 statues-menhirs · 1km SW de Palaggiu · t4t35'],
+  [41.5527,8.9347,'Pastini cercle de pierres','Mégalithique','#854d0e','Cercle de pierres · Néolithique · Plateau de Cauria nord · Megalithic Portal'],
+  [41.5582,8.9412,'Cardiccia dolmen','Mégalithique','#854d0e','Dolmen · 3.7km NE de Fontanaccia · Sartène · Megalithic Portal'],
+  [41.5936,8.8766,'Vaccil-Vecchiu menhir','Mégalithique','#854d0e','Menhir isolé · Mentionné par Mérimée 1840 · Sartenais · Megalithic Portal'],
+  [41.6014,8.8795,'Bizzicu Rossu dolmen','Mégalithique','#854d0e','Dolmen · Sartenais · Megalithic Portal'],
+  [41.6130,8.8987,'Alo Bisuje (casteddu)','Mégalithique','#854d0e','Forteresse de pierre / castello · Sartenais · D\'Anna et al. 2007 · Megalithic Portal'],
+  [41.6087,8.8778,'Timozzolo menhirs','Mégalithique','#854d0e','Menhirs · Sartenais · Grosjean 1964 · Megalithic Portal'],
+  [41.5400,8.9300,'Bocca di a Pila','Mégalithique','#854d0e','Col d\'accès NE plateau Cauria · Associé aux alignements · D\'Anna et al. · Mortillet 1893'],
+  [41.6300,8.9100,'Menhirs du Rizzanese','Mégalithique','#854d0e','U Frati è a Sora (le Moine et la Nonne) · Bord T40 · Mentionné par Mérimée 1840 · Propriano-Sartène'],
+  [41.7080,8.9110,'Albitretu alignement','Mégalithique','#854d0e','Alignement de menhirs · Olmeto · Découvert Cesari 1985 · D\'Anna PCR'],
+  [41.7172,9.1287,'Cucuruzzu / Capula','Mégalithique','#854d0e','Village-forteresse Torréen ~2000 av. J.-C. · Alta Rocca · Lévie'],
+  [41.7210,9.1130,'Ciutulaghja','Mégalithique','#854d0e','Complexe mégalithique · Coffres et dolmens · Alta Rocca · Lanfranchi 2000'],
+  [41.5750,9.2450,'Castellu d\'Araghju','Mégalithique','#854d0e','Forteresse torréenne · Granit · Fouillé par Grosjean · Vue sur Porto-Vecchio'],
+  [41.6220,8.9880,'Petra Pinzuta','Mégalithique','#854d0e','Statue-menhir armée · Armes égéo-mycéniennes · Sartène · Grosjean 1967'],
+  [41.7300,8.9100,'Scalsa Murta','Mégalithique','#854d0e','Statue-menhir armée · Olmeto · Même équipement que Filitosa · Grosjean'],
+  [41.5800,8.9100,'Manzavinu alignement','Mégalithique','#854d0e','Alignement sur versant (exception) · Mentionné D\'Anna 2007 · Sartène'],
+  [41.7240,9.1680,'Pacciunituli','Mégalithique','#854d0e','Alignement statues-menhirs · San-Gavino-di-Carbini · t4t35'],
+  [42.1465,8.6269,'U Scumunicatu (Cargèse)','Mégalithique','#854d0e','Statue-menhir 2.67m · Découverte 1993 · Paomia · GPS vérifié 42.146N 8.627E'],
+  [42.1160,8.6930,'Statues-menhirs de Sagone','Mégalithique','#854d0e','Fragments réutilisés dans cathédrale de Sagone · Vico · t4t35'],
+  [42.1000,8.7200,'Stantara d\'Apricciani','Mégalithique','#854d0e','Statue-menhir · Entrée du village de Vico · Mentionnée par Mérimée 1840'],
+  [41.7540,8.8690,'U Paladinu','Mégalithique','#854d0e','Menhir isolé · Serra-di-Ferro · Vallée du Taravo · t4t35'],
+  [41.7590,8.8770,'Statue-menhir Santa Naria','Mégalithique','#854d0e','Statue-menhir · Olmeto · t4t35'],
+  [42.0870,9.0780,'Statue-menhir de Tavera','Mégalithique','#854d0e','Statue-menhir · Tavera · Haute vallée Gravona · t4t35'],
+  [41.8600,8.9170,'U Cantonu','Mégalithique','#854d0e','Statues-menhirs · Pila-Canale · Vallée du Taravo · t4t35'],
+  [41.9410,8.9080,'Statue-menhir de Castaldu','Mégalithique','#854d0e','Statue-menhir · Ciamannacce · Haute vallée · t4t35'],
+  [42.0100,9.2000,'Poggio-di-Nazza','Mégalithique','#854d0e','Site mégalithique · Haute-Corse intérieure · Fiumorbu'],
+  [42.3920,9.2250,'Caporalino','Mégalithique','#854d0e','4 statues-menhirs · Possible alignement détruit · Capo Castinco'],
+  [42.6700,9.2590,'Monte-Revincu','Mégalithique','#854d0e','Dolmen Casa di l\'Orcu + Casa di l\'Orca · MH 1889+2018 · Santo-Pietro-di-Tenda · Agriates'],
+  [42.6600,9.2000,'Mamucci menhirs','Mégalithique','#854d0e','Menhirs · Ouest Monte Revincu · Santucci et al. 2004 archéoastronomie · Nebbiu'],
+  [42.6660,9.2610,'Casa di l\'Orca dolmen','Mégalithique','#854d0e','Dolmen matriarcal · 500m de Casa di l\'Orcu · GPS Megalithic Portal 42.670N 9.259E'],
+  [42.8800,9.3780,'Pinzu a Vergine','Mégalithique','#854d0e','5 menhirs · Bocca de Pinzu a Vergine · Crête Cap Corse · Luri-Barrettali · 630m alt.'],
+  [42.4380,9.2830,'Piève statues-menhirs','Mégalithique','#854d0e','Statues-menhirs exposées face à l\'église · Découvertes alentours du village'],
+  [41.3870,9.1590,'Bonifacio remparts','Site remarquable','#5c7a3a','Calcaire miocène (isolant/diamagnétique) + grains quartz · Falaises 70m · Contraste vs granit'],
+  [42.5680,8.7510,'Citadelle de Calvi','Site remarquable','#5c7a3a','Granit leucocrate porphyrique riche en quartz · Filon basique · XVe s. génois'],
+  [42.3050,9.1490,'Citadelle de Corte','Site remarquable','#5c7a3a','Sur ophiolites (roches vertes, gabbros) · Susceptibilité magnétique forte · Citadelle Vauban XVIIIe'],
+  [42.370,8.555,'Réserve de Scandola','Remarquable','#8b5cf6','Granit alcalin rouge Permien + rhyolites · Caldeira · UNESCO · Formations annulaires'],
+  [42.3390,9.0110,'Barrage Calacuccia','Hydraulique','#1a4b8c','Barrage voûte · Golo · 107m · 26 MW · Niolu'],
+  [41.9640,8.9650,'Barrage Tolla','Hydraulique','#1a4b8c','Barrage poids · Prunelli · 87m · GPS CFBR 41.9635 8.9646'],
+  [41.7160,9.2320,'Barrage Ospedale','Hydraulique','#1a4b8c','Barrage voûte · Cavu · Alta Rocca'],
+  [42.3460,9.4050,'Barrage Alesani','Hydraulique','#1a4b8c','Retenue · Alesani · Castagniccia'],
+  [41.570,8.895,'Tivulaggio alignement','Mégalithique','#854d0e','Alignement de menhirs · Sartène · Granit biotite · Plateau de Cauria élargi'],
+  [41.545,8.910,'Stazzona di u Diavulu (menhirs)','Mégalithique','#854d0e','Groupe de menhirs près Fontanaccia · Granit · Zone piézo · Leandri 2023'],
+  [41.692,8.915,'Tizzarella menhirs','Mégalithique','#854d0e','Menhirs isolés · Vallée Rizzanese · Granit · Sartène'],
+  [41.710,9.130,'Sant Andria menhirs','Mégalithique','#854d0e','Menhirs · Carbini · Granit biotite · Zone mégalithique dense · Leandri 2023'],
+  [41.735,9.100,'Capula torre','Mégalithique','#854d0e','Torre complexe · Bronze final · Enceinte cyclopéenne · Proche Cucuruzzu · Grosjean 1975'],
+  [41.750,9.085,'Torre de Tozzu','Mégalithique','#854d0e','Monument torréen · Age Bronze · Granit · Sainte-Lucie-de-Tallano · D\'Anna PCR'],
+  [42.670,9.258,'Dolmen de la Serra','Mégalithique','#854d0e','Dolmen · Monte Revincu · Schiste · Santucci 2004 · Leandri 2020'],
+  [42.777,9.345,'Menhir de Nonza','Mégalithique','#854d0e','Menhir isolé · Serpentinite · Cap Corse · GPS approximatif · D\'Anna 2019'],
+  [42.725,9.160,'Casa di u Banditu','Mégalithique','#854d0e','Coffre dolménique · Monte Revincu élargi · Schiste · Leandri 2020'],
+  [42.973,9.415,'Barcaggio menhirs','Mégalithique','#854d0e','Menhirs · Extrême nord Cap Corse · Schiste · D\'Anna 2019'],
+  [42.507,8.855,'Menhir de Calenzana','Mégalithique','#854d0e','Menhir isolé 2.5m · Granit alcalin piézo · Calenzana · Leandri 2020'],
+  [42.560,8.870,'Casteddu di Lozari','Mégalithique','#854d0e','Castrum préhistorique · Granit · Belgodère/Balagne · D\'Anna 2019'],
+  [42.608,8.869,'Alignement de Montegrosso','Mégalithique','#854d0e','Alignement 5 menhirs · Granit · Balagne intérieure · Leandri 2023'],
+  [42.302,9.150,'Casteddu di Corti','Mégalithique','#854d0e','Castrum protohistorique · Ophiolites · Corte · Structure cyclopéenne · Leandri 2020'],
+  [42.310,9.249,'Menhir de Sermano','Mégalithique','#854d0e','Menhir isolé · Centre géographique Corse · Granit · Rogna'],
+  [42.235,9.152,'Poggio-di-Venaco mégalithes','Mégalithique','#854d0e','Ensemble mégalithique dispersé · Granit · Haute vallée Tavignano · Leandri 2020'],
+  [42.098,9.499,'Terrina (Aléria)','Mégalithique','#854d0e','Site néolithique majeur · Céramique + mégalithes · Plaine orientale · Fouilles extensives'],
+  [42.050,9.370,'Tappa torre','Mégalithique','#854d0e','Monument torréen · Bronze · Granit/schiste · Fiumorbu · Grosjean'],
+  [41.950,9.310,'Castidetta menhirs','Mégalithique','#854d0e','Groupe menhirs · Cozzano/Zicavo · Granit · Montagne intérieure · Leandri 2020'],
+  [42.160,8.720,'Menhir de Casaglione','Mégalithique','#854d0e','Menhir isolé 2m · Granodiorite · Sagone intérieur · D\'Anna PCR'],
+  [42.030,8.810,'Casteddu de Bastelica','Mégalithique','#854d0e','Castrum · Granit · Montagne d\'Ajaccio · Protohistorique'],
+  [42.660,9.150,'Menhirs d\'Agriate','Mégalithique','#854d0e','Menhirs dispersés sous maquis · Schiste · D\'Anna 2019 · Agriate'],
+  [41.498,9.108,'Alignement de Figari','Mégalithique','#854d0e','Menhirs alignés · Granit · Zone aéroport Figari · Leandri 2020'],
+  [41.491,9.268,'Ceccia torre','Mégalithique','#854d0e','Torre du Bronze · Granit · Porto-Vecchio nord · Leandri/Grosjean'],
+  [41.400,9.100,'Capu di Logu','Mégalithique','#854d0e','Menhir/statue-menhir · Calcaire/granit · Bonifacio · Extrême sud'],
+  [41.7970,9.2230,'Aiguilles de Bavella','Remarquable','#8b5cf6','Pics granitiques 1218-1855m · Axe Cauria-Cucuruzzu-Bavella-Aléria (Leplat 2016)'],
+  [42.1050,9.5130,'Aléria antique','Remarquable','#8b5cf6','Cité néolithique puis romaine · Sommet triangle Cauria-Bavella · Plaine orientale'],
+  [41.482,9.004,'Uomo di Cagna','Remarquable','#8b5cf6','Rocher anthropomorphe 1217m · Granit · Vallée Ortolu'],
+  [42.1420,8.6390,'Calanques de Piana','Remarquable','#8b5cf6','Granit rose sculpté par érosion · UNESCO · Taffoni · 400m altitude'],
+  [42.354,8.957,'Monte Cinto','Remarquable','#8b5cf6','Point culminant Corse 2706m · Socle granitique hercynien · Référence géomagnétique altitude'],
+  [41.498,8.930,'Lion de Roccapina','Mégalithique','#854d0e','Rocher anthropomorphe granit rose 144m · Site cultuel préhistorique · Côte SW'],
+  [41.536,8.918,'Sposata (menhir penché)','Mégalithique','#854d0e','Menhir penché unique en Corse · Plateau Cauria · Granit biotite piézo'],
+  [41.578,9.278,'Tappa (Porto-Vecchio)','Mégalithique','#854d0e','Torra protohistorique Bronze + Néolithique · MH 26/03/2021 · Punta di a Caccia'],
+  [41.755,9.175,'Cuciurpula','Mégalithique','#854d0e','Habitat villageois 1er Age du Fer · ~40 structures · Bronze final–VIe s. av. J.-C. · Fouilles Peche-Quilichini 2008-2026'],
+  [42.690,9.200,'Monte Ghjenuva','Remarquable','#8b5cf6','Montagne sacrée · Axe légende du Lurcu · Santucci et al. 2004'],
+];
+
+// ── SITES_ORIENTATION ──
+const SITES_ORIENTATION = {
+  'Dolmen Fontanaccia':      {azimut:127,precision:5,source:'Hoskin 1994'},
+  'I Stantari / Cauria':     {azimut:172,precision:5,source:'D\'Anna 2007'},
+  'Renaghju':                {azimut:175,precision:10,source:'Grosjean 1964 (axe alignement N-S)'},
+  'Palaggiu / Paddaghju':    {azimut:178,precision:10,source:'Grosjean (axe alignement ~N-S)'},
+  'Monte-Revincu':           {azimut:115,precision:5,source:'Santucci et al. 2004'},
+  'Casa di l\'Orca dolmen':  {azimut:120,precision:5,source:'Santucci et al. 2004'},
+  'Dolmen de la Serra':      {azimut:118,precision:8,source:'Santucci et al. 2004'},
+  'Filitosa':                {azimut:210,precision:15,source:'Grosjean 1967 (orientation monument central)'},
+  'Cucuruzzu / Capula':      {azimut:95,precision:15,source:'estimation Tellux (ouverture enceinte)'}
+};
+
+// ── CHURCHES (chargé depuis Supabase, fallback inline) ──
+let CHURCHES = [];
+let _churchesLoaded = false;
+
+async function loadChurchesData() {
+  if (_churchesLoaded) return;
+  try {
+    let all = [];
+    let page = 0;
+    const pageSize = 400;
+    while (true) {
+      const d = await sbGet(
+        'churches_corse?select=lat,lon,name,lieu,pieve,siecle,mat,orient,sub,cont,mh,note' +
+        '&order=id.asc' +
+        `&offset=${page * pageSize}&limit=${pageSize}`
+      );
+      if (!d || !d.length) break;
+      all = all.concat(d.map(r => ({
+        lat: parseFloat(r.lat), lon: parseFloat(r.lon),
+        name: r.name, lieu: r.lieu || '', pieve: r.pieve || '',
+        s: r.siecle || '', mat: r.mat || '', orient: r.orient || 90,
+        sub: r.sub || '', cont: r.cont || '', mh: r.mh || '', note: r.note || ''
+      })));
+      if (d.length < pageSize) break;
+      page++;
+    }
+    if (all.length > 50) {
+      CHURCHES = all;
+      _churchesLoaded = true;
+      console.log(`✅ CHURCHES chargées depuis Supabase: ${CHURCHES.length} entrées`);
+      return;
+    }
+    throw new Error('Résultat Supabase trop court: ' + all.length);
+  } catch(e) {
+    console.warn('⚠️ Supabase churches indisponible — fallback inline:', e.message);
+    _loadChurchesFallback();
+  }
+}
+
+function _loadChurchesFallback() {
+CHURCHES=[
+{lat:42.957,lon:9.418,name:'San Colombano',lieu:'Rogliano',pieve:'Cap Corse',s:'XIIe',mat:'schiste',orient:85,sub:'schiste_lustre',cont:'',mh:'MH',note:'Abside semi-circulaire · Vue mer'},
+{lat:42.968,lon:9.410,name:'Santa Maria della Chiappella',lieu:'Rogliano',pieve:'Cap Corse',s:'XIe',mat:'schiste',orient:90,sub:'schiste_lustre',cont:'paléochrétien',mh:'MH',note:'Ruines · Baptistère VIe s. fouillé'},
+{lat:42.873,lon:9.348,name:'Santa Maria Assunta',lieu:'Canari',pieve:'Cap Corse',s:'XIIe',mat:'schiste+marbre',orient:88,sub:'schiste_ophiolite',cont:'',mh:'MH',note:'Clocher pisane · Marbre de Canari'},
+{lat:42.815,lon:9.454,name:'Santa Catalina',lieu:'Sisco',pieve:'Cap Corse',s:'XIIe',mat:'schiste',orient:92,sub:'schiste_lustre',cont:'',mh:'',note:'Chapelle piévane'},
+{lat:42.780,lon:9.435,name:'San Martinu',lieu:'Pietracorbara',pieve:'Cap Corse',s:'XIIe',mat:'schiste',orient:87,sub:'schiste_lustre',cont:'',mh:'',note:'Romane rustique'},
+{lat:42.750,lon:9.395,name:'San Pantaleone',lieu:'Olcani',pieve:'Cap Corse',s:'XIIIe',mat:'schiste',orient:90,sub:'schiste',cont:'',mh:'',note:'Isolée montagne'},
+{lat:42.930,lon:9.380,name:'Santa Maria',lieu:'Meria',pieve:'Cap Corse',s:'XIIe',mat:'schiste',orient:85,sub:'schiste',cont:'',mh:'',note:'Pieve de Luri'},
+{lat:42.780,lon:9.342,name:'San Nicolao',lieu:'Nonza',pieve:'Cap Corse',s:'XIe-XIIe',mat:'schiste+serpentine',orient:95,sub:'serpentinite',cont:'',mh:'MH',note:'Tour ruinée · Serpentine locale'},
+{lat:42.681,lon:9.303,name:'Cathédrale du Nebbiu (Santa Maria Assunta)',lieu:'Saint-Florent',pieve:'Nebbiu',s:'XIIe',mat:'calcaire blanc',orient:88,sub:'calcaire',cont:'paléochrétien',mh:'MH',note:'Cathédrale épiscopale · Sur baptistère Ve s.'},
+{lat:42.548,lon:9.310,name:'San Michele de Murato',lieu:'Murato',pieve:'Nebbiu',s:'XIIe',mat:'serpentine+calcaire',orient:90,sub:'serpentinite',cont:'',mh:'MH',note:'Chef-d\'oeuvre roman pisan · Polychromie · Isolée'},
+{lat:42.611,lon:9.198,name:'San Gavino',lieu:'San-Gavino-di-Tenda',pieve:'Nebbiu',s:'XIIe',mat:'calcaire',orient:92,sub:'calcaire',cont:'',mh:'',note:'Piévane du Nebbiu central'},
+{lat:42.600,lon:9.310,name:'San Quilicu',lieu:'Olmeta-di-Tuda',pieve:'Nebbiu',s:'XIIe',mat:'calcaire',orient:88,sub:'calcaire',cont:'',mh:'',note:'Chapelle rurale'},
+{lat:42.706,lon:9.358,name:'San Martino',lieu:'Patrimonio',pieve:'Nebbiu',s:'XIe',mat:'calcaire',orient:85,sub:'calcaire',cont:'',mh:'MH',note:'Pieve de Patrimonio · Vignoble'},
+{lat:42.583,lon:8.889,name:'La Trinité',lieu:'Aregno',pieve:'Balagne',s:'XIIe',mat:'granit polychrome',orient:90,sub:'granit_alcalin',cont:'',mh:'MH',note:'Façade polychrome granit · Sculptures naïves · Piézo quartzifère'},
+{lat:42.555,lon:8.855,name:'San Raineru',lieu:'Montegrosso (Feliceto)',pieve:'Balagne',s:'XIe',mat:'granit',orient:88,sub:'granit',cont:'',mh:'MH',note:'Ruines piévane · Granit local'},
+{lat:42.618,lon:8.892,name:'San Cervone / Santa Reparata',lieu:'Santa-Reparata-di-Balagna',pieve:'Balagne',s:'XIe-XIIe',mat:'granit',orient:92,sub:'granit_alcalin',cont:'',mh:'MH',note:'Place du village · Granit taillé'},
+{lat:42.578,lon:8.835,name:'San Pietro e Paolo',lieu:'Lumio',pieve:'Balagne',s:'XIIe',mat:'granit',orient:85,sub:'granit',cont:'',mh:'MH',note:'Romane pisane · Surplombe la mer'},
+{lat:42.567,lon:8.757,name:'Saint-Jean-Baptiste (cathédrale citadelle)',lieu:'Calvi',pieve:'Balagne',s:'XIIIe',mat:'granit leucocrate',orient:78,sub:'granit_porphyrique',cont:'',mh:'MH',note:'Citadelle génoise · Granit leucocrate piézo'},
+{lat:42.540,lon:8.790,name:'Santa Restuda / Restituda',lieu:'Calenzana',pieve:'Balagne',s:'XIe',mat:'granit',orient:90,sub:'granit',cont:'paléochrétien IVe',mh:'MH',note:'Sarcophages romains · Sur site antique'},
+{lat:42.510,lon:8.850,name:'Santa Maria',lieu:'Moncale',pieve:'Balagne',s:'XIIe',mat:'granit',orient:90,sub:'granit',cont:'',mh:'',note:'Village perché'},
+{lat:42.470,lon:9.472,name:'San Quilicu',lieu:'Castellare-di-Casinca',pieve:'Casinca',s:'XIIe',mat:'schiste',orient:85,sub:'schiste',cont:'',mh:'',note:'Pieve de Casinca'},
+{lat:42.465,lon:9.467,name:'San Pancrazio',lieu:'Castellare-di-Casinca',pieve:'Casinca',s:'XIe-XIIe',mat:'schiste+calcaire',orient:90,sub:'schiste',cont:'',mh:'MH',note:'Campanile roman'},
+{lat:42.465,lon:9.452,name:'La Canonica (Santa Maria Assunta)',lieu:'Lucciana/Mariana',pieve:'Mariana',s:'XIe (1119)',mat:'calcaire+marbre',orient:90,sub:'alluvions',cont:'basilique IVe',mh:'MH',note:'Cathédrale Mariana · Sur colonie romaine · Baptistère fouillé'},
+{lat:42.468,lon:9.455,name:'San Parteo',lieu:'Lucciana/Mariana',pieve:'Mariana',s:'XIe',mat:'calcaire',orient:92,sub:'alluvions',cont:'paléochrétien',mh:'MH',note:'100m de La Canonica · Ruines · Abside décorée'},
+{lat:42.445,lon:9.428,name:'Santa Maria de la Rescamone',lieu:'Vescovato',pieve:'Casinca',s:'XIIe',mat:'schiste',orient:88,sub:'schiste',cont:'',mh:'',note:'Centre Casinca'},
+{lat:42.350,lon:9.322,name:'San Cesario',lieu:'Quercitello (Piedicroce)',pieve:'Orezza',s:'XIIe',mat:'schiste',orient:90,sub:'schiste',cont:'',mh:'',note:'Castagniccia profonde'},
+{lat:42.400,lon:9.405,name:'Santa Maria',lieu:'Campile',pieve:'Ampugnani',s:'XIIe',mat:'schiste',orient:85,sub:'schiste',cont:'',mh:'',note:'Vallée du Golo'},
+{lat:42.340,lon:9.380,name:'San Giovanni',lieu:'Carcheto-Brustico',pieve:'Orezza',s:'XIe',mat:'schiste',orient:90,sub:'schiste',cont:'',mh:'',note:'Sources thermales proches'},
+{lat:42.310,lon:9.249,name:'San Nicolao',lieu:'Sermano',pieve:'Rogna',s:'XIIe',mat:'granit+schiste',orient:88,sub:'granit',cont:'',mh:'MH',note:'Centre géographique Corse · Transition géologique'},
+{lat:42.305,lon:9.150,name:'San Giovanni Battista',lieu:'Corte',pieve:'Venaco',s:'XIVe',mat:'granit',orient:82,sub:'ophiolite',cont:'',mh:'',note:'Ville historique · Ophiolites'},
+{lat:42.219,lon:9.152,name:'Santa Maria',lieu:'Venaco (Rescamone)',pieve:'Venaco',s:'XIIe',mat:'granit',orient:90,sub:'granit',cont:'',mh:'',note:'Valle du Tavignano'},
+{lat:42.285,lon:9.083,name:'San Marcellu',lieu:'Vivario',pieve:'Vivario',s:'XIIe',mat:'granit',orient:90,sub:'granit',cont:'',mh:'',note:'Col de Vizzavona · Granit hercynien'},
+{lat:42.355,lon:9.246,name:'Santa Mariona',lieu:'Talcini (Bustanico)',pieve:'Rogna',s:'XIIe',mat:'granit+schiste',orient:85,sub:'granit',cont:'',mh:'',note:'Transition schiste/granit'},
+{lat:41.743,lon:9.144,name:'San Giovanni Battista',lieu:'Carbini',pieve:'Carbini',s:'XIIe',mat:'granit',orient:90,sub:'granit_biotite',cont:'',mh:'MH',note:'Tour romane-pisane · Granit biotite piézo · Giovannali hérétiques'},
+{lat:41.768,lon:9.102,name:'Sainte-Lucie',lieu:'Sainte-Lucie-de-Tallano',pieve:'Tallano',s:'XIIe',mat:'granit',orient:88,sub:'granit_biotite',cont:'',mh:'MH',note:'Diorite orbiculaire locale · Piézo élevé'},
+{lat:41.699,lon:8.931,name:'Santa Maria Figaniella',lieu:'Figaniella (Sollacaro)',pieve:'Istria',s:'XIIe',mat:'granit',orient:92,sub:'granit_biotite',cont:'',mh:'MH',note:'Proche Filitosa · Même substrat mégalithique'},
+{lat:41.619,lon:8.976,name:'San Giovanni Battista (vieille ville)',lieu:'Sartène',pieve:'Sartène',s:'XIIIe',mat:'granit',orient:85,sub:'granit_biotite',cont:'',mh:'',note:'Citadelle médiévale'},
+{lat:41.715,lon:9.067,name:'San Nicolao',lieu:'Levie',pieve:'Carbini',s:'XIIe',mat:'granit',orient:90,sub:'granit_biotite',cont:'',mh:'',note:'Proche Cucuruzzu-Capula · Zone mégalithique'},
+{lat:41.393,lon:9.146,name:'San Giovanni Battista',lieu:'Bonifacio',pieve:'Bonifacio',s:'XIIIe',mat:'calcaire',orient:80,sub:'calcaire_miocene',cont:'paléochrétien',mh:'MH',note:'Baptistère fouillé · Calcaire de Bonifacio'},
+{lat:41.460,lon:9.230,name:'San Quilicu',lieu:'Figari',pieve:'Figari',s:'XIIe',mat:'granit',orient:88,sub:'granit',cont:'',mh:'',note:'Zone granitique sud'},
+{lat:41.512,lon:9.280,name:'Santa Giulia',lieu:'Porto-Vecchio',pieve:'Porto-Vecchio',s:'XIIe',mat:'granit',orient:90,sub:'granit',cont:'',mh:'',note:'Golfe de Porto-Vecchio'},
+{lat:42.118,lon:8.686,name:'Sant\'Appiano (cathédrale de Sagone)',lieu:'Sagone (Vico)',pieve:'Sagone',s:'XIIe',mat:'granit',orient:90,sub:'granit',cont:'paléochrétien Ve',mh:'MH',note:'Ruines cathédrale épiscopale · Sur baptistère'},
+{lat:42.100,lon:8.750,name:'San Martino',lieu:'Vico',pieve:'Vico',s:'XIIe',mat:'granit',orient:88,sub:'granodiorite',cont:'',mh:'',note:'Bourg médiéval'},
+{lat:42.080,lon:8.860,name:'Santa Maria',lieu:'Guagno',pieve:'Sorroinsù',s:'XIIe',mat:'granit',orient:90,sub:'granodiorite',cont:'',mh:'',note:'Vallée du Liamone'},
+{lat:42.005,lon:8.920,name:'San Martinu',lieu:'Zicavo',pieve:'Zicavo',s:'XIIe',mat:'granit',orient:85,sub:'granit',cont:'',mh:'',note:'Montagne granitique'},
+{lat:42.150,lon:8.650,name:'San Martino',lieu:'Cargèse',pieve:'Paomia',s:'XIe-XIIe',mat:'granit',orient:88,sub:'granit',cont:'',mh:'',note:'Côte ouest · Village grec'},
+{lat:41.918,lon:8.738,name:'San Roccu',lieu:'Ajaccio (vieille ville)',pieve:'Ajaccio',s:'XIIe',mat:'granit',orient:82,sub:'granit',cont:'',mh:'',note:'Cathédrale Notre-Dame tardive · Noyau roman'},
+{lat:42.340,lon:9.000,name:'Santa Maria',lieu:'Calacuccia',pieve:'Niolu',s:'XIIe',mat:'granit',orient:90,sub:'granit',cont:'',mh:'',note:'Niolu · Barrage'},
+{lat:42.330,lon:8.950,name:'San Pietro',lieu:'Albertacce',pieve:'Niolu',s:'XIIe',mat:'granit',orient:85,sub:'granit',cont:'',mh:'',note:'Haute montagne 900m'},
+{lat:42.280,lon:8.930,name:'San Martinu',lieu:'Soccia',pieve:'Sorroinsù',s:'XIIe',mat:'granit',orient:90,sub:'granit',cont:'',mh:'',note:'Plateau granitique'},
+{lat:42.670,lon:9.343,name:'San Cesariu de Rapale',lieu:'Rapale',pieve:'Nebbiu',s:'XIIe',mat:'serpentine',orient:88,sub:'serpentinite',cont:'',mh:'MH',note:'Unique église romane en serpentine magnétique · Ruinée v.1920 · 500m alt. · Anomalie EM forte · Classée MH 1840'},
+];
+  _churchesLoaded = true;
+  console.log(`📦 CHURCHES fallback inline: ${CHURCHES.length} entrées`);
+}
+
+// ── analyseChurches ──
+function analyseChurches(){
+  const mats={};const orients=[];const subs={};const pieves={};
+  CHURCHES.forEach(c=>{
+    mats[c.mat]=(mats[c.mat]||0)+1;
+    subs[c.sub]=(subs[c.sub]||0)+1;
+    pieves[c.pieve]=(pieves[c.pieve]||0)+1;
+    if(c.orient)orients.push(c.orient);
+  });
+  const avgOrient=orients.length?Math.round(orients.reduce((s,v)=>s+v,0)/orients.length*10)/10:0;
+  const stdOrient=orients.length?Math.round(Math.sqrt(orients.reduce((s,v)=>s+(v-avgOrient)**2,0)/orients.length)*10)/10:0;
+  const onGranit=CHURCHES.filter(c=>c.sub&&c.sub.startsWith('granit')).length;
+  const onSchist=CHURCHES.filter(c=>c.sub&&c.sub.startsWith('schiste')).length;
+  const onCalc=CHURCHES.filter(c=>c.sub&&c.sub.startsWith('calcaire')).length;
+  const withCont=CHURCHES.filter(c=>c.cont&&c.cont.length>0).length;
+  return {total:CHURCHES.length,avgOrient,stdOrient,onGranit,onSchist,onCalc,withCont,mats,subs,pieves};
+}
+
+// ── MEGA_STUDIES ──
+const MEGA_STUDIES=[
+  {id:'leplat2016',author:'Leplat Q.',year:2016,source:'messagedelanuitdestemps.org'},
+  {id:'santucci2004',author:'Santucci J-F. et al.',year:2004,source:'HAL hal-00183310 · Univ. Corse'},
+  {id:'hoskin1994',author:'Hoskin M. et al.',year:1994,source:'JHA xxv, 313-317'},
+  {id:'danna2007',author:"D'Anna A. et al.",year:2007,source:'ARTEHIS / PCR DRAC'},
+  {id:'crowhurst',author:'Crowhurst H.',year:2010,source:'ACEM / Epistemea'},
+  {id:'tellux_corpus',author:'Corpus Tellux (synthèse)',year:2025,source:'Compilation Thom/Stecchini/Michell + observations terrain'},
+  {id:'moracchini1967',author:'Moracchini-Mazel G.',year:1967,source:'CNRS Klincksieck + Cahiers Corsica FAGEC'},
+  {id:'grosjean1967',author:'Grosjean R.',year:1967,source:'CNRS · Bull. SPF 1967 · CRAI 1964 · Klincksieck'},
+  {id:'leandri2023',author:'Leandri F. (dir.)',year:2023,source:'Gallia Préhistoire XLIVe Suppl. · CNRS Éditions'},
+  {id:'danna2019',author:"D'Anna A. et al.",year:2019,source:'ADLFI / OpenEdition · DRAC'},
+  {id:'leandri2020',author:'Leandri F.',year:2020,source:'Thèse · Sudoc'},
+];
+
+// ── MEGA_ALIGNMENTS ──
+const MEGA_ALIGNMENTS=[
+  {id:'leplat_main',study:'leplat2016',label:'Cauria → Cucuruzzu → Bavella → Aléria',
+   color:'#8b5cf6',dash:'6 4',
+   points:[[41.534,8.917],[41.719,9.121],[41.797,9.223],[42.105,9.513]],
+   note:'80.9 km · 36.87° = arctan(3/4) triangle Pythagore 3-4-5'},
+  {id:'leplat_perp',study:'leplat2016',label:'Fontanaccia → Palaggiu (perpendiculaire)',
+   color:'#a78bfa',dash:'4 3',
+   points:[[41.530,8.918],[41.560,8.884]],
+   note:'4.4 km · 90° de l\'axe principal'},
+  {id:'revincu_axis',study:'santucci2004',label:'Axe Casa di u Lurcu → Monte Ghjenuva',
+   color:'#e879f9',dash:'4 3',
+   points:[[42.670,9.259],[42.690,9.200]],
+   note:'Dolmen Lurcu → montagne sacrée · Azimut ~130° solstice hiver'},
+];
+
+// ── Alignement auto-detection (Broadbent 1980) ──
+function detectAlignments(points,maxDev,minPts,minKm){
+  maxDev=maxDev||400; minPts=minPts||4; minKm=minKm||8;
+  const R=6371000;
+  function bear(a,b){const dL=(b[1]-a[1])*Math.PI/180;const la=a[0]*Math.PI/180;const lb=b[0]*Math.PI/180;const y=Math.sin(dL)*Math.cos(lb);const x=Math.cos(la)*Math.sin(lb)-Math.sin(la)*Math.cos(lb)*Math.cos(dL);return Math.atan2(y,x)*180/Math.PI;}
+  function hdist(a,b){const la=a[0]*Math.PI/180;const lb=b[0]*Math.PI/180;const dl=(b[0]-a[0])*Math.PI/180;const dg=(b[1]-a[1])*Math.PI/180;const s=Math.sin(dl/2)**2+Math.cos(la)*Math.cos(lb)*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(s));}
+  function crossTrackDist(p,a,b){const dAP=hdist(a,p)/R;const bAP=bear(a,p)*Math.PI/180;const bAB=bear(a,b)*Math.PI/180;return Math.abs(Math.asin(Math.sin(dAP)*Math.sin(bAP-bAB))*R);}
+  const lines=[];const seen=new Set();
+  for(let i=0;i<points.length;i++){
+    for(let j=i+1;j<points.length;j++){
+      const dij=hdist(points[i],points[j]);
+      if(dij<minKm*1000)continue;
+      const lp=[i,j];
+      for(let k=0;k<points.length;k++){
+        if(k===i||k===j)continue;
+        const ct=crossTrackDist(points[k],points[i],points[j]);
+        if(ct<maxDev)lp.push(k);
+      }
+      if(lp.length>=minPts){
+        const key=lp.slice().sort().join('-');
+        if(!seen.has(key)){seen.add(key);
+          const az=bear(points[i],points[j]);
+          const len=Math.max(...lp.map(idx=>hdist(points[i],points[idx])))/1000;
+          lines.push({indices:lp,count:lp.length,azimuth:Math.round(((az%360)+360)%360),length_km:Math.round(len*10)/10,points:lp.map(idx=>points[idx])});
+        }
+      }
+    }
+  }
+  lines.sort((a,b)=>b.count-a.count||b.length_km-a.length_km);
+  const dedup=[];
+  lines.forEach(l=>{
+    const overlap=dedup.some(d=>{const shared=l.indices.filter(i=>d.indices.includes(i)).length;return shared/Math.min(l.count,d.count)>0.7;});
+    if(!overlap)dedup.push(l);
+  });
+  return dedup.slice(0,15);
+}
+
+function monteCarloPvalue(nSites,bbox,maxDev,minPts,minKm,nSims){
+  nSims=nSims||500;
+  const counts=[];
+  for(let s=0;s<nSims;s++){
+    const pts=[];
+    for(let i=0;i<nSites;i++)pts.push([bbox[0]+Math.random()*(bbox[2]-bbox[0]),bbox[1]+Math.random()*(bbox[3]-bbox[1])]);
+    counts.push(detectAlignments(pts,maxDev,minPts,minKm).length);
+  }
+  counts.sort((a,b)=>a-b);
+  return counts;
+}
+
+// ── HYPOTHESES (DORMANTES) ──
+const HYPOTHESES=[
+  {id:'H1',title:'Le granit chante-t-il plus fort que le calcaire ?',need:'auto',phase:1,desc:'Sites sur granit quartzeux → susceptibilité magnétique plus forte que calcaire/schiste ?'},
+  {id:'H2',title:'Les failles terrestres créent-elles des courants invisibles ?',need:'auto',phase:1,desc:'Sites à convergence failles+eau → Δ plus élevé ? Croisement BRGM × sites.'},
+  {id:'H4',title:'Le triangle Cauria-Bavella forme-t-il un corridor magnétique ?',need:'auto',phase:1,desc:'Gradient géologique sur axe Cauria→Aléria vs transect perpendiculaire ?'},
+  {id:'H6',title:'Les sites Bronze final sont-ils préférentiellement sur granit biotite ?',need:'auto',phase:1,desc:'Statues-menhirs préférentiellement sur granit biotite ?'},
+  {id:'H7',title:'Les dolmens regardent-ils tous le soleil levant ?',need:'auto',phase:2,desc:'Églises romanes E-W vs dolmens SE (68°-130°) ?'},
+  {id:'H8',title:'Les mégalithes corses forment-ils un maillage territorial cohérent avec la géologie ?',need:'auto',phase:3,desc:'Susceptibilité magnétique granit quartzifère Cauria > serpentine Murato ?'},
+  {id:'H10',title:'L\'activité solaire perturbe-t-elle les anomalies corses ?',need:'auto',phase:1,desc:'Composante secondaire explique anomalies non attribuées ?'},
+  {id:'H18',title:'Les mégalithes évitent-ils les antennes modernes ?',need:'auto',phase:2,desc:'Églises sur substrat piézo montrent-elles un score géo supérieur au voisinage ?'},
+  {id:'H20',title:'Les alignements mégalithiques sont-ils statistiquement significatifs ?',need:'auto',phase:2,desc:'Alignements détectés significatifs vs Monte Carlo (Broadbent 1980) ?'},
+  {id:'H21',title:'Les anomalies géomagnétiques coïncident-elles avec les sites anciens ?',need:'auto',phase:2,desc:'Zones hot coïncident avec sites anciens ?'},
+  {id:'H27',title:'La densité des mégalithes suit-elle la géologie ?',need:'auto',phase:2,desc:'Orientations corses suivent précession (décalage ~1° par siècle) comme temples grecs ?'},
+  {id:'H37',title:'L\'anomalie crustale EMAG2 prédit-elle les sites piézo ?',need:'auto',phase:1,desc:'L\'anomalie crustale (grande échelle) corrèle-t-elle avec le score géo (petite échelle) ?'},
+  {id:'H39',title:'La susceptibilité magnétique du sol amplifie-t-elle certaines zones ?',need:'auto',phase:3,desc:'La susceptibilité magnétique locale modifie-t-elle le niveau géomagnétique modélisé ?'},
+];
+
+let _hypoResults={};
+
+// ── HYPOTHÈSES — dormant guard ──
+function showDormantMsg(){
+  info('<b>Hypothèses (phase 2)</b> — Données en cours de validation — disponible phase 2.<br><span style="font-size:10px;color:var(--tx3)">'+HYPOTHESES.length+' hypothèses documentées · Tests automatisés en attente de validation méthodologique par un physicien tiers (GELE-001).</span>');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEAFLET CARTE + LAYERS
+// ─────────────────────────────────────────────────────────────────────────────
+const map = L.map('map').setView([42.0, 9.0], 9);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · Tellux Patrimoine',
+  maxZoom: 19
+}).addTo(map);
+
+// Layer groups
+const lMega  = L.layerGroup().addTo(map);
+const lEgl   = L.layerGroup();
+const lAlign = L.layerGroup();
+const lSites = L.layerGroup();
+
+// Layer state
+const LAYERS = { mega: true, egl: false, align: false, sites: false };
+
+function toggleLayer(name){
+  LAYERS[name] = !LAYERS[name];
+  const btn = document.getElementById('b-'+name);
+  if(LAYERS[name]){
+    if(name==='mega') lMega.addTo(map);
+    else if(name==='egl') lEgl.addTo(map);
+    else if(name==='align') lAlign.addTo(map);
+    else if(name==='sites') lSites.addTo(map);
+    if(btn) btn.classList.add('active');
+  } else {
+    if(name==='mega') map.removeLayer(lMega);
+    else if(name==='egl') map.removeLayer(lEgl);
+    else if(name==='align') map.removeLayer(lAlign);
+    else if(name==='sites') map.removeLayer(lSites);
+    if(btn) btn.classList.remove('active');
+  }
+  // Lazy build
+  if(LAYERS[name] && name==='egl') buildEglLayer();
+  if(LAYERS[name] && name==='align') drawAlignments();
+  if(LAYERS[name] && name==='sites') buildSiteLayer();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BUILD SITE MARKERS (mégalithes + remarquables)
+// ─────────────────────────────────────────────────────────────────────────────
+function buildSiteMarkers(){
+  lMega.clearLayers();
+  lSites.clearLayers();
+  let nMega=0;
+  SITES.forEach(([a,o,n,t,c,desc],siteIdx)=>{
+    let shape,sw,sh;
+    const COL_MEGA='#3F5B3A';
+    if(t==='Mégalithique'){
+      shape='<div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:13px solid '+COL_MEGA+';filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))"></div>';
+      sw=14;sh=13; nMega++;
+    } else if(t==='Hydraulique'){
+      shape='<div style="width:11px;height:11px;background:'+c+';box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>';
+      sw=11;sh=11;
+    } else if(t==='Site remarquable'){
+      shape='<div style="width:9px;height:9px;background:'+c+';transform:rotate(45deg);box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>';
+      sw=9;sh=9;
+    } else if(t==='Remarquable'){
+      shape='<div style="width:12px;height:12px;background:'+c+'33;border:2px solid '+c+';border-radius:50%;box-shadow:0 0 4px '+c+'66"></div>';
+      sw=12;sh=12;
+    } else {
+      shape='<div style="width:9px;height:9px;background:'+c+';transform:rotate(45deg);box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>';
+      sw=9;sh=9;
+    }
+    const icon=L.divIcon({html:shape,className:'',iconSize:[sw,sh],iconAnchor:[sw/2,sh/2]});
+    const targetLayer=(t==='Mégalithique')?lMega:lSites;
+
+    L.marker([a,o],{icon})
+      .on('click',(function(lat,lon,name,typ,dsc){return function(){
+        let orientInfo='';
+        const ori=SITES_ORIENTATION[name];
+        if(ori){
+          orientInfo='<br><span class="tag-orient">🧭 Orientation : <b>'+ori.azimut+'° ('+_azLabel(ori.azimut)+')</b> ±'+ori.precision+'° · '+ori.source+'</span>';
+        } else {
+          orientInfo='<br><span style="font-size:10px;color:var(--tx3)">🧭 Orientation non documentée</span>';
+        }
+        const susc=calcGeoSusc(lat,lon);
+        const geo=getGeoType(lat,lon);
+        const tagBg=typ==='Mégalithique'?'#f0fdf4':typ==='Remarquable'?'#f0e8ff':'#fef3e2';
+        const tagCol=typ==='Mégalithique'?'var(--maquis)':typ==='Remarquable'?'#7c3aed':'#92400e';
+        info(
+          '<span style="background:'+tagBg+';color:'+tagCol+';padding:1px 6px;border-radius:4px;font-size:10px;font-weight:500">'+typ+'</span> <b>'+name+'</b>'+
+          orientInfo+
+          '<br><span style="font-size:12px;color:var(--tx2)">'+dsc+'</span>'+
+          '<br><span style="font-size:10px;color:var(--tx3)">Substrat : <b>'+geo+'</b> · Susceptibilité : <b>'+susc+' nT</b> · Densité patrimoniale : <b>'+calcHeritageDensity(lat,lon).density_sites_km2+' sites/km²</b></span>'
+        );
+      };})(a,o,n,t,desc))
+      .addTo(targetLayer);
+  });
+  document.getElementById('cnt-mega').textContent=nMega;
+  document.getElementById('lc-mega').textContent=nMega;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BUILD SITE LAYER (remarquables, hydrauliques)
+// ─────────────────────────────────────────────────────────────────────────────
+function buildSiteLayer(){
+  lSites.clearLayers();
+  let n=0;
+  SITES.forEach(([a,o,nm,t,c,desc])=>{
+    if(t==='Mégalithique')return;
+    let shape,sw,sh;
+    if(t==='Hydraulique'){
+      shape='<div style="width:11px;height:11px;background:'+c+';box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>';
+      sw=11;sh=11;
+    } else {
+      shape='<div style="width:9px;height:9px;background:'+c+';transform:rotate(45deg);box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>';
+      sw=9;sh=9;
+    }
+    const icon=L.divIcon({html:shape,className:'',iconSize:[sw,sh],iconAnchor:[sw/2,sh/2]});
+    L.marker([a,o],{icon}).on('click',(function(nm2,t2,dsc){return function(){
+      info('<b>'+nm2+'</b><br><span style="font-size:12px;color:var(--tx2)">'+dsc+'</span>');
+    };})(nm,t,desc)).addTo(lSites);
+    n++;
+  });
+  document.getElementById('lc-sites').textContent=n;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BUILD EGLISES LAYER
+// ─────────────────────────────────────────────────────────────────────────────
+async function buildEglLayer(){
+  lEgl.clearLayers();
+  await loadChurchesData();
+  const stats=analyseChurches();
+  CHURCHES.forEach(c=>{
+    const isPiezo=c.sub&&(c.sub.includes('granit_biotite')||c.sub.includes('granit_alcalin')||c.sub.includes('granit_porphyrique'));
+    const COL_EGL='#8E2F1F';
+    const col=isPiezo?'#d97706':c.sub&&c.sub.startsWith('granit')?'#b45309':c.sub&&c.sub.startsWith('schiste')?'#64748b':'#78716c';
+    const sz=11;
+    const shape='<div style="position:relative;width:'+sz+'px;height:'+sz+'px">'
+      +'<div style="position:absolute;left:'+(sz/2-1)+'px;top:0;width:2px;height:'+sz+'px;background:'+col+';border-radius:1px"></div>'
+      +'<div style="position:absolute;top:'+(sz*0.28)+'px;left:0;width:'+sz+'px;height:2px;background:'+col+';border-radius:1px"></div></div>';
+    const icon=L.divIcon({html:shape,className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]});
+    const mhTag=c.mh?'<span class="tag-mh">MH</span>':'';
+    const piezoTag=isPiezo?'<span class="tag-piezo">piézo</span>':'';
+    const contTag=c.cont?'<span class="tag-cont">'+c.cont+'</span>':'';
+    L.marker([c.lat,c.lon],{icon,zIndexOffset:250})
+      .on('click',(function(ch){return function(){
+        const orientStr=ch.orient?ch.orient+'°'+((ch.orient>=80&&ch.orient<=100)?' (E-W classique)':' (déviation notable)'):'—';
+        info(
+          '<b>✝ '+ch.name+'</b>'+mhTag+
+          '<br><span style="font-size:11px;color:var(--porphyre)">'+ch.lieu+' · Pieve '+ch.pieve+' · '+ch.s+'</span>'+
+          (isPiezo?'<br>'+piezoTag+contTag:'')+
+          '<br><span style="font-size:10px;color:var(--tx3)">Matériau : '+ch.mat+' · Substrat : '+ch.sub+'<br>Orientation : '+orientStr+'<br>'+ch.note+'</span>'
+        );
+      };})(c))
+      .addTo(lEgl);
+  });
+  document.getElementById('cnt-egl').textContent=CHURCHES.length;
+  document.getElementById('lc-egl').textContent=CHURCHES.length;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DRAW ALIGNMENTS
+// ─────────────────────────────────────────────────────────────────────────────
+let _alignmentsDrawn=false;
+function drawAlignments(){
+  if(_alignmentsDrawn)return;
+  _alignmentsDrawn=true;
+  MEGA_ALIGNMENTS.forEach(a=>{
+    if(!a.points||a.points.length<2)return;
+    const s=MEGA_STUDIES.find(s=>s.id===a.study);
+    L.polyline(a.points,{color:a.color||'#1F3A5F',weight:1.5,opacity:0.6,dashArray:a.dash})
+      .bindTooltip(
+        '<b>'+a.label+'</b><br>'+a.note+
+        '<br><span style="font-size:10px;color:#888">'+(s?s.author+' ('+s.year+')':'')+' · '+((s&&s.source)||'')+'</span>',
+        {sticky:true,direction:'top'}
+      )
+      .addTo(lAlign);
+  });
+  document.getElementById('lc-align').textContent=MEGA_ALIGNMENTS.length;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOAD SITES_REFERENCE.json (source de vérité hébergée)
+// ─────────────────────────────────────────────────────────────────────────────
+function loadSitesReference(){
+  fetch('SITES_REFERENCE.json',{cache:'no-cache'})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(data){
+      if(!Array.isArray(data)||!data.length)throw new Error('JSON vide ou invalide');
+      var remote=data.map(function(s){return[s.lat,s.lon,s.nom,s.type,s.couleur,s.description,s.gps_source?{source:s.gps_source,audit:s.gps_audit||null}:null];});
+      var remoteNames=new Set(remote.map(function(s){return s[2];}));
+      var localExtra=SITES.filter(function(s){return!remoteNames.has(s[2]);});
+      SITES=remote.concat(localExtra);
+      console.log('[Tellux Patrimoine] SITES_REFERENCE.json chargé : '+remote.length+' sites + '+localExtra.length+' local');
+      buildSiteMarkers();
+    })
+    .catch(function(err){
+      console.warn('[Tellux Patrimoine] Fallback SITES inline : '+err.message);
+      buildSiteMarkers();
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────────────────────
+loadSitesReference();
+
+// Count initial
+document.getElementById('cnt-align').textContent=MEGA_ALIGNMENTS.length;
+document.getElementById('lc-align').textContent=MEGA_ALIGNMENTS.length;
+
+console.log('[Tellux] patrimoine.html chargé — HERITAGE_HYPOTHESES_ENABLED='+HERITAGE_HYPOTHESES_ENABLED);
+</script>
+</body>
+</html>
