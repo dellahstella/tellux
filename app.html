@@ -1793,13 +1793,11 @@ async function fetchEnv(url,timeout=8000){
 const map=L.map('map',{maxZoom:22}).setView([42.0,9.0],8);
 map.setMaxBounds([[40.5,7.5],[43.5,10.5]]);
 map.options.maxBoundsViscosity=1.0;
-// URLs des fonds CartoDB (light / dark) : centralisées pour permettre un swap par setUrl()
-// sans recréer le tileLayer, ce qui casserait les références de L.control.layers.
-const _CARTO_BASE_LIGHT='https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
-const _CARTO_BASE_DARK='https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
-const _CARTO_LABELS_LIGHT='https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png';
-const _CARTO_LABELS_DARK='https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png';
-let _tileBase=L.tileLayer(DARK?_CARTO_BASE_DARK:_CARTO_BASE_LIGHT,{attribution:'© CartoDB © OSM',maxNativeZoom:19,maxZoom:22,zIndex:1}).addTo(map);
+// Fond unique : IGN Plan V2 — Géoplateforme (sans clé, depuis bascule 2024).
+// Stretch visuel 19→22 (maxNativeZoom:19 + maxZoom:22) pour placement fin en Corse.
+// Pas de variante dark (IGN Plan est un rendu papier unique) — toggleTheme ne touche
+// plus aux tuiles, seulement au data-theme du chrome UI.
+const _tileBase=L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',{attribution:'Plan IGN V2 © IGN/Geoportail',maxNativeZoom:19,maxZoom:22,zIndex:1}).addTo(map);
 const wmsGeo=L.tileLayer.wms('https://geoservices.brgm.fr/geologie',{layers:'GEOLOGIE',format:'image/png',transparent:true,opacity:0.6,zIndex:2});
 const wmsHyd=L.tileLayer.wms('https://geoservices.brgm.fr/risques',{layers:'REMNAPPE_FR',format:'image/png',transparent:true,opacity:0.55,zIndex:3,maxNativeZoom:11});
 const wmsCav=L.tileLayer.wms('https://geoservices.brgm.fr/risques',{layers:'CAVITE_LOCALISEE',format:'image/png',transparent:true,opacity:0.7,zIndex:4});
@@ -1809,48 +1807,6 @@ const wmsEmag=L.imageOverlay(
   [[41.3,8.5],[43.1,9.65]],
   {opacity:0.5,zIndex:2,attribution:'EMAG2v3 NOAA/NCEI · Meyer et al. 2017'}
 );
-let _tileLabels=L.tileLayer(DARK?_CARTO_LABELS_DARK:_CARTO_LABELS_LIGHT,{zIndex:10,attribution:'',maxNativeZoom:19,maxZoom:22}).addTo(map);
-
-// IGN Géoplateforme (sans clé, depuis bascule 2024) — stretch 19→22 sur la Corse
-const _tIgnPlan=L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',{attribution:'Plan IGN V2 © IGN/Geoportail',maxNativeZoom:19,maxZoom:22,zIndex:1});
-const _tIgnOrtho=L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',{attribution:'Orthophotos © IGN/Geoportail',maxNativeZoom:19,maxZoom:22,zIndex:1});
-
-// Fond de carte actif (utilisé pour coordonner toggleTheme et le switcher).
-let _currentBase='carto'; // 'carto' | 'ign-plan' | 'ign-ortho'
-function setBaseLayer(name){
-  // Retire tous les fonds de base connus
-  [_tileBase,_tileLabels,_tIgnPlan,_tIgnOrtho].forEach(function(l){if(map.hasLayer(l))map.removeLayer(l);});
-  if(name==='ign-plan'){_tIgnPlan.addTo(map);}
-  else if(name==='ign-ortho'){_tIgnOrtho.addTo(map);}
-  else{_tileBase.addTo(map);_tileLabels.addTo(map);name='carto';}
-  _currentBase=name;
-  ['btn-base-carto','btn-base-ign-plan','btn-base-ign-ortho'].forEach(function(id){
-    const el=document.getElementById(id);if(el)el.classList.toggle('active',id==='btn-base-'+name);
-  });
-}
-
-// Contrôle custom (3 boutons) — positionné top-right, même palette que les boutons sidebar
-const _baseCtrl=L.control({position:'topright'});
-_baseCtrl.onAdd=function(){
-  const div=L.DomUtil.create('div','leaflet-bar tellux-base-switcher');
-  div.style.cssText='background:var(--bg1,#fff);border:1px solid var(--border,#d4d4d8);border-radius:8px;padding:4px;display:flex;gap:3px;font-family:var(--font,system-ui);box-shadow:0 2px 6px rgba(0,0,0,.08)';
-  div.innerHTML=''+
-    '<button id="btn-base-carto" class="active" type="button" title="Carte (CartoDB)" style="font-size:10px;padding:4px 8px;border:0;border-radius:5px;background:transparent;cursor:pointer;font-family:inherit">Carte</button>'+
-    '<button id="btn-base-ign-plan" type="button" title="Plan IGN V2 — Géoplateforme" style="font-size:10px;padding:4px 8px;border:0;border-radius:5px;background:transparent;cursor:pointer;font-family:inherit">IGN Plan</button>'+
-    '<button id="btn-base-ign-ortho" type="button" title="Orthophotos IGN — Géoplateforme" style="font-size:10px;padding:4px 8px;border:0;border-radius:5px;background:transparent;cursor:pointer;font-family:inherit">IGN Ortho</button>';
-  L.DomEvent.disableClickPropagation(div);
-  setTimeout(function(){
-    const b1=document.getElementById('btn-base-carto');if(b1)b1.onclick=function(){setBaseLayer('carto');};
-    const b2=document.getElementById('btn-base-ign-plan');if(b2)b2.onclick=function(){setBaseLayer('ign-plan');};
-    const b3=document.getElementById('btn-base-ign-ortho');if(b3)b3.onclick=function(){setBaseLayer('ign-ortho');};
-    // style actif
-    const st=document.createElement('style');
-    st.textContent='.tellux-base-switcher button.active{background:var(--acc,#0ea5e9)!important;color:#fff!important;font-weight:600}';
-    document.head.appendChild(st);
-  },0);
-  return div;
-};
-_baseCtrl.addTo(map);
 
 const lTherm=L.layerGroup();
 // lSit/lSit2/lAlign/lEgl/lTour/lIndu/lCast/lPont : couches patrimoniales migrées vers patrimoine.html
@@ -4516,14 +4472,12 @@ function toggleGlossaire(){
 }
 try{if(!localStorage.getItem('tellux_disclaimer')){document.getElementById('disclaimer-overlay').style.display='flex';}}catch(e){document.getElementById('disclaimer-overlay').style.display='flex';}
 
-// Dark mode toggle
+// Dark mode toggle — IGN Plan V2 n'a pas de variante dark, le fond de carte
+// reste identique ; seul le chrome UI (data-theme) bascule.
 function toggleTheme(){
   DARK=!DARK;
   document.documentElement.setAttribute('data-theme',DARK?'dark':'');
   const _tt=document.getElementById('theme-toggle');if(_tt)_tt.textContent=DARK?'☀️':'🌙';
-  // Swap CartoDB URLs via setUrl() — conserve les références pour le base switcher.
-  _tileBase.setUrl(DARK?_CARTO_BASE_DARK:_CARTO_BASE_LIGHT);
-  _tileLabels.setUrl(DARK?_CARTO_LABELS_DARK:_CARTO_LABELS_LIGHT);
   try{localStorage.setItem('tellux_theme',DARK?'dark':'light');}catch(e){}
 }
 
@@ -4532,11 +4486,10 @@ function toggleMethodology(){
   panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
 }
 
-// Init toggle icon
+// Init toggle icon — IGN Plan V2 unique, pas de swap de tuiles nécessaire.
 if(DARK){
   const _tt2=document.getElementById('theme-toggle');if(_tt2)_tt2.textContent='☀️';
   document.documentElement.setAttribute('data-theme','dark');
-  try{_tileBase.setUrl(_CARTO_BASE_DARK);_tileLabels.setUrl(_CARTO_LABELS_DARK);}catch(e){}
 }
 
 // Guard: loadNOAA/loadCEM may be absent post-v8 cleanup — ne pas bloquer le reste du chaînage init
