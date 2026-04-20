@@ -3424,6 +3424,43 @@ async function loadAnt(){try{
   });
 }catch(e){console.error('❌ loadAnt erreur:',e.message);}}
 
+// ── NOAA SWPC — vent solaire + Kp + Bz + flux proton ──
+// Restauré post-v8 (régression cleanup). Alimente panneau Kp/Bz/densité/flux + calibration externe.
+async function loadNOAA(){try{
+  const[r1,r2,r3,r4]=await Promise.all([
+    fetch('https://services.swpc.noaa.gov/products/solar-wind/plasma-7-day.json'),
+    fetch('https://services.swpc.noaa.gov/products/solar-wind/mag-7-day.json'),
+    fetch('https://services.swpc.noaa.gov/json/planetary_k_index_1m.json'),
+    fetch('https://services.swpc.noaa.gov/json/goes/primary/integral-protons-1-day.json')
+  ]);
+  const[d1,d2,d3,d4]=await Promise.all([r1.json(),r2.json(),r3.json(),r4.json()]);
+  const pl=d1[d1.length-1],mg=d2[d2.length-1],kp=d3[d3.length-1];
+  const density=parseFloat(pl[1]),bz=parseFloat(mg[3]),kpv=parseFloat(kp.kp_index||kp.estimated_kp||0);
+  const flux=parseFloat(d4[d4.length-1]?.flux||d4[d4.length-1]?.['>=10MeV']||0);
+  curKp=kpv.toFixed(1);curBz=bz.toFixed(1);curDensity=density.toFixed(1);curFlux=flux;
+  try{if(typeof _apiStore==='function')_apiStore('noaa',{kp:curKp,bz:curBz,d:curDensity,f:curFlux});}catch(e){}
+  const col=(v,lo,hi)=>v<lo?'var(--acc)':v<hi?'var(--warn)':'var(--danger)';
+  const _set=(id,txt,color)=>{const el=document.getElementById(id);if(el){el.textContent=txt;if(color)el.style.color=color;}};
+  _set('sw-d',density.toFixed(1)+' p/cm³',col(density,5,15));
+  _set('sw-ds','vitesse: '+Math.round(parseFloat(pl[2]))+' km/s');
+  _set('sw-bz',bz.toFixed(1)+' nT',bz>0?'var(--acc)':bz>-5?'var(--warn)':'var(--danger)');
+  _set('bz-s',bz>0?'nord protecteur':bz>-5?'légèrement sud':'sud perturbateur');
+  _set('sw-p',flux.toExponential(1),col(flux,10,100));
+  _set('p-s',flux<10?'calme':flux<100?'élevé':'éruption');
+  _set('kp-v',Math.round(kpv*10)/10,col(kpv,2,5));
+  _set('kp-s',kpv<2?'calme':kpv<4?'actif':kpv<6?'tempête mineure':'tempête majeure');
+  // Dst (tempêtes anneau de courant) — optionnel
+  try{
+    const rd=await fetch('https://services.swpc.noaa.gov/products/kyoto-dst.json');
+    const dd=await rd.json();
+    const dst=parseFloat(dd[dd.length-1]?.[1]);
+    if(!isNaN(dst)){
+      const dstInfo=dst>-20?' · Dst calme':dst>-50?` · Dst ${dst}nT modéré`:` · Dst ${dst}nT ⚠ tempête`;
+      _set('kp-s',(kpv<2?'calme':kpv<4?'actif':kpv<6?'tempête mineure':'tempête majeure')+dstInfo);
+    }
+  }catch(e){}
+}catch(e){console.error('❌ loadNOAA erreur:',e.message);}}
+
 async function loadDB(){
   // Entièrement silencieux — ne bloque pas l'UI, ne touche pas à info()
   try{
