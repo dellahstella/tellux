@@ -2478,6 +2478,48 @@ async function fetchIGRF_precise(lat,lon){
   }catch(e){}
   return fetchIGRF(lat,lon);
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// DOMAINE M — Composante statique (champ continu géomagnétique)
+// Tâche 5.1 — IMMÉDIAT — refactoring pur de fetchIGRF() en retour structuré v2.
+// Sources : IGRF-14 (Alken et al. 2021) · EMAG2v3/LCS1 (Meyer et al. 2017 + BRGM)
+//           Sq : Campbell (1989, Rev.Geophys.27) · Correction externe : AQU/INTERMAGNET
+// Valeurs Corse 2025 : B_total ≈ 46 150–47 200 nT (gradient N-S sur 200 km)
+// IMPORTANT : B_statique et B_ELF sont deux régimes physiquement distincts.
+//   Statique = champ continu géomagnétique + anomalies crustales.
+//   ELF = champ oscillant 50 Hz d'origine anthropique.
+//   Leur combinaison éventuelle appartient à la zone GELÉE (§2.1 AUDIT_NIVEAU2_V2.1).
+// ════════════════════════════════════════════════════════════════════════════
+function calcMagneticStatic(lat, lon) {
+  const lat_ = parseFloat(lat);
+  const lon_ = parseFloat(lon);
+
+  const B_principal_nT        = igrfFallback(lat_, lon_);
+  const B_anomaly_nT          = calcLCS1(lat_, lon_);  // EMAG2v3 si chargé, LCS1 sinon
+  const Sq_correction_nT      = calcSq(lat_);
+  const external_correction_nT = calcExternalCorr(); // AQU INTERMAGNET ou Kp fallback
+  const B_total_nT            = B_principal_nT + B_anomaly_nT + Sq_correction_nT + external_correction_nT;
+
+  // Inclinaison et déclinaison approx. Corse (IGRF-14 2025, précision ±0.5°)
+  // Inclinaison : 56.5° (Bonifacio) → 60° (Cap Corse), gradient ≈ +0.5°/degré lat
+  // Déclinaison : ~1.2° E (W Corse) → ~2.5° E (Cap Corse), gradient ≈ +0.3°/degré lon
+  const inclination_deg  = Math.round((56.5 + (lat_ - 41.5) * 0.5) * 10) / 10;
+  const declination_deg  = Math.round((1.2  + (lon_ - 8.75) * 0.3) * 10) / 10;
+
+  return {
+    B_total_nT,
+    B_principal_nT,
+    B_anomaly_nT,
+    Sq_correction_nT,
+    external_correction_nT,
+    inclination_deg,
+    declination_deg,
+    source: 'IGRF-14 (Alken et al. 2021) + EMAG2v3/LCS1 (Meyer et al. 2017 + BRGM) + Sq (Campbell 1989)',
+    confidence: 'medium',
+    epistemic_note: 'Composante statique (DC) du champ géomagnétique. Distinct du champ ELF 50 Hz — exposés séparément en v2. Incertitude grille ±100 nT (interpolation IDW 0.25°).'
+  };
+}
+
 function dist(a,b,c,d){const R=6371,dL=(c-a)*Math.PI/180,dM=(d-b)*Math.PI/180;const x=Math.sin(dL/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dM/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
 // ---- DONNÉES CARTORADIO STATS (import CSV 2A + 2B) ----
 const CARTORADIO_STATS={
@@ -2722,29 +2764,38 @@ function calcWater(lat,lon){
 // ════════════════════════════════════════════════════════════════════════════
 function calcAll_v2(lat, lon, options) {
   options = options || {};
-  const elfResult = calcMagneticELF(lat, lon);
-  const rfResult = calcRF(lat, lon);
+
+  // Domaine M
+  const staticResult = calcMagneticStatic(lat, lon);
+  const elfResult    = calcMagneticELF(lat, lon);
+  // Domaine RF
+  const rfResult     = calcRF(lat, lon);
+  // Domaine I
+  const altitudeFallback = options.altitude_m || null; // intégration DEM future
+  const gammaResult  = calcGammaAmbient(lat, lon, altitudeFallback);
+  const radonResult  = calcRadonPotential(lat, lon);
+  // Contexte
   const substrateResult = calcSubstrateContext(lat, lon);
-  const heritageResult = calcHeritageDensity(lat, lon);
-  const waterRaw = calcWater(lat, lon);
-  const faultRaw = calcFaultProximity(lat, lon);
+  const heritageResult  = calcHeritageDensity(lat, lon);
+  const waterRaw    = calcWater(lat, lon);
+  const faultRaw    = calcFaultProximity(lat, lon);
   const telluricRaw = calcTelluricSecondary(lat, lon);
 
   return {
     domains: {
       magnetic: {
-        elf: elfResult
-        // static: TODO phase 1 — calcMagneticStatic() (IGRF-14 + EMAG2v3 + susceptibilité locale)
+        static: staticResult, // IGRF-14 + LCS1/EMAG2v3 + Sq + correction externe
+        elf:    elfResult     // Biot-Savart 50 Hz — lignes HTA + production + BT
       },
       rf: rfResult,
       ionizing: {
-        gamma: null,  // TODO phase 1 — calcGammaAmbient() + intégration Téléray ASNR
-        radon: null   // TODO phase 1 — calcRadonPotential() (IRSN 2018)
+        gamma: gammaResult,   // cosmique IMMÉDIAT · terrestre GELÉ · Téléray in_construction
+        radon: radonResult    // classe IRSN 2018 + plages Bq/m³ estimées
       }
     },
     context: {
       substrate: substrateResult,
-      heritage: heritageResult,
+      heritage:  heritageResult,
       water: {
         value: waterRaw,
         unit: 'proxy',
@@ -2766,28 +2817,44 @@ function calcAll_v2(lat, lon, options) {
     },
     metadata: {
       timestamp: new Date().toISOString(),
-      altitude_m: null, // TODO : intégration API DEM
-      data_freshness: {}
+      altitude_m: altitudeFallback,
+      kp_snapshot: {
+        value: parseFloat(curKp) || null,
+        timestamp: new Date().toISOString()
+      },
+      data_freshness: {
+        IGRF: 'IGRF-14 (Alken et al. 2021)',
+        EMAG: 'EMAG2v3 (Meyer et al. 2017)',
+        BRGM: 'carte géologique 1/50000',
+        radon: 'IRSN 2018',
+        ASNR_teleray: 'in_construction'
+      }
     }
   };
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// calcAll — agrégateur principal (compat + v2)
-// Les champs legacy (human/water/geo/score) sont conservés pour ~20 appelants.
+// calcAll — agrégateur principal (compat + v2) — B-calcAll-migration v2 phase 2
+// Les champs legacy (human/water/geo/score) sont désormais DÉRIVÉS de calcAll_v2
+// pour éliminer la double computation (une seule passe Biot-Savart).
+//
+// CHANGEMENT DE SÉMANTIQUE (migration phase 2) :
+//   .human était = calcHuman (ELF + RF mélangés) + calcSimDelta
+//   .human est maintenant = v2.domains.magnetic.elf.B_total_nT + calcSimDelta
+//   → La contribution RF (FH_POINTS) n'est plus incluse dans .human,
+//     elle est disponible dans .v2.domains.rf.S_total_uW_m2
+//   → Delta maximal ≈ 50–200 nT sur cols/crêtes (contribution FH proche)
+//
 // Tout nouveau code doit utiliser all.v2 (architecture à domaines séparés).
-// Migration progressive : ticket B-calcAll-migration.
 // ════════════════════════════════════════════════════════════════════════════
 function calcAll(lat,lng){
-  // Legacy — conservé jusqu'à migration complète des appelants (ticket B-calcAll-migration)
-  const human=calcHuman(lat,lng)+calcSimDelta(lat,lng);
-  const water=calcWater(lat,lng);
-  const geo=calcGeoSusc(lat,lng);
-  const heritageDensity=calcHeritageDensity(lat,lng);
-  const heritage=heritageDensity._score_legacy;
-  const scorePhys=human+Math.round(water*0.3)+geo+Math.round(heritage*0.5);
-  // v2 — architecture à domaines séparés
-  const v2=calcAll_v2(lat,lng);
+  const v2 = calcAll_v2(lat,lng);
+  // Legacy fields dérivés de v2 (une seule computation)
+  const human    = v2.domains.magnetic.elf.B_total_nT + calcSimDelta(lat,lng);
+  const water    = v2.context.water.value;
+  const geo      = v2.context.substrate.susceptibility_nT;
+  const heritage = v2.context.heritage._score_legacy;
+  const scorePhys = human + Math.round(water*0.3) + geo + Math.round(heritage*0.5);
   return {human,water,geo,heritage,scorePhys,score:scorePhys,v2};
 }
 
@@ -2935,6 +3002,93 @@ function getGeoType(lat,lon){
   return pts[0]?.t||'inconnu';
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// DOMAINE I — Potentiel radon
+// Tâche 5.3 — IMMÉDIAT — refactoring de calcSubstrateContext.radon_potential_class
+// en fonction dédiée avec plages d'activité Bq/m³ (IRSN 2018).
+// Sources : IRSN cartographie radon 2018 · BRGM RP-50200-FR 2000
+//           Géologie corse : granit hercynien biotite = potentiel fort documenté
+// Seuil action IRSN : 300 Bq/m³ (locaux habitables depuis décret 2018-434)
+// ════════════════════════════════════════════════════════════════════════════
+function calcRadonPotential(lat, lon) {
+  const lithology = getGeoType(lat, lon);
+
+  // Classes IRSN 2018 + BRGM RP-50200-FR 2000 — typologies lithologiques corses
+  const RADON_CLASS_BY_LITHOLOGY = {
+    granit: 3, granit_biotite: 3, granit_rose: 3,
+    granodiorite: 2, gneiss: 2, serpentinite: 2,
+    schistes: 2, ophiolite: 2,
+    calcaire: 1, alluvions: 1, inconnu: 1
+  };
+  const radon_class = RADON_CLASS_BY_LITHOLOGY[lithology] || 1;
+
+  // Plages d'activité volumique estimées indoor (Bq/m³) — IRSN note technique 2018
+  // Ces plages intègrent la variabilité naturelle et la perméabilité du sol.
+  // Elles sont des ordres de grandeur géologiques, PAS des mesures in situ.
+  const ACTIVITY_RANGES = {
+    1: [10,  50],   // Calcaire, alluvions — faible émanation (radon peu soluble dans calcaire)
+    2: [50,  200],  // Gneiss, granodiorite, schistes, serpentinite, ophiolite
+    3: [100, 600]   // Granit hercynien corse (biotite) — émanation élevée documentée (IRSN 2018)
+  };
+
+  return {
+    class: radon_class,
+    activity_estimate_Bq_m3: ACTIVITY_RANGES[radon_class],
+    lithology,
+    is_measurement_available: false,
+    source: 'IRSN cartographie radon 2018 + BRGM RP-50200-FR 2000',
+    confidence: 'high',
+    epistemic_note: 'IARC classe 1 (cancérogène pulmonaire confirmé) à partir de seuils d\'exposition chronique. La mesure individuelle indoor (dosimètre 2–3 mois) est la seule base d\'évaluation sanitaire. Ces plages sont des ordres de grandeur géologiques, pas des mesures in situ.'
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// DOMAINE I — Rayonnement gamma ambiant
+// Tâche 5.2 — Partition mixte (§5 AUDIT_NIVEAU2_V2.1)
+// IMMÉDIAT : signature + cosmique paramétrique + Téléray placeholder
+// GELÉ : composante terrestre NCRP 94 (13·U + 5.4·Th + 42·K),
+//         plages U/Th/K assignées aux lithologies corses — en attente relecture tiers
+// Sources IMMÉDIAT :
+//   Cosmique : Bouville & Lowder (1988), adapté latitude 42°N
+//   Téléray ASNR : réseau public (in_construction — API à vérifier)
+//   Ordres de grandeur Corse : 75–150 nSv/h (mesures Téléray 2A/2B)
+// ════════════════════════════════════════════════════════════════════════════
+function calcGammaAmbient(lat, lon, altitude_m) {
+  // Altitude par défaut : 200 m = altitude médiane côtière corse
+  const alt = (typeof altitude_m === 'number' && isFinite(altitude_m)) ? altitude_m : 200;
+
+  // Composante cosmique — IMMÉDIAT (paramètres à valider en relecture tiers)
+  // Formule : 35 × exp(alt/1500) nSv/h — §5.4 AUDIT_NIVEAU2_V2.1
+  // À sea level : ~35 nSv/h · Vizzavona (1163m) : ~75 nSv/h · Monte Cinto (2710m) : ~145 nSv/h
+  const cosmic_nSv_h = Math.round(35 * Math.exp(alt / 1500) * 10) / 10;
+
+  // Composante terrestre — GELÉ (formule NCRP 94, plages U/Th/K corses non validées)
+  // const terrestrial_nSv_h = 13 * U_ppm + 5.4 * Th_ppm + 42 * K_pct; // GELE
+  const terrestrial_nSv_h = null; // placeholder — intégration post-relecture tiers
+
+  // Téléray ASNR — in_construction
+  // API candidate : https://teleray.irsn.fr/api/
+  // Balises Corse documentées : AJA (2A, Ajaccio région) + BAP (2B, Bastia périphérie)
+  // Valeurs typiques : 80–120 nSv/h (fond naturel Corse granitique)
+  const nearest_teleray_balise = null; // TODO phase 2 — intégration après vérification API
+
+  return {
+    dose_rate_nSv_h: cosmic_nSv_h, // estimation cosmique seule (terrestrial + Téléray manquants)
+    components: {
+      cosmic_nSv_h,
+      terrestrial_nSv_h,       // null — GELÉ (NCRP 94)
+      anthropogenic_nSv_h: 0   // hors périmètre v2 (installations nucléaires hors Corse)
+    },
+    nearest_teleray_balise,      // null — in_construction
+    altitude_used_m: alt,
+    source: 'Approximation cosmique Bouville & Lowder 1988 · Téléray ASNR (in_construction)',
+    confidence: 'low',
+    under_review: true,          // terrestre GELÉ + Téléray manquant
+    in_construction: true,
+    epistemic_note: 'Estimation cosmique seule. Composante terrestre (dominant à basse altitude sur granit) en attente de relecture (NCRP 94). Fond naturel Corse : 75–150 nSv/h (Téléray IRSN). Aucune implication sanitaire à ces niveaux de fond naturel.'
+  };
+}
+
 // ═══ Modèles théoriques (Cagniard 1953, Wait 1954, Bishop 1981) ═══
 
 // Conductivité typique par type de roche (S/m) — Wait 1954 / Chave 2012
@@ -3055,14 +3209,24 @@ function calcFaultProximity(lat, lon) {
   return bonus;
 }
 
-// DEPRECATED v2 phase 1 — 2026-04-19
+// DEPRECATED v2 phase 1 — 2026-04-19 | Mise à jour : B-corpus-hypotheses résolu 2026-04-20
 // La base physique de ce score (émission piézoélectrique mesurable à l'échelle
 // du bâti mégalithique) n'est pas étayée par la littérature peer-reviewed
 // (cf. AUDIT_TELLUX_NIVEAU2_MODELE_COMPOSITE_V2.1.md §2.3).
-// Conservation obligatoire : 5 fonctions hypothèses appelantes
-//   (H1, H8, H18, H37, H39) + calcDecomposition + calcResonanceHz + popups.
-// Migration planifiée : ticket B-corpus-hypotheses (hors scope phase 1).
-// NE PAS SUPPRIMER avant migration complète de tous les appelants.
+//
+// Appelants migrés (phase 2) :
+//   H1, H8, H18, H37, H39 → calcGeoSusc() (susceptibilité magnétique nT) ✓
+//   calcDecomposition → v2.context.substrate.susceptibility_nT ✓ (via calcAll_v2)
+//   recommandMateriaux → v2.domains.magnetic.elf.B_total_nT ✓ (phase 1)
+//
+// Appelants RESTANTS (NE PAS SUPPRIMER avant résolution) :
+//   calcResonanceHz (prend `longueur_m` + `materiau`, n'utilise pas calcPiezoScore directement
+//                   — à vérifier si référence implicite existe)
+//   popup (line ~3364) : `const piezo=calcPiezoScore(lat,lng)` — utilisé pour piezoBar + solLabel
+//   agro popup line ~8158 : `piezoScore` dans export JSON
+//
+// Supprimer quand popup + agro popup + calcResonanceHz migrés.
+// NE PAS SUPPRIMER avant migration complète.
 //
 // Piezo Score (Bishop 1981 + Eppelbaum 2017 + Ghilardi 2017)
 // Polarisation piézo ∝ quartz_content × stress_tectonique × d33
@@ -3093,10 +3257,11 @@ function calcDecomposition(lat,lon){
   const v2=calcAll_v2(lat,lon);
   const human=v2.domains.magnetic.elf.B_total_nT; // nT, champ ELF anthropique
   const water=v2.context.water.value;             // proxy hydrique
-  const piezo=calcPiezoScore(lat,lon); // DEPRECATED — ticket B-corpus-hypotheses
+  // B-corpus-hypotheses résolu : piezo → susceptibilité magnétique du substrat
+  const susc_nT=v2.context.substrate.susceptibility_nT; // nT, susceptibilité locale BRGM
   const skinD=calcSkinDepth(lat,lon);
   const tellPct=v2.context.telluric.value; // % champ secondaire tellurique
-  return {crustal,localGeo,human,water,piezo,skinD,tellPct,
+  return {crustal,localGeo,human,water,susc_nT,skinD,tellPct,
     total:crustal+localGeo+human+Math.round(water*0.3)};
 }
 
@@ -3199,13 +3364,18 @@ map.on('click',e=>{
   const igrf=fetchIGRF(lat,lng);
   const {human,water,geo,scorePhys,score,v2}=calcAll(lat,lng);
   // Valeurs v2 structurées — utilisées pour la popup niveau B
-  const elf_nT=v2.domains.magnetic.elf.B_total_nT;
-  const rf_uWm2=v2.domains.rf.S_total_uW_m2;
+  const elf_nT    = v2.domains.magnetic.elf.B_total_nT;
+  const static_nT = v2.domains.magnetic.static.B_total_nT;
+  const rf_uWm2   = v2.domains.rf.S_total_uW_m2;
+  const gamma_nSvh    = v2.domains.ionizing.gamma.dose_rate_nSv_h;
+  const radon_class   = v2.domains.ionizing.radon.class;
+  const radon_range   = v2.domains.ionizing.radon.activity_estimate_Bq_m3;
   const geoType=getGeoType(lat,lng);
   const crustal=calcLCS1(lat,lng);
-  const piezo=calcPiezoScore(lat,lng);
+  // B-corpus-hypotheses résolu : piezo → susceptibilité magnétique issue de v2
+  const susc_nT=v2.context.substrate.susceptibility_nT; // remplace calcPiezoScore
   const skinD=calcSkinDepth(lat,lng);
-  const tellPct=calcTelluricSecondary(lat,lng);
+  const tellPct=v2.context.telluric.value; // déjà dans v2, pas de double compute
   const predicted=Math.round(igrf+human+water*0.3+geo);
   let real=null,bd=999;
   contribsDB.forEach(c=>{const d=dist(lat,lng,c.lat,c.lon);if(d<0.5&&d<bd&&c.valeur&&c.unite==='nT'){bd=d;real=c.valeur;}});
@@ -3221,8 +3391,9 @@ map.on('click',e=>{
   const humanScore=Math.min(4,Math.round(human/100));
   const geoScore=Math.min(3,Math.round(Math.abs(geo)/15));
   const perturbHumain=Math.min(5,humanScore+rfScore);
-  const piezoNat=piezo>40?2:piezo>15?1:0;
-  const activNat=Math.min(5,geoScore+piezoNat);
+  // susc_nT : susceptibilité magnétique locale (nT) — remplace piezoNat (B-corpus-hypotheses)
+  const suscNat=susc_nT>30?2:susc_nT>12?1:0;
+  const activNat=Math.min(5,geoScore+suscNat);
   const indiceTellux=Math.min(10,perturbHumain+activNat);
   // Couleurs basées sur perturbation humaine (c'est ça qui compte pour bon/mauvais)
   const phEmoji=perturbHumain<=1?'\ud83d\udfe2':perturbHumain<=2?'\ud83d\udfe1':perturbHumain<=3?'\ud83d\udfe0':'\ud83d\udd34';
@@ -3239,11 +3410,11 @@ map.on('click',e=>{
     perturbHumain<=3?'Influence humaine d\u00e9tectable \u2014 antennes ou lignes':
     'Zone perturb\u00e9e \u2014 mesure terrain recommand\u00e9e';
   const itEmoji=phEmoji;const itLabel=phLabel;const itColor=phColor;
-  // Sous-sol simplifié
-  const solLabel=piezo>40?'Substrat à forte susceptibilité (quartz)':piezo>15?'Substrat à susceptibilité modérée':geo<0?'Substrat neutre (calcaire)':'Substrat standard';
+  // Sous-sol simplifié — basé sur susceptibilité magnétique (nT)
+  const solLabel=susc_nT>30?'Substrat à forte susceptibilité magnétique (granit biotite)':susc_nT>12?'Substrat à susceptibilité modérée':geo<0?'Substrat neutre (calcaire/ophiolite)':'Substrat standard';
   // Recommandation implantation basée sur perturbation humaine + activité naturelle
   const implanEmoji=perturbHumain<=1&&activNat>=2?'\ud83c\udfe1':perturbHumain<=2?'\ud83c\udf3f':perturbHumain<=3?'\u26a0\ufe0f':'\ud83d\udeab';
-  const implanTip=perturbHumain<=1&&activNat>=3?'Implantation id\u00e9ale \u2014 sous-sol actif (pi\u00e9zo), calme en surface':
+  const implanTip=perturbHumain<=1&&activNat>=3?'Implantation id\u00e9ale \u2014 sous-sol actif (forte susceptibilité), calme en surface':
     perturbHumain<=1&&activNat>=2?'Bon potentiel \u2014 roche r\u00e9sonante, peu perturb\u00e9':
     perturbHumain<=2?'Implantation correcte \u2014 perturbations faibles':
     perturbHumain<=3?'V\u00e9rifier les sources de perturbation avant implantation':
@@ -3258,28 +3429,69 @@ map.on('click',e=>{
   const deltaStr=delta!==null?(delta>0?'+':'')+delta+' nT':'\u2014';
   // Couleur Δ — palette neutre (sans rouge saturé)
   const deltaCol=delta===null?'#8b92a5':Math.abs(delta)<50?'#3F5B3A':Math.abs(delta)<200?'#C28533':'#8E2F1F';
-  const piezoBar=piezo>5?'<div style="height:3px;background:linear-gradient(90deg,#f59e0b '+piezo+'%,#e5e7eb '+piezo+'%);border-radius:2px;margin:3px 0" title="Potentiel pi\u00e9zo\u00e9lectrique du sous-sol '+piezo+'%"></div>':'';
+  // Barre susceptibilité magnétique — normalisée sur 60 nT (max grille GEO_SUSC_GRID)
+  const suscPct=Math.min(100,Math.max(0,Math.round((susc_nT+5)/65*100)));
+  const piezoBar=susc_nT>5?'<div style="height:3px;background:linear-gradient(90deg,#C28533 '+suscPct+'%,#e5e7eb '+suscPct+'%);border-radius:2px;margin:3px 0" title="Susceptibilité magnétique locale : '+susc_nT+' nT ('+geoType+')"></div>':'';
   // Sections domaines v2 (niveau B)
   const elfContribs=v2.domains.magnetic.elf.contributions.slice(0,3)
     .map(c=>c.source_type+' : '+c.B_nT+' nT').join(' · ') || 'Aucune contribution proche';
   const elfIARCnote=elf_nT>=300
     ? '<div style="border-left:2px solid #C28533;padding-left:5px;margin-top:3px;font-size:8px;color:#8A5E22;font-style:italic">Repère documentaire : IARC classe 2B pour ELF ≥ 300 nT chronique résidentiel — pas de seuil d\'alerte, signal statistique.</div>'
     : '';
+  // Radon class — couleur et pictogramme
+  const radonColor = radon_class===3?'#8E2F1F':radon_class===2?'#C28533':'#3F5B3A';
+  const radonConf  = radon_class===3?'●●●':radon_class===2?'●●○':'●●●'; // conf toujours high sur classe lithologique
+  const radonLabel = radon_class===3?'Élevé':radon_class===2?'Modéré':'Faible';
+
   const v2SectionHTML=
     '<div style="border-top:1px solid #e5e7eb;margin-top:4px;padding-top:4px">'+
-      '<div style="font-size:9px;font-weight:600;color:#1F2329;margin-bottom:2px">Domaine magnétique ELF 50 Hz</div>'+
+      // ── Statique géomagnétique ──
+      '<div style="font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">Champ statique géomagnétique</div>'+
+      '<div style="display:flex;align-items:center;gap:4px;margin-bottom:1px">'+
+        '<span style="font-size:12px;font-weight:700;color:#1F3A5F">'+static_nT+' nT</span>'+
+        '<span style="font-size:9px;color:#8b92a5" title="Confiance : moyen — IGRF-14 + LCS1/EMAG2v3, ±100 nT">●●○</span>'+
+      '</div>'+
+      '<div style="font-size:8px;color:#8b92a5">IGRF-14 · LCS1/EMAG2v3 · Sq · correction AQU/Kp</div>'+
+      // ── ELF 50 Hz ──
+      '<div style="margin-top:3px;font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">ELF anthropique 50 Hz</div>'+
       '<div style="display:flex;align-items:center;gap:4px;margin-bottom:1px">'+
         '<span style="font-size:12px;font-weight:700;color:#8A5E22">'+elf_nT+' nT</span>'+
         '<span style="font-size:9px;color:#8b92a5" title="Confiance : moyen — modélisation Biot-Savart, ±50%">●●○</span>'+
       '</div>'+
       '<div style="font-size:8px;color:#8b92a5">'+elfContribs+'</div>'+
       elfIARCnote+
-      '<div style="margin-top:3px;font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">Domaine RF (FH + fond)</div>'+
+      // ── RF ──
+      '<div style="margin-top:3px;font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">Radiofréquence (FH + fond)</div>'+
       '<div style="display:flex;align-items:center;gap:4px">'+
         '<span style="font-size:12px;font-weight:700;color:#8E2F1F">'+rf_uWm2+' µW/m²</span>'+
         '<span style="font-size:9px;color:#8b92a5" title="Confiance : moyen — FH_POINTS + fond CartoRadio">●●○</span>'+
       '</div>'+
-      '<div style="font-size:8px;color:#8b92a5;font-style:italic">ICNIRP : ≈ 4 500 000 µW/m² (ordre de grandeur documentaire)</div>'+
+      '<div style="font-size:8px;color:#8b92a5;font-style:italic">ICNIRP : ≈ 4 500 000 µW/m² (repère documentaire)</div>'+
+      // ── Ionisant ──
+      '<div style="margin-top:3px;border-top:1px dashed #e5e7eb;padding-top:3px">'+
+        '<div style="font-size:9px;font-weight:600;color:#1F2329;margin-bottom:2px">Domaine ionisant</div>'+
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+
+          // Gamma
+          '<div>'+
+            '<div style="font-size:8px;color:#6b7280;margin-bottom:1px">γ cosmique</div>'+
+            '<div style="display:flex;align-items:center;gap:3px">'+
+              '<span style="font-size:11px;font-weight:700;color:#4a4f5e">'+gamma_nSvh+' nSv/h</span>'+
+              '<span style="font-size:9px;color:#C28533" title="En cours — cosmique seule, composante terrestre en attente relecture (NCRP 94)">◆</span>'+
+              '<span style="font-size:9px;color:#8b92a5" title="Confiance : faible — estimation cosmique paramétrique, composante terrestre manquante">●○○</span>'+
+            '</div>'+
+          '</div>'+
+          // Radon
+          '<div style="border-left:1px solid #e5e7eb;padding-left:6px">'+
+            '<div style="font-size:8px;color:#6b7280;margin-bottom:1px">Radon (potentiel)</div>'+
+            '<div style="display:flex;align-items:center;gap:3px">'+
+              '<span style="font-size:11px;font-weight:700;color:'+radonColor+'">Classe '+radon_class+'/3</span>'+
+              '<span style="font-size:9px;color:#8b92a5" title="Confiance : haut — classe IRSN 2018 par lithologie">●●●</span>'+
+            '</div>'+
+            '<div style="font-size:8px;color:'+radonColor+'">'+radonLabel+' · '+radon_range[0]+'–'+radon_range[1]+' Bq/m³</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="font-size:7.5px;color:#9ca3af;font-style:italic">Fond naturel Corse : 75–150 nSv/h · Seuil action radon : 300 Bq/m³ (IRSN 2018)</div>'+
+      '</div>'+
     '</div>';
   calcPopup.setContent(
     '<div style="font-family:var(--font);min-width:180px">'+
@@ -3315,7 +3527,8 @@ map.on('click',e=>{
   const coudee=calcCoudeeLatitude(lat);
   const myLat=calcMYLatitude(lat);
   const rec=recommandMateriaux(lat,lng);
-  _geoLastPoint={lat,lng,igrf,human,geo,crustal,piezo,skinD,tellPct,geoType,solLabel,indice:indiceTellux,label:itLabel,verdict:itVerdict,implanTip,rf:nRFcalib,coudee,myLat,rec};
+  // piezo → susc_nT (B-corpus-hypotheses résolu) ; tellPct déjà dans v2
+  _geoLastPoint={lat,lng,igrf,human,geo,crustal,susc_nT,skinD,tellPct,geoType,solLabel,indice:indiceTellux,label:itLabel,verdict:itVerdict,implanTip,rf:nRFcalib,coudee,myLat,rec,radon_class,gamma_nSvh};
 });
 
 function addMarker(c){L.marker([c.lat,c.lon],{icon:mkIcon('#5c3a9b',false,11),zIndexOffset:200}).on('click',()=>info(`<span class="tag" style="background:#f0e8ff;color:#5c3a9b;border:0.5px solid #9b72d4">DB</span><b>${c.type}</b>${c.valeur?' — '+c.valeur+' '+(c.unite||'nT'):''}${c.note?`<br><i style="font-size:11px;color:var(--tx3)">${c.note}</i>`:''}<br><span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">IGRF:${c.igrf_nt||'—'}nT · score:${c.score_anomalie||'—'} · Kp:${c.kp||'—'} · Bz:${c.bz||'—'}nT</span>`)).addTo(lCon);}
@@ -6595,20 +6808,21 @@ function buildHypoList(tab='auto'){
 async function runAutoTests(){
   await loadChurchesData();
   _hypoResults={};
-  // ═══ H1 — Piézoélectricité granit vs calcaire ═══
+  // ═══ H1 — Susceptibilité magnétique granit vs calcaire ═══
+  // Migration B-corpus-hypotheses : calcPiezoScore → calcGeoSusc (susceptibilité en nT)
   try{
-    let piezoGranit=[],piezoCalc=[],piezoSchist=[];
+    let suscGranit=[],suscCalc=[],suscSchist=[];
     SITES.forEach(s=>{
       if(s[3]==='Mégalithique'){
-        const gt=getGeoType(s[0],s[1]);const p=calcPiezoScore(s[0],s[1]);
-        if(gt.includes('granit'))piezoGranit.push(p);
-        else if(gt.includes('calc'))piezoCalc.push(p);
-        else piezoSchist.push(p);
+        const gt=getGeoType(s[0],s[1]);const p=calcGeoSusc(s[0],s[1]);
+        if(gt.includes('granit'))suscGranit.push(p);
+        else if(gt.includes('calc'))suscCalc.push(p);
+        else suscSchist.push(p);
       }
     });
     const avg=arr=>arr.length?Math.round(arr.reduce((s,v)=>s+v,0)/arr.length):0;
-    const aG=avg(piezoGranit),aC=avg(piezoCalc),aS=avg(piezoSchist);
-    _hypoResults.H1={pass:aG>aC+10,text:'Piézo moyen : granit='+aG+'/100 (n='+piezoGranit.length+') · calcaire='+aC+' (n='+piezoCalc.length+') · schiste='+aS+' (n='+piezoSchist.length+') — '+(aG>aC+10?'Granit nettement supérieur ✓':'Différence faible')};
+    const aG=avg(suscGranit),aC=avg(suscCalc),aS=avg(suscSchist);
+    _hypoResults.H1={pass:aG>aC+10,text:'Susceptibilité magnétique moyenne : granit='+aG+' nT (n='+suscGranit.length+') · calcaire='+aC+' nT (n='+suscCalc.length+') · schiste='+aS+' nT (n='+suscSchist.length+') — '+(aG>aC+10?'Granit nettement supérieur ✓':'Différence faible')};
   }catch(e){_hypoResults.H1={pass:false,text:'Erreur : '+e.message};}
 
   // ═══ H2 — Sites mégalithiques sur convergence failles+eau ═══
@@ -6656,23 +6870,25 @@ async function runAutoTests(){
     _hypoResults.H4={pass:avgA>avgP*1.15,text:'Gradient moyen axe Leplat : '+avgA+' nT vs perpendiculaire : '+avgP+' nT — '+(avgA>avgP*1.15?'Axe géologiquement distinct ✓':'Pas de différence significative')};
   }catch(e){_hypoResults.H4={pass:false,text:'Erreur : '+e.message};}
 
-  // ═══ H8 — Piézo Cauria vs Murato vs Bonifacio ═══
+  // ═══ H8 — Susceptibilité magnétique Cauria vs Murato vs Bonifacio ═══
+  // Migration B-corpus-hypotheses : calcPiezoScore → calcGeoSusc (susceptibilité en nT)
   try{
-    const pC=calcPiezoScore(41.534,8.917),pM=calcPiezoScore(42.548,9.310),pB=calcPiezoScore(41.387,9.159);
-    _hypoResults.H8={pass:pC>pM+10,text:'Piézo : Cauria(granit)='+pC+'/100 · Murato(serpentine)='+pM+' · Bonifacio(calcaire)='+pB+' — '+(pC>pM+10?'Cauria nettement supérieur ✓':'Différence modeste')};
+    const pC=calcGeoSusc(41.534,8.917),pM=calcGeoSusc(42.548,9.310),pB=calcGeoSusc(41.387,9.159);
+    _hypoResults.H8={pass:pC>pM+10,text:'Susceptibilité magnétique : Cauria(granit)='+pC+' nT · Murato(serpentine)='+pM+' nT · Bonifacio(calcaire)='+pB+' nT — '+(pC>pM+10?'Cauria nettement supérieur ✓':'Différence modeste')};
   }catch(e){_hypoResults.H8={pass:false,text:'Erreur : '+e.message};}
 
-  // ═══ H18 — Églises sur substrat piézo vs voisinage ═══
+  // ═══ H18 — Susceptibilité magnétique du substrat : églises vs voisinage ═══
+  // Migration B-corpus-hypotheses : calcPiezoScore → calcGeoSusc (susceptibilité en nT)
   try{
-    let churchPiezo=0,nC=0,neighborPiezo=0,nN=0;
+    let churchSusc=0,nC=0,neighborSusc=0,nN=0;
     CHURCHES.forEach(c=>{
-      churchPiezo+=calcPiezoScore(c.lat,c.lon);nC++;
-      neighborPiezo+=calcPiezoScore(c.lat+0.01,c.lon+0.01);nN++;
-      neighborPiezo+=calcPiezoScore(c.lat-0.01,c.lon-0.01);nN++;
+      churchSusc+=calcGeoSusc(c.lat,c.lon);nC++;
+      neighborSusc+=calcGeoSusc(c.lat+0.01,c.lon+0.01);nN++;
+      neighborSusc+=calcGeoSusc(c.lat-0.01,c.lon-0.01);nN++;
     });
-    const avgC=nC>0?Math.round(churchPiezo/nC):0;
-    const avgN=nN>0?Math.round(neighborPiezo/nN):0;
-    _hypoResults.H18={pass:avgC>avgN+3,text:'Piézo moyen églises : '+avgC+'/100 vs voisinage ±1km : '+avgN+'/100 — '+(avgC>avgN+3?'Églises sur substrat piézo plus fort ✓':'Différence faible — même substrat')};
+    const avgC=nC>0?Math.round(churchSusc/nC):0;
+    const avgN=nN>0?Math.round(neighborSusc/nN):0;
+    _hypoResults.H18={pass:avgC>avgN+3,text:'Susceptibilité magnétique moyenne : églises='+avgC+' nT vs voisinage ±1km='+avgN+' nT — '+(avgC>avgN+3?'Églises sur substrat plus susceptible ✓':'Différence faible — même substrat')};
   }catch(e){_hypoResults.H18={pass:false,text:'Erreur : '+e.message};}
 
   // ═══ H7 — Orientation dolmens SE → églises E-W ═══
@@ -6852,15 +7068,18 @@ async function runAutoTests(){
     _hypoResults.H36={pass:pct>50,text:onGranit+'/'+emetteurs.length+' émetteurs ('+pct+'%) sur substrat granitique — '+(pct>50?'Points hauts granitiques privilégiés ✓':'Répartition mixte')};
   }catch(e){_hypoResults.H36={pass:false,text:'Erreur : '+e.message};}
 
-  // ═══ H37 — EMAG2 crustal vs piézo local ═══
+  // ═══ H37 — Cohérence anomalie crustale EMAG2 ↔ susceptibilité locale ═══
+  // Migration B-corpus-hypotheses : calcPiezoScore → calcGeoSusc (susceptibilité en nT)
+  // Hypothèse reformulée : l'anomalie crustale grande échelle (LCS1/EMAG2v3) corrèle-t-elle
+  // avec la susceptibilité magnétique locale (GEO_SUSC_GRID) ? Test de séparation d'échelle.
   try{
     let corr=0,n=0;
     [[41.534,8.917],[42.548,9.310],[41.387,9.159],[42.583,8.889],[42.305,9.149],[42.465,9.452],[41.743,9.144],[42.374,8.548]].forEach(([lt,ln])=>{
-      const cr=calcLCS1(lt,ln);const pz=calcPiezoScore(lt,ln);
-      if(cr>0&&pz>0)corr++;if(cr<0&&pz<10)corr++;n++;
+      const cr=calcLCS1(lt,ln);const gs=calcGeoSusc(lt,ln);
+      if(cr>0&&gs>5)corr++;if(cr<0&&gs<5)corr++;n++;
     });
     const pctCorr=n>0?Math.round(corr/n*100):0;
-    _hypoResults.H37={pass:pctCorr>60,text:'Cohérence crustal↔piézo sur '+n+' sites : '+corr+'/'+n+' ('+pctCorr+'%) — '+(pctCorr>60?'Échelles cohérentes ✓':'Découplage possible')};
+    _hypoResults.H37={pass:pctCorr>60,text:'Cohérence crustal(LCS1)↔susceptibilité(nT) sur '+n+' sites : '+corr+'/'+n+' ('+pctCorr+'%) — '+(pctCorr>60?'Échelles cohérentes ✓':'Découplage possible')};
   }catch(e){_hypoResults.H37={pass:false,text:'Erreur : '+e.message};}
 
   // ═══ H38 — Continuité mégalithe→église = site plus calme ═══
@@ -6882,19 +7101,25 @@ async function runAutoTests(){
     _hypoResults.H38={pass:nCont>0&&parseFloat(avgCont)<parseFloat(avgIso),text:'Indice moyen églises continuité ('+nCont+') : '+avgCont+'/10 vs isolées ('+nIso+') : '+avgIso+'/10 — '+(parseFloat(avgCont)<parseFloat(avgIso)?'Sites de continuité plus calmes ✓':'Pas de différence significative')};
   }catch(e){_hypoResults.H38={pass:false,text:'Erreur : '+e.message};}
 
-  // ═══ H39 — Piézo amplifie ou atténue le RF ═══
+  // ═══ H39 — Susceptibilité magnétique du substrat influence-t-elle le RF ambiant ? ═══
+  // Migration B-corpus-hypotheses : "zones piézo fort/faible" → "zones haute/faible susceptibilité"
+  // Les listes de points sont conservées (elles encodent le même savoir géologique).
+  // Hypothèse reformulée : la susceptibilité magnétique du substrat granitique corrèle-t-elle
+  // avec le niveau RF modélisé ? (substrat → topographie → position antennes ?)
   try{
-    let highPiezoRF=0,nHP=0,lowPiezoRF=0,nLP=0;
+    let highSuscRF=0,nHP=0,lowSuscRF=0,nLP=0;
+    // Zones à forte susceptibilité magnétique (granit biotite hercynien)
     [[41.534,8.917],[42.583,8.889],[42.567,8.757],[41.743,9.144],[42.305,9.149]].forEach(([lt,ln])=>{
-      highPiezoRF+=calcN_RF_calib(lt,ln);nHP++;
+      highSuscRF+=calcN_RF_calib(lt,ln);nHP++;
     });
+    // Zones à faible susceptibilité (calcaire, schiste, alluvions)
     [[41.387,9.159],[42.465,9.452],[42.250,9.340],[42.155,9.500],[42.050,9.400]].forEach(([lt,ln])=>{
-      lowPiezoRF+=calcN_RF_calib(lt,ln);nLP++;
+      lowSuscRF+=calcN_RF_calib(lt,ln);nLP++;
     });
-    const aHP=nHP>0?(highPiezoRF/nHP).toFixed(2):'0';
-    const aLP=nLP>0?(lowPiezoRF/nLP).toFixed(2):'0';
+    const aHP=nHP>0?(highSuscRF/nHP).toFixed(2):'0';
+    const aLP=nLP>0?(lowSuscRF/nLP).toFixed(2):'0';
     const diff=Math.abs(parseFloat(aHP)-parseFloat(aLP));
-    _hypoResults.H39={pass:diff>0.3,text:'RF moyen zones piézo fort : '+aHP+' V/m vs piézo faible : '+aLP+' V/m · Δ='+diff.toFixed(2)+' — '+(diff>0.3?'Interaction piézo↔RF détectée ✓':'Pas d\'interaction claire')};
+    _hypoResults.H39={pass:diff>0.3,text:'RF moyen zones forte susceptibilité : '+aHP+' V/m vs faible susceptibilité : '+aLP+' V/m · Δ='+diff.toFixed(2)+' — '+(diff>0.3?'Corrélation susceptibilité↔RF détectée ✓':'Pas de corrélation claire')};
   }catch(e){_hypoResults.H39={pass:false,text:'Erreur : '+e.message};}
 
   // ═══ H40 — Skin depth plus profond sur lobes EMAG2+ ═══
