@@ -1280,22 +1280,16 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 <div class="layers-accordion" id="layers-accordion">
   <!-- Bouton réduire sidebar (desktop uniquement) -->
   <button class="sidebar-toggle" id="sidebar-toggle" type="button" onclick="toggleSidebar()" aria-label="Réduire la sidebar" title="Réduire la sidebar"><span class="sidebar-toggle-icon">◀</span></button>
-  <!-- 1. PATRIMOINE -->
+  <!-- 1. PATRIMOINE — Sources thermales uniquement (lien EM : failles actives / géothermie).
+       Autres couches patrimoniales (Mégalithes, Églises, Alignements, Sites & Ouvrages,
+       Tours génoises, Mines, Châteaux, Ponts génois) migrées vers patrimoine.html. -->
   <div class="accordion-cat">
     <div class="accordion-cat-header" onclick="toggleAccordion(this)">
       <span class="accordion-cat-icon">▶</span>
       <span>🏛️ Patrimoine</span>
     </div>
     <div class="accordion-cat-content">
-      <button class="lbtn" id="b-sit" title="Mégalithes et remarquables naturels" onclick="tog('sit','on-sit',this)"><span class="dot" style="background:#854d0e"></span>Mégalithes &amp; Naturels</button>
-      <button class="lbtn" id="b-egl" title="Églises romanes de Corse — corpus Moracchini-Mazel" onclick="tog('egl','on-egl',this)"><span style="font-size:10px;color:#b45309">✝</span>Églises</button>
-      <button class="lbtn" id="b-align" title="Alignements détectés (Broadbent 1980) · Géométrie avancée" onclick="tog('align','on-align',this)"><span class="ln" style="background:#a78bfa"></span><span style="font-size:10px">📐</span>Alignements · Géométrie</button>
-      <button class="lbtn" id="b-sit2" title="Sites remarquables artificiels, tours génoises, barrages" onclick="tog('sit2','on-sit2',this)" style="margin-top:2px"><span class="sq" style="background:#5c7a3a"></span>Sites &amp; Ouvrages</button>
-      <button class="lbtn" id="b-therm" title="Sources thermales et géothermiques — failles actives · H88" onclick="tog('therm','on-therm',this)" style="margin-top:2px"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Sources thermales</button>
-      <button class="lbtn" id="b-tour" title="Tours génoises — réseau surveillance côtière XVIe · 19 tours MH" onclick="tog('tour','on-tour',this)" style="margin-top:2px"><span style="display:inline-block;width:8px;height:8px;background:#5c7a3a;border:1px solid white;transform:rotate(45deg);vertical-align:middle;margin-right:2px"></span>Tours génoises</button>
-      <button class="lbtn" id="b-indu" title="Mines historiques — cibles EM · H85-H87 BRGM" onclick="tog('indu','on-indu',this)" style="margin-top:2px"><span style="display:inline-block;width:8px;height:8px;background:#78350f;border-radius:1px;vertical-align:middle;margin-right:2px"></span>Mines</button>
-      <button class="lbtn" id="b-cast" title="Châteaux médiévaux — castelli Cinarchesi &amp; génois · XIIe–XIVe" onclick="tog('cast','on-cast',this)" style="margin-top:2px"><span style="display:inline-block;width:8px;height:8px;background:#92400e;border-radius:1px;vertical-align:middle;margin-right:2px"></span>Châteaux</button>
-      <button class="lbtn" id="b-pont" title="Ponts génois MH — architecture XVe–XVIIe" onclick="tog('pont','on-pont',this)" style="margin-top:2px"><span style="display:inline-block;width:10px;height:4px;background:#475569;border-radius:1px;vertical-align:middle;margin-right:2px"></span>Ponts génois</button>
+      <button class="lbtn" id="b-therm" title="Sources thermales et géothermiques — failles actives · H88" onclick="tog('therm','on-therm',this)"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Sources thermales</button>
     </div>
   </div>
 
@@ -1898,15 +1892,12 @@ const wmsEmag=L.imageOverlay(
 let _tileLabels=L.tileLayer(DARK?'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',{zIndex:10,attribution:''}).addTo(map);
 
 const lTherm=L.layerGroup();
-const lTour=L.layerGroup();
-const lIndu=L.layerGroup();
-const lCast=L.layerGroup();
-const lPont=L.layerGroup();
-const lSit2=L.layerGroup(),lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lSit=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lCem=L.layerGroup(),lIntl=L.layerGroup(),lAlign=L.layerGroup(),lEgl=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
+// lSit/lSit2/lAlign/lEgl/lTour/lIndu/lCast/lPont : couches patrimoniales migrées vers patrimoine.html
 // lRPG/lForet/lAOC : layers agronomie migrées vers agronomie.html
-const LAYERS={sit2:lSit2,bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,prod:lProd,sit:lSit,hot:lHot,con:lCon,cem:lCem,intl:lIntl,align:lAlign,egl:lEgl,therm:lTherm,tour:lTour,indu:lIndu,cast:lCast,pont:lPont};
+const lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lCem=L.layerGroup(),lIntl=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
+const LAYERS={bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,prod:lProd,hot:lHot,con:lCon,cem:lCem,intl:lIntl,therm:lTherm};
 const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag};
-const ACTIVE={sit2:false,bt:false,ant:false,antOffshore:false,geo:false,hyd:false,cav:false,emag:false,hot:true,res:false,prod:false,sit:false,con:true,cem:false,intl:false,align:false,egl:false,therm:false,tour:false,indu:false,cast:false,pont:false};
+const ACTIVE={bt:false,ant:false,antOffshore:false,geo:false,hyd:false,cav:false,emag:false,hot:true,res:false,prod:false,con:true,cem:false,intl:false,therm:false};
 
 const LEGEND_ACTIVE=new Set();let _legendCtrl=null;
 const LEGEND_HTML={
@@ -2075,6 +2066,9 @@ function updateLegendPanel(){
 }
 function showLegend(id,show){show?LEGEND_ACTIVE.add(id):LEGEND_ACTIVE.delete(id);updateLegendPanel();}
 function tog(id,cls,btn){
+  // Guard : couche migrée (patrimoine → patrimoine.html, agronomie → agronomie.html)
+  // ou référence cassée — sortie silencieuse pour éviter map.addLayer(undefined).
+  if(!LAYERS[id]&&!WMS[id])return;
   if(window.innerWidth<=600){const a=document.getElementById('layers-accordion'),b=document.getElementById('mob-toggle');if(a&&a.classList.contains('mob-open')){a.classList.remove('mob-open');if(b)b.textContent='☰';}}
   if(ACTIVE[id]){WMS[id]?map.removeLayer(WMS[id]):map.removeLayer(LAYERS[id]);ACTIVE[id]=false;if(btn)btn.className='lbtn';
     if(id==='geo')document.getElementById('geo-op-row').style.display='none';
@@ -2088,10 +2082,7 @@ function tog(id,cls,btn){
     if(id==='emag')document.getElementById('emag-op-row').style.display='flex';
     if(id==='hot'&&lHot.getLayers().length===0)buildHot();
     if(id==='therm'&&lTherm.getLayers().length===0)buildThermLayer();
-    if(id==='tour'&&lTour.getLayers().length===0)buildTourLayer();
-    if(id==='indu'&&lIndu.getLayers().length===0)buildInduLayer();
-    if(id==='cast'&&lCast.getLayers().length===0)buildCastLayer();
-    if(id==='pont'&&lPont.getLayers().length===0)buildPontLayer();
+    // tour/indu/cast/pont : couches patrimoniales migrées vers patrimoine.html
     if(id==='res'&&lRes.getLayers().length===0)loadReseau();
     if(id==='prod'&&lProd.getLayers().length===0)loadProd();
     if(id==='bt'&&lBT.getLayers().length===0)loadBT();
@@ -2100,8 +2091,7 @@ function tog(id,cls,btn){
 
 
     if(id==='intl'&&lIntl.getLayers().length===0)buildIntlLayer();
-    if(id==='align'&&lAlign.getLayers().length===0)buildAutoAlignments();
-    if(id==='egl'&&lEgl.getLayers().length===0){buildEglLayer().then(()=>{if(ACTIVE.egl)showLegend('egl',true);}); return;}
+    // align/egl : couches patrimoniales migrées vers patrimoine.html
     showLegend(id,true);
     if(id==='antOffshore')showLegend('ant',true); // antOffshore partage légende ant
   }
@@ -3957,59 +3947,10 @@ function buildThermLayer(){
       .addTo(lTherm);
   });
 }
-function buildTourLayer(){
-  const tourNames=new Set([
-    'Tour génoise Chiappa','Tour d\'Agnello (Cap Corse)','Tour de la Parata (Ajaccio)',
-    'Tour de Capu di Muru','Tour de Micalona','Tour de Campomoro','Tour de Tizzano',
-    'Tour de Capu Laurosu','Tour de Portigliolo','Tour de Calanca','Tour d\'Arbellara',
-    'Tour de Fautéa','Tour de Pinarellu','Tour de San Ciprianu','Tour d\'Olmeto (Monacia)',
-    'Tour de Diana'
-  ]);
-  lTour.clearLayers();
-  SITES.forEach(([a,o,n,t,c,desc])=>{
-    if(t!=='Tour génoise'&&!tourNames.has(n))return;
-    const col=c||'#c8a035';
-    const icon=L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:'+col+';border:2px solid white;transform:rotate(45deg);box-shadow:0 0 3px rgba(0,0,0,.3)"></div>',iconSize:[10,10],iconAnchor:[5,5]});
-    L.marker([a,o],{icon,interactive:true})
-      .bindPopup('<b>'+n+'</b><br><span style="font-size:12px;color:var(--tx2)">'+desc+'</span>')
-      .addTo(lTour);
-  });
-}
-function buildInduLayer(){
-  const induNames=new Set(['Mine de la Finosa / Kyrie Eleison']);
-  lIndu.clearLayers();
-  SITES.forEach(([a,o,n,t,c,desc])=>{
-    if(t!=='Patrimoine & Ressources'&&!induNames.has(n))return;
-    const col=c||'#78350f';
-    const icon=L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:'+col+';border:2px solid white;border-radius:2px;box-shadow:0 0 3px rgba(0,0,0,.3)"></div>',iconSize:[10,10],iconAnchor:[5,5]});
-    L.marker([a,o],{icon,interactive:true})
-      .bindPopup('<b>'+n+'</b><br><span style="font-size:12px;color:var(--tx2)">'+desc+'</span>')
-      .addTo(lIndu);
-  });
-}
-function buildCastLayer(){
-  lCast.clearLayers();
-  SITES.forEach(([a,o,n,t,c,desc])=>{
-    if(t!=='Château médiéval')return;
-    const col=c||'#92400e';
-    const icon=L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:'+col+';border:2px solid white;border-radius:1px;box-shadow:0 0 3px rgba(0,0,0,.3)"></div>',iconSize:[10,10],iconAnchor:[5,5]});
-    L.marker([a,o],{icon,interactive:true})
-      .bindPopup('<b>'+n+'</b><br><span style="font-size:12px;color:var(--tx2)">'+desc+'</span>')
-      .addTo(lCast);
-  });
-}
-function buildPontLayer(){
-  lPont.clearLayers();
-  SITES.forEach(([a,o,n,t,c,desc])=>{
-    if(t!=='Pont génois')return;
-    const col=c||'#475569';
-    const icon=L.divIcon({className:'',html:'<div style="width:12px;height:5px;background:'+col+';border:2px solid white;border-radius:2px;box-shadow:0 0 3px rgba(0,0,0,.3)"></div>',iconSize:[12,5],iconAnchor:[6,3]});
-    const pontOpacity=n.includes('disparu')?0.4:1;
-    L.marker([a,o],{icon,interactive:true,opacity:pontOpacity})
-      .bindPopup('<b>'+n+'</b><br><span style="font-size:12px;color:var(--tx2)">'+desc+'</span>')
-      .addTo(lPont);
-  });
-}
+// buildTourLayer / buildInduLayer / buildCastLayer / buildPontLayer migrés vers patrimoine.html
+// (Tours génoises, Mines, Châteaux médiévaux, Ponts génois). Le dataset SITES reste exploité
+// ici par buildThermLayer() pour la couche thermalisme, seule couche patrimoniale conservée
+// dans app.html (lien EM : failles actives / géothermie).
 
 function exportTerrainCSV(){
   if(!contribsDB||contribsDB.length===0){alert('Aucune contribution en base.');return;}
