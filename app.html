@@ -1105,6 +1105,57 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   </div>
 </div>
 
+<!-- Modal choix niveau contribution terrain (N0 / N1 / N2) -->
+<div id="contrib-level-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(31,35,41,.55);z-index:2300;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeContribLevelModal()">
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:440px;width:100%;padding:22px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:var(--font)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h3 style="font-family:var(--font-display);font-size:17px;font-weight:600;color:var(--tx);margin:0;letter-spacing:-0.01em">Contribution terrain</h3>
+      <button onclick="closeContribLevelModal()" aria-label="Fermer" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--tx3);line-height:1;padding:2px 6px">&#x2715;</button>
+    </div>
+    <p style="font-size:11px;color:var(--tx3);margin:0 0 14px;line-height:1.5">Choisissez votre niveau de contribution. Les niveaux 1 et 2 seront disponibles prochainement.</p>
+
+    <!-- Niveau 0 — actif -->
+    <div class="clm-row" style="display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);margin-bottom:8px">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--acc)"></span>
+          <span style="font-weight:600;font-size:13px;color:var(--tx)">Saisie manuelle</span>
+        </div>
+        <div style="font-size:11px;color:var(--tx2);line-height:1.45">Pointer sur la carte, saisir les valeurs manuellement. Aucune permission requise.</div>
+      </div>
+      <button id="clm-choose-n0" onclick="chooseContribLevelN0()" style="flex-shrink:0;padding:7px 14px;border:none;border-radius:var(--r);background:var(--warn);color:#fff;font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">Choisir</button>
+    </div>
+
+    <!-- Niveau 1 — désactivé -->
+    <div class="clm-row" style="display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);margin-bottom:8px;opacity:.6">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--tx3)"></span>
+          <span style="font-weight:600;font-size:13px;color:var(--tx2)">GPS + boussole</span>
+        </div>
+        <div style="font-size:11px;color:var(--tx3);line-height:1.45">G&#xe9;olocalisation pr&#xe9;cise + orientation magn&#xe9;tique locale via capteurs du t&#xe9;l&#xe9;phone.</div>
+      </div>
+      <button disabled style="flex-shrink:0;padding:7px 14px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--tx3);font-family:var(--font);font-size:11px;cursor:not-allowed;white-space:nowrap">Bientôt</button>
+    </div>
+
+    <!-- Niveau 2 — désactivé -->
+    <div class="clm-row" style="display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);margin-bottom:14px;opacity:.6">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--tx3)"></span>
+          <span style="font-weight:600;font-size:13px;color:var(--tx2)">Séquence capteurs</span>
+        </div>
+        <div style="font-size:11px;color:var(--tx3);line-height:1.45">Enregistrement 10 secondes, variation magn&#xe9;tique relative (non calibr&#xe9;).</div>
+      </div>
+      <button disabled style="flex-shrink:0;padding:7px 14px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--tx3);font-family:var(--font);font-size:11px;cursor:not-allowed;white-space:nowrap">Bientôt</button>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button onclick="closeContribLevelModal()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--tx2);font-family:var(--font);font-size:12px;cursor:pointer">Annuler</button>
+    </div>
+  </div>
+</div>
+
 <!-- Panel Méthodologie & Incertitudes -->
 <div id="methodology-panel" style="display:none;padding:16px;background:var(--bg2);border-radius:var(--r2);max-width:720px;margin:12px auto 16px;border:1px solid var(--border);font-size:12px;color:var(--tx2);line-height:1.6">
 
@@ -1435,7 +1486,12 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 </div>
 
 <div class="cform" id="cform">
-  <div class="cform-title">Nouvelle mesure terrain</div>
+  <div class="cform-title">Contribution terrain</div>
+
+  <!-- Avertissement épistémique N0 -->
+  <div id="contrib-epistemic-note" style="font-size:11px;color:var(--tx2);background:var(--bg2);border-left:2px solid var(--warn);padding:7px 10px;margin-bottom:10px;border-radius:var(--r);line-height:1.45">
+    <span style="color:var(--warn);font-weight:600">&#8505;</span> Contribution terrain &mdash; donn&#xe9;es &#xe0; valeur indicative, non certifi&#xe9;es.
+  </div>
 
   <!-- Position -->
   <div id="c-position-info" style="font-size:12px;color:var(--tx3);margin-bottom:8px;font-family:var(--mono)">Cliquez sur la carte pour placer le point</div>
@@ -4666,8 +4722,8 @@ initCounts();
 <button class="quest-btn" id="quest-btn" onclick="toggleHypoPanel()" title="Quêtes & Hypothèses">🔬<span id="quest-badge" class="quest-badge">!</span><span class="quest-tooltip" id="quest-tooltip-text">Quêtes scientifiques</span></button>
 <!-- FAB mini-menu -->
 <div class="fab-menu" id="fab-menu">
-  <div class="fab-menu-item" onclick="startContribFromFAB();closeFabMenu();">
-    <span class="fab-mini-label">Ajouter une mesure</span>
+  <div class="fab-menu-item" onclick="openContribLevelModal();closeFabMenu();">
+    <span class="fab-mini-label">Contribution terrain</span>
     <button class="fab-mini" style="background:var(--acc)">+</button>
   </div>
   <div class="fab-menu-item" onclick="openPrescription();closeFabMenu();">
@@ -4987,6 +5043,25 @@ function startContribFromFAB(){
   // Attendre le prochain tick pour que la carte ait fini de traiter le toggle
   setTimeout(function(){_armContribClick();},0);
   if(fab)fab.classList.add('fab-active');
+}
+
+// ═══ MODAL CHOIX NIVEAU CONTRIBUTION TERRAIN ═══
+// Niveau 0 (saisie manuelle) : actif, équivalent fonctionnel de l'existant.
+// Niveaux 1 (GPS+boussole) et 2 (séquence capteurs) : affichés mais désactivés.
+// Le modal s'intercale entre le clic FAB (menu item "Contribution terrain")
+// et startContribFromFAB() — seul le choix N0 déclenche le flux existant.
+function openContribLevelModal(){
+  var modal=document.getElementById('contrib-level-modal');
+  if(modal)modal.style.display='flex';
+}
+function closeContribLevelModal(){
+  var modal=document.getElementById('contrib-level-modal');
+  if(modal)modal.style.display='none';
+}
+function chooseContribLevelN0(){
+  closeContribLevelModal();
+  // Délègue au flux existant — pattern setTimeout(0) + map.once('click') préservé.
+  startContribFromFAB();
 }
 
 // ═══ FAB MENU ═══
