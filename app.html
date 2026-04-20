@@ -2428,6 +2428,30 @@ function calcMagneticELF(lat, lon, chargeFactor) {
 // NOTE : les facteurs de calibration RF_CALIB_EXT sont GELÉS
 //        (cf. AUDIT_TELLUX_NIVEAU2_MODELE_COMPOSITE_V2.1.md §4.2).
 // ============================================================
+// ═══ Emetteurs broadcast TDF Corse (TDF + Arcom + Cartoradio ANFR) ═══
+// Dataset : public/data/tdf_emitters_corse.json — 10 sites documentes
+// avec PAR estimee (sommes multiplex TNT R1-R7 verifiees via TVNT.net).
+// Chargement idempotent : un seul fetch meme si plusieurs appelants.
+let TDF_EMITTERS = [];
+let _tdfLoadPromise = null;
+function loadTDFEmitters() {
+  if (_tdfLoadPromise) return _tdfLoadPromise;
+  _tdfLoadPromise = (async () => {
+    try {
+      const r = await fetch('public/data/tdf_emitters_corse.json', {signal: AbortSignal.timeout(5000)});
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      TDF_EMITTERS = d.emitters || [];
+      const withPAR = TDF_EMITTERS.filter(e => e.par_kw_estimee && e.par_kw_estimee > 0).length;
+      console.log('[Tellux] TDF emetteurs charges : ' + TDF_EMITTERS.length + ' (dont ' + withPAR + ' avec PAR connue)');
+    } catch (e) {
+      console.warn('[Tellux] TDF emetteurs indisponibles : ' + e.message);
+    }
+    return TDF_EMITTERS;
+  })();
+  return _tdfLoadPromise;
+}
+
 function calcRF(lat, lon) {
   let S_total = 0;
   const contributions = [];
@@ -2443,6 +2467,34 @@ function calcRF(lat, lon) {
       contributions.push({ source_type: 'FH', S_uW_m2: Math.round(contrib * 10) / 10, distance_m: Math.round(d * 1000), path_name: name || 'FH' });
     }
   });
+
+  // === EMETTEURS TDF BROADCAST ===
+  // Modele isotrope equivalent loin-champ : S = PAR / (4 pi d^2), borne
+  // inferieure 50 m (proche-champ non applicable). Plafond 50 000 uW/m^2
+  // par emetteur pour eviter les valeurs non physiques a tres courte
+  // distance. Emetteurs sans PAR connue (par_kw_estimee null) ignores.
+  // Source : public/data/tdf_emitters_corse.json
+  // Limite : directivite reelle non modelisee, valeurs = ordres de grandeur.
+  if (TDF_EMITTERS && TDF_EMITTERS.length) {
+    TDF_EMITTERS.forEach(em => {
+      if (!em.par_kw_estimee || em.par_kw_estimee <= 0) return;
+      const d = dist(lat, lon, em.lat, em.lon);
+      const d_m = Math.max(50, d * 1000);
+      const PAR_W = em.par_kw_estimee * 1000;
+      const S_uW_m2 = (PAR_W / (4 * Math.PI * d_m * d_m)) * 1e6;
+      const S_capped = Math.min(S_uW_m2, 50000);
+      if (S_capped > 0.1) {
+        S_total += S_capped;
+        contributions.push({
+          source_type: 'broadcast_TDF',
+          S_uW_m2: Math.round(S_capped * 10) / 10,
+          distance_m: Math.round(d_m),
+          path_name: em.nom,
+          par_kw: em.par_kw_estimee
+        });
+      }
+    });
+  }
 
   // Fond de bruit départemental (densité sites CartoRadio)
   const dept = lat < 42.0 ? '2A' : '2B';
@@ -2462,7 +2514,7 @@ function calcRF(lat, lon) {
     forest_attenuation_dB: 0, // TODO phase 1 : polygones forestiers Vizzavona, Valdu-Niellu…
     terrain_correction_dB: 0,
     note_ICNIRP: 'Rappel documentaire : limite ICNIRP grand public en bande GSM est de l\'ordre de 4,5 W/m² soit 4 500 000 µW/m².',
-    source: 'FH_POINTS CartoRadio + fond départemental ANFR',
+    source: 'FH_POINTS CartoRadio + emetteurs TDF broadcast + fond départemental ANFR',
     confidence: 'medium',
     calibrated: false // GELÉ — RF_CALIB_EXT en attente relecture tiers
   };
@@ -3394,17 +3446,22 @@ async function loadAnt(){try{
   console.log('Antennes : '+(rows.length-nSeaFiltered-nOffshore)+' affichees, '+nOffshore+' offshore');
   const hdr=document.getElementById('hdr-status');
   if(hdr)hdr.textContent=(rows.length-nSeaFiltered-nOffshore)+' antennes · '+nOffshore+' offshore';
-  // Émetteurs radiodiffusion majeurs — icône croix ✛
-  const EMITTERS=[
-    [42.652,9.392,'Serra di Pigno','Émetteur radio/TV','988m altitude · RFI + France Inter + télévision · Couverture toute la Corse'],
-    [42.415,9.186,'Col de Teghime','Émetteur FH','Faisceau hertzien · Axe principal Nord-Sud · ~200 nT impact modèle'],
-    [42.009,8.827,'Monte Gozzi','Émetteur radio/TV','Relais TV 716m · Corse-du-Sud · Couverture Ajaccio et région'],
-    [42.540,9.445,'Bastia relais','Émetteur radio/TV','Relais TV/FM · Bastia · Couverture plaine orientale nord'],
-  ];
-  EMITTERS.forEach(([lat,lon,nom,type,desc])=>{
+  // Emetteurs broadcast TDF — dataset-driven (public/data/tdf_emitters_corse.json)
+  // Icone croix, info-bulle listant PAR + services + notes.
+  await loadTDFEmitters();
+  TDF_EMITTERS.forEach(em => {
     const shape='<div style="position:relative;width:12px;height:12px"><div style="position:absolute;left:5px;top:0;width:2px;height:12px;background:#5f5e5a"></div><div style="position:absolute;top:5px;left:0;width:12px;height:2px;background:#5f5e5a"></div></div>';
     const icon=L.divIcon({html:shape,className:'',iconSize:[12,12],iconAnchor:[6,6]});
-    L.marker([lat,lon],{icon,zIndexOffset:150}).on('click',()=>info('<span class="tag" style="background:#f0f0ee;color:#5f5e5a;border:0.5px solid #aaa">'+type+'</span> <b>'+nom+'</b><br><span style="font-size:12px;color:var(--tx2)">'+desc+'</span>')).addTo(lAnt);
+    const services = (em.services || []).join(' + ') || 'broadcast';
+    const par = (em.par_kw_estimee && em.par_kw_estimee > 0) ? em.par_kw_estimee + ' kW PAR' : 'PAR non connue';
+    const alt = (em.altitude_m != null) ? em.altitude_m + ' m' : '';
+    const typeLabel = em.type === 'broadcast_principal' ? 'Emetteur principal' : (em.type === 'relais' ? 'Relais' : 'Emetteur');
+    const desc = par + (alt ? ' | ' + alt + ' altitude' : '') + ' | ' + services + (em.operateur ? ' | ' + em.operateur : '');
+    L.marker([em.lat, em.lon], {icon, zIndexOffset: 150}).on('click', () => info(
+      '<span class="tag" style="background:#f0f0ee;color:#5f5e5a;border:0.5px solid #aaa">' + typeLabel + '</span> <b>' + em.nom + '</b><br>' +
+      '<span style="font-size:12px;color:var(--tx2)">' + desc + '</span>' +
+      (em.notes ? '<br><span style="font-size:11px;color:var(--tx3);font-style:italic">' + em.notes + '</span>' : '')
+    )).addTo(lAnt);
   });
 }catch(e){console.error('❌ loadAnt erreur:',e.message);}}
 
@@ -4647,7 +4704,7 @@ let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}},300);}
 map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
-setTimeout(()=>Promise.all([loadAnt(),loadDB(),loadRadonCommunesL3()]),1500); // Décalé — après rendu complet de la carte
+setTimeout(()=>Promise.all([loadAnt(),loadDB(),loadRadonCommunesL3(),loadTDFEmitters()]),1500); // Décalé — après rendu complet de la carte
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET L'Aquila — correction externe réelle // Météo + réfractivité troposphérique
 // EMAG2v3 OFF par défaut — toggle manuel via toggleEMAG()
