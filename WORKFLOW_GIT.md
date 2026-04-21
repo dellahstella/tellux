@@ -8,10 +8,10 @@ Mémo opérationnel pour le versioning et le déploiement du projet Tellux.
 
 Tellux utilise un dépôt Git unique hébergé sur GitHub (origin). Le remote GitLab est désactivé depuis le 14 avril 2026. Deux branches principales, deux usages distincts :
 
-- **`main`** — ce qui est déployé en production sur `https://tellux.pages.dev`. Contient `index.html`, `README.md`, et les JSON externalisés (`failles-corse.json`, `prod-electrique.json`, `Hypothese.json`). Cloudflare Pages surveille cette branche et redéploie automatiquement à chaque push.
-- **`dev`** — branche de travail complète. Contient `index.html` (le HTML de travail, même fichier que main), la documentation, les briefings, les lettres, les migrations SQL, les archives, les prompts, etc.
+- **`main`** — ce qui est déployé en production sur `https://tellux.pages.dev`. Cloudflare Workers surveille cette branche et redéploie automatiquement à chaque push. Fichiers déployés : `app.html`, `index.html`, `patrimoine.html`, `agronomie.html`, `public/data/*.json`, `wrangler.jsonc`.
+- **`dev`** — branche de travail complète. Contient toute la documentation, les briefings, les lettres, les migrations SQL, les archives, les scripts, etc.
 
-Le déploiement se fait par Pull Request dev → main (non-squash merge). Le fichier `index.html` est identique sur les deux branches, dev étant en avance de quelques commits sur main.
+Le déploiement se fait **uniquement par Pull Request** → `dev` → `main` (non-squash merge, validé par Soleil). **Push direct sur `main` interdit.**
 
 ---
 
@@ -21,33 +21,33 @@ Le déploiement se fait par Pull Request dev → main (non-squash merge). Le fic
 git remote -v
 ```
 
-- `origin` → `https://github.com/dellahstella/tellux.git` (principal, connecté à Cloudflare)
-- `gitlab` → `https://gitlab.com/dellahstella/tellux.git` (mirror de sauvegarde)
+- `origin` → `https://github.com/dellahstella/tellux.git` (seul remote actif, connecté à Cloudflare)
+
+Le remote GitLab est désactivé depuis le 2026-04-14. Ne pas le rebrancher.
 
 ---
 
 ## Workflow quotidien — travail sur `dev`
 
-Tu es sur `dev` la plupart du temps. Tu modifies `tellux_v6_design.html`, tu ajoutes des fichiers markdown, tu fais évoluer le projet.
+Les sessions Claude Code travaillent sur des **branches éphémères** (`feat/...`, `fix/...`, `chore/...`) créées à partir de `dev`. Elles ne poussent jamais directement sur `dev` ou `main`.
 
 ```bash
-# Vérifier que tu es bien sur dev
-git status
+# Créer une branche éphémère
+git checkout dev
+git checkout -b feat/ma-fonctionnalite
 
-# Faire tes modifications dans tes éditeurs habituels
-# ... travail ...
+# Faire les modifications
+# ...
 
-# Regarder ce qui a changé
-git status
-git diff tellux_v6_design.html | head -50
+# Commiter
+git add app.html public/data/nouveau_fichier.json
+git commit -m "feat: description claire"
 
-# Commiter les modifications
-git add tellux_v6_design.html TELLUX_DOSSIER_ASSO_EM.md  # liste ciblée des fichiers à commiter
-git commit -m "feat: description claire de ce qui change"
+# Pousser la branche
+git push origin feat/ma-fonctionnalite
 
-# Pousser vers les deux remotes
-git push origin dev
-git push gitlab dev
+# Créer la PR vers dev (via gh ou GitHub)
+gh pr create --base dev --title "feat: ..."
 ```
 
 ### Bonnes pratiques pour les messages de commit
@@ -69,60 +69,17 @@ Exemples :
 
 ## Workflow de déploiement — mettre à jour `tellux.pages.dev`
 
-À faire chaque fois que tu veux publier une nouvelle version pour les utilisateurs. Suppose que tu es sur `dev` avec ton `tellux_v6_design.html` à jour et commité.
+Le déploiement se fait par **PR `dev` → `main`**, mergée par Soleil. Cloudflare Workers détecte le push sur `main` et redéploie automatiquement (durée typique : 1–2 minutes).
 
 ```bash
-# 1. S'assurer que dev est bien à jour et poussé
-git status                    # doit afficher "nothing to commit, working tree clean"
-git push origin dev           # au cas où un commit ne serait pas encore poussé
-git push gitlab dev
-
-# 2. Basculer sur main
-git checkout main
-
-# 3. Copier le HTML de travail vers index.html
-git show dev:tellux_v6_design.html > index.html
-
-# 4. Vérifier
-ls -la index.html
-git status                    # doit afficher "modified: index.html"
-
-# 5. Commiter et pousser
-git add index.html
-git commit -m "deploy: description courte de ce qui est livré"
-git push origin main
-
-# 6. Cloudflare Pages détecte le push et redéploie automatiquement
-#    Suivi en direct : https://dash.cloudflare.com → Workers & Pages → Tellux → Deployments
-#    Durée typique : 1-2 minutes
-
-# 7. Revenir sur dev pour continuer le travail
-git checkout dev
+# Créer la PR de déploiement (Claude Code crée, Soleil merge)
+gh pr create --base main --head dev --title "deploy: v2.x.x — description courte"
 ```
 
-### Vérification post-déploiement
-
-Une fois le déploiement terminé, ouvrir `https://tellux.pages.dev` **en navigation privée** (Ctrl+Maj+N sur Chrome, Ctrl+Maj+P sur Firefox) pour éviter le cache. Vérifier visuellement :
-- Le logo est bien affiché
-- La carte se charge
-- Les modules attendus sont présents
-- Aucune erreur dans la console (F12 → Console)
-
----
-
-## Cas particulier — déployer un fichier qui n'est pas `tellux_v6_design.html`
-
-Si tu as modifié les JSON externalisés (`failles-corse.json`, `prod-electrique.json`, `Hypothese.json`) sur `dev` et que tu veux les déployer :
-
-```bash
-git checkout main
-git show dev:failles-corse.json > failles-corse.json
-# ... idem pour les autres JSON si besoin
-git add failles-corse.json
-git commit -m "deploy: update failles-corse.json"
-git push origin main
-git checkout dev
-```
+Vérification post-déploiement : ouvrir `https://tellux.pages.dev` en navigation privée (éviter le cache). Vérifier :
+- La carte se charge (IGN Plan V2)
+- Popup fonctionnelle sur un clic
+- Aucune erreur JS dans la console (F12)
 
 ---
 
@@ -220,6 +177,4 @@ Les deux branches vivent en parallèle. Ne jamais les merger l'une dans l'autre 
 
 ---
 
-*Dernière mise à jour : 18 avril 2026.*
-
-> **Note (14 avril 2026) :** le remote `gitlab` est désactivé. Ne plus pousser vers GitLab. Seul `origin` (GitHub) est actif. Supprimer les lignes `git push gitlab dev` des commandes ci-dessus.
+*Dernière mise à jour : 21 avril 2026.*
