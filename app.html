@@ -2613,6 +2613,90 @@ function getSegmentsNear(lat, lon) {
   return SEGMENT_GRID[tileKey(lat, lon)] || [];
 }
 
+// Grille spatiale BT (dette BT-ELF-001) — structure identique à la grille HTA
+function buildBTSegmentGrid(polylines) {
+  console.log('[Tellux] Construction grille BT...');
+  const t0 = performance.now();
+  BT_SEGMENTS_DATA = [];
+  BT_SEGMENT_GRID  = {};
+  polylines.forEach(row => {
+    const pts = row.pts;
+    if (!Array.isArray(pts) || pts.length < 2) return;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i+1];
+      if (!a || !b || a.length < 2 || b.length < 2) continue;
+      BT_SEGMENTS_DATA.push({ lat1:a[0], lon1:a[1], lat2:b[0], lon2:b[1] });
+    }
+  });
+  const idx = BT_SEGMENTS_DATA.length;
+  BT_SEGMENTS_DATA.forEach((s, i) => {
+    const minLat = Math.min(s.lat1, s.lat2) - 2*TILE_SIZE_DEG;
+    const maxLat = Math.max(s.lat1, s.lat2) + 2*TILE_SIZE_DEG;
+    const minLon = Math.min(s.lon1, s.lon2) - 2*TILE_SIZE_DEG;
+    const maxLon = Math.max(s.lon1, s.lon2) + 2*TILE_SIZE_DEG;
+    const iLatMin = Math.floor(minLat / TILE_SIZE_DEG);
+    const iLatMax = Math.floor(maxLat / TILE_SIZE_DEG);
+    const iLonMin = Math.floor(minLon / TILE_SIZE_DEG);
+    const iLonMax = Math.floor(maxLon / TILE_SIZE_DEG);
+    for (let iLat = iLatMin; iLat <= iLatMax; iLat++) {
+      for (let iLon = iLonMin; iLon <= iLonMax; iLon++) {
+        const key = iLat + ',' + iLon;
+        if (!BT_SEGMENT_GRID[key]) BT_SEGMENT_GRID[key] = [];
+        BT_SEGMENT_GRID[key].push(i);
+      }
+    }
+  });
+  const elapsed = performance.now() - t0;
+  const nTiles = Object.keys(BT_SEGMENT_GRID).length;
+  console.log('[Tellux] Grille BT construite en ' + elapsed.toFixed(0) + ' ms : '
+    + BT_SEGMENTS_DATA.length + ' segments, ' + nTiles + ' tuiles.');
+}
+
+function getBTSegmentsNear(lat, lon) {
+  if (!BT_SEGMENT_GRID) return [];
+  return BT_SEGMENT_GRID[tileKey(lat, lon)] || [];
+}
+
+// Chargement asynchrone bt_lines sur bbox Corse complète (Option C)
+// Non bloquant : les clics avant la fin retournent HTA + BT_ZONES proxy uniquement.
+let _btLinesCalcLoading = false;
+async function loadBTLinesAsync() {
+  if (_btLinesCalcLoading || BT_SEGMENTS_DATA) return;
+  _btLinesCalcLoading = true;
+  try {
+    console.log('[Tellux] Chargement asynchrone bt_lines (calcul ELF)...');
+    const t0 = performance.now();
+    // Bbox Corse complète — colonnes clat/clon indexées dans bt_lines
+    const base = SB_URL + '/rest/v1/bt_lines?select=pts'
+      + '&clat=gte.41.3&clat=lte.43.1&clon=gte.8.5&clon=lte.9.7';
+    let all = [], offset = 0;
+    const PAGE = 1000;
+    while (true) {
+      const r = await fetch(base + '&order=id&limit=' + PAGE + '&offset=' + offset,
+        { headers: { apikey: SB_KEY, 'Authorization': 'Bearer ' + SB_KEY,
+                     'Range': offset + '-' + (offset + PAGE - 1), 'Range-Unit': 'items' } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const page = await r.json();
+      if (!Array.isArray(page) || page.length === 0) break;
+      all = all.concat(page);
+      if (page.length < PAGE) break;
+      offset += PAGE;
+    }
+    if (all.length === 0) {
+      console.warn('[Tellux] bt_lines calcul : 0 lignes reçues (RLS ou bbox vide)');
+      _btLinesCalcLoading = false;
+      return;
+    }
+    buildBTSegmentGrid(all);
+    const elapsed = performance.now() - t0;
+    console.log('[Tellux] bt_lines calcul pret : ' + BT_SEGMENTS_DATA.length
+      + ' segments en ' + elapsed.toFixed(0) + ' ms');
+  } catch (e) {
+    console.warn('[Tellux] loadBTLinesAsync echec : ' + e.message);
+    _btLinesCalcLoading = false;
+  }
+}
+
 // ============================================================
 // Biot-Savart segment fini avec correction triphasée (v2)
 // Formule : B = (µ₀I)/(4πh) × (sinθ₁ + sinθ₂) — segment fini
@@ -4656,6 +4740,8 @@ async function loadReseau(){
     // Construction grille Biot-Savart v2 (une fois, au premier chargement)
     if (typeof buildSegmentGrid === 'function' && !SEGMENT_GRID) {
       buildSegmentGrid(all);
+      // Chargement asynchrone BT après HTA (dette BT-ELF-001)
+      setTimeout(loadBTLinesAsync, 200);
     }
   }catch(e){
     console.warn('HTA Supabase:',e.message,'→ fallback OSM');
