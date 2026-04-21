@@ -1493,6 +1493,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <div style="border-top:1px solid rgba(245,240,231,.15);padding-top:8px;margin-bottom:8px">
       <div style="font-family:var(--mono);font-size:9px;color:rgba(245,240,231,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Statistiques du mod&#232;le</div>
       <div style="font-family:var(--mono);font-size:11px;color:rgba(245,240,231,.8)">&#128225; <span id="anfr-count">chargement&#8230;</span></div>
+      <div style="font-family:var(--mono);font-size:11px;color:rgba(245,240,231,.8);margin-top:4px">&#128346; Écart IGRF/WMM : <span id="igrf-wmm-diff" style="color:rgba(245,240,231,.5)">—</span> <span style="font-size:9px;opacity:.7">nT</span></div>
     </div>
     <div style="border-top:1px solid rgba(245,240,231,.15);padding-top:8px;margin-bottom:8px">
       <div style="font-family:var(--mono);font-size:9px;color:rgba(245,240,231,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Outils avanc&#233;s</div>
@@ -1858,7 +1859,22 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 let DARK=(function(){try{const s=localStorage.getItem('tellux_theme');if(s)return s==='dark';return matchMedia('(prefers-color-scheme:dark)').matches;}catch(e){return matchMedia('(prefers-color-scheme:dark)').matches;}})();
 if(DARK)document.documentElement.setAttribute('data-theme','dark');
 let contribsDB=[],pending=null,cachedIGRF={},_contribClickHandler=null;
-let _expertActive=false,_expertConsented=false,_expertLastResult=null,_expertThrottle=null;
+let _expertActive=false,_expertConsented=false,_expertLastResult=null,_expertLastLatLon=null,_expertThrottle=null;
+function updateIgrfWmmDiff(lat, lon) {
+  const el = document.getElementById('igrf-wmm-diff');
+  if (!el) return;
+  const wmm = (typeof calcMagneticWMM === 'function') ? calcMagneticWMM(lat, lon) : null;
+  const igrf = (typeof igrfFallback === 'function') ? igrfFallback(lat, lon) : null;
+  if (wmm == null || igrf == null) {
+    el.textContent = '—';
+    el.style.color = 'rgba(245,240,231,.5)';
+    return;
+  }
+  const diff = Math.abs(igrf - wmm);
+  el.textContent = diff.toFixed(0);
+  el.style.color = diff > 500 ? '#e8a69a' : (diff > 100 ? '#C28533' : 'rgba(245,240,231,.85)');
+  el.title = 'IGRF-14 = ' + igrf + ' nT · WMM 2025 = ' + wmm + ' nT · écart |Δ| = ' + diff.toFixed(0) + ' nT';
+}
 let curKp='—',curBz='—',curDensity='—',curFlux='—';
 let meteoData={pression:null,humidite:null,temp:null,precip:0,vent:0};
 let lightningNearby=0,chargeFacteur=1.0;
@@ -2311,6 +2327,57 @@ function calcLCS1(lat,lon){
   return Math.round(interpIDW(LCS1_GRID,lat,lon));
 }
 function igrfFallback(lat,lon){ return Math.round(interpIDW(IGRF14_GRID,lat,lon)); }
+
+// ═══ WMM 2025 grille précalculée (cross-check IGRF-14) ═══
+// Grille générée offline par scripts/generate_wmm_grid_corse.py (pygeomag).
+// Résolution 0.05° × 0.05°, ~850 points sur la Corse. Régénération tous les
+// 1-2 ans ou à la sortie du modèle suivant (WMM 2030). Domaine public NOAA/BGS.
+let WMM_GRID = null;
+let WMM_INDEX = null; // Index rapide {lat_lon: point}
+const WMM_STEP = 0.05;
+async function loadWMMGrid() {
+  try {
+    const r = await fetch('public/data/wmm_2025_grid_corse.json', {signal: AbortSignal.timeout(5000)});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    WMM_GRID = d.grid || [];
+    // Index spatial pour lookup O(1)
+    WMM_INDEX = {};
+    WMM_GRID.forEach(p => {
+      const key = p.lat.toFixed(2) + ',' + p.lon.toFixed(2);
+      WMM_INDEX[key] = p;
+    });
+    console.log('[Tellux] WMM 2025 grille chargee : ' + WMM_GRID.length + ' points');
+  } catch (e) {
+    console.warn('[Tellux] WMM 2025 indisponible : ' + e.message);
+  }
+}
+// Interpolation bilinéaire sur la grille WMM
+function calcMagneticWMM(lat, lon) {
+  if (!WMM_INDEX) return null;
+  const lat_floor = Math.floor(lat / WMM_STEP) * WMM_STEP;
+  const lon_floor = Math.floor(lon / WMM_STEP) * WMM_STEP;
+  const k = (la, lo) => la.toFixed(2) + ',' + lo.toFixed(2);
+  const p00 = WMM_INDEX[k(lat_floor, lon_floor)];
+  const p10 = WMM_INDEX[k(lat_floor, lon_floor + WMM_STEP)];
+  const p01 = WMM_INDEX[k(lat_floor + WMM_STEP, lon_floor)];
+  const p11 = WMM_INDEX[k(lat_floor + WMM_STEP, lon_floor + WMM_STEP)];
+  if (p00 && p10 && p01 && p11) {
+    const u = (lon - lon_floor) / WMM_STEP;
+    const v = (lat - lat_floor) / WMM_STEP;
+    const B = (1-u)*(1-v)*p00.total_nT + u*(1-v)*p10.total_nT
+            + (1-u)*v*p01.total_nT + u*v*p11.total_nT;
+    return Math.round(B);
+  }
+  // Point hors grille : fallback au plus proche
+  let nearest = WMM_GRID[0], minD = Infinity;
+  for (const p of WMM_GRID) {
+    const d = (p.lat - lat)*(p.lat - lat) + (p.lon - lon)*(p.lon - lon);
+    if (d < minD) { minD = d; nearest = p; }
+  }
+  return Math.round(nearest.total_nT);
+}
+loadWMMGrid();
 
 // Variation Sq (Solar quiet) — oscillation ionosphérique diurne
 // Source : Campbell (1989), Rev. Geophys. 27(3), p.399–424
@@ -3327,6 +3394,8 @@ map.on('click',async e=>{
   const {human,water,geo,scorePhys,score,v2}=calcAll(lat,lng,{commune_info, altitude_m});
   // Mode Expertise — mémoriser le résultat pour recalcul composite via curseurs
   _expertLastResult = v2;
+  _expertLastLatLon = { lat, lon: lng };
+  updateIgrfWmmDiff(lat, lng);
   if (_expertActive) refreshExpertComposite();
   // Valeurs v2 structurées — utilisées pour la popup niveau B
   const elf_nT    = v2.domains.magnetic.elf.B_total_nT;
