@@ -549,6 +549,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-sit{background:#fdf8ef!important;color:#713f12!important;border-color:#c9a56c!important;font-weight:500;}
 .on-sit2{background:#e8f5e9!important;color:#2e7d32!important;border-color:#66bb6a!important;font-weight:500;}
 .on-failles{background:#fdf4f3!important;color:#8E2F1F!important;border-color:#c16b5a!important;font-weight:500;}
+.on-postes{background:#faf2e3!important;color:#8A5E22!important;border-color:#C28533!important;font-weight:500;}
+.on-eoliennes{background:#eef3e9!important;color:#3F5B3A!important;border-color:#6b8a5c!important;font-weight:500;}
+.on-points-chauds{background:#fdf4f3!important;color:#8E2F1F!important;border-color:#c16b5a!important;font-weight:500;}
 .faille-tooltip{font-family:var(--mono);font-size:10px;background:var(--bg2,#f7f8fa);color:var(--tx2,#555);border:1px solid var(--border,rgba(0,0,0,.08));border-radius:6px;padding:4px 8px;line-height:1.5;box-shadow:0 2px 6px rgba(0,0,0,.12);}
 .on-therm{background:#e0f5fe!important;color:#0369a1!important;border-color:#38bdf8!important;font-weight:500;}
 .on-tour{background:#ecf4e4!important;color:#3a5c20!important;border-color:#5c7a3a!important;font-weight:500;}
@@ -1430,6 +1433,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <button class="lbtn" id="b-res" title="Lignes et postes électriques haute tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HT</button>
       <button class="lbtn" id="b-bt" title="Réseau basse tension BT — EDF SEI · zoom ≥ 12" onclick="tog('bt','on-bt',this)"><span class="ln" style="background:#d97706"></span>Réseau BT</button>
       <button class="lbtn" id="b-prod" title="Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions" onclick="tog('prod','on-prod',this)"><span class="sq" style="background:#1a5c8c"></span>Sites de production</button>
+      <button class="lbtn" id="b-postes" title="Postes sources EDF SEI (transformateurs HTB/HTA) — 21 postes OSM" onclick="togPostesSources(this)"><span class="sq" style="background:#C28533;border:1px solid #3F5B3A"></span>Postes sources EDF</button>
+      <button class="lbtn" id="b-eoliennes" title="Parcs éoliens corses — 3 parcs en service (Ersa, Lumio, Rogliano)" onclick="togEoliennes(this)"><span style="display:inline-block;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:8px solid #3F5B3A;vertical-align:middle"></span>Éoliennes</button>
     </div>
   </div>
 
@@ -1442,6 +1447,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <div class="accordion-cat-content">
       <button class="lbtn" id="b-geo" title="Carte géologique BRGM — granite, schiste, calcaire" onclick="tog('geo','on-geo',this)"><span class="sq" style="background:#1a6b5c"></span>Géologie BRGM</button>
       <button class="lbtn" id="b-failles" title="Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)" onclick="togFailles(this)"><span class="ln" style="background:#8E2F1F"></span>Failles tectoniques</button>
+      <button class="lbtn" id="b-points-chauds" title="Points chauds U/Th documentés — anciens sites uranifères + plages monazitiques (doses estimées, non mesurées)" onclick="togPointsChauds(this)"><span style="display:inline-block;width:8px;height:8px;background:#8E2F1F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Points chauds U/Th</button>
       <button class="lbtn" id="b-hyd" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE)" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie</button>
       <button class="lbtn" id="b-cav" title="Cavités souterraines — grottes, mines, karst (BRGM)" onclick="tog('cav','on-cav',this)"><span class="sq" style="background:#5c3a9b"></span>Cavités</button>
       <button class="lbtn" id="b-therm" title="Sources thermales et géothermiques — failles actives · H88" onclick="tog('therm','on-therm',this)"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Sources thermales</button>
@@ -1983,6 +1989,9 @@ const wmsEmag=L.imageOverlay(
 
 const lTherm=L.layerGroup();
 const lFailles=L.layerGroup();
+const lPostesSources=L.layerGroup();
+const lEoliennes=L.layerGroup();
+const lPointsChaudsRadio=L.layerGroup();
 // lSit/lSit2/lAlign/lEgl/lTour/lIndu/lCast/lPont : couches patrimoniales migrées vers patrimoine.html
 // lRPG/lForet/lAOC : layers agronomie migrées vers agronomie.html
 const lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lCem=L.layerGroup(),lIntl=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
@@ -2645,12 +2654,46 @@ function calcMagneticELF_v1(lat, lon, chargeFactor) {
     }
   });
 
+  // === POSTES SOURCES EDF (points chauds HTB/HTA) ===
+  // Modèle source ponctuelle concentrée : 50 µT à 10 m, décroissance 1/d³
+  // Ordre de grandeur documentaire, à affiner si mesure terrain dédiée.
+  if (POSTES_SOURCES && POSTES_SOURCES.length) {
+    POSTES_SOURCES.forEach(ps => {
+      const d = dist(lat, lon, ps.lat, ps.lon);
+      if (d > 1) return; // au-delà de 1 km, négligeable
+      const d_m = Math.max(10, d * 1000);
+      const B_nT = 50000 * Math.pow(10 / d_m, 3); // 50 µT = 50000 nT à 10 m
+      if (B_nT > 0.5) {
+        const contrib = Math.min(B_nT, 500); // plafond 500 nT, sécurité
+        B_total_nT += contrib;
+        contributions.push({ source_type: 'poste_source', B_nT: Math.round(contrib*10)/10, distance_m: Math.round(d_m), identifier: ps.nom });
+      }
+    });
+  }
+
+  // === EOLIENNES (contribution locale à la base du mât) ===
+  // ~2 µT à 10 m pour un 2 MW, décroissance 1/d² (plus lente qu'un poste)
+  if (EOLIENNES_DATA && EOLIENNES_DATA.length) {
+    EOLIENNES_DATA.forEach(eol => {
+      const d = dist(lat, lon, eol.lat, eol.lon);
+      if (d > 0.5) return; // au-delà de 500 m, négligeable
+      const d_m = Math.max(10, d * 1000);
+      const P_mw = eol.puissance_nominale_mw || 2;
+      const B_nT = 2000 * Math.pow(10 / d_m, 2) * Math.sqrt(P_mw / 2); // 2000 nT = 2 µT à 10 m pour 2 MW
+      if (B_nT > 0.5) {
+        const contrib = Math.min(B_nT, 300);
+        B_total_nT += contrib;
+        contributions.push({ source_type: 'eolienne', B_nT: Math.round(contrib*10)/10, distance_m: Math.round(d_m), identifier: eol.nom_parc });
+      }
+    });
+  }
+
   return {
     B_total_nT: Math.round(B_total_nT),
     contributions,
     note_ICNIRP: 'Rappel documentaire : limite ICNIRP grand public pour ELF 50 Hz est de 200 µT (200 000 nT).',
     note_IARC: 'Rappel documentaire : IARC classe 2B pour ELF >= 0,3-0,4 µT (300-400 nT) chronique résidentiel, association statistique leucémies infantiles.',
-    source: 'Biot-Savart sur lignes HTA EDF SEI + PROD_ELECTRIQUE + BT_ZONES',
+    source: 'Biot-Savart sur lignes HTA EDF SEI + PROD_ELECTRIQUE + BT_ZONES + postes sources + éoliennes',
     confidence: 'medium',
     chargeFactorApplied: htFactor
   };
@@ -2817,6 +2860,71 @@ function loadTDFEmitters() {
     return TDF_EMITTERS;
   })();
   return _tdfLoadPromise;
+}
+
+// ═══ Postes sources EDF SEI Corse (OSM fallback) ═══
+// Dataset : public/data/postes_sources_corse.json — 21 postes de distribution
+// HTB/HTA identifiés via OpenStreetMap (opendata-corse.edf.fr indisponible audit 2026-04-21).
+let POSTES_SOURCES = [];
+let _postesLoadPromise = null;
+function loadPostesSources() {
+  if (_postesLoadPromise) return _postesLoadPromise;
+  _postesLoadPromise = (async () => {
+    try {
+      const r = await fetch('public/data/postes_sources_corse.json', {signal: AbortSignal.timeout(5000)});
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      POSTES_SOURCES = d.postes || [];
+      console.log('[Tellux] Postes sources charges : ' + POSTES_SOURCES.length);
+    } catch (e) {
+      console.warn('[Tellux] Postes sources indisponibles : ' + e.message);
+    }
+    return POSTES_SOURCES;
+  })();
+  return _postesLoadPromise;
+}
+
+// ═══ Parcs éoliens Corse (RTE ODRE registre 2022) ═══
+// Dataset : public/data/eoliennes_corse.json — 3 parcs en service (2B)
+let EOLIENNES_DATA = [];
+let _eolLoadPromise = null;
+function loadEoliennes() {
+  if (_eolLoadPromise) return _eolLoadPromise;
+  _eolLoadPromise = (async () => {
+    try {
+      const r = await fetch('public/data/eoliennes_corse.json', {signal: AbortSignal.timeout(5000)});
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      EOLIENNES_DATA = d.eoliennes || [];
+      console.log('[Tellux] Eoliennes chargees : ' + EOLIENNES_DATA.length);
+    } catch (e) {
+      console.warn('[Tellux] Eoliennes indisponibles : ' + e.message);
+    }
+    return EOLIENNES_DATA;
+  })();
+  return _eolLoadPromise;
+}
+
+// ═══ Points chauds U/Th documentés Corse ═══
+// Dataset : public/data/points_chauds_radio_corse.json — 5 sites (Argentella, Saleccia…)
+// Doses estimées documentaires, non mesurées — boost ponctuel dans calcGammaAmbient.
+let POINTS_CHAUDS_RADIO = [];
+let _pcLoadPromise = null;
+function loadPointsChaudsRadio() {
+  if (_pcLoadPromise) return _pcLoadPromise;
+  _pcLoadPromise = (async () => {
+    try {
+      const r = await fetch('public/data/points_chauds_radio_corse.json', {signal: AbortSignal.timeout(5000)});
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      POINTS_CHAUDS_RADIO = d.points_chauds || [];
+      console.log('[Tellux] Points chauds U/Th charges : ' + POINTS_CHAUDS_RADIO.length);
+    } catch (e) {
+      console.warn('[Tellux] Points chauds U/Th indisponibles : ' + e.message);
+    }
+    return POINTS_CHAUDS_RADIO;
+  })();
+  return _pcLoadPromise;
 }
 
 function calcRF(lat, lon) {
@@ -3331,20 +3439,46 @@ function calcGammaAmbient(lat, lon, altitude_m) {
   // Valeurs typiques : 80–120 nSv/h (fond naturel Corse granitique)
   const nearest_teleray_balise = null; // TODO phase 2 — intégration après vérification API
 
+  // Boost ponctuel — sites documentés (anciens sites uranifères, plages monazitiques)
+  // Décroissance linéaire du centre du point chaud jusqu'à son rayon d'influence.
+  // Baseline 80 nSv/h soustraite (fond naturel corse granitique moyen).
+  let boost_ponctuel_nSv_h = 0;
+  let boost_sources_count = 0;
+  const boost_contributors = [];
+  if (POINTS_CHAUDS_RADIO && POINTS_CHAUDS_RADIO.length) {
+    POINTS_CHAUDS_RADIO.forEach(pc => {
+      const d_m = dist(lat, lon, pc.lat, pc.lon) * 1000;
+      if (d_m < pc.rayon_influence_m) {
+        const attenuation = 1 - (d_m / pc.rayon_influence_m);
+        const exces = Math.max(0, pc.dose_gamma_estimee_nSv_h - 80);
+        const contrib = exces * attenuation;
+        if (contrib > 0.1) {
+          boost_ponctuel_nSv_h += contrib;
+          boost_sources_count++;
+          boost_contributors.push({ id: pc.id, nom: pc.nom, contrib_nSv_h: Math.round(contrib*10)/10, distance_m: Math.round(d_m) });
+        }
+      }
+    });
+  }
+  const total_nSv_h = cosmic_nSv_h + Math.round(boost_ponctuel_nSv_h * 10) / 10;
+
   return {
-    dose_rate_nSv_h: cosmic_nSv_h, // estimation cosmique seule (terrestrial + Téléray manquants)
+    dose_rate_nSv_h: total_nSv_h, // cosmique + boost ponctuel (terrestrial GELÉ)
     components: {
       cosmic_nSv_h,
       terrestrial_nSv_h,       // null — GELÉ (NCRP 94)
-      anthropogenic_nSv_h: 0   // hors périmètre v2 (installations nucléaires hors Corse)
+      anthropogenic_nSv_h: 0,  // hors périmètre v2 (installations nucléaires hors Corse)
+      boost_ponctuel_nSv_h: Math.round(boost_ponctuel_nSv_h * 10) / 10
     },
+    boost_sources: boost_contributors,
+    boost_sources_count,
     nearest_teleray_balise,      // null — in_construction
     altitude_used_m: alt,
-    source: 'Approximation cosmique Bouville & Lowder 1988 · Téléray ASNR (in_construction)',
+    source: 'Approximation cosmique Bouville & Lowder 1988 · boost points chauds documentaires · Téléray ASNR (in_construction)',
     confidence: 'low',
     under_review: true,          // terrestre GELÉ + Téléray manquant
     in_construction: true,
-    epistemic_note: 'Estimation cosmique seule. Composante terrestre (dominant à basse altitude sur granit) en attente de relecture (NCRP 94). Fond naturel Corse : 75–150 nSv/h (Téléray IRSN). Aucune implication sanitaire à ces niveaux de fond naturel.'
+    epistemic_note: 'Estimation cosmique + boost points chauds documentés. Composante terrestre (NCRP 94) en attente de relecture tiers. Fond naturel Corse : 75–150 nSv/h (Téléray IRSN). Doses des points chauds sont documentaires, non mesurées par Tellux. Aucune implication sanitaire à ces niveaux de fond naturel.'
   };
 }
 
@@ -5096,7 +5230,7 @@ let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}},300);}
 map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
-setTimeout(()=>Promise.all([loadAnt(),loadDB(),loadRadonCommunesL3(),loadTDFEmitters()]),1500); // Décalé — après rendu complet de la carte
+setTimeout(()=>Promise.all([loadAnt(),loadDB(),loadRadonCommunesL3(),loadTDFEmitters(),loadPostesSources(),loadEoliennes(),loadPointsChaudsRadio()]),1500); // Décalé — après rendu complet de la carte
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET L'Aquila — correction externe réelle // Météo + réfractivité troposphérique
 // EMAG2v3 OFF par défaut — toggle manuel via toggleEMAG()
@@ -5660,6 +5794,87 @@ async function togFailles(btn){
   }catch(e){
     info('<span style="color:var(--danger)">Failles : erreur de chargement</span>');
   }
+}
+
+// ═══ Rendu / toggle postes sources EDF ═══
+let _postesRendered = false;
+function _renderPostesSources() {
+  if (_postesRendered) return;
+  _postesRendered = true;
+  (POSTES_SOURCES || []).forEach(ps => {
+    const tensionMax = Array.isArray(ps.tension_kV) ? Math.max(...ps.tension_kV) : 20;
+    const size = tensionMax >= 150 ? 12 : 10;
+    const icon = L.divIcon({
+      className: 'poste-source-icon',
+      html: '<div style="width:'+size+'px;height:'+size+'px;background:#C28533;border:2px solid #3F5B3A;box-shadow:0 1px 3px rgba(0,0,0,.3);"></div>',
+      iconSize: [size+4, size+4]
+    });
+    const tensionTxt = (ps.tension_kV || []).join('/') + ' kV';
+    L.marker([ps.lat, ps.lon], {icon})
+      .bindTooltip('<b>Poste source : '+ps.nom+'</b><br>'+tensionTxt+(ps.operateur?' · '+ps.operateur:''),{sticky:true})
+      .addTo(lPostesSources);
+  });
+}
+async function togPostesSources(btn){
+  if(map.hasLayer(lPostesSources)){
+    map.removeLayer(lPostesSources); btn.className='lbtn'; return;
+  }
+  await loadPostesSources();
+  _renderPostesSources();
+  lPostesSources.addTo(map); btn.className='lbtn on-postes';
+  info('Postes sources EDF SEI chargés — ' + (POSTES_SOURCES||[]).length + ' postes (OSM)');
+}
+
+// ═══ Rendu / toggle éoliennes ═══
+let _eolRendered = false;
+function _renderEoliennes() {
+  if (_eolRendered) return;
+  _eolRendered = true;
+  (EOLIENNES_DATA || []).forEach(eol => {
+    const svg = '<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><polygon points="8,1 14,15 2,15" fill="#3F5B3A" stroke="#1F2329" stroke-width="1"/></svg>';
+    const icon = L.divIcon({className:'eol-icon',html:svg,iconSize:[16,16]});
+    L.marker([eol.lat, eol.lon], {icon})
+      .bindTooltip('<b>'+eol.nom_parc+'</b><br>'+eol.puissance_nominale_mw+' MW · mise en service '+eol.mise_en_service,{sticky:true})
+      .addTo(lEoliennes);
+  });
+}
+async function togEoliennes(btn){
+  if(map.hasLayer(lEoliennes)){
+    map.removeLayer(lEoliennes); btn.className='lbtn'; return;
+  }
+  await loadEoliennes();
+  _renderEoliennes();
+  lEoliennes.addTo(map); btn.className='lbtn on-eoliennes';
+  info('Parcs éoliens chargés — ' + (EOLIENNES_DATA||[]).length + ' parcs (RTE ODRE)');
+}
+
+// ═══ Rendu / toggle points chauds U/Th ═══
+let _pcRendered = false;
+function _renderPointsChauds() {
+  if (_pcRendered) return;
+  _pcRendered = true;
+  (POINTS_CHAUDS_RADIO || []).forEach(pc => {
+    const icon = L.divIcon({
+      className: 'pc-radio-icon',
+      html: '<div style="width:12px;height:12px;background:#8E2F1F;transform:rotate(45deg);border:2px solid #F5F0E7;box-shadow:0 1px 3px rgba(0,0,0,.4);"></div>',
+      iconSize: [18, 18]
+    });
+    // Cercle du rayon d'influence
+    L.circle([pc.lat, pc.lon], {radius: pc.rayon_influence_m, color:'#8E2F1F', fillColor:'#8E2F1F', fillOpacity:0.08, weight:1, dashArray:'3,3'})
+      .addTo(lPointsChaudsRadio);
+    L.marker([pc.lat, pc.lon], {icon})
+      .bindTooltip('<b>'+pc.nom+'</b><br>'+pc.dose_gamma_estimee_nSv_h+' nSv/h estimé (rayon '+pc.rayon_influence_m+' m)<br><em>'+pc.note+'</em>',{sticky:true,direction:'top'})
+      .addTo(lPointsChaudsRadio);
+  });
+}
+async function togPointsChauds(btn){
+  if(map.hasLayer(lPointsChaudsRadio)){
+    map.removeLayer(lPointsChaudsRadio); btn.className='lbtn'; return;
+  }
+  await loadPointsChaudsRadio();
+  _renderPointsChauds();
+  lPointsChaudsRadio.addTo(map); btn.className='lbtn on-points-chauds';
+  info('Points chauds U/Th chargés — ' + (POINTS_CHAUDS_RADIO||[]).length + ' sites documentaires (doses estimées, non mesurées)');
 }
 
 // ═══ DONNÉES MONDIALES — WDMAM + CHAOS-7 ═══
