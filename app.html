@@ -87,6 +87,10 @@
 .hdr-btn{font-family:var(--font);font-size:11px;font-weight:500;padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--tx-ardoise);cursor:pointer;transition:all .15s;letter-spacing:0.01em;}
 .hdr-btn:hover{background:var(--tx-brume);border-color:var(--tx-mica);}
 .hdr-status{font-family:var(--mono);font-size:10px;color:var(--tx-mica);padding-left:4px;}
+.status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;transition:background .4s,box-shadow .4s;cursor:default;margin-right:4px;vertical-align:middle;}
+.status-dot--pending{background:var(--tx-ocre);box-shadow:0 0 0 2px rgba(194,133,51,.25);}
+.status-dot--ok{background:var(--tx-maquis);box-shadow:0 0 0 2px rgba(63,91,58,.25);}
+.status-dot--error{background:var(--tx-porphyre);box-shadow:0 0 0 2px rgba(142,47,31,.25);}
 /* Footer raffiné */
 .tx-footer{margin-top:16px;padding:16px 4px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;font-family:var(--font);font-size:11px;color:var(--tx-mica);letter-spacing:0.01em;}
 .tx-footer .tx-footer-brand{font-family:var(--font-display);font-size:13px;color:var(--tx-ardoise);font-weight:500;}
@@ -988,6 +992,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <div class="hdr-actions">
 <button class="hdr-btn" onclick="toggleMethodology()" title="Méthodologie & sources">Méthodologie</button>
     <button class="hdr-btn" onclick="document.getElementById('about-modal').style.display='flex';try{_unlockBadge('about');}catch(e){}" title="À propos du projet">À propos</button>
+    <span id="sb-status-dot" class="status-dot status-dot--pending" title="Supabase connexion en cours…" aria-label="Statut Supabase"></span>
     <span class="hdr-status" id="hdr-status">chargement…</span>
   </div>
 </div>
@@ -3550,26 +3555,40 @@ async function loadNOAA(){try{
   }catch(e){}
 }catch(e){console.error('❌ loadNOAA erreur:',e.message);}}
 
+function updateSupabaseStatusDot(state,contribCount){
+  const dot=document.getElementById('sb-status-dot');
+  if(!dot)return;
+  dot.classList.remove('status-dot--pending','status-dot--ok','status-dot--error');
+  if(state==='ok'){
+    dot.classList.add('status-dot--ok');
+    const n=contribCount||0;
+    dot.title='Supabase connecté · '+n+' contribution'+(n>1?'s':'');
+  }else if(state==='error'){
+    dot.classList.add('status-dot--error');
+    dot.title='Supabase hors ligne — données locales uniquement';
+  }else{
+    dot.classList.add('status-dot--pending');
+    dot.title='Supabase connexion en cours…';
+  }
+}
+
 async function loadDB(){
   // Entièrement silencieux — ne bloque pas l'UI, ne touche pas à info()
   try{
     const data=await sbGet('/rest/v1/contributions?order=created_at.desc&limit=100');
-    const dot=document.getElementById('db-dot');
-    dot.classList.remove('err');dot.classList.add('ok');
-    document.getElementById('db-label').textContent='Supabase connecté';
     contribsDB=data||[];
     lCon.clearLayers();
     contribsDB.forEach(addMarker);
     const n=contribsDB.length;
-    document.getElementById('db-total').textContent=n+' contribution'+(n>1?'s':'');window._contribCount=n;
+    updateSupabaseStatusDot('ok',n);
+    const eTot=document.getElementById('db-total');if(eTot)eTot.textContent=n+' contribution'+(n>1?'s':'');
+    window._contribCount=n;
     document.getElementById('contrib-panel').style.display=n>0?'block':'none';
     renderList();
     // Ne pas écraser info() — l'utilisateur peut être en train de lire autre chose
   }catch(err){
-    const dot=document.getElementById('db-dot');
-    dot.classList.remove('ok');dot.classList.add('err');
-    document.getElementById('db-label').textContent='Supabase hors ligne';
-    document.getElementById('db-total').textContent='contributions non chargées';
+    updateSupabaseStatusDot('error');
+    const eTot=document.getElementById('db-total');if(eTot)eTot.textContent='contributions non chargées';
     // Retry silencieux dans 30s
     setTimeout(loadDB,30000);
   }
@@ -3731,7 +3750,8 @@ async function saveContrib(){
     var csvSum=document.getElementById('csv-summary');if(csvSum)csvSum.style.display='none';
     var csvInp=document.getElementById('csv-phyphox-input');if(csvInp)csvInp.value='';
     const n=contribsDB.length;
-    document.getElementById('db-total').textContent=n+' contribution'+(n>1?'s':'')+' en base';
+    updateSupabaseStatusDot('ok',n);
+    const eTot2=document.getElementById('db-total');if(eTot2)eTot2.textContent=n+' contribution'+(n>1?'s':'')+' en base';
     document.getElementById('contrib-panel').style.display='block';renderList();
     info('Mesure sauvegardee dans Supabase. Score : '+row.score_anomalie+' · Delta : '+(row.delta_nt!==null&&row.delta_nt!==undefined?row.delta_nt+' nT':'—'),'success');
     // Desactiver le FAB active state apres sauvegarde
