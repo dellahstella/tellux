@@ -470,6 +470,13 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .cond-sparkline{margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);}
 .cond-sparkline svg{display:block;}
 .cond-sparkline-legend{font-size:9px;color:var(--tx-mica);margin-top:2px;display:flex;justify-content:space-between;}
+/* Modale contribution a onglets */
+.ctab-btn{background:none;border:none;padding:10px 14px;font-family:var(--font);font-size:12px;color:var(--tx3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;font-weight:500;}
+.ctab-btn:hover:not(.disabled){color:var(--tx2);}
+.ctab-btn.active{color:var(--acc);border-bottom-color:var(--acc);}
+.ctab-btn.disabled{color:var(--tx3);opacity:.5;cursor:not-allowed;}
+.ctab-content{display:block;}
+.ctab-content[hidden]{display:none;}
 @media (max-width:768px){
   .cond-row .cond-key{min-width:90px;}
   .cond-summary{font-size:9px;}
@@ -1127,53 +1134,55 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   </div>
 </div>
 
-<!-- Modal choix niveau contribution terrain (N0 / N1 / N2) -->
-<div id="contrib-level-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(31,35,41,.55);z-index:2300;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeContribLevelModal()">
-  <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:440px;width:100%;padding:22px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:var(--font)">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <h3 style="font-family:var(--font-display);font-size:17px;font-weight:600;color:var(--tx);margin:0;letter-spacing:-0.01em">Contribution terrain</h3>
+<!-- Modal contribution a onglets (Observation / Mesure technique / Capteurs appareil) -->
+<div id="contrib-level-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(31,35,41,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:2300;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeContribLevelModal()">
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:480px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:var(--font)">
+    <header style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px 10px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <h3 style="font-family:var(--font-display);font-size:16px;font-weight:600;color:var(--tx);margin:0;letter-spacing:-0.01em">Contribuer à Tellux</h3>
       <button onclick="closeContribLevelModal()" aria-label="Fermer" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--tx3);line-height:1;padding:2px 6px">&#x2715;</button>
-    </div>
-    <p style="font-size:11px;color:var(--tx3);margin:0 0 14px;line-height:1.5">Choisissez votre niveau de contribution. Les niveaux 1 et 2 seront disponibles prochainement.</p>
+    </header>
+    <nav class="contrib-tabs" role="tablist" style="display:flex;gap:0;padding:0 22px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <button class="ctab-btn active" role="tab" aria-selected="true" data-tab="obs" onclick="switchContribTab('obs')">Observation</button>
+      <button class="ctab-btn" role="tab" aria-selected="false" data-tab="mes" onclick="switchContribTab('mes')">Mesure technique</button>
+      <button class="ctab-btn disabled" role="tab" aria-disabled="true" title="Bientôt disponible" style="cursor:not-allowed">Capteurs appareil</button>
+    </nav>
 
-    <!-- Niveau 0 — actif -->
-    <div class="clm-row" style="display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);margin-bottom:8px">
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--acc)"></span>
-          <span style="font-weight:600;font-size:13px;color:var(--tx)">Saisie manuelle</span>
-        </div>
-        <div style="font-size:11px;color:var(--tx2);line-height:1.45">Pointer sur la carte, saisir les valeurs manuellement. Aucune permission requise.</div>
+    <!-- Onglet 1 : Observation simple -->
+    <div class="ctab-content" id="ctab-obs" style="padding:18px 22px;overflow-y:auto">
+      <p style="font-size:12px;color:var(--tx2);margin:0 0 12px;line-height:1.5">Partagez une observation libre associée à un point sur la carte. Votre observation sera vérifiée avant publication.</p>
+      <div id="obs-position-info" style="font-size:11px;color:var(--tx3);margin-bottom:10px;font-family:var(--mono);padding:8px 10px;background:var(--bg2);border-radius:var(--r);border:1px dashed var(--border)">Cliquez d'abord sur la carte pour placer le point, puis rouvrez ce formulaire. Ou saisissez manuellement ci-dessous.</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <input type="number" step="0.00001" id="obs-lat" placeholder="Latitude (ex: 42.308)" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--mono);font-size:12px">
+        <input type="number" step="0.00001" id="obs-lon" placeholder="Longitude (ex: 9.150)" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--mono);font-size:12px">
       </div>
-      <button id="clm-choose-n0" onclick="chooseContribLevelN0()" style="flex-shrink:0;padding:7px 14px;border:none;border-radius:var(--r);background:var(--warn);color:#fff;font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">Choisir</button>
-    </div>
-
-    <!-- Niveau 1 — désactivé -->
-    <div class="clm-row" style="display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);margin-bottom:8px;opacity:.6">
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--tx3)"></span>
-          <span style="font-weight:600;font-size:13px;color:var(--tx2)">GPS + boussole</span>
-        </div>
-        <div style="font-size:11px;color:var(--tx3);line-height:1.45">G&#xe9;olocalisation pr&#xe9;cise + orientation magn&#xe9;tique locale via capteurs du t&#xe9;l&#xe9;phone.</div>
+      <label for="obs-note" style="display:block;font-size:11px;color:var(--tx2);margin-bottom:4px">Que souhaitez-vous partager ?</label>
+      <textarea id="obs-note" rows="4" maxlength="300" placeholder="Ressenti, observation visuelle, contexte particulier… (300 caractères max)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--font);font-size:12px;resize:vertical;box-sizing:border-box"></textarea>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
+        <button onclick="closeContribLevelModal()" style="padding:8px 16px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--tx2);font-family:var(--font);font-size:12px;cursor:pointer">Annuler</button>
+        <button onclick="saveObservation()" id="btn-obs-send" style="padding:8px 18px;border:none;border-radius:var(--r);background:var(--acc);color:#fff;font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer">Envoyer</button>
       </div>
-      <button disabled style="flex-shrink:0;padding:7px 14px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--tx3);font-family:var(--font);font-size:11px;cursor:not-allowed;white-space:nowrap">Bientôt</button>
     </div>
 
-    <!-- Niveau 2 — désactivé -->
-    <div class="clm-row" style="display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);margin-bottom:14px;opacity:.6">
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--tx3)"></span>
-          <span style="font-weight:600;font-size:13px;color:var(--tx2)">Séquence capteurs</span>
-        </div>
-        <div style="font-size:11px;color:var(--tx3);line-height:1.45">Enregistrement 10 secondes, variation magn&#xe9;tique relative (non calibr&#xe9;).</div>
+    <!-- Onglet 2 : Mesure technique (delegue au flux #cform existant) -->
+    <div class="ctab-content" id="ctab-mes" hidden style="padding:18px 22px;overflow-y:auto">
+      <p style="font-size:12px;color:var(--tx2);margin:0 0 12px;line-height:1.5">Formulaire complet pour les utilisateurs équipés : magnétomètre smartphone (Phyphox), capteur externe (TriField, Cornet), RTL-SDR ou mesure ANFR certifiée.</p>
+      <ul style="font-size:11px;color:var(--tx3);margin:0 0 14px 18px;padding:0;line-height:1.6">
+        <li>Pointage carte obligatoire (Corse uniquement)</li>
+        <li>Saisie instrument, valeur et unité</li>
+        <li>Import CSV Phyphox / Physics Toolbox</li>
+        <li>Contexte intérieur optionnel (étage, matériaux murs, appareils actifs)</li>
+      </ul>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button onclick="closeContribLevelModal()" style="padding:8px 16px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--tx2);font-family:var(--font);font-size:12px;cursor:pointer">Annuler</button>
+        <button onclick="chooseContribLevelN0()" style="padding:8px 18px;border:none;border-radius:var(--r);background:var(--warn);color:#fff;font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer">Ouvrir le formulaire</button>
       </div>
-      <button disabled style="flex-shrink:0;padding:7px 14px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--tx3);font-family:var(--font);font-size:11px;cursor:not-allowed;white-space:nowrap">Bientôt</button>
     </div>
 
-    <div style="display:flex;justify-content:flex-end;gap:8px">
-      <button onclick="closeContribLevelModal()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--tx2);font-family:var(--font);font-size:12px;cursor:pointer">Annuler</button>
+    <!-- Onglet 3 : Capteurs appareil (reserve, place holder) -->
+    <div class="ctab-content" id="ctab-cap" hidden style="padding:18px 22px;text-align:center;color:var(--tx3);font-size:12px;line-height:1.6;overflow-y:auto">
+      <div style="font-size:28px;margin-bottom:8px;opacity:.4">📱</div>
+      <p style="margin:0 0 6px;color:var(--tx2);font-weight:500">Bientôt disponible</p>
+      <p style="margin:0">Lecture directe des capteurs du téléphone (magnétomètre, accéléromètre, signal réseau) avec enregistrement 10 secondes. Les niveaux GPS+boussole et séquence capteurs seront accessibles depuis cet onglet dans une prochaine version.</p>
     </div>
   </div>
 </div>
@@ -5142,7 +5151,11 @@ function startContribFromFAB(){
 // et startContribFromFAB() — seul le choix N0 déclenche le flux existant.
 function openContribLevelModal(){
   var modal=document.getElementById('contrib-level-modal');
-  if(modal)modal.style.display='flex';
+  if(modal){
+    modal.style.display='flex';
+    // Reset sur l'onglet Observation par defaut
+    if(typeof switchContribTab === 'function') switchContribTab('obs');
+  }
 }
 function closeContribLevelModal(){
   var modal=document.getElementById('contrib-level-modal');
@@ -5432,6 +5445,79 @@ setTimeout(() => { renderChargeSparkline(); updateCondSummaries(); }, 2000);
 setInterval(() => { renderChargeSparkline(); updateCondSummaries(); }, 60*60*1000);
 // Fallback periodique pour capter les valeurs temps reel meme si un load* oublie d'appeler
 setInterval(updateCondSummaries, 30*1000);
+
+// ═══ Modale contribution a onglets ═══
+// Onglet 1 : Observation simple (textarea libre, saveObservation)
+// Onglet 2 : Mesure technique (delegue au #cform existant via chooseContribLevelN0)
+// Onglet 3 : Capteurs appareil (desactive, placeholder pour session future)
+function switchContribTab(id){
+  const modal = document.getElementById('contrib-level-modal');
+  if(!modal) return;
+  const btns = modal.querySelectorAll('.ctab-btn');
+  btns.forEach(b => {
+    if(b.classList.contains('disabled')) return;
+    const isActive = b.getAttribute('data-tab') === id;
+    b.classList.toggle('active', isActive);
+    b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+  });
+  ['obs','mes','cap'].forEach(t => {
+    const el = document.getElementById('ctab-' + t);
+    if(!el) return;
+    if(t === id){ el.removeAttribute('hidden'); }
+    else { el.setAttribute('hidden',''); }
+  });
+  // Pre-remplir lat/lon si un marker pending est place
+  if(id === 'obs' && typeof pending !== 'undefined' && pending){
+    try{
+      const ll = pending.getLatLng();
+      const latI = document.getElementById('obs-lat');
+      const lonI = document.getElementById('obs-lon');
+      if(latI && !latI.value) latI.value = ll.lat.toFixed(5);
+      if(lonI && !lonI.value) lonI.value = ll.lng.toFixed(5);
+      const info = document.getElementById('obs-position-info');
+      if(info) info.textContent = 'Position : ' + ll.lat.toFixed(5) + ', ' + ll.lng.toFixed(5) + ' (placee via la carte)';
+    }catch(e){}
+  }
+}
+
+async function saveObservation(){
+  const noteEl = document.getElementById('obs-note');
+  const latEl  = document.getElementById('obs-lat');
+  const lonEl  = document.getElementById('obs-lon');
+  const btn    = document.getElementById('btn-obs-send');
+  const note = (noteEl && noteEl.value || '').trim();
+  if(!note){ alert('Veuillez saisir votre observation.'); return; }
+  const lat = parseFloat(latEl && latEl.value);
+  const lon = parseFloat(lonEl && lonEl.value);
+  if(!isFinite(lat) || !isFinite(lon)){
+    alert('Position invalide. Cliquez d\'abord sur la carte ou saisissez lat/lon manuellement.');
+    return;
+  }
+  if(lat < 41.3 || lat > 43.1 || lon < 8.5 || lon > 9.7){
+    alert('Position hors Corse. Tellux est calibre pour la Corse uniquement.');
+    return;
+  }
+  if(btn){ btn.disabled = true; btn.textContent = 'Envoi…'; }
+  const row = {
+    lat: lat, lon: lon,
+    type: 'observation',
+    note: note,
+    contexte: 'observation',
+    session_id: (typeof sessionId !== 'undefined' ? sessionId : null),
+    version_app: '2.4'
+  };
+  Object.keys(row).forEach(k => { if(row[k] === null || row[k] === undefined) delete row[k]; });
+  try {
+    await sbPost('/rest/v1/contributions', [row]);
+    if(typeof info === 'function') info('Merci, votre observation sera vérifiée avant publication.','success');
+    closeContribLevelModal();
+    noteEl.value = ''; latEl.value = ''; lonEl.value = '';
+  } catch(e){
+    alert('Envoi échoué : ' + (e.message || 'erreur réseau'));
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = 'Envoyer'; }
+  }
+}
 
 /* === Légende dynamique === */
 window.txLegend = {
