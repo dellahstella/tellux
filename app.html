@@ -2453,6 +2453,19 @@ const FH_POINTS=[
 ];
 
 // ============================================================
+// Courant RMS moyen pour lignes HTA — Option B (fallback unique)
+// ---
+// Le dataset Supabase hta_lines (8386 polylines EDF SEI Corse) ne comporte
+// pas de champ voltage/tension. L'ensemble est donc traité comme HTA 20 kV
+// avec courant moyen 225 A, médian d'une fourchette documentée 150–450 A.
+// Modulé par chargeFacteur RTE (0.4–2.2) selon heure et activité réseau.
+// Dette : migration SQL d'enrichissement (_migrations/005_hta_lines_tension.sql)
+// pour différencier HTA/HTB 63/90/225 kV en session dédiée ultérieure.
+// Source : RTE Data portail + littérature réseau électrique française.
+// ============================================================
+const HTA_BASE_CURRENT_A = 225;
+
+// ============================================================
 // Biot-Savart segment fini avec correction triphasée (v2)
 // Formule : B = (µ₀I)/(4πh) × (sinθ₁ + sinθ₂) — segment fini
 // Unités : I en A, h en m, retour en nT (cohérence contrat calcMagneticELF)
