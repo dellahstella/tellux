@@ -2928,7 +2928,9 @@ function calcAll_v2(lat, lon, options) {
 
   // Domaine M
   const staticResult = calcMagneticStatic(lat, lon);
-  const elfResult    = calcMagneticELF(lat, lon);
+  const elfResult    = (typeof USE_ELF_V2 !== 'undefined' && USE_ELF_V2)
+    ? calcMagneticELF_v2(lat, lon)
+    : calcMagneticELF_v1(lat, lon);
   // Domaine RF
   const rfResult     = calcRF(lat, lon);
   // Domaine I
@@ -4276,6 +4278,10 @@ async function loadReseau(){
     });
     setStatus('HTA: '+all.length+' lignes');
     console.log('✅ HTA:',all.length,'lignes');
+    // Construction grille Biot-Savart v2 (une fois, au premier chargement)
+    if (typeof buildSegmentGrid === 'function' && !SEGMENT_GRID) {
+      buildSegmentGrid(all);
+    }
   }catch(e){
     console.warn('HTA Supabase:',e.message,'→ fallback OSM');
     try{
