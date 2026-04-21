@@ -7,6 +7,17 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [2.5.1] — 2026-04-21
+
+### Vérification calibration ELF post-Biot-Savart v2 (chore `verif-elf-calib-post-merge`)
+
+- **ELF-CALIB-001** — Audit des seuils visuels `scoreColor()` après migration Biot-Savart v2 (PR #65)
+- Distribution v2 sur 20 points témoins : 40% Faible (<150 nT) · 15% Modéré (150–300 nT) · 15% Élevé (300–500 nT) · 30% Très élevé (>500 nT)
+- **Scénario A retenu — aucun changement aux seuils 150 / 300 / 500 nT** : ancrage IARC 2B à 300 nT conservé, distribution cohérente avec la géographie HTA réelle de la Corse
+- Correction cosmétique : légende `elf_domain` mise à jour ("Biot-Savart réel" + confiance ●●●) — entrée non active dans l'interface
+
+---
+
 ## [2.5.0] — 2026-04-21
 
 ### Ajouts — Enrichissement datasets publics (PR `feat/enrichissement-datasets-publics`)
