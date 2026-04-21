@@ -1243,7 +1243,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 
 <p style="margin:10px 0 8px 0;"><strong>Roadmap (Q3 2026+) :</strong></p>
 <ul style="margin:6px 0 6px 16px;padding:0">
-  <li style="margin-bottom:2px">20 mesures magnétomètre terrain Corse = validation prédictions</li>
+  <li style="margin-bottom:2px">20 mesures magnétomètre terrain Corse = validation du champ composite estimé</li>
   <li style="margin-bottom:2px">Courants HTA dynamiques = profils journaliers EDF SEI (si accord)</li>
 </ul>
 
@@ -1380,6 +1380,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <!-- Sous-panneau Expertise (visible quand mode actif) -->
   <div id="expert-panel">
     <div style="font-family:var(--mono);font-size:10px;color:#C28533;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">&#9881; Indice composite</div>
+    <div style="background:var(--tx-pierre);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:14px;font-family:var(--font);font-size:12px;color:var(--tx-ardoise);line-height:1.5">
+      Le mode Expertise permet d'ajuster la pondération des 4 domaines physiques et d'exporter les valeurs détaillées par point. Il est destiné aux utilisateurs qui souhaitent reproduire ou auditer le calcul composite. Les pondérations par défaut sont gelées dans la documentation du projet.
+    </div>
     <div style="margin-bottom:10px">
       <div id="expert-index-val">&#x2014;</div>
       <div style="font-size:10px;color:var(--tx3);margin-top:2px">sur le dernier point analys&#233; &#9670;</div>
@@ -1443,10 +1446,10 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 </div>
   <div class="mstates">
     <div id="ms-n"><div class="ms"><div class="ms-l">N naturel IGRF+LCS1</div><div class="ms-v" id="m-n" style="color:var(--acc)">—</div></div></div>
-    <div id="ms-nh" style="display:none"><div class="ms"><div class="ms-l">N+H prédit total</div><div class="ms-v" id="m-nh" style="color:var(--warn)">—</div></div></div>
+    <div id="ms-nh" style="display:none"><div class="ms"><div class="ms-l">N+H composite total</div><div class="ms-v" id="m-nh" style="color:var(--warn)">—</div></div></div>
     <div id="ms-d" style="display:none">
       <div class="ms"><div class="ms-l">Δ anomalie terrain</div><div class="ms-v" id="m-delta" style="font-size:15px;font-weight:600;color:var(--acc)">cliquez sur la carte</div></div>
-      <div style="font-size:11px;color:var(--tx3);padding:4px 8px;background:var(--bg2);border-radius:var(--r);margin-top:4px">Δ = mesure terrain nT − prédiction. Nécessite des contributions magnétomètre dans 500m.</div>
+      <div style="font-size:11px;color:var(--tx3);padding:4px 8px;background:var(--bg2);border-radius:var(--r);margin-top:4px">Δ = mesure terrain nT − estimation composite. Nécessite des contributions magnétomètre dans 500 m.</div>
     </div>
     <div id="ms-r" style="display:none">
       <div class="ms"><div class="ms-l">R — mesure réelle terrain</div><div class="ms-v" id="m-r" style="color:var(--info)">—</div></div>
@@ -1615,7 +1618,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <label class="geo-check"><input type="checkbox" id="gc1"> <span>1. App magnétomètre ouverte (Physics Toolbox / Sensor Kinetics)</span></label>
     <label class="geo-check"><input type="checkbox" id="gc2"> <span>2. Point Tellux cliqué — valeur IGRF et Indice notés</span></label>
     <label class="geo-check"><input type="checkbox" id="gc3"> <span>3. Téléphone à 1.5m du sol, bras tendu, loin de tout métal</span></label>
-    <label class="geo-check"><input type="checkbox" id="gc4"> <span>4. Valeur nT lue et comparée à la prédiction IGRF</span></label>
+    <label class="geo-check"><input type="checkbox" id="gc4"> <span>4. Valeur nT lue et comparée à l'estimation IGRF</span></label>
     <label class="geo-check"><input type="checkbox" id="gc5"> <span>5. Mesure enregistrée via +Mesure (Δ calculé auto)</span></label>
     <label class="geo-check"><input type="checkbox" id="gc6"> <span>6. Bonus : grille 2m×2m pour cartographier gradient local</span></label>
   </div>
@@ -1642,7 +1645,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 
   <!-- Systèmes prédictifs internationaux -->
   <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
-    <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Systèmes de prédiction RF — comparaison internationale</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Systèmes d'estimation RF — comparaison internationale</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="intl-systems-grid"></div>
   </div>
 </div>
@@ -1727,13 +1730,13 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   ○ 0-1 Neutre · 🪨 2-3 Actif · ⚡ 4-5 Très actif<br>
   <b>Le site idéal</b> (type mégalithique ancien) : Perturbation basse + Activité naturelle haute = calme en surface, actif en profondeur.<br>
   <span style="color:var(--tx3)">Pourquoi séparer ? Un site peut avoir C+50 nT (granit à forte susceptibilité magnétique = contexte géologique intéressant) et H+1 nT ELF (composante anthropique faible). L'ancien score unique mélangeait les deux grandeurs, ce qui n'était pas physiquement pertinent.</span></div></div>
-  <div class="gterm"><div class="gterm-name">Champ N+H — naturel + humain</div><div class="gterm-def">Le champ naturel auquel on ajoute l'influence des installations humaines proches : antennes mobiles, lignes à haute tension, transformateurs. Plus tu es proche d'une ville ou d'une antenne, plus ce chiffre est élevé.</div></div>
-  <div class="gterm"><div class="gterm-name">Δ Delta — anomalie</div><div class="gterm-def">La différence entre ce que le modèle prédit et ce qu'on mesure réellement sur le terrain. Delta proche de zéro = tout est cohérent. Delta grand = quelque chose d'inexpliqué est présent. C'est là que la recherche devient intéressante.</div></div>
+  <div class="gterm"><div class="gterm-name">Champ N+H — naturel + humain</div><div class="gterm-def">Le champ naturel auquel on ajoute l'influence des installations humaines proches : antennes mobiles, lignes à haute tension, transformateurs. Plus vous êtes proche d'une ville ou d'une antenne, plus ce chiffre est élevé.</div></div>
+  <div class="gterm"><div class="gterm-name">Δ Delta — anomalie</div><div class="gterm-def">La différence entre ce que le modèle estime et ce qu'on mesure réellement sur le terrain. Delta proche de zéro = tout est cohérent. Delta grand = quelque chose d'inexpliqué est présent. C'est là que la recherche devient intéressante.</div></div>
   <div class="gterm"><div class="gterm-name">nT — nanoTesla</div><div class="gterm-def">L'unité de mesure du champ magnétique. Le champ terrestre naturel est entre 25 000 et 65 000 nT selon les régions. En Corse : 46 150–47 200 nT (IGRF-14 2025). Rôle prouvé dans la navigation des animaux migrateurs (Wiltschko & Wiltschko 2005). Les perturbations que Tellux mesure sont faibles en valeur absolue. Leur effet éventuel sur les organismes vivants est un sujet de recherche actif, sans consensus établi à ce jour.</div></div>
   <div class="gterm"><div class="gterm-name">Zones colorées — heatmap ELF</div><div class="gterm-def">Les zones où le modèle indique une composante ELF 50 Hz anthropique plus élevée (gradient Ocre). Ce n'est pas une carte de danger — c'est une carte de composition du paysage physique : les endroits où une mesure terrain aurait le plus de valeur pour valider le modèle.</div></div>
   <div class="gterm"><div class="gterm-name">Indice Kp</div><div class="gterm-def">Un chiffre de 0 à 9 qui mesure l'agitation du champ magnétique terrestre causée par le Soleil. 0-1 = calme. 2-3 = normal. 4-5 = actif. 6+ = tempête géomagnétique. Un Kp élevé peut perturber les mesures instrumentales. Son effet direct sur les organismes est une hypothèse explorée dans certaines recherches, non validée par consensus.</div></div>
   <div class="gterm"><div class="gterm-name">📱 Comment mesurer avec mon téléphone ?</div><div class="gterm-def">Tous les smartphones ont un magnétomètre intégré (la boussole). Applications gratuites : <b>Physics Toolbox Suite</b> (Android) ou <b>Sensor Kinetics</b> (iOS). Tenez le téléphone à bout de bras, loin de votre corps et de tout objet métallique. La valeur normale en Corse est environ 46 000–47 500 nT (IGRF-14 + anomalie lithosphérique). Un écart de plus de 1 000 nT par rapport à la valeur IGRF du point indique une anomalie potentielle.</div></div>
-  <div class="gterm"><div class="gterm-name">🎨 Que signifient les couleurs ?</div><div class="gterm-def">Les <b>losanges</b> = mesures officielles ANFR en V/m (champ radio). Vert = faible, orange = modéré, rouge = élevé, bordeaux + contour or = dépassement légal. Les <b>zones colorées sur la carte</b> (heatmap) = prédiction du modèle Tellux, pas des mesures réelles — elles indiquent où mesurer en priorité.</div></div>
+  <div class="gterm"><div class="gterm-name">🎨 Que signifient les couleurs ?</div><div class="gterm-def">Les <b>losanges</b> = mesures officielles ANFR en V/m (champ radio). Vert = faible, orange = modéré, rouge = élevé, bordeaux + contour or = dépassement légal. Les <b>zones colorées sur la carte</b> (heatmap) = estimation composite du modèle Tellux, pas des mesures réelles — elles indiquent où mesurer en priorité.</div></div>
   <div class="gterm"><div class="gterm-name">Bz — composante nord-sud du vent solaire</div><div class="gterm-def">Quand Bz est positif (nord) : le bouclier magnétique de la Terre est renforcé. Quand Bz est négatif (sud) : il s'accroche à la magnétosphère et peut la perturber. Un Bz très négatif précède souvent les aurores boréales.</div></div>
     <!-- Glossaire « Hypothèses testables par Tellux » (H1–H40, corpus complet H1–H88)
          migré vers patrimoine.html (dormant-box « Hypothèses / Migration »).
@@ -1741,9 +1744,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <div class="gterm"><div class="gterm-name">🔬 Hypothèses testables par Tellux</div><div class="gterm-def">Le corpus d'hypothèses (H1–H88 : piézoélectricité, courants telluriques, métrologie, alignements, résonance, RF, continuité mégalithe→église, etc.) est désormais maintenu dans <a href="patrimoine.html" style="color:var(--acc);text-decoration:underline">patrimoine.html</a> (section « Hypothèses / Migration »). <span style="color:var(--acc)">Chaque mesure terrain contribue à valider ou invalider ces hypothèses. Pas de conclusion sans données.</span></div></div>
       <div class="gterm"><div class="gterm-name">🧭 Mode Prospecteur terrain — protocole 5 min</div><div class="gterm-def">Protocole simplifié inspiré d'Olifirenko (2015), adapté pour smartphone :<br>
   <b>1. Ouvrez</b> votre app magnétomètre (Physics Toolbox ou Sensor Kinetics)<br>
-  <b>2. Cliquez</b> sur le point Tellux — notez l'Indice Tellux prédit et la valeur IGRF<br>
+  <b>2. Cliquez</b> sur le point Tellux — notez l'Indice Tellux estimé et la valeur IGRF<br>
   <b>3. Mesurez</b> à 1.5m du sol, bras tendu, loin de tout métal — notez la valeur nT<br>
-  <b>4. Comparez</b> : si écart > 500 nT avec la prédiction → anomalie locale significative<br>
+  <b>4. Comparez</b> : si écart > 500 nT avec l'estimation composite → anomalie locale significative<br>
   <b>5. Enregistrez</b> via le bouton +Mesure — Tellux calcule automatiquement le Δ<br>
   <span style="color:var(--tx3)">Bonus : répétez sur une grille 2m × 2m pour cartographier un gradient local (veine d'eau = augmentation progressive, faille = chute brutale).</span></div></div>
     </div>
@@ -3234,7 +3237,7 @@ function showInterp(lat,lng,igrf,human,water,score,delta){
   if(delta!==null&&Math.abs(delta)>200) conseil.textContent='Anomalie Δ'+delta+' nT — mesure répétée recommandée. Vérifiez Kp/Bz.';
   else if(absScore>200) conseil.textContent='Zone active. Mesurez avec magnétomètre smartphone pour objectiver.';
   else if(absScore<30) conseil.textContent='Zone calme, idéale comme référence de calibration.';
-  else conseil.textContent='Activité modérée. Une mesure terrain validerait la prédiction.';
+  else conseil.textContent='Activité modérée. Une mesure terrain validerait l\'estimation.';
 }
 
 map.on('click',async e=>{
