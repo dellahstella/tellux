@@ -2466,6 +2466,67 @@ const FH_POINTS=[
 const HTA_BASE_CURRENT_A = 225;
 
 // ============================================================
+// Grille spatiale d'indexation des segments HTA
+// Tuiles ~1 km × 1.35 km (Corse, lat 42°N). Pruning 2 km autour du clic.
+// HTA_SEGMENTS_DATA : segments élémentaires [{lat1,lon1,lat2,lon2}]
+// SEGMENT_GRID[tileKey] : [segIdx1, segIdx2, ...]
+// Construite une fois au chargement loadReseau, ~15-25k segments attendus.
+// ============================================================
+const TILE_SIZE_DEG = 1 / 111.32;
+let HTA_SEGMENTS_DATA = null;
+let SEGMENT_GRID = null;
+
+function tileKey(lat, lon) {
+  return Math.floor(lat / TILE_SIZE_DEG) + ',' + Math.floor(lon / TILE_SIZE_DEG);
+}
+
+function buildSegmentGrid(polylines) {
+  console.log('[Tellux] Construction grille Biot-Savart…');
+  const t0 = performance.now();
+  HTA_SEGMENTS_DATA = [];
+  SEGMENT_GRID = {};
+  // Expansion polylines → segments élémentaires
+  polylines.forEach(row => {
+    const pts = row.pts;
+    if (!Array.isArray(pts) || pts.length < 2) return;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i+1];
+      if (!a || !b || a.length < 2 || b.length < 2) continue;
+      HTA_SEGMENTS_DATA.push({ lat1:a[0], lon1:a[1], lat2:b[0], lon2:b[1] });
+    }
+  });
+  // Indexation : marge 2 tuiles autour de la bounding box de chaque segment
+  HTA_SEGMENTS_DATA.forEach((s, idx) => {
+    const minLat = Math.min(s.lat1, s.lat2) - 2*TILE_SIZE_DEG;
+    const maxLat = Math.max(s.lat1, s.lat2) + 2*TILE_SIZE_DEG;
+    const minLon = Math.min(s.lon1, s.lon2) - 2*TILE_SIZE_DEG;
+    const maxLon = Math.max(s.lon1, s.lon2) + 2*TILE_SIZE_DEG;
+    const iLatMin = Math.floor(minLat / TILE_SIZE_DEG);
+    const iLatMax = Math.floor(maxLat / TILE_SIZE_DEG);
+    const iLonMin = Math.floor(minLon / TILE_SIZE_DEG);
+    const iLonMax = Math.floor(maxLon / TILE_SIZE_DEG);
+    for (let iLat = iLatMin; iLat <= iLatMax; iLat++) {
+      for (let iLon = iLonMin; iLon <= iLonMax; iLon++) {
+        const key = iLat + ',' + iLon;
+        if (!SEGMENT_GRID[key]) SEGMENT_GRID[key] = [];
+        SEGMENT_GRID[key].push(idx);
+      }
+    }
+  });
+  const elapsed = performance.now() - t0;
+  const nTiles = Object.keys(SEGMENT_GRID).length;
+  const avg = Object.values(SEGMENT_GRID).reduce((a,b)=>a+b.length,0) / (nTiles||1);
+  console.log('[Tellux] Grille construite en ' + elapsed.toFixed(0) + ' ms : '
+    + HTA_SEGMENTS_DATA.length + ' segments, ' + nTiles + ' tuiles, '
+    + avg.toFixed(1) + ' seg/tuile moy.');
+}
+
+function getSegmentsNear(lat, lon) {
+  if (!SEGMENT_GRID) return [];
+  return SEGMENT_GRID[tileKey(lat, lon)] || [];
+}
+
+// ============================================================
 // Biot-Savart segment fini avec correction triphasée (v2)
 // Formule : B = (µ₀I)/(4πh) × (sinθ₁ + sinθ₂) — segment fini
 // Unités : I en A, h en m, retour en nT (cohérence contrat calcMagneticELF)
