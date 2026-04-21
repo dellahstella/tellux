@@ -2453,6 +2453,57 @@ const FH_POINTS=[
 ];
 
 // ============================================================
+// Biot-Savart segment fini avec correction triphasée (v2)
+// Formule : B = (µ₀I)/(4πh) × (sinθ₁ + sinθ₂) — segment fini
+// Unités : I en A, h en m, retour en nT (cohérence contrat calcMagneticELF)
+// Correction triphasée : k=0.5 au-delà de 20 m (approximation géométrie pylône)
+// Distance min : 5 m · Plafond : 50 000 nT/segment · Pruning : 2 km
+// Conversion pic → RMS : facteur 1/√2
+//
+// Tests mentaux (I=225 A, segment long centré au-dessus) :
+//   h=10 m   → B_pic ≈ 4500 nT → B_rms ≈ 3180 nT (≈ 3.2 µT) ✓
+//   h=100 m  → B_pic_fil = 450 nT, corr × 0.447 → 201 → B_rms ≈ 142 nT ✓
+//   h=1 km   → B_pic_fil = 45 nT, corr × 0.141 → 6.4 → B_rms ≈ 4.5 nT ✓
+//   h=3 km   → return 0 (pruning > 2 km) ✓
+// Réf : Griffiths, Introduction to Electrodynamics, Ch. 5 ; ICNIRP 2010 (200 µT RMS)
+// ============================================================
+function calcBiotSavartSegment(segLat1, segLon1, segLat2, segLon2, obsLat, obsLon, currentA) {
+  const METERS_PER_DEG_LAT = 111320;
+  const METERS_PER_DEG_LON = 111320 * Math.cos(42.0 * Math.PI / 180); // Corse ≈ 82700
+  const x1 = (segLon1 - obsLon) * METERS_PER_DEG_LON;
+  const y1 = (segLat1 - obsLat) * METERS_PER_DEG_LAT;
+  const x2 = (segLon2 - obsLon) * METERS_PER_DEG_LON;
+  const y2 = (segLat2 - obsLat) * METERS_PER_DEG_LAT;
+  const dx = x2 - x1, dy = y2 - y1;
+  const segLen = Math.sqrt(dx*dx + dy*dy);
+  if (segLen < 1) return 0; // segment dégénéré
+  const ux = dx / segLen, uy = dy / segLen;
+  const t = -x1 * ux - y1 * uy; // projection le long du segment
+  const px = x1 + t * ux, py = y1 + t * uy;
+  const h = Math.sqrt(px*px + py*py);
+  // Pruning : distance au plus proche point du segment
+  let closestDist;
+  if (t < 0) closestDist = Math.sqrt(x1*x1 + y1*y1);
+  else if (t > segLen) closestDist = Math.sqrt(x2*x2 + y2*y2);
+  else closestDist = h;
+  if (closestDist > 2000) return 0;
+  const h_eff = Math.max(5, h);
+  // sin θ_i via longueurs signées depuis la projection
+  const d1 = -t, d2 = segLen - t;
+  const sinTheta1 = d1 / Math.sqrt(d1*d1 + h_eff*h_eff);
+  const sinTheta2 = d2 / Math.sqrt(d2*d2 + h_eff*h_eff);
+  // Formule segment fini : facteur 200 = µ₀/(2π) × 1e9 en nT·m/A
+  // Demi-somme (sinθ₁+sinθ₂)/2 : au lieu de la formule originale somme complète,
+  // on retient la moitié pour rester proche du fil infini quand segment centré.
+  let B_pic_nT = 200 * currentA / h_eff * (sinTheta1 + sinTheta2) / 2;
+  // Correction triphasée au-delà de 20 m
+  if (h_eff >= 20) B_pic_nT *= Math.pow(20 / h_eff, 0.5);
+  // Plafond 50 µT = 50 000 nT par segment
+  B_pic_nT = Math.min(50000, Math.abs(B_pic_nT));
+  return B_pic_nT / Math.SQRT2; // pic → RMS
+}
+
+// ============================================================
 // DOMAINE M — Champ magnétique ELF 50 Hz (anthropique)
 // Sources : Biot-Savart simplifié (Polk & Postow 1996)
 //           Lignes HTA/HTB/BT EDF SEI Corse + sites de production
