@@ -87,6 +87,10 @@
 .hdr-btn{font-family:var(--font);font-size:11px;font-weight:500;padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--tx-ardoise);cursor:pointer;transition:all .15s;letter-spacing:0.01em;}
 .hdr-btn:hover{background:var(--tx-brume);border-color:var(--tx-mica);}
 .hdr-status{font-family:var(--mono);font-size:10px;color:var(--tx-mica);padding-left:4px;}
+.status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;transition:background .4s,box-shadow .4s;cursor:default;margin-right:4px;vertical-align:middle;}
+.status-dot--pending{background:var(--tx-ocre);box-shadow:0 0 0 2px rgba(194,133,51,.25);}
+.status-dot--ok{background:var(--tx-maquis);box-shadow:0 0 0 2px rgba(63,91,58,.25);}
+.status-dot--error{background:var(--tx-porphyre);box-shadow:0 0 0 2px rgba(142,47,31,.25);}
 /* Footer raffiné */
 .tx-footer{margin-top:16px;padding:16px 4px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;font-family:var(--font);font-size:11px;color:var(--tx-mica);letter-spacing:0.01em;}
 .tx-footer .tx-footer-brand{font-family:var(--font-display);font-size:13px;color:var(--tx-ardoise);font-weight:500;}
@@ -988,6 +992,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <div class="hdr-actions">
 <button class="hdr-btn" onclick="toggleMethodology()" title="Méthodologie & sources">Méthodologie</button>
     <button class="hdr-btn" onclick="document.getElementById('about-modal').style.display='flex';try{_unlockBadge('about');}catch(e){}" title="À propos du projet">À propos</button>
+    <span id="sb-status-dot" class="status-dot status-dot--pending" title="Supabase connexion en cours…" aria-label="Statut Supabase"></span>
     <span class="hdr-status" id="hdr-status">chargement…</span>
   </div>
 </div>
@@ -1259,21 +1264,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 <p style="margin:12px 0 0;font-size:11px;font-style:italic;color:var(--tx3)">📚 Corpus & audit complets : <a href="https://github.com/dellahstella/tellux" target="_blank" style="color:var(--acc);text-decoration:none;">GitHub tellux</a></p>
 
 </div>
-  <span class="db-dot" id="db-dot"></span>
-  <span id="db-label" style="color:var(--tx2)">Connexion Supabase…</span>
-  <div class="db-stat">
-    <span id="db-total">—</span>
-    <span id="db-session">0 en session</span>
-    <span id="aqu-status" style="color:var(--tx3);font-size:10px;margin-left:6px"></span>
-  </div>
-</div>
-
-<div style="display:flex;gap:12px;padding:4px 12px;font-family:var(--mono);font-size:10px;color:var(--tx3);margin-bottom:6px;flex-wrap:wrap">
-  <span>🗿 <span id="count-sites-bar"></span> sites</span>
-  <span>⛪ <span id="count-egl-bar"></span> églises</span>
-  <!-- 🔬 hypothèses : compteur migré vers patrimoine.html -->
-  <span>📡 29 mesures ANFR</span>
-</div>
 
 <!-- Panneau Conditions actuelles — 3 sous-sections repliees par defaut, resume une ligne. -->
 <div class="cond-panel" id="conditions-panel">
@@ -1412,6 +1402,14 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <span class="sv" id="v-wI">0.20</span>
     </div>
     <div style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:8px;line-height:1.4">&#9670; Pond&#233;rations provisoires en attente de validation m&#233;thodologique par un physicien tiers.</div>
+    <div style="border-top:1px solid rgba(245,240,231,.15);padding-top:8px;margin-bottom:8px">
+      <div style="font-family:var(--mono);font-size:9px;color:rgba(245,240,231,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Statistiques du mod&#232;le</div>
+      <div style="font-family:var(--mono);font-size:11px;color:rgba(245,240,231,.8)">&#128225; <span id="anfr-count">chargement&#8230;</span></div>
+    </div>
+    <div style="border-top:1px solid rgba(245,240,231,.15);padding-top:8px;margin-bottom:8px">
+      <div style="font-family:var(--mono);font-size:9px;color:rgba(245,240,231,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Outils avanc&#233;s</div>
+      <button onclick="importCartoRadioCSV()" style="font-size:10px;padding:4px 10px;border-radius:var(--r);border:1px solid #2dd4bf;background:rgba(45,212,191,.12);color:#5eead4;cursor:pointer;font-family:var(--font)">Importer CSV CartoRadio</button>
+    </div>
     <div style="display:flex;gap:4px;flex-wrap:wrap">
       <button onclick="resetExpertSliders()" style="font-size:10px;padding:4px 10px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--tx2);cursor:pointer">R&#233;initialiser</button>
       <button onclick="exportExpertCSV()" style="font-size:10px;padding:4px 10px;border-radius:var(--r);border:1px solid var(--acc2);background:var(--acc3);color:var(--acc);cursor:pointer">&#8595; CSV expert</button>
@@ -1760,33 +1758,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <span style="color:var(--tx3)">Bonus : répétez sur une grille 2m × 2m pour cartographier un gradient local (veine d'eau = augmentation progressive, faille = chute brutale).</span></div></div>
     </div>
 
-<div style="margin-top:8px;"><button onclick="importCartoRadioCSV()" style="font-size:11px;padding:5px 14px;border-radius:10px;border:1px solid #2dd4bf;background:#ccfbf1;color:#0f766e;cursor:pointer;font-family:var(--font);font-weight:500">Importer CSV CartoRadio</button> <span style="font-size:11px;color:#8b92a5;margin-left:6px">Glissez votre export CartoRadio.fr</span></div>
-
-<div id="contrib-panel" style="display:none;margin-top:10px;">
-  <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Contributions récentes — base Supabase</div>
-  <div class="contrib-list" id="contrib-list"></div>
-</div>
-
-<div class="legend" style="flex-direction:column;gap:10px">
-  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-    <span style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-right:4px">COUCHES :</span>
-    <div class="leg"><span class="dot" style="background:#991b1b;opacity:.5"></span>Anomalie (modèle)</div>
-    <div class="leg"><span class="dot" style="background:#5c3a9b"></span>Contribution terrain</div>
-  </div>
-  <div style="border-top:1px solid var(--border);padding-top:8px">
-    <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-bottom:6px">MESURES CEM OFFICIELLES (losanges) · limite légale = 28 V/m :</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px">
-      <div class="leg" style="background:var(--bg2);padding:3px 8px;border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;border-radius:2px;transform:rotate(45deg);margin-right:4px"></span><b style="color:#0f766e">Faible</b> &lt; 0.5 V/m · niveau courant en zone peu dense</div>
-      <div class="leg" style="background:var(--bg2);padding:3px 8px;border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:10px;height:10px;background:#b85c00;border-radius:2px;transform:rotate(45deg);margin-right:4px"></span><b style="color:#b85c00">Modéré</b> 0.5–2 V/m · zone résidentielle avec antennes proches</div>
-      <div class="leg" style="background:var(--bg2);padding:3px 8px;border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:10px;height:10px;background:#991b1b;border-radius:2px;transform:rotate(45deg);margin-right:4px"></span><b style="color:#991b1b">Élevé</b> 2–5 V/m · antenne très proche (&lt;100m)</div>
-      <div class="leg" style="background:var(--bg2);padding:3px 8px;border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:10px;height:10px;background:#5c0000;border-radius:2px;transform:rotate(45deg);margin-right:4px"></span><b style="color:#5c0000">Très élevé</b> 5–28 V/m · immédiatement sous une antenne</div>
-      <div class="leg" style="background:#fff8e6;padding:3px 8px;border-radius:20px;border:1.5px solid #ffd700"><span style="display:inline-block;width:10px;height:10px;background:#7c0000;border:2px solid #ffd700;border-radius:2px;transform:rotate(45deg);margin-right:4px"></span><b style="color:#7c0000">⚠ Non conforme</b> &gt; 28 V/m · dépasse la limite légale (1 cas : Monticello)</div>
-    </div>
-  </div>
-  <div style="font-size:10px;color:var(--tx3);border-top:1px solid var(--border);padding-top:6px">
-    Modèle magnétique = IGRF-14 + variation diurne Sq + index Kp/Dst · Sources : ANFR, BRGM, BGS, NOAA, ESA Swarm · <a href="#" onclick="event.preventDefault();document.getElementById('disclaimer-overlay').style.display='flex'" style="color:var(--acc);text-decoration:underline">Méthodologie & confidentialité</a>
-  </div>
-</div>
 </div><!-- /.map-col -->
 </div>
 
@@ -1938,7 +1909,7 @@ const LEGEND_HTML={
   geo:'<div class="leg-block"><b class="leg-title">Geologie</b><div class="leg-row"><span style="color:#8B4513">&#9632;</span> Granit</div><div class="leg-row"><span style="color:#DAA520">&#9632;</span> Sedimentaire</div><div class="leg-row"><span style="color:#4682B4">&#9632;</span> Metamorphique</div><div class="leg-src">BRGM Geologie</div></div>',
   hyd:'<div class="leg-block"><b class="leg-title">Nappes</b><div class="leg-row"><span style="color:#1a4b8c">&#9632;</span> Affleurante</div><div class="leg-row"><span style="color:#4a90d9">&#9632;</span> Sub-affleurante</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
   cav:'<div class="leg-block"><b class="leg-title">Cavites</b><img src="https://geoservices.brgm.fr/risques?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.1.1&FORMAT=image/png&LAYER=CAVITE_LOCALISEE" style="max-width:150px;display:block;margin:4px 0"><div class="leg-src">BRGM BD Cavites</div></div>',
-  ant:'<div class="leg-block"><b class="leg-title">Antennes ANFR</b><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a4b8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a4b8c">2G</b> GSM — voix, SMS</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a6b5c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a6b5c">3G</b> UMTS — data mobile</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#b85c00">4G</b> LTE — haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#991b1b">5G</b> NR — très haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#6b7280">Infra</b> FH · TV · FM · PMR</div><div class="leg-row"><span style="display:inline-block;position:relative;width:12px;height:12px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:5px;top:0;width:2px;height:12px;background:#5f5e5a"></span><span style="position:absolute;top:5px;left:0;width:12px;height:2px;background:#5f5e5a"></span></span>Émetteur radio/TV majeur</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Opérateurs : Orange · SFR · Bouygues · Free<br>974 supports · Source ANFR open data</div><div class="leg-src">ANFR · Supabase · SUP_SUPPORT 2026</div></div>',
+  ant:'<div class="leg-block"><b class="leg-title">Antennes ANFR</b><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a4b8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a4b8c">2G</b> GSM — voix, SMS</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a6b5c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a6b5c">3G</b> UMTS — data mobile</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#b85c00">4G</b> LTE — haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#991b1b">5G</b> NR — très haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#6b7280">Infra</b> FH · TV · FM · PMR</div><div class="leg-row"><span style="display:inline-block;position:relative;width:12px;height:12px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:5px;top:0;width:2px;height:12px;background:#5f5e5a"></span><span style="position:absolute;top:5px;left:0;width:12px;height:2px;background:#5f5e5a"></span></span>Émetteur radio/TV majeur</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Opérateurs : Orange · SFR · Bouygues · Free<br>974 supports · Source ANFR open data</div><div class="leg-src">ANFR · Supabase · SUP_SUPPORT 2026</div><div style="border-top:1px solid rgba(0,0,0,.08);padding-top:6px;margin-top:4px"><div style="font-family:var(--mono);font-size:9px;color:var(--tx3);margin-bottom:4px">MESURES CEM OFFICIELLES (losanges) · limite légale = 28 V/m :</div><div style="display:flex;flex-wrap:wrap;gap:4px"><div class="leg" style="padding:2px 6px;background:var(--bg2);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#0f766e;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#0f766e">Faible</b> &lt; 0.5 V/m</div><div class="leg" style="padding:2px 6px;background:var(--bg2);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#b85c00">Modéré</b> 0.5–2 V/m</div><div class="leg" style="padding:2px 6px;background:var(--bg2);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#991b1b">Élevé</b> 2–5 V/m</div><div class="leg" style="padding:2px 6px;background:var(--bg2);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#5c0000;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#5c0000">Très élevé</b> 5–28 V/m</div><div class="leg" style="padding:2px 6px;background:#fff8e6;border-radius:20px;border:1.5px solid #ffd700"><span style="display:inline-block;width:8px;height:8px;background:#7c0000;border:1.5px solid #ffd700;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#7c0000">⚠ &gt;28 V/m</b> non conforme</div></div></div></div>',
   sit:'<div class="leg-block"><b class="leg-title">Mégalithes & Sites</b><div class="leg-row"><span style="display:inline-block;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:11px solid #854d0e;vertical-align:middle;margin-right:4px"></span>Mégalithique</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#8b5cf633;border:2px solid #8b5cf6;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Remarquable naturel</div><div class="leg-src">66 mégalithes · 11 naturels</div></div>',
   wdmam:'<div class="leg-block"><b class="leg-title">EMAG2/WDMAM mondial</b><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#dc2626;border-radius:2px"></span> Anomalie positive (magnétique)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#2563eb;border-radius:2px"></span> Anomalie négative (non-magnétique)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#f5f5f5;border:1px solid #ddd;border-radius:2px"></span> Neutre (~0 nT)</div><div class="leg-src">NOAA NCEI · Maus et al. 2009</div></div>',
   emag:'<div class="leg-block"><b class="leg-title">Anomalie crustale</b><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#dc2626;border-radius:2px"></span> Positif (granit, gabbro)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#2563eb;border-radius:2px"></span> Négatif (calcaire, schiste)</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Fond régional profond (~50-100km)</span></div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Non lié à l\'homme · EMAG2v3 NOAA</span></div><div class="leg-src">Cagniard 1953 · Meyer et al. 2017</div></div>',
@@ -3494,6 +3465,8 @@ async function loadAnt(){try{
   console.log('Antennes : '+(rows.length-nSeaFiltered-nOffshore)+' affichees, '+nOffshore+' offshore');
   const hdr=document.getElementById('hdr-status');
   if(hdr)hdr.textContent=(rows.length-nSeaFiltered-nOffshore)+' antennes · '+nOffshore+' offshore';
+  const anfrC=document.getElementById('anfr-count');
+  if(anfrC)anfrC.textContent=(rows.length-nSeaFiltered-nOffshore)+' antennes · '+nOffshore+' offshore';
   // Emetteurs broadcast TDF — dataset-driven (public/data/tdf_emitters_corse.json)
   // Icone croix, info-bulle listant PAR + services + notes.
   await loadTDFEmitters();
@@ -3550,26 +3523,40 @@ async function loadNOAA(){try{
   }catch(e){}
 }catch(e){console.error('❌ loadNOAA erreur:',e.message);}}
 
+function updateSupabaseStatusDot(state,contribCount){
+  const dot=document.getElementById('sb-status-dot');
+  if(!dot)return;
+  dot.classList.remove('status-dot--pending','status-dot--ok','status-dot--error');
+  if(state==='ok'){
+    dot.classList.add('status-dot--ok');
+    const n=contribCount||0;
+    dot.title='Supabase connecté · '+n+' contribution'+(n>1?'s':'');
+  }else if(state==='error'){
+    dot.classList.add('status-dot--error');
+    dot.title='Supabase hors ligne — données locales uniquement';
+  }else{
+    dot.classList.add('status-dot--pending');
+    dot.title='Supabase connexion en cours…';
+  }
+}
+
 async function loadDB(){
   // Entièrement silencieux — ne bloque pas l'UI, ne touche pas à info()
   try{
     const data=await sbGet('/rest/v1/contributions?order=created_at.desc&limit=100');
-    const dot=document.getElementById('db-dot');
-    dot.classList.remove('err');dot.classList.add('ok');
-    document.getElementById('db-label').textContent='Supabase connecté';
     contribsDB=data||[];
     lCon.clearLayers();
     contribsDB.forEach(addMarker);
     const n=contribsDB.length;
-    document.getElementById('db-total').textContent=n+' contribution'+(n>1?'s':'');window._contribCount=n;
-    document.getElementById('contrib-panel').style.display=n>0?'block':'none';
+    updateSupabaseStatusDot('ok',n);
+    const eTot=document.getElementById('db-total');if(eTot)eTot.textContent=n+' contribution'+(n>1?'s':'');
+    window._contribCount=n;
+    const ePanel=document.getElementById('contrib-panel');if(ePanel)ePanel.style.display=n>0?'block':'none';
     renderList();
     // Ne pas écraser info() — l'utilisateur peut être en train de lire autre chose
   }catch(err){
-    const dot=document.getElementById('db-dot');
-    dot.classList.remove('ok');dot.classList.add('err');
-    document.getElementById('db-label').textContent='Supabase hors ligne';
-    document.getElementById('db-total').textContent='contributions non chargées';
+    updateSupabaseStatusDot('error');
+    const eTot=document.getElementById('db-total');if(eTot)eTot.textContent='contributions non chargées';
     // Retry silencieux dans 30s
     setTimeout(loadDB,30000);
   }
@@ -3731,8 +3718,10 @@ async function saveContrib(){
     var csvSum=document.getElementById('csv-summary');if(csvSum)csvSum.style.display='none';
     var csvInp=document.getElementById('csv-phyphox-input');if(csvInp)csvInp.value='';
     const n=contribsDB.length;
-    document.getElementById('db-total').textContent=n+' contribution'+(n>1?'s':'')+' en base';
-    document.getElementById('contrib-panel').style.display='block';renderList();
+    updateSupabaseStatusDot('ok',n);
+    const eTot2=document.getElementById('db-total');if(eTot2)eTot2.textContent=n+' contribution'+(n>1?'s':'')+' en base';
+    const ePanel2=document.getElementById('contrib-panel');if(ePanel2)ePanel2.style.display='block';
+    renderList();
     info('Mesure sauvegardee dans Supabase. Score : '+row.score_anomalie+' · Delta : '+(row.delta_nt!==null&&row.delta_nt!==undefined?row.delta_nt+' nT':'—'),'success');
     // Desactiver le FAB active state apres sauvegarde
     const fabEl=document.getElementById('fab-mesure');if(fabEl)fabEl.classList.remove('fab-active');
@@ -3742,6 +3731,7 @@ async function saveContrib(){
 
 function renderList(){
   const el=document.getElementById('contrib-list');
+  if(!el)return;
   if(!contribsDB.length){el.innerHTML='';return;}
   el.innerHTML=contribsDB.slice(0,10).map(c=>{
     const csvBadge=c.csv_stats?' 📊':'';
