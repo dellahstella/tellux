@@ -512,6 +512,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-bt{background:#fff8e6!important;color:#d97706!important;border-color:#f5a855!important;font-weight:500;}
 .on-sit{background:#fdf8ef!important;color:#713f12!important;border-color:#c9a56c!important;font-weight:500;}
 .on-sit2{background:#e8f5e9!important;color:#2e7d32!important;border-color:#66bb6a!important;font-weight:500;}
+.on-failles{background:#fdf4f3!important;color:#8E2F1F!important;border-color:#c16b5a!important;font-weight:500;}
+.faille-tooltip{font-family:var(--mono);font-size:10px;background:var(--bg2,#f7f8fa);color:var(--tx2,#555);border:1px solid var(--border,rgba(0,0,0,.08));border-radius:6px;padding:4px 8px;line-height:1.5;box-shadow:0 2px 6px rgba(0,0,0,.12);}
 .on-therm{background:#e0f5fe!important;color:#0369a1!important;border-color:#38bdf8!important;font-weight:500;}
 .on-tour{background:#ecf4e4!important;color:#3a5c20!important;border-color:#5c7a3a!important;font-weight:500;}
 .on-indu{background:#fdf0e0!important;color:#78350f!important;border-color:#a85c1a!important;font-weight:500;}
@@ -1364,6 +1366,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     </div>
     <div class="accordion-cat-content">
       <button class="lbtn" id="b-geo" title="Carte géologique BRGM — granite, schiste, calcaire" onclick="tog('geo','on-geo',this)"><span class="sq" style="background:#1a6b5c"></span>Géologie BRGM</button>
+      <button class="lbtn" id="b-failles" title="Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)" onclick="togFailles(this)"><span class="ln" style="background:#8E2F1F"></span>Failles tectoniques</button>
       <button class="lbtn" id="b-hyd" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE)" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie</button>
       <button class="lbtn" id="b-cav" title="Cavités souterraines — grottes, mines, karst (BRGM)" onclick="tog('cav','on-cav',this)"><span class="sq" style="background:#5c3a9b"></span>Cavités</button>
       <button class="lbtn" id="b-therm" title="Sources thermales et géothermiques — failles actives · H88" onclick="tog('therm','on-therm',this)"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Sources thermales</button>
@@ -1923,6 +1926,7 @@ const wmsEmag=L.imageOverlay(
 );
 
 const lTherm=L.layerGroup();
+const lFailles=L.layerGroup();
 // lSit/lSit2/lAlign/lEgl/lTour/lIndu/lCast/lPont : couches patrimoniales migrées vers patrimoine.html
 // lRPG/lForet/lAOC : layers agronomie migrées vers agronomie.html
 const lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lCem=L.layerGroup(),lIntl=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
@@ -1936,6 +1940,7 @@ const LEGEND_HTML={
   elf_domain:'<div class="leg-block"><b class="leg-title">Magnétique basse fréquence</b><div style="height:12px;width:140px;background:linear-gradient(90deg,#EDD59A,#C28533,#8A5E22);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0 nT</span><span>250 nT</span><span>500 nT</span></div><div class="leg-row" style="font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère IARC 2B (chronique résidentiel)</div><div class="leg-row"><span style="font-size:8px;color:#8b92a5">Confiance ●●○ (modélisation Biot-Savart)</span></div><div class="leg-src">EDF SEI · ANFR · Biot-Savart simplifié</div></div>',
   rf_domain:'<div class="leg-block"><b class="leg-title">Radiofréquence (µW/m²)</b><div style="height:12px;width:140px;background:linear-gradient(90deg,#E8B8A8,#8E2F1F,#5C1F13);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>100</span><span>1 000 µW/m²</span></div><div class="leg-row" style="font-size:9px;color:#4a4f5e;font-style:italic">▸ 100 µW/m² · ▸ 1 000 µW/m² : repères documentaires</div><div class="leg-row"><span style="font-size:8px;color:#8b92a5">Limite ICNIRP ≈ 4 500 000 µW/m² — cf. popup Détails</span></div><div class="leg-src">FH_POINTS · CartoRadio ANFR · ITU-R</div></div>',
   geo:'<div class="leg-block"><b class="leg-title">Geologie</b><div class="leg-row"><span style="color:#8B4513">&#9632;</span> Granit</div><div class="leg-row"><span style="color:#DAA520">&#9632;</span> Sedimentaire</div><div class="leg-row"><span style="color:#4682B4">&#9632;</span> Metamorphique</div><div class="leg-src">BRGM Geologie</div></div>',
+  failles:'<div class="leg-block"><b class="leg-title">Failles tectoniques</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#8E2F1F;vertical-align:middle;margin-right:4px"></span><b style="color:#8E2F1F">Active</b> — faille active (3 sites)</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;border-top:2px dashed #C28533;vertical-align:middle;margin-right:4px"></span><b style="color:#C28533">Quaternaire</b> — faille ancienne (5 sites)</div><div class="leg-row" style="font-size:9px;color:var(--tx3)">Tracé indicatif ~30 km · axe orienté</div><div class="leg-src">BRGM Corte · 8 failles principales</div></div>',
   hyd:'<div class="leg-block"><b class="leg-title">Nappes</b><div class="leg-row"><span style="color:#1a4b8c">&#9632;</span> Affleurante</div><div class="leg-row"><span style="color:#4a90d9">&#9632;</span> Sub-affleurante</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
   cav:'<div class="leg-block"><b class="leg-title">Cavites</b><img src="https://geoservices.brgm.fr/risques?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.1.1&FORMAT=image/png&LAYER=CAVITE_LOCALISEE" style="max-width:150px;display:block;margin:4px 0"><div class="leg-src">BRGM BD Cavites</div></div>',
   ant:'<div class="leg-block"><b class="leg-title">Antennes ANFR</b><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a4b8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a4b8c">2G</b> GSM — voix, SMS</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a6b5c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a6b5c">3G</b> UMTS — data mobile</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#b85c00">4G</b> LTE — haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#991b1b">5G</b> NR — très haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#6b7280">Infra</b> FH · TV · FM · PMR</div><div class="leg-row"><span style="display:inline-block;position:relative;width:12px;height:12px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:5px;top:0;width:2px;height:12px;background:#5f5e5a"></span><span style="position:absolute;top:5px;left:0;width:12px;height:2px;background:#5f5e5a"></span></span>Émetteur radio/TV majeur</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Opérateurs : Orange · SFR · Bouygues · Free<br>974 supports · Source ANFR open data</div><div class="leg-src">ANFR · Supabase · SUP_SUPPORT 2026</div></div>',
@@ -5266,6 +5271,55 @@ function startFromPrescription(instrument,unit){
       }
     }
   },100);
+}
+
+// ═══ FAILLES TECTONIQUES BRGM ═══
+let FAILLES_DATA=null,FAILLES_RENDERED=false;
+function _bearingFromOrient(orient){
+  if(/^N-S|^S-N/.test(orient))return 0;
+  if(/^NE-SW|^SW-NE/.test(orient))return 45;
+  if(/^ENE|^WSW|^OSO/.test(orient))return 67;
+  if(/^E-W|^W-E/.test(orient))return 90;
+  return 0;
+}
+async function loadFailles(){
+  if(FAILLES_DATA)return FAILLES_DATA;
+  const r=await fetch('./failles-corse.json');
+  FAILLES_DATA=await r.json();
+  return FAILLES_DATA;
+}
+function renderFailles(){
+  if(FAILLES_RENDERED)return;
+  FAILLES_RENDERED=true;
+  FAILLES_DATA.forEach(f=>{
+    const b=_bearingFromOrient(f.orient)*Math.PI/180;
+    const d=15;
+    const dlat=d/111*Math.cos(b);
+    const dlon=d/(111*Math.cos(f.lat*Math.PI/180))*Math.sin(b);
+    const isActive=f.type==='active';
+    const color=isActive?'#8E2F1F':'#C28533';
+    const opts=isActive
+      ?{color,weight:2,opacity:.85}
+      :{color,weight:1.5,opacity:.75,dashArray:'4,3'};
+    L.polyline([[f.lat-dlat,f.lon-dlon],[f.lat+dlat,f.lon+dlon]],opts)
+      .bindTooltip(f.nom+' — '+f.type+' ('+f.orient+') · '+f.src,{className:'faille-tooltip',sticky:true})
+      .addTo(lFailles);
+  });
+}
+async function togFailles(btn){
+  if(map.hasLayer(lFailles)){
+    map.removeLayer(lFailles);btn.className='lbtn';showLegend('failles',false);return;
+  }
+  try{
+    await loadFailles();
+    renderFailles();
+    lFailles.addTo(map);
+    btn.className='lbtn on-failles';
+    showLegend('failles',true);
+    info('⚡ Failles tectoniques — 8 failles BRGM Corte (actives + quaternaires)');
+  }catch(e){
+    info('<span style="color:var(--danger)">Failles : erreur de chargement</span>');
+  }
 }
 
 // ═══ DONNÉES MONDIALES — WDMAM + CHAOS-7 ═══
