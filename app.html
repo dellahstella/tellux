@@ -2462,13 +2462,139 @@ const FH_POINTS=[
 ];
 
 // ============================================================
-// DOMAINE M — Champ magnétique ELF 50 Hz (anthropique)
-// Sources : Biot-Savart simplifié (Polk & Postow 1996)
-//           Lignes HTA/HTB/BT EDF SEI Corse + sites de production
-// Incertitude : ±50% (géométrie simplifiée, sans réflexions)
-// IMMÉDIAT — refactor pur de la partie ELF de calcHuman()
+// Courant RMS moyen pour lignes HTA — Option B (fallback unique)
+// ---
+// Le dataset Supabase hta_lines (8386 polylines EDF SEI Corse) ne comporte
+// pas de champ voltage/tension. L'ensemble est donc traité comme HTA 20 kV
+// avec courant moyen 225 A, médian d'une fourchette documentée 150–450 A.
+// Modulé par chargeFacteur RTE (0.4–2.2) selon heure et activité réseau.
+// Dette : migration SQL d'enrichissement (_migrations/005_hta_lines_tension.sql)
+// pour différencier HTA/HTB 63/90/225 kV en session dédiée ultérieure.
+// Source : RTE Data portail + littérature réseau électrique française.
 // ============================================================
-function calcMagneticELF(lat, lon, chargeFactor) {
+const HTA_BASE_CURRENT_A = 225;
+
+// ============================================================
+// Grille spatiale d'indexation des segments HTA
+// Tuiles ~1 km × 1.35 km (Corse, lat 42°N). Pruning 2 km autour du clic.
+// HTA_SEGMENTS_DATA : segments élémentaires [{lat1,lon1,lat2,lon2}]
+// SEGMENT_GRID[tileKey] : [segIdx1, segIdx2, ...]
+// Construite une fois au chargement loadReseau, ~15-25k segments attendus.
+// ============================================================
+const TILE_SIZE_DEG = 1 / 111.32;
+let HTA_SEGMENTS_DATA = null;
+let SEGMENT_GRID = null;
+
+function tileKey(lat, lon) {
+  return Math.floor(lat / TILE_SIZE_DEG) + ',' + Math.floor(lon / TILE_SIZE_DEG);
+}
+
+function buildSegmentGrid(polylines) {
+  console.log('[Tellux] Construction grille Biot-Savart…');
+  const t0 = performance.now();
+  HTA_SEGMENTS_DATA = [];
+  SEGMENT_GRID = {};
+  // Expansion polylines → segments élémentaires
+  polylines.forEach(row => {
+    const pts = row.pts;
+    if (!Array.isArray(pts) || pts.length < 2) return;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i+1];
+      if (!a || !b || a.length < 2 || b.length < 2) continue;
+      HTA_SEGMENTS_DATA.push({ lat1:a[0], lon1:a[1], lat2:b[0], lon2:b[1] });
+    }
+  });
+  // Indexation : marge 2 tuiles autour de la bounding box de chaque segment
+  HTA_SEGMENTS_DATA.forEach((s, idx) => {
+    const minLat = Math.min(s.lat1, s.lat2) - 2*TILE_SIZE_DEG;
+    const maxLat = Math.max(s.lat1, s.lat2) + 2*TILE_SIZE_DEG;
+    const minLon = Math.min(s.lon1, s.lon2) - 2*TILE_SIZE_DEG;
+    const maxLon = Math.max(s.lon1, s.lon2) + 2*TILE_SIZE_DEG;
+    const iLatMin = Math.floor(minLat / TILE_SIZE_DEG);
+    const iLatMax = Math.floor(maxLat / TILE_SIZE_DEG);
+    const iLonMin = Math.floor(minLon / TILE_SIZE_DEG);
+    const iLonMax = Math.floor(maxLon / TILE_SIZE_DEG);
+    for (let iLat = iLatMin; iLat <= iLatMax; iLat++) {
+      for (let iLon = iLonMin; iLon <= iLonMax; iLon++) {
+        const key = iLat + ',' + iLon;
+        if (!SEGMENT_GRID[key]) SEGMENT_GRID[key] = [];
+        SEGMENT_GRID[key].push(idx);
+      }
+    }
+  });
+  const elapsed = performance.now() - t0;
+  const nTiles = Object.keys(SEGMENT_GRID).length;
+  const avg = Object.values(SEGMENT_GRID).reduce((a,b)=>a+b.length,0) / (nTiles||1);
+  console.log('[Tellux] Grille construite en ' + elapsed.toFixed(0) + ' ms : '
+    + HTA_SEGMENTS_DATA.length + ' segments, ' + nTiles + ' tuiles, '
+    + avg.toFixed(1) + ' seg/tuile moy.');
+}
+
+function getSegmentsNear(lat, lon) {
+  if (!SEGMENT_GRID) return [];
+  return SEGMENT_GRID[tileKey(lat, lon)] || [];
+}
+
+// ============================================================
+// Biot-Savart segment fini avec correction triphasée (v2)
+// Formule : B = (µ₀I)/(4πh) × (sinθ₁ + sinθ₂) — segment fini
+// Unités : I en A, h en m, retour en nT (cohérence contrat calcMagneticELF)
+// Correction triphasée : k=0.5 au-delà de 20 m (approximation géométrie pylône)
+// Distance min : 5 m · Plafond : 50 000 nT/segment · Pruning : 2 km
+// Conversion pic → RMS : facteur 1/√2
+//
+// Tests mentaux (I=225 A, segment long centré au-dessus) :
+//   h=10 m   → B_pic ≈ 4500 nT → B_rms ≈ 3180 nT (≈ 3.2 µT) ✓
+//   h=100 m  → B_pic_fil = 450 nT, corr × 0.447 → 201 → B_rms ≈ 142 nT ✓
+//   h=1 km   → B_pic_fil = 45 nT, corr × 0.141 → 6.4 → B_rms ≈ 4.5 nT ✓
+//   h=3 km   → return 0 (pruning > 2 km) ✓
+// Réf : Griffiths, Introduction to Electrodynamics, Ch. 5 ; ICNIRP 2010 (200 µT RMS)
+// ============================================================
+function calcBiotSavartSegment(segLat1, segLon1, segLat2, segLon2, obsLat, obsLon, currentA) {
+  const METERS_PER_DEG_LAT = 111320;
+  const METERS_PER_DEG_LON = 111320 * Math.cos(42.0 * Math.PI / 180); // Corse ≈ 82700
+  const x1 = (segLon1 - obsLon) * METERS_PER_DEG_LON;
+  const y1 = (segLat1 - obsLat) * METERS_PER_DEG_LAT;
+  const x2 = (segLon2 - obsLon) * METERS_PER_DEG_LON;
+  const y2 = (segLat2 - obsLat) * METERS_PER_DEG_LAT;
+  const dx = x2 - x1, dy = y2 - y1;
+  const segLen = Math.sqrt(dx*dx + dy*dy);
+  if (segLen < 1) return 0; // segment dégénéré
+  const ux = dx / segLen, uy = dy / segLen;
+  const t = -x1 * ux - y1 * uy; // projection le long du segment
+  const px = x1 + t * ux, py = y1 + t * uy;
+  const h = Math.sqrt(px*px + py*py);
+  // Pruning : distance au plus proche point du segment
+  let closestDist;
+  if (t < 0) closestDist = Math.sqrt(x1*x1 + y1*y1);
+  else if (t > segLen) closestDist = Math.sqrt(x2*x2 + y2*y2);
+  else closestDist = h;
+  if (closestDist > 2000) return 0;
+  const h_eff = Math.max(5, h);
+  // sin θ_i via longueurs signées depuis la projection
+  const d1 = -t, d2 = segLen - t;
+  const sinTheta1 = d1 / Math.sqrt(d1*d1 + h_eff*h_eff);
+  const sinTheta2 = d2 / Math.sqrt(d2*d2 + h_eff*h_eff);
+  // Formule segment fini : facteur 200 = µ₀/(2π) × 1e9 en nT·m/A
+  // Demi-somme (sinθ₁+sinθ₂)/2 : au lieu de la formule originale somme complète,
+  // on retient la moitié pour rester proche du fil infini quand segment centré.
+  let B_pic_nT = 200 * currentA / h_eff * (sinTheta1 + sinTheta2) / 2;
+  // Correction triphasée au-delà de 20 m
+  if (h_eff >= 20) B_pic_nT *= Math.pow(20 / h_eff, 0.5);
+  // Plafond 50 µT = 50 000 nT par segment
+  B_pic_nT = Math.min(50000, Math.abs(B_pic_nT));
+  return B_pic_nT / Math.SQRT2; // pic → RMS
+}
+
+// ============================================================
+// DOMAINE M — Champ magnétique ELF 50 Hz (anthropique) — v1
+// Sources : Biot-Savart fil infini (Polk & Postow 1996)
+//           8 axes HTA/HTB hardcodés + sites de production + BT zones
+// Incertitude : ±50% (géométrie simplifiée, sans réflexions)
+// CONSERVÉE : rollback USE_ELF_V2=false et comparaison v1/v2
+// Supprimable en v3 après validation composite v2 par physicien tiers.
+// ============================================================
+function calcMagneticELF_v1(lat, lon, chargeFactor) {
   const htFactor = (chargeFactor !== undefined) ? chargeFactor
                  : (typeof chargeFacteur !== 'undefined' ? chargeFacteur : 1.0);
   const MU0_OVER_2PI = 2e-7; // µ0/(2π) en T·m/A
@@ -2571,6 +2697,138 @@ function calcMagneticELF(lat, lon, chargeFactor) {
     confidence: 'medium',
     chargeFactorApplied: htFactor
   };
+}
+
+// ============================================================
+// DOMAINE M — Champ magnétique ELF 50 Hz (anthropique) — v2
+// Sources : Biot-Savart segment fini sur 8386 polylines hta_lines Supabase
+//           (~15-25k segments élémentaires) + PROD_ELECTRIQUE + BT_ZONES
+// Retour identique à v1 (contrat calcAll_v2 préservé) : {B_total_nT, ...}
+// Courant : HTA_BASE_CURRENT_A = 225 A (Option B, dataset sans voltage)
+// Correction triphasée k=0.5 au-delà de 20 m · RMS explicite · pruning 2 km
+// Note : sommation en amplitude RMS (pas vectorielle) → surestime légèrement.
+// Fallback : si grille non prête, délègue à v1.
+// ============================================================
+function calcMagneticELF_v2(lat, lon, chargeFactor) {
+  const htFactor = (chargeFactor !== undefined) ? chargeFactor
+                 : (typeof chargeFacteur !== 'undefined' ? chargeFacteur : 1.0);
+  if (!SEGMENT_GRID || !HTA_SEGMENTS_DATA) {
+    // Grille non prête (loadReseau pas encore exécuté) — fallback v1
+    return calcMagneticELF_v1(lat, lon, chargeFactor);
+  }
+  let B_total_nT = 0;
+  const contributions = [];
+  // === LIGNES HTA RÉELLES — hta_lines Supabase via grille ===
+  const I = HTA_BASE_CURRENT_A * htFactor;
+  const nearby = getSegmentsNear(lat, lon);
+  let nContrib = 0, B_hta = 0;
+  for (const idx of nearby) {
+    const s = HTA_SEGMENTS_DATA[idx];
+    if (!s) continue;
+    const b = calcBiotSavartSegment(s.lat1, s.lon1, s.lat2, s.lon2, lat, lon, I);
+    if (b > 0.5) { // seuil 0.5 nT = cohérent v1
+      B_hta += b;
+      nContrib++;
+    }
+  }
+  if (B_hta > 0) {
+    B_total_nT += B_hta;
+    contributions.push({ source_type: 'HTA', B_nT: Math.round(B_hta*10)/10, distance_m: null, identifier: nContrib + ' segments réels' });
+  }
+  // === SITES DE PRODUCTION ÉLECTRIQUE === (identique v1)
+  const MU0_OVER_2PI = 2e-7;
+  PROD_ELECTRIQUE.forEach(s => {
+    if (s.puissance < 0.5) return;
+    const d = dist(lat, lon, s.lat, s.lon);
+    const d_m = Math.max(100, d * 1000);
+    const I_equiv = Math.sqrt(s.puissance) * 50;
+    const B_nT = MU0_OVER_2PI * I_equiv / d_m * 1e9;
+    if (B_nT > 0.5) {
+      const contrib = Math.min(B_nT, 400);
+      B_total_nT += contrib;
+      contributions.push({ source_type: 'production', B_nT: Math.round(contrib*10)/10, distance_m: Math.round(d_m), identifier: s.nom || 'prod' });
+    }
+  });
+  // === RÉSEAU BT URBAIN === (identique v1)
+  const BT_ZONES = [[41.919,8.738,80],[42.703,9.45,70],[41.578,9.267,50],[42.567,8.758,45],[42.154,9.193,40],[42.631,8.937,35],[41.387,9.159,35],[42.562,9.431,60],[41.678,8.905,30]];
+  BT_ZONES.forEach(([a, b, intensity]) => {
+    const d = dist(lat, lon, a, b);
+    let contrib = 0;
+    if (d < 0.2) contrib = intensity * (1 - d / 0.2);
+    else if (d < 0.5) contrib = intensity * 0.3 * (1 - (d - 0.2) / 0.3);
+    if (contrib > 0) {
+      B_total_nT += contrib;
+      contributions.push({ source_type: 'BT', B_nT: Math.round(contrib*10)/10, distance_m: Math.round(d*1000) });
+    }
+  });
+  return {
+    B_total_nT: Math.round(B_total_nT),
+    contributions,
+    note_ICNIRP: 'Rappel documentaire : limite ICNIRP grand public pour ELF 50 Hz est de 200 µT (200 000 nT).',
+    note_IARC: 'Rappel documentaire : IARC classe 2B pour ELF >= 0,3-0,4 µT (300-400 nT) chronique résidentiel, association statistique leucémies infantiles.',
+    source: 'Biot-Savart segment fini sur hta_lines Supabase (' + HTA_SEGMENTS_DATA.length + ' segments) + PROD_ELECTRIQUE + BT_ZONES',
+    confidence: 'medium',
+    chargeFactorApplied: htFactor,
+    version: 'v2',
+    n_hta_contributing: nContrib
+  };
+}
+
+// Flag de bascule v1/v2 — rollback d'urgence en cas de régression
+const USE_ELF_V2 = true;
+
+// ============================================================
+// Test de non-régression ELF v1 vs v2 sur 20 points témoins
+// Accessible en console : runELFRegressionTest()
+// Catégories : 5 urbains, 5 ruraux sous HTA, 5 éloignés, 5 mégalithiques
+// ============================================================
+const ELF_TEST_POINTS = [
+  { cat:'urbain', name:'Ajaccio centre',       lat:41.9267, lon:8.7369 },
+  { cat:'urbain', name:'Bastia centre',        lat:42.7028, lon:9.4508 },
+  { cat:'urbain', name:'Porto-Vecchio',        lat:41.5912, lon:9.2795 },
+  { cat:'urbain', name:'Calvi',                lat:42.5663, lon:8.7575 },
+  { cat:'urbain', name:'Corte',                lat:42.3069, lon:9.1503 },
+  { cat:'rural',  name:'Rural HTA Castagniccia', lat:42.4,  lon:9.3 },
+  { cat:'rural',  name:'Rural HTA Corte sud',  lat:42.25, lon:9.12 },
+  { cat:'rural',  name:'Rural HTA Sartene',    lat:41.62, lon:8.97 },
+  { cat:'rural',  name:'Rural HTA Balagne',    lat:42.55, lon:8.90 },
+  { cat:'rural',  name:'Rural HTA Fiumorbu',   lat:42.00, lon:9.33 },
+  { cat:'eloign', name:'Monte Cinto sommet',   lat:42.3811, lon:8.9425 },
+  { cat:'eloign', name:'Monte Rotondo',        lat:42.2236, lon:9.0586 },
+  { cat:'eloign', name:'Cap Corse pointe',     lat:43.0084, lon:9.3814 },
+  { cat:'eloign', name:'Large mer Ouest',      lat:42.0, lon:8.3 },
+  { cat:'eloign', name:'Large mer Est',        lat:42.0, lon:9.8 },
+  { cat:'mega',   name:'Cauria',               lat:41.5608, lon:8.9581 },
+  { cat:'mega',   name:'Palaggiu',             lat:41.5719, lon:8.9319 },
+  { cat:'mega',   name:'Monte Revincu',        lat:42.7272, lon:9.1928 },
+  { cat:'mega',   name:'Filitosa',             lat:41.7450, lon:8.8806 },
+  { cat:'mega',   name:'Cucuruzzu',            lat:41.7636, lon:9.0864 }
+];
+
+function runELFRegressionTest() {
+  if (!SEGMENT_GRID) {
+    console.warn('[Tellux] runELFRegressionTest : grille non prete, activer "Réseau" d\'abord');
+    return;
+  }
+  const cf = 1.0;
+  const rows = ELF_TEST_POINTS.map(p => {
+    const t0 = performance.now();
+    const v1 = calcMagneticELF_v1(p.lat, p.lon, cf).B_total_nT;
+    const tV1 = performance.now() - t0;
+    const t1 = performance.now();
+    const v2 = calcMagneticELF_v2(p.lat, p.lon, cf).B_total_nT;
+    const tV2 = performance.now() - t1;
+    return {
+      cat: p.cat,
+      nom: p.name,
+      v1_nT: v1,
+      v2_nT: v2,
+      ratio: v1 > 0 ? (v2 / v1).toFixed(2) : (v2 > 0 ? '∞' : 'N/A'),
+      ms_v2: tV2.toFixed(1)
+    };
+  });
+  console.table(rows);
+  return rows;
 }
 
 // ============================================================
@@ -2832,7 +3090,9 @@ function calcAll_v2(lat, lon, options) {
 
   // Domaine M
   const staticResult = calcMagneticStatic(lat, lon);
-  const elfResult    = calcMagneticELF(lat, lon);
+  const elfResult    = (typeof USE_ELF_V2 !== 'undefined' && USE_ELF_V2)
+    ? calcMagneticELF_v2(lat, lon)
+    : calcMagneticELF_v1(lat, lon);
   // Domaine RF
   const rfResult     = calcRF(lat, lon);
   // Domaine I
@@ -4206,6 +4466,10 @@ async function loadReseau(){
     });
     setStatus('HTA: '+all.length+' lignes');
     console.log('✅ HTA:',all.length,'lignes');
+    // Construction grille Biot-Savart v2 (une fois, au premier chargement)
+    if (typeof buildSegmentGrid === 'function' && !SEGMENT_GRID) {
+      buildSegmentGrid(all);
+    }
   }catch(e){
     console.warn('HTA Supabase:',e.message,'→ fallback OSM');
     try{
