@@ -452,6 +452,35 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   .pc{min-height:64px;padding:10px 12px;}
   .pc-v{font-size:18px;}
 }
+/* Panneau Conditions actuelles — 3 sous-sections collapsibles */
+.cond-panel{display:flex;flex-direction:column;gap:3px;margin-bottom:10px;}
+.cond-section{border:1px solid var(--border);border-radius:var(--r);background:var(--tx-pierre);overflow:hidden;}
+.cond-header{display:flex;align-items:center;gap:8px;width:100%;padding:4px 10px;border:none;background:transparent;font:500 11px var(--font);color:var(--tx-mica);cursor:pointer;text-align:left;line-height:1.4;}
+.cond-header:hover{background:var(--bg2);}
+.cond-chevron{width:12px;font-size:10px;color:var(--tx3);transition:transform .15s;flex-shrink:0;}
+.cond-section[data-open="true"] .cond-chevron{transform:rotate(90deg);}
+.cond-label{font-weight:600;color:var(--tx-ardoise);flex-shrink:0;}
+.cond-summary{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--tx2);text-align:right;}
+.cond-body{padding:8px 12px 10px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px;}
+.cond-body[hidden]{display:none;}
+.cond-row{display:flex;align-items:baseline;gap:8px;font-size:11px;}
+.cond-row .cond-key{flex:0 0 auto;font-size:10px;color:var(--tx-mica);min-width:130px;text-transform:uppercase;letter-spacing:.04em;}
+.cond-row .cond-val{font-family:var(--mono);font-weight:500;color:var(--tx-ardoise);}
+.cond-row .cond-src{margin-left:auto;font-size:9px;color:var(--tx3);font-style:italic;}
+.cond-sparkline{margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);}
+.cond-sparkline svg{display:block;}
+.cond-sparkline-legend{font-size:9px;color:var(--tx-mica);margin-top:2px;display:flex;justify-content:space-between;}
+/* Modale contribution a onglets */
+.ctab-btn{background:none;border:none;padding:10px 14px;font-family:var(--font);font-size:12px;color:var(--tx3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;font-weight:500;}
+.ctab-btn:hover:not(.disabled){color:var(--tx2);}
+.ctab-btn.active{color:var(--acc);border-bottom-color:var(--acc);}
+.ctab-btn.disabled{color:var(--tx3);opacity:.5;cursor:not-allowed;}
+.ctab-content{display:block;}
+.ctab-content[hidden]{display:none;}
+@media (max-width:768px){
+  .cond-row .cond-key{min-width:90px;}
+  .cond-summary{font-size:9px;}
+}
 .mtabs{display:flex;gap:6px;margin-bottom:8px;align-items:center;}
 .mtab{font-family:var(--mono);font-size:11px;padding:5px 13px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--tx2);cursor:pointer;transition:all .15s;}
 .lbtn.on-intl{background:#fdf2f8;color:#e11d48;border-color:#f472b6;font-weight:500;}
@@ -1105,53 +1134,55 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   </div>
 </div>
 
-<!-- Modal choix niveau contribution terrain (N0 / N1 / N2) -->
-<div id="contrib-level-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(31,35,41,.55);z-index:2300;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeContribLevelModal()">
-  <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:440px;width:100%;padding:22px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:var(--font)">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <h3 style="font-family:var(--font-display);font-size:17px;font-weight:600;color:var(--tx);margin:0;letter-spacing:-0.01em">Contribution terrain</h3>
+<!-- Modal contribution a onglets (Observation / Mesure technique / Capteurs appareil) -->
+<div id="contrib-level-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(31,35,41,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:2300;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeContribLevelModal()">
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:480px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:var(--font)">
+    <header style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px 10px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <h3 style="font-family:var(--font-display);font-size:16px;font-weight:600;color:var(--tx);margin:0;letter-spacing:-0.01em">Contribuer à Tellux</h3>
       <button onclick="closeContribLevelModal()" aria-label="Fermer" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--tx3);line-height:1;padding:2px 6px">&#x2715;</button>
-    </div>
-    <p style="font-size:11px;color:var(--tx3);margin:0 0 14px;line-height:1.5">Choisissez votre niveau de contribution. Les niveaux 1 et 2 seront disponibles prochainement.</p>
+    </header>
+    <nav class="contrib-tabs" role="tablist" style="display:flex;gap:0;padding:0 22px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <button class="ctab-btn active" role="tab" aria-selected="true" data-tab="obs" onclick="switchContribTab('obs')">Observation</button>
+      <button class="ctab-btn" role="tab" aria-selected="false" data-tab="mes" onclick="switchContribTab('mes')">Mesure technique</button>
+      <button class="ctab-btn disabled" role="tab" aria-disabled="true" title="Bientôt disponible" style="cursor:not-allowed">Capteurs appareil</button>
+    </nav>
 
-    <!-- Niveau 0 — actif -->
-    <div class="clm-row" style="display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);margin-bottom:8px">
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--acc)"></span>
-          <span style="font-weight:600;font-size:13px;color:var(--tx)">Saisie manuelle</span>
-        </div>
-        <div style="font-size:11px;color:var(--tx2);line-height:1.45">Pointer sur la carte, saisir les valeurs manuellement. Aucune permission requise.</div>
+    <!-- Onglet 1 : Observation simple -->
+    <div class="ctab-content" id="ctab-obs" style="padding:18px 22px;overflow-y:auto">
+      <p style="font-size:12px;color:var(--tx2);margin:0 0 12px;line-height:1.5">Partagez une observation libre associée à un point sur la carte. Votre observation sera vérifiée avant publication.</p>
+      <div id="obs-position-info" style="font-size:11px;color:var(--tx3);margin-bottom:10px;font-family:var(--mono);padding:8px 10px;background:var(--bg2);border-radius:var(--r);border:1px dashed var(--border)">Cliquez d'abord sur la carte pour placer le point, puis rouvrez ce formulaire. Ou saisissez manuellement ci-dessous.</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <input type="number" step="0.00001" id="obs-lat" placeholder="Latitude (ex: 42.308)" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--mono);font-size:12px">
+        <input type="number" step="0.00001" id="obs-lon" placeholder="Longitude (ex: 9.150)" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--mono);font-size:12px">
       </div>
-      <button id="clm-choose-n0" onclick="chooseContribLevelN0()" style="flex-shrink:0;padding:7px 14px;border:none;border-radius:var(--r);background:var(--warn);color:#fff;font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">Choisir</button>
-    </div>
-
-    <!-- Niveau 1 — désactivé -->
-    <div class="clm-row" style="display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);margin-bottom:8px;opacity:.6">
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--tx3)"></span>
-          <span style="font-weight:600;font-size:13px;color:var(--tx2)">GPS + boussole</span>
-        </div>
-        <div style="font-size:11px;color:var(--tx3);line-height:1.45">G&#xe9;olocalisation pr&#xe9;cise + orientation magn&#xe9;tique locale via capteurs du t&#xe9;l&#xe9;phone.</div>
+      <label for="obs-note" style="display:block;font-size:11px;color:var(--tx2);margin-bottom:4px">Que souhaitez-vous partager ?</label>
+      <textarea id="obs-note" rows="4" maxlength="300" placeholder="Ressenti, observation visuelle, contexte particulier… (300 caractères max)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--font);font-size:12px;resize:vertical;box-sizing:border-box"></textarea>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
+        <button onclick="closeContribLevelModal()" style="padding:8px 16px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--tx2);font-family:var(--font);font-size:12px;cursor:pointer">Annuler</button>
+        <button onclick="saveObservation()" id="btn-obs-send" style="padding:8px 18px;border:none;border-radius:var(--r);background:var(--acc);color:#fff;font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer">Envoyer</button>
       </div>
-      <button disabled style="flex-shrink:0;padding:7px 14px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--tx3);font-family:var(--font);font-size:11px;cursor:not-allowed;white-space:nowrap">Bientôt</button>
     </div>
 
-    <!-- Niveau 2 — désactivé -->
-    <div class="clm-row" style="display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);margin-bottom:14px;opacity:.6">
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--tx3)"></span>
-          <span style="font-weight:600;font-size:13px;color:var(--tx2)">Séquence capteurs</span>
-        </div>
-        <div style="font-size:11px;color:var(--tx3);line-height:1.45">Enregistrement 10 secondes, variation magn&#xe9;tique relative (non calibr&#xe9;).</div>
+    <!-- Onglet 2 : Mesure technique (delegue au flux #cform existant) -->
+    <div class="ctab-content" id="ctab-mes" hidden style="padding:18px 22px;overflow-y:auto">
+      <p style="font-size:12px;color:var(--tx2);margin:0 0 12px;line-height:1.5">Formulaire complet pour les utilisateurs équipés : magnétomètre smartphone (Phyphox), capteur externe (TriField, Cornet), RTL-SDR ou mesure ANFR certifiée.</p>
+      <ul style="font-size:11px;color:var(--tx3);margin:0 0 14px 18px;padding:0;line-height:1.6">
+        <li>Pointage carte obligatoire (Corse uniquement)</li>
+        <li>Saisie instrument, valeur et unité</li>
+        <li>Import CSV Phyphox / Physics Toolbox</li>
+        <li>Contexte intérieur optionnel (étage, matériaux murs, appareils actifs)</li>
+      </ul>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button onclick="closeContribLevelModal()" style="padding:8px 16px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--tx2);font-family:var(--font);font-size:12px;cursor:pointer">Annuler</button>
+        <button onclick="chooseContribLevelN0()" style="padding:8px 18px;border:none;border-radius:var(--r);background:var(--warn);color:#fff;font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer">Ouvrir le formulaire</button>
       </div>
-      <button disabled style="flex-shrink:0;padding:7px 14px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--tx3);font-family:var(--font);font-size:11px;cursor:not-allowed;white-space:nowrap">Bientôt</button>
     </div>
 
-    <div style="display:flex;justify-content:flex-end;gap:8px">
-      <button onclick="closeContribLevelModal()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--tx2);font-family:var(--font);font-size:12px;cursor:pointer">Annuler</button>
+    <!-- Onglet 3 : Capteurs appareil (reserve, place holder) -->
+    <div class="ctab-content" id="ctab-cap" hidden style="padding:18px 22px;text-align:center;color:var(--tx3);font-size:12px;line-height:1.6;overflow-y:auto">
+      <div style="font-size:28px;margin-bottom:8px;opacity:.4">📱</div>
+      <p style="margin:0 0 6px;color:var(--tx2);font-weight:500">Bientôt disponible</p>
+      <p style="margin:0">Lecture directe des capteurs du téléphone (magnétomètre, accéléromètre, signal réseau) avec enregistrement 10 secondes. Les niveaux GPS+boussole et séquence capteurs seront accessibles depuis cet onglet dans une prochaine version.</p>
     </div>
   </div>
 </div>
@@ -1221,7 +1252,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 
 <p style="margin:10px 0 8px 0;"><strong>Roadmap (Q3 2026+) :</strong></p>
 <ul style="margin:6px 0 6px 16px;padding:0">
-  <li style="margin-bottom:2px">20 mesures magnétomètre terrain Corse = validation prédictions</li>
+  <li style="margin-bottom:2px">20 mesures magnétomètre terrain Corse = validation du champ composite estimé</li>
   <li style="margin-bottom:2px">Courants HTA dynamiques = profils journaliers EDF SEI (si accord)</li>
 </ul>
 
@@ -1244,34 +1275,47 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <span>📡 29 mesures ANFR</span>
 </div>
 
-<div class="pbar">
-  <div class="pc" title="Indice Kp : perturbation magnétique globale. Kp>5 = tempête géomagnétique — perturbe les mesures nT terrain">
-    <div class="pc-l">Kp — activité solaire</div>
-    <div class="pc-v" id="kp-v">—</div>
-    <div class="pc-s" id="kp-s">NOAA SWPC</div>
+<!-- Panneau Conditions actuelles — 3 sous-sections repliees par defaut, resume une ligne. -->
+<div class="cond-panel" id="conditions-panel">
+
+  <div class="cond-section" data-open="false" id="cond-sec-solaire">
+    <button class="cond-header" type="button" onclick="toggleCondSection('solaire')" aria-expanded="false" aria-controls="cond-body-solaire">
+      <span class="cond-chevron">▸</span>
+      <span class="cond-label">Activité solaire</span>
+      <span class="cond-summary" id="cond-summary-solaire">vérification…</span>
+    </button>
+    <div class="cond-body" id="cond-body-solaire" hidden>
+      <div class="cond-row"><span class="cond-key">Kp</span><span class="cond-val" id="kp-v">—</span><span class="cond-src" id="kp-s">NOAA SWPC</span></div>
+      <div class="cond-row"><span class="cond-key">Bz (vent solaire)</span><span class="cond-val" id="sw-bz">—</span><span class="cond-src" id="bz-s">NOAA DSCOVR</span></div>
+      <div class="cond-row"><span class="cond-key">Densité vent solaire</span><span class="cond-val" id="sw-d">—</span><span class="cond-src" id="sw-ds">NOAA</span></div>
+      <div class="cond-row"><span class="cond-key">Flux proton</span><span class="cond-val" id="sw-p">—</span><span class="cond-src" id="p-s">NOAA GOES</span></div>
+    </div>
   </div>
-  <div class="pc" title="Bz : composante nord-sud du vent solaire. Bz négatif = bouclier magnétique ouvert, perturbations 30-60min plus tard">
-    <div class="pc-l">Bz — vent solaire</div>
-    <div class="pc-v" id="sw-bz">—</div>
-    <div class="pc-s" id="bz-s">NOAA DSCOVR</div>
+
+  <div class="cond-section" data-open="false" id="cond-sec-atmo">
+    <button class="cond-header" type="button" onclick="toggleCondSection('atmo')" aria-expanded="false" aria-controls="cond-body-atmo">
+      <span class="cond-chevron">▸</span>
+      <span class="cond-label">Conditions atmosphériques</span>
+      <span class="cond-summary" id="cond-summary-atmo">—</span>
+    </button>
+    <div class="cond-body" id="cond-body-atmo" hidden>
+      <div class="cond-row"><span class="cond-key">Réfractivité N</span><span class="cond-val" id="meteo-n">—</span><span class="cond-src" id="meteo-s">Open-Meteo</span></div>
+      <div class="cond-row" id="lightning-pc"><span class="cond-key">Activité orageuse</span><span class="cond-val" id="lightning-v">—</span><span class="cond-src" id="lightning-s">Blitzortung</span></div>
+    </div>
   </div>
-  <div class="pc" title="Charge du réseau électrique corse. Plus la charge est élevée, plus le champ ELF (50Hz) des lignes HT est intense.">
-    <div class="pc-l">Réseau élec. Corse</div>
-    <div class="pc-v" id="res-charge">—</div>
-    <div class="pc-s" id="res-charge-s">ELF pondéré</div>
+
+  <div class="cond-section" data-open="false" id="cond-sec-reseau">
+    <button class="cond-header" type="button" onclick="toggleCondSection('reseau')" aria-expanded="false" aria-controls="cond-body-reseau">
+      <span class="cond-chevron">▸</span>
+      <span class="cond-label">Réseau électrique</span>
+      <span class="cond-summary" id="cond-summary-reseau">—</span>
+    </button>
+    <div class="cond-body" id="cond-body-reseau" hidden>
+      <div class="cond-row"><span class="cond-key">Charge Corse</span><span class="cond-val" id="res-charge">—</span><span class="cond-src" id="res-charge-s">RTE eco2mix</span></div>
+      <div class="cond-sparkline" id="cond-sparkline-reseau" aria-label="Profil horaire de la charge electrique corse sur 24 h"></div>
+    </div>
   </div>
-  <div class="pc" title="Activité orageuse dans les 200km. Les éclairs génèrent des sferics (1-100kHz) qui perturbent les magnétomètres." id="lightning-pc">
-    <div class="pc-l">Activité orageuse</div>
-    <div class="pc-v" id="lightning-v">—</div>
-    <div class="pc-s" id="lightning-s">Blitzortung</div>
-  </div>
-  <!-- IDs cachés gardés pour la logique JS existante -->
-  <span id="sw-d" style="display:none"></span>
-  <span id="sw-ds" style="display:none"></span>
-  <span id="sw-p" style="display:none"></span>
-  <span id="p-s" style="display:none"></span>
-  <span id="meteo-n" style="display:none"></span>
-  <span id="meteo-s" style="display:none"></span>
+
 </div>
 
 <div id="lightning-warn" style="display:none;background:#fff3e6;border:1px solid #f5a855;border-radius:var(--r);padding:6px 12px;font-size:11px;color:#854d0e;margin-bottom:8px"></div>
@@ -1285,46 +1329,47 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
        Sources thermales conservées ici (lien EM : failles actives / géothermie)
        et regroupées dans Sous-sol & Géologie. -->
 
-  <!-- 1. SOUS-SOL & GÉOLOGIE (inclut Sources thermales — failles / géothermie) -->
+  <!-- GROUPE 1 — MODÈLE EM (déplié par défaut) -->
+  <div class="accordion-cat">
+    <div class="accordion-cat-header open" onclick="toggleAccordion(this)">
+      <span class="accordion-cat-icon open">▶</span>
+      <span>Modèle EM</span>
+    </div>
+    <div class="accordion-cat-content open">
+      <button class="lbtn on-hot" id="b-hot" title="Champ composite estimé par le modèle Tellux (agrégation de 4 domaines physiques)" onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ composite</button>
+      <button class="lbtn on-con" id="b-con" title="Mesures terrain soumises par les contributeurs et validées" onclick="tog('con','on-con',this)"><span class="dot" style="background:#5c3a9b"></span>Mesures terrain</button>
+      <button class="lbtn" id="b-intl" title="Points de calibration internationaux — sites de référence pour valider le modèle" onclick="tog('intl','on-intl',this)"><span class="dot" style="background:#e11d48"></span>Mondial (calibration)</button>
+    </div>
+  </div>
+
+  <!-- GROUPE 2 — SOURCES ANTHROPIQUES (plié par défaut) -->
   <div class="accordion-cat">
     <div class="accordion-cat-header" onclick="toggleAccordion(this)">
       <span class="accordion-cat-icon">▶</span>
-      <span>⛰️ Sous-sol & Géologie</span>
+      <span>Sources anthropiques</span>
+    </div>
+    <div class="accordion-cat-content">
+      <button class="lbtn" id="b-ant" title="Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF (onshore et offshore)" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR + TDF</button>
+      <button class="lbtn" id="b-res" title="Lignes et postes électriques haute tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HT</button>
+      <button class="lbtn" id="b-bt" title="Réseau basse tension BT — EDF SEI · zoom ≥ 12" onclick="tog('bt','on-bt',this)"><span class="ln" style="background:#d97706"></span>Réseau BT</button>
+      <button class="lbtn" id="b-prod" title="Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions" onclick="tog('prod','on-prod',this)"><span class="sq" style="background:#1a5c8c"></span>Sites de production</button>
+    </div>
+  </div>
+
+  <!-- GROUPE 3 — CONTEXTE NATUREL (plié par défaut) -->
+  <div class="accordion-cat">
+    <div class="accordion-cat-header" onclick="toggleAccordion(this)">
+      <span class="accordion-cat-icon">▶</span>
+      <span>Contexte naturel</span>
     </div>
     <div class="accordion-cat-content">
       <button class="lbtn" id="b-geo" title="Carte géologique BRGM — granite, schiste, calcaire" onclick="tog('geo','on-geo',this)"><span class="sq" style="background:#1a6b5c"></span>Géologie BRGM</button>
-      <button class="lbtn" id="b-hyd" title="Nappes et cours d'eau souterrains (BRGM)" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Nappes</button>
-      <button class="lbtn" id="b-cav" title="Cavités souterraines — grottes, mines, karst" onclick="tog('cav','on-cav',this)"><span class="sq" style="background:#5c3a9b"></span>Cavités</button>
+      <button class="lbtn" id="b-hyd" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE)" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie</button>
+      <button class="lbtn" id="b-cav" title="Cavités souterraines — grottes, mines, karst (BRGM)" onclick="tog('cav','on-cav',this)"><span class="sq" style="background:#5c3a9b"></span>Cavités</button>
       <button class="lbtn" id="b-therm" title="Sources thermales et géothermiques — failles actives · H88" onclick="tog('therm','on-therm',this)"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Sources thermales</button>
       <button class="lbtn" id="b-emag" title="Anomalie magnétique crustale NOAA EMAG2v3 — fond géologique régional" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Crustale (EMAG2)</button>
-      <button class="lbtn" id="b-wdmam" title="World Digital Magnetic Anomaly Map — résolution 5km, couverture mondiale (IAGA/CGMW)" onclick="togWDMAM(this)"><span class="sq" style="background:#7c3aed"></span>WDMAM mondial</button>
-    </div>
-  </div>
-
-  <!-- 3. ANOMALIES DU MODÈLE -->
-  <div class="accordion-cat">
-    <div class="accordion-cat-header" onclick="toggleAccordion(this)">
-      <span class="accordion-cat-icon">▶</span>
-      <span>📊 Anomalies du modèle</span>
-    </div>
-    <div class="accordion-cat-content">
-      <button class="lbtn on-hot" id="b-hot" title="Zones de forte perturbation EM prédite par le modèle" onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Hotspots (prédictions)</button>
-      <button class="lbtn" id="b-intl" title="Points de calibration internationaux — sites de référence pour valider le modèle" onclick="tog('intl','on-intl',this)"><span class="dot" style="background:#e11d48"></span>Mondial (calibration)</button>
-      <button class="lbtn on-con" id="b-con" title="Mesures terrain soumises par les contributeurs" onclick="tog('con','on-con',this)"><span class="dot" style="background:#5c3a9b"></span>Mesures terrain</button>
-    </div>
-  </div>
-
-  <!-- 4. ÉNERGIES HUMAINES -->
-  <div class="accordion-cat">
-    <div class="accordion-cat-header" onclick="toggleAccordion(this)">
-      <span class="accordion-cat-icon">▶</span>
-      <span>🔌 Énergies humaines</span>
-    </div>
-    <div class="accordion-cat-content">
-      <button class="lbtn" id="b-res" title="Lignes et postes électriques haute tension (50Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Électrique (HT)</button>
-      <button class="lbtn" id="b-prod" title="Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions" onclick="tog('prod','on-prod',this)"><span class="sq" style="background:#1a5c8c"></span>Sources production</button>
-      <button class="lbtn" id="b-bt" title="Réseau basse tension BT — EDF SEI · zoom ≥ 12" onclick="tog('bt','on-bt',this)"><span class="ln" style="background:#d97706"></span>Électrique (BT)</button>
-      <button class="lbtn" id="b-ant" title="Antennes 2G/3G/4G/5G recensées par l'ANFR" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR</button>
+      <button class="lbtn" id="b-wdmam" title="World Digital Magnetic Anomaly Map — résolution 5 km, couverture mondiale (IAGA/CGMW)" onclick="togWDMAM(this)"><span class="sq" style="background:#7c3aed"></span>WDMAM mondial</button>
+      <!-- TODO: Failles tectoniques (dataset data/failles_corse.json), Communes radon niveau 3 overlay (GeoJSON geometries a fournir), MNT altitude overlay -->
     </div>
   </div>
 
@@ -1344,6 +1389,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <!-- Sous-panneau Expertise (visible quand mode actif) -->
   <div id="expert-panel">
     <div style="font-family:var(--mono);font-size:10px;color:#C28533;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">&#9881; Indice composite</div>
+    <div style="background:var(--tx-pierre);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:14px;font-family:var(--font);font-size:12px;color:var(--tx-ardoise);line-height:1.5">
+      Le mode Expertise permet d'ajuster la pondération des 4 domaines physiques et d'exporter les valeurs détaillées par point. Il est destiné aux utilisateurs qui souhaitent reproduire ou auditer le calcul composite. Les pondérations par défaut sont gelées dans la documentation du projet.
+    </div>
     <div style="margin-bottom:10px">
       <div id="expert-index-val">&#x2014;</div>
       <div style="font-size:10px;color:var(--tx3);margin-top:2px">sur le dernier point analys&#233; &#9670;</div>
@@ -1407,10 +1455,10 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 </div>
   <div class="mstates">
     <div id="ms-n"><div class="ms"><div class="ms-l">N naturel IGRF+LCS1</div><div class="ms-v" id="m-n" style="color:var(--acc)">—</div></div></div>
-    <div id="ms-nh" style="display:none"><div class="ms"><div class="ms-l">N+H prédit total</div><div class="ms-v" id="m-nh" style="color:var(--warn)">—</div></div></div>
+    <div id="ms-nh" style="display:none"><div class="ms"><div class="ms-l">N+H composite total</div><div class="ms-v" id="m-nh" style="color:var(--warn)">—</div></div></div>
     <div id="ms-d" style="display:none">
       <div class="ms"><div class="ms-l">Δ anomalie terrain</div><div class="ms-v" id="m-delta" style="font-size:15px;font-weight:600;color:var(--acc)">cliquez sur la carte</div></div>
-      <div style="font-size:11px;color:var(--tx3);padding:4px 8px;background:var(--bg2);border-radius:var(--r);margin-top:4px">Δ = mesure terrain nT − prédiction. Nécessite des contributions magnétomètre dans 500m.</div>
+      <div style="font-size:11px;color:var(--tx3);padding:4px 8px;background:var(--bg2);border-radius:var(--r);margin-top:4px">Δ = mesure terrain nT − estimation composite. Nécessite des contributions magnétomètre dans 500 m.</div>
     </div>
     <div id="ms-r" style="display:none">
       <div class="ms"><div class="ms-l">R — mesure réelle terrain</div><div class="ms-v" id="m-r" style="color:var(--info)">—</div></div>
@@ -1579,7 +1627,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <label class="geo-check"><input type="checkbox" id="gc1"> <span>1. App magnétomètre ouverte (Physics Toolbox / Sensor Kinetics)</span></label>
     <label class="geo-check"><input type="checkbox" id="gc2"> <span>2. Point Tellux cliqué — valeur IGRF et Indice notés</span></label>
     <label class="geo-check"><input type="checkbox" id="gc3"> <span>3. Téléphone à 1.5m du sol, bras tendu, loin de tout métal</span></label>
-    <label class="geo-check"><input type="checkbox" id="gc4"> <span>4. Valeur nT lue et comparée à la prédiction IGRF</span></label>
+    <label class="geo-check"><input type="checkbox" id="gc4"> <span>4. Valeur nT lue et comparée à l'estimation IGRF</span></label>
     <label class="geo-check"><input type="checkbox" id="gc5"> <span>5. Mesure enregistrée via +Mesure (Δ calculé auto)</span></label>
     <label class="geo-check"><input type="checkbox" id="gc6"> <span>6. Bonus : grille 2m×2m pour cartographier gradient local</span></label>
   </div>
@@ -1606,7 +1654,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 
   <!-- Systèmes prédictifs internationaux -->
   <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
-    <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Systèmes de prédiction RF — comparaison internationale</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Systèmes d'estimation RF — comparaison internationale</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="intl-systems-grid"></div>
   </div>
 </div>
@@ -1691,13 +1739,13 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   ○ 0-1 Neutre · 🪨 2-3 Actif · ⚡ 4-5 Très actif<br>
   <b>Le site idéal</b> (type mégalithique ancien) : Perturbation basse + Activité naturelle haute = calme en surface, actif en profondeur.<br>
   <span style="color:var(--tx3)">Pourquoi séparer ? Un site peut avoir C+50 nT (granit à forte susceptibilité magnétique = contexte géologique intéressant) et H+1 nT ELF (composante anthropique faible). L'ancien score unique mélangeait les deux grandeurs, ce qui n'était pas physiquement pertinent.</span></div></div>
-  <div class="gterm"><div class="gterm-name">Champ N+H — naturel + humain</div><div class="gterm-def">Le champ naturel auquel on ajoute l'influence des installations humaines proches : antennes mobiles, lignes à haute tension, transformateurs. Plus tu es proche d'une ville ou d'une antenne, plus ce chiffre est élevé.</div></div>
-  <div class="gterm"><div class="gterm-name">Δ Delta — anomalie</div><div class="gterm-def">La différence entre ce que le modèle prédit et ce qu'on mesure réellement sur le terrain. Delta proche de zéro = tout est cohérent. Delta grand = quelque chose d'inexpliqué est présent. C'est là que la recherche devient intéressante.</div></div>
+  <div class="gterm"><div class="gterm-name">Champ N+H — naturel + humain</div><div class="gterm-def">Le champ naturel auquel on ajoute l'influence des installations humaines proches : antennes mobiles, lignes à haute tension, transformateurs. Plus vous êtes proche d'une ville ou d'une antenne, plus ce chiffre est élevé.</div></div>
+  <div class="gterm"><div class="gterm-name">Δ Delta — anomalie</div><div class="gterm-def">La différence entre ce que le modèle estime et ce qu'on mesure réellement sur le terrain. Delta proche de zéro = tout est cohérent. Delta grand = quelque chose d'inexpliqué est présent. C'est là que la recherche devient intéressante.</div></div>
   <div class="gterm"><div class="gterm-name">nT — nanoTesla</div><div class="gterm-def">L'unité de mesure du champ magnétique. Le champ terrestre naturel est entre 25 000 et 65 000 nT selon les régions. En Corse : 46 150–47 200 nT (IGRF-14 2025). Rôle prouvé dans la navigation des animaux migrateurs (Wiltschko & Wiltschko 2005). Les perturbations que Tellux mesure sont faibles en valeur absolue. Leur effet éventuel sur les organismes vivants est un sujet de recherche actif, sans consensus établi à ce jour.</div></div>
   <div class="gterm"><div class="gterm-name">Zones colorées — heatmap ELF</div><div class="gterm-def">Les zones où le modèle indique une composante ELF 50 Hz anthropique plus élevée (gradient Ocre). Ce n'est pas une carte de danger — c'est une carte de composition du paysage physique : les endroits où une mesure terrain aurait le plus de valeur pour valider le modèle.</div></div>
   <div class="gterm"><div class="gterm-name">Indice Kp</div><div class="gterm-def">Un chiffre de 0 à 9 qui mesure l'agitation du champ magnétique terrestre causée par le Soleil. 0-1 = calme. 2-3 = normal. 4-5 = actif. 6+ = tempête géomagnétique. Un Kp élevé peut perturber les mesures instrumentales. Son effet direct sur les organismes est une hypothèse explorée dans certaines recherches, non validée par consensus.</div></div>
   <div class="gterm"><div class="gterm-name">📱 Comment mesurer avec mon téléphone ?</div><div class="gterm-def">Tous les smartphones ont un magnétomètre intégré (la boussole). Applications gratuites : <b>Physics Toolbox Suite</b> (Android) ou <b>Sensor Kinetics</b> (iOS). Tenez le téléphone à bout de bras, loin de votre corps et de tout objet métallique. La valeur normale en Corse est environ 46 000–47 500 nT (IGRF-14 + anomalie lithosphérique). Un écart de plus de 1 000 nT par rapport à la valeur IGRF du point indique une anomalie potentielle.</div></div>
-  <div class="gterm"><div class="gterm-name">🎨 Que signifient les couleurs ?</div><div class="gterm-def">Les <b>losanges</b> = mesures officielles ANFR en V/m (champ radio). Vert = faible, orange = modéré, rouge = élevé, bordeaux + contour or = dépassement légal. Les <b>zones colorées sur la carte</b> (heatmap) = prédiction du modèle Tellux, pas des mesures réelles — elles indiquent où mesurer en priorité.</div></div>
+  <div class="gterm"><div class="gterm-name">🎨 Que signifient les couleurs ?</div><div class="gterm-def">Les <b>losanges</b> = mesures officielles ANFR en V/m (champ radio). Vert = faible, orange = modéré, rouge = élevé, bordeaux + contour or = dépassement légal. Les <b>zones colorées sur la carte</b> (heatmap) = estimation composite du modèle Tellux, pas des mesures réelles — elles indiquent où mesurer en priorité.</div></div>
   <div class="gterm"><div class="gterm-name">Bz — composante nord-sud du vent solaire</div><div class="gterm-def">Quand Bz est positif (nord) : le bouclier magnétique de la Terre est renforcé. Quand Bz est négatif (sud) : il s'accroche à la magnétosphère et peut la perturber. Un Bz très négatif précède souvent les aurores boréales.</div></div>
     <!-- Glossaire « Hypothèses testables par Tellux » (H1–H40, corpus complet H1–H88)
          migré vers patrimoine.html (dormant-box « Hypothèses / Migration »).
@@ -1705,9 +1753,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <div class="gterm"><div class="gterm-name">🔬 Hypothèses testables par Tellux</div><div class="gterm-def">Le corpus d'hypothèses (H1–H88 : piézoélectricité, courants telluriques, métrologie, alignements, résonance, RF, continuité mégalithe→église, etc.) est désormais maintenu dans <a href="patrimoine.html" style="color:var(--acc);text-decoration:underline">patrimoine.html</a> (section « Hypothèses / Migration »). <span style="color:var(--acc)">Chaque mesure terrain contribue à valider ou invalider ces hypothèses. Pas de conclusion sans données.</span></div></div>
       <div class="gterm"><div class="gterm-name">🧭 Mode Prospecteur terrain — protocole 5 min</div><div class="gterm-def">Protocole simplifié inspiré d'Olifirenko (2015), adapté pour smartphone :<br>
   <b>1. Ouvrez</b> votre app magnétomètre (Physics Toolbox ou Sensor Kinetics)<br>
-  <b>2. Cliquez</b> sur le point Tellux — notez l'Indice Tellux prédit et la valeur IGRF<br>
+  <b>2. Cliquez</b> sur le point Tellux — notez l'Indice Tellux estimé et la valeur IGRF<br>
   <b>3. Mesurez</b> à 1.5m du sol, bras tendu, loin de tout métal — notez la valeur nT<br>
-  <b>4. Comparez</b> : si écart > 500 nT avec la prédiction → anomalie locale significative<br>
+  <b>4. Comparez</b> : si écart > 500 nT avec l'estimation composite → anomalie locale significative<br>
   <b>5. Enregistrez</b> via le bouton +Mesure — Tellux calcule automatiquement le Δ<br>
   <span style="color:var(--tx3)">Bonus : répétez sur une grille 2m × 2m pour cartographier un gradient local (veine d'eau = augmentation progressive, faille = chute brutale).</span></div></div>
     </div>
@@ -1788,6 +1836,61 @@ async function fetchEnv(url,timeout=8000){
     try{sessionStorage.setItem(key,JSON.stringify({t:Date.now(),v:data}));}catch(e){}
     return data;
   }catch(e){clearTimeout(timer);return null;}
+}
+
+// ═══ Reverse geocoding commune (api-adresse.data.gouv.fr, sans cle) ═══
+// Resout un point lat/lon vers {code_insee, nom} pour detecter les communes
+// classees radon niveau 3 (decret 2018-434). Cache client par cle 4 decimales.
+const COMMUNE_CACHE = {};
+async function reverseGeocodeCommune(lat, lon) {
+  const key = lat.toFixed(4) + ',' + lon.toFixed(4);
+  if (Object.prototype.hasOwnProperty.call(COMMUNE_CACHE, key)) return COMMUNE_CACHE[key];
+  try {
+    const url = 'https://api-adresse.data.gouv.fr/reverse/?lon=' + lon.toFixed(5) + '&lat=' + lat.toFixed(5);
+    const r = await fetch(url, {signal: AbortSignal.timeout(5000)});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const feat = d && d.features && d.features[0];
+    if (feat && feat.properties) {
+      const info = {
+        code_insee: feat.properties.citycode || null,
+        nom: feat.properties.city || null
+      };
+      COMMUNE_CACHE[key] = info;
+      return info;
+    }
+  } catch (e) {
+    console.warn('[Tellux] Reverse geocode echec : ' + e.message);
+  }
+  COMMUNE_CACHE[key] = null;
+  return null;
+}
+
+// ═══ Altitude IGN RGE Alti (Geoplateforme, sans cle) ═══
+// API publique d'altimetrie IGN : resolution ~1 m. Cache client par cle
+// lat/lon arrondie a 4 decimales (~10 m au sol en Corse). Cache negatif
+// en cas d'echec pour eviter les retries en boucle.
+const ALTITUDE_CACHE = {};
+async function fetchAltitudeIGN(lat, lon) {
+  const key = lat.toFixed(4) + ',' + lon.toFixed(4);
+  if (Object.prototype.hasOwnProperty.call(ALTITUDE_CACHE, key)) return ALTITUDE_CACHE[key];
+  try {
+    const url = 'https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json'
+      + '?lon=' + lon.toFixed(5) + '&lat=' + lat.toFixed(5)
+      + '&resource=ign_rge_alti_wld';
+    const r = await fetch(url, {signal: AbortSignal.timeout(5000)});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const z = d && d.elevations && d.elevations[0] && d.elevations[0].z;
+    if (typeof z === 'number' && isFinite(z)) {
+      ALTITUDE_CACHE[key] = Math.round(z);
+      return ALTITUDE_CACHE[key];
+    }
+  } catch (e) {
+    console.warn('[Tellux] Altitude IGN echec : ' + e.message);
+  }
+  ALTITUDE_CACHE[key] = null;
+  return null;
 }
 
 const map=L.map('map',{maxZoom:20}).setView([42.0,9.0],8);
@@ -2373,6 +2476,30 @@ function calcMagneticELF(lat, lon, chargeFactor) {
 // NOTE : les facteurs de calibration RF_CALIB_EXT sont GELÉS
 //        (cf. AUDIT_TELLUX_NIVEAU2_MODELE_COMPOSITE_V2.1.md §4.2).
 // ============================================================
+// ═══ Emetteurs broadcast TDF Corse (TDF + Arcom + Cartoradio ANFR) ═══
+// Dataset : public/data/tdf_emitters_corse.json — 10 sites documentes
+// avec PAR estimee (sommes multiplex TNT R1-R7 verifiees via TVNT.net).
+// Chargement idempotent : un seul fetch meme si plusieurs appelants.
+let TDF_EMITTERS = [];
+let _tdfLoadPromise = null;
+function loadTDFEmitters() {
+  if (_tdfLoadPromise) return _tdfLoadPromise;
+  _tdfLoadPromise = (async () => {
+    try {
+      const r = await fetch('public/data/tdf_emitters_corse.json', {signal: AbortSignal.timeout(5000)});
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      TDF_EMITTERS = d.emitters || [];
+      const withPAR = TDF_EMITTERS.filter(e => e.par_kw_estimee && e.par_kw_estimee > 0).length;
+      console.log('[Tellux] TDF emetteurs charges : ' + TDF_EMITTERS.length + ' (dont ' + withPAR + ' avec PAR connue)');
+    } catch (e) {
+      console.warn('[Tellux] TDF emetteurs indisponibles : ' + e.message);
+    }
+    return TDF_EMITTERS;
+  })();
+  return _tdfLoadPromise;
+}
+
 function calcRF(lat, lon) {
   let S_total = 0;
   const contributions = [];
@@ -2388,6 +2515,34 @@ function calcRF(lat, lon) {
       contributions.push({ source_type: 'FH', S_uW_m2: Math.round(contrib * 10) / 10, distance_m: Math.round(d * 1000), path_name: name || 'FH' });
     }
   });
+
+  // === EMETTEURS TDF BROADCAST ===
+  // Modele isotrope equivalent loin-champ : S = PAR / (4 pi d^2), borne
+  // inferieure 50 m (proche-champ non applicable). Plafond 50 000 uW/m^2
+  // par emetteur pour eviter les valeurs non physiques a tres courte
+  // distance. Emetteurs sans PAR connue (par_kw_estimee null) ignores.
+  // Source : public/data/tdf_emitters_corse.json
+  // Limite : directivite reelle non modelisee, valeurs = ordres de grandeur.
+  if (TDF_EMITTERS && TDF_EMITTERS.length) {
+    TDF_EMITTERS.forEach(em => {
+      if (!em.par_kw_estimee || em.par_kw_estimee <= 0) return;
+      const d = dist(lat, lon, em.lat, em.lon);
+      const d_m = Math.max(50, d * 1000);
+      const PAR_W = em.par_kw_estimee * 1000;
+      const S_uW_m2 = (PAR_W / (4 * Math.PI * d_m * d_m)) * 1e6;
+      const S_capped = Math.min(S_uW_m2, 50000);
+      if (S_capped > 0.1) {
+        S_total += S_capped;
+        contributions.push({
+          source_type: 'broadcast_TDF',
+          S_uW_m2: Math.round(S_capped * 10) / 10,
+          distance_m: Math.round(d_m),
+          path_name: em.nom,
+          par_kw: em.par_kw_estimee
+        });
+      }
+    });
+  }
 
   // Fond de bruit départemental (densité sites CartoRadio)
   const dept = lat < 42.0 ? '2A' : '2B';
@@ -2407,7 +2562,7 @@ function calcRF(lat, lon) {
     forest_attenuation_dB: 0, // TODO phase 1 : polygones forestiers Vizzavona, Valdu-Niellu…
     terrain_correction_dB: 0,
     note_ICNIRP: 'Rappel documentaire : limite ICNIRP grand public en bande GSM est de l\'ordre de 4,5 W/m² soit 4 500 000 µW/m².',
-    source: 'FH_POINTS CartoRadio + fond départemental ANFR',
+    source: 'FH_POINTS CartoRadio + emetteurs TDF broadcast + fond départemental ANFR',
     confidence: 'medium',
     calibrated: false // GELÉ — RF_CALIB_EXT en attente relecture tiers
   };
@@ -2514,7 +2669,7 @@ function calcAll_v2(lat, lon, options) {
   // Domaine I
   const altitudeFallback = options.altitude_m || null; // intégration DEM future
   const gammaResult  = calcGammaAmbient(lat, lon, altitudeFallback);
-  const radonResult  = calcRadonPotential(lat, lon);
+  const radonResult  = calcRadonPotential(lat, lon, {commune_info: options.commune_info || null});
   // Contexte
   const substrateResult = calcSubstrateContext(lat, lon);
   const waterRaw    = calcWater(lat, lon);
@@ -2586,8 +2741,8 @@ function calcAll_v2(lat, lon, options) {
 //
 // Tout nouveau code doit utiliser all.v2 (architecture à domaines séparés).
 // ════════════════════════════════════════════════════════════════════════════
-function calcAll(lat,lng){
-  const v2 = calcAll_v2(lat,lng);
+function calcAll(lat,lng,options){
+  const v2 = calcAll_v2(lat,lng,options);
   // Legacy fields dérivés de v2 (une seule computation)
   const human    = v2.domains.magnetic.elf.B_total_nT + calcSimDelta(lat,lng);
   const water    = v2.context.water.value;
@@ -2731,7 +2886,60 @@ function getGeoType(lat,lon){
 //           Géologie corse : granit hercynien biotite = potentiel fort documenté
 // Seuil action IRSN : 300 Bq/m³ (locaux habitables depuis décret 2018-434)
 // ════════════════════════════════════════════════════════════════════════════
-function calcRadonPotential(lat, lon) {
+
+// ═══ Communes classees radon niveau 3 (decret 2018-434, annexe IV) ═══
+// Chargement asynchrone via loadRadonCommunesL3() puis resolution par reverse
+// geocoding dans le handler de clic. Regle 2A : TOUT le departement 2A
+// (Corse-du-Sud, 124 communes) est classe zone 3 par arrete 27 juin 2018.
+let RADON_2A_APPLIES_ALL = false;
+const RADON_L3_INSEE_SET = new Set();
+const RADON_L3_NAME_SET  = new Set();
+let RADON_L3_SOURCE = 'Decret 2018-434 + Arrete 27 juin 2018';
+
+function normCommuneName(s) {
+  return String(s || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+async function loadRadonCommunesL3() {
+  try {
+    const r = await fetch('public/data/radon_communes_level3_corse.json', {signal: AbortSignal.timeout(5000)});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    RADON_2A_APPLIES_ALL = !!(d.rule_2A && d.rule_2A.applies_to_all_communes);
+    if (d.source) RADON_L3_SOURCE = d.source;
+    (d.communes || []).forEach(c => {
+      if (c.code_insee) RADON_L3_INSEE_SET.add(c.code_insee);
+      if (c.nom) RADON_L3_NAME_SET.add(normCommuneName(c.nom));
+    });
+    console.log('[Tellux] Radon communes L3 charge : '
+      + (RADON_2A_APPLIES_ALL ? 'tout 2A + ' : '')
+      + RADON_L3_INSEE_SET.size + ' INSEE explicites, '
+      + RADON_L3_NAME_SET.size + ' noms indexes');
+  } catch (e) {
+    console.warn('[Tellux] Radon communes L3 indisponible : ' + e.message);
+  }
+}
+
+// Retourne {matched_by, nom, code_insee} si la commune est classee L3, sinon null.
+function isCommuneRadonL3(commune) {
+  if (!commune) return null;
+  const insee = commune.code_insee || '';
+  if (RADON_2A_APPLIES_ALL && insee.startsWith('2A')) {
+    return {matched_by: 'rule_2A_dept_entier', nom: commune.nom || null, code_insee: insee};
+  }
+  if (insee && RADON_L3_INSEE_SET.has(insee)) {
+    return {matched_by: 'insee_explicit', nom: commune.nom || null, code_insee: insee};
+  }
+  if (commune.nom && RADON_L3_NAME_SET.has(normCommuneName(commune.nom))) {
+    return {matched_by: 'name_match', nom: commune.nom, code_insee: insee || null};
+  }
+  return null;
+}
+
+function calcRadonPotential(lat, lon, options) {
+  options = options || {};
   const lithology = getGeoType(lat, lon);
 
   // Classes IRSN 2018 + BRGM RP-50200-FR 2000 — typologies lithologiques corses
@@ -2741,7 +2949,11 @@ function calcRadonPotential(lat, lon) {
     schistes: 2, ophiolite: 2,
     calcaire: 1, alluvions: 1, inconnu: 1
   };
-  const radon_class = RADON_CLASS_BY_LITHOLOGY[lithology] || 1;
+  const lithology_class = RADON_CLASS_BY_LITHOLOGY[lithology] || 1;
+
+  // Boost commune officiellement classee (decret 2018-434)
+  const officialMatch = isCommuneRadonL3(options.commune_info);
+  const final_class = officialMatch ? Math.max(lithology_class, 3) : lithology_class;
 
   // Plages d'activité volumique estimées indoor (Bq/m³) — IRSN note technique 2018
   // Ces plages intègrent la variabilité naturelle et la perméabilité du sol.
@@ -2753,13 +2965,18 @@ function calcRadonPotential(lat, lon) {
   };
 
   return {
-    class: radon_class,
-    activity_estimate_Bq_m3: ACTIVITY_RANGES[radon_class],
+    class: final_class,
+    class_source: officialMatch ? 'official_decree_2018_434' : 'lithology_estimation',
+    official_classification: officialMatch, // {matched_by, nom, code_insee} ou null
+    activity_estimate_Bq_m3: ACTIVITY_RANGES[final_class],
     lithology,
+    lithology_class,
     is_measurement_available: false,
-    source: 'IRSN cartographie radon 2018 + BRGM RP-50200-FR 2000',
+    source: officialMatch
+      ? (RADON_L3_SOURCE + ' + IRSN cartographie radon 2018 + BRGM RP-50200-FR 2000')
+      : 'IRSN cartographie radon 2018 + BRGM RP-50200-FR 2000',
     confidence: 'high',
-    epistemic_note: 'IARC classe 1 (cancérogène pulmonaire confirmé) à partir de seuils d\'exposition chronique. La mesure individuelle indoor (dosimètre 2–3 mois) est la seule base d\'évaluation sanitaire. Ces plages sont des ordres de grandeur géologiques, pas des mesures in situ.'
+    epistemic_note: 'IARC classe 1 (cancérogène pulmonaire confirmé) à partir de seuils d\'exposition chronique. Classement officiel décret 2018-434 lorsque disponible, sinon estimation par lithologie. La mesure individuelle indoor (dosimètre 2–3 mois) est la seule base d\'évaluation sanitaire.'
   };
 }
 
@@ -3029,10 +3246,10 @@ function showInterp(lat,lng,igrf,human,water,score,delta){
   if(delta!==null&&Math.abs(delta)>200) conseil.textContent='Anomalie Δ'+delta+' nT — mesure répétée recommandée. Vérifiez Kp/Bz.';
   else if(absScore>200) conseil.textContent='Zone active. Mesurez avec magnétomètre smartphone pour objectiver.';
   else if(absScore<30) conseil.textContent='Zone calme, idéale comme référence de calibration.';
-  else conseil.textContent='Activité modérée. Une mesure terrain validerait la prédiction.';
+  else conseil.textContent='Activité modérée. Une mesure terrain validerait l\'estimation.';
 }
 
-map.on('click',e=>{
+map.on('click',async e=>{
   if(e.originalEvent&&e.originalEvent._handled)return;
   _mapClickCount++;_gameState.clicks=_mapClickCount;_saveGameState(_gameState);
   if(_mapClickCount>=10)try{_unlockBadge('10clicks');}catch(e){}
@@ -3040,7 +3257,13 @@ map.on('click',e=>{
   const calcPopup=L.popup({closeButton:true,className:'delta-popup'})
     .setLatLng(e.latlng).setContent('<span style="font-size:12px">\u23f3 calcul\u2026</span>').openOn(map);
   const igrf=fetchIGRF(lat,lng);
-  const {human,water,geo,scorePhys,score,v2}=calcAll(lat,lng);
+  // Resolution commune officielle (decret radon 2018-434) + altitude IGN RGE Alti
+  // en parallele pour minimiser la latence. Les deux sont non bloquants (fallbacks prevus).
+  const [commune_info, altitude_m] = await Promise.all([
+    reverseGeocodeCommune(lat,lng),
+    fetchAltitudeIGN(lat,lng)
+  ]);
+  const {human,water,geo,scorePhys,score,v2}=calcAll(lat,lng,{commune_info, altitude_m});
   // Mode Expertise — mémoriser le résultat pour recalcul composite via curseurs
   _expertLastResult = v2;
   if (_expertActive) refreshExpertComposite();
@@ -3051,6 +3274,8 @@ map.on('click',e=>{
   const gamma_nSvh    = v2.domains.ionizing.gamma.dose_rate_nSv_h;
   const radon_class   = v2.domains.ionizing.radon.class;
   const radon_range   = v2.domains.ionizing.radon.activity_estimate_Bq_m3;
+  const radon_official = v2.domains.ionizing.radon.official_classification; // {matched_by, nom, code_insee} ou null
+  const radon_source_is_official = v2.domains.ionizing.radon.class_source === 'official_decree_2018_434';
   const geoType=getGeoType(lat,lng);
   const crustal=calcLCS1(lat,lng);
   // B-corpus-hypotheses résolu : piezo → susceptibilité magnétique issue de v2
@@ -3166,9 +3391,12 @@ map.on('click',e=>{
             '<div style="font-size:8px;color:#6b7280;margin-bottom:1px">Radon (potentiel)</div>'+
             '<div style="display:flex;align-items:center;gap:3px">'+
               '<span style="font-size:11px;font-weight:700;color:'+radonColor+'">Classe '+radon_class+'/3</span>'+
-              '<span style="font-size:9px;color:#8b92a5" title="Confiance : haut — classe IRSN 2018 par lithologie">●●●</span>'+
+              '<span style="font-size:9px;color:#8b92a5" title="Confiance : haut — classement officiel decret 2018-434 ou estimation lithologique IRSN 2018">●●●</span>'+
             '</div>'+
             '<div style="font-size:8px;color:'+radonColor+'">'+radonLabel+' · '+radon_range[0]+'–'+radon_range[1]+' Bq/m³</div>'+
+            (radon_source_is_official
+              ? '<div style="font-size:8px;color:'+radonColor+';margin-top:1px;font-style:italic">Commune classee zone 3 (decret 2018-434)'+(radon_official&&radon_official.nom?' : '+radon_official.nom:'')+'</div>'
+              : '')+
           '</div>'+
         '</div>'+
         '<div style="font-size:7.5px;color:#9ca3af;font-style:italic">Fond naturel Corse : 75–150 nSv/h · Seuil action radon : 300 Bq/m³ (IRSN 2018)</div>'+
@@ -3199,6 +3427,7 @@ map.on('click',e=>{
       ' \u00b7 <span style="color:#3F5B3A">L'+(geo>0?'+':'')+geo+'</span>'+
       ' \u00b7 H+'+human+
       (nRFcalib>0.01?' \u00b7 RF '+nRFcalib.toFixed(1)+'V/m':'')+
+      (typeof altitude_m==='number' && isFinite(altitude_m)?' \u00b7 <span title="Altitude IGN RGE Alti ~1 m">Alt '+altitude_m+' m</span>':'')+
     '</div>'+
     '<div style="font-size:8px;color:#b0b5c0;margin-top:2px;font-style:italic">Source : Biot-Savart EDF SEI · CartoRadio ANFR · Modèle Tellux</div>'+
     '</div>'
@@ -3265,17 +3494,22 @@ async function loadAnt(){try{
   console.log('Antennes : '+(rows.length-nSeaFiltered-nOffshore)+' affichees, '+nOffshore+' offshore');
   const hdr=document.getElementById('hdr-status');
   if(hdr)hdr.textContent=(rows.length-nSeaFiltered-nOffshore)+' antennes · '+nOffshore+' offshore';
-  // Émetteurs radiodiffusion majeurs — icône croix ✛
-  const EMITTERS=[
-    [42.652,9.392,'Serra di Pigno','Émetteur radio/TV','988m altitude · RFI + France Inter + télévision · Couverture toute la Corse'],
-    [42.415,9.186,'Col de Teghime','Émetteur FH','Faisceau hertzien · Axe principal Nord-Sud · ~200 nT impact modèle'],
-    [42.009,8.827,'Monte Gozzi','Émetteur radio/TV','Relais TV 716m · Corse-du-Sud · Couverture Ajaccio et région'],
-    [42.540,9.445,'Bastia relais','Émetteur radio/TV','Relais TV/FM · Bastia · Couverture plaine orientale nord'],
-  ];
-  EMITTERS.forEach(([lat,lon,nom,type,desc])=>{
+  // Emetteurs broadcast TDF — dataset-driven (public/data/tdf_emitters_corse.json)
+  // Icone croix, info-bulle listant PAR + services + notes.
+  await loadTDFEmitters();
+  TDF_EMITTERS.forEach(em => {
     const shape='<div style="position:relative;width:12px;height:12px"><div style="position:absolute;left:5px;top:0;width:2px;height:12px;background:#5f5e5a"></div><div style="position:absolute;top:5px;left:0;width:12px;height:2px;background:#5f5e5a"></div></div>';
     const icon=L.divIcon({html:shape,className:'',iconSize:[12,12],iconAnchor:[6,6]});
-    L.marker([lat,lon],{icon,zIndexOffset:150}).on('click',()=>info('<span class="tag" style="background:#f0f0ee;color:#5f5e5a;border:0.5px solid #aaa">'+type+'</span> <b>'+nom+'</b><br><span style="font-size:12px;color:var(--tx2)">'+desc+'</span>')).addTo(lAnt);
+    const services = (em.services || []).join(' + ') || 'broadcast';
+    const par = (em.par_kw_estimee && em.par_kw_estimee > 0) ? em.par_kw_estimee + ' kW PAR' : 'PAR non connue';
+    const alt = (em.altitude_m != null) ? em.altitude_m + ' m' : '';
+    const typeLabel = em.type === 'broadcast_principal' ? 'Emetteur principal' : (em.type === 'relais' ? 'Relais' : 'Emetteur');
+    const desc = par + (alt ? ' | ' + alt + ' altitude' : '') + ' | ' + services + (em.operateur ? ' | ' + em.operateur : '');
+    L.marker([em.lat, em.lon], {icon, zIndexOffset: 150}).on('click', () => info(
+      '<span class="tag" style="background:#f0f0ee;color:#5f5e5a;border:0.5px solid #aaa">' + typeLabel + '</span> <b>' + em.nom + '</b><br>' +
+      '<span style="font-size:12px;color:var(--tx2)">' + desc + '</span>' +
+      (em.notes ? '<br><span style="font-size:11px;color:var(--tx3);font-style:italic">' + em.notes + '</span>' : '')
+    )).addTo(lAnt);
   });
 }catch(e){console.error('❌ loadAnt erreur:',e.message);}}
 
@@ -4518,7 +4752,7 @@ let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}},300);}
 map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
-setTimeout(()=>Promise.all([loadAnt(),loadDB()]),1500); // Décalé — après rendu complet de la carte
+setTimeout(()=>Promise.all([loadAnt(),loadDB(),loadRadonCommunesL3(),loadTDFEmitters()]),1500); // Décalé — après rendu complet de la carte
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET L'Aquila — correction externe réelle // Météo + réfractivité troposphérique
 // EMAG2v3 OFF par défaut — toggle manuel via toggleEMAG()
@@ -4917,7 +5151,11 @@ function startContribFromFAB(){
 // et startContribFromFAB() — seul le choix N0 déclenche le flux existant.
 function openContribLevelModal(){
   var modal=document.getElementById('contrib-level-modal');
-  if(modal)modal.style.display='flex';
+  if(modal){
+    modal.style.display='flex';
+    // Reset sur l'onglet Observation par defaut
+    if(typeof switchContribTab === 'function') switchContribTab('obs');
+  }
 }
 function closeContribLevelModal(){
   var modal=document.getElementById('contrib-level-modal');
@@ -5092,6 +5330,193 @@ function toggleAccordion(header){
   header.classList.toggle('open');
   header.querySelector('.accordion-cat-icon').classList.toggle('open');
   header.nextElementSibling.classList.toggle('open');
+}
+
+// ═══ Panneau "Conditions actuelles" ═══
+// Plies par defaut, chaque sous-section affiche un resume une ligne.
+// Les IDs internes (kp-v, sw-bz, sw-d, meteo-n, res-charge, lightning-v…)
+// sont preserves pour ne pas casser loadNOAA / loadMeteo / loadLightning
+// / loadChargeReseau.
+function toggleCondSection(id){
+  const sec  = document.getElementById('cond-sec-' + id);
+  const body = document.getElementById('cond-body-' + id);
+  const btn  = sec && sec.querySelector('.cond-header');
+  if(!sec || !body || !btn) return;
+  const willOpen = sec.getAttribute('data-open') !== 'true';
+  sec.setAttribute('data-open', willOpen ? 'true' : 'false');
+  btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+  if(willOpen){ body.removeAttribute('hidden'); }
+  else { body.setAttribute('hidden',''); }
+}
+
+// Profil horaire type Corse (MW par heure, moyenne RTE 2020-2024)
+// Utilise par loadChargeReseau (fallback) + renderChargeSparkline.
+const PROFIL_HORAIRE_CORSE = [130,125,122,120,120,122,135,155,175,195,210,220,
+                              225,228,230,228,222,218,220,225,225,215,200,165];
+
+function renderChargeSparkline(){
+  const host = document.getElementById('cond-sparkline-reseau');
+  if(!host) return;
+  const W = 180, H = 40, pad = 4;
+  const data = PROFIL_HORAIRE_CORSE;
+  const minV = Math.min.apply(null, data);
+  const maxV = Math.max.apply(null, data);
+  const span = Math.max(1, maxV - minV);
+  const stepX = (W - 2*pad) / (data.length - 1);
+  const points = data.map((v,i) => {
+    const x = pad + i * stepX;
+    const y = H - pad - ((v - minV) / span) * (H - 2*pad);
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  }).join(' ');
+  const h = new Date().getHours();
+  const cx = pad + h * stepX;
+  const cy = H - pad - ((data[h] - minV) / span) * (H - 2*pad);
+  host.innerHTML =
+    '<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img">' +
+      '<polyline points="'+points+'" fill="none" stroke="#C28533" stroke-width="1.2" stroke-linejoin="round"/>' +
+      '<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="3" fill="#8E2F1F"/>' +
+    '</svg>' +
+    '<div class="cond-sparkline-legend"><span>0 h</span><span>Profil 24 h · ' + h + ' h actuelle</span><span>23 h</span></div>';
+}
+
+function updateCondSummaries(){
+  // --- Activite solaire ---
+  const kpNum = parseFloat(curKp);
+  const solEl = document.getElementById('cond-summary-solaire');
+  if(solEl){
+    if(isNaN(kpNum)){
+      solEl.textContent = 'vérification…';
+      solEl.style.color = 'var(--tx3)';
+    } else if(kpNum >= 7){
+      solEl.textContent = 'Tempête majeure (Kp ' + kpNum.toFixed(1) + ')';
+      solEl.style.color = 'var(--danger)';
+    } else if(kpNum >= 5){
+      solEl.textContent = 'Tempête mineure (Kp ' + kpNum.toFixed(1) + ')';
+      solEl.style.color = 'var(--danger)';
+    } else if(kpNum >= 4){
+      solEl.textContent = 'Actif (Kp ' + kpNum.toFixed(1) + ')';
+      solEl.style.color = 'var(--warn)';
+    } else {
+      solEl.textContent = 'Calme (Kp ' + kpNum.toFixed(1) + ')';
+      solEl.style.color = 'var(--acc)';
+    }
+  }
+  // --- Conditions atmospheriques ---
+  const atmoEl = document.getElementById('cond-summary-atmo');
+  if(atmoEl){
+    const meteoN  = (document.getElementById('meteo-n')||{}).textContent || '';
+    const meteoS  = (document.getElementById('meteo-s')||{}).textContent || '';
+    const lightV  = (document.getElementById('lightning-v')||{}).textContent || '';
+    const stormActive = /orage|storm|foudre|éclair/i.test(lightV) && !/aucun|—|vérif/i.test(lightV);
+    const ducting = /ducting/i.test(meteoS);
+    if(stormActive){
+      atmoEl.textContent = 'Orage actif';
+      atmoEl.style.color = 'var(--danger)';
+    } else if(ducting){
+      atmoEl.textContent = 'Ducting possible';
+      atmoEl.style.color = 'var(--warn)';
+    } else if(meteoN && meteoN !== '—'){
+      atmoEl.textContent = 'Stables (' + meteoN.replace(/^N\s*/,'') + ')';
+      atmoEl.style.color = 'var(--acc)';
+    } else {
+      atmoEl.textContent = '—';
+      atmoEl.style.color = 'var(--tx3)';
+    }
+  }
+  // --- Reseau electrique ---
+  const resEl = document.getElementById('cond-summary-reseau');
+  if(resEl){
+    const cf = (typeof chargeFacteur !== 'undefined') ? chargeFacteur : 1.0;
+    if(cf > 1.15){
+      resEl.textContent = 'Heure pleine (×' + cf.toFixed(2) + ')';
+      resEl.style.color = 'var(--warn)';
+    } else if(cf < 0.85){
+      resEl.textContent = 'Heure creuse (×' + cf.toFixed(2) + ')';
+      resEl.style.color = 'var(--acc)';
+    } else {
+      resEl.textContent = 'Charge normale (×' + cf.toFixed(2) + ')';
+      resEl.style.color = 'var(--tx2)';
+    }
+  }
+}
+
+// Render sparkline au chargement + refresh chaque heure (en cas de session longue)
+setTimeout(() => { renderChargeSparkline(); updateCondSummaries(); }, 2000);
+setInterval(() => { renderChargeSparkline(); updateCondSummaries(); }, 60*60*1000);
+// Fallback periodique pour capter les valeurs temps reel meme si un load* oublie d'appeler
+setInterval(updateCondSummaries, 30*1000);
+
+// ═══ Modale contribution a onglets ═══
+// Onglet 1 : Observation simple (textarea libre, saveObservation)
+// Onglet 2 : Mesure technique (delegue au #cform existant via chooseContribLevelN0)
+// Onglet 3 : Capteurs appareil (desactive, placeholder pour session future)
+function switchContribTab(id){
+  const modal = document.getElementById('contrib-level-modal');
+  if(!modal) return;
+  const btns = modal.querySelectorAll('.ctab-btn');
+  btns.forEach(b => {
+    if(b.classList.contains('disabled')) return;
+    const isActive = b.getAttribute('data-tab') === id;
+    b.classList.toggle('active', isActive);
+    b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+  });
+  ['obs','mes','cap'].forEach(t => {
+    const el = document.getElementById('ctab-' + t);
+    if(!el) return;
+    if(t === id){ el.removeAttribute('hidden'); }
+    else { el.setAttribute('hidden',''); }
+  });
+  // Pre-remplir lat/lon si un marker pending est place
+  if(id === 'obs' && typeof pending !== 'undefined' && pending){
+    try{
+      const ll = pending.getLatLng();
+      const latI = document.getElementById('obs-lat');
+      const lonI = document.getElementById('obs-lon');
+      if(latI && !latI.value) latI.value = ll.lat.toFixed(5);
+      if(lonI && !lonI.value) lonI.value = ll.lng.toFixed(5);
+      const info = document.getElementById('obs-position-info');
+      if(info) info.textContent = 'Position : ' + ll.lat.toFixed(5) + ', ' + ll.lng.toFixed(5) + ' (placee via la carte)';
+    }catch(e){}
+  }
+}
+
+async function saveObservation(){
+  const noteEl = document.getElementById('obs-note');
+  const latEl  = document.getElementById('obs-lat');
+  const lonEl  = document.getElementById('obs-lon');
+  const btn    = document.getElementById('btn-obs-send');
+  const note = (noteEl && noteEl.value || '').trim();
+  if(!note){ alert('Veuillez saisir votre observation.'); return; }
+  const lat = parseFloat(latEl && latEl.value);
+  const lon = parseFloat(lonEl && lonEl.value);
+  if(!isFinite(lat) || !isFinite(lon)){
+    alert('Position invalide. Cliquez d\'abord sur la carte ou saisissez lat/lon manuellement.');
+    return;
+  }
+  if(lat < 41.3 || lat > 43.1 || lon < 8.5 || lon > 9.7){
+    alert('Position hors Corse. Tellux est calibre pour la Corse uniquement.');
+    return;
+  }
+  if(btn){ btn.disabled = true; btn.textContent = 'Envoi…'; }
+  const row = {
+    lat: lat, lon: lon,
+    type: 'observation',
+    note: note,
+    contexte: 'observation',
+    session_id: (typeof sessionId !== 'undefined' ? sessionId : null),
+    version_app: '2.4'
+  };
+  Object.keys(row).forEach(k => { if(row[k] === null || row[k] === undefined) delete row[k]; });
+  try {
+    await sbPost('/rest/v1/contributions', [row]);
+    if(typeof info === 'function') info('Merci, votre observation sera vérifiée avant publication.','success');
+    closeContribLevelModal();
+    noteEl.value = ''; latEl.value = ''; lonEl.value = '';
+  } catch(e){
+    alert('Envoi échoué : ' + (e.message || 'erreur réseau'));
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = 'Envoyer'; }
+  }
 }
 
 /* === Légende dynamique === */
