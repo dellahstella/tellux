@@ -2578,13 +2578,14 @@ function calcBiotSavartSegment(segLat1, segLon1, segLat2, segLon2, obsLat, obsLo
 }
 
 // ============================================================
-// DOMAINE M — Champ magnétique ELF 50 Hz (anthropique)
-// Sources : Biot-Savart simplifié (Polk & Postow 1996)
-//           Lignes HTA/HTB/BT EDF SEI Corse + sites de production
+// DOMAINE M — Champ magnétique ELF 50 Hz (anthropique) — v1
+// Sources : Biot-Savart fil infini (Polk & Postow 1996)
+//           8 axes HTA/HTB hardcodés + sites de production + BT zones
 // Incertitude : ±50% (géométrie simplifiée, sans réflexions)
-// IMMÉDIAT — refactor pur de la partie ELF de calcHuman()
+// CONSERVÉE : rollback USE_ELF_V2=false et comparaison v1/v2
+// Supprimable en v3 après validation composite v2 par physicien tiers.
 // ============================================================
-function calcMagneticELF(lat, lon, chargeFactor) {
+function calcMagneticELF_v1(lat, lon, chargeFactor) {
   const htFactor = (chargeFactor !== undefined) ? chargeFactor
                  : (typeof chargeFacteur !== 'undefined' ? chargeFacteur : 1.0);
   const MU0_OVER_2PI = 2e-7; // µ0/(2π) en T·m/A
@@ -2654,6 +2655,84 @@ function calcMagneticELF(lat, lon, chargeFactor) {
     chargeFactorApplied: htFactor
   };
 }
+
+// ============================================================
+// DOMAINE M — Champ magnétique ELF 50 Hz (anthropique) — v2
+// Sources : Biot-Savart segment fini sur 8386 polylines hta_lines Supabase
+//           (~15-25k segments élémentaires) + PROD_ELECTRIQUE + BT_ZONES
+// Retour identique à v1 (contrat calcAll_v2 préservé) : {B_total_nT, ...}
+// Courant : HTA_BASE_CURRENT_A = 225 A (Option B, dataset sans voltage)
+// Correction triphasée k=0.5 au-delà de 20 m · RMS explicite · pruning 2 km
+// Note : sommation en amplitude RMS (pas vectorielle) → surestime légèrement.
+// Fallback : si grille non prête, délègue à v1.
+// ============================================================
+function calcMagneticELF_v2(lat, lon, chargeFactor) {
+  const htFactor = (chargeFactor !== undefined) ? chargeFactor
+                 : (typeof chargeFacteur !== 'undefined' ? chargeFacteur : 1.0);
+  if (!SEGMENT_GRID || !HTA_SEGMENTS_DATA) {
+    // Grille non prête (loadReseau pas encore exécuté) — fallback v1
+    return calcMagneticELF_v1(lat, lon, chargeFactor);
+  }
+  let B_total_nT = 0;
+  const contributions = [];
+  // === LIGNES HTA RÉELLES — hta_lines Supabase via grille ===
+  const I = HTA_BASE_CURRENT_A * htFactor;
+  const nearby = getSegmentsNear(lat, lon);
+  let nContrib = 0, B_hta = 0;
+  for (const idx of nearby) {
+    const s = HTA_SEGMENTS_DATA[idx];
+    if (!s) continue;
+    const b = calcBiotSavartSegment(s.lat1, s.lon1, s.lat2, s.lon2, lat, lon, I);
+    if (b > 0.5) { // seuil 0.5 nT = cohérent v1
+      B_hta += b;
+      nContrib++;
+    }
+  }
+  if (B_hta > 0) {
+    B_total_nT += B_hta;
+    contributions.push({ source_type: 'HTA', B_nT: Math.round(B_hta*10)/10, distance_m: null, identifier: nContrib + ' segments réels' });
+  }
+  // === SITES DE PRODUCTION ÉLECTRIQUE === (identique v1)
+  const MU0_OVER_2PI = 2e-7;
+  PROD_ELECTRIQUE.forEach(s => {
+    if (s.puissance < 0.5) return;
+    const d = dist(lat, lon, s.lat, s.lon);
+    const d_m = Math.max(100, d * 1000);
+    const I_equiv = Math.sqrt(s.puissance) * 50;
+    const B_nT = MU0_OVER_2PI * I_equiv / d_m * 1e9;
+    if (B_nT > 0.5) {
+      const contrib = Math.min(B_nT, 400);
+      B_total_nT += contrib;
+      contributions.push({ source_type: 'production', B_nT: Math.round(contrib*10)/10, distance_m: Math.round(d_m), identifier: s.nom || 'prod' });
+    }
+  });
+  // === RÉSEAU BT URBAIN === (identique v1)
+  const BT_ZONES = [[41.919,8.738,80],[42.703,9.45,70],[41.578,9.267,50],[42.567,8.758,45],[42.154,9.193,40],[42.631,8.937,35],[41.387,9.159,35],[42.562,9.431,60],[41.678,8.905,30]];
+  BT_ZONES.forEach(([a, b, intensity]) => {
+    const d = dist(lat, lon, a, b);
+    let contrib = 0;
+    if (d < 0.2) contrib = intensity * (1 - d / 0.2);
+    else if (d < 0.5) contrib = intensity * 0.3 * (1 - (d - 0.2) / 0.3);
+    if (contrib > 0) {
+      B_total_nT += contrib;
+      contributions.push({ source_type: 'BT', B_nT: Math.round(contrib*10)/10, distance_m: Math.round(d*1000) });
+    }
+  });
+  return {
+    B_total_nT: Math.round(B_total_nT),
+    contributions,
+    note_ICNIRP: 'Rappel documentaire : limite ICNIRP grand public pour ELF 50 Hz est de 200 µT (200 000 nT).',
+    note_IARC: 'Rappel documentaire : IARC classe 2B pour ELF >= 0,3-0,4 µT (300-400 nT) chronique résidentiel, association statistique leucémies infantiles.',
+    source: 'Biot-Savart segment fini sur hta_lines Supabase (' + HTA_SEGMENTS_DATA.length + ' segments) + PROD_ELECTRIQUE + BT_ZONES',
+    confidence: 'medium',
+    chargeFactorApplied: htFactor,
+    version: 'v2',
+    n_hta_contributing: nContrib
+  };
+}
+
+// Flag de bascule v1/v2 — rollback d'urgence en cas de régression
+const USE_ELF_V2 = true;
 
 // ============================================================
 // DOMAINE RF — Densité de puissance radiofréquence (µW/m²)
