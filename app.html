@@ -2735,6 +2735,60 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
 const USE_ELF_V2 = true;
 
 // ============================================================
+// Test de non-régression ELF v1 vs v2 sur 20 points témoins
+// Accessible en console : runELFRegressionTest()
+// Catégories : 5 urbains, 5 ruraux sous HTA, 5 éloignés, 5 mégalithiques
+// ============================================================
+const ELF_TEST_POINTS = [
+  { cat:'urbain', name:'Ajaccio centre',       lat:41.9267, lon:8.7369 },
+  { cat:'urbain', name:'Bastia centre',        lat:42.7028, lon:9.4508 },
+  { cat:'urbain', name:'Porto-Vecchio',        lat:41.5912, lon:9.2795 },
+  { cat:'urbain', name:'Calvi',                lat:42.5663, lon:8.7575 },
+  { cat:'urbain', name:'Corte',                lat:42.3069, lon:9.1503 },
+  { cat:'rural',  name:'Rural HTA Castagniccia', lat:42.4,  lon:9.3 },
+  { cat:'rural',  name:'Rural HTA Corte sud',  lat:42.25, lon:9.12 },
+  { cat:'rural',  name:'Rural HTA Sartene',    lat:41.62, lon:8.97 },
+  { cat:'rural',  name:'Rural HTA Balagne',    lat:42.55, lon:8.90 },
+  { cat:'rural',  name:'Rural HTA Fiumorbu',   lat:42.00, lon:9.33 },
+  { cat:'eloign', name:'Monte Cinto sommet',   lat:42.3811, lon:8.9425 },
+  { cat:'eloign', name:'Monte Rotondo',        lat:42.2236, lon:9.0586 },
+  { cat:'eloign', name:'Cap Corse pointe',     lat:43.0084, lon:9.3814 },
+  { cat:'eloign', name:'Large mer Ouest',      lat:42.0, lon:8.3 },
+  { cat:'eloign', name:'Large mer Est',        lat:42.0, lon:9.8 },
+  { cat:'mega',   name:'Cauria',               lat:41.5608, lon:8.9581 },
+  { cat:'mega',   name:'Palaggiu',             lat:41.5719, lon:8.9319 },
+  { cat:'mega',   name:'Monte Revincu',        lat:42.7272, lon:9.1928 },
+  { cat:'mega',   name:'Filitosa',             lat:41.7450, lon:8.8806 },
+  { cat:'mega',   name:'Cucuruzzu',            lat:41.7636, lon:9.0864 }
+];
+
+function runELFRegressionTest() {
+  if (!SEGMENT_GRID) {
+    console.warn('[Tellux] runELFRegressionTest : grille non prete, activer "Réseau" d\'abord');
+    return;
+  }
+  const cf = 1.0;
+  const rows = ELF_TEST_POINTS.map(p => {
+    const t0 = performance.now();
+    const v1 = calcMagneticELF_v1(p.lat, p.lon, cf).B_total_nT;
+    const tV1 = performance.now() - t0;
+    const t1 = performance.now();
+    const v2 = calcMagneticELF_v2(p.lat, p.lon, cf).B_total_nT;
+    const tV2 = performance.now() - t1;
+    return {
+      cat: p.cat,
+      nom: p.name,
+      v1_nT: v1,
+      v2_nT: v2,
+      ratio: v1 > 0 ? (v2 / v1).toFixed(2) : (v2 > 0 ? '∞' : 'N/A'),
+      ms_v2: tV2.toFixed(1)
+    };
+  });
+  console.table(rows);
+  return rows;
+}
+
+// ============================================================
 // DOMAINE RF — Densité de puissance radiofréquence (µW/m²)
 // Sources : FH_POINTS (faisceaux hertziens) + fond CartoRadio départemental
 // IMMÉDIAT — refactor pur de la partie RF de calcHuman()
