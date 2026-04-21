@@ -549,6 +549,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-sit{background:#fdf8ef!important;color:#713f12!important;border-color:#c9a56c!important;font-weight:500;}
 .on-sit2{background:#e8f5e9!important;color:#2e7d32!important;border-color:#66bb6a!important;font-weight:500;}
 .on-failles{background:#fdf4f3!important;color:#8E2F1F!important;border-color:#c16b5a!important;font-weight:500;}
+.on-foret{background:#eef3e9!important;color:#3F5B3A!important;border-color:#6b8a5c!important;font-weight:500;}
 .on-postes{background:#faf2e3!important;color:#8A5E22!important;border-color:#C28533!important;font-weight:500;}
 .on-eoliennes{background:#eef3e9!important;color:#3F5B3A!important;border-color:#6b8a5c!important;font-weight:500;}
 .on-points-chauds{background:#fdf4f3!important;color:#8E2F1F!important;border-color:#c16b5a!important;font-weight:500;}
@@ -1446,6 +1447,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     </div>
     <div class="accordion-cat-content">
       <button class="lbtn" id="b-geo" title="Carte géologique BRGM — granite, schiste, calcaire" onclick="tog('geo','on-geo',this)"><span class="sq" style="background:#1a6b5c"></span>Géologie BRGM</button>
+      <button class="lbtn" id="b-foret" title="Forêts publiques ONF via WMS IGN Géoplateforme — couche visuelle niveau A (pas de modulation calcul). BD Forêt V2 complète non disponible en WMS public." onclick="tog('foret','on-foret',this)"><span class="sq" style="background:#3F5B3A"></span>Forêts publiques</button>
       <button class="lbtn" id="b-failles" title="Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)" onclick="togFailles(this)"><span class="ln" style="background:#8E2F1F"></span>Failles tectoniques</button>
       <button class="lbtn" id="b-points-chauds" title="Points chauds U/Th documentés — anciens sites uranifères + plages monazitiques (doses estimées, non mesurées)" onclick="togPointsChauds(this)"><span style="display:inline-block;width:8px;height:8px;background:#8E2F1F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Points chauds U/Th</button>
       <button class="lbtn" id="b-hyd" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE)" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie</button>
@@ -1499,6 +1501,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <div style="border-top:1px solid rgba(245,240,231,.15);padding-top:8px;margin-bottom:8px">
       <div style="font-family:var(--mono);font-size:9px;color:rgba(245,240,231,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Statistiques du mod&#232;le</div>
       <div style="font-family:var(--mono);font-size:11px;color:rgba(245,240,231,.8)">&#128225; <span id="anfr-count">chargement&#8230;</span></div>
+      <div style="font-family:var(--mono);font-size:11px;color:rgba(245,240,231,.8);margin-top:4px">&#128346; Écart IGRF/WMM : <span id="igrf-wmm-diff" style="color:rgba(245,240,231,.5)">—</span> <span style="font-size:9px;opacity:.7">nT</span></div>
     </div>
     <div style="border-top:1px solid rgba(245,240,231,.15);padding-top:8px;margin-bottom:8px">
       <div style="font-family:var(--mono);font-size:9px;color:rgba(245,240,231,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Outils avanc&#233;s</div>
@@ -1864,7 +1867,22 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 let DARK=(function(){try{const s=localStorage.getItem('tellux_theme');if(s)return s==='dark';return matchMedia('(prefers-color-scheme:dark)').matches;}catch(e){return matchMedia('(prefers-color-scheme:dark)').matches;}})();
 if(DARK)document.documentElement.setAttribute('data-theme','dark');
 let contribsDB=[],pending=null,cachedIGRF={},_contribClickHandler=null;
-let _expertActive=false,_expertConsented=false,_expertLastResult=null,_expertThrottle=null;
+let _expertActive=false,_expertConsented=false,_expertLastResult=null,_expertLastLatLon=null,_expertThrottle=null;
+function updateIgrfWmmDiff(lat, lon) {
+  const el = document.getElementById('igrf-wmm-diff');
+  if (!el) return;
+  const wmm = (typeof calcMagneticWMM === 'function') ? calcMagneticWMM(lat, lon) : null;
+  const igrf = (typeof igrfFallback === 'function') ? igrfFallback(lat, lon) : null;
+  if (wmm == null || igrf == null) {
+    el.textContent = '—';
+    el.style.color = 'rgba(245,240,231,.5)';
+    return;
+  }
+  const diff = Math.abs(igrf - wmm);
+  el.textContent = diff.toFixed(0);
+  el.style.color = diff > 500 ? '#e8a69a' : (diff > 100 ? '#C28533' : 'rgba(245,240,231,.85)');
+  el.title = 'IGRF-14 = ' + igrf + ' nT · WMM 2025 = ' + wmm + ' nT · écart |Δ| = ' + diff.toFixed(0) + ' nT';
+}
 let curKp='—',curBz='—',curDensity='—',curFlux='—';
 let meteoData={pression:null,humidite:null,temp:null,precip:0,vent:0};
 let lightningNearby=0,chargeFacteur=1.0;
@@ -1980,6 +1998,11 @@ const _tileBase=L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=Get
 const wmsGeo=L.tileLayer.wms('https://geoservices.brgm.fr/geologie',{layers:'GEOLOGIE',format:'image/png',transparent:true,opacity:0.6,zIndex:2});
 const wmsHyd=L.tileLayer.wms('https://geoservices.brgm.fr/risques',{layers:'REMNAPPE_FR',format:'image/png',transparent:true,opacity:0.55,zIndex:3,maxNativeZoom:11});
 const wmsCav=L.tileLayer.wms('https://geoservices.brgm.fr/risques',{layers:'CAVITE_LOCALISEE',format:'image/png',transparent:true,opacity:0.7,zIndex:4});
+// Forêts publiques ONF via WMS Géoplateforme (vecteur) — couche visuelle niveau A
+// BD Forêt V2/V3 complète non disponible en WMS public (V3 BETA test partiel).
+// Limitation documentée : seules forêts publiques (domaniales + communales ONF),
+// pas les forêts privées ni les essences détaillées. Suffisant pour niveau A.
+const wmsForet=L.tileLayer.wms('https://data.geopf.fr/wms-v/ows',{layers:'FORETS.PUBLIQUES',format:'image/png',transparent:true,opacity:0.55,version:'1.3.0',attribution:'© IGN / ONF — Forêts publiques'});
 // EMAG2v3 — Anomalie magnétique crustale (NOAA ImageServer)
 const wmsEmag=L.imageOverlay(
   'https://gis.ngdc.noaa.gov/arcgis/rest/services/EMAG2v3/ImageServer/exportImage?bbox=8.5,41.3,9.65,43.1&bboxSR=4326&imageSR=4326&size=512,800&format=png32&renderingRule={"rasterFunction":"EMAG2_Color_Scale"}&f=image',
@@ -1996,8 +2019,8 @@ const lPointsChaudsRadio=L.layerGroup();
 // lRPG/lForet/lAOC : layers agronomie migrées vers agronomie.html
 const lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lCem=L.layerGroup(),lIntl=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
 const LAYERS={bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,prod:lProd,hot:lHot,con:lCon,cem:lCem,intl:lIntl,therm:lTherm};
-const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag};
-const ACTIVE={bt:false,ant:false,antOffshore:false,geo:false,hyd:false,cav:false,emag:false,hot:true,res:false,prod:false,con:true,cem:false,intl:false,therm:false};
+const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag,foret:wmsForet};
+const ACTIVE={bt:false,ant:false,antOffshore:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,res:false,prod:false,con:true,cem:false,intl:false,therm:false};
 
 const LEGEND_ACTIVE=new Set();let _legendCtrl=null;
 const LEGEND_HTML={
@@ -2320,6 +2343,57 @@ function calcLCS1(lat,lon){
   return Math.round(interpIDW(LCS1_GRID,lat,lon));
 }
 function igrfFallback(lat,lon){ return Math.round(interpIDW(IGRF14_GRID,lat,lon)); }
+
+// ═══ WMM 2025 grille précalculée (cross-check IGRF-14) ═══
+// Grille générée offline par scripts/generate_wmm_grid_corse.py (pygeomag).
+// Résolution 0.05° × 0.05°, ~850 points sur la Corse. Régénération tous les
+// 1-2 ans ou à la sortie du modèle suivant (WMM 2030). Domaine public NOAA/BGS.
+let WMM_GRID = null;
+let WMM_INDEX = null; // Index rapide {lat_lon: point}
+const WMM_STEP = 0.05;
+async function loadWMMGrid() {
+  try {
+    const r = await fetch('public/data/wmm_2025_grid_corse.json', {signal: AbortSignal.timeout(5000)});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    WMM_GRID = d.grid || [];
+    // Index spatial pour lookup O(1)
+    WMM_INDEX = {};
+    WMM_GRID.forEach(p => {
+      const key = p.lat.toFixed(2) + ',' + p.lon.toFixed(2);
+      WMM_INDEX[key] = p;
+    });
+    console.log('[Tellux] WMM 2025 grille chargee : ' + WMM_GRID.length + ' points');
+  } catch (e) {
+    console.warn('[Tellux] WMM 2025 indisponible : ' + e.message);
+  }
+}
+// Interpolation bilinéaire sur la grille WMM
+function calcMagneticWMM(lat, lon) {
+  if (!WMM_INDEX) return null;
+  const lat_floor = Math.floor(lat / WMM_STEP) * WMM_STEP;
+  const lon_floor = Math.floor(lon / WMM_STEP) * WMM_STEP;
+  const k = (la, lo) => la.toFixed(2) + ',' + lo.toFixed(2);
+  const p00 = WMM_INDEX[k(lat_floor, lon_floor)];
+  const p10 = WMM_INDEX[k(lat_floor, lon_floor + WMM_STEP)];
+  const p01 = WMM_INDEX[k(lat_floor + WMM_STEP, lon_floor)];
+  const p11 = WMM_INDEX[k(lat_floor + WMM_STEP, lon_floor + WMM_STEP)];
+  if (p00 && p10 && p01 && p11) {
+    const u = (lon - lon_floor) / WMM_STEP;
+    const v = (lat - lat_floor) / WMM_STEP;
+    const B = (1-u)*(1-v)*p00.total_nT + u*(1-v)*p10.total_nT
+            + (1-u)*v*p01.total_nT + u*v*p11.total_nT;
+    return Math.round(B);
+  }
+  // Point hors grille : fallback au plus proche
+  let nearest = WMM_GRID[0], minD = Infinity;
+  for (const p of WMM_GRID) {
+    const d = (p.lat - lat)*(p.lat - lat) + (p.lon - lon)*(p.lon - lon);
+    if (d < minD) { minD = d; nearest = p; }
+  }
+  return Math.round(nearest.total_nT);
+}
+loadWMMGrid();
 
 // Variation Sq (Solar quiet) — oscillation ionosphérique diurne
 // Source : Campbell (1989), Rev. Geophys. 27(3), p.399–424
@@ -3721,6 +3795,8 @@ map.on('click',async e=>{
   const {human,water,geo,scorePhys,score,v2}=calcAll(lat,lng,{commune_info, altitude_m});
   // Mode Expertise — mémoriser le résultat pour recalcul composite via curseurs
   _expertLastResult = v2;
+  _expertLastLatLon = { lat, lon: lng };
+  updateIgrfWmmDiff(lat, lng);
   if (_expertActive) refreshExpertComposite();
   // Valeurs v2 structurées — utilisées pour la popup niveau B
   const elf_nT    = v2.domains.magnetic.elf.B_total_nT;
