@@ -452,6 +452,28 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   .pc{min-height:64px;padding:10px 12px;}
   .pc-v{font-size:18px;}
 }
+/* Panneau Conditions actuelles — 3 sous-sections collapsibles */
+.cond-panel{display:flex;flex-direction:column;gap:3px;margin-bottom:10px;}
+.cond-section{border:1px solid var(--border);border-radius:var(--r);background:var(--tx-pierre);overflow:hidden;}
+.cond-header{display:flex;align-items:center;gap:8px;width:100%;padding:4px 10px;border:none;background:transparent;font:500 11px var(--font);color:var(--tx-mica);cursor:pointer;text-align:left;line-height:1.4;}
+.cond-header:hover{background:var(--bg2);}
+.cond-chevron{width:12px;font-size:10px;color:var(--tx3);transition:transform .15s;flex-shrink:0;}
+.cond-section[data-open="true"] .cond-chevron{transform:rotate(90deg);}
+.cond-label{font-weight:600;color:var(--tx-ardoise);flex-shrink:0;}
+.cond-summary{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--tx2);text-align:right;}
+.cond-body{padding:8px 12px 10px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px;}
+.cond-body[hidden]{display:none;}
+.cond-row{display:flex;align-items:baseline;gap:8px;font-size:11px;}
+.cond-row .cond-key{flex:0 0 auto;font-size:10px;color:var(--tx-mica);min-width:130px;text-transform:uppercase;letter-spacing:.04em;}
+.cond-row .cond-val{font-family:var(--mono);font-weight:500;color:var(--tx-ardoise);}
+.cond-row .cond-src{margin-left:auto;font-size:9px;color:var(--tx3);font-style:italic;}
+.cond-sparkline{margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);}
+.cond-sparkline svg{display:block;}
+.cond-sparkline-legend{font-size:9px;color:var(--tx-mica);margin-top:2px;display:flex;justify-content:space-between;}
+@media (max-width:768px){
+  .cond-row .cond-key{min-width:90px;}
+  .cond-summary{font-size:9px;}
+}
 .mtabs{display:flex;gap:6px;margin-bottom:8px;align-items:center;}
 .mtab{font-family:var(--mono);font-size:11px;padding:5px 13px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--tx2);cursor:pointer;transition:all .15s;}
 .lbtn.on-intl{background:#fdf2f8;color:#e11d48;border-color:#f472b6;font-weight:500;}
@@ -1244,34 +1266,47 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <span>📡 29 mesures ANFR</span>
 </div>
 
-<div class="pbar">
-  <div class="pc" title="Indice Kp : perturbation magnétique globale. Kp>5 = tempête géomagnétique — perturbe les mesures nT terrain">
-    <div class="pc-l">Kp — activité solaire</div>
-    <div class="pc-v" id="kp-v">—</div>
-    <div class="pc-s" id="kp-s">NOAA SWPC</div>
+<!-- Panneau Conditions actuelles — 3 sous-sections repliees par defaut, resume une ligne. -->
+<div class="cond-panel" id="conditions-panel">
+
+  <div class="cond-section" data-open="false" id="cond-sec-solaire">
+    <button class="cond-header" type="button" onclick="toggleCondSection('solaire')" aria-expanded="false" aria-controls="cond-body-solaire">
+      <span class="cond-chevron">▸</span>
+      <span class="cond-label">Activité solaire</span>
+      <span class="cond-summary" id="cond-summary-solaire">vérification…</span>
+    </button>
+    <div class="cond-body" id="cond-body-solaire" hidden>
+      <div class="cond-row"><span class="cond-key">Kp</span><span class="cond-val" id="kp-v">—</span><span class="cond-src" id="kp-s">NOAA SWPC</span></div>
+      <div class="cond-row"><span class="cond-key">Bz (vent solaire)</span><span class="cond-val" id="sw-bz">—</span><span class="cond-src" id="bz-s">NOAA DSCOVR</span></div>
+      <div class="cond-row"><span class="cond-key">Densité vent solaire</span><span class="cond-val" id="sw-d">—</span><span class="cond-src" id="sw-ds">NOAA</span></div>
+      <div class="cond-row"><span class="cond-key">Flux proton</span><span class="cond-val" id="sw-p">—</span><span class="cond-src" id="p-s">NOAA GOES</span></div>
+    </div>
   </div>
-  <div class="pc" title="Bz : composante nord-sud du vent solaire. Bz négatif = bouclier magnétique ouvert, perturbations 30-60min plus tard">
-    <div class="pc-l">Bz — vent solaire</div>
-    <div class="pc-v" id="sw-bz">—</div>
-    <div class="pc-s" id="bz-s">NOAA DSCOVR</div>
+
+  <div class="cond-section" data-open="false" id="cond-sec-atmo">
+    <button class="cond-header" type="button" onclick="toggleCondSection('atmo')" aria-expanded="false" aria-controls="cond-body-atmo">
+      <span class="cond-chevron">▸</span>
+      <span class="cond-label">Conditions atmosphériques</span>
+      <span class="cond-summary" id="cond-summary-atmo">—</span>
+    </button>
+    <div class="cond-body" id="cond-body-atmo" hidden>
+      <div class="cond-row"><span class="cond-key">Réfractivité N</span><span class="cond-val" id="meteo-n">—</span><span class="cond-src" id="meteo-s">Open-Meteo</span></div>
+      <div class="cond-row" id="lightning-pc"><span class="cond-key">Activité orageuse</span><span class="cond-val" id="lightning-v">—</span><span class="cond-src" id="lightning-s">Blitzortung</span></div>
+    </div>
   </div>
-  <div class="pc" title="Charge du réseau électrique corse. Plus la charge est élevée, plus le champ ELF (50Hz) des lignes HT est intense.">
-    <div class="pc-l">Réseau élec. Corse</div>
-    <div class="pc-v" id="res-charge">—</div>
-    <div class="pc-s" id="res-charge-s">ELF pondéré</div>
+
+  <div class="cond-section" data-open="false" id="cond-sec-reseau">
+    <button class="cond-header" type="button" onclick="toggleCondSection('reseau')" aria-expanded="false" aria-controls="cond-body-reseau">
+      <span class="cond-chevron">▸</span>
+      <span class="cond-label">Réseau électrique</span>
+      <span class="cond-summary" id="cond-summary-reseau">—</span>
+    </button>
+    <div class="cond-body" id="cond-body-reseau" hidden>
+      <div class="cond-row"><span class="cond-key">Charge Corse</span><span class="cond-val" id="res-charge">—</span><span class="cond-src" id="res-charge-s">RTE eco2mix</span></div>
+      <div class="cond-sparkline" id="cond-sparkline-reseau" aria-label="Profil horaire de la charge electrique corse sur 24 h"></div>
+    </div>
   </div>
-  <div class="pc" title="Activité orageuse dans les 200km. Les éclairs génèrent des sferics (1-100kHz) qui perturbent les magnétomètres." id="lightning-pc">
-    <div class="pc-l">Activité orageuse</div>
-    <div class="pc-v" id="lightning-v">—</div>
-    <div class="pc-s" id="lightning-s">Blitzortung</div>
-  </div>
-  <!-- IDs cachés gardés pour la logique JS existante -->
-  <span id="sw-d" style="display:none"></span>
-  <span id="sw-ds" style="display:none"></span>
-  <span id="sw-p" style="display:none"></span>
-  <span id="p-s" style="display:none"></span>
-  <span id="meteo-n" style="display:none"></span>
-  <span id="meteo-s" style="display:none"></span>
+
 </div>
 
 <div id="lightning-warn" style="display:none;background:#fff3e6;border:1px solid #f5a855;border-radius:var(--r);padding:6px 12px;font-size:11px;color:#854d0e;margin-bottom:8px"></div>
@@ -5280,6 +5315,120 @@ function toggleAccordion(header){
   header.querySelector('.accordion-cat-icon').classList.toggle('open');
   header.nextElementSibling.classList.toggle('open');
 }
+
+// ═══ Panneau "Conditions actuelles" ═══
+// Plies par defaut, chaque sous-section affiche un resume une ligne.
+// Les IDs internes (kp-v, sw-bz, sw-d, meteo-n, res-charge, lightning-v…)
+// sont preserves pour ne pas casser loadNOAA / loadMeteo / loadLightning
+// / loadChargeReseau.
+function toggleCondSection(id){
+  const sec  = document.getElementById('cond-sec-' + id);
+  const body = document.getElementById('cond-body-' + id);
+  const btn  = sec && sec.querySelector('.cond-header');
+  if(!sec || !body || !btn) return;
+  const willOpen = sec.getAttribute('data-open') !== 'true';
+  sec.setAttribute('data-open', willOpen ? 'true' : 'false');
+  btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+  if(willOpen){ body.removeAttribute('hidden'); }
+  else { body.setAttribute('hidden',''); }
+}
+
+// Profil horaire type Corse (MW par heure, moyenne RTE 2020-2024)
+// Utilise par loadChargeReseau (fallback) + renderChargeSparkline.
+const PROFIL_HORAIRE_CORSE = [130,125,122,120,120,122,135,155,175,195,210,220,
+                              225,228,230,228,222,218,220,225,225,215,200,165];
+
+function renderChargeSparkline(){
+  const host = document.getElementById('cond-sparkline-reseau');
+  if(!host) return;
+  const W = 180, H = 40, pad = 4;
+  const data = PROFIL_HORAIRE_CORSE;
+  const minV = Math.min.apply(null, data);
+  const maxV = Math.max.apply(null, data);
+  const span = Math.max(1, maxV - minV);
+  const stepX = (W - 2*pad) / (data.length - 1);
+  const points = data.map((v,i) => {
+    const x = pad + i * stepX;
+    const y = H - pad - ((v - minV) / span) * (H - 2*pad);
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  }).join(' ');
+  const h = new Date().getHours();
+  const cx = pad + h * stepX;
+  const cy = H - pad - ((data[h] - minV) / span) * (H - 2*pad);
+  host.innerHTML =
+    '<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img">' +
+      '<polyline points="'+points+'" fill="none" stroke="#C28533" stroke-width="1.2" stroke-linejoin="round"/>' +
+      '<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="3" fill="#8E2F1F"/>' +
+    '</svg>' +
+    '<div class="cond-sparkline-legend"><span>0 h</span><span>Profil 24 h · ' + h + ' h actuelle</span><span>23 h</span></div>';
+}
+
+function updateCondSummaries(){
+  // --- Activite solaire ---
+  const kpNum = parseFloat(curKp);
+  const solEl = document.getElementById('cond-summary-solaire');
+  if(solEl){
+    if(isNaN(kpNum)){
+      solEl.textContent = 'vérification…';
+      solEl.style.color = 'var(--tx3)';
+    } else if(kpNum >= 7){
+      solEl.textContent = 'Tempête majeure (Kp ' + kpNum.toFixed(1) + ')';
+      solEl.style.color = 'var(--danger)';
+    } else if(kpNum >= 5){
+      solEl.textContent = 'Tempête mineure (Kp ' + kpNum.toFixed(1) + ')';
+      solEl.style.color = 'var(--danger)';
+    } else if(kpNum >= 4){
+      solEl.textContent = 'Actif (Kp ' + kpNum.toFixed(1) + ')';
+      solEl.style.color = 'var(--warn)';
+    } else {
+      solEl.textContent = 'Calme (Kp ' + kpNum.toFixed(1) + ')';
+      solEl.style.color = 'var(--acc)';
+    }
+  }
+  // --- Conditions atmospheriques ---
+  const atmoEl = document.getElementById('cond-summary-atmo');
+  if(atmoEl){
+    const meteoN  = (document.getElementById('meteo-n')||{}).textContent || '';
+    const meteoS  = (document.getElementById('meteo-s')||{}).textContent || '';
+    const lightV  = (document.getElementById('lightning-v')||{}).textContent || '';
+    const stormActive = /orage|storm|foudre|éclair/i.test(lightV) && !/aucun|—|vérif/i.test(lightV);
+    const ducting = /ducting/i.test(meteoS);
+    if(stormActive){
+      atmoEl.textContent = 'Orage actif';
+      atmoEl.style.color = 'var(--danger)';
+    } else if(ducting){
+      atmoEl.textContent = 'Ducting possible';
+      atmoEl.style.color = 'var(--warn)';
+    } else if(meteoN && meteoN !== '—'){
+      atmoEl.textContent = 'Stables (' + meteoN.replace(/^N\s*/,'') + ')';
+      atmoEl.style.color = 'var(--acc)';
+    } else {
+      atmoEl.textContent = '—';
+      atmoEl.style.color = 'var(--tx3)';
+    }
+  }
+  // --- Reseau electrique ---
+  const resEl = document.getElementById('cond-summary-reseau');
+  if(resEl){
+    const cf = (typeof chargeFacteur !== 'undefined') ? chargeFacteur : 1.0;
+    if(cf > 1.15){
+      resEl.textContent = 'Heure pleine (×' + cf.toFixed(2) + ')';
+      resEl.style.color = 'var(--warn)';
+    } else if(cf < 0.85){
+      resEl.textContent = 'Heure creuse (×' + cf.toFixed(2) + ')';
+      resEl.style.color = 'var(--acc)';
+    } else {
+      resEl.textContent = 'Charge normale (×' + cf.toFixed(2) + ')';
+      resEl.style.color = 'var(--tx2)';
+    }
+  }
+}
+
+// Render sparkline au chargement + refresh chaque heure (en cas de session longue)
+setTimeout(() => { renderChargeSparkline(); updateCondSummaries(); }, 2000);
+setInterval(() => { renderChargeSparkline(); updateCondSummaries(); }, 60*60*1000);
+// Fallback periodique pour capter les valeurs temps reel meme si un load* oublie d'appeler
+setInterval(updateCondSummaries, 30*1000);
 
 /* === Légende dynamique === */
 window.txLegend = {
