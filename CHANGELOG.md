@@ -7,6 +7,34 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [2.6.0] — 2026-04-21
+
+### Fermeture dettes ELF-VECTOR-001 + BT-ELF-001 (PR `feat/elf-bt-vectoriel`)
+
+#### Chantier 1 — Sommation vectorielle (ELF-VECTOR-001)
+
+- Nouvelle fonction `calcBiotSavartSegmentVec` : retourne `{bx, by}` en nT, direction perpendiculaire au segment (règle de la main droite)
+- `calcMagneticELF_v2` migré vers sommation vectorielle 2D : `B_lines = sqrt(Bx² + By²)` avant ajout contributions ponctuelles
+- Réintégration `POSTES_SOURCES` et `EOLIENNES_DATA` dans v2 (absents depuis PR #66 — regression corrigée)
+- `calcBiotSavartSegment` scalaire conservée pour rétro-compatibilité et rollback
+- Constante `BT_BASE_CURRENT_A = 60 A` ajoutée
+- `runELFRegressionTest` mis à jour : colonne `v2.6_nT` + indicateur `bt_loaded`
+
+#### Chantier 2 — Intégration BT réel (BT-ELF-001)
+
+- Chargement asynchrone `loadBTLinesAsync` : bbox Corse complète (41.3–43.1°N / 8.5–9.7°E), pagination 1000/page, non bloquant
+- Grille spatiale `BT_SEGMENT_GRID` / `BT_SEGMENTS_DATA` (structure identique à grille HTA)
+- `getBTSegmentsNear` / `buildBTSegmentGrid` au même endroit que leurs homologues HTA
+- `BT_ZONES` proxy conservées en fallback tant que `BT_SEGMENT_GRID` est null
+- Déclenchement 200 ms après `buildSegmentGrid(all)` dans `loadReseau`
+
+### Dettes fermées
+
+- **ELF-VECTOR-001** ✓ — sommation vectorielle 2D
+- **BT-ELF-001** ✓ — segments BT réels dans le calcul ELF
+
+---
+
 ## [2.5.1] — 2026-04-21
 
 ### Vérification calibration ELF post-Biot-Savart v2 (chore `verif-elf-calib-post-merge`)
