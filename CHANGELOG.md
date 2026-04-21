@@ -7,6 +7,54 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [2.5.0] — 2026-04-21
+
+### Ajouts — Enrichissement datasets publics (PR `feat/enrichissement-datasets-publics`)
+
+- Dataset `public/data/postes_sources_corse.json` — 21 postes HTB/HTA via OpenStreetMap (fallback EDF SEI indisponible)
+- Dataset `public/data/eoliennes_corse.json` — 3 parcs éoliens Corse (Ersa, Lumio, Rogliano) via RTE ODRE 2022
+- Dataset `public/data/points_chauds_radio_corse.json` — 5 sites U/Th documentaires (Argentella, Saleccia, Manso, Cap Corse, Murato)
+- Loaders idempotents : `loadPostesSources`, `loadEoliennes`, `loadPointsChaudsRadio`
+- Couches visuelles Leaflet + boutons menu : `b-postes`, `b-eoliennes` (Groupe 2), `b-points-chauds` (Groupe 3)
+- Notes méthodologiques : `docs/data-sources/postes_sources_corse_notes.md`, `eoliennes_corse_notes.md`, `points_chauds_radio_corse_notes.md`
+
+### Modifié — Calculs physiques
+
+- `calcMagneticELF` : ajout contributions `poste_source` (modèle ponctuel 50 µT à 10 m, 1/d³, plafond 500 nT, pruning 1 km) et `eolienne` (2 µT à 10 m pour 2 MW, 1/d², plafond 300 nT, pruning 500 m)
+- `calcGammaAmbient` : ajout `components.boost_ponctuel_nSv_h` + `boost_sources[]`. Décroissance linéaire depuis centre point chaud jusqu'au rayon d'influence, baseline 80 nSv/h soustraite. Les composantes terrestre NCRP 94 et API Téléray ASNR restent en attente.
+- GELE-001 (pondérations `w_M = 0.40, w_RF = 0.40, w_I = 0.20`) **inchangé**
+
+### Hors scope / dettes reportées
+
+- **Chantier 4 BRGM radiométrie aérienne** : reportée, dette `BRGM-RADIO-001` (aucun flux WMS/WFS/download public identifié lors de l'audit)
+- **Chantier 5 WMM 2025 cross-check** : reportée, dette `WMM-CROSSCHECK-001` (implémentation harmonique sphérique hors scope session)
+- **Chantier 6 IGN BD Forêt V2** : reportée, dette `BDFORET-V2-001` (couche absente du WMS Géoplateforme raster, shapefile trop lourd pour app web)
+### Modifié — Biot-Savart réel sur réseau HTA (PR `feat/biot-savart-reel-hta`)
+
+- `calcMagneticELF` migré vers `calcMagneticELF_v2` : formule segment fini + correction triphasée sur 11 735 segments réels (expansion des 8386 polylines `hta_lines` Supabase) au lieu de 8 axes hardcodés
+- Courant unique 225 A × `chargeFacteur` (Option B, dataset sans champ voltage — dette migration SQL)
+- Champ RMS explicite (facteur 1/√2)
+- Grille spatiale précalculée 1 km × 1.35 km au chargement `loadReseau` (10 704 tuiles)
+- Calcul par clic : < 2 ms en moyenne (cible 50 ms largement battue)
+
+### Ajouts
+
+- Fonction `calcBiotSavartSegment()` — calcul unitaire par segment avec correction triphasée k=0.5 au-delà de 20 m
+- Fonction `buildSegmentGrid()` + `getSegmentsNear()` — pré-indexation spatiale
+- Fonction `runELFRegressionTest()` — validation sur 20 points témoins (5 urbains, 5 ruraux, 5 éloignés, 5 mégalithiques)
+- Flag `USE_ELF_V2 = true` — bascule v1/v2 pour rollback d'urgence sans redéploiement
+
+### Déprécié
+
+- `calcMagneticELF_v1` conservée pour référence et rollback, sera supprimée en v3 après validation tiers
+- 8 axes `HTA_SEGS` hardcodés : uniquement utilisés par v1, sortiront avec v1
+
+### Documentation
+
+- `docs/notes-tri/AUDIT_TELLUX_NIVEAU2_NOTE_EVOLUTION_BIOTSAVART_v1.md` — note scientifique complète avec tableau comparatif 20 points
+
+---
+
 ## [2.4.0] — 2026-04-20
 
 ### Ajouts — Précision modèle (PR `feat/precision-radon-mnt-tdf`)
