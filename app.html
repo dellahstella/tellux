@@ -1146,16 +1146,15 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   </p>
 </div>
 
-<p style="margin:8px 0;"><strong>Contexte substrat géologique — teneur en quartz + proximité faille :</strong> <em style="font-size:11px;color:var(--tx3)">[indicateur de contexte, pas d'indicateur EM — cf. AUDIT_NIVEAU2 §2.3]</em></p>
+<p style="margin:8px 0;"><strong>Contexte substrat géologique — proximité faille :</strong> <em style="font-size:11px;color:var(--tx3)">[indicateur de contexte structural, pas d'indicateur EM]</em></p>
 <ul style="margin:6px 0 6px 16px;padding:0">
-  <li style="margin-bottom:4px"><strong>Base</strong> = QUARTZ_CONTENT[lithologie] × stress_estimé (corrélation susceptibilité géologique) × facteur (15)</li>
-  <li style="margin-bottom:4px"><strong>+ Proximité faille</strong> = +1.5 max si faille tectonique active à &lt;3 km (Ghilardi 2017)</li>
+  <li style="margin-bottom:4px"><strong>Proximité faille</strong> = +1.5 max si faille tectonique active à &lt;3 km (décroissance linéaire, BRGM 1/50k + Ghilardi 2017)</li>
 </ul>
 
 <p style="margin:10px 0 8px 0;"><strong>Score Indice Tellux — Perturbations vs Naturel (0-10) :</strong></p>
 <ul style="margin:6px 0 6px 16px;padding:0">
   <li style="margin-bottom:4px"><strong>P (humaines)</strong> : Antennes ANFR (±50m GPS, 974 supports), lignes HTA/BT (courants 150-450A fix, modèle Biot-Savart), RF calibrée Friis</li>
-  <li><strong>N (naturelles)</strong> : IGRF-14 (±50-100 nT IDW interp.), EMAG2v3 (3.7km résolution), piézo substrat + failles</li>
+  <li><strong>N (naturelles)</strong> : IGRF-14 (±50-100 nT IDW interp.), EMAG2v3 (3.7km résolution), susceptibilité magnétique + failles</li>
 </ul>
 
 <p style="margin:10px 0 8px 0;"><strong style="color:var(--warn)">⚠️ Incertitudes documentées :</strong></p>
@@ -3609,13 +3608,6 @@ const SIGMA_ROCK={
   schistes:0.01, ophiolite:0.005, calcaire:0.0001, alluvions:0.05, inconnu:0.001
 };
 
-// Teneur en quartz par type — Bishop 1981 (0-1)
-const QUARTZ_CONTENT={
-  granit:0.30, granit_biotite:0.25, granit_rose:0.35,
-  granodiorite:0.20, gneiss:0.15, serpentinite:0.02,
-  schistes:0.05, ophiolite:0.01, calcaire:0.01, alluvions:0.10, inconnu:0.05
-};
-
 // ─── calcSkinDepth — Épaisseur de peau électromagnétique ────────────────────
 // Formule Cagniard 1953 : δ = 503 × √(ρ/f) mètres
 //   ρ = 1/σ (résistivité en Ω·m), f = fréquence en Hz
@@ -3694,11 +3686,9 @@ const FAILLES_CORSE = [
 // Sources : BRGM cartes géologiques 1/50k (02B, 2A), Ghilardi 2017,
 //            D'Anna PCR 2019.
 //
-// EPISTEMIC NOTE (v2) : Le "bonus piézoélectricité" du commentaire original
-//   n'est plus pertinent (cf. DEPRECATED calcPiezoScore). Cette fonction est
-//   conservée comme indicateur de CONTEXTE STRUCTURAL : la proximité d'une
-//   faille tectonique est un facteur géologique documenté (potentiel sismique,
-//   perméabilité, radon), pas un amplificateur de signal EM mesurable.
+// EPISTEMIC NOTE (v2) : Indicateur de CONTEXTE STRUCTURAL — la proximité
+//   d'une faille tectonique est un facteur géologique documenté (potentiel
+//   sismique, perméabilité, radon), pas un amplificateur de signal EM mesurable.
 //   La résolution spatiale des failles BRGM est ~500m-1km : un point "dans"
 //   une faille peut être décalé de plusieurs centaines de mètres en réalité.
 //   Confiance : MEDIUM pour les failles actives ; LOW pour les quaternaires.
@@ -3734,41 +3724,6 @@ function calcFaultProximity(lat, lon) {
     }
   }
   return bonus;
-}
-
-// DEPRECATED v2 phase 1 — 2026-04-19 | Mise à jour : B-corpus-hypotheses résolu 2026-04-20
-// La base physique de ce score (émission piézoélectrique mesurable à l'échelle
-// du bâti mégalithique) n'est pas étayée par la littérature peer-reviewed
-// (cf. AUDIT_TELLUX_NIVEAU2_MODELE_COMPOSITE_V2.1.md §2.3).
-//
-// Appelants migrés (phase 2) :
-//   H1, H8, H18, H37, H39 → calcGeoSusc() (susceptibilité magnétique nT) ✓
-//   calcDecomposition → v2.context.substrate.susceptibility_nT ✓ (via calcAll_v2)
-//
-// Appelants migrés (Tâche 4.8, phase 3) :
-//   calcResonanceHz : confirmé indemne (prend longueur_m + materiau, pas de calcPiezoScore)
-//
-// MIGRATION COMPLÈTE. calcPiezoScore conservée pour backward-compat uniquement.
-// Appelants directs actifs restants : AUCUN (vérifié 2026-04-20, Tâche 4.8).
-// Peut être supprimée lors d'un refactor futur.
-//
-// Piezo Score (Bishop 1981 + Eppelbaum 2017 + Ghilardi 2017)
-// Polarisation piézo ∝ quartz_content × stress_tectonique × d33
-// d33 quartz ≈ 2.3 pC/N, stress Corse ~1-5 MPa (post-orogénique)
-// Bonus failles tectoniques (Ghilardi): stress accru près failles actives
-// Score normalisé 0-100
-function calcPiezoScore(lat,lon){
-  const t=getGeoType(lat,lon);
-  const qz=QUARTZ_CONTENT[t]||0.05;
-  // Stress tectonique estimé (plus fort en montagne, faible en plaine côtière)
-  const alt_proxy=calcGeoSusc(lat,lon); // corrélation grossière susc→altitude→stress
-  const stress=2+Math.abs(alt_proxy)/20; // MPa approximé
-  // Score base = quartz × stress × facteur (normalisé sur 100)
-  const base=Math.min(100,Math.round(qz*stress*15));
-  // Bonus faille = +1.5 max si proximité faille active
-  const fault_bonus=calcFaultProximity(lat,lon);
-  // Score final = base + bonus faille pondéré (cap à 100)
-  return Math.min(100,Math.round(base+fault_bonus*8));
 }
 
 // ═══ Décomposition multi-échelle : Crustal (régional) vs Local ═══
@@ -3851,8 +3806,8 @@ map.on('click',async e=>{
   const radon_source_is_official = v2.domains.ionizing.radon.class_source === 'official_decree_2018_434';
   const geoType=getGeoType(lat,lng);
   const crustal=calcLCS1(lat,lng);
-  // B-corpus-hypotheses résolu : piezo → susceptibilité magnétique issue de v2
-  const susc_nT=v2.context.substrate.susceptibility_nT; // remplace calcPiezoScore
+  // Susceptibilité magnétique du substrat (issue de v2)
+  const susc_nT=v2.context.substrate.susceptibility_nT;
   const skinD=calcSkinDepth(lat,lng);
   const tellPct=v2.context.telluric.value; // déjà dans v2, pas de double compute
   const predicted=Math.round(igrf+human+water*0.3+geo);
