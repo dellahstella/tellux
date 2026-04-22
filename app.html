@@ -781,33 +781,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .hypo-panel-foot button:hover{background:var(--acc);color:#fff;}
 
 
-/* ═══ GAMIFICATION ═══ */
-.xp-bar-wrap{padding:6px 12px;border-bottom:1px solid var(--border);background:var(--bg2);}
-.xp-bar-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
-.xp-bar-level{font-size:11px;font-weight:600;color:var(--acc);}
-.xp-bar-pts{font-family:var(--mono);font-size:10px;color:var(--tx3);}
-.xp-bar-track{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;}
-.xp-bar-fill{height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1);}
-/* Confetti */
-@keyframes confettiFall{0%{transform:translateY(-10px) rotate(0deg);opacity:1}100%{transform:translateY(60px) rotate(360deg);opacity:0}}
-.confetti-container{position:absolute;top:0;left:0;right:0;height:60px;pointer-events:none;overflow:hidden;z-index:9999;}
-.confetti{position:absolute;width:6px;height:6px;border-radius:1px;animation:confettiFall .8s ease-out forwards;}
-/* Level-up popup */
-@keyframes levelPop{0%{transform:scale(0.5);opacity:0}50%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
-.levelup-toast{
-  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:3000;
-  background:var(--bg);border:2px solid var(--acc);border-radius:16px;padding:24px 32px;
-  text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.25);
-  animation:levelPop .5s ease-out;
-}
-.levelup-toast .lvl-emoji{font-size:40px;display:block;margin-bottom:8px;}
-.levelup-toast .lvl-title{font-size:16px;font-weight:700;color:var(--acc);}
-.levelup-toast .lvl-desc{font-size:12px;color:var(--tx3);margin-top:4px;}
-/* Badge */
-.badge-row{display:flex;gap:4px;flex-wrap:wrap;padding:4px 12px 8px;border-bottom:1px solid var(--border);}
-.badge{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;border:1.5px solid var(--border);background:var(--bg3);opacity:.35;transition:all .3s;}
-.badge.unlocked{opacity:1;border-color:var(--acc);background:var(--acc3);box-shadow:0 0 6px rgba(45,155,135,.3);}
-.badge[title]:hover{transform:scale(1.3);}
 /* FAB Mesure terrain — bottom right */
 .fab-mesure{
   position:fixed;bottom:20px;right:16px;width:52px;height:52px;border-radius:50%;
@@ -984,7 +957,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   </div>
   <div class="hdr-actions">
 <button class="hdr-btn" onclick="toggleMethodology()" title="Méthodologie & sources">Méthodologie</button>
-    <button class="hdr-btn" onclick="document.getElementById('about-modal').style.display='flex';try{_unlockBadge('about');}catch(e){}" title="À propos du projet">À propos</button>
+    <button class="hdr-btn" onclick="document.getElementById('about-modal').style.display='flex'" title="À propos du projet">À propos</button>
     <span id="sb-status-dot" class="status-dot status-dot--pending" title="Supabase connexion en cours…" aria-label="Statut Supabase"></span>
     <span class="hdr-status" id="hdr-status">chargement…</span>
   </div>
@@ -3851,8 +3824,6 @@ function showInterp(lat,lng,igrf,human,water,score,delta){
 
 map.on('click',async e=>{
   if(e.originalEvent&&e.originalEvent._handled)return;
-  _mapClickCount++;_gameState.clicks=_mapClickCount;_saveGameState(_gameState);
-  if(_mapClickCount>=10)try{_unlockBadge('10clicks');}catch(e){}
   const{lat,lng}=e.latlng;
   const calcPopup=L.popup({closeButton:true,className:'delta-popup'})
     .setLatLng(e.latlng).setContent('<span style="font-size:12px">\u23f3 calcul\u2026</span>').openOn(map);
@@ -5425,106 +5396,6 @@ initCounts();
 <button class="fab-mesure" id="fab-mesure" onclick="toggleFabMenu()" title="Actions terrain">+<span class="fab-tooltip">Actions terrain</span></button>
 
 <script>
-// ═══ GAMIFICATION ENGINE ═══
-const LEVELS=[
-  {name:'🌱 Curieux',xp:0},
-  {name:'🔍 Apprenti',xp:50},
-  {name:'⛏️ Prospecteur',xp:150},
-  {name:'🧭 Géomancien',xp:300},
-  {name:'👑 Maître Tellux',xp:500}
-];
-const BADGES={
-  first:{emoji:'🧪',title:'Premier test lancé'},
-  cauria:{emoji:'🗿',title:'Explorateur Cauria'},
-  '10clicks':{emoji:'🗺️',title:'10 points explorés'},
-  about:{emoji:'📚',title:'Corpus lu'},
-  mesure:{emoji:'📡',title:'Mesure soumise'},
-  '5pass':{emoji:'⭐',title:'5 tests validés'},
-  terrain:{emoji:'🥾',title:'Quête terrain activée'},
-  master:{emoji:'👑',title:'Maître Tellux'}
-};
-
-function _loadGameState(){
-  try{
-    const s=localStorage.getItem('tellux_game');
-    if(s)return JSON.parse(s);
-  }catch(e){}
-  return {xp:0,badges:[],clicks:0,testsRun:0,testsPassed:0};
-}
-function _saveGameState(gs){try{localStorage.setItem('tellux_game',JSON.stringify(gs));}catch(e){}}
-let _gameState=_loadGameState();
-
-function _addXP(pts,reason){
-  const gs=_gameState;
-  const oldLevel=LEVELS.filter(l=>l.xp<=gs.xp).pop();
-  gs.xp+=pts;
-  _saveGameState(gs);
-  const newLevel=LEVELS.filter(l=>l.xp<=gs.xp).pop();
-  _renderXP();
-  if(newLevel.xp>oldLevel.xp)_showLevelUp(newLevel);
-}
-
-function _unlockBadge(id){
-  const gs=_gameState;
-  if(gs.badges.includes(id))return;
-  gs.badges.push(id);
-  _saveGameState(gs);
-  _renderBadges();
-  _addXP(15,'Badge '+id);
-  // Mini confetti on the badge
-  const el=document.getElementById('bdg-'+id);
-  if(el){el.classList.add('unlocked');el.style.transform='scale(1.4)';setTimeout(()=>{el.style.transform='';},400);}
-}
-
-function _renderXP(){
-  const gs=_gameState;
-  const lvl=LEVELS.filter(l=>l.xp<=gs.xp).pop();
-  const nextLvl=LEVELS.find(l=>l.xp>gs.xp)||LEVELS[LEVELS.length-1];
-  const pct=nextLvl.xp>lvl.xp?Math.min(100,((gs.xp-lvl.xp)/(nextLvl.xp-lvl.xp))*100):100;
-  const el=document.getElementById('xp-level');if(el)el.textContent=lvl.name;
-  const pts=document.getElementById('xp-pts');if(pts)pts.textContent=gs.xp+' / '+nextLvl.xp+' XP';
-  const fill=document.getElementById('xp-fill');if(fill)fill.style.width=pct+'%';
-}
-
-function _renderBadges(){
-  const gs=_gameState;
-  Object.keys(BADGES).forEach(id=>{
-    const el=document.getElementById('bdg-'+id);
-    if(el&&gs.badges.includes(id))el.classList.add('unlocked');
-  });
-}
-
-function _showLevelUp(level){
-  const d=document.createElement('div');
-  d.className='levelup-toast';
-  d.innerHTML='<span class="lvl-emoji">🎉</span><div class="lvl-title">'+level.name+'</div><div class="lvl-desc">Niveau débloqué !</div>';
-  document.body.appendChild(d);
-  setTimeout(()=>{d.style.opacity='0';d.style.transition='opacity .5s';setTimeout(()=>d.remove(),600);},2500);
-}
-
-function _spawnConfetti(container){
-  if(!container)return;
-  const colors=['#22c55e','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#ec4899'];
-  for(let i=0;i<18;i++){
-    const p=document.createElement('div');
-    p.className='confetti';
-    p.style.left=Math.random()*100+'%';
-    p.style.background=colors[Math.floor(Math.random()*colors.length)];
-    p.style.animationDelay=Math.random()*0.3+'s';
-    p.style.transform='rotate('+Math.random()*360+'deg)';
-    container.appendChild(p);
-  }
-  setTimeout(()=>container.innerHTML='',1200);
-}
-
-// Track map clicks for badge
-let _mapClickCount=_gameState.clicks||0;
-
-// Init gamification on load
-setTimeout(()=>{
-  _renderXP();_renderBadges();
-},500);
-
 function startContribFromFAB(){
   const form=document.getElementById('cform');
   const fab=document.getElementById('fab-mesure');
