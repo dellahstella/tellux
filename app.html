@@ -3874,6 +3874,19 @@ map.on('click',async e=>{
   const radonConf  = radon_class===3?'●●●':radon_class===2?'●●○':'●●●'; // conf toujours high sur classe lithologique
   const radonLabel = radon_class===3?'Élevé':radon_class===2?'Modéré':'Faible';
 
+  // Label dynamique correction externe (honnêteté scientifique — audit 2026-04-22)
+  // La branche AQU est inatteignable en prod (CORS BGS) — s'activera automatiquement si CORS résolu
+  const corrLabel = (() => {
+    const corr = calcExternalCorr();
+    if (aquExternalCorr !== null) return 'correction AQU + Kp ('+(corr>=0?'+':'')+corr+' nT)';
+    if (!isNaN(parseFloat(curKp))) {
+      return corr === 0
+        ? 'Kp calme, pas de correction'
+        : 'correction Kp = '+(corr>=0?'+':'')+corr+' nT (NOAA SWPC)';
+    }
+    return 'correction externe indisponible';
+  })();
+
   const v2SectionHTML=
     '<div style="border-top:1px solid #e5e7eb;margin-top:4px;padding-top:4px">'+
       // ── Statique géomagnétique ──
@@ -3882,7 +3895,7 @@ map.on('click',async e=>{
         '<span style="font-size:12px;font-weight:700;color:#1F3A5F">'+static_nT+' nT</span>'+
         '<span style="font-size:9px;color:#8b92a5" title="Confiance : moyen — IGRF-14 + LCS1/EMAG2v3, ±100 nT">●●○</span>'+
       '</div>'+
-      '<div style="font-size:8px;color:#8b92a5">IGRF-14 · LCS1/EMAG2v3 · Sq · correction AQU/Kp</div>'+
+      '<div style="font-size:8px;color:#8b92a5">IGRF-14 · LCS1/EMAG2v3 · Sq · '+corrLabel+'</div>'+
       // ── ELF 50 Hz ──
       '<div style="margin-top:3px;font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">ELF anthropique 50 Hz</div>'+
       '<div style="display:flex;align-items:center;gap:4px;margin-bottom:1px">'+
