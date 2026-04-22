@@ -5394,32 +5394,6 @@ setInterval(loadMeteo,30*60*1000);
 setInterval(loadAQU,30*60*1000); // Refresh météo 30min
 setInterval(loadLightning,10*60*1000); // Refresh foudre 5min
 
-// ═══ GENERATEUR PDF BIBLIOGRAPHIE ═══
-function genererBiblioPDF(){
-  const sorted=[...MEGA_STUDIES].sort((a,b)=>a.author.localeCompare(b.author,'fr'));
-  const w=window.open('','biblio','width=800,height=600');
-  if(!w){alert('Popup bloquée — autorisez les popups pour tellux.pages.dev');return;}
-  const date=new Date().toLocaleDateString('fr-FR',{year:'numeric',month:'long',day:'numeric'});
-  let html='<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Tellux — Bibliographie</title>';
-  html+='<style>@media print{@page{size:A4;margin:20mm 15mm}}';
-  html+='body{font-family:Georgia,serif;font-size:11pt;line-height:1.6;color:#1F2329;max-width:700px;margin:0 auto;padding:40px 20px}';
-  html+='h1{font-size:18pt;margin-bottom:4px;color:#3F5B3A}h2{font-size:11pt;color:#74706A;font-weight:normal;margin-bottom:24px}';
-  html+='.entry{margin-bottom:8px;padding-left:24px;text-indent:-24px}';
-  html+='.author{font-weight:bold}.year{color:#C28533}.source{font-style:italic;color:#74706A}';
-  html+='.footer{margin-top:32px;padding-top:12px;border-top:1px solid #E8E2D5;font-size:9pt;color:#74706A}';
-  html+='</style></head><body>';
-  html+='<h1>Tellux — Bibliographie</h1>';
-  html+='<h2>'+sorted.length+' références · Généré le '+date+'</h2>';
-  sorted.forEach(s=>{
-    html+='<div class="entry"><span class="author">'+s.author+'</span> (<span class="year">'+s.year+'</span>). <span class="source">'+s.source+'</span></div>';
-  });
-  html+='<div class="footer">Tellux — Mesurer le vivant · tellux.pages.dev · Projet de recherche citoyen, Corse</div>';
-  html+='</body></html>';
-  w.document.write(html);
-  w.document.close();
-  setTimeout(()=>w.print(),500);
-}
-
 function runAutoTests(){ return Promise.resolve(); }
 
 // ── Stubs v8 — données patrimoine extraites vers patrimoine.html (Phase 2) ──
