@@ -1400,11 +1400,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   </div>
   <div id="tx-legend-body"></div>
 </div>
-<!-- Panneau hypothèses + XP/badges → migré vers patrimoine.html.
-     Les fonctions JS (HYPOTHESES, _hypoResults, toggleHypoPanel, renderHypo, hypoNav,
-     switchHTab, activateCurrentHypo, activateHypo, _addXP, _renderXP, _unlockBadge,
-     _renderBadges) restent comme code dormant — déjà guardées par `if(el)` ou try/catch
-     aux points d'appel sensibles. -->
+<!-- Panneau hypothèses migré vers patrimoine.html (purge 6/10).
+     XP/badges encore présents — retrait prévu au commit 7. -->
 
 <div class="mpanel" id="mpanel">
   <div style="display:flex;align-items:center;margin-bottom:6px">
@@ -5396,13 +5393,10 @@ setInterval(loadLightning,10*60*1000); // Refresh foudre 5min
 
 function runAutoTests(){ return Promise.resolve(); }
 
-// ── Stubs v8 — données patrimoine extraites vers patrimoine.html (Phase 2) ──
-// Phase 4 UI/UX retirera les boutons layer correspondants de app.html.
-const HYPOTHESES = [];
+// ── Stubs v8 — données patrimoine extraites vers patrimoine.html ──
+// SITES/CHURCHES conservés pour compteurs footer (retrait commit 10).
 let SITES = [];
 let CHURCHES = [];
-let _hypoResults = {};
-const MEGA_STUDIES = []; // bibliographie extraite vers patrimoine.html
 
 // ═══ COMPTAGES DYNAMIQUES ═══
 function initCounts(){
@@ -5529,194 +5523,7 @@ let _mapClickCount=_gameState.clicks||0;
 // Init gamification on load
 setTimeout(()=>{
   _renderXP();_renderBadges();
-  // Init quest badge count
-  const untested=HYPOTHESES.filter(h=>h.need==='auto'&&!_hypoResults[h.id]).length;
-  const bdg=document.getElementById('quest-badge');
-  if(bdg){bdg.textContent=untested||'!';bdg.style.display='flex';}
 },500);
-
-let questMarkers=[];
-let _hypoIdx=0;
-let _hypoTab='auto';
-function _getHypoList(){
-  if(_hypoTab==='auto') return HYPOTHESES.filter(h=>h.need==='auto');
-  return HYPOTHESES.filter(h=>h.need==='terrain'||h.need==='supabase');
-}
-function switchHTab(tab){
-  _hypoTab=tab;_hypoIdx=0;clearQuestMarkers();
-  document.querySelectorAll('.htab').forEach(b=>{b.style.borderBottom='2px solid transparent';b.style.color='var(--tx3)';});
-  const el=document.getElementById('htab-'+tab);if(el){el.style.borderBottom='2px solid var(--acc)';el.style.color='var(--acc)';}
-  const nA=HYPOTHESES.filter(h=>h.need==='auto').length,nT=HYPOTHESES.filter(h=>h.need!=='auto').length;
-  const a=document.getElementById('htab-auto-n'),t=document.getElementById('htab-terrain-n');
-  if(a)a.textContent=nA;if(t)t.textContent=nT;
-  renderHypo();
-}
-
-function toggleHypoPanel(){
-  const p=document.getElementById('hypo-panel'),btn=document.getElementById('quest-btn');
-  // Panneau migré vers patrimoine.html — sortie silencieuse si DOM absent
-  if(!p)return;
-  const opening=!p.classList.contains('open');
-  p.classList.toggle('open');if(btn)btn.classList.toggle('active');
-  if(opening){switchHTab(_hypoTab);
-    // Update badge
-    const untested=HYPOTHESES.filter(h=>h.need==='auto'&&!_hypoResults[h.id]).length;
-    const bdg=document.getElementById('quest-badge');
-    if(bdg){bdg.textContent=untested;bdg.style.display=untested>0?'flex':'none';}if(!window._hypoAutoRan){window._hypoAutoRan=true;try{runAutoTests();setTimeout(renderHypo,1000);}catch(e){}}}
-  else{clearQuestMarkers();}
-}
-
-function hypoNav(dir){
-  const list=_getHypoList();
-  _hypoIdx=(_hypoIdx+dir+list.length)%list.length;
-  clearQuestMarkers();
-  renderHypo();
-}
-
-function renderHypo(){
-  // Panneau migré vers patrimoine.html — sortie silencieuse si DOM absent
-  const _hc=document.getElementById('hypo-counter');
-  const _hb=document.getElementById('hypo-body');
-  if(!_hc||!_hb)return;
-  const list=_getHypoList();
-  if(!list.length){_hc.textContent='0/0';_hb.innerHTML='<div style="color:var(--tx3);font-size:11px;padding:8px">Aucune hypothèse.</div>';return;}
-  if(_hypoIdx>=list.length)_hypoIdx=0;
-  const h=list[_hypoIdx];
-  _hc.textContent=(_hypoIdx+1)+'/'+list.length;
-  const ni={auto:'🤖',terrain:'📍',supabase:'☁️'}[h.need]||'';
-  let rh='';
-  if(_hypoResults&&_hypoResults[h.id]){const r=_hypoResults[h.id];rh='<div style="margin-top:8px;padding:6px 8px;border-radius:6px;font-size:10px;font-family:var(--mono);background:'+(r.pass?'#dcfce7':'#fee2e2')+';color:'+(r.pass?'#166534':'#991b1b')+'">'+(r.pass?'✅ ':'❌ ')+(r.text||'')+'</div>';}
-  else if(h.need==='auto'){rh='<div style="margin-top:8px;padding:6px 8px;border-radius:6px;font-size:10px;background:var(--bg2);color:var(--tx3)">⏳ Cliquer Activer pour tester</div>';}
-  else{const isSupa=h.need==='supabase';
-  rh='<div style="margin-top:8px;padding:6px 8px;border-radius:6px;font-size:10px;background:'+(isSupa?'#e0e7ff':'var(--bg2)')+';color:'+(isSupa?'#3730a3':'var(--tx3)')+';line-height:1.5">'+(isSupa?'☁️ <b>Données requises :</b> ':'📍 <b>Action requise :</b> ');
-  const guides={'H3':'Mesurer les espacements entre menhirs à Cauria avec un décamètre. Chercher un module ~50cm.',
-    'H9':'Mesurer E et H simultanément avec 2 sondes. Calculer ratio et comparer au modèle Cagniard.',
-    'H16':'Parcourir un transect avec antenne Lecher et noter les croisements. Comparer à la carte Δ.',
-    'H17':'Magnétomètre smartphone sur Cauria/Palaghju : faire un relevé en spirale depuis le centre.',
-    'H19':'Construire un muret quartz orienté 36.87° et mesurer le champ avant/après.',
-    'H23':'Magnétomètre sur chaque menhir vs roche à 5m. Le menhir dépasse-t-il de +5 nT ?',
-    'H24':'Choisir un site Tellux score <4. Appliquer principes Vitruve et mesurer perturbations EM.',
-    'H25':'Micro + analyseur fréquence dans dolmen Fontanaccia. Chercher pic 90-120 Hz.',
-    'H26':'Micro dans église romane (San Michele Murato). Comparer fréquences aux temples maltais.',
-    'H28':'Mesurer champ dans structure φ en granit quartzifère vs structure rectangulaire.',
-    'H41':'Cliquer Activer pour voir les hotspots et sites anciens, puis choisir site/orientation/matériaux.'};
-  const guide=guides[h.id];
-  if(guide){rh+=guide;}
-  else if(isSupa){rh+='Nécessite 20+ mesures terrain. Actuellement '+(window._contribCount||0)+' contribution(s). '+((window._contribCount||0)>=20?'✅ Données suffisantes !':'Contribuez via + Mesure pour débloquer.');}
-  else{rh+='Rendez-vous sur le terrain avec un magnétomètre smartphone pour cette quête.';}
-  rh+='</div>';}
-  _hb.innerHTML='<div class="hypo-id">'+h.id+'</div><div class="hypo-title">'+h.title+'</div><div class="hypo-desc">'+h.desc+'</div><div class="hypo-meta"><span>Phase '+h.phase+'</span><span>'+ni+' '+h.need+'</span></div>'+rh;
-}
-
-function activateCurrentHypo(){
-  const list=_getHypoList();
-  if(!list.length)return;
-  activateHypo(list[_hypoIdx].id);
-}
-
-function clearQuestMarkers(){
-  questMarkers.forEach(m=>{try{map.removeLayer(m);}catch(e){}});
-  questMarkers=[];
-}
-
-function activateHypo(id){
-  clearQuestMarkers();
-  // Gamification hooks
-  _gameState.testsRun=(_gameState.testsRun||0)+1;
-  _saveGameState(_gameState);
-  if(_gameState.testsRun===1)_unlockBadge('first');
-  if(id==='H42')_unlockBadge('cauria');
-  if(_gameState.testsRun>=1&&_hypoTab==='terrain')_unlockBadge('terrain');
-  switch(id){
-    case 'H34':
-      map.setView([41.99,9.12],10);
-      questMarkers.push(L.popup().setLatLng([41.99,9.12])
-        .setContent('<b>H34 — Monte d\'Oro</b><br>Centre géométrique mégalithes corses').openOn(map));
-      break;
-    case 'H35':
-      if(!ACTIVE.res)tog('res','on-res',document.getElementById('b-res'));
-      break;
-    case 'H36':
-      if(!ACTIVE.ant)tog('ant','on-ant',document.getElementById('b-ant'));
-      if(!ACTIVE.geo)tog('geo','on-geo',document.getElementById('b-geo'));
-      break;
-    case 'H37':
-      if(!ACTIVE.emag)tog('emag','on-emag',document.getElementById('b-emag'));
-      if(!ACTIVE.sit)tog('sit','on-sit',document.getElementById('b-sit'));
-      break;
-    case 'H38':
-      if(!ACTIVE.egl)tog('egl','on-egl',document.getElementById('b-egl'));
-      if(!ACTIVE.sit)tog('sit','on-sit',document.getElementById('b-sit'));
-      break;
-    case 'H39':
-      if(!ACTIVE.ant)tog('ant','on-ant',document.getElementById('b-ant'));
-      if(!ACTIVE.sit)tog('sit','on-sit',document.getElementById('b-sit'));
-      if(!ACTIVE.geo)tog('geo','on-geo',document.getElementById('b-geo'));
-      break;
-    case 'H40':
-      if(!ACTIVE.emag)tog('emag','on-emag',document.getElementById('b-emag'));
-      if(!ACTIVE.hot)tog('hot','on-hot',document.getElementById('b-hot'));
-      break;
-    case 'H41':
-      if(!ACTIVE.hot)tog('hot','on-hot',document.getElementById('b-hot'));
-      if(!ACTIVE.sit)tog('sit','on-sit',document.getElementById('b-sit'));
-      break;
-    case 'H42':
-      if(!ACTIVE.sit)tog('sit','on-sit',document.getElementById('b-sit'));
-      if(!ACTIVE.align)tog('align','on-align',document.getElementById('b-align'));
-      map.setView([41.535,8.918],15);
-      questMarkers.push(L.popup().setLatLng([41.537,8.919])
-        .setContent('<b>H42 — Yard = 110 Hz?</b><br>Mesurer espacements menhirs Cauria<br><i>Crowhurst + Stecchini + Leplat</i>').openOn(map));
-      break;
-    case 'H43':
-      if(!ACTIVE.sit)tog('sit','on-sit',document.getElementById('b-sit'));
-      map.setView([41.530,8.918],16);
-      questMarkers.push(L.popup().setLatLng([41.530,8.918])
-        .setContent('<b>H43 — Spirales gravées?</b><br>Comparer magnétomètre face gravée vs lisse<br><i>Lonegren 1996, Brooker 1983</i>').openOn(map));
-      break;
-    case 'H44':
-      if(!ACTIVE.sit)tog('sit','on-sit',document.getElementById('b-sit'));
-      if(!ACTIVE.align)tog('align','on-align',document.getElementById('b-align'));
-      map.fitBounds([[41.53,8.88],[42.11,9.52]]);
-      questMarkers.push(L.popup().setLatLng([41.8,9.1])
-        .setContent('<b>H44 — φ = piézo optimal?</b><br>Triangle Cauria→Bavella→Aléria<br><i>Charpentier, Gomaa, Leplat</i>').openOn(map));
-      break;
-    default:
-      const hd=HYPOTHESES.find(x=>x.id===id);
-      if(hd&&hd.need==='auto'){
-        if(!window._hypoAutoRan){window._hypoAutoRan=true;try{runAutoTests();}catch(e){}}
-        setTimeout(()=>{
-      renderHypo();
-      // Award XP for auto test
-      _addXP(10,'Auto test '+id);
-      // Check if test passed for confetti
-      const res=_hypoResults[id];
-      if(res&&res.pass){
-        _gameState.testsPassed=(_gameState.testsPassed||0)+1;_saveGameState(_gameState);
-        if(_gameState.testsPassed>=5)_unlockBadge('5pass');
-        if(_gameState.testsPassed>=20)_unlockBadge('master');
-        // Confetti!
-        const panel=document.getElementById('hypo-panel');
-        if(panel){let cc=panel.querySelector('.confetti-container');if(!cc){cc=document.createElement('div');cc.className='confetti-container';panel.prepend(cc);}_spawnConfetti(cc);}
-      }
-    },800);
-        const dd=(hd.desc||'').toLowerCase();
-        if(dd.includes('piézo')||dd.includes('granit'))if(!ACTIVE.sit)tog('sit','on-sit',document.getElementById('b-sit'));
-        if(dd.includes('emag')||dd.includes('crustal'))if(!ACTIVE.emag)tog('emag','on-emag',document.getElementById('b-emag'));
-        if(dd.includes('église'))if(!ACTIVE.egl)tog('egl','on-egl',document.getElementById('b-egl'));
-        if(dd.includes('antenne')||dd.includes('rf'))if(!ACTIVE.ant)tog('ant','on-ant',document.getElementById('b-ant'));
-        if(dd.includes('anomal'))if(!ACTIVE.hot)tog('hot','on-hot',document.getElementById('b-hot'));
-        const rr=_hypoResults[id];
-        questMarkers.push(L.popup().setLatLng(map.getCenter()).setContent('<b>'+id+'</b><br>'+(rr?(rr.pass?'✅ ':'❌ ')+rr.text:'⏳ Test lancé…')).openOn(map));
-      } else {
-        if(!ACTIVE.sit)tog('sit','on-sit',document.getElementById('b-sit'));
-        _addXP(5,'Terrain exploration '+id);
-        questMarkers.push(L.popup().setLatLng(map.getCenter()).setContent('<b>'+id+'</b><br>📍 Mesures terrain requises').openOn(map));
-      }
-      break;
-  }
-}
-
 
 function startContribFromFAB(){
   const form=document.getElementById('cform');
