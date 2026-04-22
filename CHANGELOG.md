@@ -7,6 +7,69 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [2.6.1] — 2026-04-22
+
+### Fixed — HOTFIX BT-CALIBRATION-001 (PR `hotfix/disable-bt-segments-calibration`)
+
+- **Désactivation temporaire du calcul BT segments** dans `calcMagneticELF_v2` via flag `USE_BT_SEGMENTS = false`
+- Bug de calibration identifié lors de la validation PR #71 : le modèle Biot-Savart + correction triphasée `k=0.5` est calibré sur géométrie pylône HTA (phases espacées 1–3 m) et inadapté au câble BT torsadé (phases espacées ~1 cm). Surestimation catastrophique en zone urbaine dense : ratios v2.5 → v2.6 atteignant ×210 (Bastia 33 592 nT au lieu de ~160 nT attendus)
+- `BT_ZONES` proxy legacy v2.5 reprennent le relais automatiquement quand `USE_BT_SEGMENTS = false`
+- Chargement asynchrone `bt_lines`, grille `BT_SEGMENT_GRID` et fonctions BT conservés pour réactivation future après recalibrage
+- Correction du bug `_btLinesCalcLoading` non remis à `false` après succès (pattern `finally`)
+- Warning console unique au premier calcul : traçabilité de la désactivation
+
+### Validation runELFRegressionTest v2.6.1
+
+Ratios urbains reviennent à des valeurs physiquement réalistes :
+- Ajaccio centre : 14 253 → 205 nT
+- Bastia centre : 33 592 → 117 nT
+- Porto-Vecchio : 21 047 → 134 nT
+- Calvi : 26 654 → 79 nT
+- Corte : 7 737 → 433 nT
+- Palaggiu : 1 164 → 1 521 nT (HTA vectoriel seul, proximité ligne réelle)
+- Points éloignés : inchangés (offshore 11 nT, sommets 20–50 nT)
+
+### Dette ouverte
+
+- **BT-CALIBRATION-001** — recalibrage du modèle BT pour produire des ordres de grandeur physiquement réalistes. 3 leviers envisagés : recalibrage paramétrique (k, cap, dist min), modèle statistique densité BT par tuile, ou modèle Biot-Savart adapté câbles torsadés. Traitement en session dédiée avec validation physique préalable.
+
+### Préservé depuis PR #71
+
+- Sommation vectorielle HTA (gain scientifique conservé)
+- Chargement asynchrone BT (infrastructure prête pour réactivation)
+- Réintégration `POSTES_SOURCES` + `EOLIENNES_DATA` dans v2
+- Zone GELE-001 intacte
+
+---
+
+## [2.6.0] — 2026-04-21
+
+### Fermeture dettes ELF-VECTOR-001 + BT-ELF-001 (PR `feat/elf-bt-vectoriel`)
+
+#### Chantier 1 — Sommation vectorielle (ELF-VECTOR-001)
+
+- Nouvelle fonction `calcBiotSavartSegmentVec` : retourne `{bx, by}` en nT, direction perpendiculaire au segment (règle de la main droite)
+- `calcMagneticELF_v2` migré vers sommation vectorielle 2D : `B_lines = sqrt(Bx² + By²)` avant ajout contributions ponctuelles
+- Réintégration `POSTES_SOURCES` et `EOLIENNES_DATA` dans v2 (absents depuis PR #66 — regression corrigée)
+- `calcBiotSavartSegment` scalaire conservée pour rétro-compatibilité et rollback
+- Constante `BT_BASE_CURRENT_A = 60 A` ajoutée
+- `runELFRegressionTest` mis à jour : colonne `v2.6_nT` + indicateur `bt_loaded`
+
+#### Chantier 2 — Intégration BT réel (BT-ELF-001)
+
+- Chargement asynchrone `loadBTLinesAsync` : bbox Corse complète (41.3–43.1°N / 8.5–9.7°E), pagination 1000/page, non bloquant
+- Grille spatiale `BT_SEGMENT_GRID` / `BT_SEGMENTS_DATA` (structure identique à grille HTA)
+- `getBTSegmentsNear` / `buildBTSegmentGrid` au même endroit que leurs homologues HTA
+- `BT_ZONES` proxy conservées en fallback tant que `BT_SEGMENT_GRID` est null
+- Déclenchement 200 ms après `buildSegmentGrid(all)` dans `loadReseau`
+
+### Dettes fermées
+
+- **ELF-VECTOR-001** ✓ — sommation vectorielle 2D
+- **BT-ELF-001** ✓ — segments BT réels dans le calcul ELF
+
+---
+
 ## [2.5.1] — 2026-04-21
 
 ### Vérification calibration ELF post-Biot-Savart v2 (chore `verif-elf-calib-post-merge`)
