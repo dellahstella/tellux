@@ -1,5 +1,9 @@
 # Tellux — Analyses statistiques
 
+> **Note : dossier archivé.** Ce dossier archive une analyse exploratoire de corrélation mégalithes × failles tectoniques × piézoélectricité (avril 2026). Les conclusions de cette analyse ne sont pas intégrées dans l'application Tellux v6.0 qui se concentre sur la cartographie électromagnétique. L'analyse reste disponible à titre de méthodologie reproductible (seed=42) pour des travaux futurs ou une relecture externe.
+>
+> Toute référence aux sites mégalithiques, églises romanes ou hypothèses auto-testables dans ce dossier relève de l'archive pré-purge v6.0.
+
 Dossier des analyses reproductibles menées sur le corpus Tellux.
 
 ## Conventions
