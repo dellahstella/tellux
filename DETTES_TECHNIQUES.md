@@ -1,6 +1,6 @@
 # Tellux — Dettes techniques ouvertes
 
-**Dernière mise à jour :** 22 avril 2026
+**Dernière mise à jour :** 22 avril 2026 (ajout INTL-CRUSTAL-001)
 
 Ce document liste les dettes techniques ouvertes identifiées dans l'application Tellux. Chaque dette fait l'objet d'un identifiant pérenne, d'une description factuelle et d'une condition de déblocage documentée. Aucune de ces dettes ne bloque la publication de la phase 1.
 
@@ -110,6 +110,20 @@ La validation physique préalable (littérature ou mesures terrain) est un prér
 **Priorité :** Faible
 
 **Condition de déblocage :** Session dédiée de nettoyage (non bloquant).
+
+---
+
+### INTL-CRUSTAL-001 — Module de calibration crustale mondiale (EM pur)
+
+**Description :** La couche « Mondial (calibration) » et la jauge « Contexte mondial » du popup ont été retirées de `app.html` (PR `fix/app-residus-purge-patrimoine`, 22 avril 2026). L'ancienne implémentation mélangeait 2 références EM légitimes (Bangui −1000 nT, Ries −200 nT) avec 3 toponymes patrimoine corses (Bonifacio, Murato, Cauria), et sa fonction constructrice `buildIntlLayer` avait été retirée pendant la purge v6.0 sans nettoyer ses appelants, provoquant un `ReferenceError` au boot via l'auto-activation `tog('intl', …)`.
+
+**Priorité :** Faible
+
+**Condition de déblocage :** Réimplémentation d'un module de calibration crustale mondiale EM pur, basé exclusivement sur des références à pertinence magnétique documentée (cratères d'impact majeurs : Bangui, Kursk, Vredefort, Ries, Chicxulub ; grandes anomalies crustales listées dans la littérature USGS/EMAG2). Aucun site patrimoine ne doit figurer dans le tableau de références. La spécification du module inclura :
+- Tableau `CRUSTAL_REFS` avec colonnes `name`, `nT`, `source`, `doi`, `lat`, `lon`
+- Jauge popup optionnelle (toggle utilisateur, hors-champ du score composite)
+- Couche Leaflet des marqueurs mondiaux (zoom-dépendante)
+- Légende listant les sources USGS/EMAG2/publications
 
 ---
 
