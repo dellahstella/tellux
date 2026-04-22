@@ -76,7 +76,7 @@ Voir [`LICENSE`](LICENSE).
 
 ## Porteur
 
-**Lucas IANNACCONE** — SARL Stella Canis Majoris, Bastia.
+**Lucas IANNACCONE**, à Bastia.
 
 Le projet est développé en autonomie, sans mandat ni partenariat institutionnel à la date de publication de cette page. Les démarches d'accès à certaines données institutionnelles (réseaux publics nationaux français) sont en cours.
 
