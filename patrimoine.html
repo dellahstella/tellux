@@ -106,6 +106,14 @@ body{display:flex;flex-direction:column;font-family:var(--font);background:var(-
 .lg-line{width:18px;height:2px;background:var(--tyrrh);opacity:0.7;}
 .lg-dot{width:9px;height:9px;border-radius:50%;background:var(--tx3);opacity:0.6;}
 
+/* ── Bibliographie ── */
+.biblio-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;}
+.biblio-item{padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);font-size:11px;line-height:1.45;}
+.biblio-item .ba{font-weight:600;color:var(--tx);}
+.biblio-item .by{color:var(--tx3);font-family:var(--mono);font-size:10px;margin-left:4px;}
+.biblio-item .bs{display:block;color:var(--tx2);margin-top:2px;font-size:10px;}
+.biblio-note{font-size:10px;color:var(--tx3);margin-top:8px;font-style:italic;line-height:1.5;}
+
 @media(max-width:768px){
   .sidebar{width:260px;}
   .legend{left:276px;}
@@ -224,6 +232,13 @@ body{display:flex;flex-direction:column;font-family:var(--font);background:var(-
           <button class="btn-hypo" onclick="showDormantMsg()">Tester les hypothèses (bientôt)</button>
         </div>
       </div>
+
+      <!-- Bibliographie (ancre #biblio — cible du lien depuis app.html) -->
+      <section id="biblio" class="section">
+        <div class="section-title">Bibliographie</div>
+        <ul class="biblio-list" id="biblio-list"></ul>
+        <p class="biblio-note">Références peer-reviewed mobilisées pour la détection d'alignements (Broadbent 1980), la synthèse mégalithique corse (Moracchini-Mazel, Grosjean, D'Anna, Leandri) et les études orientation (Hoskin, Santucci).</p>
+      </section>
 
     </div>
 
@@ -560,6 +575,10 @@ function analyseChurches(){
 }
 
 // ── MEGA_STUDIES ──
+// Note géo-archéologique (migrée depuis app.html v5.9) :
+// les statues-menhirs Bronze final sont préférentiellement implantées sur granit
+// biotite (Permien), formations dont la susceptibilité magnétique est 5-10×
+// supérieure aux schistes ou calcaires. Voir hypothèse H6 (dormante).
 const MEGA_STUDIES=[
   {id:'leplat2016',author:'Leplat Q.',year:2016,source:'messagedelanuitdestemps.org'},
   {id:'santucci2004',author:'Santucci J-F. et al.',year:2004,source:'HAL hal-00183310 · Univ. Corse'},
@@ -888,9 +907,24 @@ function loadSitesReference(){
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// RENDER BIBLIO (section #biblio — cible du lien depuis app.html)
+// ─────────────────────────────────────────────────────────────────────────────
+function renderBiblio(){
+  const ul=document.getElementById('biblio-list');
+  if(!ul)return;
+  const items=MEGA_STUDIES.slice().sort(function(a,b){return (a.year||0)-(b.year||0);});
+  ul.innerHTML=items.map(function(s){
+    const yr=s.year?'<span class="by">('+s.year+')</span>':'';
+    const src=s.source?'<span class="bs">'+s.source+'</span>':'';
+    return '<li class="biblio-item"><span class="ba">'+s.author+'</span>'+yr+src+'</li>';
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────────────────────────
 loadSitesReference();
+renderBiblio();
 
 // Count initial
 document.getElementById('cnt-align').textContent=MEGA_ALIGNMENTS.length;
