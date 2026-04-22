@@ -3935,8 +3935,6 @@ map.on('click',async e=>{
     piezoBar+
     // Section domaines v2 (niveau B)
     v2SectionHTML+
-    // Jauge contexte international
-    '<div style="margin-top:4px"><div style="font-size:8px;color:#9ca3af;margin-bottom:1px">Contexte mondial</div>'+intlGaugeHTML(geo,crustal)+'</div>'+
     // Ligne 3 : résumé technique compact
     '<div style="font-size:9px;color:#9ca3af;margin-top:3px;border-top:1px solid #e5e7eb;padding-top:3px">'+
       '\u0394 <span style="color:'+deltaCol+'">'+deltaStr+'</span>'+
@@ -4307,34 +4305,6 @@ let RF_METRICS={n:0,rmse:0,bias:0,medianRatio:25,medianRatioDense:25,medianRatio
 
 // buildAOCLayer() + données zones AOP viticoles → migrées vers agronomie.html
 // (chore/move-agro-outils — réintégration au compte-goutte quand le moment viendra)
-
-function intlGaugeHTML(localGeo,crustal){
-  const total=localGeo+crustal;
-  const refs=[
-    {name:'Bangui',nT:-1000,col:'#3b82f6'},
-    {name:'Ries',nT:-200,col:'#60a5fa'},
-    {name:'Bonifacio',nT:-5,col:'#93c5fd'},
-    {name:'Murato',nT:18,col:'#fbbf24'},
-    {name:'Cauria',nT:35,col:'#f59e0b'},
-  ];
-  const mn=-300,mx=100;
-  const pct=v=>Math.max(0,Math.min(100,((v-mn)/(mx-mn))*100));
-  const myPct=pct(total);
-  // Reference ticks — small vertical lines, NOT dots
-  let ticks='';
-  refs.filter(r=>r.nT>=mn&&r.nT<=mx).forEach(r=>{
-    ticks+='<div style="position:absolute;left:'+pct(r.nT)+'%;top:-1px;width:1px;height:5px;background:'+r.col+';transform:translateX(-50%)" title="'+r.name+' '+r.nT+'nT"></div>';
-    ticks+='<div style="position:absolute;left:'+pct(r.nT)+'%;top:6px;font-size:7px;color:'+r.col+';transform:translateX(-50%);white-space:nowrap">'+r.name+'</div>';
-  });
-  // Cursor — triangle pointing down + value label
-  const cursorCol=total>20?'#f59e0b':total>0?'#2d9b87':total>-50?'#60a5fa':'#3b82f6';
-  const cursor='<div style="position:absolute;left:'+myPct+'%;top:-8px;transform:translateX(-50%);text-align:center">'
-    +'<div style="font-size:8px;font-weight:600;color:'+cursorCol+'">'+(total>0?'+':'')+total+'</div>'
-    +'<div style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid '+cursorCol+';margin:0 auto"></div>'
-    +'</div>';
-  return '<div style="position:relative;height:3px;background:linear-gradient(90deg,#3b82f6 0%,#e5e7eb 50%,#dc2626 100%);border-radius:2px;margin:14px 0 14px">'
-    +ticks+cursor+'</div>';
-}
 
 function buildRFCalibration(){
   if(!cemData.length) return;
