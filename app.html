@@ -2684,7 +2684,6 @@ async function loadBTLinesAsync() {
     }
     if (all.length === 0) {
       console.warn('[Tellux] bt_lines calcul : 0 lignes reçues (RLS ou bbox vide)');
-      _btLinesCalcLoading = false;
       return;
     }
     buildBTSegmentGrid(all);
@@ -2693,6 +2692,7 @@ async function loadBTLinesAsync() {
       + ' segments en ' + elapsed.toFixed(0) + ' ms');
   } catch (e) {
     console.warn('[Tellux] loadBTLinesAsync echec : ' + e.message);
+  } finally {
     _btLinesCalcLoading = false;
   }
 }
@@ -2939,8 +2939,15 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
   }
 
   // === LIGNES BT réelles — sommation vectorielle (dette BT-ELF-001) ===
+  // Désactivée par défaut depuis hotfix v2.6.1 (BT-CALIBRATION-001).
+  // BT_ZONES proxy (legacy v2.5) reprennent le relais plus bas.
+  if (!USE_BT_SEGMENTS && !window._btDisabledWarned) {
+    console.warn('[Tellux] BT-CALIBRATION-001 : calcul BT segments désactivé (hotfix). '
+      + 'Contribution ELF limitée à HTA vectoriel + BT_ZONES proxy + postes sources + éoliennes.');
+    window._btDisabledWarned = true;
+  }
   let nBtContrib = 0;
-  if (BT_SEGMENTS_DATA && BT_SEGMENT_GRID) {
+  if (USE_BT_SEGMENTS && BT_SEGMENTS_DATA && BT_SEGMENT_GRID) {
     const I_bt = BT_BASE_CURRENT_A * htFactor;
     const btNearby = getBTSegmentsNear(lat, lon);
     let btBx = 0, btBy = 0;
@@ -2980,8 +2987,9 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
     }
   });
 
-  // === RÉSEAU BT URBAIN proxy === (zones hardcodées, conservées tant que BT_SEGMENTS_DATA absent)
-  if (!BT_SEGMENT_GRID) {
+  // === RÉSEAU BT URBAIN proxy === (zones hardcodées legacy v2.5)
+  // Actif si USE_BT_SEGMENTS est false (hotfix) OU si la grille BT n'est pas chargée.
+  if (!USE_BT_SEGMENTS || !BT_SEGMENT_GRID) {
     const BT_ZONES = [[41.919,8.738,80],[42.703,9.45,70],[41.578,9.267,50],[42.567,8.758,45],[42.154,9.193,40],[42.631,8.937,35],[41.387,9.159,35],[42.562,9.431,60],[41.678,8.905,30]];
     BT_ZONES.forEach(([a, b, intensity]) => {
       const d = dist(lat, lon, a, b);
@@ -3043,6 +3051,25 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
 
 // Flag de bascule v1/v2 — rollback d'urgence en cas de régression
 const USE_ELF_V2 = true;
+
+// ═══ Flag de désactivation BT suite bug calibration (BT-CALIBRATION-001) ═══
+//
+// Le modèle Biot-Savart + correction triphasée k=0.5 actuel est calibré sur
+// géométrie pylône HTA (phases espacées 1–3 m). Il est inadapté au câble BT
+// torsadé (phases espacées ~1 cm) où la cancellation vectorielle est bien
+// plus forte et la décroissance en 1/d² voire 1/d³.
+//
+// Bug détecté sur PR #71 : ratios v2.5 → v2.6 atteignent ×210 en zone urbaine
+// dense (Bastia 33 592 nT au lieu de ~160 nT). Hotfix par désactivation du
+// calcul BT segments. Le chargement asynchrone, la grille BT et les fonctions
+// restent en place pour réactivation future après recalibrage validé.
+// BT_ZONES proxy (legacy v2.5) reprennent le relais comme avant PR #71.
+//
+// Remise à true uniquement après session dédiée de recalibrage BT :
+//   - validation physique (littérature câbles torsadés BT ou mesures terrain)
+//   - choix du modèle adapté (Biot-Savart adapté BT, ou statistique densité)
+//   - re-exécution runELFRegressionTest pour validation seuils IARC
+const USE_BT_SEGMENTS = false;
 
 // ============================================================
 // Test de non-régression ELF v1 vs v2 sur 20 points témoins
