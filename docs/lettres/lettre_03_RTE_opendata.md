@@ -4,7 +4,7 @@
 
 **Destinataire** : Réseau de Transport d'Électricité (RTE), direction Open Data
 
-**Expéditeur** : Soleil, porteur du projet Tellux Corse, SARL Stella Canis Majoris, Bastia
+**Expéditeur** : Lucas IANNACCONE, porteur du projet Tellux Corse, micro-entreprise Stella Canis Majoris, SIRET 993 881 481 00010, 20200 Bastia
 
 **Date** : 20 avril 2026
 
@@ -35,9 +35,9 @@ Je me tiens à votre disposition pour tout échange et pour vous présenter plus
 
 Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations respectueuses.
 
-Soleil
+Lucas IANNACCONE
 Porteur du projet Tellux Corse
-SARL Stella Canis Majoris, Bastia
-[courriel à confirmer]
+Micro-entreprise Stella Canis Majoris — SIRET 993 881 481 00010 — 20200 Bastia
+stelladluca@proton.me
 Dépôt public : github.com/dellahstella/tellux
 Plateforme : tellux.pages.dev
