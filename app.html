@@ -2547,6 +2547,7 @@ const FH_POINTS=[
 // Source : RTE Data portail + littérature réseau électrique française.
 // ============================================================
 const HTA_BASE_CURRENT_A = 225;
+const BT_BASE_CURRENT_A  = 60; // courant moyen distribution résidentielle BT (dette BT-ELF-001)
 
 // ============================================================
 // Grille spatiale d'indexation des segments HTA
@@ -2558,6 +2559,9 @@ const HTA_BASE_CURRENT_A = 225;
 const TILE_SIZE_DEG = 1 / 111.32;
 let HTA_SEGMENTS_DATA = null;
 let SEGMENT_GRID = null;
+// Grille BT (chargement asynchrone, dette BT-ELF-001)
+let BT_SEGMENTS_DATA = null;
+let BT_SEGMENT_GRID  = null;
 
 function tileKey(lat, lon) {
   return Math.floor(lat / TILE_SIZE_DEG) + ',' + Math.floor(lon / TILE_SIZE_DEG);
@@ -2609,6 +2613,90 @@ function getSegmentsNear(lat, lon) {
   return SEGMENT_GRID[tileKey(lat, lon)] || [];
 }
 
+// Grille spatiale BT (dette BT-ELF-001) — structure identique à la grille HTA
+function buildBTSegmentGrid(polylines) {
+  console.log('[Tellux] Construction grille BT...');
+  const t0 = performance.now();
+  BT_SEGMENTS_DATA = [];
+  BT_SEGMENT_GRID  = {};
+  polylines.forEach(row => {
+    const pts = row.pts;
+    if (!Array.isArray(pts) || pts.length < 2) return;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i+1];
+      if (!a || !b || a.length < 2 || b.length < 2) continue;
+      BT_SEGMENTS_DATA.push({ lat1:a[0], lon1:a[1], lat2:b[0], lon2:b[1] });
+    }
+  });
+  const idx = BT_SEGMENTS_DATA.length;
+  BT_SEGMENTS_DATA.forEach((s, i) => {
+    const minLat = Math.min(s.lat1, s.lat2) - 2*TILE_SIZE_DEG;
+    const maxLat = Math.max(s.lat1, s.lat2) + 2*TILE_SIZE_DEG;
+    const minLon = Math.min(s.lon1, s.lon2) - 2*TILE_SIZE_DEG;
+    const maxLon = Math.max(s.lon1, s.lon2) + 2*TILE_SIZE_DEG;
+    const iLatMin = Math.floor(minLat / TILE_SIZE_DEG);
+    const iLatMax = Math.floor(maxLat / TILE_SIZE_DEG);
+    const iLonMin = Math.floor(minLon / TILE_SIZE_DEG);
+    const iLonMax = Math.floor(maxLon / TILE_SIZE_DEG);
+    for (let iLat = iLatMin; iLat <= iLatMax; iLat++) {
+      for (let iLon = iLonMin; iLon <= iLonMax; iLon++) {
+        const key = iLat + ',' + iLon;
+        if (!BT_SEGMENT_GRID[key]) BT_SEGMENT_GRID[key] = [];
+        BT_SEGMENT_GRID[key].push(i);
+      }
+    }
+  });
+  const elapsed = performance.now() - t0;
+  const nTiles = Object.keys(BT_SEGMENT_GRID).length;
+  console.log('[Tellux] Grille BT construite en ' + elapsed.toFixed(0) + ' ms : '
+    + BT_SEGMENTS_DATA.length + ' segments, ' + nTiles + ' tuiles.');
+}
+
+function getBTSegmentsNear(lat, lon) {
+  if (!BT_SEGMENT_GRID) return [];
+  return BT_SEGMENT_GRID[tileKey(lat, lon)] || [];
+}
+
+// Chargement asynchrone bt_lines sur bbox Corse complète (Option C)
+// Non bloquant : les clics avant la fin retournent HTA + BT_ZONES proxy uniquement.
+let _btLinesCalcLoading = false;
+async function loadBTLinesAsync() {
+  if (_btLinesCalcLoading || BT_SEGMENTS_DATA) return;
+  _btLinesCalcLoading = true;
+  try {
+    console.log('[Tellux] Chargement asynchrone bt_lines (calcul ELF)...');
+    const t0 = performance.now();
+    // Bbox Corse complète — colonnes clat/clon indexées dans bt_lines
+    const base = SB_URL + '/rest/v1/bt_lines?select=pts'
+      + '&clat=gte.41.3&clat=lte.43.1&clon=gte.8.5&clon=lte.9.7';
+    let all = [], offset = 0;
+    const PAGE = 1000;
+    while (true) {
+      const r = await fetch(base + '&order=id&limit=' + PAGE + '&offset=' + offset,
+        { headers: { apikey: SB_KEY, 'Authorization': 'Bearer ' + SB_KEY,
+                     'Range': offset + '-' + (offset + PAGE - 1), 'Range-Unit': 'items' } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const page = await r.json();
+      if (!Array.isArray(page) || page.length === 0) break;
+      all = all.concat(page);
+      if (page.length < PAGE) break;
+      offset += PAGE;
+    }
+    if (all.length === 0) {
+      console.warn('[Tellux] bt_lines calcul : 0 lignes reçues (RLS ou bbox vide)');
+      return;
+    }
+    buildBTSegmentGrid(all);
+    const elapsed = performance.now() - t0;
+    console.log('[Tellux] bt_lines calcul pret : ' + BT_SEGMENTS_DATA.length
+      + ' segments en ' + elapsed.toFixed(0) + ' ms');
+  } catch (e) {
+    console.warn('[Tellux] loadBTLinesAsync echec : ' + e.message);
+  } finally {
+    _btLinesCalcLoading = false;
+  }
+}
+
 // ============================================================
 // Biot-Savart segment fini avec correction triphasée (v2)
 // Formule : B = (µ₀I)/(4πh) × (sinθ₁ + sinθ₂) — segment fini
@@ -2658,6 +2746,47 @@ function calcBiotSavartSegment(segLat1, segLon1, segLat2, segLon2, obsLat, obsLo
   // Plafond 50 µT = 50 000 nT par segment
   B_pic_nT = Math.min(50000, Math.abs(B_pic_nT));
   return B_pic_nT / Math.SQRT2; // pic → RMS
+}
+
+// Variante vectorielle 2D (dette ELF-VECTOR-001)
+// Retourne {bx, by} en nT dans le repère local horizontal (X=est, Y=nord).
+// Le vecteur est perpendiculaire au segment, orienté selon la règle de la main droite.
+// Retourne {bx:0, by:0} si segment à plus de 2 km (pruning identique au scalaire).
+function calcBiotSavartSegmentVec(segLat1, segLon1, segLat2, segLon2, obsLat, obsLon, currentA) {
+  const METERS_PER_DEG_LAT = 111320;
+  const METERS_PER_DEG_LON = 111320 * Math.cos(42.0 * Math.PI / 180); // ~82700 m/deg à Corse
+  const x1 = (segLon1 - obsLon) * METERS_PER_DEG_LON;
+  const y1 = (segLat1 - obsLat) * METERS_PER_DEG_LAT;
+  const x2 = (segLon2 - obsLon) * METERS_PER_DEG_LON;
+  const y2 = (segLat2 - obsLat) * METERS_PER_DEG_LAT;
+  const dx = x2 - x1, dy = y2 - y1;
+  const segLen = Math.sqrt(dx*dx + dy*dy);
+  if (segLen < 1) return { bx: 0, by: 0 };
+  const ux = dx / segLen, uy = dy / segLen;
+  const t = -x1 * ux - y1 * uy;
+  const px = x1 + t * ux, py = y1 + t * uy;
+  const h = Math.sqrt(px*px + py*py);
+  // Pruning : distance minimale réelle au segment
+  let closestDist;
+  if (t < 0) closestDist = Math.sqrt(x1*x1 + y1*y1);
+  else if (t > segLen) closestDist = Math.sqrt(x2*x2 + y2*y2);
+  else closestDist = h;
+  if (closestDist > 2000) return { bx: 0, by: 0 };
+  const h_eff = Math.max(5, h);
+  const d1 = -t, d2 = segLen - t;
+  const sinTheta1 = d1 / Math.sqrt(d1*d1 + h_eff*h_eff);
+  const sinTheta2 = d2 / Math.sqrt(d2*d2 + h_eff*h_eff);
+  let B_pic_nT = 200 * currentA / h_eff * (sinTheta1 + sinTheta2) / 2;
+  if (h_eff >= 20) B_pic_nT *= Math.pow(20 / h_eff, 0.5);
+  B_pic_nT = Math.min(50000, Math.abs(B_pic_nT));
+  const B_rms_nT = B_pic_nT / Math.SQRT2;
+  // Direction perpendiculaire au segment (règle de la main droite)
+  // Produit vectoriel 2D de u = (ux, uy) avec r = (-px, -py) pour déterminer le côté
+  const sign = Math.sign(uy * px - ux * py) || 1;
+  return {
+    bx: B_rms_nT * (-uy * sign),
+    by: B_rms_nT * ( ux * sign)
+  };
 }
 
 // ============================================================
@@ -2776,40 +2905,74 @@ function calcMagneticELF_v1(lat, lon, chargeFactor) {
 // ============================================================
 // DOMAINE M — Champ magnétique ELF 50 Hz (anthropique) — v2
 // Sources : Biot-Savart segment fini sur 8386 polylines hta_lines Supabase
-//           (~15-25k segments élémentaires) + PROD_ELECTRIQUE + BT_ZONES
+//           (~15-25k segments élémentaires) + segments BT (async)
+//           + PROD_ELECTRIQUE + BT_ZONES proxy + postes sources + éoliennes
 // Retour identique à v1 (contrat calcAll_v2 préservé) : {B_total_nT, ...}
-// Courant : HTA_BASE_CURRENT_A = 225 A (Option B, dataset sans voltage)
+// Courant HTA : HTA_BASE_CURRENT_A = 225 A (Option B, sans voltage Supabase)
+// Courant BT  : BT_BASE_CURRENT_A  = 60 A
 // Correction triphasée k=0.5 au-delà de 20 m · RMS explicite · pruning 2 km
-// Note : sommation en amplitude RMS (pas vectorielle) → surestime légèrement.
+// Sommation vectorielle 2D (Bx, By) — ferme la dette ELF-VECTOR-001.
 // Fallback : si grille non prête, délègue à v1.
 // ============================================================
 function calcMagneticELF_v2(lat, lon, chargeFactor) {
   const htFactor = (chargeFactor !== undefined) ? chargeFactor
                  : (typeof chargeFacteur !== 'undefined' ? chargeFacteur : 1.0);
   if (!SEGMENT_GRID || !HTA_SEGMENTS_DATA) {
-    // Grille non prête (loadReseau pas encore exécuté) — fallback v1
     return calcMagneticELF_v1(lat, lon, chargeFactor);
   }
-  let B_total_nT = 0;
+  let totalBx = 0, totalBy = 0;
   const contributions = [];
-  // === LIGNES HTA RÉELLES — hta_lines Supabase via grille ===
-  const I = HTA_BASE_CURRENT_A * htFactor;
+
+  // === LIGNES HTA — sommation vectorielle (dette ELF-VECTOR-001) ===
+  const I_hta = HTA_BASE_CURRENT_A * htFactor;
   const nearby = getSegmentsNear(lat, lon);
-  let nContrib = 0, B_hta = 0;
+  let nHtaContrib = 0;
   for (const idx of nearby) {
     const s = HTA_SEGMENTS_DATA[idx];
     if (!s) continue;
-    const b = calcBiotSavartSegment(s.lat1, s.lon1, s.lat2, s.lon2, lat, lon, I);
-    if (b > 0.5) { // seuil 0.5 nT = cohérent v1
-      B_hta += b;
-      nContrib++;
+    const v = calcBiotSavartSegmentVec(s.lat1, s.lon1, s.lat2, s.lon2, lat, lon, I_hta);
+    if (v.bx !== 0 || v.by !== 0) { totalBx += v.bx; totalBy += v.by; nHtaContrib++; }
+  }
+  const B_hta = Math.sqrt(totalBx * totalBx + totalBy * totalBy);
+  if (B_hta > 0.5) {
+    contributions.push({ source_type: 'HTA', B_nT: Math.round(B_hta*10)/10, distance_m: null, identifier: nHtaContrib + ' segments réels (vectoriel)' });
+  }
+
+  // === LIGNES BT réelles — sommation vectorielle (dette BT-ELF-001) ===
+  // Désactivée par défaut depuis hotfix v2.6.1 (BT-CALIBRATION-001).
+  // BT_ZONES proxy (legacy v2.5) reprennent le relais plus bas.
+  if (!USE_BT_SEGMENTS && !window._btDisabledWarned) {
+    console.warn('[Tellux] BT-CALIBRATION-001 : calcul BT segments désactivé (hotfix). '
+      + 'Contribution ELF limitée à HTA vectoriel + BT_ZONES proxy + postes sources + éoliennes.');
+    window._btDisabledWarned = true;
+  }
+  let nBtContrib = 0;
+  if (USE_BT_SEGMENTS && BT_SEGMENTS_DATA && BT_SEGMENT_GRID) {
+    const I_bt = BT_BASE_CURRENT_A * htFactor;
+    const btNearby = getBTSegmentsNear(lat, lon);
+    let btBx = 0, btBy = 0;
+    for (const idx of btNearby) {
+      const s = BT_SEGMENTS_DATA[idx];
+      if (!s) continue;
+      const v = calcBiotSavartSegmentVec(s.lat1, s.lon1, s.lat2, s.lon2, lat, lon, I_bt);
+      if (v.bx !== 0 || v.by !== 0) { btBx += v.bx; btBy += v.by; nBtContrib++; }
+    }
+    const B_bt = Math.sqrt(btBx * btBx + btBy * btBy);
+    // Accumulation scalaire honnête : BT est orthogonal en moyenne aux lignes HTA
+    // La superposition stricte serait vectorielle mais nécessiterait un repère commun ;
+    // l'addition scalaire des normes est la même approximation que les contributions ponctuelles.
+    if (B_bt > 0.5) {
+      totalBx += btBx; totalBy += btBy; // on continue la somme vectorielle globale
+      nBtContrib = nBtContrib; // compte pour le log
+      contributions.push({ source_type: 'BT_reel', B_nT: Math.round(B_bt*10)/10, distance_m: null, identifier: nBtContrib + ' segments BT réels' });
     }
   }
-  if (B_hta > 0) {
-    B_total_nT += B_hta;
-    contributions.push({ source_type: 'HTA', B_nT: Math.round(B_hta*10)/10, distance_m: null, identifier: nContrib + ' segments réels' });
-  }
-  // === SITES DE PRODUCTION ÉLECTRIQUE === (identique v1)
+
+  // Norme du champ vectoriel résultant lignes (HTA + BT réel)
+  const B_lines = Math.sqrt(totalBx * totalBx + totalBy * totalBy);
+  let B_total_nT = B_lines;
+
+  // === SITES DE PRODUCTION ÉLECTRIQUE === (scalaire — source ponctuelle)
   const MU0_OVER_2PI = 2e-7;
   PROD_ELECTRIQUE.forEach(s => {
     if (s.puissance < 0.5) return;
@@ -2823,38 +2986,96 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
       contributions.push({ source_type: 'production', B_nT: Math.round(contrib*10)/10, distance_m: Math.round(d_m), identifier: s.nom || 'prod' });
     }
   });
-  // === RÉSEAU BT URBAIN === (identique v1)
-  const BT_ZONES = [[41.919,8.738,80],[42.703,9.45,70],[41.578,9.267,50],[42.567,8.758,45],[42.154,9.193,40],[42.631,8.937,35],[41.387,9.159,35],[42.562,9.431,60],[41.678,8.905,30]];
-  BT_ZONES.forEach(([a, b, intensity]) => {
-    const d = dist(lat, lon, a, b);
-    let contrib = 0;
-    if (d < 0.2) contrib = intensity * (1 - d / 0.2);
-    else if (d < 0.5) contrib = intensity * 0.3 * (1 - (d - 0.2) / 0.3);
-    if (contrib > 0) {
-      B_total_nT += contrib;
-      contributions.push({ source_type: 'BT', B_nT: Math.round(contrib*10)/10, distance_m: Math.round(d*1000) });
-    }
-  });
+
+  // === RÉSEAU BT URBAIN proxy === (zones hardcodées legacy v2.5)
+  // Actif si USE_BT_SEGMENTS est false (hotfix) OU si la grille BT n'est pas chargée.
+  if (!USE_BT_SEGMENTS || !BT_SEGMENT_GRID) {
+    const BT_ZONES = [[41.919,8.738,80],[42.703,9.45,70],[41.578,9.267,50],[42.567,8.758,45],[42.154,9.193,40],[42.631,8.937,35],[41.387,9.159,35],[42.562,9.431,60],[41.678,8.905,30]];
+    BT_ZONES.forEach(([a, b, intensity]) => {
+      const d = dist(lat, lon, a, b);
+      let contrib = 0;
+      if (d < 0.2) contrib = intensity * (1 - d / 0.2);
+      else if (d < 0.5) contrib = intensity * 0.3 * (1 - (d - 0.2) / 0.3);
+      if (contrib > 0) {
+        B_total_nT += contrib;
+        contributions.push({ source_type: 'BT_proxy', B_nT: Math.round(contrib*10)/10, distance_m: Math.round(d*1000) });
+      }
+    });
+  }
+
+  // === POSTES SOURCES EDF (réintégrés — absents de v2 avant ce commit) ===
+  if (POSTES_SOURCES && POSTES_SOURCES.length) {
+    POSTES_SOURCES.forEach(ps => {
+      const d = dist(lat, lon, ps.lat, ps.lon);
+      if (d > 1) return;
+      const d_m = Math.max(10, d * 1000);
+      const B_nT = 50000 * Math.pow(10 / d_m, 3);
+      if (B_nT > 0.5) {
+        const contrib = Math.min(B_nT, 500);
+        B_total_nT += contrib;
+        contributions.push({ source_type: 'poste_source', B_nT: Math.round(contrib*10)/10, distance_m: Math.round(d_m), identifier: ps.nom });
+      }
+    });
+  }
+
+  // === EOLIENNES (réintégrées — absentes de v2 avant ce commit) ===
+  if (EOLIENNES_DATA && EOLIENNES_DATA.length) {
+    EOLIENNES_DATA.forEach(eol => {
+      const d = dist(lat, lon, eol.lat, eol.lon);
+      if (d > 0.5) return;
+      const d_m = Math.max(10, d * 1000);
+      const P_mw = eol.puissance_nominale_mw || 2;
+      const B_nT = 2000 * Math.pow(10 / d_m, 2) * Math.sqrt(P_mw / 2);
+      if (B_nT > 0.5) {
+        const contrib = Math.min(B_nT, 300);
+        B_total_nT += contrib;
+        contributions.push({ source_type: 'eolienne', B_nT: Math.round(contrib*10)/10, distance_m: Math.round(d_m), identifier: eol.nom_parc });
+      }
+    });
+  }
+
+  const btSrc = BT_SEGMENT_GRID ? (nBtContrib + ' segments BT réels') : 'BT_ZONES proxy';
   return {
     B_total_nT: Math.round(B_total_nT),
     contributions,
     note_ICNIRP: 'Rappel documentaire : limite ICNIRP grand public pour ELF 50 Hz est de 200 µT (200 000 nT).',
     note_IARC: 'Rappel documentaire : IARC classe 2B pour ELF >= 0,3-0,4 µT (300-400 nT) chronique résidentiel, association statistique leucémies infantiles.',
-    source: 'Biot-Savart segment fini sur hta_lines Supabase (' + HTA_SEGMENTS_DATA.length + ' segments) + PROD_ELECTRIQUE + BT_ZONES',
+    source: 'Biot-Savart vectoriel 2D — ' + HTA_SEGMENTS_DATA.length + ' seg HTA + ' + btSrc + ' + PROD_ELECTRIQUE + postes + éoliennes',
     confidence: 'medium',
     chargeFactorApplied: htFactor,
-    version: 'v2',
-    n_hta_contributing: nContrib
+    version: 'v2.6',
+    n_hta_contributing: nHtaContrib,
+    n_bt_contributing: nBtContrib
   };
 }
 
 // Flag de bascule v1/v2 — rollback d'urgence en cas de régression
 const USE_ELF_V2 = true;
 
+// ═══ Flag de désactivation BT suite bug calibration (BT-CALIBRATION-001) ═══
+//
+// Le modèle Biot-Savart + correction triphasée k=0.5 actuel est calibré sur
+// géométrie pylône HTA (phases espacées 1–3 m). Il est inadapté au câble BT
+// torsadé (phases espacées ~1 cm) où la cancellation vectorielle est bien
+// plus forte et la décroissance en 1/d² voire 1/d³.
+//
+// Bug détecté sur PR #71 : ratios v2.5 → v2.6 atteignent ×210 en zone urbaine
+// dense (Bastia 33 592 nT au lieu de ~160 nT). Hotfix par désactivation du
+// calcul BT segments. Le chargement asynchrone, la grille BT et les fonctions
+// restent en place pour réactivation future après recalibrage validé.
+// BT_ZONES proxy (legacy v2.5) reprennent le relais comme avant PR #71.
+//
+// Remise à true uniquement après session dédiée de recalibrage BT :
+//   - validation physique (littérature câbles torsadés BT ou mesures terrain)
+//   - choix du modèle adapté (Biot-Savart adapté BT, ou statistique densité)
+//   - re-exécution runELFRegressionTest pour validation seuils IARC
+const USE_BT_SEGMENTS = false;
+
 // ============================================================
 // Test de non-régression ELF v1 vs v2 sur 20 points témoins
 // Accessible en console : runELFRegressionTest()
 // Catégories : 5 urbains, 5 ruraux sous HTA, 5 éloignés, 5 mégalithiques
+// v2.6 : colonne v2_nT reflète la sommation vectorielle + BT réel si chargé
 // ============================================================
 const ELF_TEST_POINTS = [
   { cat:'urbain', name:'Ajaccio centre',       lat:41.9267, lon:8.7369 },
@@ -2896,8 +3117,9 @@ function runELFRegressionTest() {
       cat: p.cat,
       nom: p.name,
       v1_nT: v1,
-      v2_nT: v2,
-      ratio: v1 > 0 ? (v2 / v1).toFixed(2) : (v2 > 0 ? '∞' : 'N/A'),
+      'v2.6_nT': v2,
+      ratio: v1 > 0 ? (v2 / v1).toFixed(2) : (v2 > 0 ? '\u221e' : 'N/A'),
+      bt_loaded: BT_SEGMENT_GRID ? 'oui' : 'non',
       ms_v2: tV2.toFixed(1)
     };
   });
@@ -4545,6 +4767,8 @@ async function loadReseau(){
     // Construction grille Biot-Savart v2 (une fois, au premier chargement)
     if (typeof buildSegmentGrid === 'function' && !SEGMENT_GRID) {
       buildSegmentGrid(all);
+      // Chargement asynchrone BT après HTA (dette BT-ELF-001)
+      setTimeout(loadBTLinesAsync, 200);
     }
   }catch(e){
     console.warn('HTA Supabase:',e.message,'→ fallback OSM');
