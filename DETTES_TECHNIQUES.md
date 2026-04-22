@@ -1,6 +1,6 @@
 # Tellux — Dettes techniques ouvertes
 
-**Dernière mise à jour :** 22 avril 2026 (ajout INTL-CRUSTAL-001)
+**Dernière mise à jour :** 22 avril 2026 (fermeture SUPABASE-INSERT-001)
 
 Ce document liste les dettes techniques ouvertes identifiées dans l'application Tellux. Chaque dette fait l'objet d'un identifiant pérenne, d'une description factuelle et d'une condition de déblocage documentée. Aucune de ces dettes ne bloque la publication de la phase 1.
 
@@ -134,6 +134,7 @@ La validation physique préalable (littérature ou mesures terrain) est un prér
 - **ELF-CALIB-001** (avril 2026) — vérification des seuils visuels post-migration Biot-Savart, conservation des seuils 150/300/500 nT
 - **WMM-CROSSCHECK-001** (avril 2026) — WMM 2025 cross-check intégré via grille précalculée
 - **BDFORET-V2-001** (avril 2026) — couche Forêts publiques ONF intégrée
+- **SUPABASE-INSERT-001** (22 avril 2026) — policies INSERT permissives `WITH CHECK (true)` remplacées sur `contributions` et `orientations_contributions`. Migration `005_security_hardening.sql` : validation GPS mondiale (lat/lon), `note`/`commentaire` ≤ 500 chars, `azimut` 0-360, `site_id` non vide, rate limiting 10 contributions/heure par `session_id` via `check_contribution_rate_limit()`. Advisors Supabase : 0 alerte résiduelle. Limite connue : rate limit contournable en changeant de session_id (protection anti-spam naïf, non anti-attaquant déterminé).
 
 ---
 
