@@ -1,6 +1,6 @@
 # Tellux — Dettes techniques ouvertes
 
-**Dernière mise à jour :** 22 avril 2026 (fermeture SUPABASE-INSERT-001)
+**Dernière mise à jour :** 22 avril 2026 (ouverture CSS-HARMONISATION-001)
 
 Ce document liste les dettes techniques ouvertes identifiées dans l'application Tellux. Chaque dette fait l'objet d'un identifiant pérenne, d'une description factuelle et d'une condition de déblocage documentée. Aucune de ces dettes ne bloque la publication de la phase 1.
 
@@ -124,6 +124,20 @@ La validation physique préalable (littérature ou mesures terrain) est un prér
 - Jauge popup optionnelle (toggle utilisateur, hors-champ du score composite)
 - Couche Leaflet des marqueurs mondiaux (zoom-dépendante)
 - Légende listant les sources USGS/EMAG2/publications
+
+### CSS-HARMONISATION-001 — Cohérence CSS entre app.html et index.html
+
+**Description :** L'audit du 18 avril 2026 (branche `chore/app-audit-da`, supprimée après documentation) identifiait trois points de cohérence CSS entre `app.html` et la landing `index.html`.
+
+- **Divergence de nommage des variables** : `app.html` utilise `--tx-ardoise`, `--font`, `--font-display`, `--mono` ; `index.html` utilise `--ardoise`, `--ff`, `--fu`, `--fm`. Correctif : ajouter des aliases courts dans `:root` d'`app.html` (additif, aucun breaking change).
+- **Variables sans nom sémantique dans `:root`** : `--tx2 #3D424A`, `--bg2 #EFE9DC`, `--acc2 #4F7048`, `--acc3 #E5EBE0` sont hardcodées. À rattacher à la palette Tellux v2 (Ardoise / Pierre / Ocre / Maquis).
+- **Résidus potentiels** : références `DM Sans`, `DM Mono`, `Georgia,serif` inline dans `app.html` — à vérifier et nettoyer (probables vestiges antérieurs à PR #83 self-host fonts).
+
+**Priorité :** Faible. N'impacte pas les utilisateurs. Utile pour la maintenance et la réutilisation de composants entre pages.
+
+**Hors scope** : les 951 occurrences de couleurs hardcodées des catégories cartographiques (231 valeurs uniques, palettes métier hors DA v2).
+
+**Condition de déblocage :** Session dédiée CSS — audit `app.html` courant + patch aliases + nettoyage résidus.
 
 ---
 
