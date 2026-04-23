@@ -555,6 +555,40 @@
 }
 /* === fin sources === */
 
+/* === Legendes contextuelles Zone 2 (sous la carte, FIFO max 3) === */
+#tellux-legends-context{
+  display:none;
+  flex-wrap:wrap;
+  gap:8px;
+  padding:10px 6px 4px;
+  margin:8px 0 0;
+  justify-content:flex-start;
+  align-items:stretch;
+}
+.legend-context-pill{
+  flex:0 1 auto;
+  min-width:180px;
+  max-width:260px;
+  max-height:80px;
+  overflow-y:auto;
+  background:var(--tx-pierre);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:6px 8px;
+  font-family:var(--font);
+  font-size:10px;
+  color:var(--tx-ardoise);
+  box-shadow:0 1px 3px rgba(31,35,41,.05);
+}
+.legend-context-pill .leg-block{margin:0;}
+.legend-context-pill .leg-title{font-size:10.5px;}
+.legend-context-pill .leg-src{font-size:8.5px;}
+@media (max-width:640px){
+  #tellux-legends-context{padding:6px 2px 2px;gap:6px;}
+  .legend-context-pill{min-width:160px;max-width:100%;padding:4px 6px;}
+}
+/* === fin legendes contextuelles === */
+
 
 body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:16px;max-width:1100px;margin:0 auto;font-size:15px;line-height:1.5;}
 h1,h2,.tx-display{font-family:var(--font-display);font-weight:500;letter-spacing:-0.01em;}
@@ -2066,7 +2100,11 @@ const LAYERS={bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,prod:lProd,hot:l
 const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag,foret:wmsForet};
 const ACTIVE={bt:false,ant:false,antOffshore:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,res:false,prod:false,con:true,cem:false,therm:false,crustal:false,sitesRemarq:false};
 
-const LEGEND_ACTIVE=new Set();let _legendCtrl=null;
+const LEGEND_CORE_IDS=new Set(['hot','con']);
+const LEGEND_MAX_CONTEXT=3;
+const LEGEND_ACTIVE_CORE=new Set();
+const LEGEND_ACTIVE_CONTEXT=[];
+let _legendCtrl=null;
 const LEGEND_HTML={
   hot:'<div class="leg-block"><b class="leg-title">Champ ELF 50 Hz (nT)</b><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>150</span><span>300</span><span>500 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#8b92a5">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · PROD_ELECTRIQUE</div></div>',
   elf_domain:'<div class="leg-block"><b class="leg-title">Magnétique basse fréquence</b><div style="height:12px;width:140px;background:linear-gradient(90deg,#EDD59A,#C28533,#8A5E22);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0 nT</span><span>250 nT</span><span>500 nT</span></div><div class="leg-row" style="font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère IARC 2B (chronique résidentiel)</div><div class="leg-row"><span style="font-size:8px;color:#8b92a5">Confiance ●●● (Biot-Savart segment fini, réseau réel)</span></div><div class="leg-src">EDF SEI · hta_lines Supabase · Biot-Savart réel</div></div>',
@@ -2343,14 +2381,48 @@ function validateContrib(){
   return {ok:true};
 }
 function updateLegendPanel(){
+  // Zone 1 (core) : control Leaflet bottomright — hot + con uniquement, toujours visibles.
   if(!_legendCtrl){_legendCtrl=L.control({position:'bottomright'});_legendCtrl.onAdd=function(){const d=L.DomUtil.create('div');d.id='tellux-leg-panel';d.style.cssText='background:rgba(247,248,250,.97);border:1px solid rgba(0,0,0,.08);border-radius:10px;font-family:var(--font);font-size:10px;max-width:170px;box-shadow:0 2px 10px rgba(0,0,0,.1);overflow:hidden;display:none';L.DomEvent.disableClickPropagation(d);return d;};_legendCtrl.addTo(map);}
-  const panel=document.getElementById('tellux-leg-panel');if(!panel)return;
-  const order=['hot','con','res','bt','prod','ant','geo','hyd','foret','sitesRemarq','cav','emag','wdmam','crustal','therm','aoc'];const active=order.filter(id=>LEGEND_ACTIVE.has(id));
-  if(!active.length){panel.style.display='none';return;}
-  panel.style.display='block';
-  panel.innerHTML=active.filter(id=>LEGEND_HTML[id]).map((id,i)=>(i>0?'<div style="height:1px;background:rgba(0,0,0,.06);margin:0 8px"></div>':'')+LEGEND_HTML[id]).join('');
+  const corePanel=document.getElementById('tellux-leg-panel');
+  if(corePanel){
+    const coreOrder=['hot','con'];
+    const coreActive=coreOrder.filter(id=>LEGEND_ACTIVE_CORE.has(id)&&LEGEND_HTML[id]);
+    if(!coreActive.length){
+      corePanel.style.display='none';
+    }else{
+      corePanel.style.display='block';
+      corePanel.innerHTML=coreActive.map((id,i)=>(i>0?'<div style="height:1px;background:rgba(0,0,0,.06);margin:0 8px"></div>':'')+LEGEND_HTML[id]).join('');
+    }
+  }
+  // Zone 2 (context) : conteneur sous la carte, FIFO max 3, ordre chrono d'ajout (plus ancien a gauche).
+  const ctxPanel=document.getElementById('tellux-legends-context');
+  if(ctxPanel){
+    const ctxActive=LEGEND_ACTIVE_CONTEXT.filter(id=>LEGEND_HTML[id]);
+    if(!ctxActive.length){
+      ctxPanel.style.display='none';
+      ctxPanel.innerHTML='';
+    }else{
+      ctxPanel.style.display='flex';
+      ctxPanel.innerHTML=ctxActive.map(id=>'<div class="legend-context-pill" data-legend-id="'+id+'">'+LEGEND_HTML[id]+'</div>').join('');
+    }
+  }
 }
-function showLegend(id,show){show?LEGEND_ACTIVE.add(id):LEGEND_ACTIVE.delete(id);updateLegendPanel();}
+function showLegend(id,show){
+  if(LEGEND_CORE_IDS.has(id)){
+    if(show)LEGEND_ACTIVE_CORE.add(id);else LEGEND_ACTIVE_CORE.delete(id);
+  }else{
+    const idx=LEGEND_ACTIVE_CONTEXT.indexOf(id);
+    if(show){
+      if(idx===-1){
+        LEGEND_ACTIVE_CONTEXT.push(id);
+        if(LEGEND_ACTIVE_CONTEXT.length>LEGEND_MAX_CONTEXT)LEGEND_ACTIVE_CONTEXT.shift();
+      }
+    }else if(idx!==-1){
+      LEGEND_ACTIVE_CONTEXT.splice(idx,1);
+    }
+  }
+  updateLegendPanel();
+}
 function tog(id,cls,btn){
   // Guard : couche migrée (patrimoine → patrimoine.html, agronomie → agronomie.html)
   // ou référence cassée — sortie silencieuse pour éviter map.addLayer(undefined).
@@ -7065,6 +7137,8 @@ window.txLegend = {
 })();
 /* === fin Phase 2 JS === */
 </script>
+
+<div id="tellux-legends-context" aria-label="Légendes des couches contextuelles activées"></div>
 
 <div class="tx-sources">
   <div class="tx-sources-label">Sources institutionnelles</div>
