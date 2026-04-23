@@ -1323,7 +1323,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <button class="lbtn" id="b-geo" title="Carte géologique BRGM — granite, schiste, calcaire" onclick="tog('geo','on-geo',this)"><span class="sq" style="background:#1a6b5c"></span>Géologie BRGM</button>
       <button class="lbtn" id="b-foret" title="Forêts publiques ONF via WMS IGN Géoplateforme — couche visuelle niveau A (pas de modulation calcul). BD Forêt V2 complète non disponible en WMS public." onclick="tog('foret','on-foret',this)"><span class="sq" style="background:#3F5B3A"></span>Forêts publiques</button>
       <button class="lbtn" id="b-failles" title="Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)" onclick="togFailles(this)"><span class="ln" style="background:#8E2F1F"></span>Failles tectoniques</button>
-      <button class="lbtn" id="b-points-chauds" title="Points chauds U/Th documentés — anciens sites uranifères + plages monazitiques (doses estimées, non mesurées)" onclick="togPointsChauds(this)"><span style="display:inline-block;width:8px;height:8px;background:#8E2F1F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Points chauds U/Th</button>
+      <button class="lbtn" id="b-points-chauds" title="Sites U/Th à mesurer — catalogue de sites candidats à des mesures radiométriques (doses non mesurées, sources documentaires BRGM ou analogies géologiques)" onclick="togPointsChauds(this)"><span style="display:inline-block;width:8px;height:8px;background:#8E2F1F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Sites U/Th à mesurer</button>
       <button class="lbtn" id="b-hyd" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE)" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie</button>
       <button class="lbtn" id="b-cav" title="Cavités souterraines — grottes, mines, karst (BRGM)" onclick="tog('cav','on-cav',this)"><span class="sq" style="background:#5c3a9b"></span>Cavités</button>
       <button class="lbtn" id="b-therm" title="Sources thermales et géothermiques — failles actives" onclick="tog('therm','on-therm',this)"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Sources thermales</button>
@@ -3891,6 +3891,9 @@ function calcGammaAmbient(lat, lon, altitude_m) {
   const boost_contributors = [];
   if (POINTS_CHAUDS_RADIO && POINTS_CHAUDS_RADIO.length) {
     POINTS_CHAUDS_RADIO.forEach(pc => {
+      // Garde défensive : si la dose n'est pas mesurée (null), on n'alimente pas le boost
+      // La couche est actuellement un catalogue documentaire ; aucune mesure corse in situ n'est publiée.
+      if (pc.dose_gamma_estimee_nSv_h == null || !Number.isFinite(pc.dose_gamma_estimee_nSv_h)) return;
       const d_m = dist(lat, lon, pc.lat, pc.lon) * 1000;
       if (d_m < pc.rayon_influence_m) {
         const attenuation = 1 - (d_m / pc.rayon_influence_m);
@@ -5983,6 +5986,24 @@ async function togPostesSources(btn){
 }
 
 // ═══ Rendu / toggle points chauds U/Th ═══
+// Formatte le contenu du tooltip d'un site U/Th en fonction de son statut.
+// Doses null => affichage "non mesurée" + badge statut ; jamais d'extrapolation.
+function _formatPcTooltip(pc) {
+  const doseHtml = (pc.dose_gamma_estimee_nSv_h == null || !Number.isFinite(pc.dose_gamma_estimee_nSv_h))
+    ? '<span style="color:#8E2F1F;font-weight:600">Dose non mesurée</span>'
+    : (pc.dose_gamma_estimee_nSv_h + ' nSv/h estimé');
+  const statutLabel = pc.statut === 'mesure_requise'
+    ? 'Mesure in situ requise'
+    : (pc.statut === 'indice_documente_non_mesure' ? 'Indice documenté (BRGM)' : '');
+  const precisionLabel = pc.precision_coord
+    ? ' · précision : ' + pc.precision_coord
+    : '';
+  return '<b>' + pc.nom + '</b>'
+    + '<br>' + doseHtml
+    + ' <span style="font-size:10px;color:var(--tx3)">(rayon ' + pc.rayon_influence_m + ' m' + precisionLabel + ')</span>'
+    + (statutLabel ? '<br><span style="font-size:10px;color:#1F3A5F;font-weight:600">' + statutLabel + '</span>' : '')
+    + '<br><em>' + (pc.note || '') + '</em>';
+}
 let _pcRendered = false;
 function _renderPointsChauds() {
   if (_pcRendered) return;
@@ -5997,7 +6018,7 @@ function _renderPointsChauds() {
     L.circle([pc.lat, pc.lon], {radius: pc.rayon_influence_m, color:'#8E2F1F', fillColor:'#8E2F1F', fillOpacity:0.08, weight:1, dashArray:'3,3'})
       .addTo(lPointsChaudsRadio);
     L.marker([pc.lat, pc.lon], {icon})
-      .bindTooltip('<b>'+pc.nom+'</b><br>'+pc.dose_gamma_estimee_nSv_h+' nSv/h estimé (rayon '+pc.rayon_influence_m+' m)<br><em>'+pc.note+'</em>',{sticky:true,direction:'top',className:'tellux-pc-tooltip',maxWidth:280})
+      .bindTooltip(_formatPcTooltip(pc),{sticky:true,direction:'top',className:'tellux-pc-tooltip',maxWidth:300})
       .addTo(lPointsChaudsRadio);
   });
 }
@@ -6008,7 +6029,7 @@ async function togPointsChauds(btn){
   await loadPointsChaudsRadio();
   _renderPointsChauds();
   lPointsChaudsRadio.addTo(map); btn.className='lbtn on-points-chauds';
-  info('Points chauds U/Th chargés — ' + (POINTS_CHAUDS_RADIO||[]).length + ' sites documentaires (doses estimées, non mesurées)');
+  info('Sites U/Th à mesurer — ' + (POINTS_CHAUDS_RADIO||[]).length + ' sites candidats chargés · doses non mesurées, mesures in situ requises');
 }
 
 // ═══ DONNÉES MONDIALES — WDMAM + CHAOS-7 ═══
