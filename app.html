@@ -1389,6 +1389,14 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     </button>
     <div class="cond-body" id="cond-body-contribs" hidden>
       <div id="contrib-panel">
+        <div id="cert-download-block" style="display:none;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Sources certifiées</div>
+          <button id="btn-cert-download" type="button" onclick="downloadCertifiedJSON()" style="width:100%;padding:8px 12px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg3);color:var(--tx);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:inherit;transition:all .15s" onmouseover="this.style.background='var(--tx-brume)';this.style.borderColor='var(--tx-mica)'" onmouseout="this.style.background='var(--bg3)';this.style.borderColor='var(--border)'">
+            <span style="font-size:13px">⬇</span>
+            <span style="flex:1;text-align:left">Télécharger les 30 fiches ANFR/EXEM <span style="color:var(--tx3);font-size:10px">(JSON)</span></span>
+          </button>
+          <div style="font-size:10px;color:var(--tx3);margin-top:6px;line-height:1.4">Mesures certifiées de laboratoire (ANFR · EXEM) extraites des PDFs CartoRadio. Déjà visibles sur la carte en losanges colorés.</div>
+        </div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Contributions récentes — base Supabase</div>
         <div class="contrib-list" id="contrib-list"></div>
       </div>
@@ -6289,6 +6297,8 @@ function loadMesuresCertifiees() {
       const d = await r.json();
       MESURES_CERTIFIEES = d.mesures || [];
       console.log('[Tellux] Mesures certifiees chargees : ' + MESURES_CERTIFIEES.length);
+      const blk = document.getElementById('cert-download-block');
+      if (blk && MESURES_CERTIFIEES.length > 0) blk.style.display = 'block';
     } catch (e) {
       console.warn('[Tellux] Mesures certifiees indisponibles : ' + e.message);
       MESURES_CERTIFIEES = [];
@@ -6296,6 +6306,37 @@ function loadMesuresCertifiees() {
     return MESURES_CERTIFIEES;
   })();
   return _certLoadPromise;
+}
+
+// Telechargement des 30 fiches certifiees ANFR/EXEM en JSON (wrapper avec metadata source/licence)
+function downloadCertifiedJSON() {
+  if (!MESURES_CERTIFIEES || MESURES_CERTIFIEES.length === 0) {
+    info('Fiches certifiées non disponibles — réessayer dans quelques instants.', 'warn');
+    return;
+  }
+  const wrapper = {
+    source: 'Tellux Corse — https://tellux.pages.dev',
+    generated_at: new Date().toISOString(),
+    n_mesures: MESURES_CERTIFIEES.length,
+    note_precision: 'Coordonnées = centroïdes communaux (precision_coord=secteur). Localisation exacte : CartoRadio.fr.',
+    source_originale: 'ANFR/EXEM — PDFs CartoRadio 2024-2026, extraits par l\u2019équipe Tellux (PyMuPDF + OCR Tesseract)',
+    licence: 'Données publiques ANFR (Licence Ouverte 2.0). Compilation Tellux sous CC-BY 4.0.',
+    mesures: MESURES_CERTIFIEES
+  };
+  const json = JSON.stringify(wrapper, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const d = new Date();
+  const ymd = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+  const filename = 'tellux_mesures_certifiees_anfr_' + ymd + '.json';
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  info('Fichier téléchargé — ' + MESURES_CERTIFIEES.length + ' fiches certifiées ANFR/EXEM (JSON).', 'success');
 }
 
 // Detecte si une fiche est basse frequence (objet communicant fixe, protocole 9 kHz-100 kHz)
