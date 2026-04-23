@@ -593,6 +593,12 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .contrib-item{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:12px;}
 .contrib-item:last-child{border-bottom:none;}
 .ci-dot{width:8px;height:8px;border-radius:50%;background:var(--maquis-clair);flex-shrink:0;margin-top:3px;}
+.ci-tier{font-family:var(--mono);font-size:11px;color:var(--tx-mica);flex-shrink:0;min-width:28px;letter-spacing:-0.5px;}
+.contrib-item.tier-1{border-left:3px solid var(--acc);padding-left:8px;}
+.contrib-item.tier-1 .ci-tier{color:var(--acc);font-weight:600;}
+.contrib-item.tier-2{border-left:2px solid var(--info);padding-left:8px;}
+.contrib-item.tier-2 .ci-tier{color:var(--info);}
+.contrib-item.tier-3{border-left:1px solid var(--border);padding-left:8px;}
 .ci-main{flex:1;}
 .ci-meta{font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:2px;}
 .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;padding:8px 12px;background:var(--pierre-ombre);border-radius:var(--r);border:1px solid var(--border);}
@@ -1131,7 +1137,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 <div style="margin:18px 0 14px 0;padding:14px;background:var(--tx-brume);border-radius:8px;border-left:3px solid var(--tx-maquis)">
   <h4 style="margin:0 0 10px 0;font-family:var(--font-display);font-size:14px;font-weight:500;color:var(--tx-ardoise)">Protocole de mesure terrain</h4>
   <p style="margin:6px 0;font-size:11px;color:var(--tx-ardoise);line-height:1.6">
-    Toute mesure terrain destinée à valider ou enrichir le modèle Tellux suit le <strong>protocole de mesure en aveugle parallèle</strong>. Deux opérateurs indépendants effectuent la mesure simultanément sur le même point sans communiquer pendant la prise. Les écarts sont comparés a posteriori pour estimer la dispersion expérimentale.
+    Toute mesure terrain destinée à valider ou enrichir le modèle Tellux suit le <strong>protocole de mesure en aveugle parallèle</strong>. Trois opérateurs indépendants effectuent la mesure simultanément sur le même point sans communiquer pendant la prise. Les écarts sont comparés a posteriori pour estimer la dispersion expérimentale.
   </p>
   <p style="margin:6px 0;font-size:11px;color:var(--tx-ardoise);line-height:1.6">
     <strong>Phase 1 (consolidation) :</strong> auto-mesures par le porteur du projet selon ce protocole. <strong>Phase 2 (validation) :</strong> mesures par des tiers extérieurs (associations CEM, laboratoires indépendants) pour la crédibilité scientifique.
@@ -1522,6 +1528,18 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <label>Note <span style="color:var(--tx3);font-weight:400;font-size:10px">— conditions, observations, heure</span></label>
   <textarea id="c-note" rows="2" maxlength="500" placeholder="ex: 22h, stable 3 min, fenêtre ouverte…"></textarea>
   <div style="font-size:10px;color:var(--tx3);margin-top:2px">Merci de ne pas inclure de données personnelles (nom, adresse, téléphone).</div>
+
+  <div style="margin-bottom:10px;padding:8px 10px;background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r)">
+    <label style="display:flex;align-items:flex-start;gap:6px;font-size:11px;color:var(--ardoise-clair);cursor:pointer">
+      <input type="checkbox" id="c-protocole" style="margin-top:2px;accent-color:var(--acc)">
+      <span>
+        <b>&#9733;&#9733;&#9733; Mesure en protocole aveugle parall&#232;le</b>
+        <span style="display:block;font-size:10px;color:var(--tx3);margin-top:2px;line-height:1.3">
+          Ne cocher que si la mesure a &#233;t&#233; prise simultan&#233;ment par 3 op&#233;rateurs ind&#233;pendants sans communication entre eux pendant la prise. Les mesures hors protocole sont trait&#233;es comme indicatives.
+        </span>
+      </span>
+    </label>
+  </div>
 
   <div class="rgpd-row">
     <input type="checkbox" id="c-rgpd">
@@ -1966,6 +1984,7 @@ function updateNativeMagRowVisibility(){
 }
 
 async function startNativeMagCapture(){
+  window._nativeCaptureUsed = false;
   const statusEl = document.getElementById('native-mag-status');
   const btn = document.getElementById('btn-native-mag');
   if(!statusEl || !btn) return;
@@ -2036,6 +2055,7 @@ function stopNativeMagCapture(applyResult){
 
     const valInp = document.getElementById('c-val');
     if(valInp) valInp.value = Math.round(mean*100)/100;
+    window._nativeCaptureUsed = true;
     const unitSel = document.getElementById('c-unit');
     if(unitSel) for(let o of unitSel.options){if(o.value==='\u00B5T'){o.selected=true;break;}}
 
@@ -4408,6 +4428,8 @@ function repositionMarker(){
 
 function cancelContrib(){
   if(_nativeMag) stopNativeMagCapture(false);
+  const protoChk=document.getElementById('c-protocole');if(protoChk)protoChk.checked=false;
+  window._nativeCaptureUsed=false;
   // Nettoyer le pin violet si présent
   if(pending){map.removeLayer(pending);pending=null;}
   // Fermer le formulaire
@@ -4506,6 +4528,8 @@ async function saveContrib(){
     materiaux_murs:mats.length?mats:null,
     appareils_actifs:appareils.length?appareils:null,
     attenuation_prevue_db:attenPrevue||null,
+    protocole_aveugle: document.getElementById('c-protocole')?.checked ? true : null,
+    native_capture: window._nativeCaptureUsed === true ? true : null,
   };
   // Filtrer les champs null/undefined pour éviter PGRST204 si colonne manquante
   Object.keys(row).forEach(k=>{if(row[k]===null||row[k]===undefined)delete row[k];});
@@ -4516,6 +4540,8 @@ async function saveContrib(){
     document.getElementById('cform').style.display='none';
     document.getElementById('c-val').value='';document.getElementById('c-note').value='';
     window._csvStats=null;
+    const protoChk=document.getElementById('c-protocole');if(protoChk)protoChk.checked=false;
+    window._nativeCaptureUsed = false;
     var csvSum=document.getElementById('csv-summary');if(csvSum)csvSum.style.display='none';
     var csvInp=document.getElementById('csv-phyphox-input');if(csvInp)csvInp.value='';
     const n=contribsDB.length;
@@ -4530,15 +4556,77 @@ async function saveContrib(){
   btn.textContent='Enregistrer dans Supabase';btn.disabled=false;
 }
 
+// ═══ HIÉRARCHIE DE CONFIANCE DES CONTRIBUTIONS ═══
+// 3 niveaux :
+//   1 — Protocole aveugle parallèle (c.protocole_aveugle === true)
+//   2 — Automatique/traçable : smartphone_mag avec csv_stats OU native_capture
+//   3 — Déclaratif/autre (tout le reste)
+// Transitoire : étoiles ★★★ ★★ ★ dans l'UI. Sera remplacé par pondération modèle
+// dans une session ultérieure (zone GELÉ-001).
+function computeContribTier(c){
+  if(!c) return 3;
+  if(c.protocole_aveugle === true) return 1;
+  if(c.type === 'smartphone_mag' && (c.csv_stats || c.native_capture === true)) return 2;
+  return 3;
+}
+
+function tierBadge(tier){
+  if(tier === 1) return '\u2605\u2605\u2605';
+  if(tier === 2) return '\u2605\u2605';
+  return '\u2605';
+}
+
+function tierLabel(tier){
+  if(tier === 1) return 'Protocole aveugle';
+  if(tier === 2) return 'Automatique';
+  return 'Déclaratif';
+}
+
+const INSTRUMENT_LABELS = {
+  smartphone_mag: 'Magnétomètre téléphone',
+  smartphone_rssi: 'Signal réseau',
+  smartphone_wifi: 'Signal WiFi',
+  trifield: 'TriField TF2',
+  cornet: 'Cornet ED88T',
+  rtlsdr: 'RTL-SDR',
+  autre_capteur: 'Capteur externe',
+  anfr: 'Mesure ANFR',
+  observation: 'Observation',
+  ressenti: 'Ressenti'
+};
+
+function instrumentLabel(type){
+  return INSTRUMENT_LABELS[type] || type || '—';
+}
+
 function renderList(){
   const el=document.getElementById('contrib-list');
   if(!el)return;
   if(!contribsDB.length){el.innerHTML='';return;}
-  el.innerHTML=contribsDB.slice(0,10).map(c=>{
-    const csvBadge=c.csv_stats?' 📊':'';
-    const unitInfo=c.unite_saisie&&c.unite_saisie!=='nT'?' (saisi en '+c.unite_saisie+')':'';
-    const valLabel=c.valeur?' — '+c.valeur+' nT'+unitInfo:'';
-    return '<div class="contrib-item"><span class="ci-dot"></span><div><div class="ci-main">'+c.type+valLabel+csvBadge+'</div><div class="ci-meta">'+(c.lat?c.lat.toFixed(4):'')+', '+(c.lon?c.lon.toFixed(4):'')+' · score:'+(c.score_anomalie||'—')+' · '+(c.created_at?new Date(c.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'')+'</div></div></div>';
+  // Enrichir chaque contribution avec son tier, puis trier : tier asc, puis date desc
+  const enriched = contribsDB.slice().map(c => ({c, tier: computeContribTier(c)}));
+  enriched.sort((a,b) => {
+    if(a.tier !== b.tier) return a.tier - b.tier;
+    const ta = a.c.created_at ? new Date(a.c.created_at).getTime() : 0;
+    const tb = b.c.created_at ? new Date(b.c.created_at).getTime() : 0;
+    return tb - ta;
+  });
+  el.innerHTML = enriched.slice(0,10).map(({c, tier}) => {
+    const csvBadge = c.csv_stats ? ' \uD83D\uDCCA' : '';
+    const nativeBadge = c.native_capture === true ? ' \uD83D\uDCF1' : '';
+    const unitInfo = c.unite_saisie && c.unite_saisie !== 'nT' ? ' (saisi en '+c.unite_saisie+')' : '';
+    const valLabel = c.valeur ? ' \u2014 '+c.valeur+' nT'+unitInfo : '';
+    const instr = instrumentLabel(c.type);
+    const dateStr = c.created_at ? new Date(c.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    const coords = (c.lat ? c.lat.toFixed(4) : '') + ', ' + (c.lon ? c.lon.toFixed(4) : '');
+    const score = c.score_anomalie || '\u2014';
+    return '<div class="contrib-item tier-'+tier+'" title="'+tierLabel(tier)+'">' +
+             '<span class="ci-tier">'+tierBadge(tier)+'</span>' +
+             '<div>' +
+               '<div class="ci-main">'+instr+valLabel+csvBadge+nativeBadge+'</div>' +
+               '<div class="ci-meta">'+coords+' \u00B7 score:'+score+' \u00B7 '+dateStr+'</div>' +
+             '</div>' +
+           '</div>';
   }).join('');
 }
 
