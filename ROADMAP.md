@@ -155,6 +155,12 @@ Les chantiers suivants sont suspendus en attente de deux conditions conjointes :
 - Identification et engagement d'un relecteur physicien tiers pour validation méthodologique
 - Phase de soumission aux institutions de financement (CTC, FEDER, ANR) atteinte
 
+### Préparation soumission physicien tiers — statut
+
+Le document de soumission au physicien tiers est préparé et à jour au 2026-04-23 (version v1.2). Il intègre les ajustements scientifiques du jour (reformulation S10, amendement S8 avec cadre éthique, ajustements cosmétiques et pédagogiques complémentaires) et demande au relecteur une validation explicite sur les deux points les plus sensibles (questions Q7.6 et Q7.7).
+
+Le document reste en attente de soumission effective, conditionnée à l'identification d'un relecteur physicien tiers. Les chantiers ci-dessous s'activeront une fois cette relecture conduite et la phase de soumission institutionnelle atteinte.
+
 ### Chantier 1 — Rédaction du Guide d'interprétation de la carte
 
 - **Statut :** à rédiger
