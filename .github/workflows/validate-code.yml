@@ -1,6 +1,7 @@
 name: validate-code
 
-# Validation automatique déclenchée sur chaque PR vers dev ou main.
+# Validation automatique déclenchée sur chaque PR vers dev ou main,
+# ET sur chaque push direct vers dev ou main (workflow simplifié 22 avril).
 # Deux jobs parallèles :
 #   - validate-js   : extrait les blocs <script> inline des 5 HTML principaux
 #                     et vérifie leur syntaxe via `node --check`.
@@ -9,9 +10,17 @@ name: validate-code
 #                     Les <script src=...> CDN ne sont pas vérifiés (hors repo).
 #   - validate-html : lint HTML via htmlhint avec la configuration .htmlhintrc.
 # Un échec dans l'un ou l'autre job fait échouer le check global de la PR.
+#
+# Note : quand le site passera public (réévaluation prévue), revenir au trigger
+# pull_request uniquement + discipline PR stricte pour que la branch protection
+# de main serve réellement de garde-fou.
 
 on:
   pull_request:
+    branches:
+      - dev
+      - main
+  push:
     branches:
       - dev
       - main
