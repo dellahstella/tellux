@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light only">
 <title>Tellux — Mesurer le territoire vivant · Cartographie électromagnétique Corse</title>
-<meta name="description" content="Cartographie du champ électromagnétique en Corse — 29 mesures ANFR certifiées, modèle IGRF-14, contributions terrain.">
+<meta name="description" content="Cartographie du champ électromagnétique en Corse — 30 fiches ANFR/EXEM certifiées, modèle IGRF-14, contributions terrain.">
 <meta property="og:title" content="Tellux — Champ électromagnétique Corse">
-<meta property="og:description" content="29 mesures certifiées ANFR · IGRF-14 · BRGM · Corse 2024–2026">
+<meta property="og:description" content="30 fiches ANFR/EXEM certifiées · IGRF-14 · BRGM · Corse 2024–2026">
 <meta property="og:url" content="https://tellux.pages.dev/">
 <link rel="canonical" href="https://tellux.pages.dev/">
 <link rel="icon" type="image/svg+xml" href="assets/logo/tellux_logo.svg">
@@ -304,6 +304,98 @@
     max-width:min(260px,calc(100vw - 40px));
     font-size:11px;
   }
+}
+
+/* ═══ Mesures EM : layer certifiées ANFR/EXEM ═══ */
+@keyframes cert-halo-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(194, 133, 51, 0.8); }
+  70%  { box-shadow: 0 0 0 14px rgba(194, 133, 51, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(194, 133, 51, 0); }
+}
+.cert-marker-non-conforme {
+  animation: cert-halo-pulse 2s infinite;
+  border-radius: 50%;
+}
+.leaflet-popup.tellux-cert-popup .leaflet-popup-content {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--tx-ardoise, #1F2329);
+  max-width: 320px;
+}
+.leaflet-popup.tellux-cert-popup .cert-popup-header {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.leaflet-popup.tellux-cert-popup .cert-popup-value {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 4px 0;
+}
+.leaflet-popup.tellux-cert-popup .cert-popup-badge-nonconforme {
+  display: inline-block;
+  background: #8E2F1F;
+  color: #F5F0E7;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.leaflet-popup.tellux-cert-popup .cert-popup-badge-conforme {
+  display: inline-block;
+  background: #3F5B3A;
+  color: #F5F0E7;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.leaflet-popup.tellux-cert-popup .cert-popup-precision {
+  font-size: 10px;
+  color: #C28533;
+  font-weight: 600;
+  margin-top: 6px;
+}
+.leaflet-popup.tellux-cert-popup .cert-popup-note {
+  font-size: 11px;
+  color: var(--tx-mica, #7B7770);
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border, #d1c9b8);
+}
+.leaflet-popup.tellux-cert-popup details {
+  margin-top: 6px;
+  font-size: 11px;
+}
+.leaflet-popup.tellux-cert-popup summary {
+  cursor: pointer;
+  color: #1F3A5F;
+  font-weight: 600;
+}
+.leaflet-popup.tellux-cert-popup details table {
+  margin-top: 4px;
+  font-size: 10px;
+}
+.leaflet-popup.tellux-cert-popup details table td {
+  padding: 2px 6px 2px 0;
+}
+.leaflet-popup.tellux-cert-popup .cert-popup-link-cross {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 6px;
+  background: var(--pierre-ombre, #ebe4d4);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 10px;
+  color: #1F3A5F;
+  text-decoration: underline;
+}
+.leaflet-popup.tellux-cert-popup .cert-popup-link-cross:hover {
+  background: var(--border, #d1c9b8);
 }
 
 /* === fin Tellux v6 design Vague 2 === */
@@ -1220,7 +1312,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <li style="margin-bottom:3px"><strong>EMAG2v3 résolution</strong> 2 arc-min (~3.7 km) → lisse anomalies locales</li>
   <li style="margin-bottom:3px"><strong>Piézoélectricité</strong> : facteur 0.5 arbitraire (Bishop 1981), portée 500m = convention. À valider magnétomètre terrain.</li>
   <li style="margin-bottom:3px"><strong>Failles</strong> : 8 principales BRGM, bonus <3km. Quaternaires vs actives = pondération différente (0.7 vs 1.0).</li>
-  <li style="margin-bottom:3px"><strong>RF</strong> : 29 mesures ANFR insuffisantes intérieur Corse. Calibrage = littoral + agglos.</li>
+  <li style="margin-bottom:3px"><strong>RF</strong> : 28 mesures ANFR RF (+ 2 basse fréquence) insuffisantes intérieur Corse. Calibrage = littoral + agglos.</li>
   <li style="margin-bottom:3px"><strong>Incertitude globale</strong> : ±1-2 points sur 0-10. Utiliser en <b>comparatif (site A vs B)</b> plutôt qu'absolu.</li>
 </ul>
 
@@ -1320,7 +1412,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     </div>
     <div class="accordion-cat-content open">
       <button class="lbtn on-hot" id="b-hot" title="Champ composite estimé par le modèle Tellux (agrégation de 4 domaines physiques)" onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ composite</button>
-      <button class="lbtn on-con" id="b-con" title="Mesures terrain soumises par les contributeurs et validées" onclick="tog('con','on-con',this)"><span class="dot" style="background:#5c3a9b"></span>Mesures terrain</button>
+      <button class="lbtn on-con" id="b-con" title="Mesures EM — contributions citoyennes + 30 fiches ANFR/EXEM certifiées (2024-2026)" onclick="tog('con','on-con',this)"><span class="dot" style="background:#5c3a9b"></span>Mesures EM</button>
     </div>
   </div>
 
@@ -1404,10 +1496,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <div style="font-family:var(--mono);font-size:9px;color:rgba(245,240,231,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Statistiques du mod&#232;le</div>
       <div style="font-family:var(--mono);font-size:11px;color:rgba(245,240,231,.8)">&#128225; <span id="anfr-count">chargement&#8230;</span></div>
       <div style="font-family:var(--mono);font-size:11px;color:rgba(245,240,231,.8);margin-top:4px">&#128346; Écart IGRF/WMM : <span id="igrf-wmm-diff" style="color:rgba(245,240,231,.5)">—</span> <span style="font-size:9px;opacity:.7">nT</span></div>
-    </div>
-    <div style="border-top:1px solid rgba(245,240,231,.15);padding-top:8px;margin-bottom:8px">
-      <div style="font-family:var(--mono);font-size:9px;color:rgba(245,240,231,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Outils avanc&#233;s</div>
-      <button onclick="importCartoRadioCSV()" style="font-size:10px;padding:4px 10px;border-radius:var(--r);border:1px solid #2dd4bf;background:rgba(45,212,191,.12);color:#5eead4;cursor:pointer;font-family:var(--font)">Importer CSV CartoRadio</button>
     </div>
     <div style="display:flex;gap:4px;flex-wrap:wrap">
       <button onclick="resetExpertSliders()" style="font-size:10px;padding:4px 10px;border-radius:var(--r);border:1px solid var(--border);background:var(--pierre-ombre);color:var(--ardoise-clair);cursor:pointer">R&#233;initialiser</button>
@@ -1675,9 +1763,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 
 <!-- PANNEAU STATS CORPUS -->
 <div class="stats-panel" id="stats-panel">
-  <div class="mpanel-title">Corpus CartoRadio EXEM — 29 mesures certifiées ANFR/DR 15-4 · Corse 2024–2026</div>
+  <div class="mpanel-title">Corpus CartoRadio EXEM — 30 fiches ANFR/EXEM · Corse 2024–2026 · 1 non-conformité documentée (Monticello) · coordonnées au centroïde communal</div>
   <div class="stats-grid">
-    <div class="stat-box"><div class="stat-val" style="color:var(--acc)">29</div><div class="stat-lbl">mesures RF</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:var(--acc)">28</div><div class="stat-lbl">mesures RF (+ 2 BF)</div></div>
     <div class="stat-box"><div class="stat-val" style="color:var(--maquis-clair)">0.16</div><div class="stat-lbl">min V/m · Barrettali</div></div>
     <div class="stat-box"><div class="stat-val" style="color:var(--danger)">29.05</div><div class="stat-lbl">max V/m · Monticello</div></div>
     <div class="stat-box"><div class="stat-val" style="color:var(--warn)">1.92</div><div class="stat-lbl">médiane V/m</div></div>
@@ -1963,6 +2051,9 @@ const lPointsChaudsRadio=L.layerGroup();
 // lRPG/lForet/lAOC : layers agronomie migrées vers agronomie.html
 const lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lCem=L.layerGroup(),lSitesRemarq=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
 const lCrustal=L.layerGroup();
+// lCert : layer interne non-clusterisé pour les 30 fiches ANFR/EXEM certifiées.
+// Activé/désactivé en parallèle de lCon via tog('con') — bouton unique côté UI.
+const lCert=L.layerGroup();
 const LAYERS={bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,prod:lProd,hot:lHot,con:lCon,cem:lCem,therm:lTherm,crustal:lCrustal,sitesRemarq:lSitesRemarq};
 const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag,foret:wmsForet};
 const ACTIVE={bt:false,ant:false,antOffshore:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,res:false,prod:false,con:true,cem:false,therm:false,crustal:false,sitesRemarq:false};
@@ -1986,6 +2077,18 @@ const LEGEND_HTML={
     bt:'<div class="leg-block"><b class="leg-title">Réseau BT</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>BT aérien</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>BT souterrain</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 12</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Sites de production</b><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique barrage</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique fil de l&#39;eau</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogaz</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>TAC (turbine à combustion)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnexion</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Taille selon puissance :</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
   aoc:'<div class="leg-block"><b class="leg-title">AOC/AOP Corse</b><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#99000033;border:2px solid #991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Cru — Patrimonio · Ajaccio</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#ea580c33;border:2px solid #ea580c;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Village — Calvi · Sartène · Figari</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#fbbf2433;border:2px solid #fbbf24;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Muscat Cap Corse · Régionale</div><div class="leg-src">INAO — terroir-EM</div></div>',
+  con:'<div class="leg-block"><b class="leg-title">Mesures EM</b>'+
+    '<div class="leg-sub" style="font-size:10px;color:var(--tx-mica,#7B7770);margin:2px 0 4px">30 fiches ANFR/EXEM + contributions citoyennes</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Certifié conforme &lt; 0,5 V/m</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Certifié conforme 0,5–2 V/m</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#991b1b;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Certifié conforme 2–5 V/m</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c0000;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Certifié conforme 5–28 V/m</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#7c0000;transform:rotate(45deg);border:2px solid #C28533;vertical-align:middle;margin-right:4px"></span> Non conforme &gt; 28 V/m (Monticello)</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Basse fréquence 9 kHz–100 kHz</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#5c3a9b;border-radius:50%;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Contribution citoyenne (cluster)</div>'+
+    '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Centroïdes communaux — localisation exacte sur CartoRadio.fr</div>'+
+    '<div class="leg-src">ANFR/EXEM · Tellux crowdsourcé</div>'+
+    '</div>',
   sitesRemarq:'<div class="leg-block"><b class="leg-title">Sites géophysiques remarquables</b>'+
     '<div class="leg-row"><svg width="12" height="12" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px"><polygon points="7,1 13,5.5 10.5,13 3.5,13 1,5.5" fill="#1F3A5F" stroke="#F5F0E7" stroke-width="1.5"/></svg> Ophiolite (Cap Corse) — serpentinite, magnétite</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Site minier historique (galène, stibine, chalcopyrite, amiante)</div>'+
@@ -2234,7 +2337,7 @@ function validateContrib(){
 function updateLegendPanel(){
   if(!_legendCtrl){_legendCtrl=L.control({position:'bottomright'});_legendCtrl.onAdd=function(){const d=L.DomUtil.create('div');d.id='tellux-leg-panel';d.style.cssText='background:rgba(247,248,250,.97);border:1px solid rgba(0,0,0,.08);border-radius:10px;font-family:var(--font);font-size:10px;max-width:170px;box-shadow:0 2px 10px rgba(0,0,0,.1);overflow:hidden;display:none';L.DomEvent.disableClickPropagation(d);return d;};_legendCtrl.addTo(map);}
   const panel=document.getElementById('tellux-leg-panel');if(!panel)return;
-  const order=['hot','res','bt','prod','ant','geo','hyd','foret','sitesRemarq','cav','emag','wdmam','crustal','therm','aoc'];const active=order.filter(id=>LEGEND_ACTIVE.has(id));
+  const order=['hot','con','res','bt','prod','ant','geo','hyd','foret','sitesRemarq','cav','emag','wdmam','crustal','therm','aoc'];const active=order.filter(id=>LEGEND_ACTIVE.has(id));
   if(!active.length){panel.style.display='none';return;}
   panel.style.display='block';
   panel.innerHTML=active.filter(id=>LEGEND_HTML[id]).map((id,i)=>(i>0?'<div style="height:1px;background:rgba(0,0,0,.06);margin:0 8px"></div>':'')+LEGEND_HTML[id]).join('');
@@ -2250,6 +2353,7 @@ function tog(id,cls,btn){
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='none';
     if(id==='emag')document.getElementById('emag-op-row').style.display='none';
     if(id==='crustal')showCrustalGauge(false);
+    if(id==='con'&&map.hasLayer(lCert))map.removeLayer(lCert); // Mesures EM : retirer lCert en parallele de lCon
     showLegend(id,false);
     if(id==='antOffshore')showLegend('ant',false); // antOffshore partage légende ant
   }else{WMS[id]?map.addLayer(WMS[id]):map.addLayer(LAYERS[id]);ACTIVE[id]=true;if(btn)btn.classList.add(cls);
@@ -2265,6 +2369,16 @@ function tog(id,cls,btn){
     if(id==='bt'&&lBT.getLayers().length===0)loadBT();
     if(id==='ant'&&lAnt.getLayers().length===0)loadAnt();
     if(id==='antOffshore'&&lAntOffshore.getLayers().length===0)loadAnt(); // antOffshore charge aussi via loadAnt
+    if(id==='con'){
+      // Mesures EM : chargement + rendu des fiches certifiees ANFR/EXEM en parallele des contributions citoyennes
+      loadMesuresCertifiees().then(function(){
+        _renderMesuresCertifiees();
+        lCert.addTo(map);
+        var nContrib=(typeof contribsDB!=='undefined')?contribsDB.length:0;
+        var nCert=(MESURES_CERTIFIEES||[]).length;
+        info('Mesures EM \u2014 '+nCert+' fiches ANFR/EXEM certifiées (2024\u20132026) \u00B7 '+nContrib+' contribution(s) citoyenne(s)');
+      });
+    }
 
     // align/egl/intl : couches patrimoniales migrées vers patrimoine.html (intl : dette INTL-CRUSTAL-001)
     showLegend(id,true);
@@ -5747,12 +5861,13 @@ if(typeof loadCEM==='function')loadCEM();
 loadChargeReseau().then(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}}).catch(()=>{});
 buildHot();
 showLegend('hot',true);
+showLegend('con',true); // con est activée par défaut (ACTIVE.con=true via b-con.on-con) — légende cohérente
 // Démarrage : anomalies EM (couche Champ composite + mesures terrain par défaut)
 let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}},300);}
 map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
-setTimeout(()=>Promise.all([loadAnt(),loadDB(),loadRadonCommunesL3(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio()]),1500); // Décalé — après rendu complet de la carte
+setTimeout(()=>Promise.all([loadAnt(),loadDB(),loadRadonCommunesL3(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET L'Aquila — correction externe réelle // Météo + réfractivité troposphérique
 // EMAG2v3 OFF par défaut — toggle manuel via toggleEMAG()
@@ -6154,6 +6269,145 @@ async function togSitesRemarquables(btn) {
   ACTIVE.sitesRemarq = true;
   showLegend('sitesRemarq', true);
   info('Sites géophysiques remarquables — ' + (SITES_REMARQUABLES || []).length + ' sites chargés · données documentaires, mesures in situ souvent requises');
+}
+
+// ═══ Mesures certifiées ANFR/EXEM ═══
+// Source : public/data/cartoradio_certified_corse.json (extraction Cowork 23 avril 2026, 30 fiches).
+// Coordonnées : centroïdes communaux (precision_coord=secteur). Localisation précise via CartoRadio.fr.
+// Affichage unifié avec les contributions citoyennes sous le même bouton b-con ("Mesures EM").
+let MESURES_CERTIFIEES = [];
+let _certLoadPromise = null;
+let _certRendered = false;
+const _certMarkerById = {};
+
+function loadMesuresCertifiees() {
+  if (_certLoadPromise) return _certLoadPromise;
+  _certLoadPromise = (async () => {
+    try {
+      const r = await fetch('public/data/cartoradio_certified_corse.json', { signal: AbortSignal.timeout(5000) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      MESURES_CERTIFIEES = d.mesures || [];
+      console.log('[Tellux] Mesures certifiees chargees : ' + MESURES_CERTIFIEES.length);
+    } catch (e) {
+      console.warn('[Tellux] Mesures certifiees indisponibles : ' + e.message);
+      MESURES_CERTIFIEES = [];
+    }
+    return MESURES_CERTIFIEES;
+  })();
+  return _certLoadPromise;
+}
+
+// Detecte si une fiche est basse frequence (objet communicant fixe, protocole 9 kHz-100 kHz)
+function _certIsBasseFrequence(m) {
+  if (m.sous_protocole === 'basse_frequence') return true;
+  if (m.unite && m.unite.toLowerCase().includes('khz')) return true;
+  if (['190593', '194161'].includes(m.id)) return true;
+  return false;
+}
+
+// Couleur selon valeur V/m (bareme reglementaire)
+function _certColor(m) {
+  if (!m.conforme) return '#7c0000';
+  const v = m.valeur_max_vm;
+  if (v == null) return '#7B7770';
+  if (v < 0.5) return '#0f766e';
+  if (v < 2)   return '#b85c00';
+  if (v < 5)   return '#991b1b';
+  return '#5c0000';
+}
+
+// HTML icone : losange RF / carre basse frequence / losange + halo pulsant non conforme
+function _certIconHtml(m) {
+  const color = _certColor(m);
+  const isNonConforme = !m.conforme;
+  const isBF = _certIsBasseFrequence(m);
+  if (isBF) {
+    return '<div style="width:11px;height:11px;background:' + color + ';border:1.5px solid #F5F0E7;box-shadow:0 1px 3px rgba(0,0,0,.35);"></div>';
+  }
+  if (isNonConforme) {
+    return '<div class="cert-marker-non-conforme" style="width:14px;height:14px;background:' + color + ';transform:rotate(45deg);border:2.5px solid #C28533;"></div>';
+  }
+  return '<div style="width:12px;height:12px;background:' + color + ';transform:rotate(45deg);border:2px solid #F5F0E7;box-shadow:0 1px 3px rgba(0,0,0,.35);"></div>';
+}
+
+// Formatter popup certifiee
+function _certFormatPopup(m) {
+  const badgeHtml = m.conforme
+    ? '<div class="cert-popup-badge-conforme">\u2713 Conforme</div>'
+    : '<div class="cert-popup-badge-nonconforme">\u26A0 Non conforme \u2014 dépassement seuil ' + m.seuil_legal_vm + ' V/m</div>';
+  const valeurHtml = m.valeur_max_vm != null
+    ? '<div class="cert-popup-value">' + m.valeur_max_vm + ' ' + m.unite + '</div>'
+    : '<div class="cert-popup-value">Valeur non extractible</div>';
+  const isBF = _certIsBasseFrequence(m);
+  const protocoleHtml = isBF
+    ? '<div style="font-size:10px;color:#1F3A5F;font-weight:600">Protocole basse fréquence \u00B7 objet communicant fixe \u00B7 9 kHz\u2013100 kHz \u00B7 valeurs non comparables aux mesures RF V/m</div>'
+    : '';
+  const bandesHtml = (m.valeurs_par_bande && Object.keys(m.valeurs_par_bande).length > 0)
+    ? '<details><summary>Détail par bande</summary><table>'
+      + Object.entries(m.valeurs_par_bande)
+          .filter(function(e){return e[1] != null;})
+          .map(function(e){return '<tr><td>' + e[0].replace(/_/g,' ') + '</td><td>' + e[1] + ' V/m</td></tr>';})
+          .join('')
+      + '</table></details>'
+    : '';
+  var linkCrossHtml = '';
+  if (m.id === '192990') {
+    linkCrossHtml = '<div style="margin-top:6px"><span class="cert-popup-link-cross" data-cross-id="193102">\u21AA Voir re-inspection du 01/04/2025 (retour conformité)</span></div>';
+  } else if (m.id === '193102') {
+    linkCrossHtml = '<div style="margin-top:6px"><span class="cert-popup-link-cross" data-cross-id="192990">\u21A9 Voir mesure initiale du 20/03/2025 (non conforme)</span></div>';
+  }
+  const noteHtml = m.note
+    ? '<div class="cert-popup-note">' + m.note + '</div>'
+    : '';
+  return '<div class="cert-popup-header">' + m.site_nom + '</div>'
+    + '<div style="font-size:11px;color:var(--tx-mica,#7B7770);margin-bottom:4px">' + m.commune + ' (' + m.departement + ')</div>'
+    + badgeHtml
+    + valeurHtml
+    + protocoleHtml
+    + '<div style="font-size:11px;margin-top:4px"><b>Date :</b> ' + m.date_mesure + ' \u00B7 <b>Labo :</b> ' + m.laboratoire + '</div>'
+    + '<div style="font-size:11px"><b>Protocole :</b> ' + m.protocole + ' \u00B7 <b>Réf. :</b> #' + m.id + '</div>'
+    + bandesHtml
+    + linkCrossHtml
+    + '<div class="cert-popup-precision">\u26A0 Précision : centroïde communal \u2014 localisation exacte à vérifier sur CartoRadio.fr</div>'
+    + noteHtml;
+}
+
+// Lien croise pour paire Monticello : ouvre le popup de l'autre fiche + pan
+function _certOpenCross(targetId) {
+  const target = _certMarkerById[targetId];
+  if (target) {
+    target.openPopup();
+    map.panTo(target.getLatLng());
+  }
+}
+
+function _renderMesuresCertifiees() {
+  if (_certRendered) return;
+  _certRendered = true;
+  (MESURES_CERTIFIEES || []).forEach(m => {
+    // Offset visuel pour Monticello 193102 (re-inspection) pour eviter superposition exacte
+    let lat = m.lat, lon = m.lon;
+    if (m.id === '193102') { lat += 0.0015; lon += 0.0015; }
+    const icon = L.divIcon({
+      className: 'cert-icon',
+      html: _certIconHtml(m),
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    });
+    const marker = L.marker([lat, lon], { icon })
+      .bindPopup(_certFormatPopup(m), { className: 'tellux-cert-popup', maxWidth: 340, autoPan: true });
+    _certMarkerById[m.id] = marker;
+    lCert.addLayer(marker);
+    marker.on('popupopen', function(e) {
+      const popupEl = e.popup.getElement();
+      if (!popupEl) return;
+      const links = popupEl.querySelectorAll('.cert-popup-link-cross');
+      links.forEach(function(link){
+        link.onclick = function(){ _certOpenCross(link.getAttribute('data-cross-id')); };
+      });
+    });
+  });
 }
 
 // ═══ DONNÉES MONDIALES — WDMAM + CHAOS-7 ═══
