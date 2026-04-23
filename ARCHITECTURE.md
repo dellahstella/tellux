@@ -1,6 +1,6 @@
 # Architecture Tellux
 
-**Version :** 1.0 — 2026-04-21
+**Version :** 1.0 — création 2026-04-21, mise à jour in-place 2026-04-23 (pas de bump)
 **Usage :** référence technique pour les sessions Claude Code. Lire avant toute modification de `app.html`.
 
 ---
@@ -12,15 +12,35 @@ tellux/
 ├── app.html                    # Application principale — Cartographie EM (PUBLIQUE)
 ├── patrimoine.html             # Module patrimoine (existe, non lié depuis index, PHASE 2)
 ├── agronomie.html              # Module agronomie (existe, non lié depuis index, PHASE 3)
+├── corpus.html                 # Exposition publique du Pilier A (fiches S1-S14)
 ├── index.html                  # Landing page (dirige vers app.html uniquement)
 ├── public/
 │   └── data/                   # Jeux de données statiques JSON
 │       ├── radon_communes_level3_corse.json
-│       └── tdf_emitters_corse.json
+│       ├── tdf_emitters_corse.json
+│       ├── wmm_2025_grid_corse.json
+│       ├── postes_sources_corse.json
+│       ├── eoliennes_corse.json
+│       ├── points_chauds_radio_corse.json        # Label UI : « Sites U/Th à mesurer »
+│       ├── sites_remarquables_corse.json         # Sites géophysiques remarquables (10 entrées)
+│       └── cartoradio_certified_corse.json       # 30 mesures RF certifiées ANFR/EXEM
 ├── docs/
-│   └── data-sources/           # Notes de méthodologie par source de données
-│       ├── radon_communes_level3_corse_notes.md
-│       └── tdf_emitters_corse_notes.md
+│   ├── data-sources/           # Notes de méthodologie par source de données
+│   │   ├── radon_communes_level3_corse_notes.md
+│   │   ├── tdf_emitters_corse_notes.md
+│   │   ├── wmm_2025_notes.md
+│   │   ├── postes_sources_corse_notes.md
+│   │   ├── eoliennes_corse_notes.md
+│   │   ├── bd_foret_v2_corse_notes.md
+│   │   ├── points_chauds_radio_corse_notes.md
+│   │   ├── sites_geophysiques_remarquables_corse_notes.md
+│   │   └── cartoradio_certified_corse_notes.md
+│   ├── internal/               # Documentation technique interne (gitignored)
+│   ├── physicien/              # Documents de soumission à relecture méthodologique
+│   ├── lettres/                # Lettres institutionnelles (ASNR, EDF, RTE, BRGM, IRSN)
+│   ├── notes-tri/              # Notes de tri éditoriales
+│   └── ...
+├── _corpus/                    # Corpus scientifique interne — gitignored, miroir repo privé
 ├── _migrations/                # Migrations SQL Supabase versionnées
 ├── analysis/                   # Analyses de corrélation (scripts R/Python)
 ├── tests/                      # Tests non-régression JS (node --check)
@@ -141,6 +161,12 @@ Sparkline : SVG 180×40 px, `PROFIL_HORAIRE_CORSE` (24 valeurs MW), marqueur rou
 |---------|---------|--------|-----------|
 | `radon_communes_level3_corse.json` | Communes niveau 3 radon (décret 2018-434) | IRSN / documentation BRGM | `loadRadonCommunesL3()` au démarrage |
 | `tdf_emitters_corse.json` | 10 émetteurs radiodiffusion (PAR kW estimées) | ANFR observatoire + CSA | `loadTDFEmitters()` premier click |
+| `wmm_2025_grid_corse.json` | Grille précalculée WMM 2025 pour cross-check magnétique | NOAA WMM 2025 | Chargement asynchrone |
+| `postes_sources_corse.json` | Postes sources HTA/HTB | EDF SEI (enrichissement manuel) | `calcMagneticELF_v2` |
+| `eoliennes_corse.json` | Parcs éoliens | Observatoire éolien / ANFR | `calcMagneticELF_v2` |
+| `points_chauds_radio_corse.json` | 8 entrées documentaires U/Th (label UI « Sites U/Th à mesurer »), `dose_gamma: null` sur toutes, garde défensive `calcGammaAmbient` | Consolidation Cowork 2026-04-23 basée sur `_corpus/tellux_note_uranium_thorium_corse_v1.md` | `loadPointsChaudsRadio()` premier click |
+| `sites_remarquables_corse.json` | 10 sites géophysiques remarquables en 3 catégories (ophiolite / minier historique / surveillance radiologique) | Consolidation Cowork 2026-04-23 basée sur `_corpus/tellux_note_sites_speciaux_v1.md` | Chargement asynchrone |
+| `cartoradio_certified_corse.json` | 30 mesures RF certifiées ANFR/EXEM (29 conformes, 1 dépassement Monticello 29,05 V/m avec re-inspection conformité) | Extraction Cowork 2026-04-23 depuis 30 PDFs ANFR/EXEM | Couche Mesures EM unifiée, layer `lCert` |
 
 Règles pour les nouveaux fichiers `public/data/` :
 - JSON compact (pas de whitespace inutile pour > 100 ko)
@@ -180,13 +206,18 @@ Push direct sur `main` interdit (voir `PROJECT_INSTRUCTIONS_v2.md` §B.3).
 
 ## 6. Dettes techniques actives
 
+La liste complète et à jour des dettes techniques est maintenue dans `DETTES_TECHNIQUES.md`. Le tableau ci-dessous reprend les dettes principales à date pour permettre une lecture de référence rapide en session Claude Code, sans se substituer au document canonique.
+
 | ID | Description | Condition de déblocage |
 |----|-------------|----------------------|
-| GELÉ-001 | `EXPERT_WEIGHTS_DEFAULT`, `EXPERT_BOUNDS_DEFAULT`, formule NCRP : constantes gelées | Relecture physicien tiers (jalon 2 roadmap) |
-| TÉLÉ-001 | API Téléray ASNR (gamma temps réel) non intégrée | Accès API ASNR (courrier envoyé) |
+| GELÉ-001 | `EXPERT_WEIGHTS_DEFAULT`, `EXPERT_BOUNDS_DEFAULT`, formule NCRP : constantes gelées | Relecture physicien tiers — document `docs/physicien/DOCUMENT_SOUMISSION_PHYSICIEN_TELLUX_v1.2.md` en attente d'envoi |
+| TÉLÉ-001 | API Téléray ASNR (gamma temps réel) non intégrée | Accès API ASNR (courrier `docs/lettres/lettre_01_ASNR_teleray.md` envoyé) |
 | NCRP-001 | Fond naturel terrestre NCRP 94 dans `calcGammaAmbient` gelé | Relecture physicien tiers (lié GELÉ-001) |
-| MIGN-001 | ~6 appelants legacy `calcAll` (sans options) non migrés vers `calcAll_v2` | Session dédiée (non bloquant) |
+| BT-CALIBRATION-001 | Calcul BT segments désactivé (flag `USE_BT_SEGMENTS = false`), proxy `BT_ZONES` legacy actif | Recalibration physique du modèle Biot-Savart BT, session dédiée |
+| HTA-TENSION-001 | Dataset `hta_lines` sans champ voltage, courant uniforme 225 A | Migration SQL + enrichissement dataset |
+| MIGN-001 | ~6 appelants legacy `calcAll` non migrés vers `calcAll_v2` | Session dédiée (non bloquant) |
 | PATR-001 | H1/H8/H18/H37/H39 dormantes — `patrimoine.html` non extrait de `app.html` | Phase 2 financement + session extraction |
+| CORPUS-PILIERS-001 (ex H1-H88-ELF-001, reformulée 2026-04-23) | Relecture des fiches du Pilier A (S1-S14) et du Pilier B (P1-P20) post-migration Biot-Savart. La formulation H1-H88 est obsolète depuis la scission du 2026-04-21 ; la correspondance H-numéro → S/P reste consultable dans `_corpus/` | Session dédiée post-merge Biot-Savart, par pilier |
 
 ---
 
