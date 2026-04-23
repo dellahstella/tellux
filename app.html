@@ -171,78 +171,6 @@
   box-shadow:0 2px 10px rgba(31,35,41,.06)!important;
 }
 
-/* === Légende dynamique en bas-gauche de la carte === */
-.tx-legend{
-  position:absolute;
-  bottom:12px;
-  left:12px;
-  z-index:1000;
-  background:rgba(245,240,231,0.95);
-  border:1px solid var(--border);
-  border-radius:8px;
-  padding:10px 12px;
-  box-shadow:0 4px 16px rgba(31,35,41,.10);
-  font-family:var(--font);
-  font-size:11px;
-  color:var(--tx-ardoise);
-  max-width:240px;
-  display:none;
-  backdrop-filter:blur(4px);
-}
-.tx-legend.visible{display:block;}
-.tx-legend-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  margin-bottom:6px;
-  padding-bottom:5px;
-  border-bottom:1px solid var(--border);
-}
-.tx-legend-title{
-  font-family:var(--font-display);
-  font-size:13px;
-  font-weight:500;
-  color:var(--tx-ardoise);
-}
-.tx-legend-close{
-  background:none;
-  border:none;
-  color:var(--tx-mica);
-  cursor:pointer;
-  font-size:14px;
-  padding:0 4px;
-  line-height:1;
-}
-.tx-legend-close:hover{color:var(--tx-ardoise);}
-.tx-legend-row{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  margin:3px 0;
-  line-height:1.4;
-}
-.tx-legend-swatch{
-  width:14px;
-  height:10px;
-  border-radius:2px;
-  flex-shrink:0;
-  border:1px solid rgba(31,35,41,0.15);
-}
-.tx-legend-unit{
-  font-family:var(--mono);
-  font-size:10px;
-  color:var(--tx-mica);
-  margin-top:5px;
-  padding-top:5px;
-  border-top:1px solid var(--border);
-}
-.tx-legend-source{
-  font-size:9px;
-  color:var(--tx-mica);
-  font-style:italic;
-  margin-top:3px;
-}
-
 /* Popups Leaflet — palette cohérente */
 .leaflet-popup-content-wrapper{
   background:var(--tx-pierre)!important;
@@ -1563,13 +1491,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 <div class="op-row" id="hyd-op-row"><span>Nappes</span><input type="range" min="0.1" max="1" step="0.05" value="0.55" oninput="wmsHyd.setOpacity(+this.value)"><span id="hyd-op-v">55%</span></div>
 <div class="op-row" id="emag-op-row"><span>Anomalie crustale</span><input type="range" min="0.1" max="0.8" step="0.05" value="0.5" oninput="wmsEmag.setOpacity(+this.value)"><span id="emag-op-v">50%</span></div>
 <div id="map"></div>
-<div class="tx-legend" id="tx-legend">
-  <div class="tx-legend-header">
-    <span class="tx-legend-title" id="tx-legend-title">Légende</span>
-    <button class="tx-legend-close" onclick="document.getElementById('tx-legend').classList.remove('visible')" title="Masquer">✕</button>
-  </div>
-  <div id="tx-legend-body"></div>
-</div>
 <!-- Panneau hypothèses migré vers patrimoine.html (purge 6/10).
      XP/badges encore présents — retrait prévu au commit 7. -->
 
@@ -2110,8 +2031,6 @@ const LEGEND_ACTIVE_CONTEXT=[];
 let _legendCtrl=null;
 const LEGEND_HTML={
   hot:'<div class="leg-block"><b class="leg-title">Champ ELF 50 Hz (nT)</b><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>150</span><span>300</span><span>500 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#8b92a5">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · PROD_ELECTRIQUE</div></div>',
-  elf_domain:'<div class="leg-block"><b class="leg-title">Magnétique basse fréquence</b><div style="height:12px;width:140px;background:linear-gradient(90deg,#EDD59A,#C28533,#8A5E22);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0 nT</span><span>250 nT</span><span>500 nT</span></div><div class="leg-row" style="font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère IARC 2B (chronique résidentiel)</div><div class="leg-row"><span style="font-size:8px;color:#8b92a5">Confiance ●●● (Biot-Savart segment fini, réseau réel)</span></div><div class="leg-src">EDF SEI · hta_lines Supabase · Biot-Savart réel</div></div>',
-  rf_domain:'<div class="leg-block"><b class="leg-title">Radiofréquence (µW/m²)</b><div style="height:12px;width:140px;background:linear-gradient(90deg,#E8B8A8,#8E2F1F,#5C1F13);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>100</span><span>1 000 µW/m²</span></div><div class="leg-row" style="font-size:9px;color:#4a4f5e;font-style:italic">▸ 100 µW/m² · ▸ 1 000 µW/m² : repères documentaires</div><div class="leg-row"><span style="font-size:8px;color:#8b92a5">Limite ICNIRP ≈ 4 500 000 µW/m² — cf. popup Détails</span></div><div class="leg-src">FH_POINTS · CartoRadio ANFR · ITU-R</div></div>',
   geo:'<div class="leg-block"><b class="leg-title">Geologie</b><div class="leg-row"><span style="color:#8B4513">&#9632;</span> Granit</div><div class="leg-row"><span style="color:#DAA520">&#9632;</span> Sedimentaire</div><div class="leg-row"><span style="color:#4682B4">&#9632;</span> Metamorphique</div><div class="leg-src">BRGM Geologie</div></div>',
   failles:'<div class="leg-block"><b class="leg-title">Failles tectoniques</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#8E2F1F;vertical-align:middle;margin-right:4px"></span><b style="color:#8E2F1F">Active</b> — faille active (3 sites)</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;border-top:2px dashed #C28533;vertical-align:middle;margin-right:4px"></span><b style="color:#C28533">Quaternaire</b> — faille ancienne (5 sites)</div><div class="leg-row" style="font-size:9px;color:var(--tx3)">Tracé indicatif ~30 km · axe orienté</div><div class="leg-src">BRGM Corte · 8 failles principales</div></div>',
   hyd:'<div class="leg-block"><b class="leg-title">Nappes</b><div class="leg-row"><span style="color:#1a4b8c">&#9632;</span> Affleurante</div><div class="leg-row"><span style="color:#4a90d9">&#9632;</span> Sub-affleurante</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
@@ -2125,7 +2044,6 @@ const LEGEND_HTML={
   therm:'<div class="leg-block"><b class="leg-title">Émergences thermales</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Marqueurs de failles actives</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0ea5e9;border:2px solid white;border-radius:50%;box-shadow:0 0 3px #0ea5e966;vertical-align:middle;margin-right:4px"></span>Source / thermes actifs</div><div class="leg-src">6 émergences thermales · Corse occidentale</div></div>',
     bt:'<div class="leg-block"><b class="leg-title">Réseau BT</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>BT aérien</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>BT souterrain</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 12</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Sites de production</b><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique barrage</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique fil de l&#39;eau</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogaz</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>TAC (turbine à combustion)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnexion</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Taille selon puissance :</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
-  aoc:'<div class="leg-block"><b class="leg-title">AOC/AOP Corse</b><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#99000033;border:2px solid #991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Cru — Patrimonio · Ajaccio</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#ea580c33;border:2px solid #ea580c;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Village — Calvi · Sartène · Figari</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#fbbf2433;border:2px solid #fbbf24;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Muscat Cap Corse · Régionale</div><div class="leg-src">INAO — terroir-EM</div></div>',
   con:'<div class="leg-block"><b class="leg-title">Mesures EM</b>'+
     '<div class="leg-sub" style="font-size:10px;color:var(--tx-mica,#7B7770);margin:2px 0 4px">30 fiches ANFR/EXEM + contributions citoyennes</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Certifié conforme &lt; 0,5 V/m</div>'+
@@ -7091,33 +7009,6 @@ async function saveObservation(){
     if(btn){ btn.disabled = false; btn.textContent = 'Envoyer'; }
   }
 }
-
-/* === Légende dynamique === */
-window.txLegend = {
-  show: function(config){
-    /* config = {title, rows: [{color, label}], unit, source} */
-    try{
-      var el = document.getElementById('tx-legend');
-      if(!el) return;
-      document.getElementById('tx-legend-title').textContent = config.title || 'Légende';
-      var body = document.getElementById('tx-legend-body');
-      var html = '';
-      (config.rows || []).forEach(function(r){
-        html += '<div class="tx-legend-row"><span class="tx-legend-swatch" style="background:'+r.color+'"></span>'+r.label+'</div>';
-      });
-      if(config.unit) html += '<div class="tx-legend-unit">Unité : '+config.unit+'</div>';
-      if(config.source) html += '<div class="tx-legend-source">Source : '+config.source+'</div>';
-      body.innerHTML = html;
-      el.classList.add('visible');
-    }catch(e){if(window.console)console.warn('txLegend.show:', e);}
-  },
-  hide: function(){
-    try{
-      var el = document.getElementById('tx-legend');
-      if(el) el.classList.remove('visible');
-    }catch(e){}
-  }
-};
 
 /* === Phase 2 — Layout desktop sidebar fixe (≥ 1200px) === */
 (function(){
