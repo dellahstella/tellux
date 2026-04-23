@@ -552,7 +552,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-failles{background:#fdf4f3!important;color:#8E2F1F!important;border-color:#c16b5a!important;font-weight:500;}
 .on-foret{background:#eef3e9!important;color:#3F5B3A!important;border-color:#6b8a5c!important;font-weight:500;}
 .on-postes{background:#faf2e3!important;color:#8A5E22!important;border-color:#C28533!important;font-weight:500;}
-.on-eoliennes{background:#eef3e9!important;color:#3F5B3A!important;border-color:#6b8a5c!important;font-weight:500;}
 .on-points-chauds{background:#fdf4f3!important;color:#8E2F1F!important;border-color:#c16b5a!important;font-weight:500;}
 .faille-tooltip{font-family:var(--mono);font-size:10px;background:var(--pierre-ombre,#f7f8fa);color:var(--ardoise-clair,#555);border:1px solid var(--border,rgba(0,0,0,.08));border-radius:6px;padding:4px 8px;line-height:1.5;box-shadow:0 2px 6px rgba(0,0,0,.12);}
 .on-therm{background:#e0f5fe!important;color:#0369a1!important;border-color:#38bdf8!important;font-weight:500;}
@@ -1284,7 +1283,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <button class="lbtn" id="b-bt" title="Réseau basse tension BT — EDF SEI · zoom ≥ 12" onclick="tog('bt','on-bt',this)"><span class="ln" style="background:#d97706"></span>Réseau BT</button>
       <button class="lbtn" id="b-prod" title="Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions" onclick="tog('prod','on-prod',this)"><span class="sq" style="background:#1a5c8c"></span>Sites de production</button>
       <button class="lbtn" id="b-postes" title="Postes sources EDF SEI (transformateurs HTB/HTA) — 21 postes OSM" onclick="togPostesSources(this)"><span class="sq" style="background:#C28533;border:1px solid #3F5B3A"></span>Postes sources EDF</button>
-      <button class="lbtn" id="b-eoliennes" title="Parcs éoliens corses — 3 parcs en service (Ersa, Lumio, Rogliano)" onclick="togEoliennes(this)"><span style="display:inline-block;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:8px solid #3F5B3A;vertical-align:middle"></span>Éoliennes</button>
     </div>
   </div>
 
@@ -1906,7 +1904,6 @@ const wmsEmag=L.imageOverlay(
 const lTherm=L.layerGroup();
 const lFailles=L.layerGroup();
 const lPostesSources=L.layerGroup();
-const lEoliennes=L.layerGroup();
 const lPointsChaudsRadio=L.layerGroup();
 // lSit/lSit2/lAlign/lEgl/lTour/lIndu/lCast/lPont : couches patrimoniales migrées vers patrimoine.html
 // lRPG/lForet/lAOC : layers agronomie migrées vers agronomie.html
@@ -1932,7 +1929,7 @@ const LEGEND_HTML={
   res:'<div class="leg-block"><b class="leg-title">Réseau électrique</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>Ligne HTA 20kV</div><div class="leg-row"><span style="display:inline-block;width:14px;height:3px;background:#5c2000;vertical-align:middle;margin-right:4px"></span>Ligne HTB 63-225kV</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Hydraulique</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Thermique</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Interconnexion</div><div class="leg-src">EDF SEI · Supabase · OSM</div></div>',
   therm:'<div class="leg-block"><b class="leg-title">Sources thermales</b><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0ea5e9;border:2px solid white;border-radius:50%;box-shadow:0 0 3px #0ea5e966;vertical-align:middle;margin-right:4px"></span>Source / thermes actifs</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Géothermie · Failles</span></div><div class="leg-src">5 sites · Valinco-Taravo-Fiumorbu</div></div>',
     bt:'<div class="leg-block"><b class="leg-title">Réseau BT</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>BT aérien</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>BT souterrain</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 12</span></div><div class="leg-src">EDF SEI open data</div></div>',
-  prod:'<div class="leg-block"><b class="leg-title">Sources production</b><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Hydraulique barrage</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Hydraulique fil de l\'eau</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Biogaz</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:50%;vertical-align:middle;margin-right:4px"></span>TAC (turbine à combustion)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Interconnexion</div><div class="leg-src">EDF SEI · Supabase</div></div>',
+  prod:'<div class="leg-block"><b class="leg-title">Sites de production</b><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique barrage</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique fil de l&#39;eau</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogaz</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>TAC (turbine à combustion)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnexion</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Taille selon puissance :</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
   aoc:'<div class="leg-block"><b class="leg-title">AOC/AOP Corse</b><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#99000033;border:2px solid #991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Cru — Patrimonio · Ajaccio</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#ea580c33;border:2px solid #ea580c;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Village — Calvi · Sartène · Figari</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#fbbf2433;border:2px solid #fbbf24;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Muscat Cap Corse · Régionale</div><div class="leg-src">INAO — terroir-EM</div></div>'
 };
 
@@ -3304,9 +3301,11 @@ function loadPostesSources() {
 
 // ═══ Parcs éoliens Corse (RTE ODRE registre 2022) ═══
 // Dataset : public/data/eoliennes_corse.json — 3 parcs en service (2B)
+// Source unique des coordonnees eoliennes (fiables, bourg communal ±1 km).
+// Utilisee par calcAll (Biot-Savart) et par loadProd (affichage fusionne losanges).
 let EOLIENNES_DATA = [];
 let _eolLoadPromise = null;
-function loadEoliennes() {
+function loadEoliennesData() {
   if (_eolLoadPromise) return _eolLoadPromise;
   _eolLoadPromise = (async () => {
     try {
@@ -4861,11 +4860,26 @@ function buildHot(){
 }
 
 // Sources de production electrique (couche dediee lProd)
-function loadProd(){
+// Fusion : PROD_ELECTRIQUE (hors Eolien) + EOLIENNES_DATA (RTE ODRE, coords fiables).
+// Les 3 entrees type Eolien de PROD_ELECTRIQUE sont filtrees a la lecture —
+// coords inline non fiables (divergence 2-6 km), on garde ODRE comme source unique.
+async function loadProd(){
   lProd.clearLayers();
   const TYPE_COLOR={'Hydraulique / barrage':'#1a5c8c','Hydraulique au fil de l eau':'#4a90d9',
     'Eolien':'#2d9b87','Diesel':'#991b1b','TAC':'#b85c00','Interconnexion':'#7c3aed','Biogaz':'#15803d'};
-  PROD_ELECTRIQUE.forEach(s=>{
+  await loadEoliennesData();
+  const eolFromOdre = (EOLIENNES_DATA || []).map(e => ({
+    lat: e.lat,
+    lon: e.lon,
+    nom: e.nom_parc,
+    commune: e.commune,
+    type: 'Eolien',
+    puissance: e.puissance_nominale_mw,
+    exploitant: e.gestionnaire_raccordement || ''
+  }));
+  const nonEolFromProd = PROD_ELECTRIQUE.filter(s => s.type !== 'Eolien');
+  const all = nonEolFromProd.concat(eolFromOdre);
+  all.forEach(s=>{
     const color=TYPE_COLOR[s.type]||'#5c5c5c';
     const size=s.puissance>50?12:s.puissance>10?9:7;
     const popup='<b>'+s.nom+'</b> \u00b7 '+s.commune+'<br><span style="color:'+color+';font-weight:500">'+s.type+'</span><br>Puissance: <b>'+s.puissance+' MW</b>'+(s.exploitant?'<br>'+s.exploitant:'');
@@ -5673,7 +5687,7 @@ let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}},300);}
 map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
-setTimeout(()=>Promise.all([loadAnt(),loadDB(),loadRadonCommunesL3(),loadTDFEmitters(),loadPostesSources(),loadEoliennes(),loadPointsChaudsRadio()]),1500); // Décalé — après rendu complet de la carte
+setTimeout(()=>Promise.all([loadAnt(),loadDB(),loadRadonCommunesL3(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio()]),1500); // Décalé — après rendu complet de la carte
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET L'Aquila — correction externe réelle // Météo + réfractivité troposphérique
 // EMAG2v3 OFF par défaut — toggle manuel via toggleEMAG()
@@ -5938,29 +5952,6 @@ async function togPostesSources(btn){
   _renderPostesSources();
   lPostesSources.addTo(map); btn.className='lbtn on-postes';
   info('Postes sources EDF SEI chargés — ' + (POSTES_SOURCES||[]).length + ' postes (OSM)');
-}
-
-// ═══ Rendu / toggle éoliennes ═══
-let _eolRendered = false;
-function _renderEoliennes() {
-  if (_eolRendered) return;
-  _eolRendered = true;
-  (EOLIENNES_DATA || []).forEach(eol => {
-    const svg = '<svg viewBox="0 0 16 16" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><polygon points="8,1 14,15 2,15" fill="#3F5B3A" stroke="#1F2329" stroke-width="1"/></svg>';
-    const icon = L.divIcon({className:'eol-icon',html:svg,iconSize:[16,16]});
-    L.marker([eol.lat, eol.lon], {icon})
-      .bindTooltip('<b>'+eol.nom_parc+'</b><br>'+eol.puissance_nominale_mw+' MW · mise en service '+eol.mise_en_service,{sticky:true})
-      .addTo(lEoliennes);
-  });
-}
-async function togEoliennes(btn){
-  if(map.hasLayer(lEoliennes)){
-    map.removeLayer(lEoliennes); btn.className='lbtn'; return;
-  }
-  await loadEoliennes();
-  _renderEoliennes();
-  lEoliennes.addTo(map); btn.className='lbtn on-eoliennes';
-  info('Parcs éoliens chargés — ' + (EOLIENNES_DATA||[]).length + ' parcs (RTE ODRE)');
 }
 
 // ═══ Rendu / toggle points chauds U/Th ═══
