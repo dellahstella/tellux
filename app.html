@@ -701,16 +701,10 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   .pbar{grid-template-columns:repeat(2,1fr);gap:4px;}
   .pc{padding:6px 8px;}
   .db-bar{font-size:10px;padding:4px 8px;}
-  #map{height:calc(100vh - 190px)!important;border-radius:8px;}
-  .map-wrap .layers-accordion{
-    position:fixed;top:0;left:0;right:0;z-index:1100;
-    background:var(--bg);max-height:0;overflow-y:auto;
-    transition:max-height .3s ease;
-    box-shadow:0 4px 20px rgba(0,0,0,.15);border-radius:0 0 12px 12px;
-    padding:0 8px;
-  }
-  .map-wrap .layers-accordion.mob-open{max-height:55vh;padding:8px;}
-  .mob-toggle{display:flex!important;}
+  #map{height:calc(100vh - 340px)!important;min-height:300px;border-radius:8px;}
+  /* Portrait mobile : couches visibles en flux normal, hamburger masqué */
+  .mob-toggle{display:none!important;}
+  .map-wrap .layers-accordion{margin-bottom:10px;}
   .lbtn{font-size:10px;padding:5px 10px;min-height:36px;}
   .mtab{font-size:11px;min-height:36px;}
   .gterm-name{font-size:13px;}.gterm-def{font-size:12px;}
@@ -2018,7 +2012,7 @@ function tog(id,cls,btn){
   // Guard : couche migrée (patrimoine → patrimoine.html, agronomie → agronomie.html)
   // ou référence cassée — sortie silencieuse pour éviter map.addLayer(undefined).
   if(!LAYERS[id]&&!WMS[id])return;
-  if(window.innerWidth<=600){const a=document.getElementById('layers-accordion'),b=document.getElementById('mob-toggle');if(a&&a.classList.contains('mob-open')){a.classList.remove('mob-open');if(b)b.textContent='☰';}}
+  if(window.innerWidth<=768){const a=document.getElementById('layers-accordion'),b=document.getElementById('mob-toggle');if(a&&a.classList.contains('mob-open')){a.classList.remove('mob-open');if(b)b.textContent='☰';}}
   if(ACTIVE[id]){WMS[id]?map.removeLayer(WMS[id]):map.removeLayer(LAYERS[id]);ACTIVE[id]=false;if(btn)btn.className='lbtn';
     if(id==='geo')document.getElementById('geo-op-row').style.display='none';
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='none';
