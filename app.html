@@ -580,6 +580,32 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-foret{background:#eef3e9!important;color:#3F5B3A!important;border-color:#6b8a5c!important;font-weight:500;}
 .on-postes{background:#faf2e3!important;color:#8A5E22!important;border-color:#C28533!important;font-weight:500;}
 .on-points-chauds{background:#fdf4f3!important;color:#8E2F1F!important;border-color:#c16b5a!important;font-weight:500;}
+.on-sites-remarq{background:#faf2e3!important;color:#8A5E22!important;border-color:#C28533!important;font-weight:500;}
+.leaflet-tooltip.tellux-sr-tooltip{
+  max-width:300px;
+  white-space:normal;
+  line-height:1.4;
+  font-size:12px;
+  padding:8px 10px;
+  background:var(--tx-pierre,#F5F0E7);
+  border:1px solid var(--border,#d1c9b8);
+  border-radius:8px;
+  box-shadow:0 2px 10px rgba(0,0,0,.15);
+  color:var(--tx-ardoise,#1F2329);
+}
+.leaflet-tooltip.tellux-sr-tooltip em{
+  font-size:11px;
+  color:var(--tx-mica,#7B7770);
+  line-height:1.35;
+  display:block;
+  margin-top:4px;
+}
+@media (max-width:768px){
+  .leaflet-tooltip.tellux-sr-tooltip{
+    max-width:min(260px,calc(100vw - 40px));
+    font-size:11px;
+  }
+}
 .faille-tooltip{font-family:var(--mono);font-size:10px;background:var(--pierre-ombre,#f7f8fa);color:var(--ardoise-clair,#555);border:1px solid var(--border,rgba(0,0,0,.08));border-radius:6px;padding:4px 8px;line-height:1.5;box-shadow:0 2px 6px rgba(0,0,0,.12);}
 .on-therm{background:#e0f5fe!important;color:#0369a1!important;border-color:#38bdf8!important;font-weight:500;}
 .on-con{background:#f0e8ff!important;color:#5c3a9b!important;border-color:#9b72d4!important;font-weight:500;}
@@ -1324,6 +1350,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <button class="lbtn" id="b-foret" title="Forêts publiques ONF via WMS IGN Géoplateforme — couche visuelle niveau A (pas de modulation calcul). BD Forêt V2 complète non disponible en WMS public." onclick="tog('foret','on-foret',this)"><span class="sq" style="background:#3F5B3A"></span>Forêts publiques</button>
       <button class="lbtn" id="b-failles" title="Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)" onclick="togFailles(this)"><span class="ln" style="background:#8E2F1F"></span>Failles tectoniques</button>
       <button class="lbtn" id="b-points-chauds" title="Sites U/Th à mesurer — catalogue de sites candidats à des mesures radiométriques (doses non mesurées, sources documentaires BRGM ou analogies géologiques)" onclick="togPointsChauds(this)"><span style="display:inline-block;width:8px;height:8px;background:#8E2F1F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Sites U/Th à mesurer</button>
+      <button class="lbtn" id="b-sites-remarq" title="Sites géophysiques remarquables — 10 sites ponctuels à signature singulière (mines historiques, serpentinites ophiolitiques, surveillance radiologique marine). Données documentaires, mesures in situ souvent requises." onclick="togSitesRemarquables(this)"><span style="display:inline-block;width:10px;height:10px;background:#C28533;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Sites géophysiques remarquables</button>
       <button class="lbtn" id="b-hyd" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE)" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie</button>
       <button class="lbtn" id="b-cav" title="Cavités souterraines — grottes, mines, karst (BRGM)" onclick="tog('cav','on-cav',this)"><span class="sq" style="background:#5c3a9b"></span>Cavités</button>
       <button class="lbtn" id="b-therm" title="Sources thermales et géothermiques — failles actives" onclick="tog('therm','on-therm',this)"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Sources thermales</button>
@@ -1934,11 +1961,11 @@ const lPostesSources=L.layerGroup();
 const lPointsChaudsRadio=L.layerGroup();
 // lSit/lSit2/lAlign/lEgl/lTour/lIndu/lCast/lPont : couches patrimoniales migrées vers patrimoine.html
 // lRPG/lForet/lAOC : layers agronomie migrées vers agronomie.html
-const lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lCem=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
+const lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lCem=L.layerGroup(),lSitesRemarq=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
 const lCrustal=L.layerGroup();
-const LAYERS={bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,prod:lProd,hot:lHot,con:lCon,cem:lCem,therm:lTherm,crustal:lCrustal};
+const LAYERS={bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,prod:lProd,hot:lHot,con:lCon,cem:lCem,therm:lTherm,crustal:lCrustal,sitesRemarq:lSitesRemarq};
 const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag,foret:wmsForet};
-const ACTIVE={bt:false,ant:false,antOffshore:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,res:false,prod:false,con:true,cem:false,therm:false,crustal:false};
+const ACTIVE={bt:false,ant:false,antOffshore:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,res:false,prod:false,con:true,cem:false,therm:false,crustal:false,sitesRemarq:false};
 
 const LEGEND_ACTIVE=new Set();let _legendCtrl=null;
 const LEGEND_HTML={
@@ -1958,7 +1985,14 @@ const LEGEND_HTML={
   therm:'<div class="leg-block"><b class="leg-title">Sources thermales</b><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0ea5e9;border:2px solid white;border-radius:50%;box-shadow:0 0 3px #0ea5e966;vertical-align:middle;margin-right:4px"></span>Source / thermes actifs</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Géothermie · Failles</span></div><div class="leg-src">5 sites · Valinco-Taravo-Fiumorbu</div></div>',
     bt:'<div class="leg-block"><b class="leg-title">Réseau BT</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>BT aérien</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>BT souterrain</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 12</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Sites de production</b><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique barrage</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique fil de l&#39;eau</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogaz</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>TAC (turbine à combustion)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnexion</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Taille selon puissance :</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
-  aoc:'<div class="leg-block"><b class="leg-title">AOC/AOP Corse</b><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#99000033;border:2px solid #991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Cru — Patrimonio · Ajaccio</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#ea580c33;border:2px solid #ea580c;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Village — Calvi · Sartène · Figari</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#fbbf2433;border:2px solid #fbbf24;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Muscat Cap Corse · Régionale</div><div class="leg-src">INAO — terroir-EM</div></div>'
+  aoc:'<div class="leg-block"><b class="leg-title">AOC/AOP Corse</b><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#99000033;border:2px solid #991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Cru — Patrimonio · Ajaccio</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#ea580c33;border:2px solid #ea580c;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Village — Calvi · Sartène · Figari</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#fbbf2433;border:2px solid #fbbf24;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Muscat Cap Corse · Régionale</div><div class="leg-src">INAO — terroir-EM</div></div>',
+  sitesRemarq:'<div class="leg-block"><b class="leg-title">Sites géophysiques remarquables</b>'+
+    '<div class="leg-row"><svg width="12" height="12" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px"><polygon points="7,1 13,5.5 10.5,13 3.5,13 1,5.5" fill="#1F3A5F" stroke="#F5F0E7" stroke-width="1.5"/></svg> Ophiolite (Cap Corse) — serpentinite, magnétite</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Site minier historique (galène, stibine, chalcopyrite, amiante)</div>'+
+    '<div class="leg-row"><svg width="12" height="12" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px"><polygon points="7,1 8.5,5.5 13,5.5 9.25,8.25 10.75,13 7,10.25 3.25,13 4.75,8.25 1,5.5 5.5,5.5" fill="#3F5B3A" stroke="#F5F0E7" stroke-width="1"/></svg> Surveillance radiologique</div>'+
+    '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">10 sites · données documentaires · mesures terrain requises</div>'+
+    '<div class="leg-src">BRGM · Mérimée · IRSN · Ulevante · ADLFI</div>'+
+    '</div>'
 };
 
 // Contraintes par instrument
@@ -2200,7 +2234,7 @@ function validateContrib(){
 function updateLegendPanel(){
   if(!_legendCtrl){_legendCtrl=L.control({position:'bottomright'});_legendCtrl.onAdd=function(){const d=L.DomUtil.create('div');d.id='tellux-leg-panel';d.style.cssText='background:rgba(247,248,250,.97);border:1px solid rgba(0,0,0,.08);border-radius:10px;font-family:var(--font);font-size:10px;max-width:170px;box-shadow:0 2px 10px rgba(0,0,0,.1);overflow:hidden;display:none';L.DomEvent.disableClickPropagation(d);return d;};_legendCtrl.addTo(map);}
   const panel=document.getElementById('tellux-leg-panel');if(!panel)return;
-  const order=['hot','res','bt','prod','ant','geo','hyd','foret','cav','emag','wdmam','crustal','therm','aoc'];const active=order.filter(id=>LEGEND_ACTIVE.has(id));
+  const order=['hot','res','bt','prod','ant','geo','hyd','foret','sitesRemarq','cav','emag','wdmam','crustal','therm','aoc'];const active=order.filter(id=>LEGEND_ACTIVE.has(id));
   if(!active.length){panel.style.display='none';return;}
   panel.style.display='block';
   panel.innerHTML=active.filter(id=>LEGEND_HTML[id]).map((id,i)=>(i>0?'<div style="height:1px;background:rgba(0,0,0,.06);margin:0 8px"></div>':'')+LEGEND_HTML[id]).join('');
@@ -6030,6 +6064,96 @@ async function togPointsChauds(btn){
   _renderPointsChauds();
   lPointsChaudsRadio.addTo(map); btn.className='lbtn on-points-chauds';
   info('Sites U/Th à mesurer — ' + (POINTS_CHAUDS_RADIO||[]).length + ' sites candidats chargés · doses non mesurées, mesures in situ requises');
+}
+
+// ═══ Sites géophysiques remarquables ═══
+// 10 sites ponctuels à signature géophysique, minière ou radiologique singulière.
+// Données documentaires non mesurées. Catégories : ophiolite, minier, surveillance_radio.
+// Source : note Cowork sites spéciaux v1.0 (23 avril 2026).
+let SITES_REMARQUABLES = [];
+let _srLoadPromise = null;
+function loadSitesRemarquables() {
+  if (_srLoadPromise) return _srLoadPromise;
+  _srLoadPromise = (async () => {
+    try {
+      const r = await fetch('public/data/sites_remarquables_corse.json', { signal: AbortSignal.timeout(5000) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      SITES_REMARQUABLES = d.sites || [];
+      console.log('[Tellux] Sites remarquables charges : ' + SITES_REMARQUABLES.length);
+    } catch (e) {
+      console.warn('[Tellux] Sites remarquables indisponibles : ' + e.message);
+    }
+    return SITES_REMARQUABLES;
+  })();
+  return _srLoadPromise;
+}
+
+// Mapping catégorie → rendu visuel (forme + couleur palette Tellux DA v2)
+const SR_RENDU = {
+  'ophiolite':        { color: '#1F3A5F', shape: 'pentagon' },
+  'minier':           { color: '#C28533', shape: 'diamond' },
+  'surveillance_radio': { color: '#3F5B3A', shape: 'star' }
+};
+
+function _srIconHtml(categorie) {
+  const r = SR_RENDU[categorie] || { color: '#1F2329', shape: 'diamond' };
+  if (r.shape === 'pentagon') {
+    return '<svg width="14" height="14" viewBox="0 0 14 14" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))"><polygon points="7,1 13,5.5 10.5,13 3.5,13 1,5.5" fill="' + r.color + '" stroke="#F5F0E7" stroke-width="1.5"/></svg>';
+  }
+  if (r.shape === 'star') {
+    return '<svg width="14" height="14" viewBox="0 0 14 14" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))"><polygon points="7,1 8.5,5.5 13,5.5 9.25,8.25 10.75,13 7,10.25 3.25,13 4.75,8.25 1,5.5 5.5,5.5" fill="' + r.color + '" stroke="#F5F0E7" stroke-width="1"/></svg>';
+  }
+  return '<div style="width:12px;height:12px;background:' + r.color + ';transform:rotate(45deg);border:2px solid #F5F0E7;box-shadow:0 1px 3px rgba(0,0,0,.35);"></div>';
+}
+
+function _srFormatTooltip(s) {
+  const categorieLabel = {
+    'ophiolite': 'Ophiolite',
+    'minier': 'Site minier historique',
+    'surveillance_radio': 'Surveillance radiologique'
+  }[s.categorie] || s.categorie;
+  const precisionLabel = s.precision_coord === 'communal'
+    ? '<br><span style="font-size:10px;color:#C28533;font-weight:600">⚠ Précision communale — localisation à affiner</span>'
+    : '';
+  return '<b>' + s.nom + '</b>'
+    + '<br><span style="font-size:10px;color:#1F3A5F;font-weight:600">' + categorieLabel + '</span>'
+    + precisionLabel
+    + '<br><em>' + (s.note_ui || '') + '</em>';
+}
+
+let _srRendered = false;
+function _renderSitesRemarquables() {
+  if (_srRendered) return;
+  _srRendered = true;
+  (SITES_REMARQUABLES || []).forEach(s => {
+    const icon = L.divIcon({
+      className: 'sr-icon',
+      html: _srIconHtml(s.categorie),
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    });
+    L.marker([s.lat, s.lon], { icon })
+      .bindTooltip(_srFormatTooltip(s), { sticky: true, direction: 'top', className: 'tellux-sr-tooltip', maxWidth: 300 })
+      .addTo(lSitesRemarq);
+  });
+}
+
+async function togSitesRemarquables(btn) {
+  if (map.hasLayer(lSitesRemarq)) {
+    map.removeLayer(lSitesRemarq);
+    btn.className = 'lbtn';
+    ACTIVE.sitesRemarq = false;
+    showLegend('sitesRemarq', false);
+    return;
+  }
+  await loadSitesRemarquables();
+  _renderSitesRemarquables();
+  lSitesRemarq.addTo(map);
+  btn.className = 'lbtn on-sites-remarq';
+  ACTIVE.sitesRemarq = true;
+  showLegend('sitesRemarq', true);
+  info('Sites géophysiques remarquables — ' + (SITES_REMARQUABLES || []).length + ' sites chargés · données documentaires, mesures in situ souvent requises');
 }
 
 // ═══ DONNÉES MONDIALES — WDMAM + CHAOS-7 ═══
