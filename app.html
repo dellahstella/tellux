@@ -1237,6 +1237,20 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     </div>
   </div>
 
+  <div class="cond-section" data-open="false" id="cond-sec-contribs">
+    <button class="cond-header" type="button" onclick="toggleCondSection('contribs')" aria-expanded="false" aria-controls="cond-body-contribs">
+      <span class="cond-chevron">▸</span>
+      <span class="cond-label">Contributions terrain</span>
+      <span class="cond-summary" id="cond-summary-contribs">—</span>
+    </button>
+    <div class="cond-body" id="cond-body-contribs" hidden>
+      <div id="contrib-panel">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Contributions récentes — base Supabase</div>
+        <div class="contrib-list" id="contrib-list"></div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <div id="lightning-warn" style="display:none;background:#fff3e6;border:1px solid #f5a855;border-radius:var(--r);padding:6px 12px;font-size:11px;color:#854d0e;margin-bottom:8px"></div>
@@ -4403,6 +4417,7 @@ async function loadDB(){
     const eTot=document.getElementById('db-total');if(eTot)eTot.textContent=n+' contribution'+(n>1?'s':'');
     window._contribCount=n;
     const ePanel=document.getElementById('contrib-panel');if(ePanel)ePanel.style.display=n>0?'block':'none';
+    updateContribSummary();
     renderList();
     // Ne pas écraser info() — l'utilisateur peut être en train de lire autre chose
   }catch(err){
@@ -4580,6 +4595,7 @@ async function saveContrib(){
     updateSupabaseStatusDot('ok',n);
     const eTot2=document.getElementById('db-total');if(eTot2)eTot2.textContent=n+' contribution'+(n>1?'s':'')+' en base';
     const ePanel2=document.getElementById('contrib-panel');if(ePanel2)ePanel2.style.display='block';
+    updateContribSummary();
     renderList();
     info('Mesure sauvegardee dans Supabase. Score : '+row.score_anomalie+' · Delta : '+(row.delta_nt!==null&&row.delta_nt!==undefined?row.delta_nt+' nT':'—'),'success');
     // Desactiver le FAB active state apres sauvegarde
@@ -4629,6 +4645,17 @@ const INSTRUMENT_LABELS = {
 
 function instrumentLabel(type){
   return INSTRUMENT_LABELS[type] || type || '—';
+}
+
+function updateContribSummary(){
+  const el = document.getElementById('cond-summary-contribs');
+  if(!el) return;
+  const n = (typeof contribsDB !== 'undefined' && Array.isArray(contribsDB)) ? contribsDB.length : 0;
+  if(n === 0){
+    el.textContent = 'Aucune contribution';
+  } else {
+    el.textContent = n + ' contribution' + (n > 1 ? 's' : '');
+  }
 }
 
 function renderList(){
