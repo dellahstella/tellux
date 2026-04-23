@@ -5127,22 +5127,74 @@ async function loadProd(){
 // Réseau électrique HTA — données EDF SEI (Supabase)
 const PROD_ELECTRIQUE=[{"lat":42.3312,"lon":8.9823,"nom":"Sovenzia","commune":"Calacuccia","type":"Hydraulique / barrage","puissance":15.3,"exploitant":"EDF"},{"lat":41.7523,"lon":8.9634,"nom":"Calzola (pont de)","commune":"Casalabriva","type":"Hydraulique au fil de l eau","puissance":0.4,"exploitant":"SNC Acquaviva"},{"lat":41.6234,"lon":8.9745,"nom":"Sartene","commune":"Sartène","type":"Hydraulique au fil de l eau","puissance":0.6,"exploitant":""},{"lat":42.4289,"lon":9.2134,"nom":"Valle di Rostino","commune":"Valle-di-Rostino","type":"Hydraulique au fil de l eau","puissance":1.5,"exploitant":""},{"lat":42.4534,"lon":8.9023,"nom":"Asco","commune":"Asco","type":"Hydraulique au fil de l eau","puissance":5.4,"exploitant":""},{"lat":41.9712,"lon":8.9089,"nom":"Tolla","commune":"Tolla","type":"Hydraulique / barrage","puissance":15.6,"exploitant":"EDF"},{"lat":42.9734,"lon":9.3589,"nom":"Ersa","commune":"Ersa","type":"Eolien","puissance":7.8,"exploitant":""},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"TAC","puissance":75.0,"exploitant":"EDF"},{"lat":41.3878,"lon":9.1589,"nom":"SARCO","commune":"Bonifacio","type":"Interconnexion","puissance":90.0,"exploitant":"Terna"},{"lat":42.2789,"lon":9.4756,"nom":"Sampolo","commune":"Lugo-di-Nazza","type":"Hydraulique / barrage","puissance":43.0,"exploitant":"EDF"},{"lat":42.1534,"lon":8.8934,"nom":"Soccia","commune":"Soccia","type":"Hydraulique au fil de l eau","puissance":0.8,"exploitant":""},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"Hydraulique au fil de l eau","puissance":1.0,"exploitant":""},{"lat":42.3789,"lon":9.1234,"nom":"Castirla","commune":"Castirla","type":"Hydraulique / barrage","puissance":28.5,"exploitant":"EDF"},{"lat":42.1534,"lon":8.8934,"nom":"Soccia","commune":"Soccia","type":"Hydraulique au fil de l eau","puissance":1.1,"exploitant":""},{"lat":42.5089,"lon":8.8534,"nom":"Calenzana","commune":"Calenzana","type":"Eolien","puissance":6.0,"exploitant":""},{"lat":41.9634,"lon":8.8712,"nom":"Pont de Vanna","commune":"Ocana","type":"Hydraulique / barrage","puissance":8.6,"exploitant":"EDF"},{"lat":42.0934,"lon":9.0623,"nom":"Bocognano","commune":"Bocognano","type":"Hydraulique au fil de l eau","puissance":2.1,"exploitant":""},{"lat":41.8234,"lon":9.1123,"nom":"Olivese","commune":"Olivese","type":"Hydraulique au fil de l eau","puissance":1.5,"exploitant":""},{"lat":42.1523,"lon":9.4789,"nom":"Tallone","commune":"Tallone","type":"Biogaz","puissance":1.7,"exploitant":""},{"lat":42.2312,"lon":9.3145,"nom":"Giuncaggio","commune":"Giuncaggio","type":"Hydraulique au fil de l eau","puissance":2.1,"exploitant":""},{"lat":42.3934,"lon":8.9534,"nom":"Corscia","commune":"Corscia","type":"Hydraulique / barrage","puissance":13.0,"exploitant":"EDF"},{"lat":42.4534,"lon":8.9023,"nom":"Asco 2","commune":"Asco","type":"Hydraulique au fil de l eau","puissance":0.0,"exploitant":""},{"lat":41.9194,"lon":8.7386,"nom":"Vazzio","commune":"Ajaccio","type":"Diesel","puissance":132.3,"exploitant":"EDF"},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"TAC","puissance":40.0,"exploitant":"EDF"},{"lat":41.7834,"lon":9.1823,"nom":"Quenza","commune":"Quenza","type":"Hydraulique au fil de l eau","puissance":0.7,"exploitant":""},{"lat":42.5623,"lon":9.4312,"nom":"Lucciana","commune":"Lucciana","type":"Diesel","puissance":54.5,"exploitant":"EDF"},{"lat":42.5623,"lon":9.4312,"nom":"SACOI","commune":"Lucciana","type":"Interconnexion","puissance":50.0,"exploitant":"Terna"},{"lat":41.9634,"lon":8.8712,"nom":"Ocana","commune":"Ocana","type":"Hydraulique / barrage","puissance":15.1,"exploitant":"EDF"},{"lat":42.9534,"lon":9.4234,"nom":"Rogliano","commune":"Rogliano","type":"Eolien","puissance":4.2,"exploitant":""},{"lat":42.4534,"lon":8.9023,"nom":"Asco 3","commune":"Asco","type":"Hydraulique au fil de l eau","puissance":0.0,"exploitant":""},{"lat":41.7623,"lon":9.0534,"nom":"Cargiaca","commune":"Cargiaca","type":"Hydraulique au fil de l eau","puissance":3.5,"exploitant":""},{"lat":42.2623,"lon":9.4823,"nom":"San-Giuliano","commune":"San-Giuliano","type":"Hydraulique au fil de l eau","puissance":1.5,"exploitant":""},{"lat":41.8934,"lon":9.1289,"nom":"Zicavo","commune":"Zicavo","type":"Hydraulique au fil de l eau","puissance":2.5,"exploitant":"SAS Centrale hydroélectrique de Zicavo"}];
 
+// Préchargement data HTA pour calcul ELF composite (calcMagneticELF_v2).
+// Appelée au boot (ligne ~5930) pour que le modèle soit précis dès le premier
+// clic carte, sans attendre que l'utilisateur active la couche Réseau.
+// Trade-off assumé : si Supabase est down au boot, le préchargement échoue
+// silencieusement et calcMagneticELF_v2 retombe sur v1 (8 axes approximatifs)
+// jusqu'à ce que l'utilisateur active manuellement la couche Réseau, ce qui
+// relance un fetch via loadReseau(). Aucune régression vs comportement actuel.
+let _htaDataLoading = false;
+let _htaDataCache = null;
+
+async function loadHTADataOnly() {
+  if (_htaDataLoading || SEGMENT_GRID) return;
+  _htaDataLoading = true;
+  try {
+    console.log('[Tellux] Préchargement data HTA pour calcul ELF...');
+    let all = [], offset = 0, PAGE = 1000;
+    while (true) {
+      const r = await fetch(SB_URL + '/rest/v1/hta_lines?select=pts&order=id',
+        { headers: { apikey: SB_KEY, 'Authorization': 'Bearer ' + SB_KEY,
+          'Range': offset + '-' + (offset + PAGE - 1), 'Range-Unit': 'items', 'Prefer': 'count=exact' }});
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const page = await r.json();
+      if (!Array.isArray(page) || page.length === 0) break;
+      all = all.concat(page);
+      const cr = r.headers.get('Content-Range') || '';
+      const total = parseInt((cr.split('/')[1]) || '0');
+      if (page.length < PAGE || (total && all.length >= total)) break;
+      offset += PAGE;
+    }
+    if (all.length === 0) {
+      console.warn('[Tellux] HTA data préchargement : 0 lignes reçues');
+      return;
+    }
+    buildSegmentGrid(all);
+    setTimeout(loadBTLinesAsync, 200);
+    _htaDataCache = all;
+    console.log('[Tellux] HTA data préchargée : ' + all.length + ' lignes, grille prête.');
+  } catch (e) {
+    console.warn('[Tellux] Préchargement HTA échec : ' + e.message + ' (fallback v1 actif jusqu\'à activation manuelle couche Réseau)');
+  } finally {
+    _htaDataLoading = false;
+  }
+}
+
 async function loadReseau(){
   lRes.clearLayers();
-  // Lignes HTA depuis Supabase (pagination)
+  // Lignes HTA depuis Supabase (pagination) — ou cache préchargement si dispo
   try{
-    let all=[],offset=0,PAGE=1000;
-    while(true){
-      const r=await fetch(SB_URL+'/rest/v1/hta_lines?select=pts&order=id',
-        {headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,
-          'Range':offset+'-'+(offset+PAGE-1),'Range-Unit':'items','Prefer':'count=exact'}});
-      const page=await r.json();
-      if(!Array.isArray(page)||page.length===0) break;
-      all=all.concat(page);
-      const cr=r.headers.get('Content-Range')||'';
-      const total=parseInt((cr.split('/')[1])||'0');
-      if(page.length<PAGE||(total&&all.length>=total)) break;
-      offset+=PAGE;
+    let all;
+    if (_htaDataCache) {
+      all = _htaDataCache;
+      console.log('✅ HTA: réutilisation cache préchargement (' + all.length + ' lignes)');
+    } else {
+      all = [];
+      let offset = 0, PAGE = 1000;
+      while(true){
+        const r=await fetch(SB_URL+'/rest/v1/hta_lines?select=pts&order=id',
+          {headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,
+            'Range':offset+'-'+(offset+PAGE-1),'Range-Unit':'items','Prefer':'count=exact'}});
+        const page=await r.json();
+        if(!Array.isArray(page)||page.length===0) break;
+        all=all.concat(page);
+        const cr=r.headers.get('Content-Range')||'';
+        const total=parseInt((cr.split('/')[1])||'0');
+        if(page.length<PAGE||(total&&all.length>=total)) break;
+        offset+=PAGE;
+      }
+      _htaDataCache = all;
     }
     all.forEach(row=>{
       const pts=row.pts;
@@ -5927,7 +5979,7 @@ let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}},300);}
 map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
-setTimeout(()=>Promise.all([loadAnt(),loadDB(),loadRadonCommunesL3(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte
+setTimeout(()=>Promise.all([loadAnt(),loadDB(),loadRadonCommunesL3(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET L'Aquila — correction externe réelle // Météo + réfractivité troposphérique
 // EMAG2v3 OFF par défaut — toggle manuel via toggleEMAG()
