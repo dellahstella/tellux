@@ -113,22 +113,9 @@ La validation physique préalable (littérature ou mesures terrain) est un prér
 
 ---
 
-### INTL-CRUSTAL-001 — Module de calibration crustale mondiale (EM pur)
-
-**Description :** La couche « Mondial (calibration) » et la jauge « Contexte mondial » du popup ont été retirées de `app.html` (PR `fix/app-residus-purge-patrimoine`, 22 avril 2026). L'ancienne implémentation mélangeait 2 références EM légitimes (Bangui −1000 nT, Ries −200 nT) avec 3 toponymes patrimoine corses (Bonifacio, Murato, Cauria), et sa fonction constructrice `buildIntlLayer` avait été retirée pendant la purge v6.0 sans nettoyer ses appelants, provoquant un `ReferenceError` au boot via l'auto-activation `tog('intl', …)`.
-
-**Priorité :** Faible
-
-**Condition de déblocage :** Réimplémentation d'un module de calibration crustale mondiale EM pur, basé exclusivement sur des références à pertinence magnétique documentée (cratères d'impact majeurs : Bangui, Kursk, Vredefort, Ries, Chicxulub ; grandes anomalies crustales listées dans la littérature USGS/EMAG2). Aucun site patrimoine ne doit figurer dans le tableau de références. La spécification du module inclura :
-- Tableau `CRUSTAL_REFS` avec colonnes `name`, `nT`, `source`, `doi`, `lat`, `lon`
-- Jauge popup optionnelle (toggle utilisateur, hors-champ du score composite)
-- Couche Leaflet des marqueurs mondiaux (zoom-dépendante)
-- Légende listant les sources USGS/EMAG2/publications
-
----
-
 ## Dettes fermées récemment
 
+- **INTL-CRUSTAL-001** (23 avril 2026) — module de calibration crustale mondiale réimplémenté en EM pur. Tableau `CRUSTAL_REFS` (5 entrées : Bangui, Kursk, Vredefort, Ries, Chicxulub) avec `name`, `lat`, `lon`, `nT`, `radius_km`, `type`, `source`, `desc`. Couche Leaflet opt-in `crustal` (bouton `b-crustal`, désactivée par défaut) avec 5 cercles d'emprise + 5 markers divIcon. Panneau comparatif Leaflet Control `topright` : valeur EMAG2v3 locale au centre carte, 5 barres log(|nT|) des références mondiales, ligne "Centre carte" distincte. Aucun site patrimoine ; vérification anti-pollution passée (grep 17 termes negatif). Palette DA v2 gelée : Porphyre négatives, Ocre positives. Voir section « Module comparaison anomalies crustales mondiales » (archive ci-dessous).
 - **CSS-HARMONISATION-001** (23 avril 2026) — aliases courts déjà ajoutés en amont (commit `66fd6ce`) ; 4 variables hardcodées renommées sémantiquement dans `:root` de `app.html` (`--tx2`→`--ardoise-clair`, `--bg2`→`--pierre-ombre`, `--acc2`→`--maquis-clair`, `--acc3`→`--maquis-pale`, ~137 occurrences) ; `Georgia` retiré du fallback `--font-display` (Fraunces self-hosted depuis PR #83). `DM Sans`/`DM Mono` déjà absents.
 - **ELF-VECTOR-001** (avril 2026) — sommation vectorielle 2D implémentée dans `calcMagneticELF_v2`
 - **BT-ELF-001** (avril 2026) — infrastructure BT asynchrone implémentée (calcul désactivé temporairement, voir BT-CALIBRATION-001)
