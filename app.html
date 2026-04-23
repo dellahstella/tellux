@@ -1460,9 +1460,14 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   </div>
   <div id="c-hint-val" style="font-size:11px;color:var(--tx3);margin-bottom:8px;padding:4px 8px;background:var(--pierre-ombre);border-radius:var(--r);display:none"></div>
 
+  <div id="c-native-row" style="margin-bottom:8px;display:none">
+    <button type="button" id="btn-native-mag" onclick="startNativeMagCapture()" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--pierre-ombre);color:var(--ardoise-clair);cursor:pointer;width:100%">&#x1F4F1; Capturer avec le magn&#x00E9;tom&#x00E8;tre du t&#x00E9;l&#x00E9;phone</button>
+    <div id="native-mag-status" style="display:none;font-size:11px;color:var(--ardoise-clair);margin-top:4px;padding:6px 8px;background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r)"></div>
+  </div>
+
   <div id="c-csv-row" style="margin-bottom:8px">
     <input type="file" id="csv-phyphox-input" accept=".csv" style="display:none" onchange="handlePhyphoxCSV(this)">
-    <button type="button" onclick="document.getElementById('csv-phyphox-input').click()" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--pierre-ombre);color:var(--ardoise-clair);cursor:pointer;width:100%">📁 Importer un CSV de mesures (Phyphox, Physics Toolbox…)</button>
+    <button type="button" onclick="document.getElementById('csv-phyphox-input').click()" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--pierre-ombre);color:var(--ardoise-clair);cursor:pointer;width:100%">&#x1F4C1; Importer un CSV de mesures (Phyphox, Physics Toolbox…)</button>
     <div id="csv-summary" style="display:none;font-size:11px;color:var(--ardoise-clair);margin-top:4px;padding:6px 8px;background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r)"></div>
   </div>
 
@@ -1944,6 +1949,109 @@ function handlePhyphoxCSV(input){
   reader.readAsText(file);
 }
 
+// ═══ CAPTURE NATIVE MAGNÉTOMÈTRE (Chrome Android) ═══
+let _nativeMag = null;
+let _nativeMagReadings = [];
+let _nativeMagTimer = null;
+
+function isNativeMagSupported(){
+  return typeof window !== 'undefined' && 'Magnetometer' in window;
+}
+
+function updateNativeMagRowVisibility(){
+  const row = document.getElementById('c-native-row');
+  if(!row) return;
+  const type = document.getElementById('c-type').value;
+  row.style.display = (type === 'smartphone_mag' && isNativeMagSupported()) ? 'block' : 'none';
+}
+
+async function startNativeMagCapture(){
+  const statusEl = document.getElementById('native-mag-status');
+  const btn = document.getElementById('btn-native-mag');
+  if(!statusEl || !btn) return;
+
+  if(_nativeMag){
+    stopNativeMagCapture(true);
+    return;
+  }
+
+  if(!isNativeMagSupported()){
+    statusEl.style.display='block';
+    statusEl.textContent="Ce navigateur ne supporte pas l'acces direct au magnetometre. Utilisez l'import CSV ou la saisie manuelle.";
+    return;
+  }
+
+  try{
+    _nativeMag = new Magnetometer({frequency: 10});
+    _nativeMagReadings = [];
+
+    _nativeMag.addEventListener('reading', () => {
+      const mag = Math.sqrt(_nativeMag.x*_nativeMag.x + _nativeMag.y*_nativeMag.y + _nativeMag.z*_nativeMag.z);
+      if(isFinite(mag) && mag > 0){
+        _nativeMagReadings.push(mag);
+        statusEl.style.display='block';
+        statusEl.textContent = 'Lecture en cours : ' + mag.toFixed(2) + ' µT (' + _nativeMagReadings.length + ' echantillons)';
+      }
+    });
+
+    _nativeMag.addEventListener('error', (event) => {
+      const errName = (event.error && event.error.name) || 'Erreur inconnue';
+      const errMsg = (event.error && event.error.message) || '';
+      statusEl.style.display='block';
+      statusEl.textContent = 'Erreur capteur : ' + errName + (errMsg ? ' — ' + errMsg : '') + '. Reessayez ou utilisez la saisie manuelle.';
+      stopNativeMagCapture(false);
+    });
+
+    _nativeMag.start();
+    btn.textContent = '\u23F9 Arreter la capture (moyenne apres 3s min.)';
+    statusEl.style.display='block';
+    statusEl.textContent = 'Initialisation du capteur\u2026';
+
+    _nativeMagTimer = setTimeout(() => {
+      if(_nativeMag) stopNativeMagCapture(true);
+    }, 10000);
+  }catch(err){
+    statusEl.style.display='block';
+    statusEl.textContent = 'Impossible de demarrer le magnetometre : ' + (err.message || err.name || 'erreur inconnue') + '.';
+    _nativeMag = null;
+  }
+}
+
+function stopNativeMagCapture(applyResult){
+  const statusEl = document.getElementById('native-mag-status');
+  const btn = document.getElementById('btn-native-mag');
+  if(_nativeMagTimer){clearTimeout(_nativeMagTimer); _nativeMagTimer=null;}
+  if(_nativeMag){
+    try{ _nativeMag.stop(); }catch(e){}
+    _nativeMag = null;
+  }
+  if(btn) btn.textContent = '\u{1F4F1} Capturer avec le magnetometre du telephone';
+
+  if(applyResult && _nativeMagReadings.length >= 5){
+    const n = _nativeMagReadings.length;
+    const mean = _nativeMagReadings.reduce((a,b)=>a+b,0) / n;
+    const stddev = Math.sqrt(_nativeMagReadings.reduce((a,b)=>a+(b-mean)**2,0) / n);
+    const min = Math.min.apply(null, _nativeMagReadings);
+    const max = Math.max.apply(null, _nativeMagReadings);
+
+    const valInp = document.getElementById('c-val');
+    if(valInp) valInp.value = Math.round(mean*100)/100;
+    const unitSel = document.getElementById('c-unit');
+    if(unitSel) for(let o of unitSel.options){if(o.value==='\u00B5T'){o.selected=true;break;}}
+
+    if(statusEl){
+      statusEl.style.display='block';
+      statusEl.textContent = 'Capture terminee : moyenne ' + (Math.round(mean*100)/100) + ' \u00B5T \u00B7 \u03C3=' + (Math.round(stddev*100)/100) + ' \u00B7 min ' + (Math.round(min*100)/100) + ' / max ' + (Math.round(max*100)/100) + ' \u00B5T \u00B7 ' + n + ' echantillons';
+    }
+  } else if(applyResult && _nativeMagReadings.length < 5){
+    if(statusEl){
+      statusEl.style.display='block';
+      statusEl.textContent = 'Trop peu d\'echantillons (' + _nativeMagReadings.length + '). Gardez le telephone stable plus longtemps.';
+    }
+  }
+  _nativeMagReadings = [];
+}
+
 function onInstrumentChange(){
   const type = document.getElementById('c-type').value;
   const c = INSTRUMENT_CONSTRAINTS[type];
@@ -1973,6 +2081,7 @@ function onInstrumentChange(){
   // Bouton CSV : visible pour instruments magnéto, masqué pour signaux/observation/ressenti
   const NO_CSV=['smartphone_rssi','smartphone_wifi','cornet','rtlsdr','observation','ressenti'];
   if(csvRow) csvRow.style.display=NO_CSV.includes(type)?'none':'block';
+  updateNativeMagRowVisibility();
 }
 
 function validateContrib(){
@@ -4298,6 +4407,7 @@ function repositionMarker(){
 }
 
 function cancelContrib(){
+  if(_nativeMag) stopNativeMagCapture(false);
   // Nettoyer le pin violet si présent
   if(pending){map.removeLayer(pending);pending=null;}
   // Fermer le formulaire
@@ -4323,6 +4433,7 @@ function cancelContrib(){
 }
 
 async function saveContrib(){
+  if(_nativeMag) stopNativeMagCapture(false);
   if(!document.getElementById('c-rgpd').checked){info('⚠ Veuillez accepter les conditions de stockage des donnees.','error');return;}
   const vCheck = validateContrib();
   if(!vCheck.ok){info('⚠ '+vCheck.msg,'error');return;}
