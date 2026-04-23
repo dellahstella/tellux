@@ -222,3 +222,50 @@ Point 1 peut être résolu directement dans la rédaction du bandeau (`corpus.ht
 Points 2, 4a, 4b sont indépendants et peuvent être tranchés en 1-2 phrases chacun.
 Point 3 (H85-H87) peut nécessiter une courte session de relecture des sources primaires
 (`app.html` lignes ~2013, ROADMAP) si Soleil veut vérifier avant de trancher.
+
+---
+
+## Arbitrage Soleil — 2026-04-23
+
+Les 4 points ouverts ont été arbitrés comme suit :
+
+### Point 1 — Double A+B H1/H18/H21 : SOLDÉ
+
+Traitement dans le bandeau méthodologique de `corpus.html` (chantier d'intégration Pilier A).
+Le bandeau inclura : « Certaines hypothèses existent en double formulation dans le corpus Tellux :
+une version scientifique testable (Pilier A) et une version patrimoniale accessible (Pilier B,
+non publiée à ce stade). Chaque version relève d'une démarche distincte et ne préjuge pas du
+résultat de l'autre. »
+
+Référence : prompt d'intégration `corpus.html` du 2026-04-23.
+
+### Point 2 — H20 : DIFFÉRÉ
+
+Non bloquant pour l'intégration des 14 fiches S1-S14 dans `corpus.html`.
+À arbitrer en session dédiée ultérieure : fiche Pilier B autonome (P4) ou protocole
+subordonné mentionné dans S1 ?
+
+### Point 3 — H85-H87 : DIFFÉRÉ
+
+Non bloquant pour les 14 fiches S1-S14 (H85-H87 ne sont pas dans le périmètre exposé).
+À arbitrer en session dédiée ultérieure : priorité terrain entre (a) mines BRGM -> Pilier A
+sous S4/S9, et (b) faune (ovins/balbuzard LPO) -> Pilier B.
+
+### Point 4a — H88 fourre-tout : DIFFÉRÉ
+
+Non bloquant pour S1-S14. Recommandation : décomposition en session dédiée (granit piézo,
+cortisol, géothermie sont trois sujets distincts qui méritent chacun une fiche séparée).
+
+### Point 4b — H91 diélectrique granit : DIFFÉRÉ
+
+Non bloquant pour S1-S14. Scientifiquement valide mais bloqué sur labo diélectrique
+(critère C3 non satisfait). À réactiver lors d'un démarchage partenaire labo ultérieur.
+Option envisageable : fiche "en veille" dans une future section `corpus.html` si utile
+pour la crédibilité du démarchage partenaire.
+
+### Conclusion
+
+Aucun des 4 points ne bloque l'intégration du Pilier A (S1-S14) dans `corpus.html`.
+L'intégration peut démarrer sur la base des 14 fiches documentées, avec le bandeau
+méthodologique soldant le Point 1. Les autres points restent documentés dans cet audit
+et pourront être repris en sessions dédiées selon la priorité projet.
