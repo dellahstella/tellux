@@ -148,7 +148,55 @@ Projet indépendant. Architecture modulaire permettant la montée en gamme progr
 
 ---
 
-## 8. Dette technique
+## 8. Chantiers différés — déclenchement relecture physicien tiers
+
+Les chantiers suivants sont suspendus en attente de deux conditions conjointes :
+
+- Identification et engagement d'un relecteur physicien tiers pour validation méthodologique
+- Phase de soumission aux institutions de financement (CTC, FEDER, ANR) atteinte
+
+### Préparation soumission physicien tiers — statut
+
+Le document de soumission au physicien tiers est préparé et à jour au 2026-04-23 (version v1.2). Il intègre les ajustements scientifiques du jour (reformulation S10, amendement S8 avec cadre éthique, ajustements cosmétiques et pédagogiques complémentaires) et demande au relecteur une validation explicite sur les deux points les plus sensibles (questions Q7.6 et Q7.7).
+
+Le document reste en attente de soumission effective, conditionnée à l'identification d'un relecteur physicien tiers. Les chantiers ci-dessous s'activeront une fois cette relecture conduite et la phase de soumission institutionnelle atteinte.
+
+### Chantier 1 — Rédaction du Guide d'interprétation de la carte
+
+- **Statut :** à rédiger
+- **Type :** document pédagogique grand public
+- **Objet :** expliquer comment lire chaque couche de la carte Tellux, les unités, l'interprétation des gradients, ce qu'est (et n'est pas) l'indice composite.
+- **Destinataire :** visiteurs non spécialistes du site
+- **État actuel :** placeholder dans `index.html` section `#ressources` (« PDF bientôt disponible »), aucune source markdown
+- **Dépendance :** rédaction préalable à la conversion PDF
+
+### Chantier 2 — Rédaction du document « Hygiène EM à domicile »
+
+- **Statut :** à rédiger
+- **Type :** document pratique grand public
+- **Objet :** recommandations et repères concrets sur l'exposition électromagnétique domestique, fondés sur les références biomédicales retenues par Tellux
+- **Destinataire :** public concerné par la réduction d'exposition EM
+- **État actuel :** placeholder landing, aucune source markdown
+
+### Chantier 3 — Conversion PDF finale des 3 documents publics
+
+- **Statut :** infrastructure à préparer, conversion à exécuter après validation physicien
+- **Documents concernés :**
+  - `CADRE_SCIENTIFIQUE_TELLUX_v2.1.1.md` (949 lignes, repo public racine)
+  - `TELLUX_POSITION_EPISTEMIQUE.md` (220 lignes, repo public racine)
+  - Guide d'interprétation de la carte (à rédiger — Chantier 1 ci-dessus)
+- **Dépendance :** Chantier 1 + relecture physicien validée
+- **Note :** l'infrastructure PDF (outillage, templates DA v2, exports test) sera préparée séparément, en amont, pour que la conversion finale soit immédiate une fois les conditions réunies.
+
+### Chantier 4 — Remplacement des placeholders landing
+
+- **Statut :** à exécuter après Chantier 3
+- **Objet :** remplacer dans `index.html` section `#ressources` les trois mentions « PDF bientôt disponible » par les liens effectifs vers les PDF publiés.
+- **Dépendance :** Chantier 3 complet.
+
+---
+
+## 9. Dette technique
 
 Voir `DETTES_TECHNIQUES.md` pour la liste des dettes techniques ouvertes et leur statut.
 
