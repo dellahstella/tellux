@@ -1,0 +1,51 @@
+name: validate-code
+
+# Validation automatique déclenchée sur chaque PR vers dev ou main.
+# Deux jobs parallèles :
+#   - validate-js   : extrait les blocs <script> inline des 5 HTML principaux
+#                     et vérifie leur syntaxe via `node --check`.
+#                     Les handlers inline (onclick, onload, ...) ne sont pas
+#                     validés dans cette v1 (pattern legacy accepté).
+#                     Les <script src=...> CDN ne sont pas vérifiés (hors repo).
+#   - validate-html : lint HTML via htmlhint avec la configuration .htmlhintrc.
+# Un échec dans l'un ou l'autre job fait échouer le check global de la PR.
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+
+jobs:
+  validate-js:
+    name: JS syntax check (node --check)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Extract inline <script> blocks and run node --check
+        run: node .github/scripts/extract-and-check-js.mjs
+
+  validate-html:
+    name: HTML lint (htmlhint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install htmlhint
+        run: npm install -g htmlhint@latest
+
+      - name: Lint HTML files
+        run: htmlhint --config .htmlhintrc app.html index.html corpus.html patrimoine.html agronomie.html
