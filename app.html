@@ -1561,9 +1561,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   </div>
 </div>
 
-<div id="info" style="background:var(--maquis-pale);border:1px solid var(--maquis-clair);border-radius:var(--r);padding:9px 13px;font-size:13px;color:var(--ardoise-clair);min-height:42px;margin-top:0;line-height:1.5">
-  🌍 <b style="color:var(--acc)">Tellux</b> — champ électromagnétique en Corse · Activez les couches · Cliquez sur la carte pour analyser un point
-</div>
+<div id="info" style="display:none;background:var(--maquis-pale);border:1px solid var(--maquis-clair);border-radius:var(--r);padding:9px 13px;font-size:13px;color:var(--ardoise-clair);min-height:42px;margin-top:0;line-height:1.5"></div>
 
 <div class="cform" id="cform">
   <div class="cform-title">Contribution terrain</div>
@@ -2414,18 +2412,25 @@ let _infoCurrentToken = null;
 function info(h, type, duration){
   const inf = document.getElementById('info');
   if(!inf) return;
-  if(h){
-    inf.innerHTML = h;
-    // Styles par type de message (DA v2)
-    if(type==='error'){
-      inf.style.background='#F5E6E3';inf.style.borderColor='var(--danger)';inf.style.color='var(--danger)';
-    }else if(type==='success'){
-      inf.style.background='var(--maquis-pale)';inf.style.borderColor='var(--acc)';inf.style.color='var(--acc)';
-    }else if(type==='warn'){
-      inf.style.background='#FDF3E1';inf.style.borderColor='var(--warn)';inf.style.color='#8B6A20';
-    }else{
-      inf.style.background='var(--pierre-ombre)';inf.style.borderColor='var(--border)';inf.style.color='var(--ardoise-clair)';
-    }
+  // Cas effacement : h falsy (null, undefined, '') → masquer et vider
+  if(!h){
+    inf.innerHTML = '';
+    inf.style.display = 'none';
+    if(_infoTimer){ clearTimeout(_infoTimer); _infoTimer = null; }
+    _infoCurrentToken = null;
+    return;
+  }
+  inf.innerHTML = h;
+  inf.style.display = '';  // revient au display par defaut (block)
+  // Styles par type de message (DA v2)
+  if(type==='error'){
+    inf.style.background='#F5E6E3';inf.style.borderColor='var(--danger)';inf.style.color='var(--danger)';
+  }else if(type==='success'){
+    inf.style.background='var(--maquis-pale)';inf.style.borderColor='var(--acc)';inf.style.color='var(--acc)';
+  }else if(type==='warn'){
+    inf.style.background='#FDF3E1';inf.style.borderColor='var(--warn)';inf.style.color='#8B6A20';
+  }else{
+    inf.style.background='var(--pierre-ombre)';inf.style.borderColor='var(--border)';inf.style.color='var(--ardoise-clair)';
   }
   // Nouveau message = nouveau timing : on annule tout timer pendant.
   if(_infoTimer){ clearTimeout(_infoTimer); _infoTimer = null; }
@@ -2433,7 +2438,10 @@ function info(h, type, duration){
     const myToken = Symbol('info');
     _infoCurrentToken = myToken;
     _infoTimer = setTimeout(() => {
-      if(_infoCurrentToken === myToken) inf.innerHTML = '';
+      if(_infoCurrentToken === myToken){
+        inf.innerHTML = '';
+        inf.style.display = 'none';
+      }
       _infoTimer = null;
     }, duration);
   } else {
