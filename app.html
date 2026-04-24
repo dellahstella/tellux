@@ -207,8 +207,12 @@
   letter-spacing:0.01em;
 }
 
-/* Tooltip Points chauds U/Th — contenu long (notes documentaires 200+ car.) */
+/* Tooltip Points chauds U/Th — contenu long (notes documentaires 200+ car.)
+   width:max-content + max-width:280px : le tooltip absolu shrink-to-fit
+   prendrait sinon la largeur min-content (mot le plus long ~100 px) et
+   wrapperait chaque mot sur sa propre ligne. */
 .leaflet-tooltip.tellux-pc-tooltip{
+  width:max-content;
   max-width:280px;
   white-space:normal;
   line-height:1.4;
@@ -442,34 +446,44 @@
 /* === Legendes contextuelles Zone 2 (sous la carte, FIFO max 3) === */
 #tellux-legends-context{
   display:none;
+  width:100%;
+  min-height:80px;
+  max-height:180px;
+  margin:16px 0;
+  padding:14px 18px;
+  background:var(--pierre-ombre);
+  border:1px solid var(--border);
+  border-radius:var(--r2);
+  box-shadow:0 1px 3px rgba(31,35,41,.04);
+  gap:12px;
   flex-wrap:wrap;
-  gap:8px;
-  padding:10px 6px 4px;
-  margin:8px 0 0;
-  justify-content:flex-start;
   align-items:stretch;
+  justify-content:flex-start;
+  font-family:var(--font);
 }
 .legend-context-pill{
-  flex:0 1 auto;
-  min-width:180px;
-  max-width:260px;
-  max-height:80px;
+  flex:1 1 auto;
+  min-width:220px;
+  max-width:400px;
+  max-height:150px;
   overflow-y:auto;
   background:var(--tx-pierre);
   border:1px solid var(--border);
-  border-radius:8px;
-  padding:6px 8px;
+  border-radius:var(--r);
+  padding:10px 14px;
   font-family:var(--font);
-  font-size:10px;
+  font-size:11px;
+  line-height:1.5;
   color:var(--tx-ardoise);
-  box-shadow:0 1px 3px rgba(31,35,41,.05);
 }
 .legend-context-pill .leg-block{margin:0;}
-.legend-context-pill .leg-title{font-size:10.5px;}
-.legend-context-pill .leg-src{font-size:8.5px;}
-@media (max-width:640px){
-  #tellux-legends-context{padding:6px 2px 2px;gap:6px;}
-  .legend-context-pill{min-width:160px;max-width:100%;padding:4px 6px;}
+.legend-context-pill .leg-title{font-family:var(--font);font-size:12px;font-weight:600;color:var(--tx-ardoise);margin-bottom:4px;display:block;}
+.legend-context-pill .leg-subtitle{font-size:10px;color:var(--tx-mica);font-style:italic;margin-bottom:6px;}
+.legend-context-pill .leg-row{display:flex;align-items:center;gap:6px;margin:2px 0;color:var(--tx-ardoise);}
+.legend-context-pill .leg-src{font-size:9px;color:var(--tx-mica);font-style:italic;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);}
+@media (max-width:768px){
+  #tellux-legends-context{padding:10px 12px;margin:10px 0;max-height:none;}
+  .legend-context-pill{min-width:100%;max-width:100%;}
 }
 /* === fin legendes contextuelles === */
 
@@ -1459,7 +1473,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <button class="lbtn" id="b-cav" title="Cavités souterraines — grottes, mines, karst (BRGM)" onclick="tog('cav','on-cav',this)"><span class="sq" style="background:#5c3a9b"></span>Cavités</button>
       <button class="lbtn" id="b-therm" title="Émergences thermales — marqueurs de failles actives" onclick="tog('therm','on-therm',this)"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Émergences thermales</button>
       <button class="lbtn" id="b-emag" title="Anomalie magnétique crustale NOAA EMAG2v3 — fond géologique régional" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Crustale (EMAG2)</button>
-      <button class="lbtn" id="b-wdmam" title="World Digital Magnetic Anomaly Map — résolution 5 km, couverture mondiale (IAGA/CGMW)" onclick="togWDMAM(this)"><span class="sq" style="background:#7c3aed"></span>WDMAM mondial</button>
+      <button class="lbtn" id="b-wdmam" title="Anomalie magnétique crustale mondiale — EMAG2v3, dynamique" onclick="togWDMAM(this)"><span class="sq" style="background:#7c3aed"></span>EMAG2 mondial</button>
       <button class="lbtn" id="b-crustal" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF) — opt-in, comparaison locale/mondiale" onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Crustale mondiale</button>
       <!-- TODO: Failles tectoniques (dataset data/failles_corse.json), Communes radon niveau 3 overlay (GeoJSON geometries a fournir), MNT altitude overlay -->
     </div>
@@ -1561,9 +1575,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   </div>
 </div>
 
-<div id="info" style="background:var(--maquis-pale);border:1px solid var(--maquis-clair);border-radius:var(--r);padding:9px 13px;font-size:13px;color:var(--ardoise-clair);min-height:42px;margin-top:0;line-height:1.5">
-  🌍 <b style="color:var(--acc)">Tellux</b> — champ électromagnétique en Corse · Activez les couches · Cliquez sur la carte pour analyser un point
-</div>
+<div id="info" style="display:none;background:var(--maquis-pale);border:1px solid var(--maquis-clair);border-radius:var(--r);padding:9px 13px;font-size:13px;color:var(--ardoise-clair);min-height:42px;margin-top:0;line-height:1.5"></div>
 
 <div class="cform" id="cform">
   <div class="cform-title">Contribution terrain</div>
@@ -2044,17 +2056,17 @@ const LEGEND_HTML={
   hot:'<div class="leg-block"><b class="leg-title">Champ ELF 50 Hz (nT)</b><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>150</span><span>300</span><span>500 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#8b92a5">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · PROD_ELECTRIQUE</div></div>',
   geo:'<div class="leg-block"><b class="leg-title">Geologie</b><div class="leg-row"><span style="color:#8B4513">&#9632;</span> Granit</div><div class="leg-row"><span style="color:#DAA520">&#9632;</span> Sedimentaire</div><div class="leg-row"><span style="color:#4682B4">&#9632;</span> Metamorphique</div><div class="leg-src">BRGM Geologie</div></div>',
   failles:'<div class="leg-block"><b class="leg-title">Failles tectoniques</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#8E2F1F;vertical-align:middle;margin-right:4px"></span><b style="color:#8E2F1F">Active</b> — faille active (3 sites)</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;border-top:2px dashed #C28533;vertical-align:middle;margin-right:4px"></span><b style="color:#C28533">Quaternaire</b> — faille ancienne (5 sites)</div><div class="leg-row" style="font-size:9px;color:var(--tx3)">Tracé indicatif ~30 km · axe orienté</div><div class="leg-src">BRGM Corte · 8 failles principales</div></div>',
-  hyd:'<div class="leg-block"><b class="leg-title">Nappes</b><div class="leg-row"><span style="color:#1a4b8c">&#9632;</span> Affleurante</div><div class="leg-row"><span style="color:#4a90d9">&#9632;</span> Sub-affleurante</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
+  hyd:'<div class="leg-block"><b class="leg-title">Nappes</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Eau souterraine proche de la surface</div><div class="leg-row"><span style="color:#1a4b8c">&#9632;</span> Affleurante</div><div class="leg-row"><span style="color:#4a90d9">&#9632;</span> Sub-affleurante</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
   foret:'<div class="leg-block"><b class="leg-title">Forêts publiques</b><img src="https://data.geopf.fr/wms-v/ows?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.3.0&FORMAT=image/png&LAYER=FORETS.PUBLIQUES" style="max-width:170px;display:block;margin:4px 0" alt="Légende Forêts publiques"><div class="leg-src">IGN · ONF · Géoplateforme</div></div>',
-  cav:'<div class="leg-block"><b class="leg-title">Cavites</b><img src="https://geoservices.brgm.fr/risques?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.1.1&FORMAT=image/png&LAYER=CAVITE_LOCALISEE" style="max-width:150px;display:block;margin:4px 0"><div class="leg-src">BRGM BD Cavites</div></div>',
+  cav:'<div class="leg-block"><b class="leg-title">Cavites</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Grottes, karst, mines souterraines</div><img src="https://geoservices.brgm.fr/risques?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.1.1&FORMAT=image/png&LAYER=CAVITE_LOCALISEE" style="max-width:150px;display:block;margin:4px 0"><div class="leg-src">BRGM BD Cavites</div></div>',
   ant:'<div class="leg-block"><b class="leg-title">Antennes ANFR</b><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a4b8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a4b8c">2G</b> GSM — voix, SMS</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a6b5c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a6b5c">3G</b> UMTS — data mobile</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#b85c00">4G</b> LTE — haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#991b1b">5G</b> NR — très haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#6b7280">Infra</b> FH · TV · FM · PMR</div><div class="leg-row"><span style="display:inline-block;position:relative;width:12px;height:12px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:5px;top:0;width:2px;height:12px;background:#5f5e5a"></span><span style="position:absolute;top:5px;left:0;width:12px;height:2px;background:#5f5e5a"></span></span>Émetteur radio/TV majeur</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Opérateurs : Orange · SFR · Bouygues · Free<br>974 supports · Source ANFR open data</div><div class="leg-src">ANFR · Supabase · SUP_SUPPORT 2026</div><div style="border-top:1px solid rgba(0,0,0,.08);padding-top:6px;margin-top:4px"><div style="font-family:var(--mono);font-size:9px;color:var(--tx3);margin-bottom:4px">MESURES CEM OFFICIELLES (losanges) · limite légale = 28 V/m :</div><div style="display:flex;flex-wrap:wrap;gap:4px"><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#0f766e;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#0f766e">Faible</b> &lt; 0.5 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#b85c00">Modéré</b> 0.5–2 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#991b1b">Élevé</b> 2–5 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#5c0000;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#5c0000">Très élevé</b> 5–28 V/m</div><div class="leg" style="padding:2px 6px;background:#fff8e6;border-radius:20px;border:1.5px solid #ffd700"><span style="display:inline-block;width:8px;height:8px;background:#7c0000;border:1.5px solid #ffd700;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#7c0000">⚠ &gt;28 V/m</b> non conforme</div></div></div></div>',
-  wdmam:'<div class="leg-block"><b class="leg-title">EMAG2/WDMAM mondial</b><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#dc2626;border-radius:2px"></span> Anomalie positive (magnétique)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#2563eb;border-radius:2px"></span> Anomalie négative (non-magnétique)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#f5f5f5;border:1px solid #ddd;border-radius:2px"></span> Neutre (~0 nT)</div><div class="leg-src">NOAA NCEI · Maus et al. 2009</div></div>',
-  emag:'<div class="leg-block"><b class="leg-title">Anomalie crustale</b><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#dc2626;border-radius:2px"></span> Positif (granit, gabbro)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#2563eb;border-radius:2px"></span> Négatif (calcaire, schiste)</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Fond régional profond (~50-100km)</span></div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Non lié à l\'homme · EMAG2v3 NOAA</span></div><div class="leg-src">Cagniard 1953 · Meyer et al. 2017</div></div>',
-  crustal:'<div class="leg-block"><b class="leg-title">Anomalies crustales mondiales</b><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#8E2F1F33;border:2px solid #8E2F1F;border-radius:50%"></span> Anomalie négative (cratère, intrusion)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C2853333;border:2px solid #C28533;border-radius:50%"></span> Anomalie positive (BIF, gisement ferrifère)</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">5 références · Bangui · Kursk · Vredefort · Ries · Chicxulub</span></div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Panneau comparatif en haut à droite quand couche active</span></div><div class="leg-src">EMAG2v3 NOAA · publications académiques</div></div>',
+  wdmam:'<div class="leg-block"><b class="leg-title">EMAG2 mondial</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Anomalies crustales mondiales dynamiques</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#dc2626;border-radius:2px"></span> Anomalie positive (magnétique)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#2563eb;border-radius:2px"></span> Anomalie négative (non-magnétique)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#f5f5f5;border:1px solid #ddd;border-radius:2px"></span> Neutre (~0 nT)</div><div class="leg-src">EMAG2v3 · NOAA NCEI · Meyer et al. 2017</div></div>',
+  emag:'<div class="leg-block"><b class="leg-title">Anomalie crustale</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Signature magnétique du socle profond</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#dc2626;border-radius:2px"></span> Positif (granit, gabbro)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#2563eb;border-radius:2px"></span> Négatif (calcaire, schiste)</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Fond régional profond (~50-100km)</span></div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Non lié à l\'homme · EMAG2v3 NOAA</span></div><div class="leg-src">Cagniard 1953 · Meyer et al. 2017</div></div>',
+  crustal:'<div class="leg-block"><b class="leg-title">Anomalies crustales mondiales</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Cinq références pédagogiques mondiales</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#8E2F1F33;border:2px solid #8E2F1F;border-radius:50%"></span> Anomalie négative (cratère, intrusion)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C2853333;border:2px solid #C28533;border-radius:50%"></span> Anomalie positive (BIF, gisement ferrifère)</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">5 références · Bangui · Kursk · Vredefort · Ries · Chicxulub</span></div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Panneau comparatif en haut à droite quand couche active</span></div><div class="leg-src">EMAG2v3 NOAA · publications académiques</div></div>',
   res:'<div class="leg-block"><b class="leg-title">Réseau électrique</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>Ligne HTA 20kV</div><div class="leg-row"><span style="display:inline-block;width:14px;height:3px;background:#5c2000;vertical-align:middle;margin-right:4px"></span>Ligne HTB 63-225kV</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Hydraulique</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Thermique</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Interconnexion</div><div class="leg-src">EDF SEI · Supabase · OSM</div></div>',
   therm:'<div class="leg-block"><b class="leg-title">Émergences thermales</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Marqueurs de failles actives</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0ea5e9;border:2px solid white;border-radius:50%;box-shadow:0 0 3px #0ea5e966;vertical-align:middle;margin-right:4px"></span>Source / thermes actifs</div><div class="leg-src">6 émergences thermales · Corse occidentale</div></div>',
-    bt:'<div class="leg-block"><b class="leg-title">Réseau BT</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>BT aérien</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>BT souterrain</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 12</span></div><div class="leg-src">EDF SEI open data</div></div>',
-  prod:'<div class="leg-block"><b class="leg-title">Sites de production</b><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique barrage</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique fil de l&#39;eau</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogaz</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>TAC (turbine à combustion)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnexion</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Taille selon puissance :</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
+    bt:'<div class="leg-block"><b class="leg-title">Réseau BT</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Distribution électrique dans les rues</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>BT aérien</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>BT souterrain</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 12</span></div><div class="leg-src">EDF SEI open data</div></div>',
+  prod:'<div class="leg-block"><b class="leg-title">Sites de production</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Centrales du réseau électrique corse</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique barrage</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique fil de l&#39;eau</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogaz</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>TAC (turbine à combustion)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnexion</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Taille selon puissance :</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
   con:'<div class="leg-block"><b class="leg-title">Mesures EM</b>'+
     '<div class="leg-sub" style="font-size:10px;color:var(--tx-mica,#7B7770);margin:2px 0 4px">30 fiches ANFR/EXEM + contributions citoyennes</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Certifié conforme &lt; 0,5 V/m</div>'+
@@ -2068,6 +2080,7 @@ const LEGEND_HTML={
     '<div class="leg-src">ANFR/EXEM · Tellux crowdsourcé</div>'+
     '</div>',
   sitesRemarq:'<div class="leg-block"><b class="leg-title">Sites géophysiques remarquables</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Géologie insolite et anciens sites miniers</div>'+
     '<div class="leg-row"><svg width="12" height="12" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px"><polygon points="7,1 13,5.5 10.5,13 3.5,13 1,5.5" fill="#1F3A5F" stroke="#F5F0E7" stroke-width="1.5"/></svg> Ophiolite (Cap Corse) — serpentinite, magnétite</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Site minier historique (galène, stibine, chalcopyrite, amiante)</div>'+
     '<div class="leg-row"><svg width="12" height="12" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px"><polygon points="7,1 8.5,5.5 13,5.5 9.25,8.25 10.75,13 7,10.25 3.25,13 4.75,8.25 1,5.5 5.5,5.5" fill="#3F5B3A" stroke="#F5F0E7" stroke-width="1"/></svg> Surveillance radiologique</div>'+
@@ -2075,9 +2088,10 @@ const LEGEND_HTML={
     '<div class="leg-src">BRGM · Mérimée · IRSN · Ulevante · ADLFI</div>'+
     '</div>',
   radon:'<div class="leg-block"><b class="leg-title">Potentiel radon</b>'+
-    '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;opacity:0.45;border-radius:50%"></span> Cat. 3 — potentiel élevé</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;opacity:0.25;border-radius:50%"></span> Cat. 2 — potentiel modéré</div>'+
-    '<div class="leg-src">ASNR cartographie radon</div>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Exhalation du sous-sol, géologie granitique</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#C28533;opacity:0.4;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Catégorie 3 — potentiel élevé</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#EDD59A;opacity:0.6;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Catégorie 2 — potentiel modéré</div>'+
+    '<div class="leg-src">ASNR · Décret 2018-434 · 216 cat.3 + 37 cat.2</div>'+
     '</div>'
 };
 
@@ -2412,18 +2426,25 @@ let _infoCurrentToken = null;
 function info(h, type, duration){
   const inf = document.getElementById('info');
   if(!inf) return;
-  if(h){
-    inf.innerHTML = h;
-    // Styles par type de message (DA v2)
-    if(type==='error'){
-      inf.style.background='#F5E6E3';inf.style.borderColor='var(--danger)';inf.style.color='var(--danger)';
-    }else if(type==='success'){
-      inf.style.background='var(--maquis-pale)';inf.style.borderColor='var(--acc)';inf.style.color='var(--acc)';
-    }else if(type==='warn'){
-      inf.style.background='#FDF3E1';inf.style.borderColor='var(--warn)';inf.style.color='#8B6A20';
-    }else{
-      inf.style.background='var(--pierre-ombre)';inf.style.borderColor='var(--border)';inf.style.color='var(--ardoise-clair)';
-    }
+  // Cas effacement : h falsy (null, undefined, '') → masquer et vider
+  if(!h){
+    inf.innerHTML = '';
+    inf.style.display = 'none';
+    if(_infoTimer){ clearTimeout(_infoTimer); _infoTimer = null; }
+    _infoCurrentToken = null;
+    return;
+  }
+  inf.innerHTML = h;
+  inf.style.display = '';  // revient au display par defaut (block)
+  // Styles par type de message (DA v2)
+  if(type==='error'){
+    inf.style.background='#F5E6E3';inf.style.borderColor='var(--danger)';inf.style.color='var(--danger)';
+  }else if(type==='success'){
+    inf.style.background='var(--maquis-pale)';inf.style.borderColor='var(--acc)';inf.style.color='var(--acc)';
+  }else if(type==='warn'){
+    inf.style.background='#FDF3E1';inf.style.borderColor='var(--warn)';inf.style.color='#8B6A20';
+  }else{
+    inf.style.background='var(--pierre-ombre)';inf.style.borderColor='var(--border)';inf.style.color='var(--ardoise-clair)';
   }
   // Nouveau message = nouveau timing : on annule tout timer pendant.
   if(_infoTimer){ clearTimeout(_infoTimer); _infoTimer = null; }
@@ -2431,7 +2452,10 @@ function info(h, type, duration){
     const myToken = Symbol('info');
     _infoCurrentToken = myToken;
     _infoTimer = setTimeout(() => {
-      if(_infoCurrentToken === myToken) inf.innerHTML = '';
+      if(_infoCurrentToken === myToken){
+        inf.innerHTML = '';
+        inf.style.display = 'none';
+      }
       _infoTimer = null;
     }, duration);
   } else {
@@ -3946,41 +3970,60 @@ function getGeoType(lat,lon){
 // Seuil action IRSN : 300 Bq/m³ (locaux habitables depuis décret 2018-434)
 // ════════════════════════════════════════════════════════════════════════════
 
-// ═══ RADON ZONES CORSE (ASNR/IRSN) — 8 zones géographiques ═══
-// Source : ASNR cartographie potentiel radon · dataset canonique partagé
-// avec analysis/correlate_megaliths.py
-// Labels dérivés du dataset v6 historique (équivalence géographique).
-// Cat. 3 = potentiel élevé (massifs granitiques biotite)
-// Cat. 2 = potentiel modéré (ophiolites Cap Corse)
-const RADON_ZONES_CORSE = [
-  {lat: 41.75, lon: 8.95, categ: 3, nom: "Sartenais"},
-  {lat: 41.85, lon: 8.90, categ: 3, nom: "Taravo"},
-  {lat: 41.60, lon: 9.28, categ: 3, nom: "Porto-Vecchio"},
-  {lat: 42.15, lon: 8.95, categ: 3, nom: "Niolu"},
-  {lat: 42.12, lon: 9.10, categ: 3, nom: "Vizzavona"},
-  {lat: 42.35, lon: 9.05, categ: 3, nom: "Renoso-Cinto"},
-  {lat: 42.55, lon: 8.85, categ: 3, nom: "Balagne"},
-  {lat: 42.85, lon: 9.30, categ: 2, nom: "Cap Corse"}
-];
+// ═══ RADON ZONES CORSE — polygones communaux officiels ASNR/IRSN ═══
+// Source : ASNR/IRSN, Arrêté du 27 juin 2018 (JORFTEXT000037131346).
+// Géométries : IGN AdminExpress via gregoiredavid/france-geojson (Etalab 2.0).
+// 253 communes classées : 216 cat. 3 (potentiel élevé) + 37 cat. 2 (potentiel modéré).
+// Chargement paresseux au premier toggle — le fichier fait ~2 Mo, cache navigateur
+// ensuite. Remplace 8 circleMarkers approximatifs (PR radon-polygons-integration).
+let _radonGeojsonCache = null;
 
-function buildRadonLayer() {
-  lRadon.clearLayers();
-  RADON_ZONES_CORSE.forEach(function(z){
-    var opacity = z.categ === 3 ? 0.45 : 0.25;
-    var marker = L.circleMarker([z.lat, z.lon], {
-      radius: 9,
-      fillColor: '#C28533',
-      fillOpacity: opacity,
-      color: '#C28533',
-      weight: 2,
-      opacity: 0.8
+function radonStyle(feature){
+  var cat = feature.properties.categorie;
+  if(cat === 3){
+    return {fillColor:'#C28533', fillOpacity:0.40, color:'#C28533', weight:1, opacity:0.8};
+  }
+  if(cat === 2){
+    return {fillColor:'#EDD59A', fillOpacity:0.25, color:'#C28533', weight:1, opacity:0.6};
+  }
+  // Fallback neutre si cat inattendue
+  return {fillColor:'#EFE9DC', fillOpacity:0.15, color:'#74706A', weight:1, opacity:0.4};
+}
+
+function radonOnEachFeature(feature, layer){
+  var p = feature.properties || {};
+  var cat = p.categorie;
+  var catText = cat === 3 ? 'Catégorie 3 (potentiel élevé)'
+              : cat === 2 ? 'Catégorie 2 (potentiel modéré)'
+              : 'Catégorie non classée';
+  var src = p.source || 'ASNR';
+  layer.bindPopup(
+    '<b>' + (p.nom_commune || 'Commune') + '</b><br>'
+    + '<span style="font-size:11px;color:var(--tx-mica)">INSEE ' + (p.code_insee || '—') + (p.departement ? ' · ' + p.departement : '') + '</span><br>'
+    + catText + '<br>'
+    + '<span style="font-size:10px;color:var(--tx-mica);font-style:italic">Source : ' + src + ' · Décret 2018-434</span>'
+  );
+}
+
+async function buildRadonLayer(){
+  // Nettoyage (idempotent : si déjà populée, on sort)
+  if(lRadon.getLayers().length > 0) return;
+  try {
+    if(!_radonGeojsonCache){
+      var r = await fetch('public/data/radon_zones_corse.geojson');
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      _radonGeojsonCache = await r.json();
+    }
+    var gj = L.geoJSON(_radonGeojsonCache, {
+      style: radonStyle,
+      onEachFeature: radonOnEachFeature
     });
-    var popupHtml = '<b>Zone radon \u2014 ' + z.nom + '</b>'
-      + '<br>Potentiel : cat. ' + z.categ + '/3 (ASNR)'
-      + '<br><span style="font-size:10px;color:var(--tx3)">Source : ASNR cartographie potentiel radon</span>';
-    marker.bindPopup(popupHtml);
-    lRadon.addLayer(marker);
-  });
+    lRadon.addLayer(gj);
+    var meta = _radonGeojsonCache.metadata || {};
+    console.log('[Tellux] Radon polygones chargés : ' + (meta.features_total || (_radonGeojsonCache.features||[]).length) + ' communes (cat.2+cat.3)');
+  } catch(e){
+    console.warn('[Tellux] Radon GeoJSON indisponible : ' + e.message);
+  }
 }
 
 // ═══ Communes classees radon niveau 3 (decret 2018-434, annexe IV) ═══
@@ -6633,15 +6676,13 @@ function _renderMesuresCertifiees() {
   });
 }
 
-// ═══ DONNÉES MONDIALES — WDMAM + CHAOS-7 ═══
+// ═══ DONNÉES MONDIALES — EMAG2 mondial + CHAOS-7 ═══
 let wmsWDMAM=null;
 function togWDMAM(btn){
   if(wmsWDMAM&&map.hasLayer(wmsWDMAM)){
     map.removeLayer(wmsWDMAM);wmsWDMAM=null;btn.className='lbtn';showLegend('wdmam',false);return;
   }
-  // WDMAM v2 — World Digital Magnetic Anomaly Map (IAGA/CGMW)
-  // WMS from NOAA NCEI — global coverage, 5km resolution
-  // EMAG2v3/WDMAM via NOAA ArcGIS REST export — image overlay
+  // Raster EMAG2v3 mondial dynamique (reconstruit à chaque activation selon bbox courante) · NOAA NCEI · Meyer et al. 2017
   const bounds=map.getBounds();
   const url='https://gis.ngdc.noaa.gov/arcgis/rest/services/EMAG2v3/ImageServer/exportImage?bbox='+
     bounds.getWest()+','+bounds.getSouth()+','+bounds.getEast()+','+bounds.getNorth()+
@@ -6652,7 +6693,7 @@ function togWDMAM(btn){
   ],{opacity:0.5,attribution:'EMAG2v3 © NOAA NCEI'}).addTo(map);
   btn.className='lbtn on-wdmam';
   showLegend('wdmam',true);
-  info('🌍 EMAG2v3 — Anomalie magnétique mondiale (NOAA/IAGA) · Couverture globale · Réf: Maus et al. 2009',null,5000);
+  info('🌍 EMAG2v3 — Anomalie magnétique mondiale (NOAA) · Couverture globale · Réf: Meyer et al. 2017',null,5000);
 }
 
 // CHAOS-7 model reference (DTU Space, Denmark)
