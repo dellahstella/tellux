@@ -48,6 +48,7 @@ Licence : donnees ANFR sous Licence Ouverte 2.0 (Etalab)
 """
 
 import json
+import os
 import sys
 import urllib.request
 from pathlib import Path
@@ -60,11 +61,27 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = REPO_ROOT / "public" / "data"
 OUTPUT_FILE = OUTPUT_DIR / "antennes_par_commune_corse.json"
 
-SB_URL = "https://knckulwghgfrxmbweada.supabase.co"
-SB_KEY = (
+# Credentials Supabase lus depuis les variables d'environnement avec fallback
+# sur les valeurs publiques hardcodees (cle anon = lecture seule soumise a RLS,
+# exposable sans risque). La lecture d'env vars sert la CI GitHub Actions
+# (workflow .github/workflows/refresh-antennes.yml) ou les secrets sont
+# definis dans Settings > Secrets and variables > Actions du repo.
+_SB_URL_DEFAULT = "https://knckulwghgfrxmbweada.supabase.co"
+_SB_KEY_DEFAULT = (
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtu"
     "Y2t1bHdnaGdmcnhtYndlYWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NTAxMzQsImV4cCI6"
     "MjA4OTIyNjEzNH0.Cu9dvxFyn-5pbOP65gowCEQvRti74CLnlNYf92jebis"
+)
+# Utilisation de `or` (et non `get(..., default)`) pour traiter les env vars
+# vides ("") comme absentes et basculer sur le fallback. Cas utile en CI si
+# un secret n'est pas defini.
+SB_URL = os.environ.get("SUPABASE_URL") or _SB_URL_DEFAULT
+# Accepte SUPABASE_ANON_KEY (nom canonique) ou SUPABASE_KEY (alias court
+# utilise dans certains workflows CI).
+SB_KEY = (
+    os.environ.get("SUPABASE_ANON_KEY")
+    or os.environ.get("SUPABASE_KEY")
+    or _SB_KEY_DEFAULT
 )
 
 GEO_API = "https://geo.api.gouv.fr/communes"
