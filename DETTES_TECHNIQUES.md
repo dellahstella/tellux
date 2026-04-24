@@ -1,6 +1,6 @@
 # Tellux — Dettes techniques ouvertes
 
-**Dernière mise à jour :** 23 avril 2026 — clôture CSS-HARMONISATION-001, reformulation H1-H88-ELF-001 en CORPUS-PILIERS-001 post-scission Pilier A/B du 2026-04-21, ajout MESURES-EM-BASCULE-001
+**Dernière mise à jour :** 24 avril 2026 — ajout WDMAM-NAMING-001 (rename JS identifiers différé post-PR #125)
 
 Ce document liste les dettes techniques ouvertes identifiées dans l'application Tellux. Chaque dette fait l'objet d'un identifiant pérenne, d'une description factuelle et d'une condition de déblocage documentée. Aucune de ces dettes ne bloque la publication de la phase 1.
 
@@ -122,6 +122,16 @@ La validation physique préalable (littérature ou mesures terrain) est un prér
 **Priorité :** Faible (non bloquant tant que le volume certifiées reste inférieur à ~100)
 
 **Condition de déblocage :** dépassement du seuil de ~100 mesures certifiées OU feedback utilisateur signalant la confusion entre les deux strates OU session UI dédiée identifiant d'autres besoins de filtrage.
+
+---
+
+### WDMAM-NAMING-001 — Renommage identifiants JS `wmsWDMAM`, `togWDMAM`, `LEGEND_HTML.wdmam`, `#b-wdmam`
+
+**Description :** La couche de cartographie magnétique mondiale charge dynamiquement le raster EMAG2v3 depuis NOAA NCEI (endpoint ArcGIS REST, `Meyer et al. 2017`). Elle a historiquement été nommée d'après `WDMAM` (World Digital Magnetic Anomaly Map de `IAGA/CGMW`, `Maus et al. 2009`), qui est un produit distinct. La PR #125 (2026-04-24) a corrigé les libellés visibles par l'utilisateur : le bouton affiche désormais « EMAG2 mondial », la légende titre « EMAG2 mondial » avec sous-titre « Anomalies crustales mondiales dynamiques », et la citation source renvoie à `Meyer et al. 2017`. Les identifiants JS (`wmsWDMAM`, `togWDMAM`, clé `LEGEND_HTML.wdmam`, ID HTML `#b-wdmam`, classe CSS `on-wdmam`, appels `showLegend('wdmam', ...)`) restent cependant nommés d'après le faux-ami. Le renommage a été volontairement différé pendant la PR #125 pour éviter une régression silencieuse sur un sélecteur oublié.
+
+**Priorité :** Faible (cosmétique, aucun bug fonctionnel, non bloquant)
+
+**Condition de déblocage :** Session dédiée de renommage avec grep exhaustif pré-changement sur les chaînes `wdmam` / `WDMAM` / `b-wdmam` / `on-wdmam`, puis test navigateur manuel post-renommage (activation couche, affichage légende en Zone 2, toggle on/off, resize responsive). Nom cible à valider lors de l'implémentation — options ouvertes : `wmsEmagGlobal` / `togEmagGlobal` / `emagGlobal` (anglophone, cohérent avec le reste du code), ou `wmsEmagMondial` / `togEmagMondial` / `emagMondial` (francophone, cohérent avec le libellé UI). Zone concernée uniquement : `app.html` (aucun autre fichier ne référence ces identifiants — à confirmer au grep).
 
 ---
 
