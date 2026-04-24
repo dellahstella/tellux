@@ -2097,7 +2097,7 @@ function handlePhyphoxCSV(input){
       }
     }catch(err){
       window._csvStats=null;
-      info('CSV invalide : '+err.message,'error');
+      info('CSV invalide : '+err.message,'error',5000);
     }
   };
   reader.readAsText(file);
@@ -2339,7 +2339,7 @@ function tog(id,cls,btn){
         lCert.addTo(map);
         var nContrib=(typeof contribsDB!=='undefined')?contribsDB.length:0;
         var nCert=(MESURES_CERTIFIEES||[]).length;
-        info('Mesures EM \u2014 '+nCert+' fiches ANFR/EXEM certifiées (2024\u20132026) \u00B7 '+nContrib+' contribution(s) citoyenne(s)');
+        info('Mesures EM \u2014 '+nCert+' fiches ANFR/EXEM certifiées (2024\u20132026) \u00B7 '+nContrib+' contribution(s) citoyenne(s)',null,5000);
       });
     }
 
@@ -2348,10 +2348,17 @@ function tog(id,cls,btn){
     if(id==='antOffshore')showLegend('ant',true); // antOffshore partage légende ant
   }
 }
-function info(h,type){
-  const inf=document.getElementById('info');
+// info(h, type, duration) : duration en ms pour auto-effacement (transitoire).
+// Omis/0 = persistant (comportement historique, reste affiche jusqu'au prochain info()).
+// Anti-collision : chaque appel genere un Symbol unique ; un timer en cours
+// n'efface le panneau que si son token est encore le courant.
+let _infoTimer = null;
+let _infoCurrentToken = null;
+function info(h, type, duration){
+  const inf = document.getElementById('info');
+  if(!inf) return;
   if(h){
-    inf.innerHTML=h;
+    inf.innerHTML = h;
     // Styles par type de message (DA v2)
     if(type==='error'){
       inf.style.background='#F5E6E3';inf.style.borderColor='var(--danger)';inf.style.color='var(--danger)';
@@ -2362,6 +2369,19 @@ function info(h,type){
     }else{
       inf.style.background='var(--pierre-ombre)';inf.style.borderColor='var(--border)';inf.style.color='var(--ardoise-clair)';
     }
+  }
+  // Nouveau message = nouveau timing : on annule tout timer pendant.
+  if(_infoTimer){ clearTimeout(_infoTimer); _infoTimer = null; }
+  if(duration && duration > 0){
+    const myToken = Symbol('info');
+    _infoCurrentToken = myToken;
+    _infoTimer = setTimeout(() => {
+      if(_infoCurrentToken === myToken) inf.innerHTML = '';
+      _infoTimer = null;
+    }, duration);
+  } else {
+    // Persistant : invalider tout token restant pour securite.
+    _infoCurrentToken = null;
   }
 }
 function setStatus(t){document.getElementById('hdr-status').textContent=t;}
@@ -4640,7 +4660,7 @@ function _armContribClick(){
 function _placeContribMarker(lat,lng){
   // Filtre geographique : Tellux est calibre pour la Corse uniquement
   if(lat<41.3||lat>43.1||lng<8.5||lng>9.7){
-    info('Tellux est calibre pour la Corse uniquement. Cliquez sur l\'ile pour ajouter une mesure.','error');
+    info('Tellux est calibre pour la Corse uniquement. Cliquez sur l\'ile pour ajouter une mesure.','error',5000);
     // Re-armer le click pour que l'utilisateur puisse re-cliquer au bon endroit
     _armContribClick();
     return;
@@ -4652,7 +4672,7 @@ function _placeContribMarker(lat,lng){
   if(posInfo)posInfo.innerHTML='Position : <b style="font-family:var(--mono)">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</b>';
   var reposBtn=document.getElementById('btn-reposition');
   if(reposBtn)reposBtn.style.display='inline-block';
-  info('Position placee — remplissez le formulaire.','success');
+  info('Position placee — remplissez le formulaire.','success',5000);
 }
 function repositionMarker(){
   if(pending){map.removeLayer(pending);pending=null;}
@@ -4689,19 +4709,19 @@ function cancelContrib(){
   // Désarmer le handler de clic s'il est encore en attente (pas de map.off('click')
   // global qui casserait les autres handlers)
   if(_contribClickHandler){map.off('click',_contribClickHandler);_contribClickHandler=null;}
-  info('Mesure annulée.','warn');
+  info('Mesure annulée.','warn',5000);
 }
 
 async function saveContrib(){
   if(_nativeMag) stopNativeMagCapture(false);
-  if(!document.getElementById('c-rgpd').checked){info('⚠ Veuillez accepter les conditions de stockage des donnees.','error');return;}
+  if(!document.getElementById('c-rgpd').checked){info('⚠ Veuillez accepter les conditions de stockage des donnees.','error',5000);return;}
   const vCheck = validateContrib();
-  if(!vCheck.ok){info('⚠ '+vCheck.msg,'error');return;}
+  if(!vCheck.ok){info('⚠ '+vCheck.msg,'error',5000);return;}
   if(!pending){info('Cliquez d\'abord sur la carte pour placer votre point de mesure.','warn');return;}
   const ll=pending.getLatLng();
   // Double verification : position dans le bbox Corse
   if(ll.lat<41.3||ll.lat>43.1||ll.lng<8.5||ll.lng>9.7){
-    info('Position hors Corse — mesure non enregistree.','error');
+    info('Position hors Corse — mesure non enregistree.','error',5000);
     map.removeLayer(pending);pending=null;return;
   }
   const btn=document.getElementById('btn-save');btn.textContent='Sauvegarde…';btn.disabled=true;
@@ -4788,10 +4808,10 @@ async function saveContrib(){
     const ePanel2=document.getElementById('contrib-panel');if(ePanel2)ePanel2.style.display='block';
     updateContribSummary();
     renderList();
-    info('Mesure sauvegardee dans Supabase. Score : '+row.score_anomalie+' · Delta : '+(row.delta_nt!==null&&row.delta_nt!==undefined?row.delta_nt+' nT':'—'),'success');
+    info('Mesure sauvegardee dans Supabase. Score : '+row.score_anomalie+' · Delta : '+(row.delta_nt!==null&&row.delta_nt!==undefined?row.delta_nt+' nT':'—'),'success',5000);
     // Desactiver le FAB active state apres sauvegarde
     const fabEl=document.getElementById('fab-mesure');if(fabEl)fabEl.classList.remove('fab-active');
-  }catch(err){info('Erreur : '+err.message,'error');}
+  }catch(err){info('Erreur : '+err.message,'error',5000);}
   btn.textContent='Enregistrer dans Supabase';btn.disabled=false;
 }
 
@@ -5448,7 +5468,7 @@ function shareURL() {
   }
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(url).then(function() {
-      info('Lien copi\u00e9 dans le presse-papiers', 'success');
+      info('Lien copi\u00e9 dans le presse-papiers', 'success', 5000);
     }).catch(function() {
       prompt('Copiez ce lien :', url);
     });
@@ -5699,7 +5719,7 @@ function recalcSim(){
     }
   }
   if(lastClickedLatLng)map.fire('click',{latlng:lastClickedLatLng,layerPoint:map.latLngToLayerPoint(lastClickedLatLng),containerPoint:map.latLngToContainerPoint(lastClickedLatLng)});
-  info('<span style="color:var(--acc)">Carte recalculée avec les objets simulés.</span>');
+  info('<span style="color:var(--acc)">Carte recalculée avec les objets simulés.</span>',null,5000);
 }
 
 // Recalcul local haute résolution autour d'un point (rayon en degrés, step en degrés)
@@ -5754,7 +5774,7 @@ map.on('contextmenu',e=>{
   L.circleMarker([e.latlng.lat,e.latlng.lng],{radius:6,color:t.color,fillColor:t.color,fillOpacity:0.7,weight:2})
     .bindTooltip(`${t.icon} ${t.label}`,{permanent:false,direction:'top'}).addTo(simMarkers);
   renderSimObjects();updateSimCompare();
-  info(`${t.icon} <b>${t.label}</b> placé en ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)} · ${simObjects.length} objet(s) simulé(s)`);
+  info(`${t.icon} <b>${t.label}</b> placé en ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)} · ${simObjects.length} objet(s) simulé(s)`,null,5000);
 });
 
 // Préview rectangle en cours de dessin
@@ -5772,28 +5792,28 @@ const _origMapClick=map._events.click?.[0]?.fn;
 map.on('click',e=>{lastClickedLatLng=e.latlng;updateSimCompare();});
 
 function saveScenario(){
-  if(!simObjects.length){info('<span style="color:var(--warn)">Aucun objet à sauvegarder.</span>');return;}
+  if(!simObjects.length){info('<span style="color:var(--warn)">Aucun objet à sauvegarder.</span>',null,5000);return;}
   const name=prompt('Nom du scénario :','Scénario 1');
   if(!name)return;
   try{
     const scenarios=JSON.parse(localStorage.getItem('tellux_scenarios')||'{}');
     scenarios[name]={objects:simObjects.map(o=>({...o})),date:new Date().toLocaleDateString('fr-FR')};
     localStorage.setItem('tellux_scenarios',JSON.stringify(scenarios));
-    info('Scenario "'+name+'" sauvegarde ('+simObjects.length+' objet(s)).','success');
-  }catch(e){info('Erreur sauvegarde localStorage.','error');}
+    info('Scenario "'+name+'" sauvegarde ('+simObjects.length+' objet(s)).','success',5000);
+  }catch(e){info('Erreur sauvegarde localStorage.','error',5000);}
 }
 
 function loadScenario(){
   try{
     const scenarios=JSON.parse(localStorage.getItem('tellux_scenarios')||'{}');
     const names=Object.keys(scenarios);
-    if(!names.length){info('Aucun scenario sauvegarde.','warn');return;}
+    if(!names.length){info('Aucun scenario sauvegarde.','warn',5000);return;}
     const list=names.map((n,i)=>`${i+1}. ${n} (${scenarios[n].date})`).join('\n');
     const choice=prompt('Scénarios disponibles :\n'+list+'\n\nEntrez le numéro ou le nom :');
     if(!choice)return;
     const idx=parseInt(choice)-1;
     const key=isNaN(idx)?choice:names[idx];
-    if(!scenarios[key]){info('Scenario introuvable.','error');return;}
+    if(!scenarios[key]){info('Scenario introuvable.','error',5000);return;}
     simObjects=scenarios[key].objects;
     simMarkers.clearLayers();
     simObjects.forEach(o=>{
@@ -5802,8 +5822,8 @@ function loadScenario(){
       if(t)L.circleMarker([o.lat,o.lon],{radius:6,color:t.color,fillColor:t.color,fillOpacity:0.7,weight:2}).addTo(simMarkers);
     });
     renderSimObjects();updateSimCompare();
-    info('Scenario "'+key+'" charge — '+simObjects.length+' objet(s).','success');
-  }catch(e){info('Erreur chargement.','error');}
+    info('Scenario "'+key+'" charge — '+simObjects.length+' objet(s).','success',5000);
+  }catch(e){info('Erreur chargement.','error',5000);}
 }
 
 // Météo locale — pression et humidité influencent la propagation RF
@@ -6163,9 +6183,9 @@ async function togFailles(btn){
     lFailles.addTo(map);
     btn.className='lbtn on-failles';
     showLegend('failles',true);
-    info('⚡ Failles tectoniques — 8 failles BRGM Corte (actives + quaternaires)');
+    info('⚡ Failles tectoniques — 8 failles BRGM Corte (actives + quaternaires)',null,5000);
   }catch(e){
-    info('<span style="color:var(--danger)">Failles : erreur de chargement</span>');
+    info('<span style="color:var(--danger)">Failles : erreur de chargement</span>',null,5000);
   }
 }
 
@@ -6195,7 +6215,7 @@ async function togPostesSources(btn){
   await loadPostesSources();
   _renderPostesSources();
   lPostesSources.addTo(map); btn.className='lbtn on-postes';
-  info('Postes sources EDF SEI chargés — ' + (POSTES_SOURCES||[]).length + ' postes (OSM)');
+  info('Postes sources EDF SEI chargés — ' + (POSTES_SOURCES||[]).length + ' postes (OSM)',null,5000);
 }
 
 // ═══ Rendu / toggle points chauds U/Th ═══
@@ -6242,7 +6262,7 @@ async function togPointsChauds(btn){
   await loadPointsChaudsRadio();
   _renderPointsChauds();
   lPointsChaudsRadio.addTo(map); btn.className='lbtn on-points-chauds';
-  info('Sites U/Th à mesurer — ' + (POINTS_CHAUDS_RADIO||[]).length + ' sites candidats chargés · doses non mesurées, mesures in situ requises');
+  info('Sites U/Th à mesurer — ' + (POINTS_CHAUDS_RADIO||[]).length + ' sites candidats chargés · doses non mesurées, mesures in situ requises',null,5000);
 }
 
 // ═══ Sites géophysiques remarquables ═══
@@ -6332,7 +6352,7 @@ async function togSitesRemarquables(btn) {
   btn.className = 'lbtn on-sites-remarq';
   ACTIVE.sitesRemarq = true;
   showLegend('sitesRemarq', true);
-  info('Sites géophysiques remarquables — ' + (SITES_REMARQUABLES || []).length + ' sites chargés · données documentaires, mesures in situ souvent requises');
+  info('Sites géophysiques remarquables — ' + (SITES_REMARQUABLES || []).length + ' sites chargés · données documentaires, mesures in situ souvent requises',null,5000);
 }
 
 // ═══ Mesures certifiées ANFR/EXEM ═══
@@ -6367,7 +6387,7 @@ function loadMesuresCertifiees() {
 // Telechargement des 30 fiches certifiees ANFR/EXEM en JSON (wrapper avec metadata source/licence)
 function downloadCertifiedJSON() {
   if (!MESURES_CERTIFIEES || MESURES_CERTIFIEES.length === 0) {
-    info('Fiches certifiées non disponibles — réessayer dans quelques instants.', 'warn');
+    info('Fiches certifiées non disponibles — réessayer dans quelques instants.', 'warn', 5000);
     return;
   }
   const wrapper = {
@@ -6392,7 +6412,7 @@ function downloadCertifiedJSON() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  info('Fichier téléchargé — ' + MESURES_CERTIFIEES.length + ' fiches certifiées ANFR/EXEM (JSON).', 'success');
+  info('Fichier téléchargé — ' + MESURES_CERTIFIEES.length + ' fiches certifiées ANFR/EXEM (JSON).', 'success', 5000);
 }
 
 // Detecte si une fiche est basse frequence (objet communicant fixe, protocole 9 kHz-100 kHz)
@@ -6526,7 +6546,7 @@ function togWDMAM(btn){
   ],{opacity:0.5,attribution:'EMAG2v3 © NOAA NCEI'}).addTo(map);
   btn.className='lbtn on-wdmam';
   showLegend('wdmam',true);
-  info('🌍 EMAG2v3 — Anomalie magnétique mondiale (NOAA/IAGA) · Couverture globale · Réf: Maus et al. 2009');
+  info('🌍 EMAG2v3 — Anomalie magnétique mondiale (NOAA/IAGA) · Couverture globale · Réf: Maus et al. 2009',null,5000);
 }
 
 // CHAOS-7 model reference (DTU Space, Denmark)
@@ -6900,7 +6920,7 @@ function capStopRecording(){
 
 function capComputeStats(){
   if(capSamples.length<3){
-    if(typeof info==='function')info('<span style="color:var(--danger)">Pas assez d\'échantillons — recommencez.</span>');
+    if(typeof info==='function')info('<span style="color:var(--danger)">Pas assez d\'échantillons — recommencez.</span>',null,5000);
     return;
   }
   const vals=capSamples;
@@ -6960,7 +6980,7 @@ async function capSubmitMeasurement(){
   Object.keys(row).forEach(k=>{if(row[k]===null||row[k]===undefined)delete row[k];});
   try{
     await sbPost('/rest/v1/contributions',[row]);
-    if(typeof info==='function')info('Mesure envoyée — merci pour votre contribution Tellux !');
+    if(typeof info==='function')info('Mesure envoyée — merci pour votre contribution Tellux !',null,5000);
     closeContribLevelModal();
   }catch(e){
     alert('Envoi échoué : '+(e.message||'erreur réseau'));
@@ -7008,7 +7028,7 @@ async function saveObservation(){
   Object.keys(row).forEach(k => { if(row[k] === null || row[k] === undefined) delete row[k]; });
   try {
     await sbPost('/rest/v1/contributions', [row]);
-    if(typeof info === 'function') info('Merci, votre observation sera vérifiée avant publication.','success');
+    if(typeof info === 'function') info('Merci, votre observation sera vérifiée avant publication.','success', 5000);
     closeContribLevelModal();
     noteEl.value = ''; latEl.value = ''; lonEl.value = '';
   } catch(e){
