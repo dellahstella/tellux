@@ -2089,9 +2089,9 @@ const LEGEND_HTML={
     '</div>',
   radon:'<div class="leg-block"><b class="leg-title">Potentiel radon</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Exhalation du sous-sol, géologie granitique</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;opacity:0.45;border-radius:50%"></span> Cat. 3 — potentiel élevé</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;opacity:0.25;border-radius:50%"></span> Cat. 2 — potentiel modéré</div>'+
-    '<div class="leg-src">ASNR cartographie radon</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#C28533;opacity:0.4;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Catégorie 3 — potentiel élevé</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#EDD59A;opacity:0.6;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Catégorie 2 — potentiel modéré</div>'+
+    '<div class="leg-src">ASNR · Décret 2018-434 · 216 cat.3 + 37 cat.2</div>'+
     '</div>'
 };
 
@@ -3970,41 +3970,60 @@ function getGeoType(lat,lon){
 // Seuil action IRSN : 300 Bq/m³ (locaux habitables depuis décret 2018-434)
 // ════════════════════════════════════════════════════════════════════════════
 
-// ═══ RADON ZONES CORSE (ASNR/IRSN) — 8 zones géographiques ═══
-// Source : ASNR cartographie potentiel radon · dataset canonique partagé
-// avec analysis/correlate_megaliths.py
-// Labels dérivés du dataset v6 historique (équivalence géographique).
-// Cat. 3 = potentiel élevé (massifs granitiques biotite)
-// Cat. 2 = potentiel modéré (ophiolites Cap Corse)
-const RADON_ZONES_CORSE = [
-  {lat: 41.75, lon: 8.95, categ: 3, nom: "Sartenais"},
-  {lat: 41.85, lon: 8.90, categ: 3, nom: "Taravo"},
-  {lat: 41.60, lon: 9.28, categ: 3, nom: "Porto-Vecchio"},
-  {lat: 42.15, lon: 8.95, categ: 3, nom: "Niolu"},
-  {lat: 42.12, lon: 9.10, categ: 3, nom: "Vizzavona"},
-  {lat: 42.35, lon: 9.05, categ: 3, nom: "Renoso-Cinto"},
-  {lat: 42.55, lon: 8.85, categ: 3, nom: "Balagne"},
-  {lat: 42.85, lon: 9.30, categ: 2, nom: "Cap Corse"}
-];
+// ═══ RADON ZONES CORSE — polygones communaux officiels ASNR/IRSN ═══
+// Source : ASNR/IRSN, Arrêté du 27 juin 2018 (JORFTEXT000037131346).
+// Géométries : IGN AdminExpress via gregoiredavid/france-geojson (Etalab 2.0).
+// 253 communes classées : 216 cat. 3 (potentiel élevé) + 37 cat. 2 (potentiel modéré).
+// Chargement paresseux au premier toggle — le fichier fait ~2 Mo, cache navigateur
+// ensuite. Remplace 8 circleMarkers approximatifs (PR radon-polygons-integration).
+let _radonGeojsonCache = null;
 
-function buildRadonLayer() {
-  lRadon.clearLayers();
-  RADON_ZONES_CORSE.forEach(function(z){
-    var opacity = z.categ === 3 ? 0.45 : 0.25;
-    var marker = L.circleMarker([z.lat, z.lon], {
-      radius: 9,
-      fillColor: '#C28533',
-      fillOpacity: opacity,
-      color: '#C28533',
-      weight: 2,
-      opacity: 0.8
+function radonStyle(feature){
+  var cat = feature.properties.categorie;
+  if(cat === 3){
+    return {fillColor:'#C28533', fillOpacity:0.40, color:'#C28533', weight:1, opacity:0.8};
+  }
+  if(cat === 2){
+    return {fillColor:'#EDD59A', fillOpacity:0.25, color:'#C28533', weight:1, opacity:0.6};
+  }
+  // Fallback neutre si cat inattendue
+  return {fillColor:'#EFE9DC', fillOpacity:0.15, color:'#74706A', weight:1, opacity:0.4};
+}
+
+function radonOnEachFeature(feature, layer){
+  var p = feature.properties || {};
+  var cat = p.categorie;
+  var catText = cat === 3 ? 'Catégorie 3 (potentiel élevé)'
+              : cat === 2 ? 'Catégorie 2 (potentiel modéré)'
+              : 'Catégorie non classée';
+  var src = p.source || 'ASNR';
+  layer.bindPopup(
+    '<b>' + (p.nom_commune || 'Commune') + '</b><br>'
+    + '<span style="font-size:11px;color:var(--tx-mica)">INSEE ' + (p.code_insee || '—') + (p.departement ? ' · ' + p.departement : '') + '</span><br>'
+    + catText + '<br>'
+    + '<span style="font-size:10px;color:var(--tx-mica);font-style:italic">Source : ' + src + ' · Décret 2018-434</span>'
+  );
+}
+
+async function buildRadonLayer(){
+  // Nettoyage (idempotent : si déjà populée, on sort)
+  if(lRadon.getLayers().length > 0) return;
+  try {
+    if(!_radonGeojsonCache){
+      var r = await fetch('public/data/radon_zones_corse.geojson');
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      _radonGeojsonCache = await r.json();
+    }
+    var gj = L.geoJSON(_radonGeojsonCache, {
+      style: radonStyle,
+      onEachFeature: radonOnEachFeature
     });
-    var popupHtml = '<b>Zone radon \u2014 ' + z.nom + '</b>'
-      + '<br>Potentiel : cat. ' + z.categ + '/3 (ASNR)'
-      + '<br><span style="font-size:10px;color:var(--tx3)">Source : ASNR cartographie potentiel radon</span>';
-    marker.bindPopup(popupHtml);
-    lRadon.addLayer(marker);
-  });
+    lRadon.addLayer(gj);
+    var meta = _radonGeojsonCache.metadata || {};
+    console.log('[Tellux] Radon polygones chargés : ' + (meta.features_total || (_radonGeojsonCache.features||[]).length) + ' communes (cat.2+cat.3)');
+  } catch(e){
+    console.warn('[Tellux] Radon GeoJSON indisponible : ' + e.message);
+  }
 }
 
 // ═══ Communes classees radon niveau 3 (decret 2018-434, annexe IV) ═══
