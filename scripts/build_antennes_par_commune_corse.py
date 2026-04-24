@@ -2,25 +2,31 @@
 """
 build_antennes_par_commune_corse.py
 ====================================
-Pre-calcul des antennes ANFR de Corse indexees par code INSEE commune.
+Agregat des antennes ANFR de Corse indexees par code INSEE commune,
+lu depuis la colonne code_insee_commune de la table Supabase antennas_corse.
 
-Pipeline :
-  1. Telechargement des 3000 antennes depuis la table Supabase antennas_corse
-  2. Telechargement des 360 polygones de commune via geo.api.gouv.fr
-  3. Test point-in-polygon (shapely) pour assigner chaque antenne a un code INSEE
-  4. Deduplication par (lat, lon, operateur) en agregeant les generations par support
-  5. Ecriture de public/data/antennes_par_commune_corse.json
+Pipeline simplifie (ticket SUPABASE-COMMUNE-FIELD-001, Option 2) :
+  1. Telechargement des antennes depuis antennas_corse avec code_insee_commune
+  2. Resolution commune_nom via geo.api.gouv.fr (cache local dans le fichier)
+  3. Deduplication par (lat, lon, operateur) en agregeant les generations par support
+  4. Ecriture de public/data/antennes_par_commune_corse.json
 
-Structure de sortie :
+Changement majeur vs version precedente (avant resolution du ticket) :
+  - SUPPRESSION : telechargement des 360 polygones de commune via geo.api.gouv.fr
+  - SUPPRESSION : dependance a shapely pour le point-in-polygon
+  - SUPPRESSION : logique de calcul geometrique cote client
+  - AJOUT : lecture directe de code_insee_commune, source de verite en base
+
+Structure de sortie (inchangee) :
     {
       "_meta": { source, date_extraction, version, counts },
       "communes": {
         "2A004": {
           "nom": "Ajaccio",
           "departement": "2A",
-          "n_supports": 48,
-          "n_antennes": 243,
-          "operateurs": ["Orange", "SFR", "Bouygues", "Free"],
+          "n_supports": 98,
+          "n_antennes": 327,
+          "operateurs": ["Bouygues", "Free", "Orange", "SFR"],
           "technologies": ["2G", "3G", "4G", "5G"],
           "supports": [
             { "lat": 41.92, "lon": 8.73, "operateur": "Orange", "generations": ["4G", "5G"], "n_antennes": 2 },
@@ -32,27 +38,19 @@ Structure de sortie :
     }
 
 Usage :
-    pip install shapely requests
+    pip install requests
     python scripts/build_antennes_par_commune_corse.py
 
 Auteur  : Tellux (2026-04-24)
 Sources : ANFR CartoRadio via table Supabase antennas_corse
-          geo.api.gouv.fr (contours IGN AdminExpress)
+          code_insee_commune peuple par scripts/fix_supabase_commune_insee.py
 Licence : donnees ANFR sous Licence Ouverte 2.0 (Etalab)
-          contours IGN AdminExpress sous Licence Ouverte IGN
 """
 
 import json
 import sys
-import time
 import urllib.request
 from pathlib import Path
-
-try:
-    from shapely.geometry import shape, Point
-    from shapely.prepared import prep
-except ImportError:
-    sys.exit("ERREUR : shapely requis. Installer avec : pip install shapely")
 
 # ---------------------------------------------------------------------------
 # CONFIG
@@ -80,14 +78,14 @@ GEN_ORDER = ["2G", "3G", "4G", "5G"]
 # ---------------------------------------------------------------------------
 
 def fetch_antennas():
-    """Telecharge les 3000 antennes depuis Supabase (pagination 1000)."""
+    """Telecharge les antennes depuis Supabase avec code_insee_commune."""
     print("Telechargement antennas_corse depuis Supabase...")
     rows = []
     page = 0
     while True:
         url = (
             f"{SB_URL}/rest/v1/antennas_corse"
-            f"?select=id,lat,lon,generation,commune,operateur,sup_id"
+            f"?select=id,lat,lon,generation,commune,operateur,code_insee_commune"
             f"&order=id.asc&offset={page * 1000}&limit=1000"
         )
         req = urllib.request.Request(
@@ -106,59 +104,22 @@ def fetch_antennas():
     return rows
 
 
-def fetch_polygons():
-    """Telecharge les 360 polygones de commune corse via geo.api.gouv.fr."""
-    print("Telechargement des polygones de commune (2A + 2B)...")
-    features = []
+def fetch_commune_names(codes_insee):
+    """Telecharge le nom officiel des communes INSEE via geo.api.gouv.fr.
+
+    Appel groupe (un par departement), beaucoup plus leger qu'en Passe 1
+    puisqu'on n'a plus besoin des contours.
+    """
+    print("Resolution noms des communes Corse (2A + 2B)...")
+    mapping = {}
     for dep in ("2A", "2B"):
-        url = (
-            f"{GEO_API}?codeDepartement={dep}"
-            f"&fields=nom,code,contour&format=geojson&geometry=contour"
-        )
+        url = f"{GEO_API}?codeDepartement={dep}&fields=nom,code&format=json"
         with urllib.request.urlopen(url, timeout=30) as r:
             data = json.loads(r.read())
-        features.extend(data.get("features", []))
-    print(f"  {len(features)} polygones recus")
-    return features
-
-
-# ---------------------------------------------------------------------------
-# POINT-IN-POLYGON
-# ---------------------------------------------------------------------------
-
-def build_polygon_index(features):
-    """Cree une liste (code_insee, nom, dep, prepared_polygon, bbox)."""
-    index = []
-    for feat in features:
-        props = feat["properties"]
-        code = props["code"]
-        nom = props["nom"]
-        dep = code[:2]
-        geom = shape(feat["geometry"])
-        bbox = geom.bounds  # (minx, miny, maxx, maxy)
-        index.append(
-            {
-                "code": code,
-                "nom": nom,
-                "departement": dep,
-                "geom": geom,
-                "prepared": prep(geom),
-                "bbox": bbox,
-            }
-        )
-    return index
-
-
-def assign_insee(lat, lon, polygons):
-    """Retourne le code INSEE de la commune qui contient le point (lat, lon)."""
-    pt = Point(lon, lat)
-    for poly in polygons:
-        minx, miny, maxx, maxy = poly["bbox"]
-        if lon < minx or lon > maxx or lat < miny or lat > maxy:
-            continue
-        if poly["prepared"].contains(pt):
-            return poly["code"], poly["nom"], poly["departement"]
-    return None, None, None
+        for c in data:
+            mapping[c["code"]] = c["nom"]
+    print(f"  {len(mapping)} communes resolues")
+    return mapping
 
 
 # ---------------------------------------------------------------------------
@@ -179,49 +140,35 @@ def sort_generations(gens):
     return sorted(set(gens), key=key)
 
 
-def aggregate(antennas, polygons):
+def aggregate(antennas, commune_names):
     """Regroupe par commune INSEE puis par support (lat, lon, operateur)."""
     by_commune = {}
-    unassigned = []
-    t0 = time.time()
+    unassigned = 0
 
-    for i, ant in enumerate(antennas):
-        if i > 0 and i % 500 == 0:
-            print(f"  {i}/{len(antennas)} antennes traitees ({time.time()-t0:.1f}s)")
+    for ant in antennas:
+        code = ant.get("code_insee_commune")
+        if code is None:
+            unassigned += 1
+            continue
 
         lat = ant.get("lat")
         lon = ant.get("lon")
         gen = ant.get("generation")
         op = ant.get("operateur")
-
         if lat is None or lon is None:
-            unassigned.append({"reason": "no_coords", "antenna": ant})
-            continue
-
-        code, nom, dep = assign_insee(lat, lon, polygons)
-        if code is None:
-            unassigned.append(
-                {
-                    "reason": "not_in_corsica",
-                    "lat": lat,
-                    "lon": lon,
-                    "operateur": op,
-                    "generation": gen,
-                }
-            )
+            unassigned += 1
             continue
 
         bucket = by_commune.setdefault(
             code,
             {
                 "code_insee": code,
-                "nom": nom,
-                "departement": dep,
+                "nom": commune_names.get(code, code),
+                "departement": code[:2],
                 "supports_map": {},
             },
         )
 
-        # Cle de support = (lat arrondi, lon arrondi, operateur)
         sup_key = (round_coord(lat), round_coord(lon), op)
         sup = bucket["supports_map"].setdefault(
             sup_key,
@@ -237,7 +184,6 @@ def aggregate(antennas, polygons):
             sup["generations"].append(gen)
         sup["n_antennes"] += 1
 
-    print(f"  Done in {time.time()-t0:.1f}s")
     return by_commune, unassigned
 
 
@@ -246,12 +192,9 @@ def finalize(by_commune):
     out = {}
     for code, bucket in by_commune.items():
         supports = list(bucket["supports_map"].values())
-        # Tri canonique generations sur chaque support
         for s in supports:
             s["generations"] = sort_generations(s["generations"])
-        # Tri supports : nb antennes desc, puis operateur
         supports.sort(key=lambda s: (-s["n_antennes"], s["operateur"] or ""))
-        # Agregats commune
         all_ops = sorted({s["operateur"] for s in supports if s["operateur"]})
         all_techs = sort_generations(
             g for s in supports for g in s["generations"]
@@ -277,35 +220,43 @@ def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     antennas = fetch_antennas()
-    features = fetch_polygons()
-    polygons = build_polygon_index(features)
+    commune_names = fetch_commune_names(
+        {a["code_insee_commune"] for a in antennas if a.get("code_insee_commune")}
+    )
 
-    print(f"Assignation INSEE de {len(antennas)} antennes sur {len(polygons)} polygones...")
-    by_commune, unassigned = aggregate(antennas, polygons)
+    print(f"Agregation de {len(antennas)} antennes...")
+    by_commune, unassigned = aggregate(antennas, commune_names)
     final = finalize(by_commune)
 
-    # Meta
     n_communes_with_antenna = len(final)
     n_supports_total = sum(c["n_supports"] for c in final.values())
     n_antennes_placed = sum(c["n_antennes"] for c in final.values())
 
     out = {
         "_meta": {
-            "source": "ANFR CartoRadio via Supabase antennas_corse",
-            "source_polygons": "geo.api.gouv.fr (IGN AdminExpress)",
+            "source": "ANFR CartoRadio via Supabase antennas_corse.code_insee_commune",
+            "source_note": (
+                "Colonne code_insee_commune peuplee par "
+                "scripts/fix_supabase_commune_insee.py (ticket "
+                "SUPABASE-COMMUNE-FIELD-001, Option 2) le 2026-04-24. Source "
+                "de verite en base, lecture directe, plus de point-in-polygon "
+                "cote client."
+            ),
             "date_extraction": "2026-04-24",
-            "version": "1.0",
+            "version": "2.0",
             "pipeline": "scripts/build_antennes_par_commune_corse.py",
             "n_antennes_source": len(antennas),
             "n_antennes_placees": n_antennes_placed,
-            "n_antennes_non_placees": len(unassigned),
+            "n_antennes_non_placees": unassigned,
             "n_supports_total": n_supports_total,
             "n_communes_avec_antenne": n_communes_with_antenna,
             "note": (
-                "Antennes indexees par code INSEE via test point-in-polygon "
-                "sur contours IGN. Supports = groupes par (lat arrondi, lon arrondi, "
-                "operateur). Le champ 'generations' liste les technologies 2G/3G/4G/5G "
-                "presentes sur le support. Donnees ANFR sous Licence Ouverte 2.0."
+                "Antennes indexees par code INSEE via la colonne "
+                "code_insee_commune de la table antennas_corse. Supports = "
+                "groupes par (lat arrondi 5 decimales, lon arrondi, operateur). "
+                "Le champ 'generations' liste les technologies 2G/3G/4G/5G "
+                "presentes sur le support. Donnees ANFR sous Licence "
+                "Ouverte 2.0."
             ),
         },
         "communes": final,
@@ -322,10 +273,8 @@ def main():
     print(f"  Antennes placees : {n_antennes_placed}/{len(antennas)}")
     print(f"  Supports distincts : {n_supports_total}")
     if unassigned:
-        print(f"  Non placees : {len(unassigned)} (premieres 5) :")
-        for u in unassigned[:5]:
-            print(f"    - {u}")
+        print(f"  Non placees (code_insee_commune NULL) : {unassigned}")
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main() or 0)
