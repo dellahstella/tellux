@@ -1,0 +1,74 @@
+name: refresh-antennes
+
+# Refresh automatique de public/data/antennes_par_commune_corse.json.
+# Lit la table Supabase antennas_corse (colonne code_insee_commune, source
+# de verite depuis la resolution du ticket SUPABASE-COMMUNE-FIELD-001),
+# agrege par commune et operateur, ecrit le JSON. Si le JSON a change,
+# commit et push sur dev. Aucune action sur main.
+#
+# Cadence : 1er de chaque mois a 04h UTC (cron '0 4 1 * *').
+# Declenchement manuel : Actions > refresh-antennes > Run workflow.
+#
+# Resolution du ticket ANTENNES-REFRESH-001 (Option 2 GitHub Actions).
+# Documentation operationnelle : docs/operations/refresh-antennes.md.
+#
+# Dependances runtime : stdlib Python uniquement (urllib.request, json,
+# pathlib). Pas de pip install. Script producteur : requests pas requis.
+
+on:
+  schedule:
+    - cron: '0 4 1 * *'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    name: Regenerer le JSON antennes par commune
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          # Necessaire pour que le push du bot puisse ecrire sur dev.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run build script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: python scripts/build_antennes_par_commune_corse.py
+
+      - name: Detect changes
+        id: diff
+        run: |
+          if git diff --quiet -- public/data/antennes_par_commune_corse.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Aucun changement detecte, skip du commit."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Changement detecte :"
+            git diff --stat -- public/data/antennes_par_commune_corse.json
+          fi
+
+      - name: Commit and push if changed
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/antennes_par_commune_corse.json
+          # Recupere les comptes depuis le JSON pour le message de commit
+          COUNT_ANT=$(python -c "import json; d=json.load(open('public/data/antennes_par_commune_corse.json')); print(d['_meta']['n_antennes_placees'])")
+          COUNT_COMM=$(python -c "import json; d=json.load(open('public/data/antennes_par_commune_corse.json')); print(d['_meta']['n_communes_avec_antenne'])")
+          git commit -m "data: refresh mensuel antennes Corse ($COUNT_ANT antennes, $COUNT_COMM communes)
+
+          Regeneration automatique via workflow refresh-antennes.
+          Source : table Supabase antennas_corse.code_insee_commune.
+          Ticket : ANTENNES-REFRESH-001."
+          git push origin dev
