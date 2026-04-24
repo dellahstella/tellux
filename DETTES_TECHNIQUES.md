@@ -1,6 +1,6 @@
 # Tellux — Dettes techniques ouvertes
 
-**Dernière mise à jour :** 23 avril 2026 (clôture CSS-HARMONISATION-001)
+**Dernière mise à jour :** 23 avril 2026 — clôture CSS-HARMONISATION-001, reformulation H1-H88-ELF-001 en CORPUS-PILIERS-001 post-scission Pilier A/B du 2026-04-21, ajout MESURES-EM-BASCULE-001
 
 Ce document liste les dettes techniques ouvertes identifiées dans l'application Tellux. Chaque dette fait l'objet d'un identifiant pérenne, d'une description factuelle et d'une condition de déblocage documentée. Aucune de ces dettes ne bloque la publication de la phase 1.
 
@@ -93,13 +93,15 @@ La validation physique préalable (littérature ou mesures terrain) est un prér
 
 ---
 
-### H1-H88-ELF-001 — Hypothèses patrimoine post-migration ELF
+### CORPUS-PILIERS-001 — Relecture corpus Pilier A et Pilier B post-migration Biot-Savart
 
-**Description :** Les hypothèses patrimoine documentées dans le corpus scientifique interne (H1 à H88) ont été formulées avec un modèle ELF basé sur 8 axes simplifiés. Depuis la migration Biot-Savart réel sur réseau HTA complet (avril 2026), le taux de validation de ces hypothèses peut évoluer significativement.
+**Description :** Le corpus scientifique interne a été scindé le 2026-04-21 en deux piliers distincts : Pilier A (14 fiches scientifiques S1-S14, en attente de relecture méthodologique externe par un physicien) et Pilier B (20 fiches patrimoine gamifiées P1-P20). Les fiches avaient initialement été formulées avec un modèle ELF basé sur 8 axes simplifiés. Depuis la migration Biot-Savart réel sur réseau HTA complet (avril 2026), le taux de validation de chaque fiche peut évoluer significativement.
+
+**Historique.** Cette dette a été initialement identifiée sous l'ID `H1-H88-ELF-001` (formulation antérieure à la scission). L'ID est reformulé en `CORPUS-PILIERS-001` le 2026-04-23 pour refléter la structure post-scission. La correspondance H-numéro → fiche S ou P reste consultable dans `_corpus/` (fichiers `HYPOTHESES_SCIENTIFIQUES.md` et `HYPOTHESES_PATRIMOINE_GAMIFIEES.md`).
 
 **Priorité :** Haute
 
-**Condition de déblocage :** Session dédiée de relecture des hypothèses post-migration, avec recalcul des corrélations et mise à jour du corpus.
+**Condition de déblocage :** Session dédiée de relecture par pilier, avec recalcul des corrélations et mise à jour du corpus interne (repo privé `tellux-corpus-internal`). Pilier A : à prioriser dans le cadre de la relecture méthodologique externe. Pilier B : peut attendre la phase 2 de financement.
 
 ---
 
@@ -110,6 +112,16 @@ La validation physique préalable (littérature ou mesures terrain) est un prér
 **Priorité :** Faible
 
 **Condition de déblocage :** Session dédiée de nettoyage (non bloquant).
+
+---
+
+### MESURES-EM-BASCULE-001 — Bascule deux boutons couche Mesures EM
+
+**Description :** La couche Mesures EM unifiée (mergée 2026-04-23) regroupe deux datasets hétérogènes dans un seul bouton UI : contributions citoyennes (layer `lCon`, clusterisé, Supabase `contributions`) et mesures certifiées ANFR/EXEM (layer `lCert`, non-clusterisé, `public/data/cartoradio_certified_corse.json`). À terme, quand le volume des certifiées dépassera environ 100 entrées (actuellement 30), la distinction visuelle entre les deux strates devra passer par deux boutons distincts pour permettre à l'utilisateur de filtrer l'un sans l'autre.
+
+**Priorité :** Faible (non bloquant tant que le volume certifiées reste inférieur à ~100)
+
+**Condition de déblocage :** dépassement du seuil de ~100 mesures certifiées OU feedback utilisateur signalant la confusion entre les deux strates OU session UI dédiée identifiant d'autres besoins de filtrage.
 
 ---
 
