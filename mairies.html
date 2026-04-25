@@ -1797,13 +1797,19 @@ a{color:inherit;}
   }
 
   function maybeRenderEajeNote(code){
-    // Affiche la note sur EAJE si la categorie petite-enfance est totalement vide
-    // pour la commune, ce qui est le cas par defaut en v1 (ticket EAJE-CORSE-001).
+    // Note de transparence sur la couverture EAJE.
+    // Source OpenStreetMap (tags amenity=kindergarten, amenity=childcare).
+    // Couverture partielle assumée (ticket EAJE-CORSE-001 résolu en scénario B).
     var eajeCount = (etabByInsee[code] && etabByInsee[code]['petite-enfance']) ? etabByInsee[code]['petite-enfance'].length : 0;
-    if (eajeCount > 0) return '';
+    if (eajeCount > 0) {
+      return '<div class="mr-etab-note-eaje">' +
+        'Note : les EAJE listés proviennent d\'OpenStreetMap (contributions citoyennes, couverture partielle). ' +
+        'Pour une information exhaustive, consultez <a href="https://mon-enfant.fr" target="_blank" rel="noopener noreferrer">mon-enfant.fr</a> ou la CAF de Corse.' +
+      '</div>';
+    }
     return '<div class="mr-etab-note-eaje">' +
-      'Note : les etablissements d\'accueil du jeune enfant (creches, micro-creches, multi-accueil) ne sont pas encore referencees pour la Corse dans cette version. ' +
-      'Aucune source nationale geolocalisee en open data ne les recense a ce jour. Ticket EAJE-CORSE-001 ouvert pour explorer les pistes alternatives (CAF Corse, OpenStreetMap, contact ARS).' +
+      'Aucun EAJE n\'est référencé sur cette commune dans OpenStreetMap (couverture partielle, contributions citoyennes). ' +
+      'Pour vérifier la présence de crèches, micro-crèches ou multi-accueils, consultez <a href="https://mon-enfant.fr" target="_blank" rel="noopener noreferrer">mon-enfant.fr</a> ou la CAF de Corse.' +
     '</div>';
   }
 
