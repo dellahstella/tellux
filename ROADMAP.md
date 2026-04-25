@@ -206,13 +206,13 @@ Le document reste en attente de soumission effective, conditionnée à l'identif
 
 Tableau de suivi des courriers envoyés aux institutions et chercheurs en lien avec la phase 1 (cartographie EM) et la préparation de la relecture méthodologique externe (cf. section 8). Les colonnes « Date retour » et « Commentaire » sont renseignées au fil des semaines.
 
-| Date envoi prévue | Destinataire | Canal | Objet | Statut | Date retour | Commentaire |
+| Date envoi | Destinataire | Canal | Objet | Statut | Date retour | Commentaire |
 |---|---|---|---|---|---|---|
-| 2026-04-28 | Paul-Antoine Santoni — Directeur UMR SPE Université de Corse | Email | Demande d'orientation vers relecteur physicien tiers (relecture méthodologique) | À envoyer | — | — |
-| 2026-04-28 | ASNR — Direction Téléray | Email | Accès programmatique balises Téléray AJA + BAP | À envoyer | — | — |
-| 2026-04-28 | ASNR — Cellule radon | Email | Géométries polygonales communales + mesures indoor Corse | À envoyer | — | — |
-| 2026-04-29 | EDF SEI — Direction Corse | Email | Validation classification HTA + tensions/courants nominaux du réseau Corse | À envoyer | — | — |
-| 2026-04-29 | BRGM — Direction régionale Corse | Email | Aéromagnétisme + spectrogamma + flux WFS géologie Corse | À envoyer | — | — |
+| 2026-04-28 | Paul-Antoine Santoni — Directeur UMR SPE Université de Corse | Email | Demande d'orientation vers relecteur physicien tiers (relecture méthodologique) | Envoyé | — | — |
+| 2026-04-28 | ASNR — Direction Téléray | Email | Accès programmatique balises Téléray AJA + BAP | Envoyé | — | — |
+| 2026-04-28 | ASNR — Cellule radon | Email | Géométries polygonales communales + mesures indoor Corse | Envoyé | — | — |
+| 2026-04-29 | EDF SEI — Direction Corse | Email | Validation classification HTA + tensions/courants nominaux du réseau Corse | Envoyé | — | — |
+| 2026-04-29 | BRGM — Direction régionale Corse | Email | Aéromagnétisme + spectrogamma + flux WFS géologie Corse | Envoyé | — | — |
 
 ### Démarches différées
 
