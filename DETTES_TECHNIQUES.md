@@ -1,6 +1,6 @@
 # Tellux — Dettes techniques ouvertes
 
-**Dernière mise à jour :** 24 avril 2026 — ajout RADON-L3-UNIFICATION-001 (unification future des deux sources radon après PR radon-polygons-integration) + WDMAM-NAMING-001 (rename JS identifiers différé post-PR #125)
+**Dernière mise à jour :** 25 avril 2026 — ajout RTE-OPENDATA-001 (lettre RTE Open Data différée post-financement, canal formulaire ODRÉ inadapté pour demande structurée). 24 avril 2026 — ajout RADON-L3-UNIFICATION-001 (unification future des deux sources radon après PR radon-polygons-integration) + WDMAM-NAMING-001 (rename JS identifiers différé post-PR #125)
 
 Ce document liste les dettes techniques ouvertes identifiées dans l'application Tellux. Chaque dette fait l'objet d'un identifiant pérenne, d'une description factuelle et d'une condition de déblocage documentée. Aucune de ces dettes ne bloque la publication de la phase 1.
 
@@ -142,6 +142,16 @@ La validation physique préalable (littérature ou mesures terrain) est un prér
 **Priorité :** Faible (cosmétique, aucun bug fonctionnel, non bloquant)
 
 **Condition de déblocage :** Session dédiée de renommage avec grep exhaustif pré-changement sur les chaînes `wdmam` / `WDMAM` / `b-wdmam` / `on-wdmam`, puis test navigateur manuel post-renommage (activation couche, affichage légende en Zone 2, toggle on/off, resize responsive). Nom cible à valider lors de l'implémentation — options ouvertes : `wmsEmagGlobal` / `togEmagGlobal` / `emagGlobal` (anglophone, cohérent avec le reste du code), ou `wmsEmagMondial` / `togEmagMondial` / `emagMondial` (francophone, cohérent avec le libellé UI). Zone concernée uniquement : `app.html` (aucun autre fichier ne référence ces identifiants — à confirmer au grep).
+
+---
+
+### RTE-OPENDATA-001 — Demande de cadrage RTE différée post-financement
+
+**Description :** La lettre RTE Open Data v1 (rédigée 22 avril 2026, recadrée 25 avril 2026) sollicitait trois éléments auprès de la direction Open Data RTE : confirmation de stabilité des flux eco2mix utilisés actuellement par Tellux (endpoint `digital.iservices.rte-france.com/open_api/consumption/v1/short_term?sandbox=true`), validation de l'usage non commercial public d'eco2mix sandbox dans le contexte cartographique Tellux, orientation sur d'éventuels jeux de données Corse-spécifiques RTE susceptibles de remplacer le profil horaire estimé du modèle local de repli. Décision 2026-04-25 : envoi différé. Le canal officiel RTE passe par un formulaire de contact ODRÉ (`opendata.reseaux-energies.fr`) limité aux messages courts, inadapté à une demande structurée multi-points. L'envoi formel est reporté à la phase post-financement, dans un cadre institutionnel adapté (structure dédiée, courrier sur en-tête, canal direction Open Data RTE direct). En attendant, Tellux continue d'utiliser eco2mix sandbox dans le respect du quota officiel (50 000 appels API par utilisateur et par mois, mentionné dans les CGU ODRÉ). Aucune action technique requise côté Tellux. Lien interne : la lettre v1 est archivée hors du repo public ; une version recadrée sera produite pour l'envoi post-financement. Lien transverse : `chargeFacteur` (variable consommée par `calcMagneticELF_v1` / `calcMagneticELF_v2` dans `app.html`) repose actuellement sur cet endpoint sandbox, avec fallback profil horaire local en cas d'échec.
+
+**Priorité :** Faible (différée, non bloquante — le flux sandbox actuel est fonctionnel)
+
+**Condition de déblocage :** Post-obtention du financement Phase 1 (CTC ou autre). Reformulation de la lettre v1 dans un cadre institutionnel adapté au canal direction RTE.
 
 ---
 

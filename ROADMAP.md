@@ -1,6 +1,6 @@
 # Tellux — Feuille de route publique
 
-**Dernière mise à jour :** 22 avril 2026
+**Dernière mise à jour :** 25 avril 2026
 
 Document de référence publique présentant la trajectoire générale du projet Tellux. Les détails opérationnels, calendriers précis et éléments stratégiques restent en pilotage interne.
 
@@ -60,6 +60,12 @@ Publication d'une application de cartographie électromagnétique territoriale r
 ### Argument différenciant
 
 À notre connaissance, aucun équivalent international n'existe pour un outil cartographique EM territorial avec cette profondeur (quatre domaines physiques distincts, mode Expertise cadré épistémiquement).
+
+### Démarches institutionnelles d'accès aux données
+
+- **2026-04** : initiation des démarches institutionnelles d'accès aux données améliorées (ASNR Téléray, EDF SEI Corse, BRGM Corse, ASNR cellule radon). Première sollicitation méthodologique externe transmise au directeur d'UMR du laboratoire Sciences pour l'Environnement (SPE, Université de Corse) en vue d'orientation vers un relecteur physicien tiers.
+
+Suivi détaillé des envois et des retours : voir section 9 « Suivi des sollicitations institutionnelles ».
 
 ---
 
@@ -196,7 +202,25 @@ Le document reste en attente de soumission effective, conditionnée à l'identif
 
 ---
 
-## 9. Dette technique
+## 9. Suivi des sollicitations institutionnelles
+
+Tableau de suivi des courriers envoyés aux institutions et chercheurs en lien avec la phase 1 (cartographie EM) et la préparation de la relecture méthodologique externe (cf. section 8). Les colonnes « Date retour » et « Commentaire » sont renseignées au fil des semaines.
+
+| Date envoi | Destinataire | Canal | Objet | Statut | Date retour | Commentaire |
+|---|---|---|---|---|---|---|
+| 2026-04-28 | Paul-Antoine Santoni — Directeur UMR SPE Université de Corse | Email | Demande d'orientation vers relecteur physicien tiers (relecture méthodologique) | Envoyé | — | — |
+| 2026-04-28 | ASNR — Direction Téléray | Email | Accès programmatique balises Téléray AJA + BAP | Envoyé | — | — |
+| 2026-04-28 | ASNR — Cellule radon | Email | Géométries polygonales communales + mesures indoor Corse | Envoyé | — | — |
+| 2026-04-29 | EDF SEI — Direction Corse | Email | Validation classification HTA + tensions/courants nominaux du réseau Corse | Envoyé | — | — |
+| 2026-04-29 | BRGM — Direction régionale Corse | Email | Aéromagnétisme + spectrogamma + flux WFS géologie Corse | Envoyé | — | — |
+
+### Démarches différées
+
+- **RTE Open Data** : demande de cadrage différée post-financement (cf. dette `RTE-OPENDATA-001` dans `DETTES_TECHNIQUES.md`). Motif : le canal officiel RTE passe par un formulaire de contact ODRÉ limité aux messages courts, inadapté à une demande structurée multi-points. Reformulation prévue dans un cadre institutionnel adapté une fois le financement Phase 1 obtenu. En attendant, Tellux continue d'utiliser eco2mix sandbox dans le respect du quota officiel.
+
+---
+
+## 10. Dette technique
 
 Voir `DETTES_TECHNIQUES.md` pour la liste des dettes techniques ouvertes et leur statut.
 
