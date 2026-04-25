@@ -1,75 +1,94 @@
 # Ticket EAJE-CORSE-001 — Identifier une source EAJE géolocalisée pour la Corse
 
-**Statut :** ouvert
+**Statut :** clos (résolu en scénario B)
 **Créé le :** 2026-04-24
-**Priorité :** à traiter avant la Passe 2 Établissements sensibles de `mairies.html`
-**Lié à :** `scripts/build_etablissements_corse.py`, `public/data/corse/eaje.geojson`
+**Clos le :** 2026-04-25
+**Résolu par :** session Claude Code, branche `feat/eaje-corse-integration`, PR à venir
+**Priorité initiale :** à traiter avant la Passe 2 Établissements sensibles de `mairies.html`
+**Lié à :** `scripts/build_eaje_osm_corse.py`, `public/data/corse/eaje.geojson`, `tellux_eaje_corse/`
 
-## Contexte
+## Résolution
 
-Lors de l'exécution du pipeline `build_etablissements_corse.py` par la session Claude Code du 24 avril 2026, il a été constaté qu'**aucune source open data nationale géolocalisée n'existe** pour les Établissements d'Accueil du Jeune Enfant (EAJE) en France, et en particulier pour la Corse-du-Sud (2A) et la Haute-Corse (2B).
+Source retenue : **OpenStreetMap** via Overpass API, tags `amenity=kindergarten` et `amenity=childcare` filtrés sur les départements 2A et 2B (areas ISO3166-2 FR-2A et FR-2B).
 
-Recherche effectuée sur data.gouv.fr et data.caf.fr :
+Licence : ODbL (Open Database License). Attribution obligatoire : « © OpenStreetMap contributors ».
 
-- **data.gouv.fr** : le slug `poi-eaje-3` initialement retenu par Cowork est en réalité un dataset **départemental de l'Ain** (168 features). Les autres datasets EAJE sur data.gouv.fr sont également locaux : Aude, Finistère, Loire-Atlantique, Mayenne, Saint-Denis (La Réunion). La Corse n'est pas présente.
-- **data.caf.fr** : 8 datasets nationaux mais ils contiennent des **statistiques agrégées** (`nbpla_pe_nat`, `nbpla_pe_dep`, `nbpla_pe_com`...), c'est-à-dire le nombre de places offertes par territoire. Pas de liste d'établissements géolocalisés.
-- **ARS Corse** : pas de portail open data dédié identifié à ce stade.
+**Volumétrie :** 15 features valides extraites le 25 avril 2026 (11 sur 2B Haute-Corse, 4 sur 2A Corse-du-Sud), 1 rejetée (anomalie de tagging documentée, voir §Limites). Couverture estimée à 25 % sur la base d'un total attendu de 60 EAJE en Corse (45 documentés en 2B par le schéma départemental 2020 + ~15 en 2A par extrapolation démographique).
 
-En conséquence, le fichier `public/data/corse/eaje.geojson` est livré en v1 comme une `FeatureCollection` vide mais bien formée, avec des métadonnées documentant l'absence de source. Ce choix permet au bloc Établissements sensibles de `mairies.html` de charger les trois GeoJSON de manière uniforme, sans branche conditionnelle.
+**Scénario appliqué :** B (10 à 30 features) — voie OSM partielle, mention de couverture incomplète dans les métadonnées du GeoJSON et dans l'UI de `mairies.html`.
 
-## Objectif
+**Répartition par sous-catégorie :** 12 crèches collectives, 1 micro-crèche, 1 multi-accueil, 1 halte-garderie.
 
-Trouver une source géolocalisée des EAJE de Corse avant la Passe 2 de `mairies.html`, ou documenter l'absence durable et prévoir un affichage explicite dans la Fiche commune ("donnée EAJE non disponible pour cette commune, voir CAF de Corse").
+**Reverse-géocodage :** code INSEE et nom de commune dérivés via `geo.api.gouv.fr/communes` (Etalab IGN, gratuit, 50 req/s) car aucun feature OSM ne portait les tags `addr:city` ni `ref:INSEE`.
 
-## Pistes à explorer
+## Critère de clôture rempli
 
-### P1. Portail CAF de Corse en direct
+L'option 1 du critère de clôture initial est satisfaite :
+> Une source géolocalisée utilisable est intégrée au pipeline et le build produit un `eaje.geojson` non vide pour au moins Ajaccio, Bastia et 1 commune rurale.
 
-La CAF de Corse-du-Sud et la CAF de Haute-Corse publient probablement une liste de structures sur leurs sites officiels. Vérifier :
+Confirmation par les communes témoins :
+- Ajaccio (2A004) : 1 EAJE OSM
+- Bastia (2B033) : 2 EAJE OSM
+- Calvi (2B050) : 1 EAJE OSM (commune intermédiaire)
+- Corte (2B096) : 1 EAJE OSM
+- Communes rurales représentées : Olmeta-di-Capocorso, Ventiseri, Sisco, Ghisonaccia, Vescovato
 
-- [https://www.caf.fr/allocataires/caf-de-corse-du-sud](https://www.caf.fr/allocataires/caf-de-corse-du-sud)
-- [https://www.caf.fr/allocataires/caf-de-haute-corse](https://www.caf.fr/allocataires/caf-de-haute-corse)
+## Pistes non retenues (pour traçabilité)
 
-Accès probable via le service "mon-enfant.fr" (portail CAF) qui propose une recherche par code postal. Vérifier s'il existe une API ou un export.
+| Piste | Verdict |
+|---|---|
+| P1 CAF Corse / mon-enfant.fr | Pas d'API publique. Utilisable seulement comme contrôle qualité ponctuel. |
+| P3 Schémas départementaux | Statistiques agrégées sans listing géolocalisé (45 EAJE 2B en 2020, pas de coordonnées). |
+| P4 ARS Corse | Hors champ : EAJE petite enfance ne relèvent pas de l'ARS (CAF + département + PMI). |
+| P5 Scraping mairies | Effort très élevé, hétérogène, scalabilité limitée. Dernier recours non activé. |
+| P6 data.gouv.fr Géocodage 2016 | Millésime 2016, crédibilité dégradée. Non retenu pour v2. |
 
-### P2. OpenStreetMap (amenity=kindergarten)
+Détails : voir `tellux_eaje_corse/EAJE_CORSE_SOURCES_EVAL.md` (Cowork, 24 avril 2026).
 
-Requête Overpass pour récupérer toutes les structures tagguées `amenity=kindergarten` ou `social_facility:for=child` sur la Corse. Qualité variable mais donne une base. À croiser avec d'autres sources pour fiabilité.
+## Limites assumées
 
-Exemple de requête Overpass :
+1. **Couverture partielle** : 26.7 % estimée. Les communes urbaines (Ajaccio, Bastia) sont sous-représentées dans OSM par rapport aux estimations Cowork (10-15 EAJE attendus à Ajaccio, 1 seul dans OSM). À recroiser avec mon-enfant.fr lors d'un audit ultérieur en navigateur réel.
 
-    [out:json][timeout:60];
-    area["ISO3166-2"="FR-20R"]->.a;
-    ( node(area.a)[amenity=kindergarten];
-      way(area.a)[amenity=kindergarten]; );
-    out center;
+2. **Métadonnées hétérogènes** : 4 features sur 15 sans nom (« Crèche sans nom »).
 
-### P3. Scraping doux des sites mairies
+3. **Anomalie de tagging filtrée** (`osm_node_7899283685`, Olmeta-di-Capocorso 2B187, name « Mairie » mais tag `amenity=kindergarten`) : exclue du fichier final via la liste `EXCLUDED_OSM_IDS` du script `build_eaje_osm_corse.py`. Décision Soleil 2026-04-25 : « incohérence tag amenity / name, présomption d'erreur de mapping OSM amont, exclu jusqu'à correction ». Le rejet est tracé dans le bloc rejected du build avec raison `excluded_osm_anomaly`. Si l'anomalie est corrigée côté OSM, retirer l'ID de la liste pour réintégrer la feature au prochain refresh.
 
-Pour les 5 à 10 communes principales de Corse (Ajaccio, Bastia, Corte, Porto-Vecchio, Sartène, Calvi, Bonifacio, Ghisonaccia, Prunelli-di-Fiumorbo, L'Île-Rousse) : scraper les pages petite enfance des sites officiels. Approche peu scalable mais couvre le gros des EAJE corses.
+4. **Pas de tag `kindergarten:FR`** sur aucun feature → sous-catégorisation dérivée par heuristique sur le nom (`micro-crèche`, `halte-garderie`, `multi accueil`) avec fallback `creche_collective` par défaut.
 
-### P4. Contact direct ARS Corse
+5. **Pas de tag `addr:*`** sur aucun feature → adresse postale absente, code INSEE/nom commune obtenus par reverse-géocodage IGN.
 
-L'ARS Corse a potentiellement une liste interne non publiée. Demande formelle de mise à disposition sous licence Etalab 2.0. Délai administratif à prévoir.
+## UI dans `mairies.html`
 
-### P5. Basculer sur le jeu PSU
+Le bloc Établissements sensibles affiche désormais :
 
-Le prompt juridique Cowork mentionnait la possibilité de basculer sur un jeu PSU (Prestation de Service Unique) en v2. À explorer également auprès de la CNAF.
+- Si la commune sélectionnée a au moins 1 EAJE OSM : une note de transparence indiquant la source OSM, la couverture partielle, et un lien vers mon-enfant.fr pour exhaustivité.
+- Si la commune n'a aucun EAJE OSM : une note expliquant l'absence dans OSM et invitant à consulter mon-enfant.fr ou la CAF de Corse.
 
-## Contrainte d'architecture
+## Procédure de refresh
 
-Quelle que soit la source retenue, le pipeline `build_etablissements_corse.py` doit continuer à produire un fichier unique `public/data/corse/eaje.geojson` au schéma Tellux standard (voir `docs/data-sources/etablissements_corse_notes.md`). Si plusieurs sources sont agrégées (CAF + OSM + scraping), la déduplication doit se faire côté script, pas côté client.
+Cadence recommandée : trimestrielle (OSM évolue continuellement par contributions citoyennes).
 
-## Critères de clôture
+Commande :
 
-Ce ticket peut être clos quand l'une des deux conditions est remplie :
+```bash
+python scripts/build_eaje_osm_corse.py --output public/data/corse --verbose
+```
 
-- Une source géolocalisée utilisable est intégrée au pipeline et le build produit un `eaje.geojson` non vide pour au moins Ajaccio, Bastia et 1 commune rurale.
-- Une décision explicite est prise d'afficher "donnée EAJE non disponible" dans la Fiche commune, et un commentaire dans `mairies.html` documente cette décision.
+Si le delta de feature_count dépasse 50 % vs l'extraction précédente, ne pas écraser le fichier sans validation manuelle.
+
+## Pistes de progression future
+
+- **Audit OSM ciblé** : repasser sur les 5 communes témoins en navigateur réel pour comparer OSM vs mon-enfant.fr et estimer la couverture réelle. Si écart fort sur 3 communes ou plus, envisager scénario C ou contributions OSM (signalement à un mappeur local).
+- **Contributions OSM Tellux** : si politique projet le permet, contribuer manuellement à OSM pour les EAJE manquants documentés via les schémas départementaux ou mon-enfant.fr.
+- **Demande Etalab à la CNAF** : courrier formel pour obtenir un export PSU localisé Corse sous licence Etalab 2.0. Délai administratif élevé. À évaluer en post-stabilisation v1.
 
 ## Liens
 
-- Script producteur : [scripts/build_etablissements_corse.py](../../scripts/build_etablissements_corse.py)
-- Note de data source : [docs/data-sources/etablissements_corse_notes.md](../data-sources/etablissements_corse_notes.md)
-- Patch corrections FINESS/Education/EAJE : [DATASETS_PATCH_COWORK_FIX.md](../../DATASETS_PATCH_COWORK_FIX.md)
-- Référence Cowork (hors repo public) : `tellux_mairies_datasets/DATASETS_PATCH_COWORK.md` §P5.2
+- Script producteur : [scripts/build_eaje_osm_corse.py](../../scripts/build_eaje_osm_corse.py)
+- Note de data source : [docs/data-sources/etablissements_corse_notes.md](../data-sources/etablissements_corse_notes.md) (section EAJE OSM)
+- Évaluation Cowork des sources : `tellux_eaje_corse/EAJE_CORSE_SOURCES_EVAL.md` (hors repo public)
+- Notes d'intégration Cowork : `tellux_eaje_corse/EAJE_CORSE_INTEGRATION_NOTES.md` (hors repo public)
+- Récap Cowork : `tellux_eaje_corse/COWORK_SESSION_RECAP.md` (hors repo public)
+- GeoJSON produit : [public/data/corse/eaje.geojson](../../public/data/corse/eaje.geojson)
+
+Fin du ticket.
