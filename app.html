@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light only">
-<title>Tellux — Mesurer le territoire vivant · Cartographie électromagnétique Corse</title>
+<title>Tellux — Révéler l'invisible · Cartographie électromagnétique Corse</title>
 <meta name="description" content="Cartographie du champ électromagnétique en Corse — 30 fiches ANFR/EXEM certifiées, modèle IGRF-14, contributions terrain.">
 <meta property="og:title" content="Tellux — Champ électromagnétique Corse">
 <meta property="og:description" content="30 fiches ANFR/EXEM certifiées · IGRF-14 · BRGM · Corse 2024–2026">
@@ -1233,8 +1233,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
         <p>Utilise directement le magnétomètre et l'accéléromètre de votre téléphone. Enregistrement 10 secondes à 10 Hz avec calcul automatique min/max/moyenne/écart-type. Nécessite un appareil compatible et votre autorisation.</p>
       </div>
       <div class="cap-compat" id="cap-compat-warn" style="display:none">
-        <strong>Capteurs non détectés sur cet appareil.</strong>
-        <p>Votre navigateur ou appareil ne propose pas d'API capteurs accessibles. Disponible principalement sur smartphones Android récents (Chrome). Sur iPhone, utilisez l'onglet "Mesure technique" avec Phyphox.</p>
+        <strong>Magnétomètre non disponible sur cet appareil.</strong>
+        <p>Utilisez l'onglet « Mesure technique » pour saisir manuellement une valeur.</p>
       </div>
       <div id="cap-ui">
         <div class="cap-position">
@@ -4734,7 +4734,7 @@ function updateSupabaseStatusDot(state,contribCount){
 async function loadDB(){
   // Entièrement silencieux — ne bloque pas l'UI, ne touche pas à info()
   try{
-    const data=await sbGet('/rest/v1/contributions?order=created_at.desc&limit=100');
+    const data=await sbGet('/rest/v1/contributions?excluded_from_public=eq.false&order=created_at.desc&limit=100');
     contribsDB=data||[];
     lCon.clearLayers();
     contribsDB.forEach(addMarker);
@@ -4989,7 +4989,9 @@ function renderList(){
   if(!el)return;
   if(!contribsDB.length){el.innerHTML='';return;}
   // Enrichir chaque contribution avec son tier, puis trier : tier asc, puis date desc
-  const enriched = contribsDB.slice().map(c => ({c, tier: computeContribTier(c)}));
+  // Defense in depth : filtrer cote JS aussi (au cas ou la colonne excluded_from_public
+  // ne serait pas dans la projection PostgREST, ex. environnement local non migre).
+  const enriched = contribsDB.slice().filter(c => !c.excluded_from_public).map(c => ({c, tier: computeContribTier(c)}));
   enriched.sort((a,b) => {
     if(a.tier !== b.tier) return a.tier - b.tier;
     const ta = a.c.created_at ? new Date(a.c.created_at).getTime() : 0;
@@ -6956,16 +6958,20 @@ let capRecording=false, capSamples=[], capRecordingTimer=null, capProgressTimer=
 let capOrientHandler=null, capMotionHandler=null;
 
 function capCheckSupport(){
-  const anyMag=CAP_SUPPORT.magnetometer||CAP_SUPPORT.orientation;
+  // Seul le magnetometre natif Sensor API permet d enregistrer une vraie
+  // mesure de champ magnetique. DeviceOrientation ne donne que des angles
+  // (alpha/beta/gamma en degres) qui ne sont PAS un champ magnetique.
+  // Cf. dette CONTRIB-SCHEMA-001 et audit 2026-04-27 (6 contributions polluees).
+  const hasMag=CAP_SUPPORT.magnetometer;
   const warn=document.getElementById('cap-compat-warn');
   const ui=document.getElementById('cap-ui');
   const startBtn=document.getElementById('cap-btn-start');
-  if(!anyMag){
+  if(!hasMag){
     if(warn)warn.style.display='block';
     if(ui)ui.style.opacity='.45';
     if(startBtn)startBtn.disabled=true;
   }
-  return anyMag;
+  return hasMag;
 }
 
 function _capUpdateLiveMag(val){
@@ -6993,15 +6999,14 @@ function _capUpdateLiveAcc(val){
 }
 
 function capFallbackToOrientation(){
+  // Mode compass uniquement : l orientation s affiche dans cap-orient-live a
+  // titre informatif, mais NE pollue PAS capSamples. Une mesure magnetique
+  // ne peut etre enregistree qu avec l API Magnetometer native — cf. dette
+  // CONTRIB-SCHEMA-001 et fix 2026-04-27.
   capApiUsed='DeviceOrientation';
-  const magUnitEl=document.getElementById('cap-mag-unit');
-  if(magUnitEl)magUnitEl.textContent='°';
   capOrientHandler=function(e){
-    const alpha=e.alpha;
-    _capUpdateLiveOrient(alpha);
-    // DeviceOrientation n'expose pas de valeurs nT brutes — on collecte alpha
-    if(capRecording&&alpha!=null&&capSamples.length<150)capSamples.push(alpha);
-    // Mag live shows '—' (no µT available)
+    _capUpdateLiveOrient(e.alpha);
+    // Pas de push dans capSamples : les angles ne sont PAS un champ magnetique.
   };
   window.addEventListener('deviceorientation',capOrientHandler);
 }
@@ -7074,6 +7079,15 @@ async function capStartLiveReadings(){
 function capStartRecording(){
   if(capRecording)return;
   if(!capCheckSupport())return;
+  // Defense en profondeur : refuser l enregistrement si le magnetometre natif
+  // n est pas l API en cours d utilisation. Sans Magnetometer API, ne pas
+  // collecter de samples (sinon pollution avec angles DeviceOrientation).
+  if(capApiUsed && capApiUsed!=='Magnetometer'){
+    if(typeof info==='function'){
+      info('<span style="color:var(--danger)">Magnetometre natif requis pour enregistrer une mesure. Utilisez l onglet Mesure technique.</span>',null,5000);
+    }
+    return;
+  }
   capRecording=true;
   capSamples=[];
   const startTime=Date.now();
@@ -7116,6 +7130,14 @@ function capStopRecording(){
 }
 
 function capComputeStats(){
+  // Garde-fou : n accepter que des samples issus de l API Magnetometer.
+  // capCheckSupport et capStartRecording empechent en theorie d arriver ici
+  // en mode DeviceOrientation, ce check est une protection supplementaire.
+  if(capApiUsed!=='Magnetometer'){
+    if(typeof info==='function')info('<span style="color:var(--danger)">Magnetometre natif requis pour calculer une mesure. Mode capteur non valide.</span>',null,5000);
+    capSamples=[];
+    return;
+  }
   if(capSamples.length<3){
     if(typeof info==='function')info('<span style="color:var(--danger)">Pas assez d\'échantillons — recommencez.</span>',null,5000);
     return;
@@ -7164,6 +7186,14 @@ function capRequestGeolocation(){
 
 async function capSubmitMeasurement(){
   if(!window.capLastMeasurement){alert('Aucune mesure à soumettre');return;}
+  // Triple verrou final : refuser tout envoi en mode degres / DeviceOrientation.
+  // Ne devrait jamais etre atteint apres capCheckSupport + capStartRecording +
+  // capComputeStats, mais sert d ultime garde-fou avant INSERT Supabase.
+  const _m=window.capLastMeasurement;
+  if(_m && (_m.unit==='°'||_m.unit==='deg')){
+    alert('Mesure refusee : unite invalide (degres). Magnetometre natif requis.');
+    return;
+  }
   if(!window.capPosition||window.capPosition.lat===undefined){alert('Position requise — cliquez sur "Utiliser ma position actuelle" ou placez un point sur la carte.');return;}
   const consent=document.getElementById('cap-consent-check');
   if(!consent||!consent.checked){alert('Merci d\'accepter le stockage de la mesure');return;}
