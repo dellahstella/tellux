@@ -339,8 +339,32 @@ a{color:inherit;}
 .mr-footer-links a:hover{color:var(--pierre);}
 .mr-footer-mentions{margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.08);font-family:var(--fm);font-size:10px;color:var(--mica);letter-spacing:0.5px;width:100%;}
 
+/* SKIP LINK (a11y) */
+.skip-link{position:absolute;top:-100px;left:0;background:var(--ardoise);color:var(--pierre);padding:12px 20px;text-decoration:none;font-family:var(--fu);font-weight:500;z-index:9999;border-radius:0 0 4px 0;}
+.skip-link:focus{top:0;outline:2px solid var(--ocre);outline-offset:-2px;}
+
+/* BURGER + MOBILE MENU (drawer) */
+.lp-nav-burger{display:none;background:transparent;border:0;padding:10px;width:44px;height:44px;cursor:pointer;align-items:center;justify-content:center;flex-direction:column;gap:5px;border-radius:4px;}
+.lp-nav-burger:focus{outline:2px solid var(--ocre);outline-offset:2px;}
+.lp-burger-line{display:block;width:24px;height:2px;background:var(--pierre);border-radius:1px;transition:transform .25s ease,opacity .2s ease;}
+.lp-nav-burger[aria-expanded="true"] .lp-burger-line:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.lp-nav-burger[aria-expanded="true"] .lp-burger-line:nth-child(2){opacity:0;}
+.lp-nav-burger[aria-expanded="true"] .lp-burger-line:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+.lp-mobile-menu{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:var(--ardoise);z-index:40;flex-direction:column;padding:80px 24px 24px;gap:24px;opacity:0;visibility:hidden;transform:translateY(-10px);transition:opacity .3s ease,transform .3s ease,visibility .3s;}
+.lp-mobile-menu.is-open{opacity:1;visibility:visible;transform:translateY(0);}
+.lp-mobile-link{font-family:var(--fu);font-size:20px;color:var(--pierre);padding:12px 0;text-decoration:none;transition:color .15s;}
+.lp-mobile-link:hover{color:var(--ocre);}
+.lp-mobile-link:focus{color:var(--ocre);outline:2px solid var(--ocre);outline-offset:4px;}
+.lp-mobile-cta{background:var(--maquis);color:var(--ocre);border:none;padding:14px 24px;border-radius:6px;font-size:14px;font-family:var(--fu);font-weight:500;text-decoration:none;text-align:center;margin-top:12px;transition:background .15s;}
+.lp-mobile-cta:hover{background:#4d6e47;}
+.lp-mobile-cta:focus{outline:2px solid var(--ocre);outline-offset:2px;}
+.no-scroll{overflow:hidden;}
+
 /* MOBILE */
 @media (max-width:960px){
+  .mr-nav-links{display:none;}
+  .lp-nav-burger{display:flex;}
+  .lp-mobile-menu{display:flex;}
   .mr-modal-body{grid-template-columns:1fr;}
   .mr-modal-form{border-right:none;border-bottom:1px solid var(--border);max-height:45vh;}
   .mr-modal-preview{max-height:45vh;}
@@ -384,6 +408,8 @@ a{color:inherit;}
 </head>
 <body>
 
+<a class="skip-link" href="#main">Aller au contenu</a>
+
 <nav class="mr-nav">
   <a class="mr-nav-logo" href="index.html">
     <span class="mr-nav-t">T</span>
@@ -395,7 +421,19 @@ a{color:inherit;}
     <a class="mr-nav-link" href="#citoyen">Citoyen·ne</a>
     <a class="mr-nav-cta" href="app.html">Accéder à la carte →</a>
   </div>
+  <button class="lp-nav-burger" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="lp-mobile-menu">
+    <span class="lp-burger-line"></span>
+    <span class="lp-burger-line"></span>
+    <span class="lp-burger-line"></span>
+  </button>
 </nav>
+
+<div class="lp-mobile-menu" id="lp-mobile-menu" aria-hidden="true">
+  <a class="lp-mobile-link" href="index.html">Accueil</a>
+  <a class="lp-mobile-link" href="app.html">Cartographie EM</a>
+  <a class="lp-mobile-link" href="#citoyen">Citoyen·ne</a>
+  <a class="lp-mobile-cta" href="app.html">Accéder à la carte →</a>
+</div>
 
 <section class="mr-hero">
   <div class="mr-hero-inner">
@@ -415,7 +453,7 @@ a{color:inherit;}
   </div>
 </section>
 
-<main class="mr-main">
+<main class="mr-main" id="main">
 
   <div class="mr-tabs" role="tablist">
     <button class="mr-tab active" data-tab="fiche" role="tab" aria-selected="true">Fiche commune</button>
@@ -606,7 +644,7 @@ a{color:inherit;}
     <div class="mr-modal-header">
       <div class="mr-modal-header-text">
         <div id="mr-modal-eyebrow" class="mr-modal-eyebrow">Courrier</div>
-        <h3 id="mr-modal-title" class="mr-modal-title">Titre</h3>
+        <h3 id="mr-modal-title" class="mr-modal-title"></h3>
       </div>
       <button class="mr-modal-close" aria-label="Fermer" onclick="closeModal()">✕</button>
     </div>
@@ -2137,6 +2175,42 @@ a{color:inherit;}
     loadFailles().catch(function(){ /* silencieux */ });
   });
 
+})();
+
+(function initMobileMenu(){
+  const btn = document.querySelector('.lp-nav-burger');
+  const menu = document.getElementById('lp-mobile-menu');
+  if(!btn || !menu) return;
+
+  function setOpen(open){
+    btn.setAttribute('aria-expanded', String(open));
+    menu.setAttribute('aria-hidden', String(!open));
+    menu.classList.toggle('is-open', open);
+    document.body.classList.toggle('no-scroll', open);
+    btn.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+  }
+
+  btn.addEventListener('click', () => {
+    const isOpen = btn.getAttribute('aria-expanded') === 'true';
+    setOpen(!isOpen);
+  });
+
+  menu.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => setOpen(false));
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape' && btn.getAttribute('aria-expanded') === 'true'){
+      setOpen(false);
+      btn.focus();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if(window.innerWidth > 960 && btn.getAttribute('aria-expanded') === 'true'){
+      setOpen(false);
+    }
+  });
 })();
 </script>
 
