@@ -2112,6 +2112,22 @@ const INSTRUMENT_CONSTRAINTS = {
   ressenti:        {unit:'description', min:null, max:null, hint:'Ressenti subjectif — décrivez dans la note'},
 };
 
+// Formatage utilitaire d'une valeur de champ magnetique avec affichage
+// systematique des deux unites (nT et uT). `unit` indique l'unite de
+// stockage canonique de `value`.
+//   nT >= 1000 -> 0 decimale ; nT < 1000 -> 2 decimales
+//   uT >= 1    -> 2 decimales ; uT < 1   -> 4 decimales
+function formatMagneticField(value, unit){
+  if(value==null||!isFinite(value)) return '—';
+  const u=(unit||'nT').toString().toLowerCase().replace('µ','u');
+  let nT, uT;
+  if(u==='ut'){ uT=value; nT=value*1000; }
+  else { nT=value; uT=value/1000; }
+  const fmtNT = nT>=1000 ? Math.round(nT).toString() : nT.toFixed(2);
+  const fmtUT = uT>=1 ? uT.toFixed(2) : uT.toFixed(4);
+  return u==='ut' ? fmtUT+' µT ('+fmtNT+' nT)' : fmtNT+' nT ('+fmtUT+' µT)';
+}
+
 function parsePhyphoxCSV(text){
   const lines=text.trim().replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
   if(lines.length<2) throw new Error('CSV vide ou trop court (moins de 2 lignes).');
@@ -2215,7 +2231,7 @@ async function startNativeMagCapture(){
       if(isFinite(mag) && mag > 0){
         _nativeMagReadings.push(mag);
         statusEl.style.display='block';
-        statusEl.textContent = 'Lecture en cours : ' + mag.toFixed(2) + ' µT (' + _nativeMagReadings.length + ' echantillons)';
+        statusEl.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--tx)">Lecture en cours&nbsp;: ' + formatMagneticField(mag,'µT') + '</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">' + _nativeMagReadings.length + ' echantillons</div>';
       }
     });
 
@@ -2267,7 +2283,7 @@ function stopNativeMagCapture(applyResult){
 
     if(statusEl){
       statusEl.style.display='block';
-      statusEl.textContent = 'Capture terminee : moyenne ' + (Math.round(mean*100)/100) + ' \u00B5T \u00B7 \u03C3=' + (Math.round(stddev*100)/100) + ' \u00B7 min ' + (Math.round(min*100)/100) + ' / max ' + (Math.round(max*100)/100) + ' \u00B5T \u00B7 ' + n + ' echantillons';
+      statusEl.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--tx)">Moyenne&nbsp;: ' + formatMagneticField(mean,'µT') + '</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">σ=' + (Math.round(stddev*100)/100) + ' µT · min ' + (Math.round(min*100)/100) + ' / max ' + (Math.round(max*100)/100) + ' µT · ' + n + ' echantillons</div>';
     }
   } else if(applyResult && _nativeMagReadings.length < 5){
     if(statusEl){
@@ -4983,8 +4999,21 @@ function renderList(){
   el.innerHTML = enriched.slice(0,10).map(({c, tier}) => {
     const csvBadge = c.csv_stats ? ' \uD83D\uDCCA' : '';
     const nativeBadge = c.native_capture === true ? ' \uD83D\uDCF1' : '';
-    const unitInfo = c.unite_saisie && c.unite_saisie !== 'nT' ? ' (saisi en '+c.unite_saisie+')' : '';
-    const valLabel = c.valeur ? ' \u2014 '+c.valeur+' nT'+unitInfo : '';
+    let valLabel = '';
+    if(c.valeur != null){
+      if(c.unite === 'nT' || c.unite === '\u00b5T'){
+        // Affichage systematique nT + uT a partir de l'unite canonique stockee
+        valLabel = ' \u2014 ' + formatMagneticField(c.valeur, c.unite);
+      } else if(c.unite){
+        // Autres unites (V/m, dBm, deg, mG, ...) : affichage simple
+        const unitInfo = c.unite_saisie && c.unite_saisie !== c.unite ? ' (saisi en '+c.unite_saisie+')' : '';
+        valLabel = ' \u2014 ' + c.valeur + ' ' + c.unite + unitInfo;
+      } else {
+        // Fallback legacy : pas d'unite stockee, on suppose nT
+        const unitInfo = c.unite_saisie && c.unite_saisie !== 'nT' ? ' (saisi en '+c.unite_saisie+')' : '';
+        valLabel = ' \u2014 ' + c.valeur + ' nT' + unitInfo;
+      }
+    }
     const instr = instrumentLabel(c.type);
     const dateStr = c.created_at ? new Date(c.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
     const coords = (c.lat ? c.lat.toFixed(4) : '') + ', ' + (c.lon ? c.lon.toFixed(4) : '');
@@ -6886,7 +6915,7 @@ function switchContribTab(id){
     }catch(e){}
   }
   if(id === 'cap'){
-    capCheckSupport();
+    const ok = capCheckSupport();
     // Pre-fill position from pending marker if available
     if(typeof pending !== 'undefined' && pending){
       try{
@@ -6898,6 +6927,16 @@ function switchContribTab(id){
         window.capPosition = { lat: ll.lat, lon: ll.lng };
       }catch(e){}
     }
+    // Demarrer la lecture live des capteurs des l'ouverture de l'onglet,
+    // pour que l'utilisateur voie la valeur captee avant de cliquer
+    // sur Demarrer l'enregistrement.
+    if(ok && !capApiUsed && typeof capStartLiveReadings === 'function'){
+      capStartLiveReadings();
+    }
+  } else if(capApiUsed && !capRecording && typeof capCleanup === 'function'){
+    // Quitter l'onglet Capteurs sans enregistrement en cours arrete les
+    // capteurs pour economiser la batterie.
+    capCleanup();
   }
 }
 
@@ -6931,7 +6970,17 @@ function capCheckSupport(){
 
 function _capUpdateLiveMag(val){
   const el=document.getElementById('cap-mag-live');
-  if(el)el.textContent=val!=null?val.toFixed(1):'—';
+  const unitEl=document.getElementById('cap-mag-unit');
+  if(el){
+    if(val==null){
+      el.textContent='—';
+      if(unitEl) unitEl.textContent='µT';
+    } else {
+      // Affichage systematique nT + uT pendant la lecture live
+      el.textContent=formatMagneticField(val,'µT');
+      if(unitEl) unitEl.textContent='';
+    }
+  }
   if(capRecording&&val!=null&&capSamples.length<150)capSamples.push(val);
 }
 function _capUpdateLiveOrient(deg){
@@ -7078,11 +7127,20 @@ function capComputeStats(){
   const std=Math.sqrt(vals.reduce((a,b)=>a+(b-mean)**2,0)/vals.length);
   const unit=capApiUsed==='DeviceOrientation'?'°':'µT';
   const setEl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
-  setEl('cap-mag-mean',mean.toFixed(1));
-  setEl('cap-mag-range',min.toFixed(1)+' / '+max.toFixed(1));
-  setEl('cap-mag-std',std.toFixed(2));
+  if(unit==='µT'){
+    // Moyenne avec conversion nT systematique ; min/max et std restent en uT
+    setEl('cap-mag-mean',formatMagneticField(mean,'µT'));
+    setEl('cap-mean-unit','');
+    setEl('cap-mag-range',min.toFixed(2)+' / '+max.toFixed(2));
+    setEl('cap-mag-std',std.toFixed(2));
+    ['cap-range-unit','cap-std-unit'].forEach(id=>setEl(id,'µT'));
+  } else {
+    setEl('cap-mag-mean',mean.toFixed(1));
+    setEl('cap-mag-range',min.toFixed(1)+' / '+max.toFixed(1));
+    setEl('cap-mag-std',std.toFixed(2));
+    ['cap-mean-unit','cap-range-unit','cap-std-unit'].forEach(id=>setEl(id,unit));
+  }
   setEl('cap-mag-n',vals.length);
-  ['cap-mean-unit','cap-range-unit','cap-std-unit'].forEach(id=>setEl(id,unit));
   const results=document.getElementById('cap-results');
   if(results)results.style.display='block';
   window.capLastMeasurement={mean,min,max,std,n:vals.length,unit};
