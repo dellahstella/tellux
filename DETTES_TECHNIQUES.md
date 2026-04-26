@@ -1,6 +1,6 @@
 # Tellux — Dettes techniques ouvertes
 
-**Dernière mise à jour :** 25 avril 2026 — consolidation semaine 21-25 avril : enrichissement BT-CALIBRATION-001 (priorité Haute, mesures ratios ×57 à ×210), nouvelle dette EMAG-CRUSTAL-AUDIT-001 (Cowork Session B), précisions PR # sur les fermetures ELF-CALIB-001/WMM-CROSSCHECK-001/BDFORET-V2-001/ELF-VECTOR-001/BT-ELF-001, ajout en fermées récemment de SUPABASE-COMMUNE-FIELD-001 (PR #137) et ANTENNES-REFRESH-001 (PR #138), liens démarches externes sur TÉLÉ-001/HTA-TENSION-001/RADIO-AERO-001 (lettres envoyées 28-29 avril 2026). Précédente : 25 avril — ajout RTE-OPENDATA-001. 24 avril — ajout RADON-L3-UNIFICATION-001 + WDMAM-NAMING-001.
+**Dernière mise à jour :** 26 avril 2026 (soir) — ajout RADON-DATASET-COVERAGE-001 (couverture partielle du dataset radon 2B vs décret 2018-434, identifiée lors de l'audit pré-Santoni). Précédente : 26 avril 2026 — ajout des dettes CONTRIB-SCHEMA-001 (incohérence schéma stockage contributions, identifiée lors du fix Android PR #154), RADON-CLASS-DUPLICATE et HELPERS-INLINE-CONSTS (issues de la cartographie d'extraction du moteur, `docs/tellux-engine-extraction-plan.md`). 25 avril 2026 — consolidation semaine 21-25 avril : enrichissement BT-CALIBRATION-001 (priorité Haute, mesures ratios ×57 à ×210), nouvelle dette EMAG-CRUSTAL-AUDIT-001 (Cowork Session B), précisions PR # sur les fermetures ELF-CALIB-001/WMM-CROSSCHECK-001/BDFORET-V2-001/ELF-VECTOR-001/BT-ELF-001, ajout en fermées récemment de SUPABASE-COMMUNE-FIELD-001 (PR #137) et ANTENNES-REFRESH-001 (PR #138), liens démarches externes sur TÉLÉ-001/HTA-TENSION-001/RADIO-AERO-001 (lettres envoyées 28-29 avril 2026). 25 avril — ajout RTE-OPENDATA-001. 24 avril — ajout RADON-L3-UNIFICATION-001 + WDMAM-NAMING-001.
 
 Ce document liste les dettes techniques ouvertes identifiées dans l'application Tellux. Chaque dette fait l'objet d'un identifiant pérenne, d'une description factuelle et d'une condition de déblocage documentée. Aucune de ces dettes ne bloque la publication de la phase 1.
 
@@ -179,6 +179,50 @@ La validation physique préalable (littérature ou mesures terrain) est un prér
 **Priorité :** Faible (différée, non bloquante — le flux sandbox actuel est fonctionnel)
 
 **Condition de déblocage :** Post-obtention du financement Phase 1 (CTC ou autre). Reformulation de la lettre v1 dans un cadre institutionnel adapté au canal direction RTE.
+
+---
+
+### CONTRIB-SCHEMA-001 — Incohérence du schéma de stockage des contributions (Mesure technique vs Capteurs appareil)
+
+**Description :** Les deux flux d'écriture vers la table Supabase `contributions` stockent la valeur de mesure dans deux unités différentes. Le flux « Mesure technique » (formulaire `cform`) convertit la valeur saisie en nT et stocke `unite='nT'` quel que soit le choix de l'utilisateur (`app.html` lignes 4866-4868 et 4873). Le flux « Capteurs appareil » (`ctab-cap`) stocke la valeur brute renvoyée par l'API Magnetometer en µT et stocke `unite='µT'` (`app.html` lignes 7120-7121). La colonne `valeur` mélange donc deux unités selon la provenance de la contribution, ce qui complique l'agrégation, les comparaisons et toute requête SQL transversale. Identifiée lors de l'audit du 26 avril 2026 ayant conduit à la PR #154 (fix affichage magnétomètre). La dette est masquée côté affichage par la fonction `formatMagneticField` (introduite par la PR #154) qui lit `c.unite` comme unité canonique, mais le schéma reste incohérent au niveau stockage.
+
+**Priorité :** Faible (masquée côté affichage, sans bug fonctionnel direct)
+
+**Condition de déblocage :** Harmoniser le pipeline d'écriture pour que les deux flux convergent sur une même unité de stockage (a priori nT). Migration Supabase à prévoir pour normaliser les contributions historiques flux B (multiplier `valeur` par 1000 sur les lignes où `unite='µT'`, puis passer `unite` à `nT`).
+
+---
+
+### RADON-CLASS-DUPLICATE — Doublon du mapping `RADON_CLASS_BY_LITHOLOGY` dans `app.html`
+
+**Description :** Le mapping `RADON_CLASS_BY_LITHOLOGY` (correspondance lithologie → classe radon 1/2/3) est défini en deux endroits dans `app.html` : dans `calcSubstrateContext` (ligne ~3939) et dans `calcRadonPotential` (ligne ~4102). Risque de dérive entre les deux copies si l'une est mise à jour sans l'autre. Le contenu actuel est identique et stable. Identifiée le 26 avril 2026 lors de la cartographie d'extraction du moteur (`docs/tellux-engine-extraction-plan.md` section 6.7).
+
+**Priorité :** Faible (cosmétique, contenu actuel identique)
+
+**Condition de déblocage :** Centraliser le mapping en un seul export (`data/radon-classification.js` ou équivalent) lors de l'extraction du moteur. Référence : `docs/tellux-engine-extraction-plan.md` section 6.7.
+
+---
+
+### HELPERS-INLINE-CONSTS — Constantes physiques inline dans le moteur de calcul
+
+**Description :** Plusieurs constantes physiques sont définies inline dans le corps de fonctions du moteur de calcul de `app.html`, recréées à chaque appel et non testables en isolation. Liste identifiée le 26 avril 2026 lors de la cartographie du moteur (`docs/tellux-engine-extraction-plan.md` section 6.8) :
+- `MU0_OVER_2PI` dans `calcBiotSavartSegment` (ligne ~3350)
+- `METERS_PER_DEG_LAT` dans `calcBiotSavartSegment` et `calcBiotSavartSegmentVec` (lignes ~3090 et 3130)
+- `METERS_PER_DEG_LON` dans `calcBiotSavartSegment` et `calcBiotSavartSegmentVec` (lignes ~3091 et 3131)
+- `RIVER_PTS` dans `calcSubstrateContext`
+
+**Priorité :** Faible (sans impact runtime significatif, mais nuit à la testabilité et à la lisibilité du code)
+
+**Condition de déblocage :** Hisser ces constantes au niveau module lors de l'extraction du moteur. Référence : `docs/tellux-engine-extraction-plan.md` section 6.8.
+
+---
+
+### RADON-DATASET-COVERAGE-001 — Couverture partielle du dataset radon Corse vs décret 2018-434
+
+**Description :** Le dataset `public/data/radon_communes_level3_corse.json` liste 28 communes corses explicitement classées en zone 3 par le décret 2018-434 / arrêté du 27 juin 2018 (14 en Corse-du-Sud, 14 en Haute-Corse). En réalité, l'arrêté classe environ 194-209 communes en zone 3 sur l'ensemble du territoire corse : la totalité du département 2A (124 communes, classement intégral confirmé par l'arrêté annexe IV) + environ 70 à 85 communes du département 2B (estimation faute d'extraction exhaustive). Couverture pratique du modèle Tellux : la règle départementale `RADON_2A_APPLIES_ALL` (`app.html` ligne 4050) reconnaît automatiquement les 124 communes 2A par préfixe INSEE, donc la couverture 2A est complète. La couverture 2B reste à environ 17-20% (14 communes listées sur 70-85 attendues), ce qui constitue une dette réelle. Identifiée le 26 avril 2026 lors de l'audit du dataset radon en préparation des envois Santoni. Les notes méthodologiques `docs/data-sources/radon_communes_level3_corse_notes.md` (datées 20 avril 2026) documentent déjà l'incomplétude (« dataset amorce fiable, à compléter ») et listent les sources de complétion (data.gouv.fr IRSN, Legifrance annexe IV, cartographie ASNR interactive).
+
+**Priorité :** Moyenne (impact direct sur la fidélité du score radon en Haute-Corse, sans bug fonctionnel — la classe par défaut estimée par lithologie reste appliquée pour les communes non listées explicitement)
+
+**Condition de déblocage :** Compléter le dataset avec les communes 2B manquantes en téléchargeant le dataset IRSN sur data.gouv.fr depuis un environnement non bloqué, puis joindre les codes INSEE et centroïdes officiels via API BAN ou COG INSEE 2016. Référence : `docs/data-sources/radon_communes_level3_corse_notes.md` section 6 (méthodologie de complétion phase 2).
 
 ---
 
