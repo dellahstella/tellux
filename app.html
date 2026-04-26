@@ -6886,7 +6886,7 @@ function switchContribTab(id){
     }catch(e){}
   }
   if(id === 'cap'){
-    capCheckSupport();
+    const ok = capCheckSupport();
     // Pre-fill position from pending marker if available
     if(typeof pending !== 'undefined' && pending){
       try{
@@ -6898,6 +6898,16 @@ function switchContribTab(id){
         window.capPosition = { lat: ll.lat, lon: ll.lng };
       }catch(e){}
     }
+    // Demarrer la lecture live des capteurs des l'ouverture de l'onglet,
+    // pour que l'utilisateur voie la valeur captee avant de cliquer
+    // sur Demarrer l'enregistrement.
+    if(ok && !capApiUsed && typeof capStartLiveReadings === 'function'){
+      capStartLiveReadings();
+    }
+  } else if(capApiUsed && !capRecording && typeof capCleanup === 'function'){
+    // Quitter l'onglet Capteurs sans enregistrement en cours arrete les
+    // capteurs pour economiser la batterie.
+    capCleanup();
   }
 }
 
