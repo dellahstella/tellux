@@ -24,6 +24,10 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 
+/* SKIP LINK (a11y) */
+.skip-link{position:absolute;top:-100px;left:0;background:var(--ardoise);color:var(--pierre);padding:12px 20px;text-decoration:none;font-family:var(--fu);font-weight:500;z-index:9999;border-radius:0 0 4px 0;}
+.skip-link:focus{top:0;outline:2px solid var(--ocre);outline-offset:-2px;}
+
 /* NAV */
 .lp-nav{display:flex;align-items:center;justify-content:space-between;padding:16px 40px;background:var(--ardoise);position:sticky;top:0;z-index:50;}
 .lp-nav-logo{display:flex;align-items:center;gap:8px;}
@@ -35,6 +39,23 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 .lp-nav-cta{background:var(--maquis);color:var(--ocre);border:none;padding:8px 18px;border-radius:5px;font-size:12px;font-family:var(--fu);font-weight:500;cursor:pointer;transition:background .15s,color .2s;text-decoration:none;display:inline-block;}
 .lp-nav-cta:hover{background:#4d6e47;}
 .lp-nav-cta.clicked{color:#ffffff;}
+
+/* BURGER + MOBILE MENU (drawer) */
+.lp-nav-burger{display:none;background:transparent;border:0;padding:10px;width:44px;height:44px;cursor:pointer;align-items:center;justify-content:center;flex-direction:column;gap:5px;border-radius:4px;}
+.lp-nav-burger:focus{outline:2px solid var(--ocre);outline-offset:2px;}
+.lp-burger-line{display:block;width:24px;height:2px;background:var(--pierre);border-radius:1px;transition:transform .25s ease,opacity .2s ease;}
+.lp-nav-burger[aria-expanded="true"] .lp-burger-line:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.lp-nav-burger[aria-expanded="true"] .lp-burger-line:nth-child(2){opacity:0;}
+.lp-nav-burger[aria-expanded="true"] .lp-burger-line:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+.lp-mobile-menu{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:var(--ardoise);z-index:40;flex-direction:column;padding:80px 24px 24px;gap:24px;opacity:0;visibility:hidden;transform:translateY(-10px);transition:opacity .3s ease,transform .3s ease,visibility .3s;}
+.lp-mobile-menu.is-open{opacity:1;visibility:visible;transform:translateY(0);}
+.lp-mobile-link{font-family:var(--fu);font-size:20px;color:var(--pierre);padding:12px 0;text-decoration:none;transition:color .15s;}
+.lp-mobile-link:hover{color:var(--ocre);}
+.lp-mobile-link:focus{color:var(--ocre);outline:2px solid var(--ocre);outline-offset:4px;}
+.lp-mobile-cta{background:var(--maquis);color:var(--ocre);border:none;padding:14px 24px;border-radius:6px;font-size:14px;font-family:var(--fu);font-weight:500;text-decoration:none;text-align:center;margin-top:12px;transition:background .15s;}
+.lp-mobile-cta:hover{background:#4d6e47;}
+.lp-mobile-cta:focus{outline:2px solid var(--ocre);outline-offset:2px;}
+.no-scroll{overflow:hidden;}
 
 /* HERO */
 .lp-hero{background:var(--ardoise);padding:80px 40px 72px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;}
@@ -208,6 +229,8 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 @media(max-width:768px){
   .lp-nav{padding:12px 20px;}
   .lp-nav-links{display:none;}
+  .lp-nav-burger{display:flex;}
+  .lp-mobile-menu{display:flex;}
   .lp-hero{grid-template-columns:1fr;padding:48px 20px;}
   .lp-hero-h1{font-size:32px;}
   .lp-hero-sub{font-size:14px;}
@@ -227,6 +250,8 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 </head>
 <body>
 
+<a class="skip-link" href="#main">Aller au contenu</a>
+
 <nav class="lp-nav">
   <div class="lp-nav-logo">
     <span class="lp-nav-t">T</span>
@@ -240,13 +265,28 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
     <a class="lp-nav-link" href="#contact">Contact</a>
     <a class="lp-nav-link" href="#apropos">À propos</a>
   </div>
+  <button class="lp-nav-burger" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="lp-mobile-menu">
+    <span class="lp-burger-line"></span>
+    <span class="lp-burger-line"></span>
+    <span class="lp-burger-line"></span>
+  </button>
   <a class="lp-nav-cta" href="app.html">Accéder à la carte →</a>
 </nav>
 
-<div class="lp-hero">
+<div class="lp-mobile-menu" id="lp-mobile-menu" aria-hidden="true">
+  <a class="lp-mobile-link" href="#outils">Outils</a>
+  <a class="lp-mobile-link" href="#fonctionnalites">Fonctionnalités</a>
+  <a class="lp-mobile-link" href="#corpus">Corpus scientifique</a>
+  <a class="lp-mobile-link" href="#faq">FAQ</a>
+  <a class="lp-mobile-link" href="#contact">Contact</a>
+  <a class="lp-mobile-link" href="#apropos">À propos</a>
+  <a class="lp-mobile-cta" href="app.html">Accéder à la carte →</a>
+</div>
+
+<div class="lp-hero" id="main">
   <div class="reveal">
     <div class="lp-hero-eyebrow"><div class="lp-hero-eyebrow-line"></div>Cartographie électromagnétique · Corse</div>
-    <h1 class="lp-hero-h1">Révéler<br><em>l'invisible</em></h1>
+    <h1 class="lp-hero-h1">Révéler<br> <em>l'invisible</em></h1>
     <p class="lp-hero-sub">Tellux cartographie les champs électromagnétiques de Corse — naturels et artificiels. Géomagnétisme, anomalies crustales, antennes, lignes haute tension : une lecture physique rigoureuse du territoire.</p>
     <div class="lp-hero-btns">
       <a class="lp-btn-primary" href="app.html">Explorer la carte →</a>
@@ -276,7 +316,7 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 
 <div class="lp-section reveal" id="outils">
   <div class="lp-section-label">Les outils Tellux</div>
-  <h2 class="lp-section-h2">Deux portes d'entrée,<br>une même chaîne EM</h2>
+  <h2 class="lp-section-h2">Deux portes d'entrée,<br> une même chaîne EM</h2>
   <p class="lp-section-sub">Tellux se décline en outils adressés à des usages différents mais complémentaires. La cartographie EM documente le territoire pour les chercheurs et les collectivités. Les outils mairies traduisent ces données en démarches administratives concrètes.</p>
   <div class="lp-portes-grid">
     <a class="lp-porte" href="app.html">
@@ -297,7 +337,7 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 
 <div class="lp-section reveal" id="comprendre">
   <div class="lp-section-label">Comprendre en 30 secondes</div>
-  <h2 class="lp-section-h2">Quatre idées simples<br>avant d'entrer dans la carte</h2>
+  <h2 class="lp-section-h2">Quatre idées simples<br> avant d'entrer dans la carte</h2>
   <p class="lp-section-sub">Tellux aborde quatre domaines physiques distincts. Avant de manipuler la carte, ces quatre clés permettent de situer ce que l'outil fait et ce qu'il ne fait pas.</p>
   <div class="lp-understand-grid">
     <div class="lp-understand-card">
@@ -332,7 +372,7 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 
 <div class="lp-section reveal" id="fonctionnalites">
   <div class="lp-section-label">Fonctionnalités</div>
-  <h2 class="lp-section-h2">Quatre domaines physiques,<br>une carte rigoureuse</h2>
+  <h2 class="lp-section-h2">Quatre domaines physiques,<br> une carte rigoureuse</h2>
   <p class="lp-section-sub">Chaque couche révèle une dimension du territoire électromagnétique — du champ géomagnétique naturel aux infrastructures humaines, jusqu'au contexte géologique local.</p>
   <div class="lp-features">
     <div class="lp-feature-card">
@@ -364,7 +404,7 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 
 <div class="lp-section reveal" id="modele">
   <div class="lp-section-label">Le modèle</div>
-  <h2 class="lp-section-h2">Quatre domaines physiques,<br>traités séparément</h2>
+  <h2 class="lp-section-h2">Quatre domaines physiques,<br> traités séparément</h2>
   <p class="lp-section-sub">Le modèle Tellux décompose le réel en quatre domaines physiques qui coexistent mais ne s'additionnent pas en une seule note. Chaque domaine est traité avec ses propres équations, ses propres unités et ses propres références. Un indice composite d'exposition est proposé à la couche Expertise, avec une pondération explicite. Cette pondération n'est pas une vérité physique : c'est un choix de présentation documenté, versionné et modifiable. Les ordres de grandeur ci-dessous sont des repères, pas des valeurs individuelles.</p>
   <div class="lp-model-grid">
     <div class="lp-model-domain">
@@ -410,7 +450,7 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
   <div class="lp-corpus">
     <div class="lp-corpus-text">
       <div class="lp-section-label">Corpus scientifique</div>
-      <h2 class="lp-section-h2">Rigueur<br>épistémique</h2>
+      <h2 class="lp-section-h2">Rigueur<br> épistémique</h2>
       <p class="lp-section-sub">Toutes les données sont issues de sources peer-reviewed ou institutionnelles. Chaque valeur affichée indique son statut : mesuré, modélisé, ou hypothèse en cours de test.</p>
       <a class="lp-btn-ghost" href="/corpus.html" style="margin-top:8px">Consulter le corpus complet</a>
     </div>
@@ -427,7 +467,7 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 
 <div class="lp-section reveal" id="sources">
   <div class="lp-section-label">Les sources</div>
-  <h2 class="lp-section-h2">Données publiques,<br>institutions de référence</h2>
+  <h2 class="lp-section-h2">Données publiques,<br> institutions de référence</h2>
   <p class="lp-section-sub">Tellux ne produit pas ses données primaires. Le projet agrège, rend comparables et cartographie des données publiées par les institutions de référence. Chaque couche de la carte affiche sa source, son millésime et sa licence.</p>
   <div class="lp-sources-grid">
     <div class="lp-sources-category">
@@ -473,7 +513,7 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 
 <div class="lp-section-dark reveal" id="projet">
   <div class="lp-section-label" style="color:var(--mica)">Le projet</div>
-  <h2 class="lp-section-h2" style="color:var(--pierre)">Porté depuis Bastia,<br>ouvert en open source</h2>
+  <h2 class="lp-section-h2" style="color:var(--pierre)">Porté depuis Bastia,<br> ouvert en open source</h2>
   <div class="lp-project-grid">
     <div class="lp-project-part">
       <h3 class="lp-project-h3">Qui porte Tellux</h3>
@@ -594,7 +634,7 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 
 <div class="lp-section reveal" id="contact">
   <div class="lp-section-label">Contact</div>
-  <h2 class="lp-section-h2">Questions, collaborations,<br>presse</h2>
+  <h2 class="lp-section-h2">Questions, collaborations,<br> presse</h2>
   <div class="lp-contact-grid">
     <div class="lp-contact-block">
       <h3 class="lp-contact-h3">Pour toute question sur le projet</h3>
@@ -616,7 +656,7 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 </div>
 
 <div class="lp-cta-section reveal" id="apropos">
-  <h2 class="lp-cta-h2">Explorez la <em>Corse<br>électromagnétique</em></h2>
+  <h2 class="lp-cta-h2">Explorez la <em>Corse<br> électromagnétique</em></h2>
   <p class="lp-cta-sub">La carte est accessible librement. Aucune inscription requise. Les données sont mises à jour en continu.</p>
   <div class="lp-cta-btns">
     <a class="lp-btn-primary" href="app.html" style="padding:13px 28px;font-size:14px">Accéder à la carte →</a>
@@ -639,15 +679,68 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
     <a class="lp-footer-link" href="/retractations.html">Rétractations</a>
     <a class="lp-footer-link" href="#corpus">Corpus scientifique</a>
     <a class="lp-footer-link" href="mairies.html">Outils mairies</a>
-    <a class="lp-footer-link" href="app.html">tellux.pages.dev/app</a>
+    <a class="lp-footer-link" href="app.html">Application carte</a>
   </div>
 </footer>
 
 <script>
-const obs = new IntersectionObserver(entries => {
-  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
-}, {threshold:0.1});
-document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+function initReveal(){
+  const els = document.querySelectorAll('.reveal');
+  if(!('IntersectionObserver' in window)){
+    els.forEach(el => el.classList.add('visible'));
+    return;
+  }
+  const obs = new IntersectionObserver((entries, observer) => {
+    entries.forEach(e => {
+      if(e.isIntersecting){
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, {threshold:0.1, rootMargin:'0px 0px -10% 0px'});
+  els.forEach(el => obs.observe(el));
+}
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', initReveal);
+} else {
+  initReveal();
+}
+
+(function initMobileMenu(){
+  const btn = document.querySelector('.lp-nav-burger');
+  const menu = document.getElementById('lp-mobile-menu');
+  if(!btn || !menu) return;
+
+  function setOpen(open){
+    btn.setAttribute('aria-expanded', String(open));
+    menu.setAttribute('aria-hidden', String(!open));
+    menu.classList.toggle('is-open', open);
+    document.body.classList.toggle('no-scroll', open);
+    btn.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+  }
+
+  btn.addEventListener('click', () => {
+    const isOpen = btn.getAttribute('aria-expanded') === 'true';
+    setOpen(!isOpen);
+  });
+
+  menu.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => setOpen(false));
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape' && btn.getAttribute('aria-expanded') === 'true'){
+      setOpen(false);
+      btn.focus();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if(window.innerWidth > 768 && btn.getAttribute('aria-expanded') === 'true'){
+      setOpen(false);
+    }
+  });
+})();
 </script>
 
 </body>
