@@ -60,8 +60,8 @@ a{color:inherit;}
 .mr-hero-inner{max-width:1040px;margin:0 auto;}
 .mr-hero-eyebrow{font-family:var(--fm);font-size:11px;color:var(--ocre);letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
 .mr-hero-eyebrow-line{width:24px;height:1px;background:var(--ocre);}
-.mr-hero-h1{font-family:var(--ff);font-size:40px;line-height:1.15;color:var(--pierre);margin-bottom:18px;font-weight:600;max-width:720px;}
-.mr-hero-h1 em{font-style:italic;color:var(--ocre);}
+.mr-hero-accroche{font-family:var(--ff);font-size:40px;line-height:1.15;color:var(--pierre);margin-bottom:18px;font-weight:600;max-width:720px;}
+.mr-hero-accroche em{font-style:italic;color:var(--ocre);}
 .mr-hero-sub{font-size:15px;color:var(--mica);line-height:1.7;max-width:640px;margin-bottom:28px;}
 
 /* SÉLECTEUR COMMUNE */
@@ -89,10 +89,6 @@ a{color:inherit;}
 /* FICHE COMMUNE */
 .mr-fiche-commune-title{font-family:var(--ff);font-size:24px;font-weight:600;margin-bottom:8px;}
 .mr-fiche-commune-sub{font-size:13px;color:var(--mica);margin-bottom:28px;}
-.mr-fiche-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}
-.mr-fiche-block{background:white;border:1px solid var(--brume);border-radius:10px;padding:22px;}
-.mr-fiche-block-title{font-family:var(--ff);font-size:15px;font-weight:600;color:var(--ardoise);margin-bottom:10px;}
-.mr-fiche-block-placeholder{font-size:12px;color:var(--mica);font-style:italic;line-height:1.6;}
 
 /* BLOC ANTENNES — plein-largeur, actif quand commune selectionnee */
 .mr-antennes-section{background:white;border:1px solid var(--brume);border-radius:10px;padding:26px 28px;margin-bottom:20px;}
@@ -141,9 +137,6 @@ a{color:inherit;}
 .mr-antennes-error{background:rgba(142,47,31,0.06);border:1px solid rgba(142,47,31,0.2);border-radius:8px;padding:16px;color:var(--porphyre);font-size:12px;line-height:1.6;}
 .mr-antennes-error button{margin-top:10px;background:var(--porphyre);color:white;border:none;padding:7px 14px;border-radius:5px;font-size:11px;font-family:var(--fu);cursor:pointer;}
 .mr-antennes-loading{padding:32px 12px;text-align:center;color:var(--mica);font-size:12px;font-family:var(--fm);letter-spacing:1px;}
-
-/* Avant selection commune : grille 4 placeholders ; apres : grid cachee (tous les blocs actifs en passe 3). */
-.mr-fiche-grid.reduced{display:none;}
 
 /* BLOC ETABLISSEMENTS SENSIBLES (passe 2 Fiche commune) */
 .mr-etab-section{background:white;border:1px solid var(--brume);border-radius:10px;padding:26px 28px;margin-bottom:20px;}
@@ -371,15 +364,14 @@ a{color:inherit;}
 }
 @media (max-width:960px){
   .mr-antennes-kpis, .mr-etab-kpis{grid-template-columns:repeat(2,1fr);}
-  .mr-fiche-grid.reduced{grid-template-columns:repeat(2,1fr);}
 }
 @media (max-width:768px){
   .mr-nav{padding:12px 20px;}
   .mr-nav-links{display:none;}
   .mr-hero{padding:48px 20px 36px;}
-  .mr-hero-h1{font-size:26px;}
+  .mr-hero-accroche{font-size:26px;}
   .mr-main{padding:32px 20px;}
-  .mr-fiche-grid, .mr-fiche-grid.reduced, .mr-cards, .mr-citoyen-cards{grid-template-columns:1fr;}
+  .mr-cards, .mr-citoyen-cards{grid-template-columns:1fr;}
   .mr-antennes-section{padding:20px;}
   .mr-antenne-row{grid-template-columns:1fr;gap:6px;padding:12px 14px;}
   .mr-antenne-row.header{display:none;}
@@ -437,10 +429,10 @@ a{color:inherit;}
 
 <section class="mr-hero">
   <div class="mr-hero-inner">
-    <div class="mr-hero-eyebrow">
-      <div class="mr-hero-eyebrow-line"></div>Outils administratifs · Communes corses
-    </div>
-    <h1 class="mr-hero-h1">À l'heure où le nombre de pollinisateurs s'effondre, la <em>Loi Abeille</em> offre un cadre légal utile face aux ondes.</h1>
+    <h1 class="mr-hero-eyebrow">
+      <span class="mr-hero-eyebrow-line"></span>Outils administratifs · Communes corses
+    </h1>
+    <p class="mr-hero-accroche">À l'heure où le nombre de pollinisateurs s'effondre, la <em>Loi Abeille</em> offre un cadre légal utile face aux ondes.</p>
     <p class="mr-hero-sub">Outils pratiques pour les maires et services municipaux de Corse. Fiche d'exposition EM par commune, modèles de courriers administratifs prêts à l'emploi, checklist déploiement d'antenne, rappel du cadre légal. Conçu pour gagner du temps, pas pour remplacer un avis juridique personnalisé.</p>
 
     <div class="mr-commune-picker">
@@ -501,25 +493,6 @@ a{color:inherit;}
       </section>
     </div>
 
-    <!-- Placeholders initiaux (commune non sélectionnée) -->
-    <div class="mr-fiche-grid" id="mr-fiche-grid-placeholders">
-      <div class="mr-fiche-block" data-placeholder-block="antennes">
-        <h3 class="mr-fiche-block-title">Antennes sur le territoire</h3>
-        <p class="mr-fiche-block-placeholder">Sélectionnez une commune dans le bandeau du haut pour afficher la liste des antennes ANFR recensées.</p>
-      </div>
-      <div class="mr-fiche-block" data-placeholder-block="etablissements">
-        <h3 class="mr-fiche-block-title">Établissements sensibles à proximité</h3>
-        <p class="mr-fiche-block-placeholder">Sélectionnez une commune dans le bandeau du haut pour afficher les établissements sensibles situés à proximité des antennes ANFR.</p>
-      </div>
-      <div class="mr-fiche-block" data-placeholder-block="geophysique">
-        <h3 class="mr-fiche-block-title">Contexte géophysique</h3>
-        <p class="mr-fiche-block-placeholder">Sélectionnez une commune pour afficher la synthèse géophysique (classement radon, proximité de failles, liens vers la carte Tellux).</p>
-      </div>
-      <div class="mr-fiche-block" data-placeholder-block="atypiques">
-        <h3 class="mr-fiche-block-title">Points atypiques ANFR</h3>
-        <p class="mr-fiche-block-placeholder">Sélectionnez une commune pour afficher le statut des points atypiques ANFR sur son territoire.</p>
-      </div>
-    </div>
   </section>
 
   <!-- ONGLET 2 : GÉNÉRER UN COURRIER -->
@@ -1215,20 +1188,13 @@ a{color:inherit;}
 
   function renderAntennesForCommune(commune){
     var section = document.getElementById('mr-antennes-section');
-    var placeholder = document.querySelector('[data-placeholder-block="antennes"]');
-    var grid = document.getElementById('mr-fiche-grid-placeholders');
     if (!section) return;
 
     if (!commune){
       section.hidden = true;
-      if (placeholder) placeholder.hidden = false;
-      if (grid) grid.classList.remove('reduced');
       return;
     }
 
-    // Une commune est selectionnee : on masque le placeholder et on affiche le bloc
-    if (placeholder) placeholder.hidden = true;
-    if (grid) grid.classList.add('reduced');
     section.hidden = false;
 
     // Reset de l'etat de filtrage et pagination a chaque changement de commune
@@ -1603,16 +1569,13 @@ a{color:inherit;}
 
   function renderEtabForCommune(commune){
     var section = document.getElementById('mr-etab-section');
-    var placeholder = document.querySelector('[data-placeholder-block="etablissements"]');
     if (!section) return;
 
     if (!commune){
       section.hidden = true;
-      if (placeholder) placeholder.hidden = false;
       return;
     }
 
-    if (placeholder) placeholder.hidden = true;
     section.hidden = false;
 
     etabState.code_insee = commune.code_insee;
@@ -1954,17 +1917,11 @@ a{color:inherit;}
 
   function renderGeoAtypForCommune(commune){
     var wrap = document.getElementById('mr-geo-atyp-wrap');
-    var phGeo = document.querySelector('[data-placeholder-block="geophysique"]');
-    var phAtyp = document.querySelector('[data-placeholder-block="atypiques"]');
     if (!wrap) return;
     if (!commune){
       wrap.hidden = true;
-      if (phGeo) phGeo.hidden = false;
-      if (phAtyp) phAtyp.hidden = false;
       return;
     }
-    if (phGeo) phGeo.hidden = true;
-    if (phAtyp) phAtyp.hidden = true;
     wrap.hidden = false;
 
     var geoBody = document.getElementById('mr-geophys-body');
