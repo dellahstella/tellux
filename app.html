@@ -916,9 +916,15 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .accordion-cat-header.open{background:var(--maquis-pale);color:var(--acc);}
 .accordion-cat-icon{display:inline-block;width:16px;text-align:center;transition:transform .2s;}
 .accordion-cat-icon.open{transform:rotate(90deg);}
-.accordion-cat-content{max-height:0;overflow:hidden;transition:max-height .25s ease;display:flex;flex-direction:column;gap:4px;padding:0 4px;}
-.accordion-cat-content.open{max-height:500px;padding:8px 4px;}
+.accordion-cat-content{max-height:0;overflow:hidden;transition:max-height .35s ease;display:flex;flex-direction:column;gap:4px;padding:0 4px;}
+.accordion-cat-content.open{max-height:900px;padding:8px 4px;}
 .accordion-cat-content .lbtn{margin:0;}
+/* Header descriptif d'un accordéon (paragraphe d'ouverture, ex. Groupe 3 « Contexte naturel »). */
+.cat-header-text{margin:0 0 8px 0;font-size:11px;color:var(--tx3);font-style:italic;line-height:1.5;}
+/* Mini-header de sous-groupe thématique (A/B/C/D), avec son texte descriptif. */
+.subgroup-header{margin:8px 0 2px 0;padding:0;font-family:var(--font);font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;}
+.subgroup-header-first{margin-top:0;}
+.subgroup-text{margin:0 0 6px 0;font-size:10px;color:var(--tx3);font-style:italic;line-height:1.5;}
 
 /* Quête FAB */
 .quest-btn{position:fixed;bottom:20px;left:16px;width:52px;height:52px;border-radius:50%;background:var(--acc);color:white;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);transition:all .2s;z-index:1050;display:flex;align-items:center;justify-content:center;}
@@ -1478,18 +1484,31 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <span>Contexte naturel</span>
     </div>
     <div class="accordion-cat-content">
+      <p class="cat-header-text">Substrat géologique, indicateurs structurels et références comparatives. Certaines couches modulent le calcul Tellux (substrat magnétique, failles, radon, anomalies crustales locales), d'autres servent uniquement de contexte visuel — la distinction est explicitée pour chaque couche.</p>
+
+      <h5 class="subgroup-header subgroup-header-first">A. Substrat magnétique</h5>
+      <p class="subgroup-text">Couches qui modulent directement le calcul Tellux : susceptibilité magnétique du substrat, proximité de failles, potentiel radon, anomalie crustale locale.</p>
       <button class="lbtn" id="b-geo" title="Carte géologique BRGM — granite, schiste, calcaire" onclick="tog('geo','on-geo',this)"><span class="sq" style="background:#1a6b5c"></span>Géologie BRGM</button>
-      <button class="lbtn" id="b-foret" title="Forêts publiques ONF via WMS IGN Géoplateforme — couche visuelle niveau A (pas de modulation calcul). BD Forêt V2 complète non disponible en WMS public." onclick="tog('foret','on-foret',this)"><span class="sq" style="background:#3F5B3A"></span>Forêts publiques</button>
       <button class="lbtn" id="b-failles" title="Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)" onclick="togFailles(this)"><span class="ln" style="background:#8E2F1F"></span>Failles tectoniques</button>
       <button class="lbtn" id="b-radon" title="Potentiel radon géologique — zones ASNR cat. 2/3" onclick="tog('radon','on-radon',this)"><span class="sq" style="background:#C28533"></span>Radon</button>
+      <button class="lbtn" id="b-emag" title="Anomalie magnétique crustale (NOAA EMAG2v3) — fond géologique régional. Bbox de la vue courante." onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Crustale (EMAG2)</button>
+
+      <h5 class="subgroup-header">B. Contexte structurel</h5>
+      <p class="subgroup-text">Indicateurs géologiques documentés, présentés pour aider l'interprétation. Pas d'amplification EM modélisée dans le calcul.</p>
+      <button class="lbtn" id="b-cav" title="Cavités souterraines — grottes, mines, karst (BRGM)" onclick="tog('cav','on-cav',this)"><span class="sq" style="background:#5c3a9b"></span>Cavités</button>
+      <button class="lbtn" id="b-therm" title="Émergences thermales — observations de surface, marqueurs de failles actives" onclick="tog('therm','on-therm',this)"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Émergences thermales</button>
+      <button class="lbtn" id="b-hyd" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie</button>
+
+      <h5 class="subgroup-header">C. Sites documentaires</h5>
+      <p class="subgroup-text">Catalogues de points d'intérêt scientifique. Données issues de la littérature ou d'analogies géologiques — mesures in situ requises pour confirmation.</p>
       <button class="lbtn" id="b-points-chauds" title="Sites U/Th à mesurer — catalogue de sites candidats à des mesures radiométriques (doses non mesurées, sources documentaires BRGM ou analogies géologiques)" onclick="togPointsChauds(this)"><span style="display:inline-block;width:8px;height:8px;background:#8E2F1F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Sites U/Th à mesurer</button>
       <button class="lbtn" id="b-sites-remarq" title="Sites géophysiques remarquables — 10 sites ponctuels à signature singulière (mines historiques, serpentinites ophiolitiques, surveillance radiologique marine). Données documentaires, mesures in situ souvent requises." onclick="togSitesRemarquables(this)"><span style="display:inline-block;width:10px;height:10px;background:#C28533;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Sites géophysiques remarquables</button>
-      <button class="lbtn" id="b-hyd" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE)" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie</button>
-      <button class="lbtn" id="b-cav" title="Cavités souterraines — grottes, mines, karst (BRGM)" onclick="tog('cav','on-cav',this)"><span class="sq" style="background:#5c3a9b"></span>Cavités</button>
-      <button class="lbtn" id="b-therm" title="Émergences thermales — marqueurs de failles actives" onclick="tog('therm','on-therm',this)"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Émergences thermales</button>
-      <button class="lbtn" id="b-emag" title="Anomalie magnétique crustale (NOAA EMAG2v3) — fond géologique régional. Bbox de la vue courante." onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Crustale (EMAG2)</button>
+
+      <h5 class="subgroup-header">D. Référence comparative</h5>
+      <p class="subgroup-text">Couches visuelles et de mise en perspective. Aucun impact sur le calcul.</p>
+      <button class="lbtn" id="b-foret" title="Forêts publiques ONF via WMS IGN Géoplateforme — couche visuelle niveau A (pas de modulation calcul). BD Forêt V2 complète non disponible en WMS public." onclick="tog('foret','on-foret',this)"><span class="sq" style="background:#3F5B3A"></span>Forêts publiques</button>
       <button class="lbtn" id="b-crustal" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF) — opt-in, comparaison locale/mondiale" onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Crustale mondiale</button>
-      <!-- TODO: Failles tectoniques (dataset data/failles_corse.json), Communes radon niveau 3 overlay (GeoJSON geometries a fournir), MNT altitude overlay -->
+      <!-- TODO: Communes radon niveau 3 overlay (GeoJSON geometries a fournir), MNT altitude overlay -->
     </div>
   </div>
 
