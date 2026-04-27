@@ -4,6 +4,8 @@
 
 Document de référence publique présentant la trajectoire générale du projet Tellux. Les détails opérationnels, calendriers précis et éléments stratégiques restent en pilotage interne.
 
+**Note de lecture.** Le terme « phase 1 » désigne dans ce document l'étape actuelle de développement de Tellux : la cartographie EM publique. Les modules d'extension envisagés au-delà ne sont pas détaillés publiquement à ce stade.
+
 ---
 
 ## 1. Périmètre actuel et trajectoire
