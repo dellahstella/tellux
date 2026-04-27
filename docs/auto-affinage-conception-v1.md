@@ -27,7 +27,7 @@ Les quatre domaines couverts par Tellux ne se prêtent pas également à l'auto-
 |---|---|---|
 | Radiofréquence | Forte | Mesures grand public possibles avec analyseurs de spectre simples ; les 30 mesures certifiées ANFR/EXEM disponibles fournissent un jeu de référence pour les niveaux 1 ; couverture territoriale faible donc forte valeur ajoutée d'un afflux de mesures terrain. |
 | Rayonnement ionisant gamma | Forte | Compteurs Geiger amateurs avec précision raisonnable ; calibration directe possible de la composante terrestre `NCRP-001` (zone gelée actuelle) ; validation croisée avec Téléray quand l'API ASNR sera ouverte. |
-| Magnétique basse fréquence (ELF) | Modérée | Smartphones disposent d'un magnétomètre exploitable avec orientation correcte ; permet de valider Biot-Savart sur les segments HTA en conditions réelles, mais bruit important au-delà de 50-100 m d'une source. |
+| Magnétique basse fréquence (ELF) | Modérée | Smartphones : magnétomètre utilisable pour la densité spatiale et la détection de gradient, mais bruit interne chiffré (±150–250 nT typique, jusqu'à ±1 500 nT sans calibration) et fréquence d'échantillonnage (100 Hz) insuffisante pour caractériser proprement le signal 50 Hz (limite Nyquist) — valeur absolue non fiable, ne substitue pas un magnétomètre fluxgate. Pertinence auto-affinage limitée à la cartographie de gradient, pas à la calibration des constantes. |
 | Magnétique statique | Faible à court terme | IGRF et EMAG2 sont des modèles institutionnels mûrs ; difficilement améliorables par des amateurs sans magnétomètre fluxgate calibré ; à exclure de la première phase. |
 
 L'auto-affinage cible donc en priorité **RF** et **gamma**, secondairement **ELF**, et **pas du tout** le magnétique statique dans un premier temps.
@@ -37,7 +37,7 @@ L'auto-affinage cible donc en priorité **RF** et **gamma**, secondairement **EL
 L'application distingue déjà deux niveaux de fiabilité parmi les contributions terrain :
 
 - **Niveau 1** : mesures réalisées dans le respect d'un protocole strict (matériel qualifié, position de l'instrument, distance des sources parasites, conditions environnementales).
-- **Niveau 2** : mesures captées automatiquement par le magnétomètre Android au moment de la saisie, sans contrôle des conditions de prise.
+- **Niveau 2** : mesures saisies manuellement dans le formulaire Tellux à partir d'une lecture effectuée dans une application tierce (Phyphox, Sensor Kinetics), sans contrôle des conditions de prise.
 
 Cette distinction est **structurante** pour le design de l'auto-affinage. Les contributions de niveau 2 sont précieuses pour la **couverture territoriale** (densité d'échantillonnage, détection d'anomalies à investiguer) mais ne doivent **pas** entrer dans le calcul de calibration des constantes du modèle. Seul le niveau 1 alimente la décision d'ajustement.
 
@@ -181,7 +181,7 @@ Pas de phase « calibration semi-automatique » envisagée à court terme. Si el
 Ce chantier ne se déclenche pas avant que **toutes** les conditions suivantes soient réunies.
 
 1. **Phase 1 du projet stabilisée.** L'application `app.html` est publiée comme cartographie EM rigoureuse, le pivot architectural est consommé, les bugs résiduels sont absorbés.
-2. **Retour Santoni reçu.** Au moins une réponse du physicien sollicité, qu'elle soit de validation ou d'avis méthodologique. La phase 0 ne s'amorce pas dans le silence.
+2. **Premier retour de relecture méthodologique externe reçu.** Au moins une réponse du physicien sollicité, qu'elle soit de validation ou d'avis méthodologique. La phase 0 ne s'amorce pas dans le silence.
 3. **Volume de contributions suffisant pour avoir du sens.** Indicatif : au moins quelques dizaines de contributions niveau 1 réparties sur le territoire. Avec moins, les résidus sont du bruit non statistiquement exploitable.
 4. **Disponibilité de Soleil.** Le chantier est non urgent. Il ne déprend rien. Il s'amorce quand Soleil a la bande passante pour le piloter sans précipitation.
 

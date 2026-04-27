@@ -44,14 +44,14 @@ Des démarches sont en cours pour l'accès à d'autres données institutionnelle
 
 ## Architecture
 
-Tellux est structuré en suite d'applications :
+Tellux est aujourd'hui structuré autour d'une application principale publique :
 
 - `index.html` — landing publique
 - `app.html` — application cartographie EM (publique, mise en avant)
-- `patrimoine.html` — module patrimoine corse (non lié depuis la landing, accessible via URL directe)
-- `agronomie.html` — module diagnostic parcellaire (même statut)
+- `mairies.html` — outils communaux (fiche commune, modèles de courriers, cadre légal)
+- `corpus.html` — corpus scientifique soutenant la phase 1
 
-Les modules patrimoine et agronomie sont des chantiers en développement. Seule la cartographie EM est actuellement présentée publiquement.
+Des modules d'extension thématiques pourront être envisagés sous condition d'obtention d'un financement public, sans calendrier public à ce stade.
 
 ## Stack technique
 
