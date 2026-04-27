@@ -6567,8 +6567,9 @@ async function togSitesRemarquables(btn) {
 }
 
 // ═══ Mesures certifiées ANFR/EXEM ═══
-// Source : public/data/cartoradio_certified_corse.json (extraction Cowork 23 avril 2026, 30 fiches).
-// Coordonnées : centroïdes communaux (precision_coord=secteur). Localisation précise via CartoRadio.fr.
+// Source : public/data/cartoradio_certified_corse.json (régénération 27 avril 2026, 30 fiches).
+// Coordonnées : positions exactes ANFR (precision_coord=exacte). Source : API publique cartoradio.fr (/api/v1/mesures, format=geojson).
+// Données métier (date, valeur_max_vm, conformité, services) : extraction Cowork OCR du 23 avril 2026 sur les 30 PDFs ANFR/EXEM.
 // Affichage unifié avec les contributions citoyennes sous le même bouton b-con ("Mesures EM").
 let MESURES_CERTIFIEES = [];
 let _certLoadPromise = null;
@@ -6605,7 +6606,7 @@ function downloadCertifiedJSON() {
     source: 'Tellux Corse — https://tellux.pages.dev',
     generated_at: new Date().toISOString(),
     n_mesures: MESURES_CERTIFIEES.length,
-    note_precision: 'Coordonnées = centroïdes communaux (precision_coord=secteur). Localisation exacte : CartoRadio.fr.',
+    note_precision: 'Coordonnées = positions exactes ANFR (precision_coord=exacte), récupérées via l’API publique cartoradio.fr le 27/04/2026.',
     source_originale: 'ANFR/EXEM — PDFs CartoRadio 2024-2026, extraits par l\u2019équipe Tellux (PyMuPDF + OCR Tesseract)',
     licence: 'Données publiques ANFR (Licence Ouverte 2.0). Compilation Tellux sous CC-BY 4.0.',
     mesures: MESURES_CERTIFIEES
@@ -6714,9 +6715,7 @@ function _renderMesuresCertifiees() {
   if (_certRendered) return;
   _certRendered = true;
   (MESURES_CERTIFIEES || []).forEach(m => {
-    // Offset visuel pour Monticello 193102 (re-inspection) pour eviter superposition exacte
     let lat = m.lat, lon = m.lon;
-    if (m.id === '193102') { lat += 0.0015; lon += 0.0015; }
     const icon = L.divIcon({
       className: 'cert-icon',
       html: _certIconHtml(m),
