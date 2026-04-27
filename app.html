@@ -592,7 +592,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .lbtn.on-perma{background:#dcfce7;color:#166534;border-color:#86efac;font-weight:500;}
 .lbtn.on-hypo{background:#e8eef8;color:var(--info);border-color:#6b8fd4;font-weight:500;}
 /* Etat actif partage (Option A — DA v2) pour couches sans variante dediee */
-.lbtn.on-emag,.lbtn.on-wdmam,.lbtn.on-prod,.lbtn.on-crustal{background:var(--tx-brume);color:var(--tx-maquis);border-color:var(--tx-maquis);}
+.lbtn.on-emag,.lbtn.on-prod,.lbtn.on-crustal{background:var(--tx-brume);color:var(--tx-maquis);border-color:var(--tx-maquis);}
 .layers{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;}
 .lbtn{font-size:10px;padding:3px 7px;border-radius:14px;border:1px solid var(--border);background:var(--bg);color:var(--ardoise-clair);cursor:pointer;display:inline-flex;align-items:center;gap:3px;transition:all .15s;white-space:nowrap;}
 .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
@@ -1106,7 +1106,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <div class="d-grid">
       <div class="d-block">
         <div class="d-block-title">Champs électromagnétiques</div>
-        <div class="d-block-text">Antennes ANFR, réseau EDF SEI haute et basse tension, modèle géomagnétique IGRF-14, anomalies crustales EMAG2v3 · WDMAM. L'Indice Tellux est un score comparatif <strong>indicatif</strong> — il ne remplace pas une mesure certifiée.</div>
+        <div class="d-block-text">Antennes ANFR, réseau EDF SEI haute et basse tension, modèle géomagnétique IGRF-14, anomalies crustales EMAG2v3. L'Indice Tellux est un score comparatif <strong>indicatif</strong> — il ne remplace pas une mesure certifiée.</div>
       </div>
       <div class="d-block">
         <div class="d-block-title">Contribuer</div>
@@ -1487,8 +1487,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <button class="lbtn" id="b-hyd" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE)" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie</button>
       <button class="lbtn" id="b-cav" title="Cavités souterraines — grottes, mines, karst (BRGM)" onclick="tog('cav','on-cav',this)"><span class="sq" style="background:#5c3a9b"></span>Cavités</button>
       <button class="lbtn" id="b-therm" title="Émergences thermales — marqueurs de failles actives" onclick="tog('therm','on-therm',this)"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Émergences thermales</button>
-      <button class="lbtn" id="b-emag" title="Anomalie magnétique crustale NOAA EMAG2v3 — fond géologique régional" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Crustale (EMAG2)</button>
-      <button class="lbtn" id="b-wdmam" title="Anomalie magnétique crustale mondiale — EMAG2v3, dynamique" onclick="togWDMAM(this)"><span class="sq" style="background:#7c3aed"></span>EMAG2 mondial</button>
+      <button class="lbtn" id="b-emag" title="Anomalie magnétique crustale (NOAA EMAG2v3) — fond géologique régional. Bbox de la vue courante." onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Crustale (EMAG2)</button>
       <button class="lbtn" id="b-crustal" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF) — opt-in, comparaison locale/mondiale" onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Crustale mondiale</button>
       <!-- TODO: Failles tectoniques (dataset data/failles_corse.json), Communes radon niveau 3 overlay (GeoJSON geometries a fournir), MNT altitude overlay -->
     </div>
@@ -1558,7 +1557,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 </div>
 <div class="op-row" id="geo-op-row"><span>Géologie</span><input type="range" min="0.1" max="1" step="0.05" value="0.6" oninput="wmsGeo.setOpacity(+this.value)"><span id="geo-op-v">60%</span></div>
 <div class="op-row" id="hyd-op-row"><span>Nappes</span><input type="range" min="0.1" max="1" step="0.05" value="0.55" oninput="wmsHyd.setOpacity(+this.value)"><span id="hyd-op-v">55%</span></div>
-<div class="op-row" id="emag-op-row"><span>Anomalie crustale</span><input type="range" min="0.1" max="0.8" step="0.05" value="0.5" oninput="wmsEmag.setOpacity(+this.value)"><span id="emag-op-v">50%</span></div>
 <div id="map"></div>
 <!-- Panneau hypothèses migré vers patrimoine.html (purge 6/10).
      XP/badges encore présents — retrait prévu au commit 7. -->
@@ -2040,11 +2038,20 @@ const wmsCav=L.tileLayer.wms('https://geoservices.brgm.fr/risques',{layers:'CAVI
 // pas les forêts privées ni les essences détaillées. Suffisant pour niveau A.
 const wmsForet=L.tileLayer.wms('https://data.geopf.fr/wms-v/ows',{layers:'FORETS.PUBLIQUES',format:'image/png',transparent:true,opacity:0.55,version:'1.3.0',attribution:'© IGN / ONF — Forêts publiques'});
 // EMAG2v3 — Anomalie magnétique crustale (NOAA ImageServer)
-const wmsEmag=L.imageOverlay(
-  'https://gis.ngdc.noaa.gov/arcgis/rest/services/EMAG2v3/ImageServer/exportImage?bbox=8.5,41.3,9.65,43.1&bboxSR=4326&imageSR=4326&size=512,800&format=png32&renderingRule={"rasterFunction":"EMAG2_Color_Scale"}&f=image',
-  [[41.3,8.5],[43.1,9.65]],
-  {opacity:0.5,zIndex:2,attribution:'EMAG2v3 NOAA/NCEI · Meyer et al. 2017'}
-);
+// Bbox dynamique : l'imageOverlay est (re)créé à chaque activation via tog('emag')
+// sur la bbox courante de la carte. Fusion avec l'ancienne couche b-wdmam
+// (PR phase 2 groupe 3 — résout WDMAM-NAMING-001).
+let wmsEmag=null;
+function buildWmsEmag(){
+  const b=map.getBounds();
+  return L.imageOverlay(
+    'https://gis.ngdc.noaa.gov/arcgis/rest/services/EMAG2v3/ImageServer/exportImage?bbox='+
+      b.getWest()+','+b.getSouth()+','+b.getEast()+','+b.getNorth()+
+      '&bboxSR=4326&imageSR=4326&size=800,600&format=png32&f=image',
+    [[b.getSouth(),b.getWest()],[b.getNorth(),b.getEast()]],
+    {opacity:0.5,zIndex:2,attribution:'EMAG2v3 NOAA/NCEI · Meyer et al. 2017'}
+  );
+}
 
 const lTherm=L.layerGroup();
 const lFailles=L.layerGroup();
@@ -2059,7 +2066,8 @@ const lRadon=L.layerGroup();
 // Activé/désactivé en parallèle de lCon via tog('con') — bouton unique côté UI.
 const lCert=L.layerGroup();
 const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,con:lCon,cem:lCem,therm:lTherm,crustal:lCrustal,sitesRemarq:lSitesRemarq,radon:lRadon};
-const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag,foret:wmsForet};
+// emag : géré spécifiquement dans tog() ci-dessous (imageOverlay bbox-dynamique reconstruit à chaque activation).
+const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,foret:wmsForet};
 const ACTIVE={bt:false,ant:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,res:false,prod:false,con:true,cem:false,therm:false,crustal:false,sitesRemarq:false,radon:false};
 
 const LEGEND_CORE_IDS=new Set(['hot','con']);
@@ -2075,7 +2083,6 @@ const LEGEND_HTML={
   foret:'<div class="leg-block"><b class="leg-title">Forêts publiques</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Atténuation RF en zones boisées (modèle ITU-R P.833)</div><img src="https://data.geopf.fr/wms-v/ows?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.3.0&FORMAT=image/png&LAYER=FORETS.PUBLIQUES" style="max-width:170px;display:block;margin:4px 0" alt="Légende Forêts publiques"><div class="leg-src">IGN · ONF · Géoplateforme</div></div>',
   cav:'<div class="leg-block"><b class="leg-title">Cavites</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Grottes, karst, mines souterraines</div><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Anomalies magnétiques locales (discontinuité de susceptibilité)</div><img src="https://geoservices.brgm.fr/risques?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.1.1&FORMAT=image/png&LAYER=CAVITE_LOCALISEE" style="max-width:150px;display:block;margin:4px 0"><div class="leg-src">BRGM BD Cavites</div></div>',
   ant:'<div class="leg-block"><b class="leg-title">Antennes ANFR</b><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a4b8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a4b8c">2G</b> GSM — voix, SMS</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a6b5c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a6b5c">3G</b> UMTS — data mobile</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#b85c00">4G</b> LTE — haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#991b1b">5G</b> NR — très haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#6b7280">Infra</b> FH · TV · FM · PMR</div><div class="leg-row"><span style="display:inline-block;position:relative;width:12px;height:12px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:5px;top:0;width:2px;height:12px;background:#5f5e5a"></span><span style="position:absolute;top:5px;left:0;width:12px;height:2px;background:#5f5e5a"></span></span>Émetteur radio/TV majeur</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Opérateurs : Orange · SFR · Bouygues · Free<br>974 supports · Source ANFR open data</div><div class="leg-src">ANFR · Supabase · SUP_SUPPORT 2026</div><div style="border-top:1px solid rgba(0,0,0,.08);padding-top:6px;margin-top:4px"><div style="font-family:var(--mono);font-size:9px;color:var(--tx3);margin-bottom:4px">MESURES CEM OFFICIELLES (losanges) · limite légale = 28 V/m :</div><div style="display:flex;flex-wrap:wrap;gap:4px"><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#0f766e;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#0f766e">Faible</b> &lt; 0.5 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#b85c00">Modéré</b> 0.5–2 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#991b1b">Élevé</b> 2–5 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#5c0000;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#5c0000">Très élevé</b> 5–28 V/m</div><div class="leg" style="padding:2px 6px;background:#fff8e6;border-radius:20px;border:1.5px solid #ffd700"><span style="display:inline-block;width:8px;height:8px;background:#7c0000;border:1.5px solid #ffd700;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#7c0000">⚠ &gt;28 V/m</b> non conforme</div></div></div></div>',
-  wdmam:'<div class="leg-block"><b class="leg-title">EMAG2 mondial</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Anomalies crustales mondiales dynamiques</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#dc2626;border-radius:2px"></span> Anomalie positive (magnétique)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#2563eb;border-radius:2px"></span> Anomalie négative (non-magnétique)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#f5f5f5;border:1px solid #ddd;border-radius:2px"></span> Neutre (~0 nT)</div><div class="leg-src">EMAG2v3 · NOAA NCEI · Meyer et al. 2017</div></div>',
   emag:'<div class="leg-block"><b class="leg-title">Anomalie crustale</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Signature magnétique du socle profond</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#dc2626;border-radius:2px"></span> Positif (granit, gabbro)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#2563eb;border-radius:2px"></span> Négatif (calcaire, schiste)</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Fond régional profond (~50-100km)</span></div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Non lié à l\'homme · EMAG2v3 NOAA</span></div><div class="leg-src">Cagniard 1953 · Meyer et al. 2017</div></div>',
   crustal:'<div class="leg-block"><b class="leg-title">Anomalies crustales mondiales</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Cinq références pédagogiques mondiales</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#8E2F1F33;border:2px solid #8E2F1F;border-radius:50%"></span> Anomalie négative (cratère, intrusion)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C2853333;border:2px solid #C28533;border-radius:50%"></span> Anomalie positive (BIF, gisement ferrifère)</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">5 références · Bangui · Kursk · Vredefort · Ries · Chicxulub</span></div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Panneau comparatif en haut à droite quand couche active</span></div><div class="leg-src">EMAG2v3 NOAA · publications académiques</div></div>',
   res:'<div class="leg-block"><b class="leg-title">Réseau électrique</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>Ligne HTA 20kV</div><div class="leg-row"><span style="display:inline-block;width:14px;height:3px;background:#5c2000;vertical-align:middle;margin-right:4px"></span>Ligne HTB 63-225kV</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Hydraulique</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Thermique</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Interconnexion</div><div class="leg-src">EDF SEI · Supabase · OSM</div></div>',
@@ -2408,19 +2415,31 @@ function showLegend(id,show){
 function tog(id,cls,btn){
   // Guard : couche migrée (patrimoine → patrimoine.html, agronomie → agronomie.html)
   // ou référence cassée — sortie silencieuse pour éviter map.addLayer(undefined).
-  if(!LAYERS[id]&&!WMS[id])return;
+  if(!LAYERS[id]&&!WMS[id]&&id!=='emag')return; // emag : couche dynamique gérée hors WMS, voir hooks ci-dessous
   if(window.innerWidth<=600){const a=document.getElementById('layers-accordion'),b=document.getElementById('mob-toggle');if(a&&a.classList.contains('mob-open')){a.classList.remove('mob-open');if(b)b.textContent='☰';}}
-  if(ACTIVE[id]){WMS[id]?map.removeLayer(WMS[id]):map.removeLayer(LAYERS[id]);ACTIVE[id]=false;if(btn)btn.className='lbtn';
+  if(ACTIVE[id]){
+    if(id==='emag'){
+      if(wmsEmag&&map.hasLayer(wmsEmag))map.removeLayer(wmsEmag);
+      wmsEmag=null;
+    }else{
+      WMS[id]?map.removeLayer(WMS[id]):map.removeLayer(LAYERS[id]);
+    }
+    ACTIVE[id]=false;if(btn)btn.className='lbtn';
     if(id==='geo')document.getElementById('geo-op-row').style.display='none';
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='none';
-    if(id==='emag')document.getElementById('emag-op-row').style.display='none';
     if(id==='crustal')showCrustalGauge(false);
     if(id==='con'&&map.hasLayer(lCert))map.removeLayer(lCert); // Mesures EM : retirer lCert en parallele de lCon
     showLegend(id,false);
-  }else{WMS[id]?map.addLayer(WMS[id]):map.addLayer(LAYERS[id]);ACTIVE[id]=true;if(btn)btn.classList.add(cls);
+  }else{
+    if(id==='emag'){
+      wmsEmag=buildWmsEmag();
+      map.addLayer(wmsEmag);
+    }else{
+      WMS[id]?map.addLayer(WMS[id]):map.addLayer(LAYERS[id]);
+    }
+    ACTIVE[id]=true;if(btn)btn.classList.add(cls);
     if(id==='geo')document.getElementById('geo-op-row').style.display='flex';
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='flex';
-    if(id==='emag')document.getElementById('emag-op-row').style.display='flex';
     if(id==='hot'&&lHot.getLayers().length===0)buildHot();
     if(id==='therm'&&lTherm.getLayers().length===0)buildThermLayer();
     if(id==='crustal'){if(lCrustal.getLayers().length===0)buildCrustalLayer();showCrustalGauge(true);}
@@ -6734,26 +6753,6 @@ function _renderMesuresCertifiees() {
       });
     });
   });
-}
-
-// ═══ DONNÉES MONDIALES — EMAG2 mondial + CHAOS-7 ═══
-let wmsWDMAM=null;
-function togWDMAM(btn){
-  if(wmsWDMAM&&map.hasLayer(wmsWDMAM)){
-    map.removeLayer(wmsWDMAM);wmsWDMAM=null;btn.className='lbtn';showLegend('wdmam',false);return;
-  }
-  // Raster EMAG2v3 mondial dynamique (reconstruit à chaque activation selon bbox courante) · NOAA NCEI · Meyer et al. 2017
-  const bounds=map.getBounds();
-  const url='https://gis.ngdc.noaa.gov/arcgis/rest/services/EMAG2v3/ImageServer/exportImage?bbox='+
-    bounds.getWest()+','+bounds.getSouth()+','+bounds.getEast()+','+bounds.getNorth()+
-    '&bboxSR=4326&imageSR=4326&size=800,600&format=png32&f=image';
-  wmsWDMAM=L.imageOverlay(url,[
-    [bounds.getSouth(),bounds.getWest()],
-    [bounds.getNorth(),bounds.getEast()]
-  ],{opacity:0.5,attribution:'EMAG2v3 © NOAA NCEI'}).addTo(map);
-  btn.className='lbtn on-wdmam';
-  showLegend('wdmam',true);
-  info('🌍 EMAG2v3 — Anomalie magnétique mondiale (NOAA) · Couverture globale · Réf: Meyer et al. 2017',null,5000);
 }
 
 // CHAOS-7 model reference (DTU Space, Denmark)
