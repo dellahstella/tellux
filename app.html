@@ -602,7 +602,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .leg-block{padding:8px 10px}.leg-title{display:block;font-weight:600;font-size:11px;color:#0f1117;margin-bottom:5px}.leg-row{display:flex;align-items:center;gap:5px;margin-bottom:3px;color:#4a4f5e;line-height:1.4}.leg-src{color:#8b92a5;font-style:italic;font-size:9px;margin-top:4px}
 .map-wrap{position:relative}.layers{position:absolute;top:10px;left:45px;right:10px;z-index:1001;background:rgba(247,248,250,.95);border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:5px 8px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;box-shadow:0 2px 10px rgba(0,0,0,.1);pointer-events:all}#map{position:relative}.op-row{position:absolute;top:50px;left:10px;right:10px;z-index:1001;background:rgba(247,248,250,.95);border:1px solid rgba(0,0,0,.08);border-radius:8px;padding:4px 10px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
 .on-ant{background:#e8eef8!important;color:var(--info)!important;border-color:#6b8fd4!important;font-weight:500;}
-.on-ant-offshore{background:#f0f0f0!important;color:#666!important;border-color:#808080!important;font-weight:500;}
 .on-geo{background:#e8f5f2!important;color:var(--acc)!important;border-color:var(--maquis-clair)!important;font-weight:500;}
 .on-hyd{background:#e0f0ff!important;color:#1a5c8c!important;border-color:#5ba3d4!important;font-weight:500;}
 .on-cav{background:#f0e8ff!important;color:#5c3a9b!important;border-color:#9b72d4!important;font-weight:500;}
@@ -868,7 +867,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 [data-theme="dark"] .mat-chip{background:var(--pierre-ombre)!important;color:var(--ardoise-clair)!important;border-color:var(--border)!important;}
 [data-theme="dark"] #tellux-leg-panel{background:rgba(26,29,37,.97)!important;border-color:rgba(255,255,255,.08)!important;}
 [data-theme="dark"] .on-ant{background:#1a2a3a!important;color:#5b9bd5!important;border-color:#2563eb!important;}
-[data-theme="dark"] .on-ant-offshore{background:#2a2a2a!important;color:#999!important;border-color:#666!important;}
 [data-theme="dark"] .on-hot{background:#2a1a1a!important;color:#ef4444!important;border-color:#991b1b!important;}
 [data-theme="dark"] .on-con{background:#1a2a28!important;color:#3ec9ab!important;border-color:#2d9b87!important;}
 /* Dark mode toggle */
@@ -1466,7 +1464,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <span>Sources anthropiques</span>
     </div>
     <div class="accordion-cat-content">
-      <button class="lbtn" id="b-ant" title="Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF (onshore et offshore)" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR + TDF</button>
+      <button class="lbtn" id="b-ant" title="Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR + TDF</button>
       <button class="lbtn" id="b-res" title="Lignes et postes électriques haute tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HT</button>
       <button class="lbtn" id="b-bt" title="Réseau basse tension BT — EDF SEI · zoom ≥ 12" onclick="tog('bt','on-bt',this)"><span class="ln" style="background:#d97706"></span>Réseau BT</button>
       <button class="lbtn" id="b-prod" title="Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions" onclick="tog('prod','on-prod',this)"><span class="sq" style="background:#1a5c8c"></span>Sites de production</button>
@@ -2055,15 +2053,15 @@ const lPostesSources=L.layerGroup();
 const lPointsChaudsRadio=L.layerGroup();
 // lSit/lSit2/lAlign/lEgl/lTour/lIndu/lCast/lPont : couches patrimoniales migrées vers patrimoine.html
 // lRPG/lForet/lAOC : layers agronomie migrées vers agronomie.html
-const lBT=L.layerGroup(),lAnt=L.layerGroup(),lAntOffshore=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lCem=L.layerGroup(),lSitesRemarq=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
+const lBT=L.layerGroup(),lAnt=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lCem=L.layerGroup(),lSitesRemarq=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
 const lCrustal=L.layerGroup();
 const lRadon=L.layerGroup();
 // lCert : layer interne non-clusterisé pour les 30 fiches ANFR/EXEM certifiées.
 // Activé/désactivé en parallèle de lCon via tog('con') — bouton unique côté UI.
 const lCert=L.layerGroup();
-const LAYERS={bt:lBT,ant:lAnt,antOffshore:lAntOffshore,res:lRes,prod:lProd,hot:lHot,con:lCon,cem:lCem,therm:lTherm,crustal:lCrustal,sitesRemarq:lSitesRemarq,radon:lRadon};
+const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,con:lCon,cem:lCem,therm:lTherm,crustal:lCrustal,sitesRemarq:lSitesRemarq,radon:lRadon};
 const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag,foret:wmsForet};
-const ACTIVE={bt:false,ant:false,antOffshore:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,res:false,prod:false,con:true,cem:false,therm:false,crustal:false,sitesRemarq:false,radon:false};
+const ACTIVE={bt:false,ant:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,res:false,prod:false,con:true,cem:false,therm:false,crustal:false,sitesRemarq:false,radon:false};
 
 const LEGEND_CORE_IDS=new Set(['hot','con']);
 const LEGEND_MAX_CONTEXT=3;
@@ -2420,7 +2418,6 @@ function tog(id,cls,btn){
     if(id==='crustal')showCrustalGauge(false);
     if(id==='con'&&map.hasLayer(lCert))map.removeLayer(lCert); // Mesures EM : retirer lCert en parallele de lCon
     showLegend(id,false);
-    if(id==='antOffshore')showLegend('ant',false); // antOffshore partage légende ant
   }else{WMS[id]?map.addLayer(WMS[id]):map.addLayer(LAYERS[id]);ACTIVE[id]=true;if(btn)btn.classList.add(cls);
     if(id==='geo')document.getElementById('geo-op-row').style.display='flex';
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='flex';
@@ -2434,7 +2431,6 @@ function tog(id,cls,btn){
     if(id==='prod'&&lProd.getLayers().length===0)loadProd();
     if(id==='bt'&&lBT.getLayers().length===0)loadBT();
     if(id==='ant'&&lAnt.getLayers().length===0)loadAnt();
-    if(id==='antOffshore'&&lAntOffshore.getLayers().length===0)loadAnt(); // antOffshore charge aussi via loadAnt
     if(id==='con'){
       // Mesures EM : chargement + rendu des fiches certifiees ANFR/EXEM en parallele des contributions citoyennes
       loadMesuresCertifiees().then(function(){
@@ -2448,7 +2444,6 @@ function tog(id,cls,btn){
 
     // align/egl/intl : couches patrimoniales migrées vers patrimoine.html (intl : dette INTL-CRUSTAL-001)
     showLegend(id,true);
-    if(id==='antOffshore')showLegend('ant',true); // antOffshore partage légende ant
   }
 }
 // info(h, type, duration) : duration en ms pour auto-effacement (transitoire).
@@ -4657,7 +4652,7 @@ async function loadAnt(){try{
     if(ln>9.53)return false;
     return true;
   };
-  let nSkipped=0, nOffshore=0, nSeaFiltered=0;
+  let nSkipped=0, nSeaFiltered=0;
   rows.forEach(f=>{
     if(f.lon<8.30||f.lon>9.65||f.lat<41.35||f.lat>43.03){nSeaFiltered++;return;}
     const isLandAnt=isLand(f.lat,f.lon);
@@ -4665,16 +4660,15 @@ async function loadAnt(){try{
       const gen=f.generation||'default';
       L.marker([f.lat,f.lon],{icon:mkIcon(GC[gen]||GC.default,false,9),zIndexOffset:100}).on('click',()=>info((f.commune||'Corse')+' · '+(f.operateur||'?'))).addTo(lAnt);
     }else{
-      nOffshore++;
-      L.marker([f.lat,f.lon],{icon:mkIcon('#808080',false,5),zIndexOffset:50,opacity:0.5}).on('click',()=>info('<span style="color:#808080;font-weight:500">⚓ OFFSHORE</span> · '+(f.commune||'Corse')+' · '+(f.operateur||'?'))).addTo(lAntOffshore);
       nSkipped++;
     }
   });
-  console.log('Antennes : '+(rows.length-nSeaFiltered-nOffshore)+' affichees, '+nOffshore+' offshore');
+  const nOnshore = rows.length - nSeaFiltered - nSkipped;
+  console.log('Antennes : '+nOnshore+' affichees ('+nSkipped+' rejetees par filtre cotier, '+nSeaFiltered+' hors bbox)');
   const hdr=document.getElementById('hdr-status');
-  if(hdr)hdr.textContent=(rows.length-nSeaFiltered-nOffshore)+' antennes · '+nOffshore+' offshore';
+  if(hdr)hdr.textContent=nOnshore+' antennes';
   const anfrC=document.getElementById('anfr-count');
-  if(anfrC)anfrC.textContent=(rows.length-nSeaFiltered-nOffshore)+' antennes · '+nOffshore+' offshore';
+  if(anfrC)anfrC.textContent=nOnshore+' antennes';
   // Emetteurs broadcast TDF — dataset-driven (public/data/tdf_emitters_corse.json)
   // Icone croix, info-bulle listant PAR + services + notes.
   await loadTDFEmitters();
