@@ -1500,7 +1500,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <button class="lbtn" id="b-geo" title="Carte géologique BRGM — granite, schiste, calcaire" onclick="tog('geo','on-geo',this)"><span class="sq" style="background:#1a6b5c"></span>Géologie BRGM</button>
       <button class="lbtn" id="b-failles" title="Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)" onclick="togFailles(this)"><span class="ln" style="background:#8E2F1F"></span>Failles tectoniques</button>
       <button class="lbtn" id="b-radon" title="Potentiel radon géologique — zones ASNR cat. 2/3" onclick="tog('radon','on-radon',this)"><span class="sq" style="background:#C28533"></span>Radon</button>
-      <button class="lbtn" id="b-emag" title="Fond magnétique régional NOAA EMAG2v3 — bbox de la vue courante" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Fond magnétique régional</button>
+      <button class="lbtn" id="b-emag" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Fond magnétique régional</button>
 
       <h5 class="subgroup-header">B. Contexte structurel</h5>
       <p class="subgroup-text">Indicateurs géologiques documentés, présentés pour aider l'interprétation. Pas d'amplification EM modélisée dans le calcul.</p>
@@ -1585,6 +1585,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 </div>
 <div class="op-row" id="geo-op-row"><span>Géologie</span><input type="range" min="0.1" max="1" step="0.05" value="0.6" oninput="wmsGeo.setOpacity(+this.value)"><span id="geo-op-v">60%</span></div>
 <div class="op-row" id="hyd-op-row"><span>Nappes</span><input type="range" min="0.1" max="1" step="0.05" value="0.55" oninput="wmsHyd.setOpacity(+this.value)"><span id="hyd-op-v">55%</span></div>
+<div class="op-row" id="emag-op-row"><span>Fond magnétique régional</span><input type="range" min="0.1" max="0.8" step="0.05" value="0.5" oninput="wmsEmag.setOpacity(+this.value)"><span id="emag-op-v">50%</span></div>
 <div id="map"></div>
 <!-- Panneau hypothèses migré vers patrimoine.html (purge 6/10).
      XP/badges encore présents — retrait prévu au commit 7. -->
@@ -2066,20 +2067,16 @@ const wmsCav=L.tileLayer.wms('https://geoservices.brgm.fr/risques',{layers:'CAVI
 // pas les forêts privées ni les essences détaillées. Suffisant pour niveau A.
 const wmsForet=L.tileLayer.wms('https://data.geopf.fr/wms-v/ows',{layers:'FORETS.PUBLIQUES',format:'image/png',transparent:true,opacity:0.55,version:'1.3.0',attribution:'© IGN / ONF — Forêts publiques'});
 // EMAG2v3 — Anomalie magnétique crustale (NOAA ImageServer)
-// Bbox dynamique : l'imageOverlay est (re)créé à chaque activation via tog('emag')
-// sur la bbox courante de la carte. Fusion avec l'ancienne couche b-wdmam
-// (PR phase 2 groupe 3 — résout WDMAM-NAMING-001).
-let wmsEmag=null;
-function buildWmsEmag(){
-  const b=map.getBounds();
-  return L.imageOverlay(
-    'https://gis.ngdc.noaa.gov/arcgis/rest/services/EMAG2v3/ImageServer/exportImage?bbox='+
-      b.getWest()+','+b.getSouth()+','+b.getEast()+','+b.getNorth()+
-      '&bboxSR=4326&imageSR=4326&size=800,600&format=png32&f=image',
-    [[b.getSouth(),b.getWest()],[b.getNorth(),b.getEast()]],
-    {opacity:0.5,zIndex:2,attribution:'EMAG2v3 NOAA/NCEI · Meyer et al. 2017'}
-  );
-}
+// imageOverlay statique à bbox fixe Corse [[41.3, 8.5], [43.1, 9.65]].
+// Rollback du pattern bbox-dynamique introduit en PR #190 (raccord cassé en prod —
+// l'URL dynamique manquait notamment le renderingRule EMAG2_Color_Scale rendant
+// l'image transparente). Fusion en façade conservée (un seul bouton b-emag, pas de
+// b-wdmam ; voir DETTES_TECHNIQUES.md WDMAM-NAMING-001 fermée).
+const wmsEmag=L.imageOverlay(
+  'https://gis.ngdc.noaa.gov/arcgis/rest/services/EMAG2v3/ImageServer/exportImage?bbox=8.5,41.3,9.65,43.1&bboxSR=4326&imageSR=4326&size=512,800&format=png32&renderingRule={"rasterFunction":"EMAG2_Color_Scale"}&f=image',
+  [[41.3,8.5],[43.1,9.65]],
+  {opacity:0.5,zIndex:2,attribution:'EMAG2v3 NOAA/NCEI · Meyer et al. 2017'}
+);
 
 const lTherm=L.layerGroup();
 const lFailles=L.layerGroup();
@@ -2094,8 +2091,7 @@ const lRadon=L.layerGroup();
 // Activé/désactivé en parallèle de lCon via tog('con') — bouton unique côté UI.
 const lCert=L.layerGroup();
 const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,con:lCon,therm:lTherm,crustal:lCrustal,sitesRemarq:lSitesRemarq,radon:lRadon};
-// emag : géré spécifiquement dans tog() ci-dessous (imageOverlay bbox-dynamique reconstruit à chaque activation).
-const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,foret:wmsForet};
+const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag,foret:wmsForet};
 const ACTIVE={bt:false,ant:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,res:false,prod:false,con:true,therm:false,crustal:false,sitesRemarq:false,radon:false};
 
 const LEGEND_CORE_IDS=new Set(['hot','con']);
@@ -2441,31 +2437,19 @@ function showLegend(id,show){
 function tog(id,cls,btn){
   // Guard : couche migrée (patrimoine → patrimoine.html, agronomie → agronomie.html)
   // ou référence cassée — sortie silencieuse pour éviter map.addLayer(undefined).
-  if(!LAYERS[id]&&!WMS[id]&&id!=='emag')return; // emag : couche dynamique gérée hors WMS, voir hooks ci-dessous
+  if(!LAYERS[id]&&!WMS[id])return;
   if(window.innerWidth<=600){const a=document.getElementById('layers-accordion'),b=document.getElementById('mob-toggle');if(a&&a.classList.contains('mob-open')){a.classList.remove('mob-open');if(b)b.textContent='☰';}}
-  if(ACTIVE[id]){
-    if(id==='emag'){
-      if(wmsEmag&&map.hasLayer(wmsEmag))map.removeLayer(wmsEmag);
-      wmsEmag=null;
-    }else{
-      WMS[id]?map.removeLayer(WMS[id]):map.removeLayer(LAYERS[id]);
-    }
-    ACTIVE[id]=false;if(btn)btn.className='lbtn';
+  if(ACTIVE[id]){WMS[id]?map.removeLayer(WMS[id]):map.removeLayer(LAYERS[id]);ACTIVE[id]=false;if(btn)btn.className='lbtn';
     if(id==='geo')document.getElementById('geo-op-row').style.display='none';
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='none';
+    if(id==='emag')document.getElementById('emag-op-row').style.display='none';
     if(id==='crustal')showCrustalGauge(false);
     if(id==='con'&&map.hasLayer(lCert))map.removeLayer(lCert); // Mesures EM : retirer lCert en parallele de lCon
     showLegend(id,false);
-  }else{
-    if(id==='emag'){
-      wmsEmag=buildWmsEmag();
-      map.addLayer(wmsEmag);
-    }else{
-      WMS[id]?map.addLayer(WMS[id]):map.addLayer(LAYERS[id]);
-    }
-    ACTIVE[id]=true;if(btn)btn.classList.add(cls);
+  }else{WMS[id]?map.addLayer(WMS[id]):map.addLayer(LAYERS[id]);ACTIVE[id]=true;if(btn)btn.classList.add(cls);
     if(id==='geo')document.getElementById('geo-op-row').style.display='flex';
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='flex';
+    if(id==='emag')document.getElementById('emag-op-row').style.display='flex';
     if(id==='hot'&&lHot.getLayers().length===0)buildHot();
     if(id==='therm'&&lTherm.getLayers().length===0)buildThermLayer();
     if(id==='crustal'){if(lCrustal.getLayers().length===0)buildCrustalLayer();showCrustalGauge(true);}
