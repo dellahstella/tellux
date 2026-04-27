@@ -561,7 +561,7 @@ footer {
         <h4>Protocole résumé</h4>
         <ul>
           <li>Sélection de sites témoins stratifiés par lithologie, filtrés à ≥ 2 km de toute HTA</li>
-          <li>Mesure in situ du champ magnétique total (magnétomètre portable, triplicate)</li>
+          <li>Mesure in situ du champ magnétique total (magnétomètre fluxgate calibré ou à précession de protons — pas smartphone, triplicate)</li>
           <li>Calcul de l'écart au modèle de référence IGRF + anomalie crustale</li>
           <li>Régression écart mesuré ~ susceptibilité locale</li>
         </ul>
@@ -957,6 +957,117 @@ footer {
     </details>
 
   </div>
+</section>
+
+<!-- Limites instrumentales du magnétomètre smartphone — fiche méthodologique (PR 3) -->
+<section id="limites-instrumentales-magnetometre">
+  <div class="section-label">Méthodologie — contributions citoyennes</div>
+  <h2>Limites instrumentales du magnétomètre smartphone — ce que Tellux mesure et ne mesure pas</h2>
+
+  <h3>1. Ce que mesure un magnétomètre smartphone</h3>
+  <p>
+    Le magnétomètre intégré dans un smartphone est un capteur à effet Hall ou magnétorésistif (type AMR ou TMR), fabriqué en technologie MEMS et conçu pour la boussole électronique. Il mesure les trois composantes du champ magnétique ambiant et en restitue la magnitude totale. Sa gamme de mesure couvre typiquement ±1 200 à ±4 900 µT, largement au-delà du champ géomagnétique terrestre (~47 µT en Corse). Sa fréquence d'échantillonnage maximale est de l'ordre de 100 Hz dans les applications grand public (Phyphox, Sensor Kinetics, Physics Toolbox).
+  </p>
+
+  <h3>2. Sources de bruit interne documentées</h3>
+  <p>
+    Le capteur MEMS n'est pas isolé électromagnétiquement dans le boîtier du téléphone. Plusieurs sources de perturbation interne ont été caractérisées dans la littérature :
+  </p>
+  <ul style="padding-left: 24px; margin-bottom: 16px; max-width: 680px;">
+    <li><strong>Modem cellulaire (TDMA / GSM / LTE)</strong> : les bursts de transmission périodiques induisent des perturbations magnétiques pulsées, typiquement ±150 à ±250 nT superposées au signal.</li>
+    <li><strong>Convertisseurs DC-DC</strong> : les alimentations à découpage opèrent à des fréquences de quelques dizaines de kilohertz et rayonnent localement des harmoniques magnétiques.</li>
+    <li><strong>Batterie en charge</strong> : le courant de charge génère un champ magnétique continu additionnel pouvant atteindre ±100 à ±200 nT selon la position du capteur dans le boîtier.</li>
+    <li><strong>Écran et processeur</strong> : les courants de balayage de l'écran et les accès mémoire produisent des perturbations impulsionnelles.</li>
+    <li><strong>Accessoires aimantés</strong> : étuis foliotants à fermeture magnétique, boutons et agrafes ferromagnétiques décalent le zéro du capteur d'une valeur fixe (offset DC) qui persiste tant que l'élément reste à proximité.</li>
+  </ul>
+  <p>
+    Sans calibration préalable (procédure figure-8 ou équivalent), le bruit combiné peut atteindre <strong>±1 500 nT</strong>. Après calibration, le bruit résiduel aléatoire est de l'ordre de <strong>±200 nT</strong> dans des conditions favorables (mode avion, charge débranchée, loin de tout objet ferromagnétique). Ces valeurs sont à comparer au champ géomagnétique total en Corse (~46 200 à 47 000 nT, source IGRF-14) : le bruit représente 0,3 à 3 % du signal, ce qui suffit à masquer des anomalies crustales inférieures à 500 nT.
+  </p>
+
+  <h3>3. La limite Nyquist sur le 50 Hz</h3>
+  <p>
+    Le théorème de Shannon-Nyquist impose que pour capturer sans ambiguïté un signal à la fréquence <em>f</em>, la fréquence d'échantillonnage doit être strictement supérieure à <em>2f</em>. À 100 Hz d'échantillonnage, le magnétomètre smartphone est juste à la limite théorique pour une composante à 50 Hz, sans marge pratique : aliasing et erreurs d'amplitude rendent la valeur mesurée non fiable.
+  </p>
+  <p>
+    En pratique, <strong>un smartphone ne constitue pas un mesureur fiable du champ magnétique alternatif à 50 Hz</strong>. Il fonctionne comme un détecteur de gradient spatial du champ magnétique total (composante statique DC et basses fréquences inférieures à quelques hertz), utile pour cartographier des variations géographiques relatives, pas pour quantifier une exposition ELF conforme aux seuils ICNIRP.
+  </p>
+
+  <h3>4. Ce que Tellux fait et ne fait pas avec ces données</h3>
+  <p>
+    Les contributions smartphone intégrées à la base Tellux sont utilisées exclusivement pour :
+  </p>
+  <ul style="padding-left: 24px; margin-bottom: 16px; max-width: 680px;">
+    <li><strong>la densité spatiale</strong> : augmenter le maillage géographique des observations sur le territoire corse ;</li>
+    <li><strong>la détection de gradient relatif</strong> : identifier des zones où la valeur mesurée s'écarte significativement de la prédiction IGRF locale, ce qui peut signaler une anomalie crustale ou anthropique à investiguer.</li>
+  </ul>
+  <p>
+    Tellux n'utilise pas les contributions smartphone pour :
+  </p>
+  <ul style="padding-left: 24px; margin-bottom: 16px; max-width: 680px;">
+    <li>calibrer ou ajuster les constantes du modèle de champ (cela requiert un magnétomètre fluxgate calibré ou à précession de protons, type Geometrics ou Bartington) ;</li>
+    <li>produire une valeur absolue d'exposition certifiée (cela requiert un instrument accrédité conforme aux protocoles ANFR ou ICNIRP) ;</li>
+    <li>caractériser le champ ELF à 50 Hz (voir limite Nyquist ci-dessus) ;</li>
+    <li>se substituer à une mesure professionnelle dans un contexte réglementaire ou médical.</li>
+  </ul>
+
+  <h3>5. Protocole de bonnes pratiques pour une contribution exploitable</h3>
+  <ol style="padding-left: 24px; margin-bottom: 16px; max-width: 680px;">
+    <li><strong>Mode avion activé</strong> avant la mesure — supprime les perturbations TDMA du modem.</li>
+    <li><strong>Charge USB débranchée</strong> — supprime le champ magnétique du courant de charge.</li>
+    <li><strong>Calibration figure-8</strong> — faire tourner lentement le téléphone dans les trois axes pendant 30 secondes avant la mesure, si l'application le propose (Phyphox le fait automatiquement).</li>
+    <li><strong>Surface plane et stable</strong> — poser le téléphone à plat, loin de tables en métal, de clés, de montres, d'étuis aimantés (distance minimale : 30 cm de tout objet ferromagnétique).</li>
+    <li><strong>Moyennage 30 secondes minimum</strong> — la moyenne temporelle réduit le bruit aléatoire par un facteur √<em>n</em>. Trente secondes d'acquisition à 10 Hz produisent 300 échantillons, ce qui réduit le bruit aléatoire d'un facteur √300 ≈ 17.</li>
+    <li><strong>Saisir la durée de stabilisation</strong> dans le champ prévu à cet effet dans le formulaire Tellux.</li>
+  </ol>
+
+  <h3>Sources et références</h3>
+  <ul class="biblio">
+    <li>
+      <span class="authors">NASA</span>.
+      <span class="title">Smartphone Magnetometers Student Guide.</span>
+      <span class="ref-meta">Document pédagogique sur l'usage scientifique du magnétomètre smartphone et ses limites instrumentales. <em>URL à reprendre depuis la recherche Cowork du 27/04/2026.</em></span>
+    </li>
+    <li>
+      <span class="authors">Phyphox (RWTH Aachen)</span>.
+      <span class="title">Sensor Database — Magnetic field.</span>
+      <span class="ref-meta">Documentation officielle du capteur magnétomètre dans l'application Phyphox, plages typiques et bruit observé. <em>URL à reprendre depuis la recherche Cowork du 27/04/2026.</em></span>
+    </li>
+    <li>
+      <span class="authors">Fizziq</span>.
+      <span class="title">Le magnétomètre du smartphone.</span>
+      <span class="ref-meta">Article pédagogique sur le principe physique du capteur et ses limites. <em>URL à reprendre depuis la recherche Cowork du 27/04/2026.</em></span>
+    </li>
+    <li>
+      <span class="authors">Skarlatidou A., Hamilton A., Vitos M., Haklay M.</span>
+      <span class="year">(2018)</span>.
+      <span class="title">What Do Volunteers Want from Citizen Science Technologies? A Systematic Literature Review and Best Practices for Their Design.</span>
+      <span class="ref-meta">Citizen Science: Theory and Practice. <a href="https://doi.org/10.5334/cstp.158" target="_blank" rel="noopener">DOI</a></span>
+    </li>
+    <li>
+      <span class="authors">Matyunin N., Anagnostopoulos N.A., Boukoros S., et al. (Boston University SecLab)</span>
+      <span class="year">(2019)</span>.
+      <span class="title">Fatal Attraction: Identifying Mobile Devices Through Electromagnetic Emissions.</span>
+      <span class="ref-meta">12th ACM Conference on Security and Privacy in Wireless and Mobile Networks (WiSec '19). <em>URL à reprendre depuis la recherche Cowork du 27/04/2026.</em></span>
+    </li>
+    <li>
+      <span class="authors">Wang C.X., Hilburn I.A., Wu D.A., et al.</span>
+      <span class="year">(2019)</span>.
+      <span class="title">Transduction of the geomagnetic field as evidenced from alpha-band activity in the human brain.</span>
+      <span class="ref-meta">eNeuro, 6(2):ENEURO.0483-18.2019. <a href="https://doi.org/10.1523/ENEURO.0483-18.2019" target="_blank" rel="noopener">DOI</a></span>
+    </li>
+    <li>
+      <span class="authors">Alken P., Thébault E., Beggan C.D., et al.</span>
+      <span class="year">(2021)</span>.
+      <span class="title">International Geomagnetic Reference Field: the thirteenth generation.</span>
+      <span class="ref-meta">Earth, Planets and Space, 73:49. <a href="https://doi.org/10.1186/s40623-020-01288-x" target="_blank" rel="noopener">DOI</a></span>
+    </li>
+    <li>
+      <span class="authors">ICNIRP — International Commission on Non-Ionizing Radiation Protection.</span>
+      <span class="year">(2010)</span>.
+      <span class="title">Guidelines for limiting exposure to time-varying electric and magnetic fields (1 Hz to 100 kHz).</span>
+      <span class="ref-meta">Health Physics, 99:818-836. <a href="https://doi.org/10.1097/HP.0b013e3181f06c86" target="_blank" rel="noopener">DOI</a></span>
+    </li>
+  </ul>
 </section>
 
 <!-- Biblio 1 : Géomagnétisme & modèles -->
