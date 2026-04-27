@@ -10,9 +10,8 @@
 ```
 tellux/
 ├── app.html                    # Application principale — Cartographie EM (PUBLIQUE)
-├── patrimoine.html             # Module patrimoine (existe, non lié depuis index, PHASE 2)
-├── agronomie.html              # Module agronomie (existe, non lié depuis index, PHASE 3)
 ├── corpus.html                 # Exposition publique du Pilier A (fiches S1-S14)
+├── mairies.html                # Outils communaux (fiche commune, modèles de courriers)
 ├── index.html                  # Landing page (dirige vers app.html uniquement)
 ├── public/
 │   └── data/                   # Jeux de données statiques JSON
@@ -46,8 +45,6 @@ tellux/
 ├── tests/                      # Tests non-régression JS (node --check)
 └── wrangler.jsonc              # Config Cloudflare Workers
 ```
-
-Les modules `patrimoine.html` et `agronomie.html` existent dans le repo public mais ne sont pas référencés depuis `index.html` ni `app.html`. Accessibles uniquement par URL directe. Ne pas les lier avant leur phase de financement respective.
 
 ---
 
@@ -216,9 +213,8 @@ La liste complète et à jour des dettes techniques est maintenue dans `DETTES_T
 | BT-CALIBRATION-001 | Calcul BT segments désactivé (flag `USE_BT_SEGMENTS = false`), proxy `BT_ZONES` legacy actif | Recalibration physique du modèle Biot-Savart BT, session dédiée |
 | HTA-TENSION-001 | Dataset `hta_lines` sans champ voltage, courant uniforme 225 A | Migration SQL + enrichissement dataset |
 | MIGN-001 | ~6 appelants legacy `calcAll` non migrés vers `calcAll_v2` | Session dédiée (non bloquant) |
-| PATR-001 | H1/H8/H18/H37/H39 dormantes — `patrimoine.html` non extrait de `app.html` | Phase 2 financement + session extraction |
-| CORPUS-PILIERS-001 (ex H1-H88-ELF-001, reformulée 2026-04-23) | Relecture des fiches du Pilier A (S1-S14) et du Pilier B (P1-P20) post-migration Biot-Savart. La formulation H1-H88 est obsolète depuis la scission du 2026-04-21 ; la correspondance H-numéro → S/P reste consultable dans `_corpus/` | Session dédiée post-merge Biot-Savart, par pilier |
+| CORPUS-PILIERS-001 (ex H1-H88-ELF-001, reformulée 2026-04-23) | Relecture des fiches du Pilier A (S1-S14) et du Pilier B (P1-P20) post-migration Biot-Savart. La formulation H1-H88 est obsolète depuis la scission du 2026-04-21 ; la correspondance H-numéro → S/P reste consultable dans le corpus interne | Session dédiée post-merge Biot-Savart, par pilier |
 
 ---
 
-*Mise à jour suivante prévue après extraction `patrimoine.html` / `agronomie.html` (jalon 1 roadmap).*
+*Mise à jour suivante prévue à mesure que la phase 1 se stabilise et que les modules d'extension sont, le cas échéant, activés (cf. ROADMAP).*
