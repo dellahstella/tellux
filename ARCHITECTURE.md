@@ -10,9 +10,8 @@
 ```
 tellux/
 ├── app.html                    # Application principale — Cartographie EM (PUBLIQUE)
-├── patrimoine.html             # Module patrimoine (existe, non lié depuis index, PHASE 2)
-├── agronomie.html              # Module agronomie (existe, non lié depuis index, PHASE 3)
 ├── corpus.html                 # Exposition publique du Pilier A (fiches S1-S14)
+├── mairies.html                # Outils communaux (fiche commune, modèles de courriers)
 ├── index.html                  # Landing page (dirige vers app.html uniquement)
 ├── public/
 │   └── data/                   # Jeux de données statiques JSON
@@ -40,14 +39,12 @@ tellux/
 │   ├── lettres/                # Lettres institutionnelles (ASNR, EDF, RTE, BRGM, IRSN)
 │   ├── notes-tri/              # Notes de tri éditoriales
 │   └── ...
-├── _corpus/                    # Corpus scientifique interne — gitignored, miroir repo privé
+├── _corpus/                    # Corpus scientifique interne — gitignored
 ├── _migrations/                # Migrations SQL Supabase versionnées
 ├── analysis/                   # Analyses de corrélation (scripts R/Python)
 ├── tests/                      # Tests non-régression JS (node --check)
 └── wrangler.jsonc              # Config Cloudflare Workers
 ```
-
-Les modules `patrimoine.html` et `agronomie.html` existent dans le repo public mais ne sont pas référencés depuis `index.html` ni `app.html`. Accessibles uniquement par URL directe. Ne pas les lier avant leur phase de financement respective.
 
 ---
 
@@ -164,8 +161,8 @@ Sparkline : SVG 180×40 px, `PROFIL_HORAIRE_CORSE` (24 valeurs MW), marqueur rou
 | `wmm_2025_grid_corse.json` | Grille précalculée WMM 2025 pour cross-check magnétique | NOAA WMM 2025 | Chargement asynchrone |
 | `postes_sources_corse.json` | Postes sources HTA/HTB | EDF SEI (enrichissement manuel) | `calcMagneticELF_v2` |
 | `eoliennes_corse.json` | Parcs éoliens | Observatoire éolien / ANFR | `calcMagneticELF_v2` |
-| `points_chauds_radio_corse.json` | 8 entrées documentaires U/Th (label UI « Sites U/Th à mesurer »), `dose_gamma: null` sur toutes, garde défensive `calcGammaAmbient` | Consolidation Cowork 2026-04-23 basée sur `_corpus/tellux_note_uranium_thorium_corse_v1.md` | `loadPointsChaudsRadio()` premier click |
-| `sites_remarquables_corse.json` | 10 sites géophysiques remarquables en 3 catégories (ophiolite / minier historique / surveillance radiologique) | Consolidation Cowork 2026-04-23 basée sur `_corpus/tellux_note_sites_speciaux_v1.md` | Chargement asynchrone |
+| `points_chauds_radio_corse.json` | 8 entrées documentaires U/Th (label UI « Sites U/Th à mesurer »), `dose_gamma: null` sur toutes, garde défensive `calcGammaAmbient` | Consolidation Cowork 2026-04-23, note de consolidation interne | `loadPointsChaudsRadio()` premier click |
+| `sites_remarquables_corse.json` | 10 sites géophysiques remarquables en 3 catégories (ophiolite / minier historique / surveillance radiologique) | Consolidation Cowork 2026-04-23, note de consolidation interne | Chargement asynchrone |
 | `cartoradio_certified_corse.json` | 30 mesures RF certifiées ANFR/EXEM (29 conformes, 1 dépassement Monticello 29,05 V/m avec re-inspection conformité) | Extraction Cowork 2026-04-23 depuis 30 PDFs ANFR/EXEM | Couche Mesures EM unifiée, layer `lCert` |
 
 Règles pour les nouveaux fichiers `public/data/` :
@@ -200,7 +197,7 @@ GitHub (dellahstella/tellux) → push main → Cloudflare Workers build
 ```
 
 Branche `dev` → branches éphémères `feat/`, `fix/`, `chore/` → PR → merge `dev` → PR → merge `main`.
-Push direct sur `main` interdit (voir `PROJECT_INSTRUCTIONS_v2.md` §B.3).
+Push direct sur `main` interdit (workflow imposé par les instructions internes du projet).
 
 ---
 
@@ -210,15 +207,14 @@ La liste complète et à jour des dettes techniques est maintenue dans `DETTES_T
 
 | ID | Description | Condition de déblocage |
 |----|-------------|----------------------|
-| GELÉ-001 | `EXPERT_WEIGHTS_DEFAULT`, `EXPERT_BOUNDS_DEFAULT`, formule NCRP : constantes gelées | Relecture physicien tiers — document `docs/physicien/DOCUMENT_SOUMISSION_PHYSICIEN_TELLUX_v1.2.md` en attente d'envoi |
-| TÉLÉ-001 | API Téléray ASNR (gamma temps réel) non intégrée | Accès API ASNR (courrier `docs/lettres/lettre_01_ASNR_teleray.md` envoyé) |
+| GELÉ-001 | `EXPERT_WEIGHTS_DEFAULT`, `EXPERT_BOUNDS_DEFAULT`, formule NCRP : constantes gelées | Relecture physicien tiers — document de soumission transmis en avril 2026 (cf. `ROADMAP.md` section 7) |
+| TÉLÉ-001 | API Téléray ASNR (gamma temps réel) non intégrée | Accès API ASNR (courrier transmis en avril 2026, cf. `ROADMAP.md` section 7) |
 | NCRP-001 | Fond naturel terrestre NCRP 94 dans `calcGammaAmbient` gelé | Relecture physicien tiers (lié GELÉ-001) |
 | BT-CALIBRATION-001 | Calcul BT segments désactivé (flag `USE_BT_SEGMENTS = false`), proxy `BT_ZONES` legacy actif | Recalibration physique du modèle Biot-Savart BT, session dédiée |
 | HTA-TENSION-001 | Dataset `hta_lines` sans champ voltage, courant uniforme 225 A | Migration SQL + enrichissement dataset |
 | MIGN-001 | ~6 appelants legacy `calcAll` non migrés vers `calcAll_v2` | Session dédiée (non bloquant) |
-| PATR-001 | H1/H8/H18/H37/H39 dormantes — `patrimoine.html` non extrait de `app.html` | Phase 2 financement + session extraction |
-| CORPUS-PILIERS-001 (ex H1-H88-ELF-001, reformulée 2026-04-23) | Relecture des fiches du Pilier A (S1-S14) et du Pilier B (P1-P20) post-migration Biot-Savart. La formulation H1-H88 est obsolète depuis la scission du 2026-04-21 ; la correspondance H-numéro → S/P reste consultable dans `_corpus/` | Session dédiée post-merge Biot-Savart, par pilier |
+| CORPUS-PILIERS-001 (ex H1-H88-ELF-001, reformulée 2026-04-23) | Relecture des fiches du Pilier A (S1-S14) et du Pilier B (P1-P20) post-migration Biot-Savart. La formulation H1-H88 est obsolète depuis la scission du 2026-04-21 ; la correspondance H-numéro → S/P reste consultable dans le corpus interne | Session dédiée post-merge Biot-Savart, par pilier |
 
 ---
 
-*Mise à jour suivante prévue après extraction `patrimoine.html` / `agronomie.html` (jalon 1 roadmap).*
+*Mise à jour suivante prévue à mesure que la phase 1 se stabilise et que les modules d'extension sont, le cas échéant, activés (cf. ROADMAP).*
