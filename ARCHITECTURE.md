@@ -39,7 +39,7 @@ tellux/
 │   ├── lettres/                # Lettres institutionnelles (ASNR, EDF, RTE, BRGM, IRSN)
 │   ├── notes-tri/              # Notes de tri éditoriales
 │   └── ...
-├── _corpus/                    # Corpus scientifique interne — gitignored, miroir repo privé
+├── _corpus/                    # Corpus scientifique interne — gitignored
 ├── _migrations/                # Migrations SQL Supabase versionnées
 ├── analysis/                   # Analyses de corrélation (scripts R/Python)
 ├── tests/                      # Tests non-régression JS (node --check)
@@ -161,8 +161,8 @@ Sparkline : SVG 180×40 px, `PROFIL_HORAIRE_CORSE` (24 valeurs MW), marqueur rou
 | `wmm_2025_grid_corse.json` | Grille précalculée WMM 2025 pour cross-check magnétique | NOAA WMM 2025 | Chargement asynchrone |
 | `postes_sources_corse.json` | Postes sources HTA/HTB | EDF SEI (enrichissement manuel) | `calcMagneticELF_v2` |
 | `eoliennes_corse.json` | Parcs éoliens | Observatoire éolien / ANFR | `calcMagneticELF_v2` |
-| `points_chauds_radio_corse.json` | 8 entrées documentaires U/Th (label UI « Sites U/Th à mesurer »), `dose_gamma: null` sur toutes, garde défensive `calcGammaAmbient` | Consolidation Cowork 2026-04-23 basée sur `_corpus/tellux_note_uranium_thorium_corse_v1.md` | `loadPointsChaudsRadio()` premier click |
-| `sites_remarquables_corse.json` | 10 sites géophysiques remarquables en 3 catégories (ophiolite / minier historique / surveillance radiologique) | Consolidation Cowork 2026-04-23 basée sur `_corpus/tellux_note_sites_speciaux_v1.md` | Chargement asynchrone |
+| `points_chauds_radio_corse.json` | 8 entrées documentaires U/Th (label UI « Sites U/Th à mesurer »), `dose_gamma: null` sur toutes, garde défensive `calcGammaAmbient` | Consolidation Cowork 2026-04-23, note de consolidation interne | `loadPointsChaudsRadio()` premier click |
+| `sites_remarquables_corse.json` | 10 sites géophysiques remarquables en 3 catégories (ophiolite / minier historique / surveillance radiologique) | Consolidation Cowork 2026-04-23, note de consolidation interne | Chargement asynchrone |
 | `cartoradio_certified_corse.json` | 30 mesures RF certifiées ANFR/EXEM (29 conformes, 1 dépassement Monticello 29,05 V/m avec re-inspection conformité) | Extraction Cowork 2026-04-23 depuis 30 PDFs ANFR/EXEM | Couche Mesures EM unifiée, layer `lCert` |
 
 Règles pour les nouveaux fichiers `public/data/` :
@@ -197,7 +197,7 @@ GitHub (dellahstella/tellux) → push main → Cloudflare Workers build
 ```
 
 Branche `dev` → branches éphémères `feat/`, `fix/`, `chore/` → PR → merge `dev` → PR → merge `main`.
-Push direct sur `main` interdit (voir `PROJECT_INSTRUCTIONS_v2.md` §B.3).
+Push direct sur `main` interdit (workflow imposé par les instructions internes du projet).
 
 ---
 
@@ -207,8 +207,8 @@ La liste complète et à jour des dettes techniques est maintenue dans `DETTES_T
 
 | ID | Description | Condition de déblocage |
 |----|-------------|----------------------|
-| GELÉ-001 | `EXPERT_WEIGHTS_DEFAULT`, `EXPERT_BOUNDS_DEFAULT`, formule NCRP : constantes gelées | Relecture physicien tiers — document `docs/physicien/DOCUMENT_SOUMISSION_PHYSICIEN_TELLUX_v1.2.md` en attente d'envoi |
-| TÉLÉ-001 | API Téléray ASNR (gamma temps réel) non intégrée | Accès API ASNR (courrier `docs/lettres/lettre_01_ASNR_teleray.md` envoyé) |
+| GELÉ-001 | `EXPERT_WEIGHTS_DEFAULT`, `EXPERT_BOUNDS_DEFAULT`, formule NCRP : constantes gelées | Relecture physicien tiers — document de soumission transmis en avril 2026 (cf. `ROADMAP.md` section 7) |
+| TÉLÉ-001 | API Téléray ASNR (gamma temps réel) non intégrée | Accès API ASNR (courrier transmis en avril 2026, cf. `ROADMAP.md` section 7) |
 | NCRP-001 | Fond naturel terrestre NCRP 94 dans `calcGammaAmbient` gelé | Relecture physicien tiers (lié GELÉ-001) |
 | BT-CALIBRATION-001 | Calcul BT segments désactivé (flag `USE_BT_SEGMENTS = false`), proxy `BT_ZONES` legacy actif | Recalibration physique du modèle Biot-Savart BT, session dédiée |
 | HTA-TENSION-001 | Dataset `hta_lines` sans champ voltage, courant uniforme 225 A | Migration SQL + enrichissement dataset |
