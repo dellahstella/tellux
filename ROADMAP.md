@@ -1,6 +1,6 @@
 # Tellux — Feuille de route publique
 
-**Dernière mise à jour :** 25 avril 2026
+**Dernière mise à jour :** 27 avril 2026
 
 Document de référence publique présentant la trajectoire générale du projet Tellux. Les détails opérationnels, calendriers précis et éléments stratégiques restent en pilotage interne.
 
@@ -57,10 +57,6 @@ Publication d'une application de cartographie électromagnétique territoriale r
 - Glossaire technique intégré
 - Phase d'UI avancée (sélecteur de domaines, badges temps réel)
 
-### Argument différenciant
-
-À notre connaissance, aucun équivalent international n'existe pour un outil cartographique EM territorial avec cette profondeur (quatre domaines physiques distincts, mode Expertise cadré épistémiquement).
-
 ### Avancées techniques majeures avril 2026
 
 - **2026-04-21/22** : refonte du modèle Biot-Savart sur les lignes HTA réelles (8 386 polylines depuis l'open data EDF SEI), intégration des lignes BT, sommation vectorielle 2D, fermeture des dettes `ELF-CALIB-001` (PR #69), `WMM-CROSSCHECK-001` (PR #67), `BDFORET-V2-001` (partielle, PR #67), `ELF-VECTOR-001` et `BT-ELF-001` (PR #71). Nouvelle dette `BT-CALIBRATION-001` détectée à l'audit post-merge.
@@ -70,8 +66,8 @@ Publication d'une application de cartographie électromagnétique territoriale r
 
 ### Démarches institutionnelles d'accès aux données
 
-- **2026-04** : initiation des démarches institutionnelles d'accès aux données améliorées (ASNR Téléray, EDF SEI Corse, BRGM Corse, ASNR cellule radon). Première sollicitation méthodologique externe transmise au directeur d'UMR du laboratoire Sciences pour l'Environnement (SPE, Université de Corse) en vue d'orientation vers un relecteur physicien tiers.
-- **2026-04-28** : envoi du document de spécification méthodologique au directeur de l'UMR SPE pour orientation vers un relecteur physicien tiers.
+- **2026-04** : initiation des démarches institutionnelles d'accès aux données améliorées (ASNR Téléray, EDF SEI Corse, BRGM Corse, ASNR cellule radon). Première sollicitation méthodologique externe transmise à la direction d'une UMR locale (sciences pour l'environnement) en vue d'orientation vers un relecteur physicien tiers.
+- **2026-04-28** : envoi du document de spécification méthodologique à la même direction d'UMR pour orientation vers un relecteur physicien tiers.
 
 Suivi détaillé des envois et des retours : voir section 9 « Suivi des sollicitations institutionnelles ».
 
@@ -160,7 +156,7 @@ Chaque phase est strictement cadrée. Les modules suivants existent techniquemen
 
 ### Financements
 
-Stratégie de financement basée sur des candidatures à des appels publics (2026-2027). Partenariats et collaborations scientifiques en cours de construction.
+Stratégie de financement basée sur des candidatures à des appels publics (FEDER en priorité, 2026-2027). Aucun partenariat ni collaboration scientifique formalisé à ce jour. Premières démarches de relecture méthodologique externe initiées en avril 2026 (cf. section 9).
 
 ### Indépendance
 
@@ -179,7 +175,7 @@ Les chantiers suivants sont suspendus en attente de deux conditions conjointes :
 
 Le document de soumission au physicien tiers est préparé et à jour au 2026-04-23 (version v1.2). Il intègre les ajustements scientifiques du jour (reformulation S10, amendement S8 avec cadre éthique, ajustements cosmétiques et pédagogiques complémentaires) et demande au relecteur une validation explicite sur les deux points les plus sensibles (questions Q7.6 et Q7.7).
 
-Le document reste en attente de soumission effective, conditionnée à l'identification d'un relecteur physicien tiers. Les chantiers ci-dessous s'activeront une fois cette relecture conduite et la phase de soumission institutionnelle atteinte.
+Le document a été transmis le 28 avril 2026 à la direction d'UMR sollicitée ainsi qu'à quatre institutions (cf. section 9). Les chantiers ci-dessous s'activeront après réception d'au moins un retour de relecture.
 
 ### Chantier 1 — Rédaction du Guide d'interprétation de la carte
 
@@ -202,8 +198,8 @@ Le document reste en attente de soumission effective, conditionnée à l'identif
 
 - **Statut :** infrastructure à préparer, conversion à exécuter après validation physicien
 - **Documents concernés :**
-  - `CADRE_SCIENTIFIQUE_TELLUX_v2.1.1.md` (949 lignes, repo public racine)
-  - `TELLUX_POSITION_EPISTEMIQUE.md` (220 lignes, repo public racine)
+  - Cadre scientifique Tellux (document interne en attente de publication PDF)
+  - Position épistémique (document interne en attente de publication PDF)
   - Guide d'interprétation de la carte (à rédiger — Chantier 1 ci-dessus)
 - **Dépendance :** Chantier 1 + relecture physicien validée
 - **Note :** l'infrastructure PDF (outillage, templates DA v2, exports test) sera préparée séparément, en amont, pour que la conversion finale soit immédiate une fois les conditions réunies.
@@ -222,7 +218,7 @@ Tableau de suivi des courriers envoyés aux institutions et chercheurs en lien a
 
 | Date envoi | Destinataire | Canal | Objet | Statut | Date retour | Commentaire |
 |---|---|---|---|---|---|---|
-| 2026-04-28 | Paul-Antoine Santoni — Directeur UMR SPE Université de Corse | Email | Demande d'orientation vers relecteur physicien tiers (relecture méthodologique) | Envoyé | — | — |
+| 2026-04-28 | Direction UMR locale (sciences pour l'environnement) | Email | Demande d'orientation vers relecteur physicien tiers (relecture méthodologique) | Envoyé | — | — |
 | 2026-04-28 | ASNR — Direction Téléray | Email | Accès programmatique balises Téléray AJA + BAP | Envoyé | — | — |
 | 2026-04-28 | ASNR — Cellule radon | Email | Géométries polygonales communales + mesures indoor Corse | Envoyé | — | — |
 | 2026-04-29 | EDF SEI — Direction Corse | Email | Validation classification HTA + tensions/courants nominaux du réseau Corse | Envoyé | — | — |
