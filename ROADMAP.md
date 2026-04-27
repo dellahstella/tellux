@@ -107,7 +107,7 @@ Projet indépendant. Architecture modulaire permettant la montée en gamme progr
 Les chantiers suivants sont suspendus en attente de deux conditions conjointes :
 
 - Identification et engagement d'un relecteur physicien tiers pour validation méthodologique
-- Phase de soumission aux institutions de financement (CTC, FEDER, ANR) atteinte
+- Phase de soumission aux institutions de financement (FEDER, programmes nationaux et européens) atteinte
 
 ### Préparation soumission physicien tiers — statut
 
