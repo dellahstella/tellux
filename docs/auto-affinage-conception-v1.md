@@ -181,7 +181,7 @@ Pas de phase « calibration semi-automatique » envisagée à court terme. Si el
 Ce chantier ne se déclenche pas avant que **toutes** les conditions suivantes soient réunies.
 
 1. **Phase 1 du projet stabilisée.** L'application `app.html` est publiée comme cartographie EM rigoureuse, le pivot architectural est consommé, les bugs résiduels sont absorbés.
-2. **Retour Santoni reçu.** Au moins une réponse du physicien sollicité, qu'elle soit de validation ou d'avis méthodologique. La phase 0 ne s'amorce pas dans le silence.
+2. **Premier retour de relecture méthodologique externe reçu.** Au moins une réponse du physicien sollicité, qu'elle soit de validation ou d'avis méthodologique. La phase 0 ne s'amorce pas dans le silence.
 3. **Volume de contributions suffisant pour avoir du sens.** Indicatif : au moins quelques dizaines de contributions niveau 1 réparties sur le territoire. Avec moins, les résidus sont du bruit non statistiquement exploitable.
 4. **Disponibilité de Soleil.** Le chantier est non urgent. Il ne déprend rien. Il s'amorce quand Soleil a la bande passante pour le piloter sans précipitation.
 
