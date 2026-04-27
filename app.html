@@ -1666,7 +1666,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <div class="cform-step">Etape 3 — Mesure</div>
   <label>Valeur mesuree <span style="color:var(--tx3);font-weight:400;font-size:10px">— laissez vide si pas de chiffre</span></label>
   <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
-    <input type="number" id="c-val" placeholder="ex: 44800" style="flex:1;margin-bottom:0">
+    <input type="number" id="c-val" placeholder="ex: 44800" style="flex:1;margin-bottom:0" oninput="refreshIGRFDelta()">
     <select id="c-unit" style="width:90px;margin-bottom:0">
       <option value="nT">nT (magnéto)</option>
       <option value="µT">µT (magnéto)</option>
@@ -1688,6 +1688,22 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <input type="file" id="csv-phyphox-input" accept=".csv" style="display:none" onchange="handlePhyphoxCSV(this)">
     <button type="button" onclick="document.getElementById('csv-phyphox-input').click()" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--pierre-ombre);color:var(--ardoise-clair);cursor:pointer;width:100%">&#x1F4C1; Importer un CSV de mesures (Phyphox, Physics Toolbox…)</button>
     <div id="csv-summary" style="display:none;font-size:11px;color:var(--ardoise-clair);margin-top:4px;padding:6px 8px;background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r)"></div>
+  </div>
+
+  <!-- Zone IGRF — apparait apres placement du point de mesure -->
+  <div id="c-igrf-box" style="display:none;background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;margin-bottom:8px;font-size:11px;color:var(--ardoise-clair);line-height:1.5">
+    <span id="c-igrf-text"></span>
+    <span id="c-igrf-warn" style="display:none;color:var(--warn);font-weight:500;margin-top:3px"></span>
+  </div>
+
+  <!-- Conditions de mesure -->
+  <div class="cform-step">Conditions de mesure</div>
+  <div style="border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px;background:var(--pierre-ombre)">
+    <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ardoise-clair);margin-bottom:6px;cursor:pointer"><input type="checkbox" id="c-airplane-mode" style="flex-shrink:0;accent-color:var(--acc)"><span>Mode avion activ&eacute; pendant la mesure</span></label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ardoise-clair);margin-bottom:6px;cursor:pointer"><input type="checkbox" id="c-usb-off" style="flex-shrink:0;accent-color:var(--acc)"><span>Charge USB d&eacute;branch&eacute;e</span></label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ardoise-clair);margin-bottom:10px;cursor:pointer"><input type="checkbox" id="c-no-metal" style="flex-shrink:0;accent-color:var(--acc)"><span>Aucun objet m&eacute;tallique dans un rayon de 30&nbsp;cm</span></label>
+    <label style="display:block;font-size:11px;color:var(--ardoise-clair);margin-bottom:4px;font-weight:500">Dur&eacute;e de stabilisation avant lecture (secondes)</label>
+    <input type="number" id="c-duration-s" min="0" placeholder="30" style="width:120px;margin-bottom:0">
   </div>
 
   <!-- ÉTAPE 4 : Contexte intérieur (visible si intérieur sélectionné) -->
@@ -4811,6 +4827,42 @@ function _armContribClick(){
   };
   map.once('click',_contribClickHandler);
 }
+function updateIGRFDisplay(lat, lng){
+  var box=document.getElementById('c-igrf-box');
+  var txt=document.getElementById('c-igrf-text');
+  var warn=document.getElementById('c-igrf-warn');
+  if(!box||!txt||!warn) return;
+  var res=calcMagneticStatic(lat, lng);
+  var igrf_nT=Math.round(res.B_total_nT);
+  var igrf_fmt=igrf_nT.toLocaleString('fr-FR');
+  var valRaw=parseFloat(document.getElementById('c-val')?.value||'');
+  var unite=(document.getElementById('c-unit')?.value)||'nT';
+  var instrType=(document.getElementById('c-type')?.value)||'';
+  var msg='Valeur IGRF-14 attendue ici : '+igrf_fmt+' nT.';
+  warn.style.display='none';
+  if(!isNaN(valRaw) && valRaw>0){
+    var valNT=valRaw;
+    var cInstr=INSTRUMENT_CONSTRAINTS[instrType];
+    if(cInstr && cInstr.units && cInstr.units[unite]) valNT=valRaw*(cInstr.units[unite].pivot||1);
+    var magUnits=['nT','µT','mG'];
+    if(magUnits.indexOf(unite)>=0){
+      var delta=Math.round(valNT-igrf_nT);
+      var sign=delta>=0?'+':'';
+      msg+=' Ecart avec votre mesure : '+sign+delta.toLocaleString('fr-FR')+' nT.';
+      if(Math.abs(delta)>5000){
+        warn.textContent='Ecart supérieur à 5 000 nT — vérifiez instrument et unités.';
+        warn.style.display='block';
+      }
+    }
+  }
+  txt.textContent=msg;
+  box.style.display='block';
+}
+function refreshIGRFDelta(){
+  if(typeof pending==='undefined'||!pending) return;
+  var ll=pending.getLatLng();
+  updateIGRFDisplay(ll.lat, ll.lng);
+}
 function _placeContribMarker(lat,lng){
   // Filtre geographique : Tellux est calibre pour la Corse uniquement
   if(lat<41.3||lat>43.1||lng<8.5||lng>9.7){
@@ -4826,6 +4878,7 @@ function _placeContribMarker(lat,lng){
   if(posInfo)posInfo.innerHTML='Position : <b style="font-family:var(--mono)">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</b>';
   var reposBtn=document.getElementById('btn-reposition');
   if(reposBtn)reposBtn.style.display='inline-block';
+  updateIGRFDisplay(lat, lng);
   info('Position placee — remplissez le formulaire.','success',5000);
 }
 function repositionMarker(){
@@ -4834,6 +4887,7 @@ function repositionMarker(){
   if(posInfo)posInfo.textContent='Cliquez sur la carte pour placer le point';
   var reposBtn=document.getElementById('btn-reposition');
   if(reposBtn)reposBtn.style.display='none';
+  var igrfBox=document.getElementById('c-igrf-box');if(igrfBox)igrfBox.style.display='none';
   info('Cliquez sur la carte pour repositionner votre mesure.','warn');
   _armContribClick();
 }
@@ -4860,6 +4914,11 @@ function cancelContrib(){
   if(reposBtn)reposBtn.style.display='none';
   // Désactiver le FAB active state
   var fabEl=document.getElementById('fab-mesure');if(fabEl)fabEl.classList.remove('fab-active');
+  var airplaneChk=document.getElementById('c-airplane-mode');if(airplaneChk)airplaneChk.checked=false;
+  var usbChk=document.getElementById('c-usb-off');if(usbChk)usbChk.checked=false;
+  var metalChk=document.getElementById('c-no-metal');if(metalChk)metalChk.checked=false;
+  var durInp=document.getElementById('c-duration-s');if(durInp)durInp.value='';
+  var igrfBox=document.getElementById('c-igrf-box');if(igrfBox)igrfBox.style.display='none';
   // Désarmer le handler de clic s'il est encore en attente (pas de map.off('click')
   // global qui casserait les autres handlers)
   if(_contribClickHandler){map.off('click',_contribClickHandler);_contribClickHandler=null;}
@@ -4942,6 +5001,10 @@ async function saveContrib(){
     attenuation_prevue_db:attenPrevue||null,
     protocole_aveugle: document.getElementById('c-protocole')?.checked ? true : null,
     native_capture: window._nativeCaptureUsed === true ? true : null,
+    airplane_mode_on: document.getElementById('c-airplane-mode')?.checked ? true : null,
+    usb_charging_off: document.getElementById('c-usb-off')?.checked ? true : null,
+    no_metal_proximity: document.getElementById('c-no-metal')?.checked ? true : null,
+    measurement_duration_s: parseInt(document.getElementById('c-duration-s')?.value||'0')||null,
   };
   // Filtrer les champs null/undefined pour éviter PGRST204 si colonne manquante
   Object.keys(row).forEach(k=>{if(row[k]===null||row[k]===undefined)delete row[k];});
@@ -4953,6 +5016,11 @@ async function saveContrib(){
     document.getElementById('c-val').value='';document.getElementById('c-note').value='';
     window._csvStats=null;
     const protoChk=document.getElementById('c-protocole');if(protoChk)protoChk.checked=false;
+    var airplaneChk=document.getElementById('c-airplane-mode');if(airplaneChk)airplaneChk.checked=false;
+    var usbChk=document.getElementById('c-usb-off');if(usbChk)usbChk.checked=false;
+    var metalChk=document.getElementById('c-no-metal');if(metalChk)metalChk.checked=false;
+    var durInp=document.getElementById('c-duration-s');if(durInp)durInp.value='';
+    var igrfBox=document.getElementById('c-igrf-box');if(igrfBox)igrfBox.style.display='none';
     window._nativeCaptureUsed = false;
     var csvSum=document.getElementById('csv-summary');if(csvSum)csvSum.style.display='none';
     var csvInp=document.getElementById('csv-phyphox-input');if(csvInp)csvInp.value='';
@@ -6247,6 +6315,7 @@ function startContribFromFAB(){
   if(posInfo)posInfo.textContent='Cliquez sur la carte pour placer le point';
   var reposBtn=document.getElementById('btn-reposition');
   if(reposBtn)reposBtn.style.display='none';
+  var igrfBox=document.getElementById('c-igrf-box');if(igrfBox)igrfBox.style.display='none';
   info('Cliquez sur la carte pour placer votre mesure.','warn');
   // Attendre le prochain tick pour que la carte ait fini de traiter le toggle
   setTimeout(function(){_armContribClick();},0);
