@@ -7,6 +7,22 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [2.7.0] — 2026-04-27
+
+### Removed — Retrait des modules patrimoine et agronomie du dépôt public (PR `refactor/audit-transparence-corpus-public`)
+
+- Suppression de `patrimoine.html` et `agronomie.html`. Les deux fichiers existaient dans le dépôt public sans être liés depuis la landing ; ils sont retirés à l'occasion de l'audit de transparence du 27 avril 2026 pour aligner le périmètre public sur la phase 1 effectivement publiée (cartographie EM, outils communaux, corpus). Contenus conservés en interne pour réactivation éventuelle dans une phase ultérieure financée.
+- Mise à jour en cascade : `index.html` (bloc état d'avancement, références bibliographiques, sources territoire), `README.md`, `ROADMAP.md` (section périmètre, sections Phase 2/3/4 consolidées en une note neutre, renumérotation), `ARCHITECTURE.md`, `app.html` (lien biblio redirigé vers `corpus.html`).
+- Anonymisation de la mention nominative du destinataire de la première sollicitation méthodologique externe dans `ROADMAP.md` (section 7) et `docs/auto-affinage-conception-v1.md`.
+- Reformulation de la cible candidature financement (FEDER en priorité) dans les contextes publics.
+- Reformulation de l'accroche grand public (`index.html`, `mairies.html`) en cadrage dialogue institutionnel non anxiogène.
+- Retrait du chiffre « 130+ études peer-reviewed » du bloc numbers de la landing — non auditable publiquement.
+- Documents de session internes-style (`AUDIT_SECTION_7_CORPUS.md`, `DATASETS_PATCH_COWORK_FIX.md`, `PILIERS_AB_RECOS_COWORK.md`) déplacés vers `docs/internal/` (gitignored).
+
+Voir l'entrée correspondante dans `retractations.html` pour le détail des motifs.
+
+---
+
 ## [2.6.1] — 2026-04-22
 
 ### Fixed — HOTFIX BT-CALIBRATION-001 (PR `hotfix/disable-bt-segments-calibration`)

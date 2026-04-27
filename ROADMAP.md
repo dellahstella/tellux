@@ -1,40 +1,18 @@
 # Tellux — Feuille de route publique
 
-**Dernière mise à jour :** 25 avril 2026
+**Dernière mise à jour :** 27 avril 2026
 
 Document de référence publique présentant la trajectoire générale du projet Tellux. Les détails opérationnels, calendriers précis et éléments stratégiques restent en pilotage interne.
 
+**Note de lecture.** Le terme « phase 1 » désigne dans ce document l'étape actuelle de développement de Tellux : la cartographie EM publique. Les modules d'extension envisagés au-delà ne sont pas détaillés publiquement à ce stade.
+
 ---
 
-## 1. Vision en suite d'applications
+## 1. Périmètre actuel et trajectoire
 
-Depuis avril 2026, Tellux n'est plus une application monolithique mais une **suite d'applications** déployées progressivement selon la maturité de chaque module.
+Tellux est aujourd'hui structuré autour d'**une application principale publique** : la cartographie électromagnétique territoriale (`app.html`), accompagnée d'outils communaux (`mairies.html`) et d'un corpus scientifique dédié (`corpus.html`). Cette phase 1 est en cours de stabilisation.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      LANDING PAGE (index.html)                   │
-│    Présente l'application de cartographie EM (application 1)     │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  APP 1 — CARTOGRAPHIE EM (app.html)                              │
-│  4 domaines physiques + contexte géologique + mode Expertise     │
-│  Phase 1 — publique, en cours de stabilisation                   │
-└─────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────┐
-│  APP 2 — PATRIMOINE (patrimoine.html)                            │
-│  Mégalithes, églises romanes, hypothèses exploratoires           │
-│  Phase 2 — non active, accessible via URL directe                │
-└─────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────┐
-│  APP 3 — AGRONOMIE (agronomie.html)                              │
-│  Diagnostic parcellaire, recommandations permaculture            │
-│  Phase 3 — non active, accessible via URL directe                │
-└─────────────────────────────────────────────────────────────────┘
-```
+Des modules d'extension thématiques pourront être envisagés sous condition d'obtention d'un financement public (FEDER en priorité), sans calendrier public à ce stade.
 
 ---
 
@@ -51,15 +29,10 @@ Publication d'une application de cartographie électromagnétique territoriale r
 
 ### Livrables restants
 
-- Finalisation de l'extraction des modules patrimoine et agronomie depuis `app.html`
-- Mise à jour de la landing vers une cohérence totale avec la suite d'applications
+- Mise à jour de la landing vers une cohérence totale avec la phase 1 publique
 - Documentation méthodologique par domaine physique
 - Glossaire technique intégré
 - Phase d'UI avancée (sélecteur de domaines, badges temps réel)
-
-### Argument différenciant
-
-À notre connaissance, aucun équivalent international n'existe pour un outil cartographique EM territorial avec cette profondeur (quatre domaines physiques distincts, mode Expertise cadré épistémiquement).
 
 ### Avancées techniques majeures avril 2026
 
@@ -70,10 +43,10 @@ Publication d'une application de cartographie électromagnétique territoriale r
 
 ### Démarches institutionnelles d'accès aux données
 
-- **2026-04** : initiation des démarches institutionnelles d'accès aux données améliorées (ASNR Téléray, EDF SEI Corse, BRGM Corse, ASNR cellule radon). Première sollicitation méthodologique externe transmise au directeur d'UMR du laboratoire Sciences pour l'Environnement (SPE, Université de Corse) en vue d'orientation vers un relecteur physicien tiers.
-- **2026-04-28** : envoi du document de spécification méthodologique au directeur de l'UMR SPE pour orientation vers un relecteur physicien tiers.
+- **2026-04** : initiation des démarches institutionnelles d'accès aux données améliorées (ASNR Téléray, EDF SEI Corse, BRGM Corse, ASNR cellule radon). Première sollicitation méthodologique externe transmise à la direction d'une UMR locale (sciences pour l'environnement) en vue d'orientation vers un relecteur physicien tiers.
+- **2026-04-28** : envoi du document de spécification méthodologique à la même direction d'UMR pour orientation vers un relecteur physicien tiers.
 
-Suivi détaillé des envois et des retours : voir section 9 « Suivi des sollicitations institutionnelles ».
+Suivi détaillé des envois et des retours : voir section 7 « Suivi des sollicitations institutionnelles ».
 
 ### Chantiers techniques prioritaires en cours
 
@@ -83,54 +56,17 @@ Suivi détaillé des envois et des retours : voir section 9 « Suivi des sollici
 
 ---
 
-## 3. Phase 2 — Patrimoine et extensions (après phase 1)
+## 3. Modules d'extension envisagés (sous condition de financement)
 
-### Conditions de déclenchement
-
-- Phase 1 stabilisée et publiée
-- Validation méthodologique par relecture scientifique externe
-- Ressources budgétaires acquises
-
-### Contenus envisagés
-
-- Réactivation de l'application patrimoine (mégalithes, églises romanes, hypothèses auto-testables)
-- Orientation pédagogique distincte du cadre scientifique R&D
-- Intégration des corpus patrimoniaux régionaux corses
-- Ouverture multilingue (corse, italien, grec) pour extension à l'espace méditerranéen
+Tellux pourra être étendu, à mesure que des financements publics permettent leur conduite scientifique rigoureuse, par des modules thématiques complémentaires. Ces modules ne sont pas activés à ce jour et aucun calendrier public n'est annoncé : leur conduite suppose à la fois la stabilisation de la phase 1 et l'obtention d'un financement dédié.
 
 ---
 
-## 4. Phase 3 — Agronomie sectorielle (horizon ultérieur)
-
-### Conditions de déclenchement
-
-- Phase 2 publiée
-- Structuration des besoins agricoles corses identifiée
-- Opportunité de financement dédié
-
-### Contenus envisagés
-
-- Diagnostic parcellaire
-- Recommandations matériaux (clôtures, irrigation, bâti) selon contexte géologique et magnétique
-- Interface simplifiée pour agriculteurs et conseillers
-
----
-
-## 5. Phase 4 — Dimensions avancées (horizon long)
-
-### Modules envisagés
-
-- Module bâtiment et urbanisme EM résidentiel
-- Composante sciences humaines et sociales (représentations du risque EM, dimensions perceptives et contextuelles)
-- Infrastructure scientifique dédiée (campagnes de mesure, publications peer-reviewed)
-
----
-
-## 6. Jalons
+## 4. Jalons
 
 | Jalon | Livrable | Horizon |
 |-------|----------|---------|
-| 1 | Stabilisation architecturale (extraction modules, landing cohérente) | 2026 T2 |
+| 1 | Stabilisation architecturale (landing cohérente, périmètre phase 1 figé) | 2026 T2 |
 | 2 | Première relecture méthodologique externe | 2026-2027 |
 | 3 | Candidature à appels publics de financement | 2026-2027 |
 | 4 | Déblocage des constantes gelées post-relecture | 2026 T3 ou ultérieur |
@@ -138,7 +74,7 @@ Suivi détaillé des envois et des retours : voir section 9 « Suivi des sollici
 
 ---
 
-## 7. Principes de pilotage
+## 5. Principes de pilotage
 
 ### Discipline sur le périmètre
 
@@ -160,7 +96,7 @@ Chaque phase est strictement cadrée. Les modules suivants existent techniquemen
 
 ### Financements
 
-Stratégie de financement basée sur des candidatures à des appels publics (2026-2027). Partenariats et collaborations scientifiques en cours de construction.
+Stratégie de financement basée sur des candidatures à des appels publics (FEDER en priorité, 2026-2027). Aucun partenariat ni collaboration scientifique formalisé à ce jour. Premières démarches de relecture méthodologique externe initiées en avril 2026 (cf. section 7).
 
 ### Indépendance
 
@@ -168,18 +104,18 @@ Projet indépendant. Architecture modulaire permettant la montée en gamme progr
 
 ---
 
-## 8. Chantiers différés — déclenchement relecture physicien tiers
+## 6. Chantiers différés — déclenchement relecture physicien tiers
 
 Les chantiers suivants sont suspendus en attente de deux conditions conjointes :
 
 - Identification et engagement d'un relecteur physicien tiers pour validation méthodologique
-- Phase de soumission aux institutions de financement (CTC, FEDER, ANR) atteinte
+- Phase de soumission aux institutions de financement (FEDER, programmes nationaux et européens) atteinte
 
 ### Préparation soumission physicien tiers — statut
 
 Le document de soumission au physicien tiers est préparé et à jour au 2026-04-23 (version v1.2). Il intègre les ajustements scientifiques du jour (reformulation S10, amendement S8 avec cadre éthique, ajustements cosmétiques et pédagogiques complémentaires) et demande au relecteur une validation explicite sur les deux points les plus sensibles (questions Q7.6 et Q7.7).
 
-Le document reste en attente de soumission effective, conditionnée à l'identification d'un relecteur physicien tiers. Les chantiers ci-dessous s'activeront une fois cette relecture conduite et la phase de soumission institutionnelle atteinte.
+Le document a été transmis le 28 avril 2026 à la direction d'UMR sollicitée ainsi qu'à quatre institutions (cf. section 7). Les chantiers ci-dessous s'activeront après réception d'au moins un retour de relecture.
 
 ### Chantier 1 — Rédaction du Guide d'interprétation de la carte
 
@@ -202,8 +138,8 @@ Le document reste en attente de soumission effective, conditionnée à l'identif
 
 - **Statut :** infrastructure à préparer, conversion à exécuter après validation physicien
 - **Documents concernés :**
-  - `CADRE_SCIENTIFIQUE_TELLUX_v2.1.1.md` (949 lignes, repo public racine)
-  - `TELLUX_POSITION_EPISTEMIQUE.md` (220 lignes, repo public racine)
+  - Cadre scientifique Tellux (document interne en attente de publication PDF)
+  - Position épistémique (document interne en attente de publication PDF)
   - Guide d'interprétation de la carte (à rédiger — Chantier 1 ci-dessus)
 - **Dépendance :** Chantier 1 + relecture physicien validée
 - **Note :** l'infrastructure PDF (outillage, templates DA v2, exports test) sera préparée séparément, en amont, pour que la conversion finale soit immédiate une fois les conditions réunies.
@@ -216,13 +152,13 @@ Le document reste en attente de soumission effective, conditionnée à l'identif
 
 ---
 
-## 9. Suivi des sollicitations institutionnelles
+## 7. Suivi des sollicitations institutionnelles
 
-Tableau de suivi des courriers envoyés aux institutions et chercheurs en lien avec la phase 1 (cartographie EM) et la préparation de la relecture méthodologique externe (cf. section 8). Les colonnes « Date retour » et « Commentaire » sont renseignées au fil des semaines.
+Tableau de suivi des courriers envoyés aux institutions et chercheurs en lien avec la phase 1 (cartographie EM) et la préparation de la relecture méthodologique externe (cf. section 6). Les colonnes « Date retour » et « Commentaire » sont renseignées au fil des semaines.
 
 | Date envoi | Destinataire | Canal | Objet | Statut | Date retour | Commentaire |
 |---|---|---|---|---|---|---|
-| 2026-04-28 | Paul-Antoine Santoni — Directeur UMR SPE Université de Corse | Email | Demande d'orientation vers relecteur physicien tiers (relecture méthodologique) | Envoyé | — | — |
+| 2026-04-28 | Direction UMR locale (sciences pour l'environnement) | Email | Demande d'orientation vers relecteur physicien tiers (relecture méthodologique) | Envoyé | — | — |
 | 2026-04-28 | ASNR — Direction Téléray | Email | Accès programmatique balises Téléray AJA + BAP | Envoyé | — | — |
 | 2026-04-28 | ASNR — Cellule radon | Email | Géométries polygonales communales + mesures indoor Corse | Envoyé | — | — |
 | 2026-04-29 | EDF SEI — Direction Corse | Email | Validation classification HTA + tensions/courants nominaux du réseau Corse | Envoyé | — | — |
@@ -234,7 +170,7 @@ Tableau de suivi des courriers envoyés aux institutions et chercheurs en lien a
 
 ---
 
-## 10. Dette technique
+## 8. Dette technique
 
 Voir `DETTES_TECHNIQUES.md` pour la liste des dettes techniques ouvertes et leur statut.
 
