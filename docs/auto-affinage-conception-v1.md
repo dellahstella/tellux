@@ -1,7 +1,8 @@
-# Auto-affinage du modèle Tellux par les contributions terrain — Document de conception v1
+# Auto-affinage du modèle Tellux par les contributions terrain — Document de conception v1.1
 
-**Statut :** brouillon de conception, non engagé techniquement.
-**Date :** 26 avril 2026.
+**Statut :** conception arbitrée, non engagée techniquement.
+**Date initiale :** 26 avril 2026.
+**Mise à jour :** 28 avril 2026 (arbitrages des points en suspens, cf. §11).
 **Auteur :** session Claude.ai (architecte de prompts) avec Soleil.
 **Périmètre :** réflexion préalable, sans aucune implémentation associée. À reprendre lorsque les conditions d'amorçage sont réunies (cf. section *Conditions d'amorçage*).
 
@@ -27,7 +28,7 @@ Les quatre domaines couverts par Tellux ne se prêtent pas également à l'auto-
 |---|---|---|
 | Radiofréquence | Forte | Mesures grand public possibles avec analyseurs de spectre simples ; les 30 mesures certifiées ANFR/EXEM disponibles fournissent un jeu de référence pour les niveaux 1 ; couverture territoriale faible donc forte valeur ajoutée d'un afflux de mesures terrain. |
 | Rayonnement ionisant gamma | Forte | Compteurs Geiger amateurs avec précision raisonnable ; calibration directe possible de la composante terrestre `NCRP-001` (zone gelée actuelle) ; validation croisée avec Téléray quand l'API ASNR sera ouverte. |
-| Magnétique basse fréquence (ELF) | Modérée | Smartphones : magnétomètre utilisable pour la densité spatiale et la détection de gradient, mais bruit interne chiffré (±150–250 nT typique, jusqu'à ±1 500 nT sans calibration) et fréquence d'échantillonnage (100 Hz) insuffisante pour caractériser proprement le signal 50 Hz (limite Nyquist) — valeur absolue non fiable, ne substitue pas un magnétomètre fluxgate. Pertinence auto-affinage limitée à la cartographie de gradient, pas à la calibration des constantes. |
+| Magnétique basse fréquence (ELF) | Modérée | Smartphones disposent d'un magnétomètre exploitable avec orientation correcte ; permet de valider Biot-Savart sur les segments HTA en conditions réelles, mais bruit important au-delà de 50-100 m d'une source. |
 | Magnétique statique | Faible à court terme | IGRF et EMAG2 sont des modèles institutionnels mûrs ; difficilement améliorables par des amateurs sans magnétomètre fluxgate calibré ; à exclure de la première phase. |
 
 L'auto-affinage cible donc en priorité **RF** et **gamma**, secondairement **ELF**, et **pas du tout** le magnétique statique dans un premier temps.
@@ -37,7 +38,7 @@ L'auto-affinage cible donc en priorité **RF** et **gamma**, secondairement **EL
 L'application distingue déjà deux niveaux de fiabilité parmi les contributions terrain :
 
 - **Niveau 1** : mesures réalisées dans le respect d'un protocole strict (matériel qualifié, position de l'instrument, distance des sources parasites, conditions environnementales).
-- **Niveau 2** : mesures saisies manuellement dans le formulaire Tellux à partir d'une lecture effectuée dans une application tierce (Phyphox, Sensor Kinetics), sans contrôle des conditions de prise.
+- **Niveau 2** : mesures captées automatiquement par le magnétomètre Android au moment de la saisie, sans contrôle des conditions de prise.
 
 Cette distinction est **structurante** pour le design de l'auto-affinage. Les contributions de niveau 2 sont précieuses pour la **couverture territoriale** (densité d'échantillonnage, détection d'anomalies à investiguer) mais ne doivent **pas** entrer dans le calcul de calibration des constantes du modèle. Seul le niveau 1 alimente la décision d'ajustement.
 
@@ -181,11 +182,13 @@ Pas de phase « calibration semi-automatique » envisagée à court terme. Si el
 Ce chantier ne se déclenche pas avant que **toutes** les conditions suivantes soient réunies.
 
 1. **Phase 1 du projet stabilisée.** L'application `app.html` est publiée comme cartographie EM rigoureuse, le pivot architectural est consommé, les bugs résiduels sont absorbés.
-2. **Premier retour de relecture méthodologique externe reçu.** Au moins une réponse du physicien sollicité, qu'elle soit de validation ou d'avis méthodologique. La phase 0 ne s'amorce pas dans le silence.
+2. **Retour Santoni reçu.** Au moins une réponse du physicien sollicité, qu'elle soit de validation ou d'avis méthodologique. La phase 0 ne s'amorce pas dans le silence.
 3. **Volume de contributions suffisant pour avoir du sens.** Indicatif : au moins quelques dizaines de contributions niveau 1 réparties sur le territoire. Avec moins, les résidus sont du bruit non statistiquement exploitable.
 4. **Disponibilité de Soleil.** Le chantier est non urgent. Il ne déprend rien. Il s'amorce quand Soleil a la bande passante pour le piloter sans précipitation.
 
 ## 9. Points en suspens à arbitrer en début de phase 0
+
+> **Mise à jour 28 avril 2026.** Les points listés ci-dessous ont été arbitrés en session web. Voir **§11 — Arbitrages 28 avril 2026** pour les décisions retenues. La présente section est conservée en l'état pour mémoire.
 
 - Choix entre Supabase Edge Function et Cloudflare Worker pour héberger l'exécution serveur du moteur Node.js. Critères : coût, latence, simplicité de déploiement.
 - Stratégie de packaging du module `lib/tellux-engine.js` : ESM natif, bundler minimal, ou autre.
@@ -202,6 +205,73 @@ Ce chantier ne se déclenche pas avant que **toutes** les conditions suivantes s
 - Ne pas oublier le versioning du modèle dans le calcul des résidus. Sans `model_version`, la donnée historique perd sa valeur.
 - Ne pas négliger le calcul rétroactif des résidus historiques lors de la phase 1. Ils donnent une référence statistique de départ.
 
+## 11. Arbitrages — 28 avril 2026
+
+Les cinq points listés en §9 ont été arbitrés en session web en vue d'aboutir le chantier avant la rédaction du dossier de candidature finale FEDER (mise à jour `CANDIDATURE_TELLUX_v8.1.docx` prévue ~mi-mai 2026, dépôt juin 2026). Les décisions ci-dessous prévalent sur les questions ouvertes laissées en §9.
+
+### 11.1 Hébergement de l'exécution serveur — Cloudflare Worker retenu
+
+L'exécution serveur du moteur Node.js sera portée par un **Cloudflare Worker**, pas par une Edge Function Supabase.
+
+Justification :
+- Cohérence stack : Tellux est déjà servi par Cloudflare Pages, `wrangler.jsonc` est à la racine du repo, le déploiement est unifié.
+- Découplage propre : le moteur n'a pas besoin d'accès direct à Supabase. Il reçoit `{lat, lon, date, domain}` en entrée et retourne `{predicted_value, predicted_unit, model_version}` en sortie. La lecture des contributions et l'écriture des résidus restent à la charge du workflow N8N orchestrateur.
+- Pureté de calcul : le Worker reste sans secret ni clé d'API, ce qui simplifie la gestion des permissions et l'auditabilité.
+
+L'Edge Function Supabase reste recevable comme alternative si une raison technique non identifiée à ce jour la rendait préférable. Pas envisagé dans l'état actuel.
+
+### 11.2 Packaging du module — ESM natif sans bundler
+
+Le module sera nommé `lib/tellux-engine.js` (chemin à confirmer en début de phase 0, peut devenir un dossier `lib/tellux-engine/` si plusieurs sous-modules), et exposera ses fonctions en **ESM natif** sans pipeline de build.
+
+- Côté client : `app.html` importe via `<script type="module">`.
+- Côté serveur : le Worker importe via `import` standard.
+
+Aucune dépendance build n'est ajoutée au projet, qui est aujourd'hui sans pipeline. Si un besoin de bundling apparaît plus tard (compatibilité navigateurs anciens, optimisation taille), `esbuild` pourra être ajouté en quelques minutes. Pas avant.
+
+### 11.3 Granularité du `model_version` — double identification
+
+Chaque ligne de la table `residuals` stocke deux identifiants complémentaires :
+
+- **Hash de commit court** (ex. `a3f8b21`) — automatique, garantit la traçabilité technique exacte du code qui a produit la prédiction. C'est la vérité opérationnelle.
+- **Tag SemVer optionnel** (ex. `engine-v1.0.0`) — posé manuellement sur les commits qui marquent une évolution publique du modèle. C'est la vérité narrative communiquée en page Rétractations ("le modèle est passé de v1.0 à v1.1 en raison de…").
+
+Les deux coexistent sans conflit. Le hash est obligatoire dans `residuals.model_version`. Le tag SemVer est dérivable a posteriori en interrogeant l'historique git.
+
+Implémentation : la fonction du Worker qui retourne la prédiction expose son hash de commit via une variable d'environnement de build Cloudflare (par exemple `CF_PAGES_COMMIT_SHA` ou équivalent), récupérée au runtime et incluse dans la réponse JSON.
+
+### 11.4 Format des unités — enum validé strict, par domaine
+
+Les colonnes `measured_unit` et `predicted_unit` de la table `residuals` sont contraintes à un **enum validé** par domaine, encodé à la fois en SQL et dans la validation côté Worker.
+
+Mapping retenu :
+
+| Domaine | Unités autorisées |
+|---|---|
+| `M_static` | `nT` |
+| `M_elf` | `µT`, `nT` |
+| `RF` | `V/m`, `µW/m2` |
+| `I_gamma` | `µSv/h`, `nSv/h` |
+
+Justification : la table est interne, autant être strict dès le départ. Évite les bugs silencieux à l'analyse statistique (variations d'écriture `'µT'` / `'uT'` / `'microT'` qui pollueraient un GROUP BY).
+
+L'encodage SQL passera par un `CHECK` étendu sur les couples `(domain, measured_unit)` et `(domain, predicted_unit)`. Le détail du `CHECK` sera figé lors de la rédaction de la migration Supabase en phase 1.
+
+### 11.5 Contributions niveau 2 — stockées avec flag, exclues du calcul de calibration
+
+Les contributions de niveau 2 (mesures magnétomètre Android sans contrôle des conditions) sont **stockées dans la table `residuals`** au même titre que les niveau 1, distinguées par la colonne `confidence_level smallint check (in (1, 2))` déjà prévue au schéma §6.
+
+Exclusion stricte du signal de calibration :
+- Toute requête analytique destinée à informer une décision de calibration filtre sur `confidence_level = 1`.
+- Toute évolution du modèle suite à analyse des résidus se fonde exclusivement sur des données niveau 1.
+
+Conservation utile :
+- Les résidus niveau 2 restent accessibles pour analyser la couverture territoriale (densité d'échantillonnage, identification de zones sous-couvertes).
+- Ils permettent de détecter d'éventuels patterns à investiguer ensuite par une mesure niveau 1 ciblée.
+- Ils fournissent un benchmark de bruit statistique utile pour calibrer les seuils de détection d'anomalie.
+
+Aucun mélange n'est jamais effectué dans le signal de calibration. La séparation est garantie par le filtre `confidence_level = 1` posé systématiquement dans toute analyse calibrante.
+
 ---
 
-**Fin du document v1.** Reprendre ce document lors de la planification de la phase 0, le compléter de toute décision intervenue d'ici là, et passer à la version v2 avec un plan d'implémentation détaillé.
+**Fin du document v1.1.** Reprendre lors de la planification de la phase 0, le compléter de toute décision intervenue d'ici là, et passer à la version v2 avec un plan d'implémentation détaillé.
