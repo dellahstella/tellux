@@ -49,7 +49,9 @@ Tellux est aujourd'hui structuré autour d'une application principale publique :
 - `index.html` — landing publique
 - `app.html` — application cartographie EM (publique, mise en avant)
 - `mairies.html` — outils communaux (fiche commune, modèles de courriers, cadre légal)
-- `corpus.html` — corpus scientifique soutenant la phase 1
+- `cadre-scientifique.html` — démarche scientifique (architecture du modèle, formules, pondérations)
+- `methode-et-limites.html` — méthode et limites (position épistémique, vocabulaire, pièges rhétoriques)
+- `guide-utilisation.html` — guide d'utilisation (manuel d'usage de la carte et des contributions)
 
 Des modules d'extension thématiques pourront être envisagés sous condition d'obtention d'un financement public, sans calendrier public à ce stade.
 
