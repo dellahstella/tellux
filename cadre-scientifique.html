@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<title>Cadre scientifique — Tellux</title>
+<meta name="description" content="Document de spécification méthodologique du modèle de calcul Tellux : architecture quatre domaines, composante gamma terrestre, superposition magnétique, indice composite du mode Expertise.">
+<meta name="robots" content="index, follow">
+<link rel="icon" type="image/svg+xml" href="assets/logo/tellux_logo.svg">
+<link rel="canonical" href="https://tellux.pages.dev/cadre-scientifique.html">
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+
+<style>
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/fonts/fraunces/Fraunces-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/assets/fonts/fraunces/Fraunces-SemiBold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/fonts/ibm-plex-sans/IBMPlexSans-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/assets/fonts/ibm-plex-sans/IBMPlexSans-Medium.woff2') format('woff2');
+}
+
+:root {
+  --tx-ardoise: #1F2329;
+  --tx-pierre: #F5F0E7;
+  --tx-mica: #74706A;
+  --tx-brume: #E8E2D5;
+  --tx-maquis: #3F5B3A;
+  --tx-ocre: #C28533;
+  --tx-porphyre: #8E2F1F;
+  --tx-tyrrhenien: #1F3A5F;
+  --border: rgba(31, 35, 41, 0.10);
+  --font: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--tx-pierre);
+  color: var(--tx-ardoise);
+  padding: 48px 20px 80px;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+header.page-header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 24px;
+  margin-bottom: 40px;
+}
+
+header.page-header .back-link {
+  font-size: 13px;
+  color: var(--tx-tyrrhenien);
+  text-decoration: none;
+  letter-spacing: 0.01em;
+  display: inline-block;
+  margin-bottom: 16px;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+
+header.page-header .back-link:hover {
+  border-bottom-color: var(--tx-tyrrhenien);
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 32px;
+  letter-spacing: -0.015em;
+  color: var(--tx-ardoise);
+  margin-bottom: 8px;
+}
+
+header.page-header .subtitle {
+  font-size: 14px;
+  color: var(--tx-mica);
+  letter-spacing: 0.005em;
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  color: var(--tx-ardoise);
+  margin-top: 48px;
+  margin-bottom: 16px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--tx-ardoise);
+  margin-top: 28px;
+  margin-bottom: 10px;
+  letter-spacing: -0.005em;
+}
+
+h4 {
+  font-family: var(--font);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--tx-ardoise);
+  margin-top: 22px;
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+p {
+  font-size: 15px;
+  color: var(--tx-ardoise);
+  margin-bottom: 12px;
+}
+
+p.meta {
+  font-size: 13px;
+  color: var(--tx-mica);
+  font-style: italic;
+}
+
+ul,
+ol {
+  list-style: none;
+  margin-bottom: 12px;
+  padding-left: 0;
+}
+
+ul li,
+ol li {
+  font-size: 15px;
+  color: var(--tx-ardoise);
+  padding-left: 18px;
+  position: relative;
+  margin-bottom: 6px;
+}
+
+ul li::before {
+  content: "—";
+  position: absolute;
+  left: 0;
+  color: var(--tx-mica);
+}
+
+ol {
+  counter-reset: ol-counter;
+}
+
+ol li {
+  counter-increment: ol-counter;
+}
+
+ol li::before {
+  content: counter(ol-counter) ".";
+  position: absolute;
+  left: 0;
+  color: var(--tx-mica);
+  font-variant-numeric: tabular-nums;
+}
+
+a {
+  color: var(--tx-tyrrhenien);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(31, 58, 95, 0.3);
+  transition: border-color 0.15s;
+}
+
+a:hover {
+  border-bottom-color: var(--tx-tyrrhenien);
+}
+
+strong {
+  font-weight: 500;
+  color: var(--tx-ardoise);
+}
+
+em {
+  font-style: italic;
+  color: var(--tx-ardoise);
+}
+
+code {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  color: var(--tx-tyrrhenien);
+}
+
+pre {
+  background: var(--tx-brume);
+  padding: 14px 18px;
+  border-radius: 8px;
+  margin: 14px 0;
+  overflow-x: auto;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+pre code {
+  font-size: inherit;
+  color: var(--tx-ardoise);
+  white-space: pre;
+}
+
+blockquote {
+  border-left: 3px solid var(--tx-mica);
+  padding: 8px 16px;
+  margin: 16px 0;
+  background: var(--tx-brume);
+  border-radius: 0 6px 6px 0;
+  color: var(--tx-ardoise);
+  font-size: 14.5px;
+  font-style: italic;
+}
+
+blockquote p {
+  margin-bottom: 0;
+  font-size: 14.5px;
+}
+
+nav.toc {
+  background: var(--tx-brume);
+  padding: 18px 22px;
+  border-radius: 8px;
+  margin: 24px 0 32px;
+  font-size: 14px;
+}
+
+nav.toc h2 {
+  font-family: var(--font);
+  font-weight: 500;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tx-mica);
+  margin: 0 0 10px;
+  padding: 0;
+  border: none;
+}
+
+nav.toc ul {
+  margin-bottom: 0;
+}
+
+nav.toc ul li {
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+mjx-container[display="true"] {
+  margin: 14px 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+footer.page-footer {
+  margin-top: 64px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--tx-mica);
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+footer.page-footer a {
+  color: var(--tx-mica);
+  border-bottom-color: rgba(116, 112, 106, 0.3);
+}
+
+@media (max-width: 600px) {
+  body {
+    padding: 32px 16px 60px;
+  }
+  h1 {
+    font-size: 26px;
+  }
+  h2 {
+    font-size: 19px;
+  }
+  h3 {
+    font-size: 16px;
+  }
+  pre {
+    font-size: 12.5px;
+    padding: 12px 14px;
+  }
+  nav.toc {
+    padding: 14px 18px;
+  }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="page-header">
+  <a href="/" class="back-link">← Retour à l'accueil</a>
+  <h1>Cadre scientifique</h1>
+  <p class="subtitle">Document de spécification méthodologique — version v1 — avril 2026</p>
+</header>
+
+<nav class="toc" aria-label="Sommaire">
+  <h2>Sommaire</h2>
+  <ul>
+    <li><a href="#section-1">Section 1 — Présentation</a></li>
+    <li><a href="#section-2">Section 2 — Position épistémique</a></li>
+    <li><a href="#section-3">Section 3 — Architecture du modèle composite</a></li>
+    <li><a href="#section-4">Section 4 — Composante gamma terrestre</a></li>
+    <li><a href="#section-5">Section 5 — Superposition magnétique</a></li>
+    <li><a href="#section-6">Section 6 — Mode Expertise : pondérations et bornes de normalisation</a></li>
+    <li><a href="#annexe-a">Annexe A — Traitement du signal EMAG2v3 sur la Corse</a></li>
+  </ul>
+</nav>
+
+<section id="section-1">
+  <h2>Section 1 — Présentation</h2>
+  <p>Tellux est une plateforme cartographique consacrée à la distribution territoriale des champs électromagnétiques en Corse, naturels et anthropiques, croisée avec les données géologiques, patrimoniales et environnementales de l'île. Le projet vise une mise à disposition publique via tellux.pages.dev, ainsi qu'une valorisation dans des dossiers de financement auprès de la Collectivité de Corse, de l'Agence nationale de la recherche, et des dispositifs FEDER.</p>
+  <p>Le projet articule trois niveaux. Le premier est cartographique : représenter spatialement les expositions physiques mesurables (champ géomagnétique, anomalies locales, infrastructures radiofréquences, rayonnement ionisant de fond), en s'appuyant sur des données publiques existantes (ANFR, IRSN, BRGM, IGRF, EMAG2) et sur des mesures de terrain conduites par des tiers habilités. Le deuxième est formulateur : transformer cette cartographie en hypothèses testables sur les interactions entre environnement électromagnétique et biologie, dans un corpus peer-reviewé de dix-huit axes thématiques. Le troisième est exploratoire : rendre l'infrastructure disponible aux communautés scientifiques et aux collectivités.</p>
+  <p>L'architecture du modèle de calcul a fait l'objet d'une refonte documentée. Cette refonte adopte une partition explicite entre les domaines physiques (magnétique statique, magnétique basse fréquence, radiofréquence, ionisant), refuse l'addition scalaire de grandeurs hétérogènes, et réserve à un mode expert optionnel tout indice composite. Le présent document spécifie les choix méthodologiques au cœur de ce refactor, qui engagent la crédibilité scientifique du projet et conditionnent l'implémentation effective de la plateforme.</p>
+</section>
+
+<section id="section-2">
+  <h2>Section 2 — Position épistémique</h2>
+  <p>Trois règles épistémiques gouvernent l'ensemble des productions de Tellux. Elles cadrent la discussion méthodologique et permettent de situer le projet dans le paysage des travaux sur les expositions environnementales.</p>
+
+  <h3>2.1 Règle 1 — Refus symétrique de l'alarmisme et de la trivialisation</h3>
+  <p>Tellux refuse d'affirmer que toute exposition électromagnétique ou ionisante de faible niveau entraîne des effets sanitaires avérés. Il refuse également d'affirmer que ces expositions sont sans intérêt scientifique en deçà des seuils thermiques ou de doses élevées. Entre ces deux postures, le projet documente les tensions scientifiques ouvertes sans les résoudre prématurément.</p>
+
+  <h3>2.2 Règle 2 — Adoption de la « position C documentée » sur les basses doses</h3>
+  <p>En référence à la position intermédiaire de l'UNSCEAR 2012, Tellux reconnaît la réponse adaptative aux faibles doses comme phénomène biologique réel (Olivieri et al. 1984 et réplications, Feinendegen 2004, Mavragani et al. 2025), sans l'inscrire dans une grille réglementaire. Cette position s'applique à l'ensemble des tensions scientifiques que le projet mobilise : documentation plutôt que résolution, présentation des positions en présence plutôt que prise de parti.</p>
+
+  <h3>2.3 Règle 3 — Distinction systématique entre niveaux d'inférence</h3>
+  <p>Chaque affirmation produite par Tellux distingue explicitement : mécanisme biologique (plausible, documenté ou spéculatif), effet biologique (mesuré en conditions contrôlées), effet sanitaire (observable à l'échelle individuelle), impact populationnel (détectable par épidémiologie). Cette gradation évite les glissements entre niveaux qui fragilisent la communication scientifique sur les champs électromagnétiques.</p>
+
+  <h3>2.4 Trois formulations explicitement écartées</h3>
+  <p>Trois formulations sont explicitement absentes des productions Tellux. Elles sont rappelées ici pour clarifier le cadre éditorial.</p>
+  <p>La première est l'idée qu'il existerait deux réalités physiques distinctes selon l'origine naturelle ou anthropique du champ électromagnétique. Le champ électromagnétique est un champ physique unique, défini par les équations de Maxwell, dont les contributions se superposent. La distinction pertinente est spectrale et décompositive, pas ontologique.</p>
+  <p>La deuxième est l'idée que les mesures issues de sources différentes ne seraient pas combinables. Les champs s'additionnent vectoriellement au sein d'un même domaine fréquentiel. La combinaison entre domaines (statique, ELF, RF, ionisant) relève de conventions métrologiques explicites et non d'une incommensurabilité.</p>
+  <p>La troisième est l'équation entre « naturel » et « inoffensif ». Le radon est un cancérogène pulmonaire reconnu (IARC 1) au-dessus de certains seuils d'exposition chronique. Le rayonnement gamma terrestre peut atteindre des niveaux significativement supérieurs au fond mondial dans les zones granitiques. La qualification sanitaire d'une exposition dépend de son intensité, de sa durée et du contexte biologique récepteur, non de son origine.</p>
+  <p>Ces précisions figurent en tête du document parce qu'elles permettent d'engager la discussion méthodologique sur des bases physiquement et épistémiquement correctes.</p>
+</section>
+
+<section id="section-3">
+  <h2>Section 3 — Architecture du modèle composite</h2>
+
+  <h3>3.1 Décision architecturale centrale</h3>
+  <p>Le modèle antérieur de Tellux produisait un score composite scalaire unique (<code>scorePhys = human + water*0.3 + geo + heritage*0.5</code>) qui additionnait des grandeurs physiques hétérogènes : un proxy de champ magnétique en nanotesla, un proxy de teneur en eau, une susceptibilité adimensionnelle, une densité patrimoniale. Cette approche était pratique pour une première version mais elle n'avait pas de fondement physique, et le sens de la valeur produite était difficilement explicable à un interlocuteur scientifique.</p>
+  <p>Le modèle v2 adopte une architecture à quatre domaines physiques séparés. Chaque domaine est calculé et présenté dans son unité physique propre dans la vue par défaut. La réconciliation entre domaines est traitée via un indice composite explicite, réservé au mode Expertise, clairement labellisé comme convention calculatoire sans signification physique directe.</p>
+
+  <h3>3.2 Les quatre domaines</h3>
+
+  <h4>Domaine M — Magnétique</h4>
+  <p>Deux sous-domaines distincts.</p>
+  <ul>
+    <li><strong>Composante statique</strong> (<code>calcMagneticStatic</code>) : champ géomagnétique principal (IGRF-14, environ 46 000 nT en Corse, inclinaison 58°, déclinaison 1–2° Est) augmenté des anomalies locales (EMAG2v3, résolution 2 minutes d'arc, et susceptibilité lithologique selon BRGM et Gattacceca et al. 2004). Unité : nanotesla (nT). Confiance : moyenne.</li>
+    <li><strong>Composante basse fréquence anthropique</strong> (<code>calcMagneticELF</code>) : champ oscillant à 50 Hz produit par les lignes HTA/HTB/BT et la production électrique insulaire, modélisé par Biot-Savart. Unité : nanotesla (nT). Confiance : moyenne.</li>
+  </ul>
+  <p>Ces deux sous-domaines ne sont pas sommés par défaut : ils correspondent à des régimes fréquentiels et à des mécanismes biologiques candidats distincts (mécanisme de paires radicalaires via cryptochromes pour le statique, modulation de canaux calciques voltage-dépendants pour l'ELF 50 Hz, selon la littérature synthétisée dans le corpus).</p>
+
+  <h4>Domaine E — Électrique</h4>
+  <p>Le domaine électrique ambiant est dominé, hors très proche voisinage des lignes HT, par le gradient de potentiel atmosphérique, très variable en fonction de la météo et de l'orographie. Sa modélisation spatiale continue à l'échelle territoriale est jugée prématurée pour la version v2. Ce domaine est mentionné pour complétude ; son implémentation est différée.</p>
+
+  <h4>Domaine RF — Radiofréquence</h4>
+  <p>Densité de puissance en microwatts par mètre carré (µW/m²), avec conversion en V/m. Contributions : antennes 2G/3G/4G/5G (base ANFR Cartoradio), faisceaux hertziens point à point, radiodiffusion TDF. Modélisation par propagation en espace libre ($S = \mathrm{PIRE} / (4\pi d^2)$), correction ITU-R P.452 (propagation point à point), ITU-R P.526 (diffraction), ITU-R P.833 (atténuation forestière). Repères documentaires dans les infobulles : seuil ICNIRP grand public en bande GSM de l'ordre de 4 500 000 µW/m² ; classification IARC 2B pour RF associée à un usage intensif. Confiance : moyenne. Implémenté par <code>calcRF</code>.</p>
+
+  <h4>Domaine I — Ionisant</h4>
+  <p>Débit d'équivalent de dose gamma en nanosievert par heure (nSv/h), décomposé en trois contributions :</p>
+<pre><code>Dose_gamma_ambient (nSv/h) = Dose_cosmique + Dose_terrestre + Dose_mesurée_balise
+</code></pre>
+  <p>Activité radon séparément en becquerels par mètre cube (Bq/m³), classe de potentiel IRSN 2018. Implémenté par <code>calcGammaAmbient</code> et <code>calcRadonPotential</code>.</p>
+
+  <h3>3.3 Structure de retour standardisée</h3>
+  <p>Chaque fonction de calcul retourne un objet structuré contenant au minimum :</p>
+<pre><code>{
+    value:          &lt;grandeur principale&gt;,
+    unit:           &lt;unité SI&gt;,
+    components:     &lt;décomposition par source&gt;,
+    source:         &lt;jeux de données utilisés&gt;,
+    confidence:     "high" | "medium" | "low",
+    timestamp:      &lt;horodatage de la donnée&gt;,
+    epistemic_note: &lt;qualification épistémique explicite&gt;,
+    under_review:   &lt;true si le calcul appartient à la zone gelée&gt;
+}
+</code></pre>
+  <p>Le champ <code>under_review: true</code> signale les fonctions dont le corps de calcul est gelé en attente de validation méthodologique. L'interface affiche un indicateur visuel (picto losange ocre) sur ces valeurs.</p>
+
+  <h3>3.4 Partition implémentable / gelée</h3>
+  <p>Les choix méthodologiques décrits aux sections 4, 5 et 6 ci-dessous appartiennent à la zone gelée : ils sont spécifiés mais leur implémentation est conditionnée à une validation méthodologique externe. Les fonctions correspondantes retournent provisoirement un placeholder documenté plutôt qu'une valeur non validée.</p>
+  <p>Les choix d'architecture (signatures de fonctions, structure de retour, renommage, éclatement des fonctions existantes, intégration des nouvelles sources de données publiques) sont implémentables immédiatement sans risque méthodologique.</p>
+</section>
+
+<section id="section-4">
+  <h2>Section 4 — Composante gamma terrestre</h2>
+
+  <h3>4.1 Contexte : lacune de la campagne spectrogamma en Corse</h3>
+  <p>La modélisation du débit de dose gamma terrestre en Corse se heurte à une lacune documentaire. Les campagnes de spectrogamma aéroporté conduites par le BRGM en France métropolitaine couvrent plusieurs massifs (Massif Armoricain, Massif Central, Pyrénées, Vosges) mais la Corse n'a, à notre connaissance, pas fait l'objet d'une campagne dédiée. Les données disponibles sont :</p>
+  <ul>
+    <li>la cartographie du potentiel radon par commune (IRSN 2018), qui donne une information sur la teneur en uranium et la perméabilité des sols, mais pas directement le débit de dose gamma ;</li>
+    <li>le réseau Téléray de l'ASNR (anciennement IRSN), avec au minimum deux balises actives en Corse. Ces balises mesurent le débit d'équivalent de dose gamma ambiant en temps réel, mais leur faible densité (une par département approximativement) ne permet pas une interpolation spatiale fine ;</li>
+    <li>les données lithologiques BRGM 1/50 000, qui permettent une estimation par lithologie à partir de valeurs de teneur en uranium (U), thorium (Th) et potassium (K) issues de la littérature.</li>
+  </ul>
+  <p>L'ordre de grandeur naturel du débit de dose gamma en Corse, au vu de la prédominance des granites varisques, est estimé par l'IRSN entre 75 et 150 nSv/h, avec des dépassements permanents de 150 nSv/h documentés localement. Ces valeurs sont sans implication sanitaire directe à ces niveaux d'exposition chronique.</p>
+
+  <h3>4.2 Décomposition proposée</h3>
+  <p>La décomposition du débit de dose gamma ambiant retenue est :</p>
+<pre><code>Dose_gamma_ambient (nSv/h) = Dose_cosmique + Dose_terrestre + Dose_anthropogenique
+</code></pre>
+  <p>Les trois termes sont les suivants.</p>
+
+  <h4>Dose cosmique</h4>
+  <p>Approximation paramétrique embarquée côté client, sans appel à une API externe :</p>
+  <p>$$
+\mathrm{Dose}_{\mathrm{cosmique}} \,(\mathrm{nSv/h}) \approx 35 \times \exp\!\left(\frac{\mathrm{altitude}_m}{1500}\right)
+$$</p>
+  <p>Le facteur 35 nSv/h correspond à l'ordre de grandeur au niveau de la mer aux latitudes tempérées. Le facteur 1500 m correspond à la hauteur d'échelle approximative du doublement de la fluence cosmique secondaire avec l'altitude. Cette approximation ne distingue pas les composantes muonique, électromagnétique et neutronique du rayonnement cosmique secondaire ; elle ne prend pas en compte la modulation par l'activité solaire (cycle de 11 ans, variations Kp journalières). Elle est proposée comme estimation suffisante pour un outil cartographique grand public à l'échelle territoriale.</p>
+
+  <h4>Dose terrestre</h4>
+  <p>Estimation lithologique par la formule NCRP 94 (1988) :</p>
+  <p>$$
+\mathrm{Dose}_{\mathrm{terrestre}} \,(\mathrm{nSv/h}) \approx 13 \cdot U \,(\mathrm{ppm}) + 5{,}4 \cdot Th \,(\mathrm{ppm}) + 42 \cdot K \,(\%)
+$$</p>
+  <p>Où $U$ est la teneur en uranium en parties par million, $Th$ la teneur en thorium en parties par million, et $K$ la teneur en potassium en pourcentage massique. Ces coefficients relient les concentrations élémentaires au débit de dose gamma absorbée dans l'air à un mètre au-dessus du sol (UNSCEAR 2000, tableau 5).</p>
+  <p>Les lithologies corses pertinentes sont regroupées en trois familles.</p>
+  <p><strong>Granitoïdes calc-alcalins varisques</strong> (Corse hercynienne, ouest et sud, association U2 dominante de la nomenclature Rossi-Cocherie 1991). Pour ces faciès, les intervalles plausibles consolidés issus de la triangulation entre la mesure directe in situ Verdoya, Pasquale, Chiozzi, Tositti 2013 (210 affleurements du batholite Corse-Sardaigne par spectrogamma in situ HPGe, Environmental Earth Sciences, DOI 10.1007/s12665-013-2442-8) et les analogues régionaux varisques (Sardaigne, Massif Armoricain, Massif Central, Pyrénées axiales) donnent : $U = 3{,}0$ à $8{,}0$ ppm (médiane 5,0), $Th = 10$ à $27$ ppm (médiane 17), $K = 2{,}8$ à $5{,}1$ % (médiane 3,8). Débit de dose absorbée extérieure médian directement mesuré sur le batholite Corse-Sardaigne : 124 nGy/h, soit environ deux fois la moyenne mondiale UNSCEAR 2008 (60 nGy/h). Pour les faciès U3 alcalins tardifs (volume mineur), bornes supérieures relevées à $U \approx 12$ à $15$ ppm et $Th \approx 30$ à $45$ ppm. Ces intervalles restent à confirmer par campagne spectrogamma BRGM dédiée Corse (dette technique RADIO-AERO-001).</p>
+  <p><strong>Schistes et métamorphites alpins de Castagniccia</strong> (nord-est) : teneur U/Th/K intermédiaire, débits probablement entre 50 et 100 nSv/h.</p>
+  <p><strong>Ophiolites et roches basiques téthysiennes</strong> : teneur U/Th/K faible, débits probablement entre 20 et 50 nSv/h.</p>
+  <p>Le cadre géologique de référence pour les granitoïdes corses est la nomenclature à trois associations magmatiques (U1 ultrapotassique mineur, U2 calc-alcalin dominant 310–280 Ma, U3 alcalin tardif) établie par Rossi &amp; Cocherie 1991 (Tectonophysics 195:319-346) et Cocherie, Rossi, Fanning, Guerrot 1994 (Chemical Geology 115:173-211), affinée géochronologiquement par Paquette, Menot, Pin, Orsini 2003 (Lithos 70:289-311).</p>
+
+  <h4>Dose anthropogénique</h4>
+  <p>Nulle en conditions normales hors zones nucléaires. Non applicable en Corse.</p>
+</section>
+
+<section id="section-5">
+  <h2>Section 5 — Superposition magnétique</h2>
+
+  <h3>5.1 Nature du problème</h3>
+  <p>Le modèle Tellux v2 distingue deux sous-domaines au sein du domaine magnétique :</p>
+  <ul>
+    <li><code>calcMagneticStatic(lat, lon)</code> : champ géomagnétique statique (continu), résultant du champ dipolaire principal IGRF-14 augmenté des anomalies locales (EMAG2v3, susceptibilité lithologique). Valeur typique en Corse : 46 000 nT ± 200 à 500 nT d'anomalie locale.</li>
+    <li><code>calcMagneticELF(lat, lon, chargeFactor)</code> : champ oscillant à 50 Hz produit par les lignes et installations électriques. Valeur typique loin des sources : inférieure à 1 nT ; en dessous d'une ligne HTA à 10–20 kV à quelques mètres : de l'ordre de 100 à 1 000 nT ; seuil ICNIRP grand public pour l'ELF 50 Hz : 200 000 nT.</li>
+  </ul>
+  <p>Ces deux contributions sont physiquement coexistantes en tout point, mais elles correspondent à des régimes fréquentiels distincts (DC versus 50 Hz), à des mécanismes instrumentaux de mesure différents (magnétomètre fluxgate pour le statique, gaussmètre basse fréquence pour l'ELF), et à des mécanismes biologiques candidats distincts dans la littérature. Pour la composante statique, le mécanisme de paires radicalaires via cryptochromes (Xu et al. 2021, Nature ; Hore et Mouritsen 2016) opère sur le régime DC et sur les variations temporelles de faible fréquence (variations géomagnétiques diurnes et lors d'orages solaires). Pour l'ELF 50 Hz, le mécanisme candidat principal est la modulation des canaux calciques voltage-dépendants (VGCC, Pall 2013), et les études épidémiologiques de référence — dont la classification IARC 2B pour une exposition résidentielle chronique supérieure à 0,3-0,4 µT (300–400 nT) — portent exclusivement sur la composante 50 Hz.</p>
+
+  <h4>Magnétoréception humaine : état récent de la littérature</h4>
+  <p>Les travaux de Wang, Kirschvink et coll. 2019 (eNeuro 6(2):ENEURO.0483-18.2019, sur trente-quatre participants) ont rapporté une désynchronisation du rythme alpha (alpha-ERD) en EEG lors de rotations contrôlées d'un champ magnétique d'intensité proche du champ géomagnétique ambiant, dans une cage de Faraday blindée. Ces résultats sont cohérents avec une magnétoréception inconsciente chez l'humain, hypothèse déjà ancienne (Kirschvink et coll. 1992, PNAS 89:7683-7687, présence de magnétite biogénique dans le cerveau humain à raison de plus de cinq millions de cristaux monodomaines par gramme de parenchyme cérébral et plus de cent millions par gramme de méninges). Une étude complémentaire publiée en 2022 par Chae KS, Kim SC, Kwon HJ, Kim Y, <em>Human magnetic sense is mediated by a light and magnetic field resonance-dependent mechanism</em>, Sci Rep. 2022;12:8997, apporte un argument supplémentaire en faveur d'un second mécanisme possible, fondé sur la cryptochrome et une dépendance à la lumière bleue, rejoignant l'hypothèse radical-pair largement documentée chez les oiseaux migrateurs. Ces deux familles de résultats (magnétite versus cryptochrome) ne sont pas exclusives et pourraient correspondre à des récepteurs complémentaires.</p>
+  <p>Ces résultats électrophysiologiques concernent une réponse neurologique non consciente à des champs magnétiques contrôlés en laboratoire. Ils ne constituent ni une validation ni une invalidation de l'électrosensibilité symptomatique déclarée, qui relève d'une littérature clinique distincte et largement débattue (Rubin 2005, Rubin 2010).</p>
+  <p>Par conséquent, le modèle v2 choisit de ne pas additionner ces deux contributions (statique et ELF 50 Hz) dans la vue par défaut. Leur combinaison éventuelle en une valeur unique relève de la mesure instrumentale en bande large, qui n'est pas la même chose qu'un indicateur biologique combiné.</p>
+
+  <h3>5.2 Variations temporelles du champ magnétique</h3>
+  <p>Le champ géomagnétique principal n'est pas strictement statique. Plusieurs composantes temporelles se superposent à la valeur moyenne IGRF-14, avec des amplitudes et des fréquences caractéristiques très différentes. Cette sous-section les recense afin de documenter comment Tellux choisit de les représenter.</p>
+
+  <h4>Variations diurnes Sq (solar quiet)</h4>
+  <p>Oscillations régulières du champ pendant les journées géomagnétiquement calmes, d'amplitude typique de 20 à 60 nT, avec une périodicité dominante de 24 heures. Elles sont produites par les courants ionosphériques induits par le rayonnement solaire ultraviolet (Campbell 1989). Le système Sq est un repère géophysique classique et sert souvent de ligne de base pour détecter les perturbations.</p>
+
+  <h4>Indices d'activité géomagnétique Kp et Dst</h4>
+  <p>Kp est un indice trihoraire planétaire de magnitude des perturbations (échelle de 0 à 9, pas de 1/3), produit à partir des relevés d'une douzaine d'observatoires (GFZ Potsdam, INTERMAGNET). Dst est un indice horaire mesurant l'intensité du courant annulaire équatorial et donc la phase principale des orages géomagnétiques (exprimé en nanoteslas, valeurs de -50 à -400 nT lors des orages). Les sources de référence sont la NOAA SWPC et le WDC Kyoto. Lors d'un orage géomagnétique (Kp supérieur à 5, Dst inférieur à -50 nT), les amplitudes locales du champ peuvent atteindre 100 à plusieurs centaines de nanoteslas, y compris à latitude tempérée.</p>
+
+  <h4>Résonance de Schumann</h4>
+  <p>Résonances électromagnétiques globales de la cavité ionosphère-sol, excitées principalement par l'activité orageuse. La fondamentale est à 7,83 Hz, avec des harmoniques à 14,3, 20,8, 27,3 et 33,8 Hz environ. Les amplitudes du champ magnétique associé sont de l'ordre du picotesla, plusieurs ordres de grandeur inférieures au champ principal. Les revues récentes (notamment Zhou Q, Williams ER, Boldi R. <em>Impact of Solar Activity on Schumann Resonance: Model and Experiment</em>. Atmosphere 2025;16(6):648, et la synthèse Atmosphere 2023;15(14):3557 sur les avancées récentes en observation des résonances de Schumann) documentent une modulation des fréquences de résonance par l'activité solaire (variation non monotone du fait de l'effet conjugué des rayons X et des protons énergétiques) et une altération de la cohérence lors des tempêtes géomagnétiques.</p>
+
+  <h4>Représentation dans Tellux</h4>
+  <p>Pour chaque composante temporelle, Tellux choisit la représentation suivante. Les indices Kp et Dst sont affichés en bandeau contextuel à côté de la couche magnétique statique, sans être intégrés à la valeur du champ représentée sur la carte. Les variations Sq ne sont pas représentées à l'échelle territoriale (amplitude trop faible et variation quasi-uniforme sur la Corse). La résonance de Schumann est mentionnée dans la documentation mais n'est pas cartographiée (phénomène global, non local). Les orages géomagnétiques forts font l'objet d'une alerte visuelle lorsque le seuil Kp supérieur ou égal à 5 est franchi.</p>
+  <p>La littérature sur d'éventuels effets biologiques des variations temporelles naturelles du champ magnétique reste peu conclusive à ce jour. Cette question ne fait pas partie du périmètre de Tellux, qui cartographie ces variations comme facteurs temporels du modèle composite sans en tirer d'implication sanitaire.</p>
+</section>
+
+<section id="section-6">
+  <h2>Section 6 — Mode Expertise : pondérations et bornes de normalisation</h2>
+
+  <h3>6.1 Formule de l'indice composite</h3>
+  <p>Le mode Expertise est un sous-menu optionnel de l'interface, accessible sur demande explicite, affichant un indice composite adimensionnel calculé à partir des trois domaines non électriques :</p>
+  <p>$$
+\mathrm{indice\_composite} = w_M \cdot \mathrm{normalize}(B_{\mathrm{elf,nT}}, \mathrm{bornes}_{\mathrm{ELF}})
++ w_{RF} \cdot \mathrm{normalize}(S_{\mathrm{RF},\mu W/m^2}, \mathrm{bornes}_{\mathrm{RF}})
++ w_I \cdot \mathrm{normalize}(\mathrm{dose}_{\gamma,\mathrm{nSv/h}}, \mathrm{bornes}_{\gamma})
+$$</p>
+  <p>La fonction <code>normalize(x, [min, max])</code> est une normalisation min-max linéaire avec clipping :</p>
+  <p>$$
+\mathrm{normalize}(x, [\min, \max]) = \mathrm{clamp}\!\left(\frac{x - \min}{\max - \min},\ 0,\ 1\right)
+$$</p>
+  <p>Cet indice est systématiquement présenté avec la note épistémique suivante, visible en permanence quand la couche est active :</p>
+  <blockquote>
+    <p>Indice composite conventionnel, adimensionnel. Il ne représente pas une grandeur physique ni un indicateur sanitaire. Il permet de comparer la composition du paysage électromagnétique entre zones, selon des pondérations provisoires documentées ci-dessous. Ces pondérations sont modifiables par l'utilisateur.</p>
+  </blockquote>
+
+  <h3>6.2 Pondérations par défaut proposées et justifications provisoires</h3>
+  <p>Trois pondérations sont proposées à titre provisoire :</p>
+<pre><code>w_M  = 0,4   (ELF 50 Hz anthropique)
+w_RF = 0,4   (radiofréquence)
+w_I  = 0,2   (gamma ambiant)
+</code></pre>
+  <p>Les justifications provisoires sont les suivantes.</p>
+  <p>$w_M = 0{,}4$ et $w_{RF} = 0{,}4$ : pondérations égales pour les deux domaines pour lesquels des études épidémiologiques documentent une exposition humaine ambiante et une signalisation biologique potentielle. Pour l'ELF, la méta-analyse Amoon-Kheifets (2022, International Journal of Epidemiology 51) sur 34 études retrouve un odds ratio de 1,01 pour les expositions résidentielles supérieures à 0,4 µT ; Brabant et al. (2022, Environment International 167) retrouvent 1,26 dans la même plage. Pour les RF, l'avis SCHEER (2024) confirme la classification IARC 2B pour les RF associées à un usage de longue durée et l'absence d'élément justifiant une révision des seuils ICNIRP à ce stade.</p>
+  <p>$w_I = 0{,}2$ : pondération plus faible pour le domaine ionisant, pour deux raisons. D'une part, la variabilité spatiale du débit de dose gamma à l'échelle du territoire corse est modeste en valeur relative (75–150 nSv/h dans la grande majorité du territoire, soit un facteur 2 environ), ce qui limite le pouvoir discriminant de cette composante pour comparer des zones entre elles. D'autre part, l'implication sanitaire de ces niveaux, bien en deçà des zones à hauts fonds radioactifs naturels (HBRA) étudiées épidémiologiquement, reste débattue dans le cadre du modèle LNT versus hormesis (tension T9 du corpus, position C UNSCEAR 2012).</p>
+
+  <h3>6.3 Bornes de normalisation proposées</h3>
+  <p>Les bornes définissent l'espace dans lequel chaque grandeur est normalisée. Toute valeur au-delà de la borne haute est clippée à 1.</p>
+  <ul>
+    <li><strong>ELF : 0 à 1 000 nT.</strong> Plage qui encadre les expositions ambiantes domestiques typiques (quelques dizaines de nT dans une maison ordinaire) jusqu'aux expositions proches de lignes HTA à quelques mètres (plusieurs centaines à quelques milliers de nT). Elle est cohérente avec la gamme d'exposition à partir de laquelle la classification IARC 2B est documentée (300–400 nT chroniques).</li>
+    <li><strong>RF : 0 à 1 000 µW/m².</strong> Plage qui encadre les expositions urbaines typiques (10–500 µW/m² dans un appartement exposé aux antennes relais de quartier), très en deçà des seuils ICNIRP (4 500 000 µW/m² en bande GSM 900 MHz). La borne haute de 1 000 µW/m² est provisoire : elle correspond à un environnement urbain dense avec antennes rapprochées, mais des expositions supérieures peuvent exister à très courte distance de sources.</li>
+    <li><strong>Gamma : 50 à 250 nSv/h.</strong> Plage cohérente avec les valeurs naturelles corses documentées par l'IRSN : fond minimal en zone schisteuse autour de 50–70 nSv/h, valeurs typiques en zone granitique de 100–150 nSv/h, dépassements locaux documentés jusqu'à 200–250 nSv/h.</li>
+  </ul>
+
+  <h3>6.4 Comportement de l'indice dans l'interface</h3>
+  <p>L'utilisateur en mode Expertise peut modifier les pondérations et les bornes en temps réel via des curseurs. Les modifications ne sont pas persistées entre sessions. L'indice se recalcule immédiatement et la carte se met à jour. La note épistémique reste visible en permanence quelle que soit la configuration choisie.</p>
+</section>
+
+<section id="annexe-a">
+  <h2>Annexe A — Traitement du signal EMAG2v3 sur la Corse</h2>
+  <p>Cette annexe documente le traitement appliqué à la grille EMAG2v3 (Meyer, Saltus et Chulliat 2017, NOAA/NGDC) lorsqu'elle est mobilisée comme source d'anomalie magnétique crustale dans la composante statique de Tellux. Elle est destinée à un lecteur géophysicien ; elle n'est pas affichée dans l'interface publique.</p>
+
+  <h3>A.1 Grille source</h3>
+  <p>EMAG2v3 fournit une grille globale d'anomalie magnétique à 2 minutes d'arc de résolution (environ 3,7 km à la latitude de la Corse), résultant de la compilation et du ré-échantillonnage de relevés satellitaires, aéroportés et marins. L'unité est le nanotesla. En Corse, la grille présente des anomalies dont l'amplitude typique se situe entre -500 et +500 nT, avec des structures de longueur d'onde caractéristique de quelques dizaines de kilomètres, compatibles avec la géologie des massifs varisques et des unités alpines.</p>
+
+  <h3>A.2 Interpolation</h3>
+  <p>Tellux effectue par défaut une interpolation bilinéaire de la grille EMAG2v3 vers les coordonnées de la requête. Lorsque la grille source est indisponible ou dégradée, un mécanisme de secours utilise une interpolation par pondération inverse à la distance (IDW, exposant 2) à partir du modèle LCS1 (champ lithosphérique satellite) restreint à l'emprise Corse. Le choix d'IDW pour le secours est motivé par sa robustesse face aux lacunes locales et par la simplicité de son implémentation côté client.</p>
+
+  <h3>A.3 Lissage et filtrage</h3>
+  <p>La magnétisation crustale présente une propriété statistique d'auto-similarité approximative sur plusieurs ordres de grandeur. La littérature géophysique documente des densités spectrales de puissance en loi de puissance, avec des exposants typiques compris entre 1,5 et 5,0 selon les provinces géologiques et les longueurs d'onde considérées (analyses fractales de champs potentiels, par exemple Pilkington et Todoeschuck 1993, Maus et Dimri 1994, et revues ultérieures). Cette propriété justifie un lissage conservateur : un lissage trop agressif efface des structures réelles aux courtes longueurs d'onde, tandis qu'une absence de lissage fait apparaître du bruit d'échantillonnage dans la représentation cartographique.</p>
+  <p>Tellux applique une convolution gaussienne de rayon caractéristique 3 cellules (environ 11 km à la latitude de la Corse) avant rendu à l'écran, au-delà du niveau de zoom pour lequel la résolution native de la grille devient inférieure au pixel. En deçà, le rendu utilise la valeur interpolée sans lissage supplémentaire. Ce compromis est empirique et documenté comme tel.</p>
+
+  <h3>A.4 Seuil de détection d'anomalie</h3>
+  <p>Pour la qualification qualitative des zones (« anomalie faible », « modérée », « forte »), Tellux retient des seuils relatifs à l'écart-type local sur un voisinage de 50 km autour du point : au-delà de 1 écart-type, l'anomalie est qualifiée de modérée ; au-delà de 2, de forte. Ce choix normalise la qualification selon la structure locale plutôt que selon un seuil absolu, ce qui est cohérent avec la variabilité régionale de la magnétisation crustale. Les seuils absolus en nanoteslas restent affichés dans l'info-bulle pour préserver l'information physique.</p>
+
+  <h3>A.5 Limites</h3>
+  <p>La résolution de 2 minutes d'arc ne permet pas de capter les anomalies très locales (échelle kilométrique et inférieure), qui nécessiteraient des levés aéromagnétiques régionaux dédiés. La Corse n'a pas fait, à notre connaissance, l'objet d'une campagne aéromagnétique publique au cours des deux dernières décennies ; toute comparaison avec une référence locale à haute résolution est donc aujourd'hui impossible. Tellux signale cette limite dans sa documentation et fait partie des données sollicitées auprès du BRGM (voir courriers institutionnels du 20 avril 2026).</p>
+
+  <h3>A.6 Référence principale</h3>
+  <p>Meyer B, Saltus RW, Chulliat A (2017), <em>EMAG2: Earth Magnetic Anomaly Grid (2-arc-minute resolution), Version 3</em>, National Centers for Environmental Information, NOAA. DOI 10.7289/V5H70CVX.</p>
+</section>
+
+<footer class="page-footer">
+  <p>Dernière mise à jour : avril 2026</p>
+  <p><a href="/">Accueil</a> · <a href="/mentions-legales.html">Mentions légales</a> · <a href="/donnees-vie-privee.html">Politique de données personnelles</a> · <a href="/transparence.html">Transparence</a></p>
+</footer>
+
+</div>
+</body>
+</html>
