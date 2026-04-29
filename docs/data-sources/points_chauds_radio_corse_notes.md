@@ -105,7 +105,7 @@ Pour l'intégralité du contexte géologique, historique (campagnes BRGM 1958-19
 
 `_corpus/tellux_note_uranium_thorium_corse_v1.md` (version 1.0, 2026-04-23)
 
-Cette note est dans le corpus interne privé. Les éléments qui sortent dans les productions publiques (landing, dossier CTC, corpus.html Pilier A) sont des synthèses dérivées, jamais l'exposition brute.
+Cette note est dans le corpus interne privé. Les éléments qui sortent dans les productions publiques (landing, dossier CTC, documentation éditoriale publique) sont des synthèses dérivées, jamais l'exposition brute.
 
 ---
 

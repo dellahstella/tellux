@@ -10,9 +10,11 @@
 ```
 tellux/
 ├── app.html                    # Application principale — Cartographie EM (PUBLIQUE)
-├── corpus.html                 # Exposition publique du Pilier A (fiches S1-S14)
 ├── mairies.html                # Outils communaux (fiche commune, modèles de courriers)
 ├── index.html                  # Landing page (dirige vers app.html uniquement)
+├── cadre-scientifique.html     # Démarche scientifique (registre éditorial public)
+├── methode-et-limites.html     # Méthode et limites (registre éditorial public)
+├── guide-utilisation.html      # Guide d'utilisation (registre éditorial public)
 ├── public/
 │   └── data/                   # Jeux de données statiques JSON
 │       ├── radon_communes_level3_corse.json
