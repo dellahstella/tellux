@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<title>Méthode et limites — Tellux</title>
+<meta name="description" content="Document de référence sur la position épistémique du projet Tellux : ce que la plateforme mesure, ce qu'elle affirme, ce qu'elle n'affirme pas, et le vocabulaire qu'elle s'impose.">
+<meta name="robots" content="index, follow">
+<link rel="icon" type="image/svg+xml" href="assets/logo/tellux_logo.svg">
+<link rel="canonical" href="https://tellux.pages.dev/methode-et-limites.html">
+
+<style>
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/fonts/fraunces/Fraunces-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/assets/fonts/fraunces/Fraunces-SemiBold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/fonts/ibm-plex-sans/IBMPlexSans-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/assets/fonts/ibm-plex-sans/IBMPlexSans-Medium.woff2') format('woff2');
+}
+
+:root {
+  --tx-ardoise: #1F2329;
+  --tx-pierre: #F5F0E7;
+  --tx-mica: #74706A;
+  --tx-brume: #E8E2D5;
+  --tx-maquis: #3F5B3A;
+  --tx-ocre: #C28533;
+  --tx-porphyre: #8E2F1F;
+  --tx-tyrrhenien: #1F3A5F;
+  --border: rgba(31, 35, 41, 0.10);
+  --font: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--tx-pierre);
+  color: var(--tx-ardoise);
+  padding: 48px 20px 80px;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+header.page-header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 24px;
+  margin-bottom: 40px;
+}
+
+header.page-header .back-link {
+  font-size: 13px;
+  color: var(--tx-tyrrhenien);
+  text-decoration: none;
+  letter-spacing: 0.01em;
+  display: inline-block;
+  margin-bottom: 16px;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+
+header.page-header .back-link:hover {
+  border-bottom-color: var(--tx-tyrrhenien);
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 32px;
+  letter-spacing: -0.015em;
+  color: var(--tx-ardoise);
+  margin-bottom: 8px;
+}
+
+header.page-header .subtitle {
+  font-size: 14px;
+  color: var(--tx-mica);
+  letter-spacing: 0.005em;
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  color: var(--tx-ardoise);
+  margin-top: 48px;
+  margin-bottom: 16px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--tx-ardoise);
+  margin-top: 28px;
+  margin-bottom: 10px;
+  letter-spacing: -0.005em;
+}
+
+h4 {
+  font-family: var(--font);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--tx-ardoise);
+  margin-top: 22px;
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+p {
+  font-size: 15px;
+  color: var(--tx-ardoise);
+  margin-bottom: 12px;
+}
+
+p.meta {
+  font-size: 13px;
+  color: var(--tx-mica);
+  font-style: italic;
+}
+
+ul,
+ol {
+  list-style: none;
+  margin-bottom: 12px;
+  padding-left: 0;
+}
+
+ul li,
+ol li {
+  font-size: 15px;
+  color: var(--tx-ardoise);
+  padding-left: 18px;
+  position: relative;
+  margin-bottom: 6px;
+}
+
+ul li::before {
+  content: "—";
+  position: absolute;
+  left: 0;
+  color: var(--tx-mica);
+}
+
+ol {
+  counter-reset: ol-counter;
+}
+
+ol li {
+  counter-increment: ol-counter;
+}
+
+ol li::before {
+  content: counter(ol-counter) ".";
+  position: absolute;
+  left: 0;
+  color: var(--tx-mica);
+  font-variant-numeric: tabular-nums;
+}
+
+a {
+  color: var(--tx-tyrrhenien);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(31, 58, 95, 0.3);
+  transition: border-color 0.15s;
+}
+
+a:hover {
+  border-bottom-color: var(--tx-tyrrhenien);
+}
+
+strong {
+  font-weight: 500;
+  color: var(--tx-ardoise);
+}
+
+em {
+  font-style: italic;
+  color: var(--tx-ardoise);
+}
+
+code {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  color: var(--tx-tyrrhenien);
+}
+
+pre {
+  background: var(--tx-brume);
+  padding: 14px 18px;
+  border-radius: 8px;
+  margin: 14px 0;
+  overflow-x: auto;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+pre code {
+  font-size: inherit;
+  color: var(--tx-ardoise);
+  white-space: pre;
+}
+
+table.lexique {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 14px;
+}
+
+table.lexique thead {
+  background: var(--tx-brume);
+}
+
+table.lexique th {
+  text-align: left;
+  font-family: var(--font);
+  font-weight: 500;
+  color: var(--tx-ardoise);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  letter-spacing: 0.01em;
+}
+
+table.lexique td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  color: var(--tx-ardoise);
+}
+
+nav.toc {
+  background: var(--tx-brume);
+  padding: 18px 22px;
+  border-radius: 8px;
+  margin: 24px 0 32px;
+  font-size: 14px;
+}
+
+nav.toc h2 {
+  font-family: var(--font);
+  font-weight: 500;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tx-mica);
+  margin: 0 0 10px;
+  padding: 0;
+  border: none;
+}
+
+nav.toc ul {
+  margin-bottom: 0;
+}
+
+nav.toc ul li {
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+footer.page-footer {
+  margin-top: 64px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--tx-mica);
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+footer.page-footer a {
+  color: var(--tx-mica);
+  border-bottom-color: rgba(116, 112, 106, 0.3);
+}
+
+@media (max-width: 600px) {
+  body {
+    padding: 32px 16px 60px;
+  }
+  h1 {
+    font-size: 26px;
+  }
+  h2 {
+    font-size: 19px;
+  }
+  h3 {
+    font-size: 16px;
+  }
+  pre {
+    font-size: 12.5px;
+    padding: 12px 14px;
+  }
+  table.lexique {
+    font-size: 13px;
+  }
+  table.lexique th,
+  table.lexique td {
+    padding: 8px 8px;
+  }
+  nav.toc {
+    padding: 14px 18px;
+  }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="page-header">
+  <a href="/" class="back-link">← Retour à l'accueil</a>
+  <h1>Méthode et limites</h1>
+  <p class="subtitle">Document de référence sur la position épistémique du projet — avril 2026</p>
+</header>
+
+<nav class="toc" aria-label="Sommaire">
+  <h2>Sommaire</h2>
+  <ul>
+    <li><a href="#section-1">Section 1 — Présentation du document</a></li>
+    <li><a href="#section-2">Section 2 — Les trois règles épistémiques</a></li>
+    <li><a href="#section-3">Section 3 — Trois formulations explicitement écartées</a></li>
+    <li><a href="#section-4">Section 4 — Ce que Tellux mesure</a></li>
+    <li><a href="#section-5">Section 5 — Ce que Tellux n'est pas</a></li>
+    <li><a href="#section-6">Section 6 — Ce que Tellux est</a></li>
+    <li><a href="#section-7">Section 7 — Vocabulaire du projet</a></li>
+    <li><a href="#section-8">Section 8 — Trois pièges rhétoriques à éviter</a></li>
+  </ul>
+</nav>
+
+<section id="section-1">
+  <h2>Section 1 — Présentation du document</h2>
+  <p>Ce document expose la position épistémique du projet Tellux Corse : ce que la plateforme mesure, ce qu'elle affirme, ce qu'elle n'affirme pas, et le vocabulaire qu'elle s'impose. Il complète le Cadre scientifique du projet, qui détaille l'architecture du modèle de calcul (régimes physiques, formules, pondérations, bornes de normalisation). Là où le Cadre scientifique précise comment les valeurs sont calculées, le présent document précise dans quel cadre épistémique elles sont restituées et communiquées.</p>
+  <p>La position défendue ici est intermédiaire entre deux postures qui encombrent la communication scientifique sur les expositions environnementales : l'alarmisme, qui affirme que toute exposition de faible niveau entraîne des effets sanitaires, et la trivialisation, qui dénie tout intérêt scientifique aux tensions ouvertes en deçà des seuils thermiques. Tellux refuse symétriquement ces deux postures, adopte la position intermédiaire de l'UNSCEAR 2012 sur la réponse adaptative aux faibles doses, et distingue systématiquement les niveaux d'inférence (mécanisme biologique, effet biologique, effet sanitaire, impact populationnel).</p>
+  <p>La rédaction du document est destinée à un lectorat institutionnel et expert : pouvoirs publics, associations spécialisées en environnement électromagnétique, scientifiques institutionnels, évaluateurs de dossiers de financement, élus territoriaux, journalistes scientifiques. Le registre est descriptif, sourcé, et explicite quant aux limites de ce que la plateforme produit.</p>
+</section>
+
+<section id="section-2">
+  <h2>Section 2 — Les trois règles épistémiques</h2>
+  <p>Trois règles gouvernent l'ensemble des productions de Tellux. Elles sont nommées et numérotées pour permettre un référencement transversal entre documents.</p>
+
+  <h3>2.1 Règle 1 — Refus symétrique de l'alarmisme et de la trivialisation</h3>
+  <p>Tellux refuse d'affirmer que toute exposition électromagnétique ou ionisante de faible niveau entraîne des effets sanitaires avérés. Il refuse également d'affirmer que ces expositions sont sans intérêt scientifique en deçà des seuils thermiques ou de doses élevées. Entre ces deux postures, le projet documente les tensions scientifiques ouvertes sans les résoudre prématurément.</p>
+  <p>Cette règle s'applique à toutes les dimensions du projet. Sur le volet radiofréquence, elle conduit à présenter la classification IARC 2B et l'avis SCHEER 2024 comme des positions cohabitantes, et non comme un débat refermé dans un sens ou dans l'autre. Sur le volet ionisant, elle conduit à exposer le modèle linéaire sans seuil (LNT) et les positions hormetic ou adaptatives comme des cadres en tension, à documenter, non à arbitrer. Sur le volet basses fréquences (ELF 50 Hz), elle conduit à présenter les méta-analyses épidémiologiques et leurs odds ratios sans en tirer d'affirmation univoque.</p>
+
+  <h3>2.2 Règle 2 — Adoption de la « position C documentée » sur les basses doses</h3>
+  <p>En référence à la position intermédiaire de l'UNSCEAR 2012, Tellux reconnaît la réponse adaptative aux faibles doses comme phénomène biologique réel, sans l'inscrire dans une grille réglementaire. Les références canoniques mobilisées sont Olivieri et al. 1984 (article fondateur de l'adaptive response) et ses réplications, la synthèse Feinendegen 2004 (<em>British Journal of Radiology</em> 78), et la synthèse récente Mavragani et al. 2025.</p>
+  <p>Cette position est désignée « C » par référence à la classification interne de l'UNSCEAR 2012, qui distingue trois positions sur la réponse aux faibles doses : position A (LNT strict), position B (rejet de la pertinence biologique des effets adaptatifs), et position C (reconnaissance du phénomène sans intégration normative). Tellux applique cette posture à l'ensemble des tensions scientifiques mobilisées dans le corpus : documentation plutôt que résolution, présentation des positions en présence plutôt que prise de parti, identification claire des implications de chaque option pour l'architecture du projet.</p>
+
+  <h3>2.3 Règle 3 — Distinction systématique entre niveaux d'inférence</h3>
+  <p>Chaque affirmation produite par Tellux distingue explicitement quatre niveaux :</p>
+  <ul>
+    <li><strong>mécanisme biologique</strong> — plausible, documenté ou spéculatif, opérant à l'échelle moléculaire ou cellulaire ;</li>
+    <li><strong>effet biologique</strong> — mesuré en conditions contrôlées, in vitro ou in vivo, dans une gamme d'exposition donnée ;</li>
+    <li><strong>effet sanitaire</strong> — observable à l'échelle individuelle, distinguable du bruit de fond clinique ;</li>
+    <li><strong>impact populationnel</strong> — détectable par épidémiologie, statistiquement significatif après contrôle des variables confondantes.</li>
+  </ul>
+  <p>Cette gradation évite les glissements entre niveaux qui fragilisent la communication scientifique sur les champs électromagnétiques. Un mécanisme plausible n'est pas un effet biologique. Un effet biologique mesuré en laboratoire n'est pas un effet sanitaire. Un effet sanitaire individuel n'est pas un impact populationnel. La règle s'applique aussi bien dans les pages publiques de la plateforme que dans les fiches du corpus scientifique et dans les documents institutionnels.</p>
+</section>
+
+<section id="section-3">
+  <h2>Section 3 — Trois formulations explicitement écartées</h2>
+  <p>Trois formulations fréquentes dans la communication populaire sur les champs électromagnétiques sont absentes des productions Tellux. Cette section explicite la raison physique et épistémique pour laquelle elles sont écartées.</p>
+
+  <h3>3.1 « Deux réalités physiques distinctes » — pourquoi le mot « naturel » est un piège</h3>
+  <p>Les premières versions des documents Tellux utilisaient l'opposition « perturbation humaine / activité naturelle » comme si ces deux réalités étaient de nature physique différente. Cette opposition est inexacte. Le champ magnétique généré par une ligne haute tension et celui généré par une faille tectonique active sont de même nature physique. Un magnétomètre ne fait pas la différence. Les équations de Maxwell ne distinguent pas les origines de la source ; elles décrivent un seul tenseur de champ qui intègre toutes les contributions en chaque point de l'espace-temps.</p>
+  <p>Le mot « naturel » est particulièrement problématique parce qu'il suggère que le champ d'origine géologique est bénin ou normal, et que seul le champ d'origine humaine pose question. Or, une anomalie magnétique crustale intense peut avoir des effets biologiques mesurables (Maffei 2014). Un champ d'antenne à très faible puissance peut être biologiquement négligeable. L'effet sur un organisme dépend de l'intensité, de la fréquence et de la durée d'exposition — non de l'origine de la source.</p>
+  <p>Formulation retenue par le projet : Tellux distingue les sources (géologiques, industrielles, domestiques, atmosphériques) pour les identifier et les quantifier séparément. Mais le champ résultant en un point est un seul phénomène physique. Les indices « activité géologique » et « perturbation réseau » qui apparaissent dans l'interface sont opérationnels (identifier qui contribue quoi), non ontologiques (deux mondes séparés).</p>
+
+  <h3>3.2 « Les mesures ne s'additionnent pas » — pourquoi les champs s'additionnent vectoriellement</h3>
+  <p>Les documents antérieurs contenaient parfois la phrase « les deux ne s'additionnent pas ». Cette formulation est inexacte au regard du principe de superposition, qui est constitutif de l'électromagnétisme linéaire.</p>
+  <p>En un point donné, le champ magnétique total est la somme vectorielle de toutes les contributions :</p>
+<pre><code>B_total = B_terrestre + B_crustal + B_piezo + B_HTA + B_antennes + B_domestique
+</code></pre>
+  <p>C'est une loi fondamentale. Les champs s'additionnent point par point, vecteur par vecteur. Ils ne vivent pas dans des espaces séparés. Un capteur qui mesure 47 µT à un endroit donné mesure la résultante de toutes les contributions présentes ; il n'est pas possible d'attribuer les 46 µT au champ terrestre et le 1 µT à la ligne haute tension par simple lecture, sans modélisation. Physiquement, c'est un seul champ.</p>
+  <p>Le modèle Tellux calcule plusieurs indices distincts pour des raisons de lisibilité (composantes du régime magnétique, du régime radiofréquence, du régime ionisant). Ces indices ne sont pas des mesures physiques directes au sens d'une lecture instrumentale unique : ce sont des grandeurs reconstruites par modélisation, séparées pour permettre à l'utilisateur de comprendre d'où vient la contribution dominante. Ces indices ne se somment pas arithmétiquement entre eux dans la vue par défaut, parce que leurs unités physiques diffèrent (nT, µW/m², nSv/h). C'est cette dissociation que le projet a voulu nommer initialement par « les deux ne s'additionnent pas » — formulation inadéquate qui confondait la non-sommation entre régimes physiques hétérogènes (vraie, et conventionnelle) et l'indépendance des contributions sous-jacentes (fausse). Pour un indice composite scalaire, le mode Expertise du modèle propose une combinaison adimensionnelle pondérée explicitement labellisée comme convention, dont les pondérations et bornes sont documentées dans le Cadre scientifique, section 6.</p>
+  <p>Formulation retenue par le projet : les champs physiques sous-jacents s'additionnent vectoriellement au sein d'un même régime fréquentiel. La combinaison entre régimes (statique, ELF, RF, ionisant) relève de conventions métrologiques explicites, et non d'une incommensurabilité physique. Les indices Tellux peuvent être combinés en un indice composite si une pondération est définie ; c'est précisément ce que fait le mode Expertise.</p>
+
+  <h3>3.3 « Naturel = inoffensif » — pourquoi l'origine ne qualifie pas la nocivité</h3>
+  <p>L'équation entre origine naturelle et innocuité est un raccourci non fondé. Le radon, gaz d'origine purement géologique, est un cancérogène pulmonaire reconnu par l'IARC en classe 1 au-dessus de certains seuils d'exposition chronique. Le rayonnement gamma terrestre peut atteindre des niveaux significativement supérieurs au fond mondial dans les zones granitiques, dont la Corse. À l'inverse, certains champs anthropiques de très faible puissance sont biologiquement négligeables.</p>
+  <p>La qualification sanitaire d'une exposition dépend de son intensité, de sa durée, de sa fréquence et du contexte biologique récepteur — non de son origine naturelle ou anthropique. Tellux écarte donc, dans toutes ses productions, l'idée selon laquelle la qualification physique d'un site (géologique, industriel, domestique) emporterait par elle-même une qualification sanitaire.</p>
+</section>
+
+<section id="section-4">
+  <h2>Section 4 — Ce que Tellux mesure</h2>
+  <p>Tellux mesure le champ électromagnétique total en un point géographique donné. Ce champ est la superposition vectorielle de toutes les contributions présentes en ce point, quelle qu'en soit l'origine :</p>
+  <ul>
+    <li>le champ magnétique terrestre (IGRF-14, environ 46 µT en Corse) ;</li>
+    <li>les anomalies crustales locales (EMAG2v3, NOAA) ;</li>
+    <li>l'effet piézoélectrique éventuel du substrat géologique sous contrainte tectonique ;</li>
+    <li>le champ magnétique des lignes haute et basse tension (estimation Biot-Savart) ;</li>
+    <li>le champ électromagnétique des antennes-relais (base ANFR Cartoradio) ;</li>
+    <li>les sources domestiques et industrielles à proximité.</li>
+  </ul>
+  <p>Toutes ces contributions obéissent aux mêmes équations de Maxwell. Elles s'expriment dans les mêmes unités SI au sein d'un même régime (tesla, volt par mètre, watt par mètre carré). Elles sont détectables par les mêmes instruments (magnétomètre, antenne RF, sonde ELF). Un capteur placé en un point ne distingue pas l'origine du champ qu'il mesure : il mesure la résultante.</p>
+  <p>Le but de Tellux est de rendre lisible l'articulation entre toutes ces contributions à l'échelle territoriale, et non de les séparer en deux mondes étanches. La plateforme identifie les sources, estime leur contribution respective, et restitue une image spatiale du champ total. La séparation en couches dans l'interface (origine humaine, origine géologique, ionisant de fond) est un outil d'analyse, non une affirmation ontologique. Le détail des régimes physiques distingués (magnétique statique, magnétique basse fréquence ELF 50 Hz, radiofréquence, ionisant) et des formules associées est exposé dans le Cadre scientifique, section 3.</p>
+
+  <h3>Magnétoréception humaine et plage d'intensité du champ géomagnétique</h3>
+  <p>La plage d'intensité dans laquelle Tellux modélise les variations magnétiques (de l'ordre de 25 à 65 µT pour la composante terrestre, plus quelques centaines de nanoteslas d'anomalie locale) est précisément celle pour laquelle une réponse corticale humaine à des rotations contrôlées du champ a été documentée en EEG.</p>
+  <p>La présence de cristaux de magnétite biogénique dans le cerveau humain est documentée depuis Kirschvink, Kobayashi-Kirschvink &amp; Woodford 1992 (<em>PNAS</em> 89:7683-7687, plus de cinq millions de cristaux monodomaines par gramme de parenchyme cérébral et plus de cent millions par gramme de méninges), confirmée par Schultheiss-Grassi et al. 1999 (microscopie électronique, hippocampe), Kletetschka 2018 (cartographie de 822 spécimens, partitionnement préférentiel cervelet et tronc cérébral), et précisée par Maher 2016 qui distingue les cristaux euèdres biogéniques des nanosphères polluantes d'origine atmosphérique. Wang, Hilburn, Wu, Kirschvink et al. 2019 (<em>eNeuro</em> 6(2):ENEURO.0483-18.2019, sur trente-quatre participants) ont démontré, en cage de Faraday blindée, que l'onde alpha du cortex humain est supprimée environ 300 millisecondes après une rotation contrôlée du champ magnétique dans la gamme géomagnétique, spécifiquement pour les rotations descendantes en déclinaison. L'effet ne se produit pas pour les rotations statiques ou ascendantes, ce qui rend l'hypothèse de l'artefact sensoriel indirect peu vraisemblable. Une étude complémentaire de Chae et al. 2022 (<em>Scientific Reports</em> 12:8997) apporte un argument en faveur d'un second mécanisme, fondé sur la cryptochrome et une dépendance à la lumière bleue, rejoignant l'hypothèse radical-pair largement documentée chez les oiseaux migrateurs.</p>
+  <p>Ces résultats électrophysiologiques concernent une réponse neurologique non consciente à des champs magnétiques contrôlés en laboratoire. Ils ne constituent ni une validation ni une invalidation de l'électrosensibilité symptomatique déclarée, qui relève d'une littérature clinique distincte (Rubin 2005, Rubin 2010), traitée en section 8 du présent document.</p>
+  <p>Pour Tellux, l'enjeu épistémique de cette littérature est précisément circonscrit : la question n'est pas de savoir si l'organisme humain détecte le champ magnétique terrestre, qui est démontrée. La question ouverte est celle de l'effet fonctionnel de cette détection, et de l'intensité à partir de laquelle elle devient pertinente pour la santé.</p>
+</section>
+
+<section id="section-5">
+  <h2>Section 5 — Ce que Tellux n'est pas</h2>
+  <p><strong>Tellux n'est pas un diagnostic médical.</strong> La plateforme ne fait aucune promesse de santé, ne prescrit aucun comportement, ne qualifie aucun lieu de « dangereux » ou de « sain ». Elle restitue des données et des estimations avec leurs incertitudes. L'interprétation clinique des expositions relève des autorités compétentes (ANFR pour les expositions radiofréquences, ASNR pour les expositions ionisantes, Santé Publique France pour la surveillance épidémiologique).</p>
+  <p><strong>Tellux n'est pas un instrument de mesure.</strong> C'est un modèle spatial qui croise des données institutionnelles (ANFR, BRGM, NOAA, IGRF-14, IRSN) et des mesures de terrain contributives. Le modèle a des marges d'erreur documentées, variables selon les sources et les régimes physiques considérés. C'est un outil de comparaison relative entre zones, et non une mesure absolue de niveau d'exposition.</p>
+  <p><strong>Tellux n'est pas un produit commercial.</strong> Pas de publicité, pas de revente de données, pas de solutions de protection à vendre. Le code est sous licence MIT. Le projet est porté par la micro-entreprise Stella Canis Majoris pour la structuration juridique, non pour la commercialisation.</p>
+  <p><strong>Tellux n'est pas une plateforme militante.</strong> La plateforme ne prend pas position pour ou contre les antennes, les lignes haute tension, ou le déploiement de la 5G. Elle rend visible ce qui est mesurable et documenté. Les acteurs qui l'utilisent peuvent en tirer leurs propres conclusions, dans leur propre cadre d'analyse.</p>
+  <p><strong>Tellux n'est pas terminé.</strong> La base de mesures de terrain est limitée à ce stade. Le volet agronomique repose sur des hypothèses formulées mais pas encore testées sur le terrain corse. Les analyses d'alignements archéoastronomiques sur les sites mégalithiques sont des résultats statistiques, et non des certitudes historiques. La plateforme est en phase de validation, non de démonstration ; cette limite est explicite dans la documentation et dans le bandeau méthodologique du corpus public.</p>
+</section>
+
+<section id="section-6">
+  <h2>Section 6 — Ce que Tellux est</h2>
+  <p><strong>Un outil de transparence spatiale.</strong> Tellux rend visible, sur une carte unique, des données qui existent dans des bases séparées (ANFR, BRGM, NOAA, EDF SEI, IRSN) et qui n'avaient pas été croisées à l'échelle de la Corse à cette résolution. La superposition de ces couches sur un même écran produit une information nouvelle qu'aucune base isolée ne contenait.</p>
+  <p><strong>Un pont entre les échelles.</strong> Le champ électromagnétique en un point est la résultante de phénomènes opérant à toutes les échelles : planétaire (champ terrestre IGRF-14), régionale (géologie crustale, EMAG2v3), locale (failles, substrats, susceptibilité lithologique), humaine (antennes, lignes, appareils domestiques). Tellux est l'outil qui relie ces échelles et permet de visualiser leur contribution respective en un lieu donné.</p>
+  <p><strong>Un cadre pour la science participative.</strong> Le formulaire de contribution, le protocole en aveugle parallèle et la hiérarchie de confiance des contributions (niveau 1 : protocole aveugle parallèle ; niveau 2 : automatique avec capture native ou CSV traçable du capteur smartphone ; niveau 3 : déclaratif) constituent un cadre méthodologique pour que les mesures contribuées soient exploitables, et non un simple compteur de signalements.</p>
+  <p><strong>Un catalyseur de questions.</strong> Les hypothèses formulées dans le corpus Tellux ne sont pas des affirmations : ce sont des questions structurées, rattachées à des études existantes, avec un type de test explicite (automatique, terrain, contributif) et un niveau de crédibilité documenté. La plateforme est conçue pour poser des questions sourcées, non pour y répondre prématurément.</p>
+</section>
+
+<section id="section-7">
+  <h2>Section 7 — Vocabulaire du projet</h2>
+  <p>Cette section explicite les termes que Tellux s'interdit d'employer dans ses interfaces, ses communications et ses documents, et propose les remplacements retenus. Le tableau distingue les termes proscrits, le motif de leur exclusion, et la formulation autorisée.</p>
+
+  <h3>7.1 Mots et expressions écartés</h3>
+  <table class="lexique">
+    <thead>
+      <tr>
+        <th>Terme écarté</th>
+        <th>Motif de l'exclusion</th>
+        <th>Formulation retenue</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>« sanctuaire EHS »</td>
+        <td>Valide implicitement un diagnostic médical non établi</td>
+        <td>« espace de récupération »</td>
+      </tr>
+      <tr>
+        <td>« cage Faraday personnelle »</td>
+        <td>Vocabulaire anxiogène, connotation survivaliste</td>
+        <td>« espace blindé naturellement (ITU-R P.2040-2) »</td>
+      </tr>
+      <tr>
+        <td>« safe place »</td>
+        <td>Anglicisme thérapeutique déplacé dans un outil de mesure</td>
+        <td>« chambre optimisée pour le sommeil »</td>
+      </tr>
+      <tr>
+        <td>« espace safe EM »</td>
+        <td>Hybride des deux précédents</td>
+        <td>« zone à exposition réduite »</td>
+      </tr>
+      <tr>
+        <td>« dangereux » (qualifiant un site)</td>
+        <td>Diagnostic de risque sans base médicale</td>
+        <td>« exposition mesurée élevée »</td>
+      </tr>
+      <tr>
+        <td>« sain » (qualifiant un site)</td>
+        <td>Même problème symétrique</td>
+        <td>« exposition mesurée faible »</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>7.2 Formulations autorisées par contexte</h3>
+  <p>Pour les espaces de sommeil, les formulations retenues sont « chambre optimisée pour le sommeil », « hygiène du sommeil numérique », « espace de récupération ».</p>
+  <p>Pour les espaces atténués, les formulations retenues sont « zone à exposition réduite », « zone d'atténuation passive », « architecture vernaculaire à atténuation naturelle (référence ITU-R P.2040-2 sur les pertes de propagation à travers les matériaux de construction) ».</p>
+  <p>Pour les recommandations comportementales, les formulations retenues sont « réduire l'exposition de proximité », « augmenter la distance à la source », « privilégier les périodes de moindre activité réseau ».</p>
+
+  <h3>7.3 Règle générale</h3>
+  <p>Tellux décrit des niveaux de champ mesurables ou modélisés, avec leurs incertitudes. La plateforme ne prescrit pas de comportements de santé, ne pose pas de diagnostics, et ne valide pas de profils de vulnérabilité individuelle. Toute production se situe dans le registre de l'hygiène environnementale de précaution — non de la médecine, non de l'anxiologie.</p>
+</section>
+
+<section id="section-8">
+  <h2>Section 8 — Trois pièges rhétoriques à éviter</h2>
+  <p>Trois raccourcis circulent fréquemment dans le débat public sur les champs électromagnétiques. Ils sont signalés ici parce qu'ils confondent des cadres expérimentaux différents et fragilisent la communication scientifique sur le sujet. Tellux ne les utilise pas, dans aucun sens.</p>
+
+  <h3>8.1 « Rubin 2005 réfute la sensibilité électromagnétique »</h3>
+  <p>Cette lecture est inexacte. Rubin et al. 2005 (<em>Psychosomatic Medicine</em> 67:224-232) et Rubin et al. 2010 (<em>Bioelectromagnetics</em> 31:1-11), revue systématique cumulant 46 études et 1 175 sujets, établissent que les symptômes attribués aux champs électromagnétiques de faible intensité ne sont pas prédits par l'exposition mesurée dans des protocoles de provocation en double aveugle. Les facteurs prédictifs sont psychobiologiques, dont l'effet nocebo. Cette conclusion n'invalide pas la sensibilité biologique au champ magnétique terrestre démontrée par Wang et al. 2019 (mécanisme différent, gamme d'intensité différente, mesure différente : EEG en cage blindée et non symptomatologie déclarée). Les deux résultats coexistent sans contradiction. Le projet présente l'un et l'autre dans leur cadre expérimental respectif.</p>
+
+  <h3>8.2 « L'électrosensibilité n'existe pas »</h3>
+  <p>Cette formulation est incorrecte. Ce que la littérature clinique de référence (revues Rubin, expertise OMS, classifications IARC) établit est que les <em>symptômes rapportés</em> par les personnes se déclarant électrosensibles ne sont pas prédits par l'exposition mesurée dans des protocoles en aveugle. L'existence des symptômes n'est pas niée ; c'est leur attribution causale à l'exposition électromagnétique qui est questionnée. Tellux ne qualifie aucune personne en termes d'électrosensibilité, ne propose aucun diagnostic, et ne formule aucun avis sur les protocoles cliniques de prise en charge.</p>
+
+  <h3>8.3 « La magnétite biogénique prouve les risques des antennes »</h3>
+  <p>Ce raccourci confond deux régimes physiques distincts. La magnétoréception documentée chez l'humain (Wang et al. 2019, Chae et al. 2022) concerne le champ magnétique terrestre statique, dans une plage d'intensité de l'ordre de 25 à 65 microteslas. Les antennes radiofréquences (de quelques centaines de mégahertz à quelques dizaines de gigahertz) opèrent dans un régime physique différent (ondes électromagnétiques propagatives, non champ magnétostatique), à des intensités telles que la composante magnétique du champ rayonné est plusieurs ordres de grandeur inférieure au champ magnétique terrestre. Les mécanismes biologiques identifiés sur le régime statique ne sont pas directement transposables au régime radiofréquence ; toute inférence dans ce sens demande des preuves expérimentales propres au régime considéré. Tellux signale l'existence de la magnétoréception comme phénomène documenté sur le régime statique, et présente les questions ouvertes sur le régime radiofréquence dans le cadre des positions cohabitantes IARC 2B / SCHEER 2024.</p>
+</section>
+
+<footer class="page-footer">
+  <p>Dernière mise à jour : avril 2026</p>
+  <p><a href="/">Accueil</a> · <a href="/mentions-legales.html">Mentions légales</a> · <a href="/donnees-vie-privee.html">Politique de données personnelles</a> · <a href="/transparence.html">Transparence</a> · <a href="/cadre-scientifique.html">Cadre scientifique</a></p>
+</footer>
+
+</div>
+</body>
+</html>
