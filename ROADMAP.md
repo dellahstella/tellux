@@ -10,7 +10,7 @@ Document de référence publique présentant la trajectoire générale du projet
 
 ## 1. Périmètre actuel et trajectoire
 
-Tellux est aujourd'hui structuré autour d'**une application principale publique** : la cartographie électromagnétique territoriale (`app.html`), accompagnée d'outils communaux (`mairies.html`) et d'un corpus scientifique dédié (`corpus.html`). Cette phase 1 est en cours de stabilisation.
+Tellux est aujourd'hui structuré autour d'**une application principale publique** : la cartographie électromagnétique territoriale (`app.html`), accompagnée d'outils communaux (`mairies.html`) et d'une documentation publique en trois volets (démarche scientifique, méthode et limites, guide d'utilisation). Cette phase 1 est en cours de stabilisation.
 
 Des modules d'extension thématiques pourront être envisagés sous condition d'obtention d'un financement public (FEDER en priorité), sans calendrier public à ce stade.
 
