@@ -7,6 +7,21 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [2.8.3] — 2026-05-01
+
+### Changed — Audit cohérence `DETTES_TECHNIQUES.md` post-cycle audit Phase D (PR à venir, sprint `chore/audit-dettes-coherence-post-phase-d`)
+
+Audit documentaire des dettes techniques pour fermer l'anomalie 4 hors périmètre signalée par la PR [#283](https://github.com/dellahstella/tellux/pull/283) (sprint hygiène repo) et l'anomalie hors périmètre signalée par la PR [#289](https://github.com/dellahstella/tellux/pull/289) (sprint audit EMAG-CRUSTAL).
+
+Modifications cosmétiques appliquées :
+
+- **Fix wording `WDMAM-NAMING-001`** (note de fermeture, section « Dettes fermées récemment ») : la note décrivait un pattern « bbox-dynamique reconstruit à chaque activation » qui ne correspondait plus à l'état actuel du code après le rollback de la PR #190. La note précise désormais le rollback vers la bbox fixe `[[41.3, 8.5], [43.1, 9.65]]` et la raison du rollback (URL dynamique manquant le `renderingRule EMAG2_Color_Scale` rendant l'image transparente), avec renvoi vers le commentaire `app.html:2092-2097`.
+- **Actualisation terminologique IRSN → ASNR** sur 2 occurrences de la dette `RADON-DATASET-COVERAGE-001` (description et condition de déblocage), formulation `ASNR (anciennement IRSN)` selon la doctrine appliquée par les sprints `audit-D1`, `audit-D1bis`, `audit-D1ter`. Préserve la traçabilité historique vers les fiches data.gouv.fr publiées sous le slug IRSN tout en utilisant le nom d'autorité actuel.
+
+Pas de fermeture, recadrage ou ouverture de dette dans ce sprint. Les arbitrages non triviaux sont remontés dans la description de la PR pour décision Soleil.
+
+---
+
 ## [2.8.2] — 2026-05-01
 
 ### Changed — Fermeture de la dette `EMAG-CRUSTAL-AUDIT-001` après audit (PR à venir, sprint `chore/audit-emag-crustal-fermeture`)
