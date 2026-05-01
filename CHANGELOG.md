@@ -7,6 +7,37 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [2.8.4] — 2026-05-01
+
+### Changed — Backlog SEO et performance `mairies.html` (PR à venir, sprint `chore/seo-mairies-backlog`)
+
+Sprint d'amélioration SEO et performance de l'application communale, listé depuis avril 2026 dans la ROADMAP section 2 « Chantiers techniques en cours ». Audit Lighthouse réalisé avant et après pour mesurer l'effet.
+
+**Scores Lighthouse :**
+
+| Catégorie | Avant | Après | Δ |
+|---|---|---|---|
+| Performance | 57 | **81** | **+24** |
+| Accessibility | 96 | 96 | = |
+| Best Practices | 100 | 100 | = |
+| SEO (preview) | 92 | 61 | -31 (faux négatif preview, voir notes) |
+
+Web vitals (avant → après) : LCP 6.1 s → 1.5 s, FCP 6.1 s → 1.5 s, Speed Index 6.1 s → 1.8 s, TTI 7.6 s → 2.2 s.
+
+**Modifications appliquées :**
+
+- **Lazy load `pdfmake`** : retrait des deux balises `<script src="...pdfmake...">` du `<head>` (chargement synchrone au boot, ~600 ko + ~200 ko de fonts). Nouvelle fonction `loadPdfMake()` qui injecte dynamiquement les deux scripts CDN au premier clic sur « Télécharger PDF », avec indication visuelle « Préparation du PDF… » sur le bouton et retry au prochain clic en cas d'échec réseau. Integrity hashes conservés.
+- **Élision française** sur le préfixe `Mairie de [NOM DE LA COMMUNE]` dans la génération PDF des courriers : nouvelle fonction `applyMairieElision()` appliquée comme pré-traitement dans `substitute()` et `substituteHtml()` avant la substitution générique. Voyelle ou voyelle accentuée → « Mairie d'Ajaccio », « Mairie d'Évisa ». Article L' déjà inclus dans le nom officiel (« L'Île-Rousse ») → « Mairie de l'Île-Rousse » (article minusculé). Apostrophe typographique cohérente avec les templates existants.
+- **Open Graph et Twitter Cards** : enrichissement des meta tags dans le `<head>`. Ajout `og:type`, `og:locale` (`fr_FR`), `og:site_name`, `og:image`, `og:image:alt` et les 4 balises `twitter:card`/`title`/`description`/`image`. Image temporaire : `assets/logo/favicon_512.png` (512×512, ratio 1:1) avec `twitter:card` en `summary` (cohérent avec ratio carré). Asset Open Graph dédié 1200×630 (1.91:1) à produire en session Soleil dédiée — non créé d'autorité dans ce sprint.
+- **Hiérarchie h1** : audit confirme un seul `<h1>` (l.436 « Outils administratifs · Communes corses »), hiérarchie h1 → h2 → h3 propre. Aucune modification requise.
+
+**Notes** :
+
+- La régression SEO apparente sur preview Cloudflare (92 → 61) est un faux positif : les URL preview portent un `X-Robots-Tag: noindex` automatique pour éviter l'indexation des URLs temporaires (audit Lighthouse signale `is-crawlable: Page is blocked from indexing`). À reconfirmer sur prod après merge.
+- Anomalies hors périmètre détectées et signalées (non corrigées) : `robots-txt` invalide (présent avant et après), `color-contrast` insuffisant (présent avant et après), CLS et TBT en légère régression à surveiller.
+
+---
+
 ## [2.8.3] — 2026-05-01
 
 ### Changed — Audit cohérence `DETTES_TECHNIQUES.md` post-cycle audit Phase D (PR à venir, sprint `chore/audit-dettes-coherence-post-phase-d`)
