@@ -7,6 +7,19 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [2.8.2] — 2026-05-01
+
+### Changed — Fermeture de la dette `EMAG-CRUSTAL-AUDIT-001` après audit (PR à venir, sprint `chore/audit-emag-crustal-fermeture`)
+
+Investigation conduite sur `app.html` pour confirmer ou infirmer la duplication potentielle entre les couches `emag` et `crustal`. Verdict : couches fonctionnellement distinctes, pas de redondance. Aucune modification de code applicatif requise. La dette est déplacée en section « Dettes fermées récemment » de [`DETTES_TECHNIQUES.md`](DETTES_TECHNIQUES.md) avec note d'audit détaillée.
+
+- `emag` (l.2098 d'`app.html`) : `L.imageOverlay` raster régional Corse, endpoint NOAA NCEI EMAG2v3 ImageServer, bbox fixe `[[41.3, 8.5], [43.1, 9.65]]`.
+- `crustal` (l.2657-2700+ d'`app.html`) : `L.layerGroup` vectoriel construit à partir du tableau `CRUSTAL_REFS` (5 entrées hardcodées Bangui, Kursk, Vredefort, Ries, Chicxulub) avec cercles + markers + panneau comparatif `_crustalGauge` qui *utilise* EMAG2v3 (complémentarité, pas redondance).
+
+La portion « wdmam » de la dette avait été implicitement résolue par la fermeture de `WDMAM-NAMING-001` le 27 avril 2026.
+
+---
+
 ## [2.8.1] — 2026-05-01
 
 ### Added — Page publique `retractations.html` (PR à venir, sprint `feat/retractations-page-integration`)
