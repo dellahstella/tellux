@@ -1101,6 +1101,19 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .expert-slider-row span.sv{min-width:30px;text-align:right;font-family:var(--mono);color:#C28533;font-size:10px;}
 #expert-index-val{font-size:22px;font-weight:700;font-family:var(--mono);color:#C28533;line-height:1;}
 /* === fin Phase 3 === */
+/* === UI avancée — chips de filtre par domaine + badges temps réel (sprint feat/ui-avancee-domaines-badges, mai 2026) === */
+.domain-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--pierre-ombre);font-size:11px;}
+.chip-label{font-family:var(--mono);text-transform:uppercase;letter-spacing:.04em;color:var(--tx3);font-size:9px;margin-right:4px;}
+.domain-chip{padding:4px 10px;border:1px solid var(--border);border-radius:999px;background:transparent;color:var(--ardoise-clair);font-size:11px;font-family:inherit;cursor:pointer;transition:all .15s;}
+.domain-chip:hover{border-color:var(--mica);background:var(--bg3);}
+.domain-chip.is-active{background:var(--maquis);color:var(--pierre);border-color:var(--maquis);}
+.domain-chip.is-active:hover{background:var(--maquis-clair);}
+.cond-badges{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--bg);}
+.cond-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);font-size:11px;}
+.cond-badge .badge-key{font-family:var(--mono);text-transform:uppercase;letter-spacing:.04em;color:var(--tx3);font-size:9px;}
+.cond-badge .badge-val{font-weight:500;color:var(--tx);font-family:var(--mono);}
+.cond-badge .status-dot{margin-right:0;}
+/* === fin UI avancée === */
 </style>
 </head>
 <body>
@@ -1396,6 +1409,29 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 <!-- Panneau Conditions actuelles — 3 sous-sections repliees par defaut, resume une ligne. -->
 <div class="cond-panel" id="conditions-panel">
 
+  <!-- Badges temps réel toujours visibles : Kp, charge réseau Corse, statut Supabase, indicateur orage (caché si pas d'orage actif). -->
+  <!-- Synchronisés depuis les sources existantes via syncBadges(), appelée par updateCondSummaries() (cf. bloc script principal). -->
+  <div class="cond-badges" role="group" aria-label="Indicateurs temps réel">
+    <div class="cond-badge" id="badge-kp" title="Indice Kp d'activité géomagnétique (NOAA SWPC)">
+      <span class="badge-key">Kp</span>
+      <span class="badge-val" id="badge-kp-val">—</span>
+    </div>
+    <div class="cond-badge" id="badge-reseau" title="Charge réseau électrique Corse (RTE eco2mix)">
+      <span class="badge-key">Réseau</span>
+      <span class="badge-val" id="badge-reseau-val">—</span>
+    </div>
+    <div class="cond-badge" id="badge-supabase" title="Statut connexion Supabase (contributions live)">
+      <span class="badge-key">Live</span>
+      <span class="badge-val">
+        <span class="status-dot status-dot--pending" id="badge-sb-dot"></span>
+      </span>
+    </div>
+    <div class="cond-badge" id="badge-meteo" hidden title="Activité orageuse (Blitzortung)">
+      <span class="badge-key">Orage</span>
+      <span class="badge-val" id="badge-meteo-val">—</span>
+    </div>
+  </div>
+
   <div class="cond-section" data-open="false" id="cond-sec-solaire">
     <button class="cond-header" type="button" onclick="toggleCondSection('solaire')" aria-expanded="false" aria-controls="cond-body-solaire">
       <span class="cond-chevron">▸</span>
@@ -1466,6 +1502,16 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <!-- Bouton réduire sidebar (desktop uniquement) -->
   <button class="sidebar-toggle" id="sidebar-toggle" type="button" onclick="toggleSidebar()" aria-label="Réduire la sidebar" title="Réduire la sidebar"><span class="sidebar-toggle-icon">◀</span></button>
 
+  <!-- Filtre par domaine physique : 5 chips additifs au-dessus de l'accordion. État initial "Tous" actif. -->
+  <div class="domain-chips" role="group" aria-label="Filtre par domaine physique">
+    <span class="chip-label">Domaine</span>
+    <button class="domain-chip is-active" data-domain-filter="all" type="button" onclick="filterByDomain('all')">Tous</button>
+    <button class="domain-chip" data-domain-filter="statique" type="button" onclick="filterByDomain('statique')" title="Magnétique statique : géomagnétisme, anomalies crustales, susceptibilité lithologique">Statique</button>
+    <button class="domain-chip" data-domain-filter="elf" type="button" onclick="filterByDomain('elf')" title="Magnétique basse fréquence ELF 50 Hz : lignes HT/BT, postes sources, production">ELF</button>
+    <button class="domain-chip" data-domain-filter="rf" type="button" onclick="filterByDomain('rf')" title="Radiofréquences : antennes ANFR, émetteurs TDF">RF</button>
+    <button class="domain-chip" data-domain-filter="ionisant" type="button" onclick="filterByDomain('ionisant')" title="Rayonnement ionisant : radon, sites U/Th">Ionisant</button>
+  </div>
+
   <!-- GROUPE 1 — MODÈLE EM (déplié par défaut) -->
   <div class="accordion-cat">
     <div class="accordion-cat-header open" onclick="toggleAccordion(this)">
@@ -1473,8 +1519,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <span>Modèle EM</span>
     </div>
     <div class="accordion-cat-content open">
-      <button class="lbtn on-hot" id="b-hot" title="Champ composite estimé par le modèle Tellux (agrégation de 4 domaines physiques)" onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ composite</button>
-      <button class="lbtn on-con" id="b-con" title="Mesures EM — contributions citoyennes + 30 fiches ANFR/EXEM certifiées (2024-2026)" onclick="tog('con','on-con',this)"><span class="dot" style="background:#5c3a9b"></span>Mesures EM</button>
+      <button class="lbtn on-hot" id="b-hot" data-domains="tous" title="Champ composite estimé par le modèle Tellux (agrégation de 4 domaines physiques)" onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ composite</button>
+      <button class="lbtn on-con" id="b-con" data-domains="tous" title="Mesures EM — contributions citoyennes + 30 fiches ANFR/EXEM certifiées (2024-2026)" onclick="tog('con','on-con',this)"><span class="dot" style="background:#5c3a9b"></span>Mesures EM</button>
     </div>
   </div>
 
@@ -1485,11 +1531,11 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <span>Sources anthropiques</span>
     </div>
     <div class="accordion-cat-content">
-      <button class="lbtn" id="b-ant" title="Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR + TDF</button>
-      <button class="lbtn" id="b-res" title="Lignes et postes électriques haute tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HT</button>
-      <button class="lbtn" id="b-bt" title="Réseau basse tension BT — EDF SEI · zoom ≥ 12" onclick="tog('bt','on-bt',this)"><span class="ln" style="background:#d97706"></span>Réseau BT</button>
-      <button class="lbtn" id="b-prod" title="Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions" onclick="tog('prod','on-prod',this)"><span class="sq" style="background:#1a5c8c"></span>Sites de production</button>
-      <button class="lbtn" id="b-postes" title="Postes sources EDF SEI (transformateurs HTB/HTA) — 21 postes OSM" onclick="togPostesSources(this)"><span class="sq" style="background:#C28533;border:1px solid #3F5B3A"></span>Postes sources EDF</button>
+      <button class="lbtn" id="b-ant" data-domains="rf" title="Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR + TDF</button>
+      <button class="lbtn" id="b-res" data-domains="elf" title="Lignes et postes électriques haute tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HT</button>
+      <button class="lbtn" id="b-bt" data-domains="elf" title="Réseau basse tension BT — EDF SEI · zoom ≥ 12" onclick="tog('bt','on-bt',this)"><span class="ln" style="background:#d97706"></span>Réseau BT</button>
+      <button class="lbtn" id="b-prod" data-domains="elf" title="Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions" onclick="tog('prod','on-prod',this)"><span class="sq" style="background:#1a5c8c"></span>Sites de production</button>
+      <button class="lbtn" id="b-postes" data-domains="elf" title="Postes sources EDF SEI (transformateurs HTB/HTA) — 21 postes OSM" onclick="togPostesSources(this)"><span class="sq" style="background:#C28533;border:1px solid #3F5B3A"></span>Postes sources EDF</button>
     </div>
   </div>
 
@@ -1504,26 +1550,26 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 
       <h5 class="subgroup-header subgroup-header-first">A. Substrat magnétique</h5>
       <p class="subgroup-text">Couches qui modulent directement le calcul Tellux : susceptibilité magnétique du substrat, proximité de failles, potentiel radon, fond magnétique régional.</p>
-      <button class="lbtn" id="b-geo" title="Carte géologique BRGM — granite, schiste, calcaire" onclick="tog('geo','on-geo',this)"><span class="sq" style="background:#1a6b5c"></span>Géologie BRGM</button>
-      <button class="lbtn" id="b-failles" title="Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)" onclick="togFailles(this)"><span class="ln" style="background:#8E2F1F"></span>Failles tectoniques</button>
-      <button class="lbtn" id="b-radon" title="Potentiel radon géologique — zones ASNR cat. 2/3" onclick="tog('radon','on-radon',this)"><span class="sq" style="background:#C28533"></span>Radon</button>
-      <button class="lbtn" id="b-emag" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Fond magnétique régional</button>
+      <button class="lbtn" id="b-geo" data-domains="statique" title="Carte géologique BRGM — granite, schiste, calcaire" onclick="tog('geo','on-geo',this)"><span class="sq" style="background:#1a6b5c"></span>Géologie BRGM</button>
+      <button class="lbtn" id="b-failles" data-domains="statique" title="Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)" onclick="togFailles(this)"><span class="ln" style="background:#8E2F1F"></span>Failles tectoniques</button>
+      <button class="lbtn" id="b-radon" data-domains="ionisant" title="Potentiel radon géologique — zones ASNR cat. 2/3" onclick="tog('radon','on-radon',this)"><span class="sq" style="background:#C28533"></span>Radon</button>
+      <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Fond magnétique régional</button>
 
       <h5 class="subgroup-header">B. Contexte structurel</h5>
       <p class="subgroup-text">Indicateurs géologiques documentés, présentés pour aider l'interprétation. Pas d'amplification EM modélisée dans le calcul.</p>
-      <button class="lbtn" id="b-cav" title="Cavités souterraines — grottes, mines, karst (BRGM)" onclick="tog('cav','on-cav',this)"><span class="sq" style="background:#5c3a9b"></span>Cavités</button>
-      <button class="lbtn" id="b-therm" title="Émergences thermales — observations de surface, marqueurs de failles actives" onclick="tog('therm','on-therm',this)"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Émergences thermales</button>
-      <button class="lbtn" id="b-hyd" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie</button>
+      <button class="lbtn" id="b-cav" data-domains="ionisant statique" title="Cavités souterraines — grottes, mines, karst (BRGM)" onclick="tog('cav','on-cav',this)"><span class="sq" style="background:#5c3a9b"></span>Cavités</button>
+      <button class="lbtn" id="b-therm" data-domains="statique" title="Émergences thermales — observations de surface, marqueurs de failles actives" onclick="tog('therm','on-therm',this)"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Émergences thermales</button>
+      <button class="lbtn" id="b-hyd" data-domains="visuel" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie</button>
 
       <h5 class="subgroup-header">C. Sites documentaires</h5>
       <p class="subgroup-text">Catalogues de points d'intérêt scientifique. Données issues de la littérature ou d'analogies géologiques — mesures in situ requises pour confirmation.</p>
-      <button class="lbtn" id="b-points-chauds" title="Sites U/Th à mesurer — catalogue de sites candidats à des mesures radiométriques (doses non mesurées, sources documentaires BRGM ou analogies géologiques)" onclick="togPointsChauds(this)"><span style="display:inline-block;width:8px;height:8px;background:#8E2F1F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Sites U/Th à mesurer</button>
-      <button class="lbtn" id="b-sites-remarq" title="Sites géophysiques remarquables — 10 sites ponctuels à signature singulière (mines historiques, serpentinites ophiolitiques, surveillance radiologique marine). Données documentaires, mesures in situ souvent requises." onclick="togSitesRemarquables(this)"><span style="display:inline-block;width:10px;height:10px;background:#C28533;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Sites géophysiques remarquables</button>
+      <button class="lbtn" id="b-points-chauds" data-domains="ionisant" title="Sites U/Th à mesurer — catalogue de sites candidats à des mesures radiométriques (doses non mesurées, sources documentaires BRGM ou analogies géologiques)" onclick="togPointsChauds(this)"><span style="display:inline-block;width:8px;height:8px;background:#8E2F1F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Sites U/Th à mesurer</button>
+      <button class="lbtn" id="b-sites-remarq" data-domains="tous" title="Sites géophysiques remarquables — 10 sites ponctuels à signature singulière (mines historiques, serpentinites ophiolitiques, surveillance radiologique marine). Données documentaires, mesures in situ souvent requises." onclick="togSitesRemarquables(this)"><span style="display:inline-block;width:10px;height:10px;background:#C28533;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Sites géophysiques remarquables</button>
 
       <h5 class="subgroup-header">D. Référence comparative</h5>
       <p class="subgroup-text">Couches visuelles et de mise en perspective. Aucun impact sur le calcul.</p>
-      <button class="lbtn" id="b-foret" title="Forêts publiques ONF via WMS IGN Géoplateforme — couche visuelle niveau A (pas de modulation calcul). BD Forêt V2 complète non disponible en WMS public." onclick="tog('foret','on-foret',this)"><span class="sq" style="background:#3F5B3A"></span>Forêts publiques</button>
-      <button class="lbtn" id="b-crustal" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF) — opt-in, comparaison locale/mondiale" onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales)</button>
+      <button class="lbtn" id="b-foret" data-domains="visuel" title="Forêts publiques ONF via WMS IGN Géoplateforme — couche visuelle niveau A (pas de modulation calcul). BD Forêt V2 complète non disponible en WMS public." onclick="tog('foret','on-foret',this)"><span class="sq" style="background:#3F5B3A"></span>Forêts publiques</button>
+      <button class="lbtn" id="b-crustal" data-domains="statique" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF) — opt-in, comparaison locale/mondiale" onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales)</button>
       <!-- TODO: Communes radon niveau 3 overlay (GeoJSON geometries a fournir), MNT altitude overlay -->
     </div>
   </div>
@@ -6991,11 +7037,77 @@ function updateCondSummaries(){
   }
 }
 
+// === UI avancée — sprint feat/ui-avancee-domaines-badges (mai 2026) ===
+// filterByDomain : sélecteur chips de filtre par domaine physique sur la sidebar layers-accordion.
+// data-domains sur chaque .lbtn = liste d'espaces séparés parmi : statique elf rf ionisant tous visuel.
+// "tous" et "visuel" restent toujours visibles quel que soit le filtre.
+function filterByDomain(domain){
+  document.querySelectorAll('.domain-chip').forEach(function(chip){
+    chip.classList.toggle('is-active', chip.dataset.domainFilter === domain);
+  });
+  document.querySelectorAll('.lbtn[data-domains]').forEach(function(btn){
+    var domains = (btn.dataset.domains || '').split(/\s+/);
+    var visible = domain === 'all'
+      || domains.indexOf('tous') !== -1
+      || domains.indexOf('visuel') !== -1
+      || domains.indexOf(domain) !== -1;
+    btn.style.display = visible ? '' : 'none';
+  });
+  // Masquer un groupe d'accordion si plus aucun toggle visible à l'intérieur.
+  document.querySelectorAll('.accordion-cat').forEach(function(cat){
+    var all = cat.querySelectorAll('.lbtn[data-domains]');
+    var visibleCount = 0;
+    all.forEach(function(b){ if(b.style.display !== 'none') visibleCount++; });
+    cat.style.display = visibleCount > 0 ? '' : 'none';
+  });
+}
+
+// syncBadges : synchronise les valeurs des éléments sources (kp-v, res-charge, sb-status-dot, lightning-v)
+// vers les badges temps réel toujours visibles dans le panneau Conditions. Hooké dans updateCondSummaries
+// (rythme 30 s) et appelé aussi au setTimeout initial de renderChargeSparkline (2 s).
+function syncBadges(){
+  var kpSrc = document.getElementById('kp-v');
+  var kpBadge = document.getElementById('badge-kp-val');
+  if(kpSrc && kpBadge){
+    var kpTxt = kpSrc.textContent || '—';
+    kpBadge.textContent = kpTxt;
+    kpBadge.style.color = kpSrc.style.color || '';
+  }
+  var resSrc = document.getElementById('res-charge');
+  var resBadge = document.getElementById('badge-reseau-val');
+  if(resSrc && resBadge){
+    var resTxt = resSrc.textContent || '—';
+    // Compaction : la cellule détaillée affiche "1234 MW · ×1.05 (RTE)" ; le badge n'expose que "×1.05".
+    var m = resTxt.match(/×[0-9.]+/);
+    resBadge.textContent = m ? m[0] : resTxt;
+    resBadge.style.color = resSrc.style.color || '';
+  }
+  var sbSrc = document.getElementById('sb-status-dot');
+  var sbBadge = document.getElementById('badge-sb-dot');
+  if(sbSrc && sbBadge){
+    sbBadge.className = sbSrc.className;
+  }
+  var ltSrc = document.getElementById('lightning-v');
+  var meteoBadge = document.getElementById('badge-meteo');
+  var meteoVal = document.getElementById('badge-meteo-val');
+  if(ltSrc && meteoBadge && meteoVal){
+    var ltTxt = ltSrc.textContent || '';
+    var stormActive = /orage|storm|foudre|éclair/i.test(ltTxt) && !/aucun|—|vérif/i.test(ltTxt);
+    if(stormActive){
+      meteoVal.textContent = ltTxt;
+      meteoBadge.removeAttribute('hidden');
+    } else {
+      meteoBadge.setAttribute('hidden', '');
+    }
+  }
+}
+// === fin UI avancée ===
+
 // Render sparkline au chargement + refresh chaque heure (en cas de session longue)
-setTimeout(() => { renderChargeSparkline(); updateCondSummaries(); }, 2000);
-setInterval(() => { renderChargeSparkline(); updateCondSummaries(); }, 60*60*1000);
+setTimeout(() => { renderChargeSparkline(); updateCondSummaries(); syncBadges(); }, 2000);
+setInterval(() => { renderChargeSparkline(); updateCondSummaries(); syncBadges(); }, 60*60*1000);
 // Fallback periodique pour capter les valeurs temps reel meme si un load* oublie d'appeler
-setInterval(updateCondSummaries, 30*1000);
+setInterval(function(){ updateCondSummaries(); syncBadges(); }, 30*1000);
 
 // ═══ Modale contribution a onglets ═══
 // Onglet 1 : Observation simple (textarea libre, saveObservation)
