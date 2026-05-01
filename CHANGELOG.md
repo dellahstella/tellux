@@ -7,6 +7,32 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [2.8.0] — 2026-05-01
+
+### Changed — Terminologie ASNR sur les mentions d'actualité (PR [#274](https://github.com/dellahstella/tellux/pull/274), [#278](https://github.com/dellahstella/tellux/pull/278), [#280](https://github.com/dellahstella/tellux/pull/280))
+
+Alignement de la terminologie « ASNR » (active depuis le 1ᵉʳ janvier 2025, suite à la fusion ASN+IRSN) sur l'ensemble des mentions IRSN d'actualité non millésimées du site public et du code applicatif. Les ~16 occurrences IRSN restantes sont toutes des références à des datasets explicitement millésimés 2018 (cartographie radon, décret 2018-434, NCRP 94, noms de colonne CSV `radon_class_IRSN`) et sont conservées en l'état.
+
+- Sprint audit-D1 (PR [#274](https://github.com/dellahstella/tellux/pull/274)) : 7 occurrences contemporaines remplacées dans `index.html` (×5), `methode-et-limites.html` (×2), `guide-utilisation.html` (×2), `transparence.html` (×1).
+- Sprint audit-D1bis (PR [#278](https://github.com/dellahstella/tellux/pull/278)) : 5 mentions d'actualité corrigées dans `cadre-scientifique.html` (×3 : sections 1, 4.1, 6.3) et `app.html` (×2 : footer fonctionnel L.1184 et `epistemic_note` de `calcGammaAmbient` L.4274).
+- Sprint audit-D1ter (PR [#280](https://github.com/dellahstella/tellux/pull/280)) : 2 résiduels dans `app.html` (commentaire L.3992 « BRGM + ASNR + IGN BD TOPO » ; href L.1184 `https://teleray.irsn.fr` → `https://teleray.asnr.fr`, vivacité 200 OK confirmée par curl).
+
+### Changed — Audit Phase D, fixes structurants landing (PR [#274](https://github.com/dellahstella/tellux/pull/274))
+
+- Compteur antennes du bloc statistiques hero d'`index.html` aligné sur le chiffre exact daté `~960 sites ANFR` (avril 2026), avec mention en infobulle `title=` « plus de 3000 antennes individuelles ».
+- Footer d'`index.html` enrichi avec le statut juridique : `Stella Canis Majoris · micro-entreprise SIRET 993 881 481 00010 · 20200 Bastia · 2026`.
+- Ancre `#contact` d'`index.html` enrichie d'un libellé explicite : `Contact projet — Lucas Iannaccone Frasseto, porteur du projet Tellux Corse`.
+
+### Added — Section « Cadres éthiques de référence » sur la page Transparence (PR [#276](https://github.com/dellahstella/tellux/pull/276))
+
+Nouvelle section 4 dans `transparence.html` détaillant l'adhésion envisagée à la Charte de la donnée et de l'IA Corse (21 principes en 9 titres) et au Guide de bonne pratique IA Smart Isula (12 bonnes pratiques), conditionnelle à l'obtention d'un financement FEDER. Articulation préfigurée par les pratiques actuelles déjà visibles sur le site (MIT, RLS, polices auto-hébergées, pas de tracker). Renumérotation des sections actuelles 4 et 5 en 5 et 6.
+
+### Added then Removed — Section « Inscription territoriale » sur la landing (PR [#276](https://github.com/dellahstella/tellux/pull/276) puis [#281](https://github.com/dellahstella/tellux/pull/281))
+
+Cas particulier signalé pour clarté du lecteur : une section `#inscription-territoriale` a été ajoutée à `index.html` par la PR [#276](https://github.com/dellahstella/tellux/pull/276) (entre `#projet` et `#ressources`, 3 cartes empilées détaillant l'articulation au PO FEDER-FSE+ Corse 2021-2027, au SDTAN Smart Isula et au SPDIAC), puis retirée par la PR [#281](https://github.com/dellahstella/tellux/pull/281) sur décision éditoriale (sobriété de la landing publique, la cohérence narrative institutionnelle est portée par le dossier FEDER lui-même). Bilan net pour la version `[2.8.0]` : section absente du site public. Le draft markdown source (`_drafts/audit-D1/section_spdiac_landing.md`, untracked) est conservé localement pour usage potentiel ultérieur (par exemple page À propos dédiée).
+
+---
+
 ## [2.7.0] — 2026-04-27
 
 ### Removed — Retrait des modules patrimoine et agronomie du dépôt public (PR `refactor/audit-transparence-corpus-public`)
