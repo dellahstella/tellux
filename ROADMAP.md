@@ -1,6 +1,6 @@
 # Tellux — Feuille de route publique
 
-**Dernière mise à jour :** 1ᵉʳ mai 2026
+**Dernière mise à jour :** 1ᵉʳ mai 2026 (soir) — intégration Sections 7-10 méthodologiques sur `cadre-scientifique.html` (PR [#295](https://github.com/dellahstella/tellux/pull/295), sprint J) et optimisation SEO+performance sur `mairies.html` (PR [#293](https://github.com/dellahstella/tellux/pull/293) + [#294](https://github.com/dellahstella/tellux/pull/294), sprint L, gain Lighthouse Performance +24).
 
 Document de référence publique présentant la trajectoire générale du projet Tellux. Les détails opérationnels, calendriers précis et éléments stratégiques restent en pilotage interne.
 
@@ -29,11 +29,12 @@ Publication d'une application de cartographie électromagnétique territoriale r
 
 ### Livrables restants
 
-- Documentation méthodologique par domaine physique
 - Glossaire technique intégré
 - Phase d'UI avancée (sélecteur de domaines, badges temps réel)
 
 La mise à jour de la landing vers une cohérence totale avec la phase 1 publique est livrée (audit Phase D, sprints D1, D2, D1bis, D1ter et retrait éditorial section SPDIAC, cf. `CHANGELOG.md` `[2.8.0]`).
+
+La documentation méthodologique par domaine physique est livrée (sprint J, PR [#295](https://github.com/dellahstella/tellux/pull/295), Sections 7-10 sur `cadre-scientifique.html`, cf. `CHANGELOG.md` `[2.8.5]`).
 
 ### Avancées techniques majeures avril 2026
 
@@ -42,6 +43,8 @@ La mise à jour de la landing vers une cohérence totale avec la phase 1 publiqu
 - **2026-04-24** : Cowork Session B — clarification du modèle EMAG2v3 vs WDMAM (note de recherche `docs/EMAG2_WDMAM_NOTE_RECHERCHE.md`), production des géométries officielles radon par commune (253 polygones ASNR intégrés via PR #130), correction de 5 coordonnées GPS U/Th (PR #131). Cowork Session A — production de la version 1 publique de `mairies.html` (PRs #136 à #140), fermeture `SUPABASE-COMMUNE-FIELD-001` (PR #137) et `ANTENNES-REFRESH-001` (PR #138).
 - **2026-04-25** : finalisation du document de spécification méthodologique (23 pages) destiné à une relecture critique externe par un physicien tiers. Document archivé hors du repo public.
 - **2026-05-01** : audit Phase D livré sur le site public (sprints `audit-D1`, `audit-D2`, `audit-D1bis`, `audit-D1ter`, `retrait-section-spdiac`). Alignement de la terminologie ASNR sur 14 mentions d'actualité (`index.html`, `methode-et-limites.html`, `guide-utilisation.html`, `transparence.html`, `cadre-scientifique.html`, `app.html`), ajout d'une section « Cadres éthiques de référence » sur `transparence.html` (Charte data Corse + Guide IA Smart Isula), fixes structurants landing (compteur antennes, footer SIRET, libellé contact projet). Une section « Inscription territoriale » a été ajoutée puis retirée de la landing dans le même cycle, sur décision éditoriale. Détail dans `CHANGELOG.md` `[2.8.0]`. En parallèle, révisions du dossier de pré-candidature FEDER appliquées hors repo public (bascule EUPL → MIT sur 17 occurrences, reformulation Supabase 2.3.7 autour de l'audit CLOUD Act).
+- **2026-05-01 (soir)** : intégration des Sections 7-10 méthodologiques par domaine physique sur `cadre-scientifique.html` (sprint J, PR [#295](https://github.com/dellahstella/tellux/pull/295)). Quatre sections homogènes ajoutées entre la Section 6 et l'Annexe A (Magnétique statique, Magnétique basse fréquence ELF 50 Hz, Radiofréquences, Rayonnement ionisant), chacune en 7 sous-sections (définition, phénoménologie, sources, formules, incertitudes, dettes associées, ce que la modélisation permet/ne permet pas). Volume total ajouté : ≈ 3 820 mots de prose. Sommaire enrichi (passe de 7 à 11 entrées), liens cliquables inter-sections, retrait éditorial mention publique candidature FEDER/ANR/Collectivité de Corse en Section 1 (cohérence doctrine éditoriale post-cycle audit Phase D). Détail dans `CHANGELOG.md` `[2.8.5]`. Livre le chantier ROADMAP « Documentation méthodologique par domaine physique ».
+- **2026-05-01 (soir)** : optimisation SEO et performance de `mairies.html` (sprint L, PR [#293](https://github.com/dellahstella/tellux/pull/293) + [#294](https://github.com/dellahstella/tellux/pull/294)). Score Lighthouse Performance 57 → **81** (+24), LCP/FCP 6.1 s → 1.5 s, TTI 7.6 s → 2.2 s grâce au lazy load `pdfmake` (chargement différé au premier clic « Télécharger PDF »). Élision française appliquée sur le préfixe « Mairie de [NOM DE LA COMMUNE] » dans la génération PDF des courriers (Ajaccio → « Mairie d'Ajaccio », L'Île-Rousse → « Mairie de l'Île-Rousse »). Enrichissement Open Graph et Twitter Cards (9 meta tags ajoutées). Détail dans `CHANGELOG.md` `[2.8.4]`. Livre le chantier ROADMAP « Backlog SEO post-release `mairies.html` ». Quatre anomalies hors périmètre détectées par Lighthouse et formalisées en dettes techniques (cf. `DETTES_TECHNIQUES.md` : `ROBOTS-TXT-001`, `A11Y-CONTRAST-001`, `MAIRIES-CLS-TBT-001`, `MAIRIES-REDIRECTS-001`).
 
 ### Démarches institutionnelles d'accès aux données
 
@@ -54,7 +57,7 @@ Suivi détaillé des envois et des retours : voir section 7 « Suivi des sollici
 
 - **Audit `emag` vs `crustal` dans `app.html`** : confirmer que les couches ne pointent pas vers les mêmes tuiles (cf. dette `EMAG-CRUSTAL-AUDIT-001` dans `DETTES_TECHNIQUES.md`).
 - **Pages publiques `/transparence` et `/retractions`** sur `tellux.pages.dev` : `/transparence` est en production et a été enrichie le 1ᵉʳ mai 2026 d'une section « Cadres éthiques de référence » (audit Phase D, PR [#276](https://github.com/dellahstella/tellux/pull/276)). `/retractions` est en cours de rédaction par Cowork dans un sprint parallèle, non encore mergée à ce jour. Signal de maturité institutionnelle attendu par les destinataires des sollicitations institutionnelles. Engagement public de transparence financière et de rétraction documentée.
-- **Backlog SEO post-release `mairies.html`** : ajustements `h1`, lazy load `pdfmake`, élision « Mairie d'Ajaccio », Twitter Cards, audit Lighthouse. Non urgent, à traiter après stabilisation v1.
+- ~~**Backlog SEO post-release `mairies.html`** : ajustements `h1`, lazy load `pdfmake`, élision « Mairie d'Ajaccio », Twitter Cards, audit Lighthouse. Non urgent, à traiter après stabilisation v1.~~ **Livré 1ᵉʳ mai 2026 (sprint L, PR [#293](https://github.com/dellahstella/tellux/pull/293) + [#294](https://github.com/dellahstella/tellux/pull/294))**, gain Lighthouse Performance +24.
 
 ---
 
