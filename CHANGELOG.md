@@ -7,6 +7,46 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [2.9.0] — 2026-05-01
+
+### Added — UI avancée `app.html` : sélecteur de domaines + badges temps réel (PR à venir, sprint `feat/ui-avancee-domaines-badges`)
+
+Sprint UI avancée listé dans la ROADMAP section 2 « Phase 1 — Livrables restants » : « Phase d'UI avancée (sélecteur de domaines, badges temps réel) ». Désormais traité.
+
+**Sélecteur de domaines physiques** (chips de filtre, Option A1) :
+
+- 5 chips ajoutés en haut de la sidebar `layers-accordion`, juste après le bouton `sidebar-toggle` : **Tous** (état initial actif), **Statique**, **ELF**, **RF**, **Ionisant**.
+- Cliquer sur un chip filtre les toggles de couches selon leur domaine physique. Mapping : 18 boutons `<button class="lbtn" id="b-X">` annotés d'un attribut `data-domains` (valeurs parmi `statique`, `elf`, `rf`, `ionisant`, `tous`, `visuel` — séparées par espace pour les multi-domaines comme `b-cav` = ionisant + statique).
+- Toggles « Tous » (Champ composite, Mesures EM, Sites géophysiques remarquables) et « Visuel » (Hydrographie, Forêts publiques) restent toujours visibles quel que soit le filtre.
+- Un groupe d'accordion qui ne contient plus aucun toggle visible est masqué automatiquement (transition propre en cas de filtre exclusif).
+- Aucun toggle masqué par filtre ne perd son état actif/inactif : retour à « Tous » restaure l'état tel quel.
+- Fonction `filterByDomain(domain)` ajoutée dans le bloc `<script>` principal, en cohérence avec le style des fonctions existantes.
+
+**Badges temps réel** (panneau Conditions toujours visible, Option B1) :
+
+- 4 badges ajoutés en tête du panneau `cond-panel`, au-dessus des 4 sous-sections existantes (qui restent en accordion replié par défaut, comportement préservé) :
+  - **Kp** (indice d'activité géomagnétique, NOAA SWPC)
+  - **Réseau** (charge réseau Corse condensée en multiplicateur ×N, RTE eco2mix)
+  - **Live** (statut Supabase, indicateur dot pending/ok/error synchronisé sur `sb-status-dot`)
+  - **Orage** (caché par défaut, affiché uniquement si activité orageuse détectée par Blitzortung)
+- Fonction `syncBadges()` ajoutée pour synchroniser les valeurs depuis les éléments sources (`kp-v`, `res-charge`, `sb-status-dot`, `lightning-v`) vers les badges. Hookée dans `updateCondSummaries()` (rythme 30 s déjà en place) et dans le `setTimeout` initial de 2 s — pas de `setInterval` dédié, intégration propre dans le tick existant.
+
+### Changed — Variables CSS racines `app.html` non modifiées
+
+Les chips et badges utilisent uniquement les variables CSS existantes (`--bg`, `--bg3`, `--pierre-ombre`, `--maquis`, `--maquis-clair`, `--mica`, `--ardoise-clair`, `--tx`, `--tx3`, `--border`, `--mono`). Aucune nouvelle variable racine introduite, palette DA v2 gelée respectée.
+
+### Validation
+
+- ✅ `node --check` OK sur les 2 blocs `<script>` inline d'`app.html` (~301 KB de JS après strip des commentaires HTML)
+- ✅ Aucune modification des fonctions `tog()`, `toggleAccordion()`, `toggleCondSection()`, `togFailles`, `togPostesSources`, `togPointsChauds`, `togSitesRemarquables`
+- ✅ Aucune modification des 4 sous-sections existantes du panneau Conditions (`cond-sec-solaire`, `cond-sec-atmo`, `cond-sec-reseau`, `cond-sec-contribs`)
+- ✅ Aucune modification des zones GELÉES (`EXPERT_WEIGHTS_DEFAULT`, `EXPERT_BOUNDS_DEFAULT`, `EXPERT_EPISTEMIC_NOTE`, `calcGammaAmbient` formule NCRP 94)
+- ✅ Aucune dépendance externe ajoutée
+
+Livre le chantier ROADMAP « Phase d'UI avancée (sélecteur de domaines, badges temps réel) » de la section 2 Phase 1.
+
+---
+
 ## [2.8.5] — 2026-05-01
 
 ### Added — Documentation méthodologique par domaine physique sur `cadre-scientifique.html` (PR à venir, sprint `chore/methodo-sections-7-10-cadre-scientifique`)
