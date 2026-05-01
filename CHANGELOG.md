@@ -7,6 +7,23 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [2.8.1] — 2026-05-01
+
+### Added — Page publique `retractations.html` (PR à venir, sprint `feat/retractations-page-integration`)
+
+Nouvelle page publique de journal des rétractations, retraits et reformulations substantielles du projet, à la racine du repo. La page documente publiquement les évolutions éditoriales antérieures (retraits de pages, reformulations, anonymisations) à destination des institutions, scientifiques, journalistes et évaluateurs de dossiers. Six entrées factuelles à la livraison, présentées par ordre antichronologique : retrait section « Inscription territoriale » landing avant publication, retrait modules patrimoine et agronomie du dépôt public, reformulation accroche grand public en cadrage de dialogue institutionnel, retrait du compteur « 130+ études peer-reviewed » de la landing, reformulation de la cible candidature financement dans les contextes publics, anonymisation d'une mention nominative dans la documentation interne tracée. Style aligné DA v2 (Fraunces + IBM Plex Sans), structure cohérente avec `transparence.html` et `mentions-legales.html`. Draft source produit en session Cowork conservé dans `_drafts/retractations/` (untracked).
+
+### Changed — Cohérence transversale des footers (4 fichiers)
+
+- `index.html` : ajout de la ligne « Transparence · Rétractations · Mentions légales » dans le bloc `lp-contact-mentions`, et ajout du lien `Rétractations` dans le footer principal `lp-footer-right` à la suite des liens existants.
+- `transparence.html` : ajout du lien `Rétractations` dans le footer après `Accueil`. Date de mise à jour avril 2026 → mai 2026.
+- `mentions-legales.html` : ajout du lien `Rétractations` dans le footer après `Accueil`. Date de mise à jour avril 2026 → mai 2026.
+- `donnees-vie-privee.html` : ajout du lien `Rétractations` dans le footer après `Accueil`. Date de mise à jour avril 2026 → mai 2026.
+
+Hors périmètre validé Soleil : footers de `mairies.html`, `cadre-scientifique.html`, `methode-et-limites.html`, `guide-utilisation.html` non modifiés dans ce sprint, à arbitrer ultérieurement si besoin.
+
+---
+
 ## [2.8.0] — 2026-05-01
 
 ### Changed — Terminologie ASNR sur les mentions d'actualité (PR [#274](https://github.com/dellahstella/tellux/pull/274), [#278](https://github.com/dellahstella/tellux/pull/278), [#280](https://github.com/dellahstella/tellux/pull/280))
