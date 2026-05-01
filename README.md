@@ -47,11 +47,12 @@ Des démarches sont en cours pour l'accès à d'autres données institutionnelle
 Tellux est aujourd'hui structuré autour d'une application principale publique :
 
 - `index.html` — landing publique
-- `app.html` — application cartographie EM (publique, mise en avant)
+- `app.html` — application cartographie EM (publique, mise en avant), avec sélecteur de domaines physiques (chips de filtre Tous / Statique / ELF / RF / Ionisant) et badges temps réel dans le panneau Conditions (Kp, Réseau, Live Supabase, Orage)
 - `mairies.html` — outils communaux (fiche commune, modèles de courriers, cadre légal)
 - `cadre-scientifique.html` — démarche scientifique (architecture du modèle, formules, pondérations, et documentation méthodologique par domaine physique : magnétique statique, magnétique basse fréquence ELF 50 Hz, radiofréquences, rayonnement ionisant)
 - `methode-et-limites.html` — méthode et limites (position épistémique, vocabulaire, pièges rhétoriques)
 - `guide-utilisation.html` — guide d'utilisation (manuel d'usage de la carte et des contributions)
+- `glossaire.html` — glossaire technique du projet (94 entrées alphabétiques couvrant physique des champs EM, méthodologie, terminologie institutionnelle et juridique, vocabulaire technique projet)
 - `transparence.html` — page de transparence éditoriale (sources, statuts épistémiques, limites connues, cadres éthiques)
 - `retractations.html` — journal public des retraits et reformulations substantielles
 
