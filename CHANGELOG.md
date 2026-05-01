@@ -7,6 +7,44 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [2.10.4] — 2026-05-01
+
+### Changed — Alignement canonique sprint U (PR à venir, sprint `chore/glossaire-canonical-alignment`)
+
+Sprint d'alignement post-livraison du sprint U (`[2.10.3]`) sur la spec canonique du prompt complet. 4 ajustements mineurs sans changement fonctionnel.
+
+**Renommage classe CSS `glossaire.html`** : `.short-anchor` → `.term-short-anchor` (préfixe cohérent avec les `id="term-X"` du sprint T). 25 ancres `<span class="...">` renommées + 1 règle CSS.
+
+**Règle CSS canonique `glossaire.html`** :
+
+```diff
+-dl.glossary .short-anchor { display: inline-block; width: 0; height: 0; scroll-margin-top: 80px; }
++dl.glossary .term-short-anchor { display: block; height: 0; visibility: hidden; scroll-margin-top: 80px; }
+```
+
+Approche `display: block; visibility: hidden;` plus propre que `inline-block; width: 0;` (pas de risque d'interférence avec le flux inline).
+
+**Ajout `og:image:type` `mairies.html`** : balise `<meta property="og:image:type" content="image/png">` ajoutée après `og:image`. Sémantique propre, certaines plateformes OG en tirent parti.
+
+**Enrichissement texte alt OG/Twitter `mairies.html`** :
+
+```diff
+-content="Tellux Corse — Outils mairies pour les 360 communes corses"
++content="Tellux Corse — outils mairies pour les 360 communes corses, cartographie électromagnétique territoriale"
+```
+
+Appliqué aux deux balises `og:image:alt` et `twitter:image:alt`. Le texte alt enrichi intègre la signature du projet, cohérent avec la composition visuelle de l'asset variante B.
+
+### Validation
+
+- ✅ Aucune modification du contenu de l'asset `assets/og/mairies_og.{png,svg}`
+- ✅ Aucune modification des `<dt id="term-...">` longs ni des `<a class="xref">` du sprint T
+- ✅ Aucune modification des autres balises SEO de `mairies.html` (canonical, description, robots, og:type, og:locale, og:site_name, og:url, og:title, og:description, twitter:title, twitter:description)
+- ✅ Aucune modification des autres pages
+- ✅ Rétro-compat absolue : 119 ids `term-*` (94 longs + 25 courts) toujours présents
+
+---
+
 ## [2.10.3] — 2026-05-01
 
 ### Added — Asset Open Graph dédié pour `mairies.html` (PR à venir, sprint `feat/og-mairies-slugs-courts-glossaire`)
