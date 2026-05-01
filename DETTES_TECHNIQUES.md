@@ -1,6 +1,6 @@
 # Tellux — Dettes techniques ouvertes
 
-**Dernière mise à jour :** 1ᵉʳ mai 2026 (soir) — audit cohérence post-cycle audit Phase D : fix wording note de fermeture `WDMAM-NAMING-001` (rollback bbox-dynamique → bbox fixe par PR #190 désormais reflété correctement) ; actualisation terminologique IRSN → ASNR (anciennement IRSN) sur 2 occurrences de la dette `RADON-DATASET-COVERAGE-001` (description + condition de déblocage) selon doctrine D1bis. Précédente : 1ᵉʳ mai 2026 — fermeture EMAG-CRUSTAL-AUDIT-001 par audit (verdict : `emag` et `crustal` fonctionnellement distincts, pas de redondance, voir notes en section "Dettes fermées récemment"). Précédente : 27 avril 2026 (soir) — ajout CAPTEURS-WEB-API-001 (magnétomètre indisponible dans les navigateurs depuis Chrome M116, août 2023 ; module différé d'une éventuelle phase ultérieure couvrant une app Android native). Précédente : 27 avril 2026 — fermeture WDMAM-NAMING-001 (fusion EMAG2/WDMAM en couche unique bbox-dynamique). Précédente : 26 avril 2026 (soir) — ajout RADON-DATASET-COVERAGE-001 (couverture partielle du dataset radon 2B vs décret 2018-434, identifiée lors de l'audit préparatoire aux envois aux institutions). 26 avril 2026 — ajout des dettes CONTRIB-SCHEMA-001 (incohérence schéma stockage contributions, identifiée lors du fix Android PR #154), RADON-CLASS-DUPLICATE et HELPERS-INLINE-CONSTS (issues de la cartographie d'extraction du moteur, `docs/tellux-engine-extraction-plan.md`). 25 avril 2026 — consolidation semaine 21-25 avril : enrichissement BT-CALIBRATION-001 (priorité Haute, mesures ratios ×57 à ×210), nouvelle dette EMAG-CRUSTAL-AUDIT-001 (Cowork Session B), précisions PR # sur les fermetures ELF-CALIB-001/WMM-CROSSCHECK-001/BDFORET-V2-001/ELF-VECTOR-001/BT-ELF-001, ajout en fermées récemment de SUPABASE-COMMUNE-FIELD-001 (PR #137) et ANTENNES-REFRESH-001 (PR #138), liens démarches externes sur TÉLÉ-001/HTA-TENSION-001/RADIO-AERO-001 (lettres envoyées 28-29 avril 2026). 25 avril — ajout RTE-OPENDATA-001. 24 avril — ajout RADON-L3-UNIFICATION-001 + WDMAM-NAMING-001.
+**Dernière mise à jour :** 1ᵉʳ mai 2026 (soir, post sprints J et L) — recensement de 4 dettes nouvelles issues de l'audit Lighthouse du sprint L (`mairies.html`) : `ROBOTS-TXT-001`, `A11Y-CONTRAST-001`, `MAIRIES-CLS-TBT-001`, `MAIRIES-REDIRECTS-001`. Précédente : 1ᵉʳ mai 2026 (soir) — audit cohérence post-cycle audit Phase D : fix wording note de fermeture `WDMAM-NAMING-001` (rollback bbox-dynamique → bbox fixe par PR #190 désormais reflété correctement) ; actualisation terminologique IRSN → ASNR (anciennement IRSN) sur 2 occurrences de la dette `RADON-DATASET-COVERAGE-001` (description + condition de déblocage) selon doctrine D1bis. Précédente : 1ᵉʳ mai 2026 — fermeture EMAG-CRUSTAL-AUDIT-001 par audit (verdict : `emag` et `crustal` fonctionnellement distincts, pas de redondance, voir notes en section "Dettes fermées récemment"). Précédente : 27 avril 2026 (soir) — ajout CAPTEURS-WEB-API-001 (magnétomètre indisponible dans les navigateurs depuis Chrome M116, août 2023 ; module différé d'une éventuelle phase ultérieure couvrant une app Android native). Précédente : 27 avril 2026 — fermeture WDMAM-NAMING-001 (fusion EMAG2/WDMAM en couche unique bbox-dynamique). Précédente : 26 avril 2026 (soir) — ajout RADON-DATASET-COVERAGE-001 (couverture partielle du dataset radon 2B vs décret 2018-434, identifiée lors de l'audit préparatoire aux envois aux institutions). 26 avril 2026 — ajout des dettes CONTRIB-SCHEMA-001 (incohérence schéma stockage contributions, identifiée lors du fix Android PR #154), RADON-CLASS-DUPLICATE et HELPERS-INLINE-CONSTS (issues de la cartographie d'extraction du moteur, `docs/tellux-engine-extraction-plan.md`). 25 avril 2026 — consolidation semaine 21-25 avril : enrichissement BT-CALIBRATION-001 (priorité Haute, mesures ratios ×57 à ×210), nouvelle dette EMAG-CRUSTAL-AUDIT-001 (Cowork Session B), précisions PR # sur les fermetures ELF-CALIB-001/WMM-CROSSCHECK-001/BDFORET-V2-001/ELF-VECTOR-001/BT-ELF-001, ajout en fermées récemment de SUPABASE-COMMUNE-FIELD-001 (PR #137) et ANTENNES-REFRESH-001 (PR #138), liens démarches externes sur TÉLÉ-001/HTA-TENSION-001/RADIO-AERO-001 (lettres envoyées 28-29 avril 2026). 25 avril — ajout RTE-OPENDATA-001. 24 avril — ajout RADON-L3-UNIFICATION-001 + WDMAM-NAMING-001.
 
 Ce document liste les dettes techniques ouvertes identifiées dans l'application Tellux. Chaque dette fait l'objet d'un identifiant pérenne, d'une description factuelle et d'une condition de déblocage documentée. Aucune de ces dettes ne bloque la publication de la phase 1.
 
@@ -203,6 +203,46 @@ La validation physique préalable (littérature ou mesures terrain) est un prér
 **Priorité :** Moyenne (impact direct sur la fidélité du score radon en Haute-Corse, sans bug fonctionnel — la classe par défaut estimée par lithologie reste appliquée pour les communes non listées explicitement)
 
 **Condition de déblocage :** Compléter le dataset avec les communes 2B manquantes en téléchargeant le dataset radon ASNR (anciennement IRSN) sur data.gouv.fr depuis un environnement non bloqué, puis joindre les codes INSEE et centroïdes officiels via API BAN ou COG INSEE 2016. Référence : `docs/data-sources/radon_communes_level3_corse_notes.md` section 6 (méthodologie de complétion phase 2).
+
+---
+
+### ROBOTS-TXT-001 — Fichier `robots.txt` invalide
+
+**Description :** Lighthouse SEO signale un échec `robots-txt | robots.txt is not valid` sur `mairies.html` (audit du 1ᵉʳ mai 2026, sprint L). Anomalie présente avant et après le sprint L, hors périmètre des chantiers SEO traités. Le fichier `robots.txt` actuel (s'il existe à la racine du déploiement Cloudflare Pages) ne respecte pas la spécification attendue par Lighthouse, ou n'est pas présent / pas correctement servi.
+
+**Priorité :** Faible
+
+**Condition de déblocage :** Audit du `robots.txt` actuel en production (vérifier sa présence et son contenu à `https://tellux.pages.dev/robots.txt`). Création ou correction conforme à la spécification, en autorisant l'indexation des pages publiques (`index.html`, `app.html`, `mairies.html`, `cadre-scientifique.html`, `transparence.html`, `methode-et-limites.html`, `guide-utilisation.html`, `mentions-legales.html`, `donnees-vie-privee.html`, `retractations.html`). Vérification post-correction via Lighthouse SEO.
+
+---
+
+### A11Y-CONTRAST-001 — Contraste de couleurs insuffisant
+
+**Description :** Lighthouse Accessibility signale un échec `color-contrast | Background and foreground colors do not have a sufficient contrast ratio` sur `mairies.html` (audit du 1ᵉʳ mai 2026, sprint L). Anomalie présente avant et après le sprint L. La localisation exacte du composant fautif n'a pas été identifiée dans le sprint L (sortie Lighthouse non détaillée à ce niveau). Probablement applicable à d'autres pages éditoriales du site partageant la même DA v2.
+
+**Priorité :** Moyenne (accessibilité, conformité WCAG 2.1 AA)
+
+**Condition de déblocage :** Audit ciblé des contrastes texte/fond sur les pages publiques avec un outil dédié (axe-core, Stark, Lighthouse Accessibility détaillé). Identification des composants concernés et recalibration de la palette DA v2 si nécessaire. La palette racine est gelée (variables `--ardoise`, `--pierre`, `--mica`, `--brume`, `--maquis`, `--ocre`, `--porphyre`, `--tyrrhenien`) mais les usages spécifiques par composant peuvent être ajustés sans toucher aux variables racines.
+
+---
+
+### MAIRIES-CLS-TBT-001 — Régressions CLS et TBT post-lazy load `pdfmake`
+
+**Description :** Le sprint L (lazy load `pdfmake`, PR [#293](https://github.com/dellahstella/tellux/pull/293) + [#294](https://github.com/dellahstella/tellux/pull/294)) a introduit deux régressions Lighthouse mineures sur `mairies.html` : Cumulative Layout Shift (CLS) 0.131 → 0.186 et Total Blocking Time (TBT) 130 ms → 400 ms. Les deux métriques restent sous les seuils critiques (CLS < 0.25 = needs improvement, pas poor ; TBT < 600 ms acceptable) mais sont dégradées par rapport à l'état avant lazy load. Cause probable : le lazy load déclenche un layout shift au moment de l'injection dynamique du script et un blocage runtime au premier clic sur « Télécharger PDF ».
+
+**Priorité :** Faible (à surveiller)
+
+**Condition de déblocage :** Investigation des causes (réservation de hauteur fixe pour le bouton « Télécharger PDF » pendant la phase « Préparation du PDF… » pour éviter le shift, hydration de pdfmake en arrière-plan dès l'ouverture de l'onglet « Générer un courrier » au lieu d'attendre le clic). Patch correctif si une régression sensible est détectée par les utilisateurs ou si une remontée Lighthouse ultérieure aggrave la situation.
+
+---
+
+### MAIRIES-REDIRECTS-001 — Redirections multiples détectées par Lighthouse
+
+**Description :** Lighthouse Performance signale `Avoid multiple page redirects | Est savings of 880 ms` sur `mairies.html` (audit du 1ᵉʳ mai 2026, sprint L, présent avant et après le sprint). Probablement liée à la redirection automatique HTTP→HTTPS, à la canonical Cloudflare ou à une redirection `mairies` → `mairies.html` (cf. preview Lighthouse sur `tellux.pages.dev/mairies` qui ressort en `tellux.pages.dev/mairies` final après redirect). Audit à conduire pour confirmer la chaîne exacte.
+
+**Priorité :** Faible
+
+**Condition de déblocage :** Audit DevTools Network avec « disable cache » sur `https://tellux.pages.dev/mairies.html` pour identifier la chaîne de redirections. Optimisation possible via le fichier `_redirects` Cloudflare Pages ou la configuration `wrangler.jsonc` si applicable. Vérification post-correction via Lighthouse Performance.
 
 ---
 
