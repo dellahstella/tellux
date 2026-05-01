@@ -9,12 +9,22 @@
 <meta property="og:title" content="Tellux · Outils pour les communes">
 <meta property="og:description" content="Tellux outille les communes pour ouvrir un dialogue informé entre collectivités, associations et services de l'État sur les questions d'aménagement EM.">
 <meta property="og:url" content="https://tellux.pages.dev/mairies.html">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:site_name" content="Tellux">
+<meta property="og:image" content="https://tellux.pages.dev/assets/logo/favicon_512.png">
+<meta property="og:image:alt" content="Logo Tellux">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Tellux · Outils pour les communes">
+<meta name="twitter:description" content="Outils Tellux pour les communes corses : fiche commune, modèles de courriers administratifs, checklist déploiement antenne, cadre légal Loi Abeille.">
+<meta name="twitter:image" content="https://tellux.pages.dev/assets/logo/favicon_512.png">
 <link rel="canonical" href="https://tellux.pages.dev/mairies.html">
 <link rel="icon" type="image/svg+xml" href="assets/logo/tellux_logo.svg">
 <link rel="icon" type="image/png" sizes="512x512" href="assets/logo/favicon_512.png">
 <link rel="icon" type="image/png" sizes="128x128" href="assets/logo/favicon_128.png">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/pdfmake.min.js" integrity="sha384-UbICcZf4B6+FB/cmTNLOqZzUc40rHayX14EhEDfAnFhmte7yAAA7s081OeuC8VVT" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/vfs_fonts.js" integrity="sha384-1y8s2U/Jjn4/oeCEBcfYH3M6XeQtcg4LRmluN92FS69UgtLzoyhn3swew8Ynj8Ai" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- pdfmake : lazy-loaded au premier clic sur "Télécharger PDF" via loadPdfMake() (voir bloc script principal). -->
+<!-- Anciennement chargé en synchrone dans le head, retiré pour améliorer LCP/FCP (audit Lighthouse pré-SEO sprint, mai 2026). -->
+
 <style>
 @font-face{font-family:'Fraunces';font-style:normal;font-weight:400;font-display:swap;src:url('/assets/fonts/fraunces/Fraunces-Regular.woff2') format('woff2');}
 @font-face{font-family:'Fraunces';font-style:italic;font-weight:400;font-display:swap;src:url('/assets/fonts/fraunces/Fraunces-Italic.woff2') format('woff2');}
@@ -751,10 +761,36 @@ a{color:inherit;}
     return all.filter(function(v){ return !commonSet[v]; });
   }
 
+  // Élision française pour le préfixe "Mairie de [NOM DE LA COMMUNE]".
+  // - Voyelle ou voyelle accentuée → "Mairie d'Ajaccio", "Mairie d'Évisa"
+  // - Article L' déjà inclus dans le nom (L'Île-Rousse) → "Mairie de l'Île-Rousse"
+  // - Sinon (consonne) → laisse la substitution standard produire "Mairie de Bastia"
+  // Cas particuliers à signaler si remontés : noms commençant par h muet (rares en Corse).
+  function applyMairieElision(text, values){
+    if (!text || !values) return text;
+    var nom = values['NOM DE LA COMMUNE'];
+    if (nom == null) return text;
+    nom = String(nom).trim();
+    if (!nom) return text;
+    var apostropheRe = /^L['’]/i;
+    if (apostropheRe.test(nom)){
+      var lowered = nom.charAt(0).toLowerCase() + nom.slice(1);
+      return text.replace(/Mairie de \[NOM DE LA COMMUNE\]/g, 'Mairie de ' + lowered);
+    }
+    var first = nom.charAt(0).toLowerCase();
+    var firstNorm = first.normalize ? first.normalize('NFD').replace(/[̀-ͯ]/g, '') : first;
+    if (/^[aeiouy]$/.test(firstNorm)){
+      return text.replace(/Mairie de \[NOM DE LA COMMUNE\]/g, 'Mairie d’' + nom);
+    }
+    return text;
+  }
+
   // Substitue les [CHAMP] par les valeurs. Non remplies → laissées telles quelles.
+  // Pré-traitement : applique l'élision française sur "Mairie de [NOM DE LA COMMUNE]".
   function substitute(text, values){
     if (text == null) return '';
-    return text.replace(/\[([^\]]+)\]/g, function(match, key){
+    var pre = applyMairieElision(text, values);
+    return pre.replace(/\[([^\]]+)\]/g, function(match, key){
       var v = values[key];
       if (v != null && String(v).trim() !== '') return v;
       return match;
@@ -764,7 +800,8 @@ a{color:inherit;}
   // Rendu HTML avec mise en évidence des [CHAMP] non remplis
   function substituteHtml(text, values){
     if (text == null) return '';
-    return escapeHtml(text).replace(/\[([^\]]+)\]/g, function(match, key){
+    var pre = applyMairieElision(text, values);
+    return escapeHtml(pre).replace(/\[([^\]]+)\]/g, function(match, key){
       var v = values[key];
       if (v != null && String(v).trim() !== '') return escapeHtml(v);
       return '<span class="mr-preview-placeholder">' + match + '</span>';
@@ -1142,25 +1179,76 @@ a{color:inherit;}
     };
   }
 
+  // ═══ Lazy load pdfmake ═══
+  // pdfmake (~600 ko) + vfs_fonts (~200 ko) ne sont pas chargés au boot.
+  // Premier clic sur "Télécharger PDF" → injection dynamique des deux scripts CDN
+  // avec les mêmes integrity hash que dans la version sync précédente.
+  // Améliore le LCP/FCP de la page (audit Lighthouse pré-SEO sprint, mai 2026).
+  var _pdfMakeLoading = null;
+  function loadPdfMake(){
+    if (typeof pdfMake !== 'undefined' && pdfMake && pdfMake.vfs) return Promise.resolve();
+    if (_pdfMakeLoading) return _pdfMakeLoading;
+    function loadScript(src, integrity){
+      return new Promise(function(resolve, reject){
+        var s = document.createElement('script');
+        s.src = src;
+        s.integrity = integrity;
+        s.crossOrigin = 'anonymous';
+        s.referrerPolicy = 'no-referrer';
+        s.onload = function(){ resolve(); };
+        s.onerror = function(){ reject(new Error('Échec chargement ' + src)); };
+        document.head.appendChild(s);
+      });
+    }
+    _pdfMakeLoading = loadScript(
+      'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/pdfmake.min.js',
+      'sha384-UbICcZf4B6+FB/cmTNLOqZzUc40rHayX14EhEDfAnFhmte7yAAA7s081OeuC8VVT'
+    ).then(function(){
+      return loadScript(
+        'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/vfs_fonts.js',
+        'sha384-1y8s2U/Jjn4/oeCEBcfYH3M6XeQtcg4LRmluN92FS69UgtLzoyhn3swew8Ynj8Ai'
+      );
+    }).catch(function(err){
+      _pdfMakeLoading = null; // permettre un retry au prochain clic
+      throw err;
+    });
+    return _pdfMakeLoading;
+  }
+
   function downloadPdf(){
     if (!currentTemplate){ return; }
-    if (typeof pdfMake === 'undefined'){
-      alert('La bibliothèque pdfmake n\'est pas chargée. Vérifiez votre connexion et rechargez la page.');
-      return;
-    }
     var btn = document.getElementById('mr-btn-download');
-    if (btn) btn.disabled = true;
-    try {
-      var docDef = buildDocDefinition(currentTemplate, fieldValues);
-      var filename = currentTemplate.id + '.pdf';
-      pdfMake.createPdf(docDef).download(filename, function(){
-        if (btn) btn.disabled = false;
-      });
-    } catch(err){
-      console.error('[mairies] génération PDF échouée :', err);
-      alert('Impossible de générer le PDF. Erreur : ' + err.message);
-      if (btn) btn.disabled = false;
+    var btnOriginalLabel = btn ? btn.textContent : null;
+    if (btn){
+      btn.disabled = true;
+      btn.textContent = 'Préparation du PDF…';
     }
+    loadPdfMake().then(function(){
+      try {
+        var docDef = buildDocDefinition(currentTemplate, fieldValues);
+        var filename = currentTemplate.id + '.pdf';
+        pdfMake.createPdf(docDef).download(filename, function(){
+          if (btn){
+            btn.disabled = false;
+            if (btnOriginalLabel) btn.textContent = btnOriginalLabel;
+          }
+        });
+      } catch(err){
+        console.error('[mairies] génération PDF échouée :', err);
+        alert('Impossible de générer le PDF. Erreur : ' + err.message);
+        if (btn){
+          btn.disabled = false;
+          if (btnOriginalLabel) btn.textContent = btnOriginalLabel;
+        }
+      }
+    }).catch(function(err){
+      console.error('[mairies] chargement pdfmake échoué :', err);
+      alert('Impossible de charger la bibliothèque PDF. Vérifiez votre connexion et réessayez.');
+      if (btn){
+        btn.disabled = false;
+        if (btnOriginalLabel) btn.textContent = btnOriginalLabel;
+      }
+    });
   }
 
   // ═══════════════════════════════════════════════════════════════
