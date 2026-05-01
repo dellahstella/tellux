@@ -7,6 +7,43 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [2.10.2] — 2026-05-01
+
+### Added — Ancres `id="term-{slug}"` sur les 94 entrées de `glossaire.html` (PR à venir, sprint `feat/glossaire-ancres-liens`)
+
+Sprint de polissage post-livraison du glossaire (sprints N + P + Q). Chaque entrée `<dt>` reçoit une ancre stable au format `id="term-{slug}"` permettant le partage de liens directs vers une entrée spécifique (par exemple `https://tellux.pages.dev/glossaire.html#term-igrf-international-geomagnetic-reference-field`).
+
+**Convention de slug appliquée** : libellé en minuscules, accents retirés (NFKD), translittération `µ → u` / `² → 2` / `³ → 3`, caractères non-alphanumériques remplacés par `-`, pas de `-` consécutifs, préfixe `term-` systématique pour éviter collision avec les ancres alphabétiques `letter-X` existantes.
+
+**Statistiques** : 94 ancres ajoutées, 0 collision détectée (94 slugs uniques sur 94 libellés).
+
+### Changed — Renvois croisés `cf. X` du glossaire transformés en liens cliquables internes
+
+73 occurrences `<em>cf. X</em>` (sur 74 au total, l'occurrence restante étant la méta-référence `<em>cf. terme</em>` dans l'introduction décrivant le format) transformées en `<a class="xref" href="#term-{slug}">cf. X</a>`. Les renvois pointent désormais vers l'entrée correspondante du glossaire.
+
+**Mapping libellé → slug avec aliases** : 186 alias générés (94 libellés complets + sigles avant em-dash + parties après em-dash + unités entre parenthèses) pour résoudre les renvois courts (`cf. ANFR` → `term-anfr-agence-nationale-des-frequences`, `cf. nSv/h` → `term-nanosievert-par-heure-nsv-h`).
+
+**Renvois orphelins** : 0. Tous les `cf. X` ont trouvé une entrée correspondante dans le glossaire.
+
+### Changed — CSS `glossaire.html`
+
+Trois règles CSS ajoutées sous la déclaration existante de `.xref` :
+
+- `dl.glossary dd a.xref { border-bottom: none; }` — neutralise le soulignement par défaut des liens hérité du style global `<a>` de la page.
+- `dl.glossary dd a.xref:hover { color: var(--tx-ardoise); border-bottom: 1px solid var(--tx-mica); }` — état hover discret cohérent avec la sobriété de la page.
+- `dl.glossary dt[id] { scroll-margin-top: 80px; }` — décalage visuel lors d'un scroll vers une ancre, pour éviter que l'entrée cible soit collée au bord supérieur de la fenêtre.
+
+### Validation
+
+- ✅ 94 ancres `term-X` créées, 73 liens `<a class="xref">` générés, 0 lien cassé (vérifié par script Python).
+- ✅ Aucune collision avec les ancres existantes `letter-X` (préfixe distinct).
+- ✅ Aucune modification du contenu textuel des entrées (libellés, définitions, sources, exemples).
+- ✅ Aucune modification de la structure générale de la page (header, sommaire, footer, sections).
+- ✅ Aucune nouvelle entrée ajoutée ni supprimée.
+- ✅ Palette DA v2 gelée respectée (variables existantes uniquement).
+
+---
+
 ## [2.10.1] — 2026-05-01
 
 ### Changed — Cohérence transversale Glossaire : 4 pages éditoriales restantes (PR à venir, sprint `feat/glossaire-footers-suite`)
