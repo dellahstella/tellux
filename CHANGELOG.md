@@ -7,6 +7,35 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [2.8.5] — 2026-05-01
+
+### Added — Documentation méthodologique par domaine physique sur `cadre-scientifique.html` (PR à venir, sprint `chore/methodo-sections-7-10-cadre-scientifique`)
+
+Intégration de 4 nouvelles sections homogènes dans `cadre-scientifique.html`, une par domaine physique du modèle Tellux. Drafts produits par Cowork session 1ᵉʳ mai 2026 dans `Tellux/_drafts/methodo/` (untracked, hors repo public). Livre le chantier ROADMAP « Documentation méthodologique par domaine physique » de la section 2 « Phase 1 ».
+
+**Nouvelles sections** (insérées entre Section 6 et Annexe A) :
+
+- **Section 7 — Magnétique statique** (#section-7-magnetique-statique) : ~870 mots, 7 sous-sections homogènes (définition physique, phénoménologie Corse, sources, formules `calcMagneticStatic`, incertitudes, dettes associées, ce que la modélisation permet et ne permet pas).
+- **Section 8 — Magnétique basse fréquence ELF 50 Hz** (#section-8-elf) : ~950 mots, mêmes 7 sous-sections, autour de `calcMagneticELF_v2` et du réseau EDF SEI.
+- **Section 9 — Radiofréquences** (#section-9-rf) : ~970 mots, autour de `calcRF` et de la base CartoRadio ANFR.
+- **Section 10 — Rayonnement ionisant** (#section-10-ionisant) : ~1 030 mots, autour de `calcGammaAmbient` et `calcRadonPotential`, classification ASNR décret 2018-434.
+
+Volume total prose ajouté : ≈ 3 820 mots.
+
+### Changed — Sommaire et navigation `cadre-scientifique.html`
+
+- Sommaire enrichi de 4 entrées (Sections 7 à 10) entre Section 6 et Annexe A.
+- Liens cliquables inter-sections ajoutés dans la prose des 4 nouvelles sections (Section 7 ↔ 8, Section 8 ↔ 6/7, Section 9 ↔ 8/10, Section 10 ↔ 7/8/9, Section 7 ↔ Annexe A) — recommandation Cowork retenue pour faciliter la navigation.
+- Section 1 reformulée pour retirer la mention publique d'une candidature FEDER/ANR/Collectivité de Corse (cohérence avec la doctrine éditoriale post-cycle audit Phase D : pas de mention publique d'attribution conditionnelle). Avant : « Le projet vise une mise à disposition publique via tellux.pages.dev, ainsi qu'une valorisation dans des dossiers de financement auprès de la Collectivité de Corse, de l'Agence nationale de la recherche, et des dispositifs FEDER. » Après : « Le projet est mis à disposition publique via tellux.pages.dev. »
+- Footer : « Dernière mise à jour : avril 2026 » → « mai 2026 » (cohérent avec la modification substantielle de la page).
+
+### Anomalies hors périmètre signalées par Cowork
+
+- **Recouvrement éditorial Sections 4-5 actuelles vs nouvelles Sections 8-10** : la Section 4 (« Composante gamma terrestre ») et la Section 5 (« Superposition magnétique ») couvrent partiellement le même terrain que les Sections 10 et 7-8 nouvelles. Refactorisation transversale possible (fusion dans la nouvelle structure par domaine), à arbitrer dans un sprint Cowork ultérieur.
+- **Mention valeurs Téléray dans `app.html`** (commentaire de `calcGammaAmbient` : « 80–120 nSv/h ») cohérente avec la fourchette plus large 75–150 nSv/h citée en Section 10.2 — pas de correction requise mais point de vigilance.
+
+---
+
 ## [2.8.4] — 2026-05-01
 
 ### Changed — Backlog SEO et performance `mairies.html` (PR à venir, sprint `chore/seo-mairies-backlog`)
