@@ -7,6 +7,33 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [2.10.1] — 2026-05-01
+
+### Changed — Cohérence transversale Glossaire : 4 pages éditoriales restantes (PR à venir, sprint `feat/glossaire-footers-suite`)
+
+Sprint complémentaire au sprint P (`[2.10.0]`) qui avait traité les 5 pages éditoriales prioritaires. Ce sprint Q ferme la cohérence transversale en ajoutant le lien Glossaire sur les 4 pages restantes.
+
+**Pages mises à jour** :
+
+- **`cadre-scientifique.html`** : footer `page-footer` (l. 715) — Glossaire inséré entre Accueil et Mentions légales (Rétractations absente sur cette page).
+- **`methode-et-limites.html`** : footer `page-footer` (l. 533) — même pattern.
+- **`mairies.html`** : footer `mr-footer-links` (l. 663) — Glossaire inséré entre Cartographie EM et Mentions légales. Aucune modification des balises Open Graph ni des balises SEO posées au sprint L.
+- **`app.html`** : nouveau lien `<a class="hdr-btn" href="/glossaire.html" target="_blank" rel="noopener">Glossaire</a>` ajouté dans le header `hdr-actions` (l. 1165) entre « Comprendre les termes » et « À propos ». Le bouton « Comprendre les termes » et la fonction `openGlossaryDrawer()` (drawer interne) sont **strictement préservés** : le nouveau lien pointe vers la page publique complète sans interférer avec le drawer existant.
+
+**Page exclue** : `corpus.html` n'existe pas dans le repo public (retirée lors d'un sprint Phase D antérieur). Périmètre réduit de 5 à 4 fichiers.
+
+**Cohérence transversale acquise** : le lien Glossaire est désormais présent dans les 9 pages éditoriales du repo public (5 sprint P + 4 sprint Q). Le 3ᵉ et dernier livrable Phase 1 ROADMAP « Glossaire technique intégré » est traité de bout en bout.
+
+### Validation
+
+- ✅ Aucune modification du contenu de `glossaire.html`.
+- ✅ Aucune modification des balises SEO/Open Graph de `mairies.html` (sprint L préservé).
+- ✅ Aucune modification des Sections 7-10 ni du sommaire de `cadre-scientifique.html` (sprint J préservé).
+- ✅ Aucune modification des fonctions JavaScript de `app.html` (`openGlossaryDrawer()`, zones GELÉES).
+- ✅ Aucune dépendance externe ajoutée.
+
+---
+
 ## [2.10.0] — 2026-05-01
 
 ### Added — Page publique `glossaire.html` (PR à venir, sprint `feat/glossaire-page-integration`)
