@@ -7,6 +7,40 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [2.10.0] — 2026-05-01
+
+### Added — Page publique `glossaire.html` (PR à venir, sprint `feat/glossaire-page-integration`)
+
+Nouvelle page publique `/glossaire.html` (~48 KB, 642 lignes) : glossaire technique de 94 entrées couvrant le vocabulaire scientifique, technique et méthodologique de Tellux. Draft produit par Cowork session 1ᵉʳ mai 2026 dans `Tellux/_drafts/glossaire/` (untracked, hors repo public), intégré tel quel à la racine du repo.
+
+**Couverture alphabétique** : 21 lettres présentes (A à Z hors J, O, Q, X, Y — laissées absentes, pas d'entrées pertinentes pour Phase 1). Entrées triées alphabétiquement, avec ancres `#entry-XXX` pour cross-référencement futur.
+
+**Style aligné DA v2** : palette gelée (Ardoise, Pierre, Mica, Brume, Maquis, Ocre, Porphyre, Tyrrhénien) appliquée via les variables CSS racines existantes. Fontes auto-hébergées Fraunces (titres) + IBM Plex Sans (texte courant) chargées depuis `assets/fonts/`. Aucune nouvelle dépendance externe.
+
+### Changed — 5 footers mis à jour avec lien Glossaire
+
+Insertion d'un lien `<a href="/glossaire.html">Glossaire</a>` dans la liste de navigation pied de page de 5 pages publiques :
+
+- **`index.html`** : 2 emplacements modifiés. Bloc `lp-contact-mentions` (entre Rétractations et Mentions légales) et bloc `lp-footer-right` (entre Rétractations et Ressources).
+- **`transparence.html`** : footer `page-footer` (entre Rétractations et Mentions légales).
+- **`retractations.html`** : footer `page-footer` (entre Transparence et Mentions légales).
+- **`mentions-legales.html`** : footer `page-footer` (entre Rétractations et Données & vie privée).
+- **`donnees-vie-privee.html`** : footer `page-footer` (entre Rétractations et Mentions légales).
+
+**Note de sprint Q-bis prévu** : 5 pages publiques restantes (`cadre-scientifique.html`, `methode-et-limites.html`, `mairies.html`, `corpus.html`, `app.html`) ont un footer hétérogène ou structuré différemment. Mise à jour groupée prévue dans un sprint Q-bis dédié pour préserver l'homogénéité visuelle.
+
+### Validation
+
+- ✅ Page `glossaire.html` : 642 lignes, ~48 KB, fontes auto-hébergées présentes (`assets/fonts/fraunces/` + `assets/fonts/ibm-plex-sans/`).
+- ✅ Logo SVG vérifié : `assets/logo/tellux_logo.svg` présent.
+- ✅ Aucune modification des fonctions JavaScript des 5 pages modifiées (footers uniquement).
+- ✅ Aucune dépendance externe ajoutée.
+- ✅ Aucune nouvelle variable CSS racine introduite.
+
+Livre le chantier ROADMAP « Glossaire technique public » identifié dans le brief Cowork.
+
+---
+
 ## [2.9.0] — 2026-05-01
 
 ### Added — UI avancée `app.html` : sélecteur de domaines + badges temps réel (PR à venir, sprint `feat/ui-avancee-domaines-badges`)
