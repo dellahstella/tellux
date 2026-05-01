@@ -7,6 +7,74 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [2.10.3] — 2026-05-01
+
+### Added — Asset Open Graph dédié pour `mairies.html` (PR à venir, sprint `feat/og-mairies-slugs-courts-glossaire`)
+
+Asset Open Graph 1200×630 dédié pour `mairies.html`, **variante B « Cartographique avec silhouette Corse »** retenue (recommandation Cowork DA sprint S, drafts dans `Tellux/_drafts/og/`). Composition : fond Pierre `#F5F0E7` avec léger dégradé vers Brume, logo Tellux v14 + wordmark en haut à gauche, silhouette stylisée de la Corse à droite (trait Ocre 2.5 px, 3 marqueurs Maquis discrets Bastia/Ajaccio/Corte non labellisés), signature « Outils mairies — 360 communes corses · Cartographie EM » + URL `tellux.pages.dev/mairies` en bas.
+
+**Fichiers ajoutés** :
+
+- `assets/og/mairies_og.png` (1200×630, ~42 ko, rastérisation cairosvg)
+- `assets/og/mairies_og.svg` (4.6 ko, source vectorielle modifiable)
+
+**Critères techniques** : ratio 1.91:1 conforme aux standards Open Graph (Facebook, LinkedIn, Discord, Slack) et Twitter Cards. Poids des PNG bien sous la cible des 200 ko. Aucune dépendance externe.
+
+### Changed — Balises Open Graph et Twitter Cards de `mairies.html`
+
+Balises `<meta>` mises à jour pour pointer vers le nouvel asset au lieu du fallback `assets/logo/favicon_512.png` (1:1) installé au sprint L :
+
+- `og:image` → `https://tellux.pages.dev/assets/og/mairies_og.png`
+- `og:image:width` → `1200` (nouveau)
+- `og:image:height` → `630` (nouveau)
+- `og:image:alt` → `Tellux Corse — Outils mairies pour les 360 communes corses` (au lieu de `Logo Tellux`)
+- `twitter:card` → `summary_large_image` (au lieu de `summary`, upgrade pour profiter du format 1.91:1)
+- `twitter:image` → `https://tellux.pages.dev/assets/og/mairies_og.png`
+- `twitter:image:alt` → `Tellux Corse — Outils mairies pour les 360 communes corses` (nouveau)
+
+Balises `og:type`, `og:locale`, `og:site_name`, `twitter:title`, `twitter:description`, `og:url`, `og:title`, `og:description` du sprint L conservées telles quelles. Le favicon `assets/logo/favicon_512.png` reste utilisé pour son usage natif (favicon navigateur), inchangé.
+
+### Added — Slugs courts complémentaires sur `glossaire.html`
+
+Sprint complémentaire au sprint T (`[2.10.2]`) qui avait livré 94 slugs longs au format `term-{libellé-complet-slug}`. Ce sprint ajoute des slugs courts (sigle seul) pour les 25 entrées au format `SIGLE — Développement`, en complément des slugs longs déjà présents. **Approche additive** : chaque ancre courte est insérée comme `<span id="term-{sigle-slug}" class="short-anchor" aria-hidden="true"></span>` juste avant le `<dt>` correspondant. Aucune modification des `<dt id="term-...">` longs ni des `<a class="xref" href="#term-...">` du sprint T.
+
+**Statistiques** : 25 slugs courts ajoutés sur 25 entrées éligibles, 0 collision détectée.
+
+**Exemples produits** :
+
+| Sigle | Slug court | Slug long (préservé, sprint T) |
+|---|---|---|
+| `IRSN` | `term-irsn` | `term-irsn-institut-de-radioprotection-et-de-surete-nucleaire` |
+| `ANFR` | `term-anfr` | `term-anfr-agence-nationale-des-frequences` |
+| `ASNR` | `term-asnr` | `term-asnr-autorite-de-surete-nucleaire-et-de-radioprotection` |
+| `IGRF` | `term-igrf` | `term-igrf-international-geomagnetic-reference-field` |
+| `ICNIRP` | `term-icnirp` | `term-icnirp-international-commission-on-non-ionizing-radiation-protection` |
+| `EDF SEI` | `term-edf-sei` | `term-edf-sei-systemes-energetiques-insulaires` |
+
+**Rétro-compatibilité absolue** : les 73 liens `<a class="xref" href="#term-{slug-long}">` du sprint T continuent de fonctionner. Les slugs courts ne servent qu'au partage d'URL externe (`https://tellux.pages.dev/glossaire.html#term-irsn` plus court que la version longue).
+
+### Changed — CSS `glossaire.html`
+
+Une règle CSS ajoutée :
+
+```css
+dl.glossary .short-anchor { display: inline-block; width: 0; height: 0; scroll-margin-top: 80px; }
+```
+
+Ancres `<span class="short-anchor">` invisibles (largeur et hauteur zéro), avec `scroll-margin-top` cohérent avec celui des `<dt[id]>` du sprint T pour aligner le scroll vers ancre.
+
+### Validation
+
+- ✅ Asset `mairies_og.png` (43 ko) et `.svg` (4.6 ko) intégrés dans `assets/og/`.
+- ✅ Balises OG/Twitter de `mairies.html` mises à jour ; `og:type`, `og:locale`, `og:site_name`, `og:url`, `og:title`, `og:description`, `twitter:title`, `twitter:description` du sprint L préservées.
+- ✅ 25 ancres courtes créées dans `glossaire.html`, 0 collision (ni avec les ids `letter-X`, ni avec les ids `term-{long}`, ni entre slugs courts).
+- ✅ Rétro-compatibilité totale : 119 ids `term-*` au total (94 longs + 25 courts), 73 hrefs `#term-{long}` du sprint T toujours valides, 0 lien cassé.
+- ✅ Aucune modification des `<dt id="term-...">` longs ni des `<a class="xref">` du sprint T.
+- ✅ Aucune modification des autres balises SEO de `mairies.html` (canonical, description, robots).
+- ✅ Aucune modification des autres pages (transparence, retractations, etc.).
+
+---
+
 ## [2.10.2] — 2026-05-01
 
 ### Added — Ancres `id="term-{slug}"` sur les 94 entrées de `glossaire.html` (PR à venir, sprint `feat/glossaire-ancres-liens`)
