@@ -109,10 +109,17 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 #breadcrumb .bc-item:hover{color:var(--tx-ardoise);}
 #breadcrumb .bc-item.active{color:var(--tx-ardoise);font-weight:600;cursor:default;}
 #breadcrumb .bc-sep{color:#b89c7a;margin:0 8px;}
-.diocese-polygon{fill:rgba(140,110,80,0.15);stroke:rgba(120,90,60,0.6);stroke-width:1.5;cursor:pointer;transition:fill .2s,stroke-width .2s;outline:none;}
-.diocese-polygon:hover{fill:rgba(140,110,80,0.25);stroke-width:2.5;}
-.diocese-polygon:focus,.diocese-polygon.selected{outline:none;fill:rgba(140,110,80,0.30);stroke:#5a3f2a;stroke-width:3;}
+/* Brief 8 — Niveau 1 (vue Corse) : diocèses pleins, fill notable, stroke marqué.
+   fill-opacity:1 + stroke-opacity:1 neutralisent les attributs SVG Leaflet (0.2 / 1) pour
+   laisser les rgba CSS contrôler entièrement l'opacité. */
+.diocese-polygon,.pieve-polygon,.subpieve-polygon{fill-opacity:1;stroke-opacity:1;}
+.diocese-polygon{fill:rgba(140,110,80,0.25);stroke:rgba(120,90,60,0.8);stroke-width:1.5;cursor:pointer;transition:fill .2s,stroke-width .2s,stroke-opacity .3s,fill-opacity .3s;outline:none;}
+.diocese-polygon:hover{fill:rgba(140,110,80,0.40);stroke-width:2.5;}
+.diocese-polygon:focus,.diocese-polygon.selected{outline:none;fill:rgba(140,110,80,0.40);stroke:#5a3f2a;stroke-width:3;}
 .diocese-polygon.dim{fill:rgba(140,110,80,0.06);stroke:rgba(120,90,60,0.3);}
+/* Brief 8 — Niveau 2 (active diocese) : diocèses estompés en arrière-plan pour repère géo */
+body.has-active-diocese .diocese-polygon{fill:rgba(140,110,80,0.10);stroke:rgba(120,90,60,0.35);stroke-width:1;}
+body.has-active-diocese .diocese-polygon:hover{fill:rgba(140,110,80,0.18);}
 .pieve-polygon{fill:rgba(245,230,200,0.20);stroke:rgba(120,140,90,0.35);stroke-width:0.6;cursor:pointer;transition:fill .2s,stroke-width .2s;outline:none;}
 .pieve-polygon:hover{fill:rgba(245,230,200,0.40);stroke-width:1.8;}
 .pieve-polygon:focus,.pieve-polygon.selected{outline:none;fill:rgba(245,230,200,0.55);stroke:#8c6e50;stroke-width:3;}
@@ -124,6 +131,12 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 .leaflet-interactive:focus{outline:none;}
 /* Arbitrage badge "?" sur markers concernes */
 .tlx-marker.arbitrage::after{content:'?';position:absolute;top:-6px;right:-6px;width:14px;height:14px;border-radius:50%;background:rgba(63,91,58,0.85);color:#fff;font-family:var(--font);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1;border:1px solid #fff;}
+
+/* Brief 8 — Bouton retour vue Corse (visible niveau 2 uniquement) */
+#btn-retour-corse{position:absolute;top:12px;right:12px;z-index:1000;display:none;align-items:center;gap:6px;background:rgba(245,240,231,0.95);backdrop-filter:blur(8px);border:1px solid var(--border);color:var(--tx-ardoise);font-family:var(--font);font-size:13px;font-weight:500;padding:8px 14px;border-radius:var(--r);box-shadow:var(--shadow);cursor:pointer;transition:background .2s,color .2s,transform .2s;}
+#btn-retour-corse:hover{background:var(--tx-ocre);color:var(--tx-pierre);transform:translateX(-2px);}
+#btn-retour-corse:focus-visible{outline:2px solid var(--tx-ocre);outline-offset:2px;}
+body.has-active-diocese #btn-retour-corse{display:flex;}
 
 </style>
 </head>
@@ -144,6 +157,7 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
   <span class="sep pieve-sep" style="display:none">›</span>
   <span class="crumb pieve-crumb" data-level="pieve" style="display:none"></span>
 </nav>
+<button id="btn-retour-corse" type="button" aria-label="Retour vue d'ensemble Corse">← Vue d'ensemble</button>
 <aside id="panel" aria-hidden="true">
   <button id="panel-close" aria-label="Fermer le panneau"></button>
   <div id="panel-card">
@@ -192,17 +206,33 @@ const tileStyle = document.createElement('style');
 tileStyle.textContent = '.tlx-tiles{filter:sepia(0.25) saturate(0.85) brightness(1.02) contrast(0.95);}';
 document.head.appendChild(tileStyle);
 
-// Cluster pour densité moyenne
-const cluster = L.markerClusterGroup({
-  maxClusterRadius:35,
-  spiderfyOnMaxZoom:true,
-  showCoverageOnHover:false,
-  disableClusteringAtZoom:12
-});
+// Brief 8 — Refonte navigation drill-down 2 niveaux (vision macro Soleil 2026-05-04)
+// Niveau 1 (vue Corse) : 6 polygones diocèses pleins + spots illustrés uniquement.
+// Niveau 2 (vue diocèse, déclenché par clic) : pieves + tous les spots du diocèse.
 
-// Layer pour priorités (toujours visibles, hors cluster)
-const priorityLayer = L.layerGroup();
-const standardLayer = L.layerGroup();
+// Liste blanche des spots avec illustration réelle (fichier PNG présent dans
+// docs/assets/visuels/ au moment du build : 14 sur 124 spots).
+// Source : croisement manifest SITES_PATRIMOINE × ls docs/assets/visuels/, en
+// excluant les 5 spots-diocèse (catégorie 'E — Diocèse historique', portent
+// l'identité visuelle du polygone diocèse pas un lieu distinct).
+// Mise à jour manuelle quand un fichier est ajouté/supprimé.
+// Future amélioration éventuelle : pipeline auto (option c, voir Brief 8 §6.1).
+const ILLUSTRATED_SPOTS = new Set([
+  'aiguilles_de_bavella',
+  'aleria_antique',
+  'bastia_citadelle',
+  'bonifacio_remparts',
+  'cap_corse_extreme_nord',
+  'cargese_grec_latin',
+  'cirque_de_bonifato',
+  'citadelle_de_calvi',
+  'citadelle_de_corte',
+  'couvent_d_orezza',
+  'desert_des_agriate',
+  'lac_de_creno',
+  'lac_de_nino',
+  'massif_du_haut_asco',
+]);
 
 // Z5-UX-020 : mapping inverse spot → pieve/diocèse à partir de spot_ids[] des pieves.
 // Permet d'alimenter le breadcrumb au clic spot avec la chaîne complète.
@@ -217,14 +247,25 @@ for (const [pieveSlug, pieveData] of Object.entries(PATRIMOINE_POLYGONS.pieves))
   }
 }
 
-// Construction markers
+// Brief 8 — Layer groups drill-down
+const spotsIllustratedLayer = L.layerGroup();      // niveau 1 : 14 spots illustrés
+const spotsAllByDioceseLayer = new Map();          // niveau 2 : Map<dioceseDisplay, LayerGroup>
+
+// Construction markers : filtrage en fonction du niveau (illustré + rattachement diocèse)
 const markersBySlug = {};
+const orphansInvisibles = [];      // orphan + non illustré (consigné en console pour dette PATRIMOINE-ORPHANS-INVISIBLES-001)
+const dioceseSpotsExclus = [];     // 5 spots-diocèse exclus (slug commence par 'diocese_')
 for (const site of SITES_PATRIMOINE) {
   if (site.lat == null || site.lon == null) continue;
   // C5 mutualisation : offset 50m sur slug santa_maria_assunta_saint_florent
   if (site.slug === 'santa_maria_assunta_saint_florent') {
     site.lat = (site.lat ?? 0) + 0.0004;
     site.lon = (site.lon ?? 0) + 0.0004;
+  }
+  // 5 spots-diocèse (catégorie 'E — Diocèse historique') exclus complètement
+  if (site.slug.startsWith('diocese_')) {
+    dioceseSpotsExclus.push(site.slug);
+    continue;
   }
   const isPriority = !!site.priorite;
   const isArbitrage = ARBITRAGE_SLUGS.has(site.slug);
@@ -236,26 +277,31 @@ for (const site of SITES_PATRIMOINE) {
   const marker = L.marker([site.lat, site.lon], {icon, title: site.nom});
   marker.on('click', () => onSpotClick(marker, site));
   markersBySlug[site.slug] = {marker, site};
-  if (isPriority) {
-    priorityLayer.addLayer(marker);
-  } else {
-    cluster.addLayer(marker);
-  }
-}
-priorityLayer.addTo(map);
-cluster.addTo(map);
 
-// LOD par zoom : zoom < 9 → seuls priorité visibles
-function updateLOD() {
-  const z = map.getZoom();
-  if (z < 9) {
-    if (map.hasLayer(cluster)) map.removeLayer(cluster);
-  } else {
-    if (!map.hasLayer(cluster)) map.addLayer(cluster);
+  const isIllustrated = ILLUSTRATED_SPOTS.has(site.slug);
+  const inv = SPOT_TO_PIEVE[site.slug];
+
+  if (isIllustrated) spotsIllustratedLayer.addLayer(marker);
+
+  if (inv && inv.dioceseDisplay) {
+    if (!spotsAllByDioceseLayer.has(inv.dioceseDisplay)) {
+      spotsAllByDioceseLayer.set(inv.dioceseDisplay, L.layerGroup());
+    }
+    spotsAllByDioceseLayer.get(inv.dioceseDisplay).addLayer(marker);
+  } else if (!isIllustrated) {
+    // Orphan + non illustré : invisible aux deux niveaux. Dette PATRIMOINE-ORPHANS-INVISIBLES-001.
+    orphansInvisibles.push(site.slug);
   }
 }
-map.on('zoomend', updateLOD);
-updateLOD();
+
+// Niveau 1 attaché au load : seuls les spots illustrés
+spotsIllustratedLayer.addTo(map);
+
+// Logs dette + sanity check (DevTools console, pas user-facing)
+console.log('[Tellux patrimoine] Niveau 1 — spots illustrés :', spotsIllustratedLayer.getLayers().length, '(sur', SITES_PATRIMOINE.length, 'spots manifest)');
+console.log('[Tellux patrimoine] Spots-diocèse exclus du niveau 1 :', dioceseSpotsExclus.length, dioceseSpotsExclus);
+console.log('[Tellux patrimoine] Orphans non illustrés invisibles (dette PATRIMOINE-ORPHANS-INVISIBLES-001) :', orphansInvisibles.length, orphansInvisibles);
+console.log('[Tellux patrimoine] Spots groupés par diocèse (niveau 2) :', Array.from(spotsAllByDioceseLayer.entries()).map(([d, lg]) => d + ':' + lg.getLayers().length).join(', '));
 
 // Popup builder
 function openPopup(marker, site) {
@@ -390,31 +436,70 @@ for (const [name, data] of Object.entries(PATRIMOINE_POLYGONS.pieves)) {
   pieveLayer.addLayer(poly);
   pieveShapesByName[name] = poly;
 }
+// Brief 8 — Niveau 1 par défaut : seuls les diocèses pleins attachés.
+// Les pieves restent dans pieveShapesByName mais ne sont pas attachées au map.
+// Elles sont attachées à la demande dans enterDioceseView() (filtrées sur le diocèse cliqué).
 dioceseLayer.addTo(map);
-pieveLayer.addTo(map);
 
-// LOD couches polygones
-function updatePolygonLOD() {
-  const z = map.getZoom();
-  // Diocèses : visible <9, dim 9-11, masques >11
-  for (const poly of Object.values(dioceseShapesByName)) {
-    const el = poly.getElement && poly.getElement();
-    if (!el) continue;
-    if (z > 11) { if (map.hasLayer(dioceseLayer)) map.removeLayer(dioceseLayer); }
-    else { if (!map.hasLayer(dioceseLayer)) map.addLayer(dioceseLayer); }
-    if (z >= 9 && z <= 11) el.classList.add('dim'); else el.classList.remove('dim');
+// === Brief 8 — Drill-down navigation niveau 1 ↔ niveau 2 ===
+const corsicaInitialView = { center: [42.15, 9.10], zoom: 9 };
+
+function enterDioceseView(dioceseName, shape) {
+  document.body.classList.add('has-active-diocese');
+
+  // Cacher spots illustrés niveau 1
+  if (map.hasLayer(spotsIllustratedLayer)) map.removeLayer(spotsIllustratedLayer);
+
+  // Afficher pieves rattachées au diocèse cliqué
+  for (const [pieveSlug, pieveData] of Object.entries(PATRIMOINE_POLYGONS.pieves)) {
+    if (pieveData.diocese === dioceseName) {
+      const poly = pieveShapesByName[pieveSlug];
+      if (poly && !map.hasLayer(poly)) poly.addTo(map);
+    }
   }
-  // Pieves : masques <9, visible 9-11, dim >11
-  for (const poly of Object.values(pieveShapesByName)) {
-    if (z < 9) { if (map.hasLayer(pieveLayer)) map.removeLayer(pieveLayer); }
-    else { if (!map.hasLayer(pieveLayer)) map.addLayer(pieveLayer); }
-    const el = poly.getElement && poly.getElement();
-    if (!el) continue;
-    if (z > 11) el.classList.add('dim'); else el.classList.remove('dim');
+
+  // Afficher spots du diocèse (LayerGroup pré-construit)
+  const dioceseSpots = spotsAllByDioceseLayer.get(dioceseName);
+  if (dioceseSpots && !map.hasLayer(dioceseSpots)) dioceseSpots.addTo(map);
+
+  // Zoom auto sur bounds diocèse
+  if (shape) {
+    map.flyToBounds(shape.getBounds(), { padding: [40, 40], duration: 0.8 });
   }
 }
-map.on('zoomend', updatePolygonLOD);
-setTimeout(updatePolygonLOD, 100);
+
+function exitDioceseView() {
+  document.body.classList.remove('has-active-diocese');
+
+  // Retirer toutes les pieves attachées (peu importe le diocèse)
+  for (const poly of Object.values(pieveShapesByName)) {
+    if (map.hasLayer(poly)) map.removeLayer(poly);
+  }
+
+  // Retirer tous les spots de tous les diocèses
+  for (const lg of spotsAllByDioceseLayer.values()) {
+    if (map.hasLayer(lg)) map.removeLayer(lg);
+  }
+
+  // Restaurer spots illustrés niveau 1
+  if (!map.hasLayer(spotsIllustratedLayer)) spotsIllustratedLayer.addTo(map);
+
+  // Clear highlights polygones (Brief 6)
+  if (typeof clearSelectedPolygons === 'function') clearSelectedPolygons();
+
+  // Reset state breadcrumb (Brief 6)
+  currentDiocese = null;
+  currentPieveSlug = null;
+  currentSpotSlug = null;
+  if (typeof updateBreadcrumb === 'function') updateBreadcrumb();
+
+  // Zoom retour vue Corse
+  map.flyTo(corsicaInitialView.center, corsicaInitialView.zoom, { duration: 0.8 });
+}
+
+// Bouton retour vue Corse
+const btnRetourCorse = document.getElementById('btn-retour-corse');
+if (btnRetourCorse) btnRetourCorse.addEventListener('click', exitDioceseView);
 
 // === Breadcrumb ===
 const bc = document.getElementById('breadcrumb');
@@ -513,20 +598,23 @@ map.on('popupclose', clearSelectedPolygons);
 
 // === Click handler zones (diocese / pieve) ===
 function onZoneClick(level, name, data, shape) {
-  // Zoom sur bounds
-  map.fitBounds(shape.getBounds(), {padding:[40,40]});
-  // Highlight polygone actif (Z3-UX-019)
-  selectPolygon(shape);
-  // Mise a jour breadcrumb
+  // Brief 8 — clic diocèse : entrée niveau 2 (drill-down), pas de popup mini
   if (level === 'diocese') {
     currentDiocese = name;
     currentPieveSlug = null;
     currentSpotSlug = null;
-  } else if (level === 'pieve') {
-    currentDiocese = data.diocese && data.diocese !== '?' ? data.diocese : null;
-    currentPieveSlug = name;
-    currentSpotSlug = null;
+    updateBreadcrumb();
+    enterDioceseView(name, shape);
+    return;
   }
+  // Pieve (niveau 2) : comportement Brief 6 préservé (zoom + popup + highlight)
+  map.fitBounds(shape.getBounds(), {padding:[40,40]});
+  // Highlight polygone actif (Z3-UX-019)
+  selectPolygon(shape);
+  // Mise a jour breadcrumb
+  currentDiocese = data.diocese && data.diocese !== '?' ? data.diocese : null;
+  currentPieveSlug = name;
+  currentSpotSlug = null;
   updateBreadcrumb();
   // Popup miniature : visuel pieve si existant (placeholder v0 - case vide stylisee)
   // Heuristique : pour les pieves avec spots, prendre le 1er slug comme visuel principal
@@ -592,7 +680,7 @@ function openZonePanel(level, name, data, visualUrl) {
 
 console.log(`[Tellux Patrimoine v0 sub-passe 2] ${Object.keys(PATRIMOINE_POLYGONS.pieves).length} pieves + ${Object.keys(PATRIMOINE_POLYGONS.dioceses).length} dioceses chargees.`);
 
-console.log(`[LOD] Zoom < 9 = priority only (12 sites). Zoom ≥ 9 = tous markers (clusterisés).`);
+console.log(`[Tellux patrimoine] Brief 8 nav drill-down — niveau 1 : 6 dioceses pleins + ${spotsIllustratedLayer.getLayers().length} spots illustres ; niveau 2 (clic diocese) : pieves + tous spots du diocese.`);
 </script>
 </body>
 </html>
