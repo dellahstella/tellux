@@ -32,6 +32,7 @@ from shapely.ops import unary_union
 ROOT = Path(__file__).resolve().parent.parent
 MAPPING_PATH = ROOT / "_drafts" / "pieves_communes_mapping.json"
 OVERRIDES_PATH = ROOT / "_drafts" / "PIEVE_OVERRIDES.json"
+PIEVE_DOY_OVERRIDES_PATH = ROOT / "_drafts" / "PIEVE_DOYENNES_OVERRIDES.json"
 CACHE_DIR = ROOT / "scripts" / ".cache"
 GEO_2A = CACHE_DIR / "communes-2A.geojson"
 GEO_2B = CACHE_DIR / "communes-2B.geojson"
@@ -123,6 +124,16 @@ def main():
         overrides_data = json.load(f)
     overrides = overrides_data.get("overrides") or {}
 
+    # Brief 10 — overrides "pieve -> [doyennes_visibles]" pour permettre a une
+    # pieve d'apparaitre dans plusieurs doyennes a la fois (multi-affectation
+    # arbitree manuellement par Soleil sans modifier les frontieres doyennes).
+    pieve_doy_overrides = {}
+    if PIEVE_DOY_OVERRIDES_PATH.exists():
+        with PIEVE_DOY_OVERRIDES_PATH.open(encoding="utf-8") as f:
+            pieve_doy_data = json.load(f)
+        pieve_doy_overrides = pieve_doy_data.get("overrides") or {}
+        print(f"[build] PIEVE_DOYENNES_OVERRIDES: {len(pieve_doy_overrides)} pieves multi-affectees")
+
     # Construire commune INSEE -> pieve_slug à partir du mapping Cowork
     commune_to_pieve = {}
     for p in mapping_data["pieves"]:
@@ -212,11 +223,18 @@ def main():
         else:
             doyenne_final = declared_doy
 
+        # Brief 10 (post-arbitrage Soleil) — doyennes_visibles : liste des doyennes
+        # ou la pieve apparait au drill-down N2. Override prioritaire sur le
+        # majoritaire calcule. Permet la multi-affectation (ex: Caccia visible
+        # au clic Balagne ET au clic Golo).
+        doyennes_visibles = pieve_doy_overrides.get(slug) or [doyenne_final]
+
         entry = {
             "slug": slug,
             "name": meta.get("name", slug),
             "diocese_medieval": diocese,
             "doyenne_contemporain_majoritaire": doyenne_final,
+            "doyennes_visibles": doyennes_visibles,
             "communes_count": len(polys),
             "polygon": latlng_polygon,
         }
