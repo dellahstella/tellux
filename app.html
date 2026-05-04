@@ -2170,7 +2170,7 @@ const LEGEND_ACTIVE_CORE=new Set();
 const LEGEND_ACTIVE_CONTEXT=[];
 let _legendCtrl=null;
 const LEGEND_HTML={
-  hot:'<div class="leg-block"><b class="leg-title">Champ ELF 50 Hz (nT)</b><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>150</span><span>300</span><span>500 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#8b92a5">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · PROD_ELECTRIQUE</div></div>',
+  hot:'<div class="leg-block"><b class="leg-title">Champ ELF 50 Hz (nT)</b><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#8b92a5">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · PROD_ELECTRIQUE</div></div>',
   geo:'<div class="leg-block"><b class="leg-title">Geologie</b><div class="leg-row"><span style="color:#8B4513">&#9632;</span> Granit</div><div class="leg-row"><span style="color:#DAA520">&#9632;</span> Sedimentaire</div><div class="leg-row"><span style="color:#4682B4">&#9632;</span> Metamorphique</div><div class="leg-src">BRGM Geologie</div></div>',
   failles:'<div class="leg-block"><b class="leg-title">Failles tectoniques</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#8E2F1F;vertical-align:middle;margin-right:4px"></span><b style="color:#8E2F1F">Active</b> — faille active (3 sites)</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;border-top:2px dashed #C28533;vertical-align:middle;margin-right:4px"></span><b style="color:#C28533">Quaternaire</b> — faille ancienne (5 sites)</div><div class="leg-row" style="font-size:9px;color:var(--tx3)">Tracé indicatif ~30 km · axe orienté</div><div class="leg-src">BRGM Corte · 8 failles principales</div></div>',
   hyd:'<div class="leg-block"><b class="leg-title">Nappes</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Eau souterraine proche de la surface — couche visuelle BRGM ; le calcul utilise un dataset distinct</div><div class="leg-row"><span style="color:#1a4b8c">&#9632;</span> Affleurante</div><div class="leg-row"><span style="color:#4a90d9">&#9632;</span> Sub-affleurante</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
@@ -5193,14 +5193,17 @@ function renderList(){
 
 // scoreColor v2 — palette Ocre (gradient neutre, sans connotation danger/sécurité)
 // Palette conforme au cadre épistémique (cf. AUDIT_TELLUX_NIVEAU3_SPECIFICATION_UI_UX.md §2.2)
-// Bornes en nT pour le domaine ELF 50 Hz (0-500 nT)
+// Bornes en nT pour le domaine ELF 50 Hz (0-1000 nT)
+// Aligné sur EXPERT_BOUNDS_DEFAULT.ELF_nT = [0, 1000] (zone GELÉ-001).
+// Repère IARC classe 2B (300 nT chronique résidentiel) maintenu dans la palette
+//   comme frontière Faible/Modéré, visible mais non dramatisé.
 // NOTA : le rouge (#991b1b) et le vert (#2d9b87) ont été retirés car
 //   ils portent des connotations danger/sécurité non pertinentes ici.
 function scoreColor(sc){
-  if(sc<150)return{fill:'#DDBB88',opacity:0.28,label:'Faible (< 150 nT)'}; // Ocre clair
-  if(sc<300)return{fill:'#C28533',opacity:0.38,label:'Modéré (150–300 nT)'}; // Ocre
-  if(sc<500)return{fill:'#8A5E22',opacity:0.48,label:'Élevé (300–500 nT)'}; // Ocre foncé
-  return{fill:'#5C3D10',opacity:0.55,label:'Très élevé (> 500 nT)'}; // Ocre très foncé
+  if(sc<200)return{fill:'#DDBB88',opacity:0.28,label:'Faible (< 200 nT)'}; // Ocre clair
+  if(sc<500)return{fill:'#C28533',opacity:0.38,label:'Modéré (200–500 nT)'}; // Ocre
+  if(sc<1000)return{fill:'#8A5E22',opacity:0.48,label:'Élevé (500–1000 nT)'}; // Ocre foncé
+  return{fill:'#5C3D10',opacity:0.55,label:'Très élevé (> 1000 nT)'}; // Ocre très foncé
 }
 
 // ---- CALIBRATION RF AUTO — dérivée des mesures ANFR/EXEM certifiées ----
@@ -5313,7 +5316,7 @@ function buildHot(){
       const rfCorr=calcN_RF_calib(a,o);
       const rfScore=rfCorr>5?200:rfCorr>2?150:rfCorr>0.5?100:0; // V/m → score
       const scTotal=Math.max(sc,rfScore);
-      if(scTotal>120){
+      if(scTotal>200){
         const {fill,opacity,label}=scoreColor(scTotal);
         const bounds=[[a,o],[a+step,o+step]];
         const rect=L.rectangle(bounds,{
