@@ -21,11 +21,20 @@ Sortie : docs/data/doyennes_polygons.json (overwrite)
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
 from shapely.geometry import shape, mapping, Polygon, MultiPolygon
 from shapely.ops import unary_union
+
+# B10-UX-026 — calcul display_name : retrait du préfixe "Doyenné [du|de l'|d'|de la|de]"
+# au début du nom canonique. Ex: "Doyenné du Cap" -> "Cap", "Doyenné d'Ajaccio" -> "Ajaccio".
+DOYENNE_PREFIX_RE = re.compile(r"^Doyenn[ée]\s+(?:du\s+|de\s+l'|d'|de\s+la\s+|de\s+)?", re.IGNORECASE)
+
+
+def compute_display_name(name):
+    return DOYENNE_PREFIX_RE.sub("", name).strip() or name
 
 ROOT = Path(__file__).resolve().parent.parent
 MAPPING_PATH = ROOT / "_drafts" / "doyennes_communes_mapping.json"
@@ -141,6 +150,7 @@ def main():
         entry = {
             "slug": slug,
             "name": d["name"],
+            "display_name": compute_display_name(d["name"]),
             "tone": TONE_BY_SLUG.get(slug, "A"),
             "communes_count": len(polys),
             "polygon": latlng_polygon,
