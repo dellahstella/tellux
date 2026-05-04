@@ -192,17 +192,33 @@ const tileStyle = document.createElement('style');
 tileStyle.textContent = '.tlx-tiles{filter:sepia(0.25) saturate(0.85) brightness(1.02) contrast(0.95);}';
 document.head.appendChild(tileStyle);
 
-// Cluster pour densité moyenne
-const cluster = L.markerClusterGroup({
-  maxClusterRadius:35,
-  spiderfyOnMaxZoom:true,
-  showCoverageOnHover:false,
-  disableClusteringAtZoom:12
-});
+// Brief 8 — Refonte navigation drill-down 2 niveaux (vision macro Soleil 2026-05-04)
+// Niveau 1 (vue Corse) : 6 polygones diocèses pleins + spots illustrés uniquement.
+// Niveau 2 (vue diocèse, déclenché par clic) : pieves + tous les spots du diocèse.
 
-// Layer pour priorités (toujours visibles, hors cluster)
-const priorityLayer = L.layerGroup();
-const standardLayer = L.layerGroup();
+// Liste blanche des spots avec illustration réelle (fichier PNG présent dans
+// docs/assets/visuels/ au moment du build : 14 sur 124 spots).
+// Source : croisement manifest SITES_PATRIMOINE × ls docs/assets/visuels/, en
+// excluant les 5 spots-diocèse (catégorie 'E — Diocèse historique', portent
+// l'identité visuelle du polygone diocèse pas un lieu distinct).
+// Mise à jour manuelle quand un fichier est ajouté/supprimé.
+// Future amélioration éventuelle : pipeline auto (option c, voir Brief 8 §6.1).
+const ILLUSTRATED_SPOTS = new Set([
+  'aiguilles_de_bavella',
+  'aleria_antique',
+  'bastia_citadelle',
+  'bonifacio_remparts',
+  'cap_corse_extreme_nord',
+  'cargese_grec_latin',
+  'cirque_de_bonifato',
+  'citadelle_de_calvi',
+  'citadelle_de_corte',
+  'couvent_d_orezza',
+  'desert_des_agriate',
+  'lac_de_creno',
+  'lac_de_nino',
+  'massif_du_haut_asco',
+]);
 
 // Z5-UX-020 : mapping inverse spot → pieve/diocèse à partir de spot_ids[] des pieves.
 // Permet d'alimenter le breadcrumb au clic spot avec la chaîne complète.
@@ -217,14 +233,25 @@ for (const [pieveSlug, pieveData] of Object.entries(PATRIMOINE_POLYGONS.pieves))
   }
 }
 
-// Construction markers
+// Brief 8 — Layer groups drill-down
+const spotsIllustratedLayer = L.layerGroup();      // niveau 1 : 14 spots illustrés
+const spotsAllByDioceseLayer = new Map();          // niveau 2 : Map<dioceseDisplay, LayerGroup>
+
+// Construction markers : filtrage en fonction du niveau (illustré + rattachement diocèse)
 const markersBySlug = {};
+const orphansInvisibles = [];      // orphan + non illustré (consigné en console pour dette PATRIMOINE-ORPHANS-INVISIBLES-001)
+const dioceseSpotsExclus = [];     // 5 spots-diocèse exclus (slug commence par 'diocese_')
 for (const site of SITES_PATRIMOINE) {
   if (site.lat == null || site.lon == null) continue;
   // C5 mutualisation : offset 50m sur slug santa_maria_assunta_saint_florent
   if (site.slug === 'santa_maria_assunta_saint_florent') {
     site.lat = (site.lat ?? 0) + 0.0004;
     site.lon = (site.lon ?? 0) + 0.0004;
+  }
+  // 5 spots-diocèse (catégorie 'E — Diocèse historique') exclus complètement
+  if (site.slug.startsWith('diocese_')) {
+    dioceseSpotsExclus.push(site.slug);
+    continue;
   }
   const isPriority = !!site.priorite;
   const isArbitrage = ARBITRAGE_SLUGS.has(site.slug);
@@ -236,26 +263,31 @@ for (const site of SITES_PATRIMOINE) {
   const marker = L.marker([site.lat, site.lon], {icon, title: site.nom});
   marker.on('click', () => onSpotClick(marker, site));
   markersBySlug[site.slug] = {marker, site};
-  if (isPriority) {
-    priorityLayer.addLayer(marker);
-  } else {
-    cluster.addLayer(marker);
-  }
-}
-priorityLayer.addTo(map);
-cluster.addTo(map);
 
-// LOD par zoom : zoom < 9 → seuls priorité visibles
-function updateLOD() {
-  const z = map.getZoom();
-  if (z < 9) {
-    if (map.hasLayer(cluster)) map.removeLayer(cluster);
-  } else {
-    if (!map.hasLayer(cluster)) map.addLayer(cluster);
+  const isIllustrated = ILLUSTRATED_SPOTS.has(site.slug);
+  const inv = SPOT_TO_PIEVE[site.slug];
+
+  if (isIllustrated) spotsIllustratedLayer.addLayer(marker);
+
+  if (inv && inv.dioceseDisplay) {
+    if (!spotsAllByDioceseLayer.has(inv.dioceseDisplay)) {
+      spotsAllByDioceseLayer.set(inv.dioceseDisplay, L.layerGroup());
+    }
+    spotsAllByDioceseLayer.get(inv.dioceseDisplay).addLayer(marker);
+  } else if (!isIllustrated) {
+    // Orphan + non illustré : invisible aux deux niveaux. Dette PATRIMOINE-ORPHANS-INVISIBLES-001.
+    orphansInvisibles.push(site.slug);
   }
 }
-map.on('zoomend', updateLOD);
-updateLOD();
+
+// Niveau 1 attaché au load : seuls les spots illustrés
+spotsIllustratedLayer.addTo(map);
+
+// Logs dette + sanity check (DevTools console, pas user-facing)
+console.log('[Tellux patrimoine] Niveau 1 — spots illustrés :', spotsIllustratedLayer.getLayers().length, '(sur', SITES_PATRIMOINE.length, 'spots manifest)');
+console.log('[Tellux patrimoine] Spots-diocèse exclus du niveau 1 :', dioceseSpotsExclus.length, dioceseSpotsExclus);
+console.log('[Tellux patrimoine] Orphans non illustrés invisibles (dette PATRIMOINE-ORPHANS-INVISIBLES-001) :', orphansInvisibles.length, orphansInvisibles);
+console.log('[Tellux patrimoine] Spots groupés par diocèse (niveau 2) :', Array.from(spotsAllByDioceseLayer.entries()).map(([d, lg]) => d + ':' + lg.getLayers().length).join(', '));
 
 // Popup builder
 function openPopup(marker, site) {
