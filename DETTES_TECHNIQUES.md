@@ -258,6 +258,34 @@ La validation physique préalable (littérature ou mesures terrain) est un prér
 
 ---
 
+### PATRIMOINE-TILES-ZOOM-001 — Fond carte CARTO disparu après zoom in (audit UX #2, non reproductible)
+
+**Description :** Audit UX #2 (4 mai 2026) a observé visuellement la disparition du fond de carte CARTO sur `https://tellux.pages.dev/patrimoine` après zoom in déclenché par clic cluster (screenshot `ss_7327svjjr`). Tentative de reproduction Brief 7 sur le code dev/main actuel : tiles testées à tous les niveaux de zoom 9 à 19 (toutes chargent avec succès, `naturalWidth=512`, status HTTP 200), inspection panes (`tilePane` `opacity:1`, `visibility:visible`, `z-index:200`), test clic cluster (cluster « 11 » Sartène : zoom 9→11, 8 tiles chargées correctement). Hypothèses A (maxZoom dépassé), B (URL pattern), C (pane masque), D (overlay couvrant) toutes écartées. Configuration tile : `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png`, `subdomains:'abcd'`, `maxZoom:19`, className `tlx-tiles` (filtre sépia). Identique en local et sur prod. Branche `fix/patrimoine-tiles-zoom` clôturée sans commit.
+
+**Priorité :** Faible (à monitorer)
+
+**Condition de déblocage :** Re-observer post-Brief 8 (nav drill-down). Le drill-down déclenche `flyToBounds` qui peut potentiellement re-déclencher le symptôme. Si re-observé, rouvrir investigation avec : niveau de zoom exact, navigateur + OS + DPI, capture DevTools Network filtrée sur `cartocdn`, séquence d'actions précise.
+
+---
+
+### PATRIMOINE-ORPHANS-INVISIBLES-001 — Spots orphans non illustrés invisibles dans nav drill-down v1
+
+**Description :** Sur les 124 spots du manifest patrimoine, 43 sont actuellement invisibles dans la navigation drill-down 2 niveaux du Brief 8 (vision macro Soleil 2026-05-04). Critères croisés :
+- 52 spots sont « orphans » au sens Brief 2 (non rattachés à une pieve via `spot_ids[]` du manifest polygones).
+- 9 de ces 52 ont une illustration réelle (fichier dans `docs/assets/visuels/`) — ils apparaîtront au niveau 1 via `ILLUSTRATED_SPOTS`.
+- Restent 43 orphans sans illustration : ni rattachés à un diocèse, ni dans la liste blanche illustrée. Donc invisibles aux deux niveaux.
+
+Liste exacte loggée à chaque chargement de `patrimoine.html` via `console.log('[Tellux patrimoine] Spots invisibles ...')` (DevTools, pas user-facing). Cohérent avec la doctrine « tri/rangement = phase ultérieure ».
+
+**Priorité :** Moyenne (différée)
+
+**Condition de déblocage :** Phase tri/rangement ultérieure. Trois leviers possibles :
+1. Rattachement manuel à un diocèse via overrides JSON dans le pipeline (ajout d'un champ `diocese_override` dans le manifest spots).
+2. Génération d'illustrations (`_v1` photo réelle ou `_tellux_v2` AI-générée) pour rapatrier en `ILLUSTRATED_SPOTS`.
+3. Combinaison des deux.
+
+---
+
 ## Dettes fermées récemment
 
 - **EMAG-CRUSTAL-AUDIT-001** (1ᵉʳ mai 2026) — fermée par audit (verdict : couches fonctionnellement distinctes). Investigation conduite sur `app.html` après que la portion « wdmam » de la dette ait été implicitement résolue par la fermeture de `WDMAM-NAMING-001` le 27 avril 2026. Constats : la couche `emag` (l.2098) est un `L.imageOverlay` raster régional Corse pointant sur l'endpoint NOAA NCEI EMAG2v3 ImageServer (`gis.ngdc.noaa.gov/arcgis/rest/services/EMAG2v3/ImageServer/exportImage`) avec bbox `[[41.3, 8.5], [43.1, 9.65]]` et `renderingRule={"rasterFunction":"EMAG2_Color_Scale"}` ; la couche `crustal` (l.2657-2700+) est un `L.layerGroup` vectoriel construit à partir du tableau hardcodé `CRUSTAL_REFS` (5 entrées : Bangui, Kursk, Vredefort, Ries, Chicxulub) avec 5 cercles + 5 markers divIcon, accompagné d'un panneau Leaflet Control `topright` (`_crustalGauge`) qui combine la valeur EMAG2v3 locale au centre carte (via `fetchEMAG2()`) avec les 5 références mondiales en barres logarithmiques. Datasets différents (raster EMAG2v3 régional vs 5 références hardcodées mondiales), mécanismes différents (raster ImageServer NOAA vs vectoriel Leaflet local), finalités différentes (overlay régional Corse vs panneau comparatif pédagogique mondial). Les deux couches peuvent être superposées (chacune a son propre flag dans `ACTIVE`) ; le panneau comparatif `crustal` *utilise* EMAG2v3 (complémentarité, pas redondance). Aucune modification de code requise. Note : un rollback du pattern bbox-dynamique introduit en PR #190 (commenté l.2092-2097) a depuis remis `wmsEmag` en bbox fixe — incohérence de note avec la fermeture WDMAM-NAMING-001 qui décrit un pattern bbox-dynamique. Hors périmètre de cet audit, à arbitrer dans un sprint ultérieur si harmonisation souhaitée.
