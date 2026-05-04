@@ -549,18 +549,27 @@ fetch('docs/data/pieves_polygons.json')
   .then(r => r.json())
   .then(data => {
     for (const p of data.pieves) {
-      const poly = L.polygon(p.polygon, {className: 'pieve-polygon-v2'});
-      poly.bindTooltip(p.name, {sticky:true, direction:'top', className:'tlx-tt'});
-      poly.on('click', () => onPieveClickV2(p.slug, p.name, poly));
-      pieveShapesBySlugV2[p.slug] = poly;
+      // Brief 10 — `doyennes_visibles` (array) permet a une pieve d'apparaitre
+      // dans plusieurs doyennes au drill-down N2. On cree une instance Leaflet
+      // polygon DUPLIQUEE par doyenne cible (une instance ne peut etre attachee
+      // qu'a un seul map a la fois ; les LayerGroups sont attaches/detaches
+      // dynamiquement au clic doyenne, donc les duplicatas n'apparaissent jamais
+      // simultanement).
       pieveNameBySlugV2[p.slug] = p.name;
       pievePolygonsBySlugV2[p.slug] = p.polygon;
       pieveDoyenneBySlugV2[p.slug] = p.doyenne_contemporain_majoritaire;
-      // Grouper par doyenne majoritaire (drill-down filtrage)
-      const doy = p.doyenne_contemporain_majoritaire;
-      if (doy) {
+      const doyennesVisibles = p.doyennes_visibles && p.doyennes_visibles.length
+        ? p.doyennes_visibles
+        : (p.doyenne_contemporain_majoritaire ? [p.doyenne_contemporain_majoritaire] : []);
+      for (const doy of doyennesVisibles) {
+        const poly = L.polygon(p.polygon, {className: 'pieve-polygon-v2'});
+        poly.bindTooltip(p.name, {sticky:true, direction:'top', className:'tlx-tt'});
+        poly.on('click', () => onPieveClickV2(p.slug, p.name, poly));
         if (!pievesByDoyenneLayer.has(doy)) pievesByDoyenneLayer.set(doy, L.layerGroup());
         pievesByDoyenneLayer.get(doy).addLayer(poly);
+        // Premiere instance reference dans pieveShapesBySlugV2 (suffit pour
+        // selectPolygon/clearSelected ; les duplicatas partagent le meme slug).
+        if (!pieveShapesBySlugV2[p.slug]) pieveShapesBySlugV2[p.slug] = poly;
       }
     }
     // Mapping spot -> pieve via point-in-polygon (4e niveau breadcrumb).
@@ -646,6 +655,14 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   // Attacher pieves du doyenne (Brief 9 Strat A pieves_polygons.json).
   const pivlg = pievesByDoyenneLayer.get(doyenneSlug);
   if (pivlg && !map.hasLayer(pivlg)) pivlg.addTo(map);
+
+  // Brief 10 — z-order : ramener les doyennes voisins (non estompes) au-dessus
+  // des pieves pour clipper visuellement les portions debordantes (pieves a
+  // cheval sur deux doyennes : seule la portion dans le doyenne actif estompe
+  // reste visible, les portions dans les voisins pleins opaques sont masquees).
+  for (const [otherSlug, otherPoly] of Object.entries(doyenneShapesBySlug)) {
+    if (otherSlug !== doyenneSlug && otherPoly.bringToFront) otherPoly.bringToFront();
+  }
 
   // Attacher tous les spots du doyenne (illustres + non-illustres).
   const slg = spotsLevel2ByDoyenne.get(doyenneSlug);
