@@ -494,13 +494,16 @@ fetch('docs/data/doyennes_polygons.json')
   .then(r => r.json())
   .then(data => {
     for (const d of data.doyennes) {
+      // B10-UX-026 — affichages utilisent display_name (sans prefixe "Doyenne ").
+      // Le name complet reste dans le JSON pour traces / coherence canonique.
+      const display = d.display_name || d.name;
       const cls = 'doyenne-polygon tone-' + (d.tone || 'a').toLowerCase();
       const poly = L.polygon(d.polygon, {className: cls});
-      poly.bindTooltip(d.name, {sticky:true, direction:'top', className:'tlx-tt'});
-      poly.on('click', () => onDoyenneClick(d.slug, d.name, poly));
+      poly.bindTooltip(display, {sticky:true, direction:'top', className:'tlx-tt'});
+      poly.on('click', () => onDoyenneClick(d.slug, display, poly));
       doyenneFillLayer.addLayer(poly);
       doyenneShapesBySlug[d.slug] = poly;
-      doyenneNameBySlug[d.slug] = d.name;
+      doyenneNameBySlug[d.slug] = display;
       doyennePolygonsBySlug[d.slug] = d.polygon;
     }
     doyenneFillLayer.addTo(map);
