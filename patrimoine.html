@@ -122,9 +122,6 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 .subpieve-polygon:focus{outline:none;fill:rgba(200,150,90,0.40);stroke:#a06840;stroke-width:3;}
 .subpieve-polygon.dim{fill:rgba(200,150,90,0.08);stroke:rgba(180,130,70,0.25);}
 .leaflet-interactive:focus{outline:none;}
-/* Z1-UX-009 : décaler contrôle zoom sous le header (header top:12 + h~53 = 65px) */
-.leaflet-top.leaflet-left{margin-top:75px;}
-@media (max-width:640px){.leaflet-top.leaflet-left{margin-top:60px;}}
 /* Arbitrage badge "?" sur markers concernes */
 .tlx-marker.arbitrage::after{content:'?';position:absolute;top:-6px;right:-6px;width:14px;height:14px;border-radius:50%;background:rgba(63,91,58,0.85);color:#fff;font-family:var(--font);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1;border:1px solid #fff;}
 
@@ -173,12 +170,14 @@ const SITES_PATRIMOINE = [{"slug":"aiguilles_de_bavella","nom":"Aiguilles de Bav
 
 // Carte centrée Corse
 // Z1-UX-008 : attributionControl désactivé par défaut pour éviter doublon avec le custom ci-dessous
+// Z1-UX-009 : zoomControl désactivé par défaut + ajout API en bottomleft (hors header)
 const map = L.map('map', {
   center: [42.15, 9.10],
   zoom: 9,
-  zoomControl: true,
+  zoomControl: false,
   attributionControl: false
 });
+L.control.zoom({position: 'bottomleft'}).addTo(map);
 L.control.attribution({prefix:'<a href="https://leafletjs.com/">Leaflet</a> · Tellux Patrimoine v0'}).addTo(map);
 
 // Tile layer sépia (CartoDB Light avec filtre CSS pour ambiance Tellux v2)
