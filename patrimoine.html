@@ -108,7 +108,7 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 #breadcrumb .bc-item{cursor:pointer;transition:color .2s;color:#8c6e50;}
 #breadcrumb .bc-item:hover{color:var(--tx-ardoise);}
 #breadcrumb .bc-item.active{color:var(--tx-ardoise);font-weight:600;cursor:default;}
-#breadcrumb .bc-sep{color:#b89c7a;}
+#breadcrumb .bc-sep{color:#b89c7a;margin:0 8px;}
 .diocese-polygon{fill:rgba(140,110,80,0.15);stroke:rgba(120,90,60,0.6);stroke-width:1.5;cursor:pointer;transition:fill .2s,stroke-width .2s;outline:none;}
 .diocese-polygon:hover{fill:rgba(140,110,80,0.25);stroke-width:2.5;}
 .diocese-polygon:focus{outline:none;fill:rgba(140,110,80,0.30);stroke:#5a3f2a;stroke-width:3;}
@@ -327,6 +327,28 @@ function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+// Helpers labels diocèse/pieve : capitalisation + élision (Z2-UX-010, Z2-UX-013, Z3-UX-017)
+function capitalize(s) {
+  if (!s) return '';
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function startsWithVowelOrH(s) {
+  if (!s) return false;
+  return 'aeiouhàâäèéêëîïôöùûü'.includes(s.charAt(0).toLowerCase());
+}
+function formatLabel(prefix, name) {
+  const display = capitalize(name || '');
+  if (!display) return prefix;
+  return startsWithVowelOrH(display) ? `${prefix} d'${display}` : `${prefix} de ${display}`;
+}
+function formatDioceseLabel(name) { return formatLabel('Diocèse', name); }
+function formatPieveLabel(displayName) { return formatLabel('Pieve', displayName); }
+
+// Pluralisation : '1 pieve' / 'X pieves' (Z2-UX-011, Z3-UX-018). 0 reste au pluriel (FR).
+function pluralize(n, singular, plural) {
+  return n === 1 ? `${n} ${singular}` : `${n} ${plural}`;
+}
+
 // Console info
 console.log(`[Tellux Patrimoine v0] ${SITES_PATRIMOINE.length} sites chargés.`);
 
@@ -340,7 +362,7 @@ const pieveShapesByName = {};
 // Construire polygones dioceses
 for (const [name, data] of Object.entries(PATRIMOINE_POLYGONS.dioceses)) {
   const poly = L.polygon(data.polygon, {className:'diocese-polygon'});
-  poly.bindTooltip(name + ' · ' + data.n_pieves + ' pieves', {sticky:true, direction:'top', className:'tlx-tt'});
+  poly.bindTooltip(formatDioceseLabel(name) + ' · ' + pluralize(data.n_pieves, 'pieve', 'pieves'), {sticky:true, direction:'top', className:'tlx-tt'});
   poly.on('click', () => onZoneClick('diocese', name, data, poly));
   dioceseLayer.addLayer(poly);
   dioceseShapesByName[name] = poly;
@@ -350,7 +372,7 @@ for (const [name, data] of Object.entries(PATRIMOINE_POLYGONS.dioceses)) {
 for (const [name, data] of Object.entries(PATRIMOINE_POLYGONS.pieves)) {
   const cls = data.is_subpieve ? 'subpieve-polygon' : 'pieve-polygon';
   const poly = L.polygon(data.polygon, {className: cls});
-  poly.bindTooltip(name + ' · ' + (data.n_spots_geographic ?? data.n_spots) + ' spots', {sticky:true, direction:'top', className:'tlx-tt'});
+  poly.bindTooltip(formatPieveLabel(data.pieve || name) + ' · ' + pluralize(data.n_spots_geographic ?? data.n_spots, 'spot', 'spots'), {sticky:true, direction:'top', className:'tlx-tt'});
   poly.on('click', () => onZoneClick('pieve', name, data, poly));
   pieveLayer.addLayer(poly);
   pieveShapesByName[name] = poly;
@@ -396,11 +418,11 @@ function updateBreadcrumb() {
   let html = '<span class="bc-item' + (!currentDiocese && !currentPieve ? ' active' : '') + '" data-level="corse">Corse</span>';
   if (currentDiocese) {
     html += '<span class="bc-sep">›</span>';
-    html += '<span class="bc-item' + (!currentPieve ? ' active' : '') + '" data-level="diocese">Diocèse de ' + escapeHtml(currentDiocese) + '</span>';
+    html += '<span class="bc-item' + (!currentPieve ? ' active' : '') + '" data-level="diocese">' + escapeHtml(formatDioceseLabel(currentDiocese)) + '</span>';
   }
   if (currentPieve) {
     html += '<span class="bc-sep">›</span>';
-    html += '<span class="bc-item active" data-level="pieve">Pieve de ' + escapeHtml(currentPieve) + '</span>';
+    html += '<span class="bc-item active" data-level="pieve">' + escapeHtml(formatPieveLabel(currentPieve)) + '</span>';
   }
   bc.innerHTML = html;
   bc.querySelectorAll('.bc-item').forEach(el => {
@@ -427,7 +449,7 @@ function onZoneClick(level, name, data, shape) {
     currentPieve = null;
   } else if (level === 'pieve') {
     currentDiocese = data.diocese && data.diocese !== '?' ? data.diocese : null;
-    currentPieve = name;
+    currentPieve = data.pieve || name;
   }
   updateBreadcrumb();
   // Popup miniature : visuel pieve si existant (placeholder v0 - case vide stylisee)
@@ -442,12 +464,13 @@ function onZoneClick(level, name, data, shape) {
     ? `<img loading="lazy" class="tlx-popup-img" src="${visualUrl}" alt="${escapeHtml(name)}" onerror="this.outerHTML='<div class=\'tlx-popup-img fallback\'>Visuel à venir</div>'">`
     : `<div class="tlx-popup-img fallback">Visuel à venir</div>`;
   const subtitle = level === 'diocese'
-    ? `${data.n_pieves} pieves`
-    : `${data.n_spots_geographic ?? data.n_spots} spots${data.diocese && data.diocese !== '?' ? ' · diocèse ' + data.diocese : ''}`;
+    ? pluralize(data.n_pieves, 'pieve', 'pieves')
+    : `${pluralize(data.n_spots_geographic ?? data.n_spots, 'spot', 'spots')}${data.diocese && data.diocese !== '?' ? ' · ' + formatLabel('diocèse', data.diocese) : ''}`;
+  const titleText = level === 'diocese' ? formatDioceseLabel(name) : formatPieveLabel(data.pieve || name);
   const html = `<div class="tlx-popup">
     ${imgHtml}
     <div class="tlx-popup-body">
-      <div class="tlx-popup-title">${level === 'diocese' ? 'Diocèse de ' : 'Pieve de '}${escapeHtml(name)}</div>
+      <div class="tlx-popup-title">${escapeHtml(titleText)}</div>
       <div class="tlx-popup-cat">${escapeHtml(subtitle)}</div>
       <button class="tlx-popup-btn" data-zone="${level}:${name}">Ouvrir la fiche</button>
     </div>
@@ -465,18 +488,18 @@ function onZoneClick(level, name, data, shape) {
 }
 
 function openZonePanel(level, name, data, visualUrl) {
-  const title = (level === 'diocese' ? 'Diocèse de ' : 'Pieve de ') + name;
+  const title = level === 'diocese' ? formatDioceseLabel(name) : formatPieveLabel(data.pieve || name);
   const cat = level === 'diocese' ? 'DIOCÈSE HISTORIQUE' : 'PIEVE HISTORIQUE';
   let metaParts = [];
   if (level === 'pieve' && data.diocese) metaParts.push(`<strong>Diocèse</strong> · ${escapeHtml(data.diocese)}`);
   if (level === 'pieve') metaParts.push(`<strong>Spots</strong> · ${data.n_spots_geographic ?? data.n_spots}`);
   if (level === 'diocese') metaParts.push(`<strong>Pieves</strong> · ${data.n_pieves}`);
-  metaParts.push(`<strong>Méthode polygone</strong> · ${escapeHtml(data.method || '—')}`);
+  // Z2-UX-014 : slug technique 'method' masqué de la vue user-facing (sans intérêt utilisateur)
   recto.innerHTML = `
     <div class="panel-cat">${cat}</div>
     <h2>${escapeHtml(title)}</h2>
     <div class="panel-meta">${metaParts.join(' · ')}</div>
-    <div class="panel-desc">Description détaillée à enrichir depuis les fiches pieve/diocèse (corpus _drafts/fiches_pieve/).</div>
+    <div class="panel-desc">Description en préparation.</div>
     <div class="panel-flip-hint">Cliquez sur le panneau pour révéler l'illustration</div>
   `;
   if (visualUrl) {
