@@ -127,11 +127,20 @@ body.has-active-diocese .diocese-polygon:hover{fill:rgba(140,110,80,0.18);}
 /* Arbitrage badge "?" sur markers concernes */
 .tlx-marker.arbitrage::after{content:'?';position:absolute;top:-6px;right:-6px;width:14px;height:14px;border-radius:50%;background:rgba(63,91,58,0.85);color:#fff;font-family:var(--font);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1;border:1px solid #fff;}
 
-/* Brief 8 — Bouton retour vue Corse (visible niveau 2 uniquement) */
-#btn-retour-corse{position:absolute;top:12px;right:12px;z-index:1000;display:none;align-items:center;gap:6px;background:rgba(245,240,231,0.95);backdrop-filter:blur(8px);border:1px solid var(--border);color:var(--tx-ardoise);font-family:var(--font);font-size:13px;font-weight:500;padding:8px 14px;border-radius:var(--r);box-shadow:var(--shadow);cursor:pointer;transition:background .2s,color .2s,transform .2s;}
-#btn-retour-corse:hover{background:var(--tx-ocre);color:var(--tx-pierre);transform:translateX(-2px);}
-#btn-retour-corse:focus-visible{outline:2px solid var(--tx-ocre);outline-offset:2px;}
-body.has-active-diocese #btn-retour-corse{display:flex;}
+/* DORMANT post-Brief 8 (revise) — bouton retour vue Corse, reactivable Brief 9 (drill-down 2 niveaux). */
+#btn-retour-corse{display:none !important;}
+
+/* Brief 8 (revise) — Polygones doyennes contemporains (vision macro 2026-05-04).
+   Strategie C : fill plein opaque masque le fond OSM/CARTO et les imprecisions
+   de digitalisation. Palette 4 teintes (theoreme des 4 couleurs) pour eviter
+   conflits adjacence. Stroke ardoise discret. */
+.doyenne-polygon{stroke:#1F2329;stroke-width:1.5;stroke-opacity:1;fill-opacity:1;cursor:pointer;transition:filter .2s,stroke-width .2s;outline:none;}
+.doyenne-polygon.tone-a{fill:#D4C5A8;}
+.doyenne-polygon.tone-b{fill:#A8B89A;}
+.doyenne-polygon.tone-c{fill:#D9B789;}
+.doyenne-polygon.tone-d{fill:#B89A6B;}
+.doyenne-polygon:hover{filter:brightness(0.9);stroke-width:2.5;}
+.doyenne-polygon:focus,.doyenne-polygon.selected{outline:none;stroke:#1F2329;stroke-width:3;filter:brightness(0.85);}
 
 </style>
 </head>
@@ -291,11 +300,11 @@ for (const site of SITES_PATRIMOINE) {
 // Niveau 1 attaché au load : seuls les spots illustrés
 spotsIllustratedLayer.addTo(map);
 
-// Logs dette + sanity check (DevTools console, pas user-facing)
-console.log('[Tellux patrimoine] Niveau 1 — spots illustrés :', spotsIllustratedLayer.getLayers().length, '(sur', SITES_PATRIMOINE.length, 'spots manifest)');
-console.log('[Tellux patrimoine] Spots-diocèse exclus du niveau 1 :', dioceseSpotsExclus.length, dioceseSpotsExclus);
-console.log('[Tellux patrimoine] Orphans non illustrés invisibles (dette PATRIMOINE-ORPHANS-INVISIBLES-001) :', orphansInvisibles.length, orphansInvisibles);
-console.log('[Tellux patrimoine] Spots groupés par diocèse (niveau 2) :', Array.from(spotsAllByDioceseLayer.entries()).map(([d, lg]) => d + ':' + lg.getLayers().length).join(', '));
+// Logs decomptes (DevTools console, pas user-facing). Brief 8 revise — vision macro.
+const hiddenSpots = orphansInvisibles.length;
+console.log('[Tellux patrimoine] Spots illustrés affichés:', spotsIllustratedLayer.getLayers().length);
+console.log('[Tellux patrimoine] Spots non illustrés masqués:', hiddenSpots, '(dette PATRIMOINE-ORPHANS-INVISIBLES-001)');
+console.log('[Tellux patrimoine] Spots-diocèse exclus:', dioceseSpotsExclus.length, dioceseSpotsExclus);
 
 // Popup builder
 function openPopup(marker, site) {
@@ -430,10 +439,87 @@ for (const [name, data] of Object.entries(PATRIMOINE_POLYGONS.pieves)) {
   pieveLayer.addLayer(poly);
   pieveShapesByName[name] = poly;
 }
-// Brief 8 — Niveau 1 par défaut : seuls les diocèses pleins attachés.
-// Les pieves restent dans pieveShapesByName mais ne sont pas attachées au map.
-// Elles sont attachées à la demande dans enterDioceseView() (filtrées sur le diocèse cliqué).
-dioceseLayer.addTo(map);
+// DORMANT post-Brief 8 (revise) — couches diocèses médiévaux + pieves Convex Hull.
+// Conservées en mémoire (constructions ci-dessus) mais non attachées au map.
+// Réactivables Brief 9 (calque pieve fine, après livraison data Cowork).
+// dioceseLayer.addTo(map);
+
+// === Brief 8 (revise) — Niveau 1 unique : 11 doyennes contemporains ===
+// Strategie C : polygones approximatifs digitalises (docs/data/doyennes_polygons.json),
+// fill plein opaque masque le fond OSM/CARTO. Substitution future strategie A
+// (polygones unions OSM communaux) = remplacer le seul fichier JSON.
+const doyenneFillLayer = L.layerGroup();
+const doyenneShapesBySlug = {};
+const doyenneNameBySlug = {};
+const doyennePolygonsBySlug = {};   // [lat,lng][] pour point-in-polygon
+const SPOT_TO_DOYENNE = new Map();  // spot.slug -> doyenne.slug
+
+// Ray-casting point-in-polygon (lat/lng — algo standard, sans dependance externe).
+function pointInPolygon(lat, lng, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [yi, xi] = polygon[i];
+    const [yj, xj] = polygon[j];
+    const intersect = ((yi > lat) !== (yj > lat))
+      && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function findDoyenneForPoint(lat, lng) {
+  for (const slug in doyennePolygonsBySlug) {
+    if (pointInPolygon(lat, lng, doyennePolygonsBySlug[slug])) return slug;
+  }
+  return null;
+}
+
+fetch('docs/data/doyennes_polygons.json')
+  .then(r => r.json())
+  .then(data => {
+    for (const d of data.doyennes) {
+      const cls = 'doyenne-polygon tone-' + (d.tone || 'a').toLowerCase();
+      const poly = L.polygon(d.polygon, {className: cls});
+      poly.bindTooltip(d.name, {sticky:true, direction:'top', className:'tlx-tt'});
+      poly.on('click', () => onDoyenneClick(d.slug, d.name, poly));
+      doyenneFillLayer.addLayer(poly);
+      doyenneShapesBySlug[d.slug] = poly;
+      doyenneNameBySlug[d.slug] = d.name;
+      doyennePolygonsBySlug[d.slug] = d.polygon;
+    }
+    doyenneFillLayer.addTo(map);
+
+    // Mapping spot -> doyenne (point-in-polygon sur les 14 spots illustres et
+    // tous les markers en memoire pour alimentation breadcrumb correcte).
+    let mapped = 0, unmapped = 0;
+    for (const slug in markersBySlug) {
+      const site = markersBySlug[slug].site;
+      const doy = findDoyenneForPoint(site.lat, site.lon);
+      if (doy) { SPOT_TO_DOYENNE.set(slug, doy); mapped++; } else { unmapped++; }
+    }
+    console.log('[Tellux patrimoine] Doyennes charges :', data.doyennes.length, '| spots rattaches :', mapped, '| hors polygones :', unmapped);
+  })
+  .catch(err => {
+    console.error('[Tellux patrimoine] Echec chargement doyennes_polygons.json :', err);
+  });
+
+function onDoyenneClick(slug, name, shape) {
+  currentDoyenneSlug = slug;
+  currentSpotSlug = null;
+  updateBreadcrumb();
+  selectPolygon(shape);
+  // Popup minimaliste centree sur le polygone (pas de zoom auto, pas de drill-down).
+  const html = '<div class="tlx-popup">'
+    + '<div class="tlx-popup-img fallback">Visuel a venir</div>'
+    + '<div class="tlx-popup-body">'
+    + '<div class="tlx-popup-title">' + escapeHtml(name) + '</div>'
+    + '<div class="tlx-popup-cat">DOYENNE CONTEMPORAIN</div>'
+    + '</div></div>';
+  L.popup({maxWidth:240, closeButton:false, autoPan:true})
+    .setLatLng(shape.getBounds().getCenter())
+    .setContent(html)
+    .openOn(map);
+}
 
 // === Brief 8 — Drill-down navigation niveau 1 ↔ niveau 2 ===
 const corsicaInitialView = { center: [42.15, 9.10], zoom: 9 };
@@ -495,17 +581,17 @@ function exitDioceseView() {
 const btnRetourCorse = document.getElementById('btn-retour-corse');
 if (btnRetourCorse) btnRetourCorse.addEventListener('click', exitDioceseView);
 
-// === Breadcrumb ===
+// === Breadcrumb (Brief 8 revise — Corse > Doyenne > Spot) ===
 const bc = document.getElementById('breadcrumb');
-let currentDiocese = null;       // display name (clé de PATRIMOINE_POLYGONS.dioceses)
-let currentPieveSlug = null;     // slug (clé de PATRIMOINE_POLYGONS.pieves)
+let currentDoyenneSlug = null;   // slug doyenne actif (clé doyenneNameBySlug)
 let currentSpotSlug = null;      // slug du spot actif (alimenté au clic marker)
 
-function getCurrentPieveDisplay() {
-  if (!currentPieveSlug) return null;
-  const pd = PATRIMOINE_POLYGONS.pieves[currentPieveSlug];
-  return pd ? (pd.pieve || currentPieveSlug) : currentPieveSlug;
-}
+// DORMANT post-Brief 8 (revise) : variables conservees pour compatibilite avec
+// les fonctions onZoneClick / enterDioceseView / openZonePanel encore en memoire
+// (jamais declenchees tant qu'aucun polygone diocese/pieve n'est attache).
+let currentDiocese = null;
+let currentPieveSlug = null;
+
 function getCurrentSpotDisplay() {
   if (!currentSpotSlug) return null;
   const site = SITES_PATRIMOINE.find(s => s.slug === currentSpotSlug);
@@ -513,24 +599,19 @@ function getCurrentSpotDisplay() {
 }
 
 function updateBreadcrumb() {
-  if (!currentDiocese && !currentPieveSlug && !currentSpotSlug) {
+  if (!currentDoyenneSlug && !currentSpotSlug) {
     bc.classList.remove('visible');
     bc.innerHTML = '';
     return;
   }
   bc.classList.add('visible');
-  const pieveDisplay = getCurrentPieveDisplay();
+  const doyenneDisplay = currentDoyenneSlug ? doyenneNameBySlug[currentDoyenneSlug] : null;
   const spotDisplay = getCurrentSpotDisplay();
   let html = '<span class="bc-item" data-level="corse">Corse</span>';
-  if (currentDiocese) {
-    html += '<span class="bc-sep">›</span>';
-    const isActive = !currentPieveSlug && !currentSpotSlug;
-    html += '<span class="bc-item' + (isActive ? ' active' : '') + '" data-level="diocese">' + escapeHtml(formatDioceseLabel(currentDiocese)) + '</span>';
-  }
-  if (pieveDisplay) {
+  if (doyenneDisplay) {
     html += '<span class="bc-sep">›</span>';
     const isActive = !currentSpotSlug;
-    html += '<span class="bc-item' + (isActive ? ' active' : '') + '" data-level="pieve">' + escapeHtml(formatPieveLabel(pieveDisplay)) + '</span>';
+    html += '<span class="bc-item' + (isActive ? ' active' : '') + '" data-level="doyenne">' + escapeHtml(doyenneDisplay) + '</span>';
   }
   if (spotDisplay) {
     html += '<span class="bc-sep">›</span>';
@@ -541,17 +622,14 @@ function updateBreadcrumb() {
     el.addEventListener('click', () => {
       const lvl = el.dataset.level;
       if (lvl === 'corse') {
-        currentDiocese = null; currentPieveSlug = null; currentSpotSlug = null;
+        currentDoyenneSlug = null; currentSpotSlug = null;
+        clearSelectedPolygons();
+        map.closePopup();
         map.setView([42.15, 9.10], 9);
         updateBreadcrumb();
-      } else if (lvl === 'diocese' && currentDiocese) {
-        currentPieveSlug = null; currentSpotSlug = null;
-        const shape = dioceseShapesByName[currentDiocese];
-        if (shape) map.fitBounds(shape.getBounds(), {padding:[40,40]});
-        updateBreadcrumb();
-      } else if (lvl === 'pieve' && currentPieveSlug) {
+      } else if (lvl === 'doyenne' && currentDoyenneSlug) {
         currentSpotSlug = null;
-        const shape = pieveShapesByName[currentPieveSlug];
+        const shape = doyenneShapesBySlug[currentDoyenneSlug];
         if (shape) map.fitBounds(shape.getBounds(), {padding:[40,40]});
         updateBreadcrumb();
       }
@@ -561,11 +639,9 @@ function updateBreadcrumb() {
 
 // === Click handler spot (marker) — alimente breadcrumb avec chaîne complète ===
 function onSpotClick(marker, site) {
-  const inv = SPOT_TO_PIEVE[site.slug];
-  if (inv) {
-    currentDiocese = inv.dioceseDisplay;
-    currentPieveSlug = inv.pieveSlug;
-  }
+  // Mapping spot -> doyenne via point-in-polygon (calcule au boot apres fetch).
+  const doy = SPOT_TO_DOYENNE.get(site.slug);
+  currentDoyenneSlug = doy || null;
   currentSpotSlug = site.slug;
   updateBreadcrumb();
   openPopup(marker, site);
@@ -574,6 +650,12 @@ function onSpotClick(marker, site) {
 // === Highlight polygone actif — classe .selected gérée explicitement
 // car :focus SVG ne se déclenche pas au clic souris sous Leaflet.
 function clearSelectedPolygons() {
+  for (const poly of Object.values(doyenneShapesBySlug)) {
+    const el = poly.getElement && poly.getElement();
+    if (el) el.classList.remove('selected');
+  }
+  // DORMANT post-Brief 8 (revise) — couches diocèses/pieves jamais attachées,
+  // mais on nettoie au cas où Brief 9 les réactiverait.
   for (const poly of Object.values(dioceseShapesByName)) {
     const el = poly.getElement && poly.getElement();
     if (el) el.classList.remove('selected');
@@ -591,17 +673,10 @@ function selectPolygon(shape) {
 map.on('popupclose', clearSelectedPolygons);
 
 // === Click handler zones (diocese / pieve) ===
+// DORMANT post-Brief 8 (revise) : aucun polygone diocèse/pieve n'est attaché au map,
+// donc cette fonction ne reçoit plus d'événement. Conservée pour Brief 9.
 function onZoneClick(level, name, data, shape) {
-  // Brief 8 — clic diocèse : entrée niveau 2 (drill-down), pas de popup mini
-  if (level === 'diocese') {
-    currentDiocese = name;
-    currentPieveSlug = null;
-    currentSpotSlug = null;
-    updateBreadcrumb();
-    enterDioceseView(name, shape);
-    return;
-  }
-  // Pieve (niveau 2) : comportement Brief 6 préservé (zoom + popup + highlight)
+  // Niveau 2 dormant — code conservé tel quel pour réactivation Brief 9.
   map.fitBounds(shape.getBounds(), {padding:[40,40]});
   // Highlight polygone actif
   selectPolygon(shape);
@@ -674,7 +749,7 @@ function openZonePanel(level, name, data, visualUrl) {
 
 console.log(`[Tellux Patrimoine] ${Object.keys(PATRIMOINE_POLYGONS.pieves).length} pieves + ${Object.keys(PATRIMOINE_POLYGONS.dioceses).length} dioceses chargees.`);
 
-console.log(`[Tellux patrimoine] Brief 8 nav drill-down — niveau 1 : 6 dioceses pleins + ${spotsIllustratedLayer.getLayers().length} spots illustres ; niveau 2 (clic diocese) : pieves + tous spots du diocese.`);
+console.log(`[Tellux patrimoine] Brief 8 revise — vue 11 doyennes contemporains + ${spotsIllustratedLayer.getLayers().length} spots illustres. Couches diocese/pieve dormantes (Brief 9 ulterieur).`);
 </script>
 </body>
 </html>
