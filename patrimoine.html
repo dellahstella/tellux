@@ -286,13 +286,17 @@ for (const site of SITES_PATRIMOINE) {
 
   if (isIllustrated) spotsIllustratedLayer.addLayer(marker);
 
+  // DORMANT post-Brief 8 (revise) : alimentation spotsAllByDioceseLayer
+  // conservée pour réactivation Brief 9 (drill-down par diocèse médiéval).
   if (inv && inv.dioceseDisplay) {
     if (!spotsAllByDioceseLayer.has(inv.dioceseDisplay)) {
       spotsAllByDioceseLayer.set(inv.dioceseDisplay, L.layerGroup());
     }
     spotsAllByDioceseLayer.get(inv.dioceseDisplay).addLayer(marker);
-  } else if (!isIllustrated) {
-    // Orphan + non illustré : invisible aux deux niveaux. Dette PATRIMOINE-ORPHANS-INVISIBLES-001.
+  }
+  if (!isIllustrated) {
+    // Brief 8 revise : tous les spots non illustrés sont invisibles dans la vue v1
+    // (rattachés ou non à une pieve). Dette PATRIMOINE-ORPHANS-INVISIBLES-001.
     orphansInvisibles.push(site.slug);
   }
 }
