@@ -111,15 +111,15 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 #breadcrumb .bc-sep{color:#b89c7a;margin:0 8px;}
 .diocese-polygon{fill:rgba(140,110,80,0.15);stroke:rgba(120,90,60,0.6);stroke-width:1.5;cursor:pointer;transition:fill .2s,stroke-width .2s;outline:none;}
 .diocese-polygon:hover{fill:rgba(140,110,80,0.25);stroke-width:2.5;}
-.diocese-polygon:focus{outline:none;fill:rgba(140,110,80,0.30);stroke:#5a3f2a;stroke-width:3;}
+.diocese-polygon:focus,.diocese-polygon.selected{outline:none;fill:rgba(140,110,80,0.30);stroke:#5a3f2a;stroke-width:3;}
 .diocese-polygon.dim{fill:rgba(140,110,80,0.06);stroke:rgba(120,90,60,0.3);}
 .pieve-polygon{fill:rgba(245,230,200,0.20);stroke:rgba(120,140,90,0.35);stroke-width:0.6;cursor:pointer;transition:fill .2s,stroke-width .2s;outline:none;}
 .pieve-polygon:hover{fill:rgba(245,230,200,0.40);stroke-width:1.8;}
-.pieve-polygon:focus{outline:none;fill:rgba(245,230,200,0.55);stroke:#8c6e50;stroke-width:3;}
+.pieve-polygon:focus,.pieve-polygon.selected{outline:none;fill:rgba(245,230,200,0.55);stroke:#8c6e50;stroke-width:3;}
 .pieve-polygon.dim{fill:rgba(245,230,200,0.10);stroke:rgba(120,140,90,0.25);}
 .subpieve-polygon{fill:rgba(200,150,90,0.15);stroke:rgba(180,130,70,0.5);stroke-width:1;cursor:pointer;outline:none;}
 .subpieve-polygon:hover{fill:rgba(200,150,90,0.30);stroke-width:1.8;}
-.subpieve-polygon:focus{outline:none;fill:rgba(200,150,90,0.40);stroke:#a06840;stroke-width:3;}
+.subpieve-polygon:focus,.subpieve-polygon.selected{outline:none;fill:rgba(200,150,90,0.40);stroke:#a06840;stroke-width:3;}
 .subpieve-polygon.dim{fill:rgba(200,150,90,0.08);stroke:rgba(180,130,70,0.25);}
 .leaflet-interactive:focus{outline:none;}
 /* Arbitrage badge "?" sur markers concernes */
@@ -204,6 +204,19 @@ const cluster = L.markerClusterGroup({
 const priorityLayer = L.layerGroup();
 const standardLayer = L.layerGroup();
 
+// Z5-UX-020 : mapping inverse spot → pieve/diocèse à partir de spot_ids[] des pieves.
+// Permet d'alimenter le breadcrumb au clic spot avec la chaîne complète.
+const SPOT_TO_PIEVE = {};
+for (const [pieveSlug, pieveData] of Object.entries(PATRIMOINE_POLYGONS.pieves)) {
+  for (const spotId of (pieveData.spot_ids || [])) {
+    SPOT_TO_PIEVE[spotId] = {
+      pieveSlug,
+      pieveDisplay: pieveData.pieve || pieveSlug,
+      dioceseDisplay: pieveData.diocese && pieveData.diocese !== '?' ? pieveData.diocese : null,
+    };
+  }
+}
+
 // Construction markers
 const markersBySlug = {};
 for (const site of SITES_PATRIMOINE) {
@@ -221,7 +234,7 @@ for (const site of SITES_PATRIMOINE) {
     iconAnchor: isPriority ? [9,9] : [7,7],
   });
   const marker = L.marker([site.lat, site.lon], {icon, title: site.nom});
-  marker.on('click', () => openPopup(marker, site));
+  marker.on('click', () => onSpotClick(marker, site));
   markersBySlug[site.slug] = {marker, site};
   if (isPriority) {
     priorityLayer.addLayer(marker);
@@ -405,33 +418,61 @@ setTimeout(updatePolygonLOD, 100);
 
 // === Breadcrumb ===
 const bc = document.getElementById('breadcrumb');
-let currentDiocese = null;
-let currentPieve = null;
+let currentDiocese = null;       // display name (clé de PATRIMOINE_POLYGONS.dioceses)
+let currentPieveSlug = null;     // slug (clé de PATRIMOINE_POLYGONS.pieves)
+let currentSpotSlug = null;      // slug du spot (Z5-UX-020)
+
+function getCurrentPieveDisplay() {
+  if (!currentPieveSlug) return null;
+  const pd = PATRIMOINE_POLYGONS.pieves[currentPieveSlug];
+  return pd ? (pd.pieve || currentPieveSlug) : currentPieveSlug;
+}
+function getCurrentSpotDisplay() {
+  if (!currentSpotSlug) return null;
+  const site = SITES_PATRIMOINE.find(s => s.slug === currentSpotSlug);
+  return site ? site.nom : currentSpotSlug;
+}
 
 function updateBreadcrumb() {
-  if (!currentDiocese && !currentPieve) {
+  if (!currentDiocese && !currentPieveSlug && !currentSpotSlug) {
     bc.classList.remove('visible');
     bc.innerHTML = '';
     return;
   }
   bc.classList.add('visible');
-  let html = '<span class="bc-item' + (!currentDiocese && !currentPieve ? ' active' : '') + '" data-level="corse">Corse</span>';
+  const pieveDisplay = getCurrentPieveDisplay();
+  const spotDisplay = getCurrentSpotDisplay();
+  let html = '<span class="bc-item" data-level="corse">Corse</span>';
   if (currentDiocese) {
     html += '<span class="bc-sep">›</span>';
-    html += '<span class="bc-item' + (!currentPieve ? ' active' : '') + '" data-level="diocese">' + escapeHtml(formatDioceseLabel(currentDiocese)) + '</span>';
+    const isActive = !currentPieveSlug && !currentSpotSlug;
+    html += '<span class="bc-item' + (isActive ? ' active' : '') + '" data-level="diocese">' + escapeHtml(formatDioceseLabel(currentDiocese)) + '</span>';
   }
-  if (currentPieve) {
+  if (pieveDisplay) {
     html += '<span class="bc-sep">›</span>';
-    html += '<span class="bc-item active" data-level="pieve">' + escapeHtml(formatPieveLabel(currentPieve)) + '</span>';
+    const isActive = !currentSpotSlug;
+    html += '<span class="bc-item' + (isActive ? ' active' : '') + '" data-level="pieve">' + escapeHtml(formatPieveLabel(pieveDisplay)) + '</span>';
+  }
+  if (spotDisplay) {
+    html += '<span class="bc-sep">›</span>';
+    html += '<span class="bc-item active" data-level="spot">' + escapeHtml(spotDisplay) + '</span>';
   }
   bc.innerHTML = html;
   bc.querySelectorAll('.bc-item').forEach(el => {
     el.addEventListener('click', () => {
       const lvl = el.dataset.level;
-      if (lvl === 'corse') { currentDiocese = null; currentPieve = null; map.setView([42.15, 9.10], 9); updateBreadcrumb(); }
-      else if (lvl === 'diocese' && currentDiocese) {
-        currentPieve = null;
+      if (lvl === 'corse') {
+        currentDiocese = null; currentPieveSlug = null; currentSpotSlug = null;
+        map.setView([42.15, 9.10], 9);
+        updateBreadcrumb();
+      } else if (lvl === 'diocese' && currentDiocese) {
+        currentPieveSlug = null; currentSpotSlug = null;
         const shape = dioceseShapesByName[currentDiocese];
+        if (shape) map.fitBounds(shape.getBounds(), {padding:[40,40]});
+        updateBreadcrumb();
+      } else if (lvl === 'pieve' && currentPieveSlug) {
+        currentSpotSlug = null;
+        const shape = pieveShapesByName[currentPieveSlug];
         if (shape) map.fitBounds(shape.getBounds(), {padding:[40,40]});
         updateBreadcrumb();
       }
@@ -439,17 +480,52 @@ function updateBreadcrumb() {
   });
 }
 
+// === Click handler spot (marker) — alimente breadcrumb avec chaîne complète (Z5-UX-020) ===
+function onSpotClick(marker, site) {
+  const inv = SPOT_TO_PIEVE[site.slug];
+  if (inv) {
+    currentDiocese = inv.dioceseDisplay;
+    currentPieveSlug = inv.pieveSlug;
+  }
+  currentSpotSlug = site.slug;
+  updateBreadcrumb();
+  openPopup(marker, site);
+}
+
+// === Highlight polygone actif (Z3-UX-019) — classe .selected gérée explicitement
+// car :focus SVG ne se déclenche pas en click souris sous Leaflet.
+function clearSelectedPolygons() {
+  for (const poly of Object.values(dioceseShapesByName)) {
+    const el = poly.getElement && poly.getElement();
+    if (el) el.classList.remove('selected');
+  }
+  for (const poly of Object.values(pieveShapesByName)) {
+    const el = poly.getElement && poly.getElement();
+    if (el) el.classList.remove('selected');
+  }
+}
+function selectPolygon(shape) {
+  clearSelectedPolygons();
+  const el = shape.getElement && shape.getElement();
+  if (el) el.classList.add('selected');
+}
+map.on('popupclose', clearSelectedPolygons);
+
 // === Click handler zones (diocese / pieve) ===
 function onZoneClick(level, name, data, shape) {
   // Zoom sur bounds
   map.fitBounds(shape.getBounds(), {padding:[40,40]});
+  // Highlight polygone actif (Z3-UX-019)
+  selectPolygon(shape);
   // Mise a jour breadcrumb
   if (level === 'diocese') {
     currentDiocese = name;
-    currentPieve = null;
+    currentPieveSlug = null;
+    currentSpotSlug = null;
   } else if (level === 'pieve') {
     currentDiocese = data.diocese && data.diocese !== '?' ? data.diocese : null;
-    currentPieve = data.pieve || name;
+    currentPieveSlug = name;
+    currentSpotSlug = null;
   }
   updateBreadcrumb();
   // Popup miniature : visuel pieve si existant (placeholder v0 - case vide stylisee)
@@ -464,7 +540,7 @@ function onZoneClick(level, name, data, shape) {
     ? `<img loading="lazy" class="tlx-popup-img" src="${visualUrl}" alt="${escapeHtml(name)}" onerror="this.outerHTML='<div class=\'tlx-popup-img fallback\'>Visuel à venir</div>'">`
     : `<div class="tlx-popup-img fallback">Visuel à venir</div>`;
   const subtitle = level === 'diocese'
-    ? pluralize(data.n_pieves, 'pieve', 'pieves')
+    ? `${pluralize(data.n_pieves, 'pieve', 'pieves')} · ${pluralize(data.n_spots_geographic ?? 0, 'spot', 'spots')}`
     : `${pluralize(data.n_spots_geographic ?? data.n_spots, 'spot', 'spots')}${data.diocese && data.diocese !== '?' ? ' · ' + formatLabel('diocèse', data.diocese) : ''}`;
   const titleText = level === 'diocese' ? formatDioceseLabel(name) : formatPieveLabel(data.pieve || name);
   const html = `<div class="tlx-popup">
@@ -494,6 +570,8 @@ function openZonePanel(level, name, data, visualUrl) {
   if (level === 'pieve' && data.diocese) metaParts.push(`<strong>Diocèse</strong> · ${escapeHtml(data.diocese)}`);
   if (level === 'pieve') metaParts.push(`<strong>Spots</strong> · ${data.n_spots_geographic ?? data.n_spots}`);
   if (level === 'diocese') metaParts.push(`<strong>Pieves</strong> · ${data.n_pieves}`);
+  // Z2-UX-012 : décompte spots agrégé enfants sur diocèse (somme des pieves)
+  if (level === 'diocese') metaParts.push(`<strong>Spots</strong> · ${data.n_spots_geographic ?? 0}`);
   // Z2-UX-014 : slug technique 'method' masqué de la vue user-facing (sans intérêt utilisateur)
   recto.innerHTML = `
     <div class="panel-cat">${cat}</div>
