@@ -32,10 +32,47 @@ from shapely.ops import unary_union
 ROOT = Path(__file__).resolve().parent.parent
 MAPPING_PATH = ROOT / "_drafts" / "pieves_communes_mapping.json"
 OVERRIDES_PATH = ROOT / "_drafts" / "PIEVE_OVERRIDES.json"
+PIEVE_DOY_OVERRIDES_PATH = ROOT / "_drafts" / "PIEVE_DOYENNES_OVERRIDES.json"
 CACHE_DIR = ROOT / "scripts" / ".cache"
 GEO_2A = CACHE_DIR / "communes-2A.geojson"
 GEO_2B = CACHE_DIR / "communes-2B.geojson"
 OUTPUT_PATH = ROOT / "docs" / "data" / "pieves_polygons.json"
+# B10-UX-025 — input pour recalcul rigoureux du doyenne_contemporain_majoritaire
+# par intersection polygonale (vs declaration Cowork qui peut etre incoherente
+# pour les pieves a cheval sur deux doyennes).
+DOYENNES_PATH = ROOT / "docs" / "data" / "doyennes_polygons.json"
+
+
+def latlng_polygon_to_shapely(latlng):
+    coords = [[c[1], c[0]] for c in latlng]
+    return Polygon(coords)
+
+
+def load_doyennes_shapes():
+    """Charge les polygones doyennes (Strat A) en shapely pour intersection."""
+    if not DOYENNES_PATH.exists():
+        return None
+    with DOYENNES_PATH.open(encoding="utf-8") as f:
+        data = json.load(f)
+    return {d["slug"]: latlng_polygon_to_shapely(d["polygon"]) for d in data["doyennes"]}
+
+
+def compute_majoritaire_by_intersection(pieve_geom, doyennes_shapes):
+    """Retourne le slug du doyenne avec le plus grand % d'intersection
+    avec la geometrie pieve (recalcul rigoureux B10-UX-025)."""
+    if not doyennes_shapes:
+        return None
+    best_slug = None
+    best_pct = 0.0
+    for doy_slug, doy_geom in doyennes_shapes.items():
+        if not pieve_geom.intersects(doy_geom):
+            continue
+        inter = pieve_geom.intersection(doy_geom)
+        pct = inter.area / pieve_geom.area
+        if pct > best_pct:
+            best_pct = pct
+            best_slug = doy_slug
+    return best_slug
 
 
 def load_communes_index():
@@ -87,6 +124,16 @@ def main():
         overrides_data = json.load(f)
     overrides = overrides_data.get("overrides") or {}
 
+    # Brief 10 — overrides "pieve -> [doyennes_visibles]" pour permettre a une
+    # pieve d'apparaitre dans plusieurs doyennes a la fois (multi-affectation
+    # arbitree manuellement par Soleil sans modifier les frontieres doyennes).
+    pieve_doy_overrides = {}
+    if PIEVE_DOY_OVERRIDES_PATH.exists():
+        with PIEVE_DOY_OVERRIDES_PATH.open(encoding="utf-8") as f:
+            pieve_doy_data = json.load(f)
+        pieve_doy_overrides = pieve_doy_data.get("overrides") or {}
+        print(f"[build] PIEVE_DOYENNES_OVERRIDES: {len(pieve_doy_overrides)} pieves multi-affectees")
+
     # Construire commune INSEE -> pieve_slug à partir du mapping Cowork
     commune_to_pieve = {}
     for p in mapping_data["pieves"]:
@@ -111,6 +158,16 @@ def main():
     communes_index = load_communes_index()
     print(f"[build] communes indexées: {len(communes_index)} (attendu 360)")
 
+    # B10-UX-025 — chargement des polygones doyennes pour recalcul rigoureux
+    # du doyenne_contemporain_majoritaire par intersection. Le mapping Cowork
+    # reste intact, on derive juste le rattachement majoritaire de la geometrie
+    # reelle (resout les pieves a cheval ou les declarations incoherentes).
+    doyennes_shapes = load_doyennes_shapes()
+    if doyennes_shapes:
+        print(f"[build] doyennes shapes chargees pour recalcul majoritaire : {len(doyennes_shapes)}")
+    else:
+        print(f"[build] WARN doyennes_polygons.json absent, fallback declaration Cowork")
+
     # Métadonnées (name, diocese_medieval, doyenne_contemporain_majoritaire) du mapping
     meta_by_slug = {p["slug"]: p for p in mapping_data["pieves"]}
 
@@ -120,6 +177,7 @@ def main():
     total_area_km2 = 0.0
     not_found = []
     surface_by_diocese = {}
+    reclassed = []   # B10-UX-025 — log des reclasses (declared vs actual)
 
     for slug, insee_list in pieve_to_communes.items():
         meta = meta_by_slug.get(slug, {})
@@ -154,11 +212,29 @@ def main():
         diocese = meta.get("diocese_medieval", "?")
         surface_by_diocese[diocese] = surface_by_diocese.get(diocese, 0) + area_km2
 
+        # B10-UX-025 — recalcul rigoureux du doyenne majoritaire par intersection
+        # polygonale shapely (sur le polygone simplifie pour coherence visuelle).
+        declared_doy = meta.get("doyenne_contemporain_majoritaire")
+        if doyennes_shapes:
+            actual_doy = compute_majoritaire_by_intersection(simplified, doyennes_shapes)
+            if actual_doy and actual_doy != declared_doy:
+                reclassed.append({"pieve": slug, "declared": declared_doy, "actual": actual_doy})
+            doyenne_final = actual_doy or declared_doy
+        else:
+            doyenne_final = declared_doy
+
+        # Brief 10 (post-arbitrage Soleil) — doyennes_visibles : liste des doyennes
+        # ou la pieve apparait au drill-down N2. Override prioritaire sur le
+        # majoritaire calcule. Permet la multi-affectation (ex: Caccia visible
+        # au clic Balagne ET au clic Golo).
+        doyennes_visibles = pieve_doy_overrides.get(slug) or [doyenne_final]
+
         entry = {
             "slug": slug,
             "name": meta.get("name", slug),
             "diocese_medieval": diocese,
-            "doyenne_contemporain_majoritaire": meta.get("doyenne_contemporain_majoritaire"),
+            "doyenne_contemporain_majoritaire": doyenne_final,
+            "doyennes_visibles": doyennes_visibles,
             "communes_count": len(polys),
             "polygon": latlng_polygon,
         }
@@ -177,6 +253,8 @@ def main():
         "source_communes": "github.com/gregoiredavid/france-geojson (departements 2A + 2B)",
         "tolerance_degrees": args.tolerance,
         "overrides_applied": overrides_applied,
+        "doyenne_majoritaire_recalc": "intersection_polygonale_shapely_vs_declaration_cowork",
+        "doyenne_majoritaire_reclassed": reclassed,
         "stats": {
             "pieves_count": len(out_pieves),
             "total_communes": sum(p["communes_count"] for p in out_pieves),
@@ -185,6 +263,7 @@ def main():
             "approx_total_area_km2": round(total_area_km2, 1),
             "surface_by_diocese_km2": {k: round(v, 1) for k, v in surface_by_diocese.items()},
             "communes_not_found_in_geo": not_found,
+            "doyenne_reclassed_count": len(reclassed),
         },
         "pieves": out_pieves,
     }
@@ -204,6 +283,10 @@ def main():
         print(f"[build] {len(not_found)} pieves avec INSEE manquants:")
         for nf in not_found:
             print(f"  - {nf['pieve']}: {nf['insee']}")
+    if reclassed:
+        print(f"[build] B10-UX-025 reclasses {len(reclassed)} pieves (declared Cowork -> majoritaire reel) :")
+        for rc in reclassed:
+            print(f"  - {rc['pieve']}: {rc['declared']} -> {rc['actual']}")
 
 
 if __name__ == "__main__":
