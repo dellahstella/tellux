@@ -519,7 +519,7 @@ function onZoneClick(level, name, data, shape) {
     ? `<img loading="lazy" class="tlx-popup-img" src="${visualUrl}" alt="${escapeHtml(name)}" onerror="this.outerHTML='<div class=\'tlx-popup-img fallback\'>Visuel à venir</div>'">`
     : `<div class="tlx-popup-img fallback">Visuel à venir</div>`;
   const subtitle = level === 'diocese'
-    ? pluralize(data.n_pieves, 'pieve', 'pieves')
+    ? `${pluralize(data.n_pieves, 'pieve', 'pieves')} · ${pluralize(data.n_spots_geographic ?? 0, 'spot', 'spots')}`
     : `${pluralize(data.n_spots_geographic ?? data.n_spots, 'spot', 'spots')}${data.diocese && data.diocese !== '?' ? ' · ' + formatLabel('diocèse', data.diocese) : ''}`;
   const titleText = level === 'diocese' ? formatDioceseLabel(name) : formatPieveLabel(data.pieve || name);
   const html = `<div class="tlx-popup">
@@ -549,6 +549,8 @@ function openZonePanel(level, name, data, visualUrl) {
   if (level === 'pieve' && data.diocese) metaParts.push(`<strong>Diocèse</strong> · ${escapeHtml(data.diocese)}`);
   if (level === 'pieve') metaParts.push(`<strong>Spots</strong> · ${data.n_spots_geographic ?? data.n_spots}`);
   if (level === 'diocese') metaParts.push(`<strong>Pieves</strong> · ${data.n_pieves}`);
+  // Z2-UX-012 : décompte spots agrégé enfants sur diocèse (somme des pieves)
+  if (level === 'diocese') metaParts.push(`<strong>Spots</strong> · ${data.n_spots_geographic ?? 0}`);
   // Z2-UX-014 : slug technique 'method' masqué de la vue user-facing (sans intérêt utilisateur)
   recto.innerHTML = `
     <div class="panel-cat">${cat}</div>
