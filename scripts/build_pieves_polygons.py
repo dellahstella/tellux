@@ -31,6 +31,7 @@ from shapely.ops import unary_union
 
 ROOT = Path(__file__).resolve().parent.parent
 MAPPING_PATH = ROOT / "_drafts" / "pieves_communes_mapping.json"
+MAPPING_V2_PATH = ROOT / "_drafts" / "pieves_communes_mapping_v2_canonicite_casta.json"
 OVERRIDES_PATH = ROOT / "_drafts" / "PIEVE_OVERRIDES.json"
 PIEVE_DOY_OVERRIDES_PATH = ROOT / "_drafts" / "PIEVE_DOYENNES_OVERRIDES.json"
 CACHE_DIR = ROOT / "scripts" / ".cache"
@@ -143,6 +144,20 @@ def main():
         overrides_data = json.load(f)
     overrides = overrides_data.get("overrides") or {}
 
+    # Brief 17 Phase B — chargement mapping v2 canonicite Casta si present.
+    # Restaure les 8 pieves Casta absorbees + applique 39 transferts de communes
+    # depuis pieves v1 vers les pieves restaurees. Resultat : 47 pieves au lieu
+    # de 39 dans le manifest final.
+    mapping_v2 = None
+    if MAPPING_V2_PATH.exists():
+        with MAPPING_V2_PATH.open(encoding="utf-8") as f:
+            mapping_v2 = json.load(f)
+        print(f"[build] mapping v2 (canonicite Casta) charge : "
+              f"{len(mapping_v2.get('pieves_added', []))} pieves restaurees, "
+              f"{len(mapping_v2.get('transferts', []))} transferts")
+    else:
+        print(f"[build] mapping v2 absent — fallback v1 39 pieves uniquement")
+
     # Brief 10 — overrides "pieve -> [doyennes_visibles]" pour permettre a une
     # pieve d'apparaitre dans plusieurs doyennes a la fois (multi-affectation
     # arbitree manuellement par Soleil sans modifier les frontieres doyennes).
@@ -153,11 +168,27 @@ def main():
         pieve_doy_overrides = pieve_doy_data.get("overrides") or {}
         print(f"[build] PIEVE_DOYENNES_OVERRIDES: {len(pieve_doy_overrides)} pieves multi-affectees")
 
-    # Construire commune INSEE -> pieve_slug à partir du mapping Cowork
+    # Construire commune INSEE -> pieve_slug à partir du mapping Cowork v1
     commune_to_pieve = {}
     for p in mapping_data["pieves"]:
         for insee in p["communes_insee"]:
             commune_to_pieve[insee] = p["slug"]
+
+    # Brief 17 Phase B — appliquer transferts v2 (commune passe de pieve_v1 a
+    # pieve_v2 restauree) AVANT l'union polygonale.
+    transferts_appliques = []
+    if mapping_v2:
+        for t in mapping_v2.get("transferts", []):
+            insee = t["commune_insee"]
+            from_p = t.get("de_pieve")
+            to_p = t.get("vers_pieve")
+            current = commune_to_pieve.get(insee)
+            if current != from_p:
+                # Soit la commune n'est pas dans la pieve attendue, soit deja
+                # transferee. On applique quand meme le transfert vers to_p.
+                pass
+            commune_to_pieve[insee] = to_p
+            transferts_appliques.append({"insee": insee, "from": current, "to": to_p})
 
     # Appliquer overrides (post-mapping Cowork)
     overrides_applied = []
@@ -189,6 +220,10 @@ def main():
 
     # Métadonnées (name, diocese_medieval, doyenne_contemporain_majoritaire) du mapping
     meta_by_slug = {p["slug"]: p for p in mapping_data["pieves"]}
+    # Brief 17 Phase B — ajouter metadonnees des 8 pieves restaurees v2.
+    if mapping_v2:
+        for p in mapping_v2.get("pieves_added", []):
+            meta_by_slug[p["slug"]] = p
 
     out_pieves = []
     total_vertices_before = 0
@@ -272,12 +307,16 @@ def main():
               + (f", dropped {len(dropped)}" if dropped else ""))
 
     output = {
-        "version": "v1-stratA-from-communes",
+        "version": "v3-stratA-canonicite-casta" if mapping_v2 else "v1-stratA-from-communes",
         "generated_by": "scripts/build_pieves_polygons.py",
-        "source_mapping": "_drafts/pieves_communes_mapping.json (Cowork)",
+        "source_mapping": "_drafts/pieves_communes_mapping.json (Cowork v1)" + (
+            " + _drafts/pieves_communes_mapping_v2_canonicite_casta.json (Cowork v2 Brief 17)"
+            if mapping_v2 else ""
+        ),
         "source_communes": "github.com/gregoiredavid/france-geojson (departements 2A + 2B)",
         "tolerance_degrees": args.tolerance,
         "overrides_applied": overrides_applied,
+        "transferts_v2_appliques": transferts_appliques,
         "doyenne_majoritaire_recalc": "intersection_polygonale_shapely_vs_declaration_cowork",
         "doyenne_majoritaire_reclassed": reclassed,
         "stats": {
