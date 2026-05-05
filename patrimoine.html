@@ -723,9 +723,11 @@ function exitNiveau2View() {
   // Le tooltip Leaflet sticky se reouvre via mouseover residuel pendant le
   // flyTo. On ferme via API + cleanup DOM defensif au moveend pour eviter
   // le tooltip orphelin (couche tilePane n'a pas de hover en niveau 1).
+  // map.closeTooltip() sans arg peut planter si aucun tooltip global ouvert
+  // (regression observee Brief 13) — try/catch defensif.
   map.closePopup();
   const closeAllDoyenneTooltips = () => {
-    map.closeTooltip();
+    try { map.closeTooltip(); } catch (_) { /* aucun tooltip global ouvert */ }
     for (const poly of Object.values(doyenneShapesBySlug)) {
       if (poly.closeTooltip) poly.closeTooltip();
     }
@@ -772,7 +774,10 @@ function getCurrentSpotDisplay() {
 }
 
 function updateBreadcrumb() {
-  if (!currentDoyenneSlug && !currentPieveSlugV2 && !currentSpotSlug) {
+  // Brief 13 — breadcrumb limite a 3 segments max : Corse > Doyenne > Pieve.
+  // Le spot n'apparait pas dans le breadcrumb (represente par sa popup).
+  // currentSpotSlug est conserve cote etat mais ignore par updateBreadcrumb.
+  if (!currentDoyenneSlug && !currentPieveSlugV2) {
     bc.classList.remove('visible');
     bc.innerHTML = '';
     return;
@@ -780,21 +785,15 @@ function updateBreadcrumb() {
   bc.classList.add('visible');
   const doyenneDisplay = currentDoyenneSlug ? doyenneNameBySlug[currentDoyenneSlug] : null;
   const pieveDisplay = currentPieveSlugV2 ? pieveNameBySlugV2[currentPieveSlugV2] : null;
-  const spotDisplay = getCurrentSpotDisplay();
   let html = '<span class="bc-item" data-level="corse">Corse</span>';
   if (doyenneDisplay) {
     html += '<span class="bc-sep">›</span>';
-    const isActive = !currentPieveSlugV2 && !currentSpotSlug;
+    const isActive = !currentPieveSlugV2;
     html += '<span class="bc-item' + (isActive ? ' active' : '') + '" data-level="doyenne">' + escapeHtml(doyenneDisplay) + '</span>';
   }
   if (pieveDisplay) {
     html += '<span class="bc-sep">›</span>';
-    const isActive = !currentSpotSlug;
-    html += '<span class="bc-item' + (isActive ? ' active' : '') + '" data-level="pieve-v2">' + escapeHtml(pieveDisplay) + '</span>';
-  }
-  if (spotDisplay) {
-    html += '<span class="bc-sep">›</span>';
-    html += '<span class="bc-item active" data-level="spot">' + escapeHtml(spotDisplay) + '</span>';
+    html += '<span class="bc-item active" data-level="pieve-v2">' + escapeHtml(pieveDisplay) + '</span>';
   }
   bc.innerHTML = html;
   bc.querySelectorAll('.bc-item').forEach(el => {
