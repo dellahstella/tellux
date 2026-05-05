@@ -103,7 +103,7 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 #breadcrumb .bc-item{cursor:pointer;transition:color .2s;color:#8c6e50;}
 #breadcrumb .bc-item:hover{color:var(--tx-ardoise);}
 #breadcrumb .bc-item.active{color:var(--tx-ardoise);font-weight:600;cursor:default;}
-#breadcrumb .bc-sep{color:#b89c7a;margin:0 8px;}
+#breadcrumb .bc-sep{color:#5a3f2a;margin:0 10px;font-weight:500;}
 /* Brief 8 — Niveau 1 (vue Corse) : diocèses pleins, fill notable, stroke marqué.
    fill-opacity:1 + stroke-opacity:1 neutralisent les attributs SVG Leaflet (0.2 / 1) pour
    laisser les rgba CSS contrôler entièrement l'opacité. */
@@ -561,9 +561,12 @@ fetch('docs/data/pieves_polygons.json')
       const doyennesVisibles = p.doyennes_visibles && p.doyennes_visibles.length
         ? p.doyennes_visibles
         : (p.doyenne_contemporain_majoritaire ? [p.doyenne_contemporain_majoritaire] : []);
+      // Brief 11 (B11-UX-030) — tooltip pieve prefixe "Pieve di X" pour
+      // distinguer du tooltip doyenne (qui affiche juste "Cap", "Bastia"...).
+      const tooltipLabel = 'Pieve di ' + p.name;
       for (const doy of doyennesVisibles) {
         const poly = L.polygon(p.polygon, {className: 'pieve-polygon-v2'});
-        poly.bindTooltip(p.name, {sticky:true, direction:'top', className:'tlx-tt'});
+        poly.bindTooltip(tooltipLabel, {sticky:true, direction:'top', className:'tlx-tt'});
         poly.on('click', () => onPieveClickV2(p.slug, p.name, poly));
         if (!pievesByDoyenneLayer.has(doy)) pievesByDoyenneLayer.set(doy, L.layerGroup());
         pievesByDoyenneLayer.get(doy).addLayer(poly);
@@ -702,8 +705,20 @@ function exitNiveau2View() {
   // Re-attacher couche niveau 1 (14 spots illustres).
   if (!map.hasLayer(spotsIllustratedLayer)) spotsIllustratedLayer.addTo(map);
 
-  // Clear highlights polygones et popup (Brief 6 preserve).
+  // Clear highlights polygones, popup et tooltip persistant (B11-UX-029).
+  // Le tooltip Leaflet sticky se reouvre via mouseover residuel pendant le
+  // flyTo. On ferme via API + cleanup DOM defensif au moveend pour eviter
+  // le tooltip orphelin (couche tilePane n'a pas de hover en niveau 1).
   map.closePopup();
+  const closeAllDoyenneTooltips = () => {
+    map.closeTooltip();
+    for (const poly of Object.values(doyenneShapesBySlug)) {
+      if (poly.closeTooltip) poly.closeTooltip();
+    }
+    document.querySelectorAll('.leaflet-tooltip-pane .leaflet-tooltip').forEach(el => el.remove());
+  };
+  closeAllDoyenneTooltips();
+  map.once('moveend', closeAllDoyenneTooltips);
   if (typeof clearSelectedPolygons === 'function') clearSelectedPolygons();
   for (const p of Object.values(pieveShapesBySlugV2)) {
     const el = p.getElement && p.getElement();
