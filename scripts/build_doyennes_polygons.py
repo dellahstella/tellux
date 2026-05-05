@@ -147,11 +147,18 @@ def main():
         area_km2 = simplified.area * 9156
         total_area_km2 += area_km2
 
+        display = compute_display_name(d["name"])
         entry = {
             "slug": slug,
             "name": d["name"],
-            "display_name": compute_display_name(d["name"]),
+            "display_name": display,
             "tone": TONE_BY_SLUG.get(slug, "A"),
+            # Brief 14 — chemin speculatif vers la miniature illustration. Si le
+            # fichier n'existe pas, le fallback typographique JS (initiale du
+            # display_name) prend le relais via onerror du <img>. La bascule est
+            # automatique au depot d'un fichier doyenne_<slug>_tellux_v2.png.
+            "illustration_path": f"docs/assets/visuels/doyenne_{slug.replace('doyenne_', '')}_tellux_v2.png",
+            "initiale": display[:1].upper() if display else "?",
             "communes_count": len(polys),
             "polygon": latlng_polygon,
         }
