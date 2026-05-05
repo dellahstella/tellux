@@ -530,6 +530,15 @@ function onDoyenneClick(slug, name, shape) {
 // === Brief 9 — Niveau 2 : pieves medievales par doyenne (drill-down) ===
 // Polygones pieves generes par scripts/build_pieves_polygons.py (Strategie A,
 // union de polygones communaux INSEE depuis _drafts/pieves_communes_mapping.json).
+
+// Brief 12 (B11-UX-028) — Seuil multi-appartenance pieve -> doyenne. Une pieve
+// apparait au drill-down d'un doyenne si :
+//   - elle est listee dans `doyennes_visibles` (override manuel Brief 10) OU
+//   - son ratio d'intersection avec ce doyenne est >= SEUIL_PIEVE_DOYENNE.
+// Logique union (Option B Brief 12) : les overrides Brief 10 ne sont plus
+// exclusifs, le seuil 25% peut ajouter des doyennes secondaires (ex: Plaine
+// Orientale recupere bozio/moriani/rogna malgre overrides cortenais/golo).
+const SEUIL_PIEVE_DOYENNE = 0.25;
 const pievesByDoyenneLayer = new Map();    // doyenneSlug -> LayerGroup pieves
 const spotsLevel2ByDoyenne = new Map();    // doyenneSlug -> LayerGroup tous spots du doyenne
 const pieveShapesBySlugV2 = {};            // pieveSlug -> Leaflet polygon
@@ -558,9 +567,14 @@ fetch('docs/data/pieves_polygons.json')
       pieveNameBySlugV2[p.slug] = p.name;
       pievePolygonsBySlugV2[p.slug] = p.polygon;
       pieveDoyenneBySlugV2[p.slug] = p.doyenne_contemporain_majoritaire;
-      const doyennesVisibles = p.doyennes_visibles && p.doyennes_visibles.length
+      // Brief 12 — UNION : overrides manuels (Brief 10) + auto seuil 25%.
+      const overrides = p.doyennes_visibles && p.doyennes_visibles.length
         ? p.doyennes_visibles
         : (p.doyenne_contemporain_majoritaire ? [p.doyenne_contemporain_majoritaire] : []);
+      const auto = (p.doyennes_appartenance || [])
+        .filter(a => a.ratio >= SEUIL_PIEVE_DOYENNE)
+        .map(a => a.slug);
+      const doyennesVisibles = Array.from(new Set([...overrides, ...auto]));
       // Brief 11 (B11-UX-030) — tooltip pieve prefixe "Pieve di X" pour
       // distinguer du tooltip doyenne (qui affiche juste "Cap", "Bastia"...).
       const tooltipLabel = 'Pieve di ' + p.name;
