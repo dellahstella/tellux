@@ -679,6 +679,48 @@ fetch('docs/data/pieves_polygons.json')
       '| spots->pieves rattaches :', mappedPieve, '| hors pieves :', unmappedPieve);
     console.log('[Tellux patrimoine] Pieves par doyenne (niveau 2) :',
       Array.from(pievesByDoyenneLayer.entries()).map(([d, lg]) => d + ':' + lg.getLayers().length).join(', '));
+
+    // Brief 17 — Application overrides spots orphans (rattachement manuel
+    // spot -> doyenne / pieve via _drafts/SPOT_DOYENNE_OVERRIDES.json). Liste
+    // des spots adressables = ceux invisibles aux deux niveaux : non illustres
+    // (pas dans ILLUSTRATED_SPOTS) ET non rattaches a un doyenne via
+    // SPOT_TO_DOYENNE (point-in-polygon doyenne echec).
+    fetch('_drafts/SPOT_DOYENNE_OVERRIDES.json')
+      .then(r => r.ok ? r.json() : {overrides: {}})
+      .then(ovrData => {
+        const overrides = (ovrData && ovrData.overrides) || {};
+        let adressed = 0, skipped = 0;
+        for (const [slug, target] of Object.entries(overrides)) {
+          const m = markersBySlug[slug];
+          if (!m || !target || !target.doyenne) { skipped++; continue; }
+          const doy = target.doyenne;
+          if (!spotsLevel2ByDoyenne.has(doy)) spotsLevel2ByDoyenne.set(doy, L.layerGroup());
+          // Si deja attache via SPOT_TO_DOYENNE, on n'ajoute pas de doublon.
+          const existingDoy = SPOT_TO_DOYENNE.get(slug);
+          if (existingDoy !== doy) {
+            spotsLevel2ByDoyenne.get(doy).addLayer(m.marker);
+            SPOT_TO_DOYENNE.set(slug, doy);
+          }
+          if (target.pieve) SPOT_TO_PIEVE_V2.set(slug, target.pieve);
+          adressed++;
+        }
+        // Recompte des orphans encore invisibles : non illustres ET non
+        // attaches a un doyenne (apres overrides).
+        const stillInvisible = [];
+        for (const slug in markersBySlug) {
+          if (ILLUSTRATED_SPOTS.has(slug)) continue;
+          if (!SPOT_TO_DOYENNE.has(slug)) stillInvisible.push(slug);
+        }
+        console.log('[Tellux patrimoine] Overrides spots orphans :', adressed, 'adresses |',
+          skipped, 'ignores (slug ou doyenne invalide) |', stillInvisible.length, 'encore invisibles');
+        if (stillInvisible.length > 0 && stillInvisible.length <= 50) {
+          console.log('[Tellux patrimoine] Liste orphans encore invisibles :', stillInvisible);
+        }
+      })
+      .catch(err => {
+        console.warn('[Tellux patrimoine] SPOT_DOYENNE_OVERRIDES.json absent ou invalide :', err && err.message);
+      });
+
     // Brief 15 — flag pret pour applyHash initial (apres doyennes aussi).
     _pievesLoaded = true;
     if (typeof _tryApplyInitialHash === 'function') _tryApplyInitialHash();
