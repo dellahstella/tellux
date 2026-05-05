@@ -157,6 +157,24 @@ body.niveau-2 #btn-retour-corse{display:flex;}
 .doyenne-mini-label{font-family:'Fraunces',serif;font-size:13px;font-weight:600;color:#1F2329;text-align:center;text-shadow:0 1px 3px rgba(245,240,231,0.95),0 0 8px rgba(245,240,231,0.95);max-width:120px;line-height:1.1;}
 body.niveau-2 .doyenne-mini{display:none;}
 
+/* Brief 16 — Legende visuelle (bottom-right, au-dessus attribution Leaflet).
+   Bouton "?" rond toujours visible, panneau s'ouvre au clic vers haut-gauche.
+   Replie par defaut, etat persiste via localStorage. */
+#legende{position:absolute;bottom:36px;right:12px;z-index:1000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+#legende-toggle{width:36px;height:36px;border-radius:50%;background:rgba(245,240,231,0.95);backdrop-filter:blur(8px);border:1px solid var(--border);color:var(--tx-ardoise);font-family:var(--font-display);font-size:18px;font-weight:600;cursor:pointer;box-shadow:var(--shadow);transition:background .2s,color .2s,transform .2s;display:flex;align-items:center;justify-content:center;line-height:1;}
+#legende-toggle:hover{background:var(--tx-ocre);color:var(--tx-pierre);transform:scale(1.05);}
+#legende-toggle:focus-visible{outline:2px solid var(--tx-ocre);outline-offset:2px;}
+#legende-content{background:rgba(245,240,231,0.97);backdrop-filter:blur(8px);border-radius:var(--r2);box-shadow:var(--shadow-lg);padding:16px 18px;max-width:280px;font-size:12.5px;line-height:1.5;color:var(--tx-ardoise);transition:opacity .25s,transform .25s;transform-origin:bottom right;}
+#legende.collapsed #legende-content{display:none;}
+#legende-content h3{font-family:var(--font-display);font-size:14px;font-weight:600;color:var(--tx-ardoise);margin-bottom:10px;letter-spacing:0.02em;}
+#legende-content h4{font-family:var(--font);font-size:11px;font-weight:600;color:var(--tx-ocre);text-transform:uppercase;letter-spacing:0.06em;margin:10px 0 6px;}
+#legende-content section + section{border-top:1px solid var(--border);padding-top:8px;}
+#legende-content p{margin:4px 0;}
+#legende-content p strong{color:var(--tx-ardoise);font-weight:600;}
+#legende-content .hint{font-size:11px;color:var(--tx-mica);font-style:italic;margin-top:6px;}
+.legend-marker{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--tx-maquis);border:2px solid var(--tx-pierre);box-shadow:0 1px 4px rgba(0,0,0,0.3);vertical-align:middle;margin-right:6px;}
+.legend-marker.priority{background:var(--tx-ocre);width:18px;height:18px;border-width:3px;color:var(--tx-pierre);font-size:10px;font-weight:700;}
+
 /* Brief 9 — Polygones pieves medievales (drill-down niveau 2). Stroke sepia
    (palette DA Tellux v2 cohesive avec popups/breadcrumb), fill discret pour
    laisser lire le fond, hover et selected (Brief 6 preserve) marques. */
@@ -184,6 +202,23 @@ body.niveau-2 .doyenne-mini{display:none;}
   <span class="crumb pieve-crumb" data-level="pieve" style="display:none"></span>
 </nav>
 <button id="btn-retour-corse" type="button" aria-label="Retour vue d'ensemble Corse">← Vue d'ensemble</button>
+<aside id="legende" class="collapsed">
+  <button id="legende-toggle" type="button" aria-label="Légende" aria-expanded="false">?</button>
+  <div id="legende-content" role="region" aria-label="Légende patrimoine">
+    <h3>Légende</h3>
+    <section>
+      <h4>Niveaux de navigation</h4>
+      <p><strong>Doyennés</strong> (niveau 1) — découpage ecclésiastique contemporain.</p>
+      <p><strong>Pieves</strong> (niveau 2) — entités médiévales canoniques (Inventaire Casta).</p>
+      <p class="hint">Les couleurs alternées des doyennés sont uniquement visuelles, sans catégorisation.</p>
+    </section>
+    <section>
+      <h4>Sites patrimoniaux</h4>
+      <p><span class="legend-marker priority">★</span>Site illustré (visuel disponible)</p>
+      <p><span class="legend-marker"></span>Site documenté (visuel à venir)</p>
+    </section>
+  </div>
+</aside>
 <aside id="panel" aria-hidden="true">
   <button id="panel-close" aria-label="Fermer le panneau"></button>
   <div id="panel-card">
@@ -979,6 +1014,26 @@ function openZonePanel(level, name, data, visualUrl) {
 console.log(`[Tellux Patrimoine] ${Object.keys(PATRIMOINE_POLYGONS.pieves).length} pieves + ${Object.keys(PATRIMOINE_POLYGONS.dioceses).length} dioceses chargees.`);
 
 console.log(`[Tellux patrimoine] Brief 8 revise (Strat A) — vue doyennes contemporains du diocese d'Ajaccio + ${spotsIllustratedLayer.getLayers().length} spots illustres. Polygones generes par union de polygones communaux INSEE (cf. scripts/build_doyennes_polygons.py). Couches diocese/pieve dormantes (Brief 9 ulterieur).`);
+
+// === Brief 16 — Legende visuelle repliable + persistance localStorage ===
+(function initLegende() {
+  const legende = document.getElementById('legende');
+  const toggle = document.getElementById('legende-toggle');
+  if (!legende || !toggle) return;
+  const STORAGE_KEY = 'tlx_patrimoine_legende_open';
+  // Restaurer etat depuis localStorage (defaut : repliee).
+  try {
+    if (localStorage.getItem(STORAGE_KEY) === '1') {
+      legende.classList.remove('collapsed');
+      toggle.setAttribute('aria-expanded', 'true');
+    }
+  } catch (_) { /* localStorage indisponible (Safari prive, etc.) */ }
+  toggle.addEventListener('click', () => {
+    const open = legende.classList.toggle('collapsed') === false;
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    try { localStorage.setItem(STORAGE_KEY, open ? '1' : '0'); } catch (_) {}
+  });
+})();
 
 // === Brief 15 — URL hash bookmarking 3 niveaux ===
 // Format hash : #<doyenne_short>/<pieve_short>/<spot_short>
