@@ -147,7 +147,12 @@ body.niveau-2 #btn-retour-corse{display:flex;}
 .doyenne-mini-img,.doyenne-mini-fallback{width:64px;height:64px;border-radius:50%;border:2px solid #1F2329;background:#F5F0E7;box-shadow:0 4px 12px rgba(31,35,41,0.25);object-fit:cover;display:flex;align-items:center;justify-content:center;}
 .doyenne-mini-fallback{font-family:'Fraunces',serif;font-size:28px;font-weight:600;color:#1F2329;}
 .doyenne-mini-label{font-family:'Fraunces',serif;font-size:13px;font-weight:600;color:#1F2329;text-align:center;text-shadow:0 1px 3px rgba(245,240,231,0.95),0 0 8px rgba(245,240,231,0.95);max-width:120px;line-height:1.1;}
-body.niveau-2 .doyenne-mini{display:none;}
+/* Brief 19 — Bug visibilite N2 (Brief 14) : la regle .doyenne-mini cache
+   l'inner mais le wrapper Leaflet outer .doyenne-mini-marker reste visible
+   (boite 120x96 transparente cliquable). Fix CSS defensif sur le wrapper
+   (en backup du detach LayerGroup cote JS). */
+body.niveau-2 .doyenne-mini,
+body.niveau-2 .doyenne-mini-marker{display:none !important;pointer-events:none;}
 
 /* Brief 16 — Legende visuelle (bottom-right, au-dessus attribution Leaflet).
    Bouton "?" rond toujours visible, panneau s'ouvre au clic vers haut-gauche.
@@ -497,6 +502,23 @@ const doyenneNameBySlug = {};
 const doyennePolygonsBySlug = {};   // [lat,lng][] pour point-in-polygon
 const SPOT_TO_DOYENNE = new Map();  // spot.slug -> doyenne.slug
 
+// Brief 19 — LayerGroup miniatures doyennes (attache N1, detache N2).
+// Pattern aligne sur spotsLevel1Layer Brief 8 : detach via map.removeLayer
+// dans enterNiveau2View, reattach dans exitNiveau2View.
+const doyenneMinisLayer = L.layerGroup();
+
+// Brief 19 — Mapping illustrations diocese -> doyenne (5/10 doyennes).
+// Recyclage des visuels diocese existants pour donner une identite visuelle
+// aux miniatures. Les 5 autres doyennes gardent le fallback typographique
+// (initiale du display_name, geree par onerror du <img>).
+const DOYENNE_ILLUSTRATIONS = {
+  doyenne_ajaccio: 'docs/assets/visuels/diocese_d_ajaccio_tellux_v2.png',
+  doyenne_plaine_orientale: 'docs/assets/visuels/diocese_d_aleria_tellux_v2.png',
+  doyenne_de_bastia: 'docs/assets/visuels/diocese_de_mariana_tellux_v2.png',
+  doyenne_piana_vico_sari: 'docs/assets/visuels/diocese_de_sagone_tellux_v2.png',
+  doyenne_du_cap: 'docs/assets/visuels/diocese_du_nebbio_tellux_v2.png',
+};
+
 // Ray-casting point-in-polygon (lat/lng — algo standard, sans dependance externe).
 function pointInPolygon(lat, lng, polygon) {
   let inside = false;
@@ -533,18 +555,45 @@ fetch('docs/data/doyennes_polygons.json')
       doyenneNameBySlug[d.slug] = display;
       doyennePolygonsBySlug[d.slug] = d.polygon;
 
-      // Brief 14 — Miniature illustration au centroide. L'image est tentee
-      // avec onerror -> fallback typographique (initiale du display_name).
-      // Cachee en niveau 2 via CSS body.niveau-2 .doyenne-mini.
+      // Brief 14 + Brief 19 — Miniature illustration au centroide.
+      // Priorites de path :
+      //   1) d.illustration_path (Brief 14, chemin speculatif futur visuel
+      //      doyenne dedie : doyenne_<slug>_tellux_v2.png)
+      //   2) DOYENNE_ILLUSTRATIONS[d.slug] (Brief 19, recyclage diocese 5/10)
+      //   3) onerror -> fallback typographique (initiale du display_name)
+      // Brief 19 : marker attache a doyenneMinisLayer (detache en N2 via
+      // enterNiveau2View, reattache via exitNiveau2View). CSS defensif sur
+      // .doyenne-mini-marker (wrapper Leaflet) en backup.
       const center = poly.getBounds().getCenter();
       const initiale = (d.initiale || display.charAt(0) || '?').toUpperCase();
-      const path = d.illustration_path || '';
+      const speculativePath = d.illustration_path || '';
+      const recycledPath = DOYENNE_ILLUSTRATIONS[d.slug] || '';
+      // Si le visuel doyenne dedie existe, on l'utilise (priorite 0). Sinon
+      // on tente le recyclage diocese si mappable. Sinon fallback typo.
+      const primaryPath = speculativePath || recycledPath;
       const safeDisplay = display.replace(/'/g, '&#39;');
-      const html = '<div class="doyenne-mini">'
-        + '<img class="doyenne-mini-img" src="' + path + '" alt="' + safeDisplay + '"'
-        + ' onerror="this.outerHTML=\'<span class=&quot;doyenne-mini-fallback&quot;>' + initiale + '</span>\'">'
-        + '<span class="doyenne-mini-label">' + safeDisplay + '</span>'
-        + '</div>';
+      // Si les deux paths sont disponibles, on chaine les fallbacks via deux
+      // niveaux d'onerror (img dedie -> img recyclee -> typo). Sinon un seul
+      // niveau (img unique -> typo).
+      let html;
+      if (speculativePath && recycledPath) {
+        html = '<div class="doyenne-mini">'
+          + '<img class="doyenne-mini-img" src="' + speculativePath + '" alt="' + safeDisplay + '"'
+          + ' onerror="this.onerror=function(){this.outerHTML=\'<span class=&quot;doyenne-mini-fallback&quot;>' + initiale + '</span>\'};this.src=\'' + recycledPath + '\'">'
+          + '<span class="doyenne-mini-label">' + safeDisplay + '</span>'
+          + '</div>';
+      } else if (primaryPath) {
+        html = '<div class="doyenne-mini">'
+          + '<img class="doyenne-mini-img" src="' + primaryPath + '" alt="' + safeDisplay + '"'
+          + ' onerror="this.outerHTML=\'<span class=&quot;doyenne-mini-fallback&quot;>' + initiale + '</span>\'">'
+          + '<span class="doyenne-mini-label">' + safeDisplay + '</span>'
+          + '</div>';
+      } else {
+        html = '<div class="doyenne-mini">'
+          + '<span class="doyenne-mini-fallback">' + initiale + '</span>'
+          + '<span class="doyenne-mini-label">' + safeDisplay + '</span>'
+          + '</div>';
+      }
       const icon = L.divIcon({
         className: 'doyenne-mini-marker',
         html: html,
@@ -553,9 +602,10 @@ fetch('docs/data/doyennes_polygons.json')
       });
       const miniMarker = L.marker(center, {icon, interactive: true, keyboard: false, riseOnHover: true});
       miniMarker.on('click', () => onDoyenneClick(d.slug, display, poly));
-      miniMarker.addTo(map);
+      doyenneMinisLayer.addLayer(miniMarker);
     }
     doyenneFillLayer.addTo(map);
+    doyenneMinisLayer.addTo(map);
 
     // Mapping spot -> doyenne (point-in-polygon sur les 14 spots illustres et
     // tous les markers en memoire pour alimentation breadcrumb correcte).
@@ -766,6 +816,9 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   // Detacher couche niveau 1 (14 spots illustres uniquement).
   if (map.hasLayer(spotsIllustratedLayer)) map.removeLayer(spotsIllustratedLayer);
 
+  // Brief 19 — detacher miniatures doyennes en N2 (fix bug Brief 14).
+  if (map.hasLayer(doyenneMinisLayer)) map.removeLayer(doyenneMinisLayer);
+
   // Attacher pieves du doyenne (Brief 9 Strat A pieves_polygons.json).
   const pivlg = pievesByDoyenneLayer.get(doyenneSlug);
   if (pivlg && !map.hasLayer(pivlg)) pivlg.addTo(map);
@@ -815,6 +868,9 @@ function exitNiveau2View() {
 
   // Re-attacher couche niveau 1 (14 spots illustres).
   if (!map.hasLayer(spotsIllustratedLayer)) spotsIllustratedLayer.addTo(map);
+
+  // Brief 19 — re-attacher miniatures doyennes au retour vue Corse.
+  if (!map.hasLayer(doyenneMinisLayer)) doyenneMinisLayer.addTo(map);
 
   // Clear highlights polygones, popup et tooltip persistant (B11-UX-029).
   // Le tooltip Leaflet sticky se reouvre via mouseover residuel pendant le
