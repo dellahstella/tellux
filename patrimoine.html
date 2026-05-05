@@ -549,6 +549,9 @@ fetch('docs/data/doyennes_polygons.json')
       if (doy) { SPOT_TO_DOYENNE.set(slug, doy); mapped++; } else { unmapped++; }
     }
     console.log('[Tellux patrimoine] Doyennes charges :', data.doyennes.length, '| spots rattaches :', mapped, '| hors polygones :', unmapped);
+    // Brief 15 — flag pret pour applyHash initial (apres pieves aussi).
+    _doyennesLoaded = true;
+    if (typeof _tryApplyInitialHash === 'function') _tryApplyInitialHash();
   })
   .catch(err => {
     console.error('[Tellux patrimoine] Echec chargement doyennes_polygons.json :', err);
@@ -641,6 +644,9 @@ fetch('docs/data/pieves_polygons.json')
       '| spots->pieves rattaches :', mappedPieve, '| hors pieves :', unmappedPieve);
     console.log('[Tellux patrimoine] Pieves par doyenne (niveau 2) :',
       Array.from(pievesByDoyenneLayer.entries()).map(([d, lg]) => d + ':' + lg.getLayers().length).join(', '));
+    // Brief 15 — flag pret pour applyHash initial (apres doyennes aussi).
+    _pievesLoaded = true;
+    if (typeof _tryApplyInitialHash === 'function') _tryApplyInitialHash();
   })
   .catch(err => {
     console.error('[Tellux patrimoine] Echec chargement pieves_polygons.json :', err);
@@ -834,18 +840,20 @@ function updateBreadcrumb() {
       if (lvl === 'corse') {
         // Sortie niveau 2 si on y etait, retour vue Corse.
         if (document.body.classList.contains('niveau-2')) exitNiveau2View();
-        else { currentDoyenneSlug = null; currentPieveSlugV2 = null; currentSpotSlug = null; map.closePopup(); clearSelectedPolygons(); map.setView([42.15, 9.10], 9); updateBreadcrumb(); }
+        else { currentDoyenneSlug = null; currentPieveSlugV2 = null; currentSpotSlug = null; map.closePopup(); clearSelectedPolygons(); map.setView([42.15, 9.10], 9); updateBreadcrumb(); if (typeof syncHashToUrl === 'function') syncHashToUrl(); }
       } else if (lvl === 'doyenne' && currentDoyenneSlug) {
         currentPieveSlugV2 = null; currentSpotSlug = null;
         for (const p of Object.values(pieveShapesBySlugV2)) { const e = p.getElement && p.getElement(); if (e) e.classList.remove('selected'); }
         const shape = doyenneShapesBySlug[currentDoyenneSlug];
         if (shape) map.fitBounds(shape.getBounds(), {padding:[40,40]});
         updateBreadcrumb();
+        if (typeof syncHashToUrl === 'function') syncHashToUrl();
       } else if (lvl === 'pieve-v2' && currentPieveSlugV2) {
         currentSpotSlug = null;
         const shape = pieveShapesBySlugV2[currentPieveSlugV2];
         if (shape) map.fitBounds(shape.getBounds(), {padding:[40,40]});
         updateBreadcrumb();
+        if (typeof syncHashToUrl === 'function') syncHashToUrl();
       }
     });
   });
@@ -971,6 +979,118 @@ function openZonePanel(level, name, data, visualUrl) {
 console.log(`[Tellux Patrimoine] ${Object.keys(PATRIMOINE_POLYGONS.pieves).length} pieves + ${Object.keys(PATRIMOINE_POLYGONS.dioceses).length} dioceses chargees.`);
 
 console.log(`[Tellux patrimoine] Brief 8 revise (Strat A) — vue doyennes contemporains du diocese d'Ajaccio + ${spotsIllustratedLayer.getLayers().length} spots illustres. Polygones generes par union de polygones communaux INSEE (cf. scripts/build_doyennes_polygons.py). Couches diocese/pieve dormantes (Brief 9 ulterieur).`);
+
+// === Brief 15 — URL hash bookmarking 3 niveaux ===
+// Format hash : #<doyenne_short>/<pieve_short>/<spot_short>
+//   - slugs sans prefixe (ex: cortenais, caccia, filitosa)
+//   - segments separes par '/' tous optionnels
+//   - URL mise a jour via history.replaceState (pas de spam historique)
+// Au boot apres fetch doyennes ET pieves : si hash present, applyHash() ouvre
+// l'etat correspondant. Listener hashchange : applique modifications externes
+// (manuelles ou bouton precedent/suivant du navigateur).
+let _isApplyingHash = false;   // evite feedback updateHash <-> hashchange
+let _doyennesLoaded = false;
+let _pievesLoaded = false;
+
+function _stripDoyennePrefix(s) { return s ? s.replace(/^doyenne_/, '') : ''; }
+function _addDoyennePrefix(s) { return s && !s.startsWith('doyenne_') ? 'doyenne_' + s : s; }
+function _stripPievePrefix(s) { return s ? s.replace(/^pieve_/, '') : ''; }
+function _addPievePrefix(s) { return s && !s.startsWith('pieve_') ? 'pieve_' + s : s; }
+
+function getCurrentHash() {
+  // Reconstruit le hash depuis l'etat in-memory (currentDoyenneSlug, currentPieveSlugV2, currentSpotSlug).
+  const parts = [];
+  if (currentDoyenneSlug) parts.push(_stripDoyennePrefix(currentDoyenneSlug));
+  if (currentPieveSlugV2) parts.push(_stripPievePrefix(currentPieveSlugV2));
+  if (currentSpotSlug) parts.push(currentSpotSlug);
+  return parts.length ? '#' + parts.join('/') : '';
+}
+
+function syncHashToUrl() {
+  if (_isApplyingHash) return;
+  const target = getCurrentHash();
+  const current = window.location.hash || '';
+  if (target === current) return;
+  // replaceState pour eviter saturation historique navigateur sur clics rapides.
+  history.replaceState(null, '', target || window.location.pathname + window.location.search);
+}
+
+function applyHash(rawHash) {
+  // Parse #doy/pieve/spot et declenche les actions correspondantes.
+  // Validation : si un segment est invalide, log warning + reset niveau 1.
+  const hash = (rawHash || '').replace(/^#/, '').trim();
+  if (!hash) {
+    if (document.body.classList.contains('niveau-2')) exitNiveau2View();
+    return;
+  }
+  const segs = hash.split('/').map(s => s.trim()).filter(Boolean);
+  const [doyShort, pieveShort, spotSlug] = segs;
+  const doySlug = doyShort ? _addDoyennePrefix(doyShort) : null;
+  const pieveSlug = pieveShort ? _addPievePrefix(pieveShort) : null;
+
+  if (doySlug && !doyenneShapesBySlug[doySlug]) {
+    console.warn('[Tellux patrimoine] Hash invalide — doyenne inconnu :', doyShort);
+    if (document.body.classList.contains('niveau-2')) exitNiveau2View();
+    return;
+  }
+  if (pieveSlug && !pieveShapesBySlugV2[pieveSlug]) {
+    console.warn('[Tellux patrimoine] Hash invalide — pieve inconnu :', pieveShort);
+    return;
+  }
+  if (spotSlug && !markersBySlug[spotSlug]) {
+    console.warn('[Tellux patrimoine] Hash invalide — spot inconnu :', spotSlug);
+    return;
+  }
+
+  _isApplyingHash = true;
+  try {
+    if (doySlug) {
+      const doyShape = doyenneShapesBySlug[doySlug];
+      const doyDisplay = doyenneNameBySlug[doySlug] || doyShort;
+      enterNiveau2View(doySlug, doyDisplay, doyShape);
+    }
+    if (pieveSlug) {
+      const pieveShape = pieveShapesBySlugV2[pieveSlug];
+      const pieveDisplay = pieveNameBySlugV2[pieveSlug] || pieveShort;
+      onPieveClickV2(pieveSlug, pieveDisplay, pieveShape);
+    }
+    if (spotSlug) {
+      const m = markersBySlug[spotSlug];
+      onSpotClick(m.marker, m.site);
+    }
+  } finally {
+    _isApplyingHash = false;
+  }
+}
+
+function _tryApplyInitialHash() {
+  if (!_doyennesLoaded || !_pievesLoaded) return;
+  if (window.location.hash) applyHash(window.location.hash);
+}
+
+// Listener navigation arriere/avant + modifications manuelles barre URL.
+window.addEventListener('hashchange', () => {
+  if (_isApplyingHash) return;
+  applyHash(window.location.hash);
+});
+
+// Patches state setters : declencher syncHashToUrl apres chaque mutation.
+(function wireUpHashSync() {
+  const origEnter = enterNiveau2View;
+  const origExit = exitNiveau2View;
+  const origPieve = onPieveClickV2;
+  const origSpot = onSpotClick;
+  enterNiveau2View = function() { origEnter.apply(this, arguments); syncHashToUrl(); };
+  exitNiveau2View = function() { origExit.apply(this, arguments); syncHashToUrl(); };
+  onPieveClickV2 = function() { origPieve.apply(this, arguments); syncHashToUrl(); };
+  onSpotClick = function() { origSpot.apply(this, arguments); syncHashToUrl(); };
+  // Bouton retour reattache (l'ecouteur initial pointait sur l'ancienne ref).
+  const btn = document.getElementById('btn-retour-corse');
+  if (btn) {
+    btn.replaceWith(btn.cloneNode(true));
+    document.getElementById('btn-retour-corse').addEventListener('click', exitNiveau2View);
+  }
+})();
 </script>
 </body>
 </html>
