@@ -147,6 +147,16 @@ body.niveau-2 #btn-retour-corse{display:flex;}
    apparaitre les pieves et le fond OSM dessous, contour ardoise marque. */
 .doyenne-polygon.dim-niveau-2{fill-opacity:0;stroke-width:2;stroke:#1F2329;cursor:default;pointer-events:none;}
 
+/* Brief 14 — Miniatures doyennes au niveau 1 (vision macro Soleil 2026-05-04).
+   Vignette ronde (image ou fallback typographique) + label nom dessous,
+   positionnee au centroide du polygone via L.divIcon. Cachees en niveau 2. */
+.doyenne-mini{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:transform .2s;pointer-events:auto;}
+.doyenne-mini:hover{transform:scale(1.08);}
+.doyenne-mini-img,.doyenne-mini-fallback{width:64px;height:64px;border-radius:50%;border:2px solid #1F2329;background:#F5F0E7;box-shadow:0 4px 12px rgba(31,35,41,0.25);object-fit:cover;display:flex;align-items:center;justify-content:center;}
+.doyenne-mini-fallback{font-family:'Fraunces',serif;font-size:28px;font-weight:600;color:#1F2329;}
+.doyenne-mini-label{font-family:'Fraunces',serif;font-size:13px;font-weight:600;color:#1F2329;text-align:center;text-shadow:0 1px 3px rgba(245,240,231,0.95),0 0 8px rgba(245,240,231,0.95);max-width:120px;line-height:1.1;}
+body.niveau-2 .doyenne-mini{display:none;}
+
 /* Brief 9 — Polygones pieves medievales (drill-down niveau 2). Stroke sepia
    (palette DA Tellux v2 cohesive avec popups/breadcrumb), fill discret pour
    laisser lire le fond, hover et selected (Brief 6 preserve) marques. */
@@ -505,6 +515,28 @@ fetch('docs/data/doyennes_polygons.json')
       doyenneShapesBySlug[d.slug] = poly;
       doyenneNameBySlug[d.slug] = display;
       doyennePolygonsBySlug[d.slug] = d.polygon;
+
+      // Brief 14 — Miniature illustration au centroide. L'image est tentee
+      // avec onerror -> fallback typographique (initiale du display_name).
+      // Cachee en niveau 2 via CSS body.niveau-2 .doyenne-mini.
+      const center = poly.getBounds().getCenter();
+      const initiale = (d.initiale || display.charAt(0) || '?').toUpperCase();
+      const path = d.illustration_path || '';
+      const safeDisplay = display.replace(/'/g, '&#39;');
+      const html = '<div class="doyenne-mini">'
+        + '<img class="doyenne-mini-img" src="' + path + '" alt="' + safeDisplay + '"'
+        + ' onerror="this.outerHTML=\'<span class=&quot;doyenne-mini-fallback&quot;>' + initiale + '</span>\'">'
+        + '<span class="doyenne-mini-label">' + safeDisplay + '</span>'
+        + '</div>';
+      const icon = L.divIcon({
+        className: 'doyenne-mini-marker',
+        html: html,
+        iconSize: [120, 96],
+        iconAnchor: [60, 48],
+      });
+      const miniMarker = L.marker(center, {icon, interactive: true, keyboard: false, riseOnHover: true});
+      miniMarker.on('click', () => onDoyenneClick(d.slug, display, poly));
+      miniMarker.addTo(map);
     }
     doyenneFillLayer.addTo(map);
 
