@@ -65,31 +65,23 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 .tlx-popup-btn{display:block;width:100%;background:var(--tx-maquis);color:var(--tx-pierre);border:none;padding:8px 12px;border-radius:var(--r);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:background .2s;outline:none;}
 .tlx-popup-btn:hover,.tlx-popup-btn:focus,.tlx-popup-btn:active{background:var(--tx-ardoise);color:var(--tx-pierre);}
 .tlx-popup-btn:focus-visible{outline:2px solid var(--tx-ocre);outline-offset:2px;}
-/* Panel partiel droite avec flip card */
-#panel{position:fixed;top:0;right:0;width:38vw;min-width:340px;max-width:480px;height:100vh;z-index:1500;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);pointer-events:none;overflow:hidden;}
-#panel.open{transform:translateX(0);pointer-events:auto;}
-#panel-card{position:absolute;inset:16px;perspective:1600px;}
-#panel-flipper{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.4,0,.2,1);cursor:pointer;}
-#panel-flipper.flipped{transform:rotateY(180deg);}
-.panel-face{position:absolute;inset:0;backface-visibility:hidden;background:var(--tx-pierre);border-radius:var(--r2);box-shadow:var(--shadow-lg);overflow:hidden;display:flex;flex-direction:column;}
-.panel-face.verso{transform:rotateY(180deg);background:var(--tx-ardoise);}
-/* Recto */
-#panel-recto-content{padding:48px 28px 28px;overflow-y:auto;overflow-x:hidden;flex:1;overflow-wrap:break-word;word-wrap:break-word;}
-#panel-recto-content h2{font-family:var(--font-display);font-size:24px;font-weight:600;color:var(--tx-ardoise);margin-bottom:6px;line-height:1.2;overflow-wrap:break-word;hyphens:auto;}
-#panel-recto-content .panel-cat{font-size:11px;color:var(--tx-ocre);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:18px;}
-#panel-recto-content .panel-meta{font-size:13px;color:var(--tx-mica);margin-bottom:14px;line-height:1.5;}
-#panel-recto-content .panel-meta strong{color:var(--tx-ardoise);font-weight:500;}
-#panel-recto-content .panel-desc{font-size:14px;color:var(--tx-ardoise);line-height:1.6;margin-bottom:20px;}
-#panel-recto-content .panel-flip-hint{position:absolute;bottom:16px;left:28px;right:28px;font-size:11px;color:var(--tx-mica);font-style:italic;text-align:center;padding-top:8px;border-top:1px solid var(--border);}
-/* Verso */
-#panel-verso-content{flex:1;display:flex;align-items:center;justify-content:center;padding:48px 28px 28px;}
-#panel-verso-content img{max-width:100%;max-height:100%;object-fit:contain;border-radius:var(--r);}
-#panel-verso-content .verso-fallback{color:var(--tx-pierre);font-size:14px;font-style:italic;text-align:center;opacity:0.7;}
-#panel-verso-content .verso-flip-hint{position:absolute;bottom:16px;left:28px;right:28px;font-size:11px;color:var(--tx-pierre);opacity:0.6;font-style:italic;text-align:center;}
-/* Bouton fermeture (au-dessus du flipper, ne flippe pas) */
-#panel-close{position:absolute;top:24px;right:24px;width:36px;height:36px;border-radius:50%;background:var(--tx-pierre);border:1px solid var(--border);color:var(--tx-ardoise);font-size:18px;line-height:1;cursor:pointer;z-index:10;box-shadow:var(--shadow);transition:transform .2s,background .2s;display:flex;align-items:center;justify-content:center;}
-#panel-close:hover{background:var(--tx-ocre);color:var(--tx-pierre);transform:rotate(90deg);}
-#panel-close::before{content:'×';font-size:24px;}
+/* Brief 18 — Panel simplifie : viewer illustration plein cadre + overlay
+   titre/categorie en bas. Suppression du systeme flip recto/verso.
+   Refonte des fiches longues differee (decision Soleil 2026-05-04). */
+#panel{position:fixed;top:0;right:0;width:38vw;min-width:340px;max-width:520px;height:100vh;z-index:1500;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);background:var(--tx-pierre);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;}
+#panel.open{transform:translateX(0);}
+#panel-illustration{flex:1;position:relative;background:var(--tx-brume);overflow:hidden;display:flex;align-items:center;justify-content:center;}
+#panel-img{width:100%;height:100%;object-fit:cover;display:block;}
+#panel-img.hidden{display:none;}
+#panel-fallback{font-style:italic;color:var(--tx-mica);font-size:14px;padding:24px;text-align:center;}
+#panel-fallback.hidden{display:none;}
+#panel-overlay{position:absolute;left:0;right:0;bottom:0;padding:20px 28px 24px;background:linear-gradient(to top,rgba(31,35,41,0.85),rgba(31,35,41,0));color:var(--tx-pierre);pointer-events:none;}
+#panel-overlay #panel-cat{font-size:11px;color:var(--tx-pierre);opacity:0.85;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;}
+#panel-overlay #panel-title{font-family:var(--font-display);font-size:24px;font-weight:600;line-height:1.2;color:var(--tx-pierre);overflow-wrap:break-word;hyphens:auto;text-shadow:0 2px 8px rgba(0,0,0,0.45);}
+#panel-close{position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:var(--tx-pierre);border:1px solid var(--border);cursor:pointer;z-index:10;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;transition:background .2s,transform .2s;}
+#panel-close::before{content:'×';font-size:24px;color:var(--tx-ardoise);line-height:1;}
+#panel-close:hover{background:var(--tx-ocre);transform:rotate(90deg);}
+#panel-close:hover::before{color:var(--tx-pierre);}
 /* Mobile */
 @media (max-width:640px){
   #panel{width:100vw;min-width:100%;}
@@ -220,15 +212,13 @@ body.niveau-2 .doyenne-mini{display:none;}
   </div>
 </aside>
 <aside id="panel" aria-hidden="true">
-  <button id="panel-close" aria-label="Fermer le panneau"></button>
-  <div id="panel-card">
-    <div id="panel-flipper">
-      <section class="panel-face recto">
-        <div id="panel-recto-content"></div>
-      </section>
-      <section class="panel-face verso">
-        <div id="panel-verso-content"></div>
-      </section>
+  <button id="panel-close" type="button" aria-label="Fermer le panneau"></button>
+  <div id="panel-illustration">
+    <img id="panel-img" alt="" class="hidden" />
+    <div id="panel-fallback" class="hidden">Illustration à venir</div>
+    <div id="panel-overlay">
+      <div id="panel-cat"></div>
+      <h2 id="panel-title"></h2>
     </div>
   </div>
 </aside>
@@ -392,49 +382,41 @@ function openPopup(marker, site) {
   }, 50);
 }
 
-// Panel
+// Brief 18 — Panel simplifie : viewer illustration plein cadre + overlay
+// titre/categorie en bas. Suppression du systeme flip recto/verso.
 const panel = document.getElementById('panel');
-const flipper = document.getElementById('panel-flipper');
-const recto = document.getElementById('panel-recto-content');
-const verso = document.getElementById('panel-verso-content');
+const panelImg = document.getElementById('panel-img');
+const panelFallback = document.getElementById('panel-fallback');
+const panelCat = document.getElementById('panel-cat');
+const panelTitle = document.getElementById('panel-title');
 const panelClose = document.getElementById('panel-close');
 
 function openPanel(site) {
-  // Recto = texte fiche
-  let metaParts = [];
-  if (site.commune) metaParts.push(`<strong>Commune</strong> · ${escapeHtml(site.commune)}`);
-  if (site.pieve) metaParts.push(`<strong>Pieve</strong> · ${escapeHtml(site.pieve)}`);
-  if (site.diocese) metaParts.push(`<strong>Diocèse</strong> · ${escapeHtml(site.diocese)}`);
-  recto.innerHTML = `
-    <div class="panel-cat">${escapeHtml(site.categorie || 'Patrimoine')}</div>
-    <h2>${escapeHtml(site.nom)}</h2>
-    ${metaParts.length ? '<div class="panel-meta">' + metaParts.join(' · ') + '</div>' : ''}
-    <div class="panel-desc">${escapeHtml(site.description || "Description en cours d'enrichissement.")}</div>
-    <div class="panel-flip-hint">Cliquez sur le panneau pour révéler l'illustration</div>
-  `;
-  // Verso = illustration
+  panelTitle.textContent = site.nom || '';
+  panelCat.textContent = site.categorie || '';
   if (site.visuel) {
-    verso.innerHTML = `<img loading="lazy" src="${site.visuel}" alt="${escapeHtml(site.nom)}" onerror="this.outerHTML='<div class=\\'verso-fallback\\'>Illustration à venir</div>'"><div class="verso-flip-hint">Cliquez pour revenir à la fiche</div>`;
+    panelImg.src = site.visuel;
+    panelImg.alt = site.nom || '';
+    panelImg.classList.remove('hidden');
+    panelFallback.classList.add('hidden');
+    panelImg.onerror = () => {
+      panelImg.classList.add('hidden');
+      panelFallback.classList.remove('hidden');
+    };
   } else {
-    verso.innerHTML = `<div class="verso-fallback">Illustration à venir</div><div class="verso-flip-hint">Cliquez pour revenir à la fiche</div>`;
+    panelImg.classList.add('hidden');
+    panelImg.removeAttribute('src');
+    panelFallback.classList.remove('hidden');
   }
-  flipper.classList.remove('flipped');
   panel.classList.add('open');
-  panel.setAttribute('aria-hidden','false');
+  panel.setAttribute('aria-hidden', 'false');
 }
 
 function closePanel() {
   panel.classList.remove('open');
-  panel.setAttribute('aria-hidden','true');
-  flipper.classList.remove('flipped');
+  panel.setAttribute('aria-hidden', 'true');
 }
 
-// Click sur le flipper → flip (sauf bouton fermeture)
-flipper.addEventListener('click', (e) => {
-  flipper.classList.toggle('flipped');
-});
-
-// Bouton fermeture (stopPropagation pour ne pas déclencher flip)
 panelClose.addEventListener('click', (e) => {
   e.stopPropagation();
   closePanel();
@@ -1019,39 +1001,20 @@ function onZoneClick(level, name, data, shape) {
     .setContent(html)
     .openOn(map);
   setTimeout(() => {
+    // Brief 18 — openZonePanel supprime, handlers neutralises pour eviter
+    // ReferenceError si onZoneClick etait reactive sans refonte associee.
     const btn = document.querySelector('.tlx-popup-btn[data-zone="' + level + ':' + name + '"]');
-    if (btn) btn.addEventListener('click', () => openZonePanel(level, name, data, visualUrl));
+    if (btn) btn.addEventListener('click', () => console.warn('[Tellux patrimoine] Ouverture panel zone diocese/pieve dormante : non implementee depuis Brief 18.'));
     const img = document.querySelector('.tlx-popup-img:not(.fallback)');
-    if (img) img.addEventListener('click', () => openZonePanel(level, name, data, visualUrl));
+    if (img) img.addEventListener('click', () => console.warn('[Tellux patrimoine] Ouverture panel zone diocese/pieve dormante : non implementee depuis Brief 18.'));
   }, 50);
 }
 
-function openZonePanel(level, name, data, visualUrl) {
-  const title = level === 'diocese' ? formatDioceseLabel(name) : formatPieveLabel(data.pieve || name);
-  const cat = level === 'diocese' ? 'DIOCÈSE HISTORIQUE' : 'PIEVE HISTORIQUE';
-  let metaParts = [];
-  if (level === 'pieve' && data.diocese) metaParts.push(`<strong>Diocèse</strong> · ${escapeHtml(data.diocese)}`);
-  if (level === 'pieve') metaParts.push(`<strong>Spots</strong> · ${data.n_spots_geographic ?? data.n_spots}`);
-  if (level === 'diocese') metaParts.push(`<strong>Pieves</strong> · ${data.n_pieves}`);
-  // Décompte spots agrégé enfants sur diocèse (somme des pieves)
-  if (level === 'diocese') metaParts.push(`<strong>Spots</strong> · ${data.n_spots_geographic ?? 0}`);
-  // Slug technique 'method' masqué de la vue user-facing (sans intérêt utilisateur)
-  recto.innerHTML = `
-    <div class="panel-cat">${cat}</div>
-    <h2>${escapeHtml(title)}</h2>
-    <div class="panel-meta">${metaParts.join(' · ')}</div>
-    <div class="panel-desc">Description en préparation.</div>
-    <div class="panel-flip-hint">Cliquez sur le panneau pour révéler l'illustration</div>
-  `;
-  if (visualUrl) {
-    verso.innerHTML = `<img loading="lazy" src="${visualUrl}" alt="${escapeHtml(title)}" onerror="this.outerHTML='<div class=\'verso-fallback\'>Illustration à venir</div>'"><div class="verso-flip-hint">Cliquez pour revenir à la fiche</div>`;
-  } else {
-    verso.innerHTML = `<div class="verso-fallback">Illustration à venir</div><div class="verso-flip-hint">Cliquez pour revenir à la fiche</div>`;
-  }
-  flipper.classList.remove('flipped');
-  panel.classList.add('open');
-  panel.setAttribute('aria-hidden', 'false');
-}
+// Brief 18 — openZonePanel supprime : fonction dormante depuis Brief 8 revise
+// (couches dioceses medievaux + pieves Convex Hull jamais attachees au map),
+// elle referencait l'ancien systeme flip recto/verso desormais retire. Si le
+// drill-down medieval est reactive (Brief 9 ulterieur futur), une nouvelle
+// fonction adaptee au panel simplifie devra etre ecrite.
 
 console.log(`[Tellux Patrimoine] ${Object.keys(PATRIMOINE_POLYGONS.pieves).length} pieves + ${Object.keys(PATRIMOINE_POLYGONS.dioceses).length} dioceses chargees.`);
 
