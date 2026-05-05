@@ -47,7 +47,10 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 #tlx-header .subtitle{font-size:11px;color:var(--tx-mica);text-transform:uppercase;letter-spacing:0.08em;}
 #tlx-header a{color:inherit;text-decoration:none;display:flex;align-items:center;gap:8px;}
 /* Markers Tellux v2 */
-.tlx-marker{background:var(--tx-maquis);width:14px;height:14px;border-radius:50%;border:2px solid var(--tx-pierre);box-shadow:0 1px 4px rgba(0,0,0,0.3);transition:transform .2s;}
+.tlx-marker{background:var(--tx-maquis);width:14px;height:14px;border-radius:50%;border:2px solid var(--tx-pierre);box-shadow:0 1px 4px rgba(0,0,0,0.3);transition:transform .2s,opacity .25s ease-out;}
+/* Brief 20 — fade-out wrapper Leaflet markers/divIcon au passage N2.
+   Active via .leaflet-marker-icon.fading-out, retire au prochain attach. */
+.leaflet-marker-icon.fading-out{opacity:0;pointer-events:none;transition:opacity .25s ease-out;}
 .tlx-marker.priority{background:var(--tx-ocre);width:18px;height:18px;border:3px solid var(--tx-pierre);box-shadow:0 2px 6px rgba(0,0,0,0.4);}
 .tlx-marker.priority::before{content:'★';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--tx-pierre);font-size:10px;line-height:1;}
 .tlx-marker:hover{transform:scale(1.2);}
@@ -128,7 +131,9 @@ body.niveau-2 #btn-retour-corse{display:flex;}
    (cf. scripts/build_doyennes_polygons.py). Fill plein opaque masque le fond
    OSM/CARTO. Palette 4 teintes (theoreme des 4 couleurs) pour eviter conflits
    adjacence. Stroke ardoise discret. */
-.doyenne-polygon{stroke:#1F2329;stroke-width:1.5;stroke-opacity:1;fill-opacity:1;cursor:pointer;transition:filter .2s,stroke-width .2s,fill-opacity .3s;outline:none;}
+/* Brief 20 — transition fill-opacity etendue a 0.5s pour adoucir le pivot
+   N1->N2 (estompage doyenne cliqué progressif vs bascule binaire). */
+.doyenne-polygon{stroke:#1F2329;stroke-width:1.5;stroke-opacity:1;fill-opacity:1;cursor:pointer;transition:filter .2s,stroke-width .2s,fill-opacity .5s ease-out;outline:none;}
 .doyenne-polygon.tone-a{fill:#D4C5A8;}
 .doyenne-polygon.tone-b{fill:#A8B89A;}
 .doyenne-polygon.tone-c{fill:#D9B789;}
@@ -175,7 +180,9 @@ body.niveau-2 .doyenne-mini-marker{display:none !important;pointer-events:none;}
 /* Brief 9 — Polygones pieves medievales (drill-down niveau 2). Stroke sepia
    (palette DA Tellux v2 cohesive avec popups/breadcrumb), fill discret pour
    laisser lire le fond, hover et selected (Brief 6 preserve) marques. */
-.pieve-polygon-v2{stroke:#8c6e50;stroke-width:1.5;stroke-opacity:1;fill:#8c6e50;fill-opacity:0.08;cursor:pointer;transition:fill-opacity .2s,stroke-width .2s;outline:none;}
+/* Brief 20 — transition stroke-opacity ajoutee + duree etendue 0.35s pour
+   fade-in/out doux des pieves au passage N1<->N2 (vs apparition pop). */
+.pieve-polygon-v2{stroke:#8c6e50;stroke-width:1.5;stroke-opacity:1;fill:#8c6e50;fill-opacity:0.08;cursor:pointer;transition:fill-opacity .35s ease-out,stroke-opacity .35s ease-out,stroke-width .2s;outline:none;}
 .pieve-polygon-v2:hover{fill-opacity:0.18;stroke-width:2.5;}
 .pieve-polygon-v2:focus,.pieve-polygon-v2.selected{outline:none;stroke:#5a3f2a;stroke-width:3;fill-opacity:0.22;}
 
@@ -795,6 +802,10 @@ const corsicaInitialView = { center: [42.15, 9.10], zoom: 9 };
 function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   document.body.classList.add('niveau-2');
 
+  // Brief 20 fix #7 — fermer toute popup map ouverte (spot precedent ou popup
+  // miniature) avant le pivot N1->N2, evite la superposition residuelle.
+  map.closePopup();
+
   // Detacher les couches niveau 2 d'un eventuel doyenne precedent (cas clic A->B
   // sans passer par le bouton retour).
   for (const lg of pievesByDoyenneLayer.values()) {
@@ -813,11 +824,18 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   const el = shape.getElement && shape.getElement();
   if (el) el.classList.add('dim-niveau-2');
 
-  // Detacher couche niveau 1 (14 spots illustres uniquement).
-  if (map.hasLayer(spotsIllustratedLayer)) map.removeLayer(spotsIllustratedLayer);
-
-  // Brief 19 — detacher miniatures doyennes en N2 (fix bug Brief 14).
-  if (map.hasLayer(doyenneMinisLayer)) map.removeLayer(doyenneMinisLayer);
+  // Brief 20 fix #4 — fade-out spots N1 + miniatures doyennes via classe CSS
+  // .fading-out (250ms) avant detach pour adoucir la disparition.
+  const spotsN1Icons = spotsIllustratedLayer.getLayers().map(l => l._icon).filter(Boolean);
+  const minisIcons = doyenneMinisLayer.getLayers().map(l => l._icon).filter(Boolean);
+  for (const icon of spotsN1Icons) icon.classList.add('fading-out');
+  for (const icon of minisIcons) icon.classList.add('fading-out');
+  setTimeout(() => {
+    if (map.hasLayer(spotsIllustratedLayer)) map.removeLayer(spotsIllustratedLayer);
+    if (map.hasLayer(doyenneMinisLayer)) map.removeLayer(doyenneMinisLayer);
+    for (const icon of spotsN1Icons) icon.classList.remove('fading-out');
+    for (const icon of minisIcons) icon.classList.remove('fading-out');
+  }, 250);
 
   // Attacher pieves du doyenne (Brief 9 Strat A pieves_polygons.json).
   const pivlg = pievesByDoyenneLayer.get(doyenneSlug);
@@ -835,9 +853,10 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   const slg = spotsLevel2ByDoyenne.get(doyenneSlug);
   if (slg && !map.hasLayer(slg)) slg.addTo(map);
 
-  // Zoom auto sur bounds doyenne.
+  // Zoom auto sur bounds doyenne. Brief 20 fix #3 — easeLinearity 0.5 pour
+  // courbe d'animation plus naturelle (vs 0.25 par defaut Leaflet).
   if (shape) {
-    map.flyToBounds(shape.getBounds(), { padding: [40, 40], duration: 0.8 });
+    map.flyToBounds(shape.getBounds(), { padding: [40, 40], duration: 0.8, easeLinearity: 0.5 });
   }
 
   // Update breadcrumb (Corse > Doyenne X).
@@ -900,8 +919,8 @@ function exitNiveau2View() {
   currentSpotSlug = null;
   if (typeof updateBreadcrumb === 'function') updateBreadcrumb();
 
-  // Zoom retour vue Corse.
-  map.flyTo(corsicaInitialView.center, corsicaInitialView.zoom, { duration: 0.8 });
+  // Zoom retour vue Corse. Brief 20 fix #3 — easeLinearity 0.5.
+  map.flyTo(corsicaInitialView.center, corsicaInitialView.zoom, { duration: 0.8, easeLinearity: 0.5 });
 }
 
 // Bouton retour vue Corse (visible uniquement en niveau 2 via CSS body.niveau-2).
