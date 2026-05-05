@@ -75,6 +75,25 @@ def compute_majoritaire_by_intersection(pieve_geom, doyennes_shapes):
     return best_slug
 
 
+def compute_doyennes_appartenance(pieve_geom, doyennes_shapes):
+    """Brief 12 (B11-UX-028) — pour chaque doyenne, calcule le ratio
+    intersection / aire_pieve. Retourne tous les doyennes avec ratio > 0,
+    tries par ratio descendant. Le seuil de visibilite est applique cote
+    runtime (constante SEUIL_PIEVE_DOYENNE dans patrimoine.html)."""
+    if not doyennes_shapes:
+        return []
+    out = []
+    for doy_slug, doy_geom in doyennes_shapes.items():
+        if not pieve_geom.intersects(doy_geom):
+            continue
+        inter = pieve_geom.intersection(doy_geom)
+        ratio = inter.area / pieve_geom.area
+        if ratio > 0:
+            out.append({"slug": doy_slug, "ratio": round(ratio, 4)})
+    out.sort(key=lambda x: -x["ratio"])
+    return out
+
+
 def load_communes_index():
     index = {}
     for path in (GEO_2A, GEO_2B):
@@ -224,10 +243,15 @@ def main():
             doyenne_final = declared_doy
 
         # Brief 10 (post-arbitrage Soleil) — doyennes_visibles : liste des doyennes
-        # ou la pieve apparait au drill-down N2. Override prioritaire sur le
-        # majoritaire calcule. Permet la multi-affectation (ex: Caccia visible
+        # ou la pieve apparait au drill-down N2. Override manuel prioritaire sur
+        # le majoritaire calcule. Permet la multi-affectation (ex: Caccia visible
         # au clic Balagne ET au clic Golo).
         doyennes_visibles = pieve_doy_overrides.get(slug) or [doyenne_final]
+
+        # Brief 12 (B11-UX-028) — appartenance multi-doyennes pour le seuillage
+        # cote runtime. Le runtime fait l'union de doyennes_visibles (override
+        # manuel) et des doyennes ou ratio >= SEUIL_PIEVE_DOYENNE.
+        doyennes_appartenance = compute_doyennes_appartenance(simplified, doyennes_shapes)
 
         entry = {
             "slug": slug,
@@ -235,6 +259,7 @@ def main():
             "diocese_medieval": diocese,
             "doyenne_contemporain_majoritaire": doyenne_final,
             "doyennes_visibles": doyennes_visibles,
+            "doyennes_appartenance": doyennes_appartenance,
             "communes_count": len(polys),
             "polygon": latlng_polygon,
         }
