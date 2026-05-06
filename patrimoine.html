@@ -165,9 +165,13 @@ body.niveau-2 #btn-retour-corse{display:flex;}
 /* Brief 19 — Bug visibilite N2 (Brief 14) : la regle .doyenne-mini cache
    l'inner mais le wrapper Leaflet outer .doyenne-mini-marker reste visible
    (boite 120x96 transparente cliquable). Fix CSS defensif sur le wrapper
-   (en backup du detach LayerGroup cote JS). */
-body.niveau-2 .doyenne-mini,
-body.niveau-2 .doyenne-mini-marker{display:none !important;pointer-events:none;}
+   (en backup du detach LayerGroup cote JS).
+   Brief 25 — exception pour la miniature persistante du doyenne actif
+   (.persistente-niveau-2). Sans ce :not(...), la regle !important Brief 19
+   masquait aussi la mini active malgre le detach selectif Brief 23, ce qui
+   defaisait toute la fonctionnalite fiche doyenne (cause racine echec MCP). */
+body.niveau-2 .doyenne-mini:not(.persistente-niveau-2),
+body.niveau-2 .doyenne-mini-marker:not(.persistente-niveau-2){display:none !important;pointer-events:none;}
 
 /* Brief 16 — Legende visuelle (bottom-right, au-dessus attribution Leaflet).
    Bouton "?" rond toujours visible, panneau s'ouvre au clic vers haut-gauche.
@@ -469,7 +473,7 @@ function openDoyennePanel(d) {
   const visuel = recycled || speculative || '';
   openPanel({
     nom: display,
-    categorie: 'Doyenné contemporain',
+    categorie: 'Doyenné',
     visuel: visuel,
   });
 }
@@ -664,7 +668,12 @@ fetch(resolveAssetPath('docs/data/doyennes_polygons.json'))
       //   N2 (sur la miniature persistante du doyenne actif uniquement) :
       //     ouvre fiche doyenne via openDoyennePanel reutilisant openPanel.
       const doyData = d;
-      miniMarker.on('click', () => {
+      miniMarker.on('click', (e) => {
+        // Brief 25 — defense en profondeur : stop propagation vers polygone
+        // sous-jacent (au cas ou Leaflet bubble jusqu'a doyenneFillLayer).
+        if (e && e.originalEvent && e.originalEvent.stopPropagation) {
+          e.originalEvent.stopPropagation();
+        }
         if (document.body.classList.contains('niveau-2')) {
           if (currentDoyenneSlug === doyData.slug) openDoyennePanel(doyData);
         } else {
@@ -914,6 +923,14 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   if (activeMiniLayer && activeMiniLayer._icon) {
     activeMiniLayer._icon.classList.add('persistente-niveau-2');
   }
+  // Brief 25 — tooltip Leaflet hint au-dessus de la mini active : signale
+  // la nouvelle fonction (fiche, pas zoom). Bind unique pour la duree N2.
+  if (activeMiniLayer && activeMiniLayer.bindTooltip) {
+    activeMiniLayer.unbindTooltip();
+    activeMiniLayer.bindTooltip('Voir la fiche du doyenné', {
+      direction: 'top', offset: [0, -8], className: 'tlx-tt'
+    });
+  }
 
   // Attacher pieves du doyenne (Brief 9 Strat A pieves_polygons.json).
   const pivlg = pievesByDoyenneLayer.get(doyenneSlug);
@@ -977,6 +994,9 @@ function exitNiveau2View() {
   for (const m of doyenneMinisLayer.getLayers()) {
     if (!map.hasLayer(m)) m.addTo(map);
     if (m._icon) m._icon.classList.remove('persistente-niveau-2');
+    // Brief 25 — retrait du tooltip "Voir la fiche du doyenné" pose en N2.
+    // unbindTooltip est safe sur marker sans tooltip (no-op cote Leaflet).
+    if (m.unbindTooltip) m.unbindTooltip();
   }
   // Brief 23 — fermer la fiche doyenne si elle etait ouverte au retour.
   if (typeof closePanel === 'function' && panel.classList.contains('open')) closePanel();
