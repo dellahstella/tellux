@@ -372,10 +372,13 @@ let SITES_META = null;
 // utilises par tout le code aval (commune, pieve, doyenne, priorite, version)
 // pour migration sans regression. Champs supplementaires (illustre, axe_corpus)
 // exposes pour usage futur.
+// Brief 33 split (2026-05-06) — bascule vers sites_patrimoine.json. Le
+// nouveau schema utilise `name` au lieu de `nom` ; on tolere les deux pour
+// retro-compat. Ajoute fiche_v3_slug pour matching carte postale Brief 31.
 function adaptSiteSchema(s) {
   return {
     slug: s.slug,
-    nom: s.nom,
+    nom: s.name || s.nom,
     lat: s.lat, lon: s.lon,
     categorie: s.categorie,
     description: s.description,
@@ -388,6 +391,7 @@ function adaptSiteSchema(s) {
     version: s.version_visuel,
     illustre: s.illustre === true,
     axe_corpus: s.axe_corpus,
+    fiche_v3_slug: s.fiche_v3_slug || null,
   };
 }
 
@@ -396,9 +400,9 @@ function adaptSiteSchema(s) {
 // Erreur fetch : log + reject. Le boot patrimoine se contentera des couches
 // polygones (doyennes/pieves) sans les markers — mode degrade observable.
 function loadSitesPatrimoine() {
-  return fetch(resolveAssetPath('docs/data/sites_corse.json'), {cache: 'default'})
+  return fetch(resolveAssetPath('docs/data/sites_patrimoine.json'), {cache: 'default'})
     .then(function(res) {
-      if (!res.ok) throw new Error('sites_corse.json HTTP ' + res.status);
+      if (!res.ok) throw new Error('sites_patrimoine.json HTTP ' + res.status);
       return res.json();
     })
     .then(function(data) {
@@ -406,6 +410,7 @@ function loadSitesPatrimoine() {
       SITES_PATRIMOINE = data.sites
         .filter(function(s) { return s.phase_publication === 1; })
         .map(adaptSiteSchema);
+      console.log('[Tellux patrimoine] sites patrimoniaux chargés : ' + data.sites.length + ' depuis sites_patrimoine.json');
       console.info('[Tellux Patrimoine] ' + SITES_PATRIMOINE.length +
         ' sites P1 charges (corpus ' + data.sites.length +
         ', v' + (SITES_META && SITES_META.version) + ')');
@@ -642,10 +647,15 @@ function openPanel(site) {
 
   // Brief 31 — carte postale flippable si fiche v3 disponible pour ce slug.
   _deactivateCartePostale();
-  if (site.slug) {
+  if (site.slug || site.fiche_v3_slug) {
     _loadFichesPatrimoine().then(fiches => {
       if (!panel.classList.contains('open')) return; // panel referme entre-temps
-      const fiche = fiches[site.slug];
+      // Brief 33 split — match prioritaire via fiche_v3_slug (champ explicite
+      // sites_patrimoine.json), fallback site.slug pour retro-compat (doyennes
+      // qui passent par openDoyennePanel sans fiche_v3_slug).
+      const fiche = (site.fiche_v3_slug && fiches[site.fiche_v3_slug])
+        || (site.slug && fiches[site.slug])
+        || null;
       if (fiche) _activateCartePostale(document.getElementById('panel-illustration'), fiche);
     });
   }
