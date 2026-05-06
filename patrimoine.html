@@ -212,6 +212,46 @@ body.niveau-2 .doyenne-mini-marker:not(.persistente-niveau-2){display:none !impo
 .pieve-polygon-v2:hover{fill-opacity:0.18;stroke-width:2.5;}
 .pieve-polygon-v2:focus,.pieve-polygon-v2.selected{outline:none;stroke:#5a3f2a;stroke-width:3;fill-opacity:0.22;}
 
+/* LOD Phase B — popup fiche éditorial (v3) */
+.tlx-fiche-popup-wrapper .leaflet-popup-content{width:320px !important;}
+.tlx-fiche-popup{padding:0;}
+.tlx-fiche-header{padding:12px 16px 10px;}
+.tlx-fiche-cat{font-size:10px;color:var(--tx-mica);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:3px;}
+.tlx-fiche-title{font-family:var(--font-display);font-size:17px;font-weight:500;color:var(--tx-ardoise);line-height:1.2;}
+.tlx-fiche-sep{height:1px;background:var(--border);}
+.tlx-fiche-body{padding:10px 16px;font-size:13.5px;line-height:1.65;color:var(--tx-ardoise);text-align:justify;max-height:210px;overflow-y:auto;}
+.tlx-fiche-body p{margin:0 0 8px;}
+.tlx-fiche-body p:last-child{margin-bottom:0;}
+.tlx-fiche-body.loading{color:var(--tx-mica);font-style:italic;text-align:center;padding:22px 16px;}
+.tlx-fiche-footer{padding:8px 16px 12px;display:flex;justify-content:flex-end;}
+.tlx-fiche-btn-detail{background:none;border:1px solid var(--border);color:var(--tx-mica);font-family:var(--font);font-size:12px;padding:5px 10px;border-radius:var(--r);cursor:pointer;transition:color .2s,border-color .2s;}
+.tlx-fiche-btn-detail:hover:not([disabled]){color:var(--tx-ardoise);border-color:rgba(31,35,41,0.4);}
+.tlx-fiche-btn-detail[disabled]{opacity:0.5;cursor:default;}
+/* LOD Phase B — side panel fiches v2 */
+#fiche-panel{position:fixed;top:0;right:0;bottom:0;width:400px;max-width:96vw;z-index:5010;background:var(--tx-pierre);box-shadow:var(--shadow-lg);transform:translateX(100%);transition:transform .3s ease-out;overflow-y:auto;}
+#fiche-panel.open{transform:translateX(0);}
+#fiche-panel-header{position:sticky;top:0;background:var(--tx-pierre);border-bottom:1px solid var(--border);padding:14px 20px 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;z-index:1;}
+#fiche-panel-title-wrap{min-width:0;}
+#fiche-panel-cat{font-size:10px;color:var(--tx-mica);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:3px;}
+#fiche-panel-title{font-family:var(--font-display);font-size:20px;font-weight:500;color:var(--tx-ardoise);line-height:1.2;}
+#fiche-panel-close{flex-shrink:0;width:34px;height:34px;border-radius:50%;background:none;border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+#fiche-panel-close::before{content:'×';font-size:24px;color:var(--tx-ardoise);font-weight:300;line-height:1;}
+#fiche-panel-close:hover{background:var(--tx-brume);}
+#fiche-panel-body{padding:18px 22px 40px;font-size:14px;line-height:1.7;color:var(--tx-ardoise);}
+#fiche-panel-body p{margin:0 0 12px;text-align:justify;hyphens:auto;}
+#fiche-panel-body p:last-child{margin-bottom:0;}
+#fiche-panel-body strong{font-weight:600;}
+#fiche-panel-body em{font-style:italic;}
+#fiche-panel-body h2{font-family:var(--font-display);font-size:15px;font-weight:600;color:var(--tx-ardoise);margin:20px 0 6px;}
+#fiche-panel-body h3{font-size:12px;font-weight:600;color:var(--tx-mica);text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 4px;}
+@media(max-width:640px){#fiche-panel{width:100%;}}
+/* LOD Phase C — polygones diocèses et pieves tous-zoom */
+.diocese-lod-polygon{fill:rgba(180,140,90,0.22);stroke:rgba(140,100,50,0.65);stroke-width:1.5;cursor:pointer;fill-opacity:1;stroke-opacity:1;transition:fill .2s;outline:none;}
+.diocese-lod-polygon:hover{fill:rgba(180,140,90,0.38);}
+.diocese-lod-polygon:focus,.diocese-lod-polygon.selected{outline:none;stroke:rgba(100,70,20,0.9);stroke-width:3;}
+.pieve-lod-polygon{stroke:#8c6e50;stroke-width:1.2;stroke-opacity:0.65;fill:#8c6e50;fill-opacity:0.07;cursor:pointer;transition:fill-opacity .25s;outline:none;}
+.pieve-lod-polygon:hover{fill-opacity:0.18;stroke-width:2;}
+
 </style>
 </head>
 <body>
@@ -260,6 +300,16 @@ body.niveau-2 .doyenne-mini-marker:not(.persistente-niveau-2){display:none !impo
       <h2 id="panel-title"></h2>
     </div>
   </div>
+</aside>
+<aside id="fiche-panel" aria-hidden="true">
+  <div id="fiche-panel-header">
+    <div id="fiche-panel-title-wrap">
+      <div id="fiche-panel-cat"></div>
+      <h2 id="fiche-panel-title"></h2>
+    </div>
+    <button id="fiche-panel-close" type="button" aria-label="Fermer la fiche"></button>
+  </div>
+  <div id="fiche-panel-body"></div>
 </aside>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -438,6 +488,7 @@ function initSiteMarkers() {
     const inv = SPOT_TO_PIEVE[site.slug];
 
     if (isIllustrated) spotsIllustratedLayer.addLayer(marker);
+    allSpotsLodLayer.addLayer(marker);  // LOD Phase C : tous les spots a zoom > LOD_ZOOM_SPOTS
 
     // DORMANT post-Brief 8 (revise) : alimentation spotsAllByDioceseLayer
     // conservée pour réactivation Brief 9 (drill-down par diocèse médiéval).
@@ -654,6 +705,14 @@ const SPOT_TO_DOYENNE = new Map();  // spot.slug -> doyenne.slug
 // dans enterNiveau2View, reattach dans exitNiveau2View.
 const doyenneMinisLayer = L.layerGroup();
 
+// LOD Phase C — couches zoom-dependantes (dioceses medievaux, pieves globales, tous spots).
+const dioceseLodLayer = L.layerGroup();
+const allPievesLodLayer = L.layerGroup();
+const allSpotsLodLayer = L.layerGroup();
+const LOD_ZOOM_DIOCESE = 8;    // zoom < 8 : dioceses medievaux
+const LOD_ZOOM_PIEVE = 10;     // zoom >= 10 : toutes les pieves
+const LOD_ZOOM_SPOTS = 12;     // zoom > 12 : tous les spots
+
 // Brief 19 — Mapping illustrations diocese -> doyenne (5/10 doyennes).
 // Recyclage des visuels diocese existants pour donner une identite visuelle
 // aux miniatures. Les 5 autres doyennes gardent le fallback typographique
@@ -661,7 +720,6 @@ const doyenneMinisLayer = L.layerGroup();
 const DOYENNE_ILLUSTRATIONS = {
   doyenne_ajaccio: 'docs/assets/visuels/diocese_d_ajaccio_tellux_v2.png',
   doyenne_plaine_orientale: 'docs/assets/visuels/diocese_d_aleria_tellux_v2.png',
-  doyenne_de_bastia: 'docs/assets/visuels/diocese_de_mariana_tellux_v2.png',
   doyenne_piana_vico_sari: 'docs/assets/visuels/diocese_de_sagone_tellux_v2.png',
   doyenne_du_cap: 'docs/assets/visuels/diocese_du_nebbio_tellux_v2.png',
 };
@@ -796,6 +854,8 @@ fetch(resolveAssetPath('docs/data/doyennes_polygons.json'))
       if (doy) { SPOT_TO_DOYENNE.set(slug, doy); mapped++; } else { unmapped++; }
     }
     console.log('[Tellux patrimoine] Doyennes charges :', data.doyennes.length, '| spots rattaches :', mapped, '| hors polygones :', unmapped);
+    // LOD Phase C — appliquer le LOD initial apres chargement des doyennes.
+    updateZoomLOD();
     // Brief 15 — flag pret pour applyHash initial (apres pieves aussi).
     _doyennesLoaded = true;
     if (typeof _tryApplyInitialHash === 'function') _tryApplyInitialHash();
@@ -872,6 +932,27 @@ fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
         // selectPolygon/clearSelected ; les duplicatas partagent le meme slug).
         if (!pieveShapesBySlugV2[p.slug]) pieveShapesBySlugV2[p.slug] = poly;
       }
+      // LOD Phase C — instance separee pour allPievesLodLayer (zoom 10-12).
+      // Phase D — pieves urbaines (display_mode:'point') : marker centroide.
+      if (p.display_mode === 'point' && p.centroid) {
+        var urbanIcon = L.divIcon({className: 'tlx-marker', iconSize: [14,14], iconAnchor: [7,7]});
+        var urbanMarker = L.marker(L.latLng(p.centroid[0], p.centroid[1]), {icon: urbanIcon, title: p.name});
+        (function(ps) {
+          urbanMarker.on('click', function() {
+            openFichePopup(urbanMarker, 'pieves', ps.slug.replace(/^pieve_/, ''), ps.name, 'PIEVE MEDIEVALE');
+          });
+        })(p);
+        allPievesLodLayer.addLayer(urbanMarker);
+      } else if (p.polygon) {
+        var lodPoly = L.polygon(p.polygon, {className: 'pieve-lod-polygon'});
+        lodPoly.bindTooltip(tooltipLabel, {sticky:true, direction:'top', className:'tlx-tt'});
+        (function(ps) {
+          lodPoly.on('click', function() {
+            openFichePopup(lodPoly, 'pieves', ps.slug.replace(/^pieve_/, ''), ps.name, 'PIEVE MEDIEVALE');
+          });
+        })(p);
+        allPievesLodLayer.addLayer(lodPoly);
+      }
     }
     // Mapping spot -> pieve via point-in-polygon (4e niveau breadcrumb).
     let mappedPieve = 0, unmappedPieve = 0;
@@ -935,6 +1016,8 @@ fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
         console.warn('[Tellux patrimoine] SPOT_DOYENNE_OVERRIDES.json absent ou invalide :', err && err.message);
       });
 
+    // LOD Phase C — reactualiser LOD apres chargement pieves (allPievesLodLayer pret).
+    updateZoomLOD();
     // Brief 15 — flag pret pour applyHash initial (apres doyennes aussi).
     _pievesLoaded = true;
     if (typeof _tryApplyInitialHash === 'function') _tryApplyInitialHash();
@@ -954,17 +1037,9 @@ function onPieveClickV2(slug, name, shape) {
   }
   const el = shape.getElement && shape.getElement();
   if (el) el.classList.add('selected');
-  // Popup minimaliste centree (pas de niveau 3).
-  const html = '<div class="tlx-popup">'
-    + '<div class="tlx-popup-img fallback">Visuel a venir</div>'
-    + '<div class="tlx-popup-body">'
-    + '<div class="tlx-popup-title">' + escapeHtml(name) + '</div>'
-    + '<div class="tlx-popup-cat">PIEVE MEDIEVALE</div>'
-    + '</div></div>';
-  L.popup({maxWidth:240, closeButton:false, autoPan:true})
-    .setLatLng(shape.getBounds().getCenter())
-    .setContent(html)
-    .openOn(map);
+  // LOD Phase B — popup fiche v3 (fallback v2 si v3 absent).
+  var ficheSlug = slug.replace(/^pieve_/, '');
+  openFichePopup(shape, 'pieves', ficheSlug, name, 'PIEVE MEDIEVALE');
 }
 
 // === Brief 9 — Drill-down navigation niveau 1 ↔ niveau 2 ===
@@ -1436,6 +1511,170 @@ window.addEventListener('hashchange', () => {
     document.getElementById('btn-retour-corse').addEventListener('click', exitNiveau2View);
   }
 })();
+
+// === LOD Phase B — Runtime fiche rendering ===
+
+function parseMiniMd(raw) {
+  if (!raw) return '';
+  var text = raw.replace(/^---[\s\S]*?---\s*\n?/, '');
+  text = text.replace(/\n## Note interne[\s\S]*/i, '');
+  text = text.replace(/^#{1,6}\s+.*$/gm, '');
+  text = text.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  var paras = text.split(/\n{2,}/).map(function(p) { return p.trim().replace(/\n/g, ' '); }).filter(Boolean);
+  return paras.map(function(p) { return '<p>' + p + '</p>'; }).join('');
+}
+
+function extractFrontmatter(raw) {
+  var m = raw.match(/^---\n([\s\S]*?)\n---\n?/);
+  if (!m) return { body: raw, meta: {} };
+  var meta = {};
+  m[1].split('\n').forEach(function(line) {
+    var kv = line.match(/^([\w_]+):\s*(.+)$/);
+    if (kv) meta[kv[1].trim()] = kv[2].trim().replace(/^["']|["']$/g, '');
+  });
+  return { body: raw.slice(m[0].length), meta: meta };
+}
+
+function fetchFiche(ficheType, slug, version) {
+  var url = resolveAssetPath('fiches_patrimoine/' + ficheType + '/' + slug + '_' + version + '.md');
+  return fetch(url, {cache: 'default'}).then(function(r) {
+    return r.ok ? r.text() : null;
+  }).catch(function() { return null; });
+}
+
+function openFichePopup(shape, ficheType, slug, displayName, catLabel) {
+  var center = (shape.getBounds ? shape.getBounds().getCenter() : shape.getLatLng ? shape.getLatLng() : shape);
+  var pid = 'fp-' + slug.replace(/[^a-z0-9_]/g, '_');
+  var html = '<div class="tlx-fiche-popup">'
+    + '<div class="tlx-fiche-header">'
+    + '<div class="tlx-fiche-cat">' + escapeHtml(catLabel) + '</div>'
+    + '<div class="tlx-fiche-title">' + escapeHtml(displayName) + '</div>'
+    + '</div>'
+    + '<div class="tlx-fiche-sep"></div>'
+    + '<div class="tlx-fiche-body loading" id="' + pid + '-body">Chargement...</div>'
+    + '<div class="tlx-fiche-footer">'
+    + '<button class="tlx-fiche-btn-detail" id="' + pid + '-btn" disabled>Détails factuels</button>'
+    + '</div>'
+    + '</div>';
+  L.popup({maxWidth: 320, closeButton: false, autoPan: true, className: 'tlx-fiche-popup-wrapper'})
+    .setLatLng(center).setContent(html).openOn(map);
+  // Tenter v3, puis v2 si absent.
+  fetchFiche(ficheType, slug, 'v3').then(function(text) {
+    if (text) return text;
+    return fetchFiche(ficheType, slug, 'v2');
+  }).then(function(text) {
+    var bodyEl = document.getElementById(pid + '-body');
+    var btnEl = document.getElementById(pid + '-btn');
+    if (!bodyEl) return;
+    bodyEl.classList.remove('loading');
+    if (text) {
+      var parsed = extractFrontmatter(text);
+      bodyEl.innerHTML = parseMiniMd(parsed.body || text);
+      if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.addEventListener('click', function() {
+          openFicheDetailPanel(ficheType, slug, displayName, catLabel);
+        });
+      }
+    } else {
+      bodyEl.innerHTML = '<p style="color:var(--tx-mica);font-style:italic">Fiche non disponible.</p>';
+    }
+  });
+}
+
+var fichePanelEl = document.getElementById('fiche-panel');
+var fichePanelTitle = document.getElementById('fiche-panel-title');
+var fichePanelCat = document.getElementById('fiche-panel-cat');
+var fichePanelBody = document.getElementById('fiche-panel-body');
+var fichePanelClose = document.getElementById('fiche-panel-close');
+
+function openFicheDetailPanel(ficheType, slug, displayName, catLabel) {
+  if (!fichePanelEl) return;
+  fichePanelTitle.textContent = displayName;
+  fichePanelCat.textContent = catLabel;
+  fichePanelBody.innerHTML = '<p style="color:var(--tx-mica);font-style:italic">Chargement...</p>';
+  fichePanelEl.classList.add('open');
+  fichePanelEl.setAttribute('aria-hidden', 'false');
+  map.closePopup();
+  fetchFiche(ficheType, slug, 'v2').then(function(text) {
+    if (!text) {
+      fichePanelBody.innerHTML = '<p style="color:var(--tx-mica);font-style:italic">Fiche détaillée non disponible.</p>';
+      return;
+    }
+    var parsed = extractFrontmatter(text);
+    fichePanelBody.innerHTML = parseMiniMd(parsed.body || text);
+  });
+}
+
+function closeFichePanel() {
+  if (!fichePanelEl) return;
+  fichePanelEl.classList.remove('open');
+  fichePanelEl.setAttribute('aria-hidden', 'true');
+}
+
+if (fichePanelClose) fichePanelClose.addEventListener('click', closeFichePanel);
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && fichePanelEl && fichePanelEl.classList.contains('open')) closeFichePanel();
+});
+
+// === LOD Phase C — Zoom-based level of detail ===
+
+fetch(resolveAssetPath('docs/data/dioceses_polygons.json'))
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    for (var i = 0; i < data.dioceses.length; i++) {
+      var d = data.dioceses[i];
+      var label = d.label || ('Diocèse de ' + (d.name || d.slug));
+      var poly = L.polygon(d.polygon, {className: 'diocese-lod-polygon'});
+      poly.bindTooltip(label, {sticky: true, direction: 'top', className: 'tlx-tt'});
+      (function(ds, lbl, pl) {
+        pl.on('click', function() {
+          openFichePopup(pl, 'dioceses', ds.slug, lbl, 'DIOCESE MEDIEVAL');
+        });
+      })(d, label, poly);
+      dioceseLodLayer.addLayer(poly);
+    }
+    console.log('[Tellux patrimoine] LOD Dioceses charges :', data.dioceses.length);
+    updateZoomLOD();
+  })
+  .catch(function(err) {
+    console.error('[Tellux patrimoine] Echec dioceses_polygons.json LOD :', err);
+  });
+
+function updateZoomLOD() {
+  if (document.body.classList.contains('niveau-2')) return;
+  var z = map.getZoom();
+
+  // Diocèses (zoom < LOD_ZOOM_DIOCESE) vs doyennés
+  if (z < LOD_ZOOM_DIOCESE) {
+    if (!map.hasLayer(dioceseLodLayer) && dioceseLodLayer.getLayers().length > 0) dioceseLodLayer.addTo(map);
+    if (map.hasLayer(doyenneFillLayer)) map.removeLayer(doyenneFillLayer);
+    if (map.hasLayer(doyenneMinisLayer)) map.removeLayer(doyenneMinisLayer);
+  } else {
+    if (map.hasLayer(dioceseLodLayer)) map.removeLayer(dioceseLodLayer);
+    if (!map.hasLayer(doyenneFillLayer)) doyenneFillLayer.addTo(map);
+    if (!map.hasLayer(doyenneMinisLayer)) doyenneMinisLayer.addTo(map);
+  }
+
+  // Toutes les pieves (zoom >= LOD_ZOOM_PIEVE)
+  if (z >= LOD_ZOOM_PIEVE) {
+    if (!map.hasLayer(allPievesLodLayer) && allPievesLodLayer.getLayers().length > 0) allPievesLodLayer.addTo(map);
+  } else {
+    if (map.hasLayer(allPievesLodLayer)) map.removeLayer(allPievesLodLayer);
+  }
+
+  // Tous les spots (zoom > LOD_ZOOM_SPOTS) — remplace les 14 spots illustres
+  if (z > LOD_ZOOM_SPOTS) {
+    if (map.hasLayer(spotsIllustratedLayer)) map.removeLayer(spotsIllustratedLayer);
+    if (!map.hasLayer(allSpotsLodLayer) && allSpotsLodLayer.getLayers().length > 0) allSpotsLodLayer.addTo(map);
+  } else {
+    if (map.hasLayer(allSpotsLodLayer)) map.removeLayer(allSpotsLodLayer);
+    if (!map.hasLayer(spotsIllustratedLayer)) spotsIllustratedLayer.addTo(map);
+  }
+}
+
+map.on('zoomend', function() { updateZoomLOD(); });
 </script>
 </body>
 </html>
