@@ -71,14 +71,17 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 /* Brief 18 — Panel simplifie : viewer illustration plein cadre + overlay
    titre/categorie en bas. Suppression du systeme flip recto/verso.
    Refonte des fiches longues differee (decision Soleil 2026-05-04). */
-/* Brief 22 (B22-UX-034) — z-index 1500 -> 5000 pour passer au-dessus de la
-   legende (z-index 1000) et de tout autre overlay. Le transform translateX
-   sur #panel cree un nouveau contexte de stacking qui pouvait isoler son
-   z-index ; bumper le z-index resout proprement le conflit visuel. */
-#panel{position:fixed;top:0;right:0;width:38vw;min-width:340px;max-width:520px;height:100vh;z-index:5000;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);background:var(--tx-pierre);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;}
-#panel.open{transform:translateX(0);}
-#panel-illustration{flex:1;position:relative;background:var(--tx-brume);overflow:hidden;display:flex;align-items:center;justify-content:center;}
-#panel-img{width:100%;height:100%;object-fit:cover;display:block;}
+/* Brief 21 — Panel illustration en MODAL CENTRE avec backdrop overlay.
+   Animation scale + opacity, click backdrop ferme le panel. object-fit:contain
+   pour ne pas rogner l'illustration.
+   Brief 22 (B22-UX-034) — z-index panel 1500 -> 5000 pour passer au-dessus
+   de tout overlay actuel (legende 1000, backdrop 1499). */
+#panel-backdrop{position:fixed;inset:0;background:rgba(31,35,41,0.6);z-index:4999;display:none;}
+#panel-backdrop.visible{display:block;}
+#panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.95);max-width:90vw;width:520px;max-height:90vh;z-index:5000;opacity:0;pointer-events:none;transition:transform .25s cubic-bezier(.4,0,.2,1),opacity .25s;background:var(--tx-pierre);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;border-radius:var(--r2);}
+#panel.open{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto;}
+#panel-illustration{flex:1;min-height:0;position:relative;background:var(--tx-brume);overflow:hidden;display:flex;align-items:center;justify-content:center;}
+#panel-img{max-width:90vw;max-height:90vh;width:100%;height:auto;object-fit:contain;display:block;}
 #panel-img.hidden{display:none;}
 #panel-fallback{font-style:italic;color:var(--tx-mica);font-size:14px;padding:24px;text-align:center;}
 #panel-fallback.hidden{display:none;}
@@ -91,7 +94,7 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 #panel-close:hover::before{color:var(--tx-pierre);}
 /* Mobile */
 @media (max-width:640px){
-  #panel{width:100vw;min-width:100%;}
+  #panel{width:95vw;max-height:85vh;}
   #tlx-header h1{font-size:16px;}
   #tlx-header .subtitle{display:none;}
 }
@@ -153,18 +156,10 @@ body.niveau-2 #btn-retour-corse{display:flex;}
    positionnee au centroide du polygone via L.divIcon. Cachees en niveau 2. */
 .doyenne-mini{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:transform .2s;pointer-events:auto;}
 .doyenne-mini:hover{transform:scale(1.08);}
-/* Brief 22 (B22-UX-033) — wrapper unifie cercle 56x56 pour garantir le meme
-   format aux miniatures illustrees ET fallback typo. L'<img> et le <span>
-   fallback partagent les memes proprietes geometriques (taille, border,
-   ombre, palette) mais display:flex est reserve au fallback (replaced
-   element <img> ne supporte pas display:flex correctement, ce qui faisait
-   etirer l'<img> a sa width intrinseque PNG ~1344px ratio paysage). */
-.doyenne-mini-img,.doyenne-mini-fallback{width:56px;height:56px;min-width:56px;border-radius:50%;border:2px solid #1F2329;background:#F5F0E7;box-shadow:0 4px 12px rgba(31,35,41,0.25);overflow:hidden;}
-/* Brief 22 (B22-UX-033) — !important sur width/height de <img> car le browser
-   considere par defaut son aspect-ratio natif (1344x768) qui force width au-
-   dessus de la regle CSS sans !important. */
-.doyenne-mini-img{display:block;object-fit:cover;object-position:center;width:56px !important;height:56px !important;max-width:56px;}
-.doyenne-mini-fallback{display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:24px;font-weight:600;color:#1F2329;line-height:1;}
+/* Brief 21 — Miniatures format RECTANGLE (border-radius:var(--r) = 8px)
+   pour ne pas rogner l'illustration diocese recyclee (PNG ratio paysage). */
+.doyenne-mini-img,.doyenne-mini-fallback{width:64px;height:64px;border-radius:var(--r);border:2px solid #1F2329;background:#F5F0E7;box-shadow:0 4px 12px rgba(31,35,41,0.25);object-fit:cover;display:flex;align-items:center;justify-content:center;}
+.doyenne-mini-fallback{font-family:'Fraunces',serif;font-size:28px;font-weight:600;color:#1F2329;}
 .doyenne-mini-label{font-family:'Fraunces',serif;font-size:13px;font-weight:600;color:#1F2329;text-align:center;text-shadow:0 1px 3px rgba(245,240,231,0.95),0 0 8px rgba(245,240,231,0.95);max-width:120px;line-height:1.1;}
 /* Brief 19 — Bug visibilite N2 (Brief 14) : la regle .doyenne-mini cache
    l'inner mais le wrapper Leaflet outer .doyenne-mini-marker reste visible
@@ -237,6 +232,7 @@ body.niveau-2 .doyenne-mini-marker{display:none !important;pointer-events:none;}
     </section>
   </div>
 </aside>
+<div id="panel-backdrop"></div>
 <aside id="panel" aria-hidden="true">
   <button id="panel-close" type="button" aria-label="Fermer le panneau"></button>
   <div id="panel-illustration">
@@ -423,6 +419,7 @@ function openPopup(marker, site) {
 // Brief 18 — Panel simplifie : viewer illustration plein cadre + overlay
 // titre/categorie en bas. Suppression du systeme flip recto/verso.
 const panel = document.getElementById('panel');
+const panelBackdrop = document.getElementById('panel-backdrop');
 const panelImg = document.getElementById('panel-img');
 const panelFallback = document.getElementById('panel-fallback');
 const panelCat = document.getElementById('panel-cat');
@@ -447,11 +444,13 @@ function openPanel(site) {
     panelFallback.classList.remove('hidden');
   }
   panel.classList.add('open');
+  panelBackdrop.classList.add('visible');
   panel.setAttribute('aria-hidden', 'false');
 }
 
 function closePanel() {
   panel.classList.remove('open');
+  panelBackdrop.classList.remove('visible');
   panel.setAttribute('aria-hidden', 'true');
 }
 
@@ -459,6 +458,7 @@ panelClose.addEventListener('click', (e) => {
   e.stopPropagation();
   closePanel();
 });
+panelBackdrop.addEventListener('click', closePanel);
 
 // ESC pour fermer
 document.addEventListener('keydown', (e) => {
