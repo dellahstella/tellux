@@ -71,9 +71,14 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 /* Brief 18 — Panel simplifie : viewer illustration plein cadre + overlay
    titre/categorie en bas. Suppression du systeme flip recto/verso.
    Refonte des fiches longues differee (decision Soleil 2026-05-04). */
-#panel-backdrop{position:fixed;inset:0;background:rgba(31,35,41,0.6);z-index:1499;display:none;}
+/* Brief 21 — Panel illustration en MODAL CENTRE avec backdrop overlay.
+   Animation scale + opacity, click backdrop ferme le panel. object-fit:contain
+   pour ne pas rogner l'illustration.
+   Brief 22 (B22-UX-034) — z-index panel 1500 -> 5000 pour passer au-dessus
+   de tout overlay actuel (legende 1000, backdrop 4999). */
+#panel-backdrop{position:fixed;inset:0;background:rgba(31,35,41,0.6);z-index:4999;display:none;}
 #panel-backdrop.visible{display:block;}
-#panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.95);max-width:90vw;width:520px;max-height:90vh;z-index:1500;opacity:0;pointer-events:none;transition:transform .25s cubic-bezier(.4,0,.2,1),opacity .25s;background:var(--tx-pierre);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;border-radius:var(--r2);}
+#panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.95);max-width:90vw;width:520px;max-height:90vh;z-index:5000;opacity:0;pointer-events:none;transition:transform .25s cubic-bezier(.4,0,.2,1),opacity .25s;background:var(--tx-pierre);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;border-radius:var(--r2);}
 #panel.open{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto;}
 #panel-illustration{flex:1;min-height:0;position:relative;background:var(--tx-brume);overflow:hidden;display:flex;align-items:center;justify-content:center;}
 #panel-img{max-width:90vw;max-height:90vh;width:100%;height:auto;object-fit:contain;display:block;}
@@ -151,8 +156,15 @@ body.niveau-2 #btn-retour-corse{display:flex;}
    positionnee au centroide du polygone via L.divIcon. Cachees en niveau 2. */
 .doyenne-mini{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:transform .2s;pointer-events:auto;}
 .doyenne-mini:hover{transform:scale(1.08);}
+/* Brief 21 — Miniatures format RECTANGLE (border-radius:var(--r) = 8px)
+   pour ne pas rogner l'illustration diocese recyclee (PNG ratio paysage). */
 .doyenne-mini-img,.doyenne-mini-fallback{width:64px;height:64px;border-radius:var(--r);border:2px solid #1F2329;background:#F5F0E7;box-shadow:0 4px 12px rgba(31,35,41,0.25);object-fit:cover;display:flex;align-items:center;justify-content:center;}
 .doyenne-mini-fallback{font-family:'Fraunces',serif;font-size:28px;font-weight:600;color:#1F2329;}
+/* Brief 23 — Distinction visuelle de la miniature persistante au niveau 2
+   (clic = ouvre fiche doyenne, vs niveau 1 ou clic = drill-down). Bordure
+   ocre + ombre plus marquee pour signaler une interaction differente. */
+.doyenne-mini-marker.persistente-niveau-2 .doyenne-mini-img,
+.doyenne-mini-marker.persistente-niveau-2 .doyenne-mini-fallback{border-color:var(--tx-ocre);box-shadow:0 4px 16px rgba(194,133,51,0.45);}
 .doyenne-mini-label{font-family:'Fraunces',serif;font-size:13px;font-weight:600;color:#1F2329;text-align:center;text-shadow:0 1px 3px rgba(245,240,231,0.95),0 0 8px rgba(245,240,231,0.95);max-width:120px;line-height:1.1;}
 /* Brief 19 — Bug visibilite N2 (Brief 14) : la regle .doyenne-mini cache
    l'inner mais le wrapper Leaflet outer .doyenne-mini-marker reste visible
@@ -271,6 +283,18 @@ const tileStyle = document.createElement('style');
 tileStyle.textContent = '.tlx-tiles{filter:sepia(0.25) saturate(0.85) brightness(1.02) contrast(0.95);}';
 document.head.appendChild(tileStyle);
 
+// Brief 22 (B22-UX-035) — Resoudre les paths assets en absolu pour eviter
+// la resolution relative depuis l'URL courante. Sur Cloudflare Pages, la
+// route /patrimoine est servie via patrimoine.html (sans .html dans l'URL),
+// le browser interprete /patrimoine comme un dossier pour la resolution
+// relative -> docs/assets/foo.png devient /patrimoine/docs/assets/foo.png
+// (404). Helper qui prefixe '/' si le path est relatif simple.
+function resolveAssetPath(p) {
+  if (!p) return p;
+  if (p.startsWith('/') || /^https?:\/\//.test(p) || p.startsWith('data:')) return p;
+  return '/' + p;
+}
+
 // Brief 8 — Refonte navigation drill-down 2 niveaux (vision macro Soleil 2026-05-04)
 // Niveau 1 (vue Corse) : 6 polygones diocèses pleins + spots illustrés uniquement.
 // Niveau 2 (vue diocèse, déclenché par clic) : pieves + tous les spots du diocèse.
@@ -374,7 +398,7 @@ console.log('[Tellux patrimoine] Spots-diocèse exclus:', dioceseSpotsExclus.len
 
 // Popup builder
 function openPopup(marker, site) {
-  const visualPath = site.visuel || '';
+  const visualPath = site.visuel ? resolveAssetPath(site.visuel) : '';
   const imgHtml = visualPath
     ? `<img loading="lazy" class="tlx-popup-img" src="${visualPath}" alt="${escapeHtml(site.nom)}" onerror="this.outerHTML='<div class=\\'tlx-popup-img fallback\\'>Visuel à venir</div>'">`
     : `<div class="tlx-popup-img fallback">Visuel à venir</div>`;
@@ -411,7 +435,7 @@ function openPanel(site) {
   panelTitle.textContent = site.nom || '';
   panelCat.textContent = site.categorie || '';
   if (site.visuel) {
-    panelImg.src = site.visuel;
+    panelImg.src = resolveAssetPath(site.visuel);
     panelImg.alt = site.nom || '';
     panelImg.classList.remove('hidden');
     panelFallback.classList.add('hidden');
@@ -433,6 +457,24 @@ function closePanel() {
   panel.classList.remove('open');
   panelBackdrop.classList.remove('visible');
   panel.setAttribute('aria-hidden', 'true');
+}
+
+// Brief 23 — Fiche doyenne (niveau 2, clic miniature persistante).
+// Reutilise openPanel via objet adapte (memes champs nom/categorie/visuel).
+// Source illustration : DOYENNE_ILLUSTRATIONS recyclage diocese (5/10) ou
+// d.illustration_path speculatif (fallback). Pour les 5 doyennes sans
+// illustration : visuel vide -> fallback "Illustration a venir" centre.
+function openDoyennePanel(d) {
+  const display = d.display_name || d.name || d.slug;
+  const recycled = (typeof DOYENNE_ILLUSTRATIONS === 'object' && DOYENNE_ILLUSTRATIONS[d.slug])
+    ? DOYENNE_ILLUSTRATIONS[d.slug] : '';
+  const speculative = d.illustration_path || '';
+  const visuel = recycled || speculative || '';
+  openPanel({
+    nom: display,
+    categorie: 'Doyenné contemporain',
+    visuel: visuel,
+  });
 }
 
 panelClose.addEventListener('click', (e) => {
@@ -553,7 +595,7 @@ function findDoyenneForPoint(lat, lng) {
   return null;
 }
 
-fetch('docs/data/doyennes_polygons.json')
+fetch(resolveAssetPath('docs/data/doyennes_polygons.json'))
   .then(r => r.json())
   .then(data => {
     for (const d of data.doyennes) {
@@ -580,8 +622,10 @@ fetch('docs/data/doyennes_polygons.json')
       // .doyenne-mini-marker (wrapper Leaflet) en backup.
       const center = poly.getBounds().getCenter();
       const initiale = (d.initiale || display.charAt(0) || '?').toUpperCase();
-      const speculativePath = d.illustration_path || '';
-      const recycledPath = DOYENNE_ILLUSTRATIONS[d.slug] || '';
+      // Brief 22 (B22-UX-035) — paths absolus pour eviter resolution
+      // relative depuis l'URL courante /patrimoine sur Cloudflare Pages.
+      const speculativePath = d.illustration_path ? resolveAssetPath(d.illustration_path) : '';
+      const recycledPath = DOYENNE_ILLUSTRATIONS[d.slug] ? resolveAssetPath(DOYENNE_ILLUSTRATIONS[d.slug]) : '';
       // Si le visuel doyenne dedie existe, on l'utilise (priorite 0). Sinon
       // on tente le recyclage diocese si mappable. Sinon fallback typo.
       const primaryPath = speculativePath || recycledPath;
@@ -589,16 +633,20 @@ fetch('docs/data/doyennes_polygons.json')
       // Si les deux paths sont disponibles, on chaine les fallbacks via deux
       // niveaux d'onerror (img dedie -> img recyclee -> typo). Sinon un seul
       // niveau (img unique -> typo).
+      // Brief 22 (B22-UX-033) — attributs HTML width="56" height="56" inline
+      // pour forcer les dimensions intrinsequees de <img> (la regle CSS
+      // .doyenne-mini-img { width: 56px } est ignoree par certains browsers
+      // sur replaced elements quand le PNG natif a un ratio paysage).
       let html;
       if (speculativePath && recycledPath) {
         html = '<div class="doyenne-mini">'
-          + '<img class="doyenne-mini-img" src="' + speculativePath + '" alt="' + safeDisplay + '"'
+          + '<img class="doyenne-mini-img" width="56" height="56" src="' + speculativePath + '" alt="' + safeDisplay + '"'
           + ' onerror="this.onerror=function(){this.outerHTML=\'<span class=&quot;doyenne-mini-fallback&quot;>' + initiale + '</span>\'};this.src=\'' + recycledPath + '\'">'
           + '<span class="doyenne-mini-label">' + safeDisplay + '</span>'
           + '</div>';
       } else if (primaryPath) {
         html = '<div class="doyenne-mini">'
-          + '<img class="doyenne-mini-img" src="' + primaryPath + '" alt="' + safeDisplay + '"'
+          + '<img class="doyenne-mini-img" width="56" height="56" src="' + primaryPath + '" alt="' + safeDisplay + '"'
           + ' onerror="this.outerHTML=\'<span class=&quot;doyenne-mini-fallback&quot;>' + initiale + '</span>\'">'
           + '<span class="doyenne-mini-label">' + safeDisplay + '</span>'
           + '</div>';
@@ -615,7 +663,22 @@ fetch('docs/data/doyennes_polygons.json')
         iconAnchor: [60, 48],
       });
       const miniMarker = L.marker(center, {icon, interactive: true, keyboard: false, riseOnHover: true});
-      miniMarker.on('click', () => onDoyenneClick(d.slug, display, poly));
+      // Brief 23 — handler clic miniature dependant du niveau :
+      //   N1 : drill-down (idem clic polygone) — comportement Brief 14
+      //   N2 (sur la miniature persistante du doyenne actif uniquement) :
+      //     ouvre fiche doyenne via openDoyennePanel reutilisant openPanel.
+      const doyData = d;
+      miniMarker.on('click', () => {
+        if (document.body.classList.contains('niveau-2')) {
+          if (currentDoyenneSlug === doyData.slug) openDoyennePanel(doyData);
+        } else {
+          onDoyenneClick(doyData.slug, display, poly);
+        }
+      });
+      // Brief 23 — slug stocke sur le marker pour identifier la miniature
+      // active dans enterNiveau2View / exitNiveau2View.
+      miniMarker._doyenneSlug = doyData.slug;
+      miniMarker._doyenneData = doyData;
       doyenneMinisLayer.addLayer(miniMarker);
     }
     doyenneFillLayer.addTo(map);
@@ -670,7 +733,7 @@ function findPieveForPoint(lat, lng) {
   return null;
 }
 
-fetch('docs/data/pieves_polygons.json')
+fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
   .then(r => r.json())
   .then(data => {
     for (const p of data.pieves) {
@@ -731,7 +794,7 @@ fetch('docs/data/pieves_polygons.json')
     // des spots adressables = ceux invisibles aux deux niveaux : non illustres
     // (pas dans ILLUSTRATED_SPOTS) ET non rattaches a un doyenne via
     // SPOT_TO_DOYENNE (point-in-polygon doyenne echec).
-    fetch('_drafts/SPOT_DOYENNE_OVERRIDES.json')
+    fetch(resolveAssetPath('_drafts/SPOT_DOYENNE_OVERRIDES.json'))
       .then(r => r.ok ? r.json() : {overrides: {}})
       .then(ovrData => {
         const overrides = (ovrData && ovrData.overrides) || {};
@@ -831,18 +894,30 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   const el = shape.getElement && shape.getElement();
   if (el) el.classList.add('dim-niveau-2');
 
-  // Brief 20 fix #4 — fade-out spots N1 + miniatures doyennes via classe CSS
-  // .fading-out (250ms) avant detach pour adoucir la disparition.
+  // Brief 20 fix #4 + Brief 23 — fade-out spots N1 + 9 miniatures
+  // (la 10e du doyenne actif reste visible avec classe .persistente-niveau-2).
   const spotsN1Icons = spotsIllustratedLayer.getLayers().map(l => l._icon).filter(Boolean);
-  const minisIcons = doyenneMinisLayer.getLayers().map(l => l._icon).filter(Boolean);
+  const allMiniLayers = doyenneMinisLayer.getLayers();
+  const activeMiniLayer = allMiniLayers.find(m => m._doyenneSlug === doyenneSlug);
+  const otherMiniLayers = allMiniLayers.filter(m => m._doyenneSlug !== doyenneSlug);
+  const otherMiniIcons = otherMiniLayers.map(l => l._icon).filter(Boolean);
   for (const icon of spotsN1Icons) icon.classList.add('fading-out');
-  for (const icon of minisIcons) icon.classList.add('fading-out');
+  for (const icon of otherMiniIcons) icon.classList.add('fading-out');
   setTimeout(() => {
     if (map.hasLayer(spotsIllustratedLayer)) map.removeLayer(spotsIllustratedLayer);
-    if (map.hasLayer(doyenneMinisLayer)) map.removeLayer(doyenneMinisLayer);
+    // Brief 23 — detacher individuellement les 9 miniatures non-actives
+    // (vs detach total Brief 19 §4.6). La miniature active reste attachee.
+    for (const m of otherMiniLayers) {
+      if (map.hasLayer(m)) map.removeLayer(m);
+    }
     for (const icon of spotsN1Icons) icon.classList.remove('fading-out');
-    for (const icon of minisIcons) icon.classList.remove('fading-out');
+    for (const icon of otherMiniIcons) icon.classList.remove('fading-out');
   }, 250);
+  // Brief 23 — distinction visuelle de la miniature persistante (classe
+  // .persistente-niveau-2 sur le wrapper Leaflet pour bordure ocre + ombre).
+  if (activeMiniLayer && activeMiniLayer._icon) {
+    activeMiniLayer._icon.classList.add('persistente-niveau-2');
+  }
 
   // Attacher pieves du doyenne (Brief 9 Strat A pieves_polygons.json).
   const pivlg = pievesByDoyenneLayer.get(doyenneSlug);
@@ -896,7 +971,19 @@ function exitNiveau2View() {
   if (!map.hasLayer(spotsIllustratedLayer)) spotsIllustratedLayer.addTo(map);
 
   // Brief 19 — re-attacher miniatures doyennes au retour vue Corse.
+  // Brief 23 — chaque marker doit etre re-attache individuellement au map
+  // (en plus du LayerGroup global) car les 9 non-actifs ont ete detaches
+  // individuellement dans enterNiveau2View. Le LayerGroup re-attache les
+  // refs internes mais pour s'assurer que chaque marker apparait, on les
+  // ajoute au LayerGroup s'ils n'y sont plus, et on retire la classe
+  // persistente-niveau-2 du marker actif precedent.
   if (!map.hasLayer(doyenneMinisLayer)) doyenneMinisLayer.addTo(map);
+  for (const m of doyenneMinisLayer.getLayers()) {
+    if (!map.hasLayer(m)) m.addTo(map);
+    if (m._icon) m._icon.classList.remove('persistente-niveau-2');
+  }
+  // Brief 23 — fermer la fiche doyenne si elle etait ouverte au retour.
+  if (typeof closePanel === 'function' && panel.classList.contains('open')) closePanel();
 
   // Clear highlights polygones, popup et tooltip persistant (B11-UX-029).
   // Le tooltip Leaflet sticky se reouvre via mouseover residuel pendant le
