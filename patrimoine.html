@@ -8,6 +8,9 @@
 <meta name="description" content="Cartographie patrimoniale corse — sites mégalithiques, édifices romans, sites naturels, architecture LOD diocèses & pieves.">
 <link rel="icon" type="image/svg+xml" href="assets/logo/tellux_logo.svg">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
 <style>
 @font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400;font-display:swap;src:url('/assets/fonts/ibm-plex-sans/IBMPlexSans-Regular.woff2') format('woff2');}
 @font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:500;font-display:swap;src:url('/assets/fonts/ibm-plex-sans/IBMPlexSans-Medium.woff2') format('woff2');}
@@ -264,6 +267,32 @@ body.niveau-2-actif .doyenne-mini-marker.persistente-niveau-2{display:none !impo
 .pieve-lod-polygon{stroke:#8c6e50;stroke-width:1.2;stroke-opacity:0.65;fill:#8c6e50;fill-opacity:0.07;cursor:pointer;transition:fill-opacity .25s;outline:none;}
 .pieve-lod-polygon:hover{fill-opacity:0.18;stroke-width:2;}
 
+/* === Brief 31 — Carte postale flippable === */
+.carte-postale{perspective:1500px;cursor:pointer;user-select:none;position:absolute;inset:0;z-index:2;}
+.carte-postale-inner{position:relative;width:100%;height:100%;transition:transform 0.7s ease;transform-style:preserve-3d;}
+.carte-postale.flipped .carte-postale-inner{transform:rotateY(180deg);}
+.carte-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:var(--r);overflow:hidden;background-size:cover;background-position:center;background-repeat:no-repeat;}
+.carte-face-verso{transform:rotateY(180deg);}
+.carte-verso-overlay{position:absolute;top:var(--frieze-top,7%);right:var(--frieze-right,4%);bottom:var(--frieze-bottom,12%);left:var(--frieze-left,4%);background:radial-gradient(ellipse at 30% 20%,rgba(255,255,255,0.55),transparent 60%),radial-gradient(ellipse at 70% 80%,rgba(255,255,255,0.45),transparent 60%),#f0e6d0;border-radius:2px;overflow:hidden;box-shadow:inset 0 0 8px rgba(120,90,60,0.15);}
+.carte-verso-text{position:absolute;inset:0;padding:8px 10px;overflow-y:auto;overflow-x:hidden;color:#3a2c1c;font-family:'Kalam',cursive;font-size:11.5px;font-weight:400;line-height:1.32;}
+.carte-verso-text::-webkit-scrollbar{width:4px;}
+.carte-verso-text::-webkit-scrollbar-thumb{background:rgba(58,44,28,0.3);border-radius:4px;}
+.carte-verso-text::-webkit-scrollbar-track{background:transparent;}
+.carte-verso-text p{margin:0 0 6px;}
+.carte-verso-text p:first-child::first-letter{font-size:1.4em;font-weight:700;}
+.carte-flip-hint{position:absolute;top:8px;right:8px;width:22px;height:22px;background:rgba(245,240,231,0.88);border:1px solid rgba(31,35,41,0.35);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--tx-encre);z-index:5;pointer-events:none;transition:transform 0.25s,box-shadow 0.25s;}
+.carte-postale:hover .carte-flip-hint{transform:scale(1.15) rotate(15deg);box-shadow:0 2px 6px rgba(31,35,41,0.25);background:rgba(245,240,231,1);}
+.carte-face-verso .carte-flip-hint{right:auto;left:8px;}
+.carte-postale::after{content:"";position:absolute;inset:0;border-radius:var(--r);background:linear-gradient(135deg,transparent 30%,rgba(255,255,255,0.18) 50%,transparent 70%);opacity:0;transition:opacity 0.4s;pointer-events:none;z-index:4;}
+.carte-postale:hover::after{opacity:1;}
+.carte-illustration-partagee{position:absolute;bottom:6px;right:6px;z-index:6;background:rgba(245,240,231,0.85);border:1px solid rgba(31,35,41,0.25);border-radius:8px;padding:2px 7px;font-family:'Fraunces',serif;font-size:9.5px;font-style:italic;color:var(--tx-encre);pointer-events:none;opacity:0.7;}
+.carte-postale.flipped .carte-illustration-partagee{display:none;}
+#panel-illustration.has-carte-postale #panel-img,#panel-illustration.has-carte-postale #panel-fallback{display:none;}
+#panel-illustration.has-carte-postale #panel-overlay{z-index:10;pointer-events:none;}
+@media(max-width:768px){
+  .carte-verso-text{font-size:12px;padding:6px 8px;}
+  .carte-flip-hint{width:20px;height:20px;font-size:11px;}
+}
 </style>
 </head>
 <body>
@@ -598,11 +627,23 @@ function openPanel(site) {
   }
   panel.classList.add('open');
   panel.setAttribute('aria-hidden', 'false');
+
+  // Brief 31 — carte postale flippable si fiche v3 disponible pour ce slug.
+  _deactivateCartePostale();
+  if (site.slug) {
+    _loadFichesPatrimoine().then(fiches => {
+      if (!panel.classList.contains('open')) return; // panel referme entre-temps
+      const fiche = fiches[site.slug];
+      if (fiche) _activateCartePostale(document.getElementById('panel-illustration'), fiche);
+    });
+  }
 }
 
 function closePanel() {
   panel.classList.remove('open');
   panel.setAttribute('aria-hidden', 'true');
+  // Brief 31 — nettoyage carte postale a la fermeture du panel.
+  _deactivateCartePostale();
   // Brief 27 — backdrop modal sync fermeture.
   if (panelBackdrop) {
     panelBackdrop.classList.remove('open');
@@ -622,6 +663,7 @@ function openDoyennePanel(d) {
   const speculative = d.illustration_path || '';
   const visuel = recycled || speculative || '';
   openPanel({
+    slug: d.slug,
     nom: display,
     categorie: 'Doyenné',
     visuel: visuel,
@@ -1755,6 +1797,125 @@ function _removeDoyenneSticker() {
     console.log('[Tellux patrimoine] Brief 30 — sticker doyenné niveau 2 supprimé');
   }
 }
+
+// === Brief 31 — Carte postale flippable ===
+let _fichesPatrimoine = null;
+let _fichesPatrimoinePromise = null;
+async function _loadFichesPatrimoine() {
+  if (_fichesPatrimoine) return _fichesPatrimoine;
+  if (_fichesPatrimoinePromise) return _fichesPatrimoinePromise;
+  _fichesPatrimoinePromise = (async () => {
+    try {
+      const resp = await fetch(resolveAssetPath('docs/data/fiches_patrimoine.json'));
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const json = await resp.json();
+      _fichesPatrimoine = json.fiches || {};
+      console.log('[Tellux patrimoine] Brief 31 — ' + Object.keys(_fichesPatrimoine).length + ' fiches v3 chargées');
+    } catch (e) {
+      console.warn('[Tellux patrimoine] Brief 31 — erreur chargement fiches v3 :', e);
+      _fichesPatrimoine = {};
+    }
+    return _fichesPatrimoine;
+  })();
+  return _fichesPatrimoinePromise;
+}
+
+function _activateCartePostale(container, fiche) {
+  if (!container || !fiche) return;
+  _deactivateCartePostale();
+  const inset = fiche.frieze_inset || {};
+  const carte = document.createElement('div');
+  carte.className = 'carte-postale';
+  carte.style.setProperty('--frieze-top', inset.top || '7%');
+  carte.style.setProperty('--frieze-right', inset.right || '4%');
+  carte.style.setProperty('--frieze-bottom', inset.bottom || '12%');
+  carte.style.setProperty('--frieze-left', inset.left || '4%');
+
+  const inner = document.createElement('div');
+  inner.className = 'carte-postale-inner';
+
+  const illuPath = resolveAssetPath(fiche.illustration);
+  const recto = document.createElement('div');
+  recto.className = 'carte-face carte-face-recto';
+  recto.style.backgroundImage = 'url("' + illuPath + '")';
+  const hintRecto = document.createElement('div');
+  hintRecto.className = 'carte-flip-hint';
+  hintRecto.textContent = '↻';
+  hintRecto.title = 'Cliquer pour lire le texte';
+  recto.appendChild(hintRecto);
+  if (fiche.illustration_partagee) {
+    const badge = document.createElement('div');
+    badge.className = 'carte-illustration-partagee';
+    badge.textContent = '✦ illustration partagée';
+    badge.title = 'Illustration commune avec ' + fiche.illustration_partagee.replace('diocese_', 'diocèse de ');
+    recto.appendChild(badge);
+  }
+
+  const verso = document.createElement('div');
+  verso.className = 'carte-face carte-face-verso';
+  verso.style.backgroundImage = 'url("' + illuPath + '")';
+  const overlay = document.createElement('div');
+  overlay.className = 'carte-verso-overlay';
+  const textBox = document.createElement('div');
+  textBox.className = 'carte-verso-text';
+  textBox.innerHTML = _formatTextVersoFiche(fiche.texte_v3);
+  overlay.appendChild(textBox);
+  verso.appendChild(overlay);
+  const hintVerso = document.createElement('div');
+  hintVerso.className = 'carte-flip-hint';
+  hintVerso.textContent = '↺';
+  hintVerso.title = "Cliquer pour revenir à l'illustration";
+  verso.appendChild(hintVerso);
+
+  inner.appendChild(recto);
+  inner.appendChild(verso);
+  carte.appendChild(inner);
+
+  let isScrollingText = false;
+  let scrollResetTimer = null;
+  textBox.addEventListener('scroll', () => {
+    isScrollingText = true;
+    if (scrollResetTimer) clearTimeout(scrollResetTimer);
+    scrollResetTimer = setTimeout(() => { isScrollingText = false; }, 200);
+  });
+  carte.addEventListener('click', (e) => {
+    if (isScrollingText) return;
+    carte.classList.toggle('flipped');
+  });
+
+  container.appendChild(carte);
+  container.classList.add('has-carte-postale');
+}
+
+function _deactivateCartePostale() {
+  const container = document.getElementById('panel-illustration');
+  if (!container) return;
+  container.classList.remove('has-carte-postale');
+  const existing = container.querySelector('.carte-postale');
+  if (existing) existing.remove();
+}
+
+function _formatTextVersoFiche(rawText) {
+  if (!rawText) return '';
+  const sentences = rawText.split(/(?<=[.!?])\s+(?=[A-ZÀÁÂÄÆÇÈÉÊËÌÎÏÒÓÔÖÙÛÜ«])/);
+  const paras = [];
+  let buf = [];
+  sentences.forEach((s, i) => {
+    buf.push(s);
+    if (buf.length >= 3 || i === sentences.length - 1) {
+      paras.push(buf.join(' '));
+      buf = [];
+    }
+  });
+  return paras.map(p => '<p>' + _escapeHtmlBrief31(p) + '</p>').join('');
+}
+
+function _escapeHtmlBrief31(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Préchargement non-bloquant des fiches au boot.
+_loadFichesPatrimoine();
 </script>
 </body>
 </html>
