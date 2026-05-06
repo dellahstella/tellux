@@ -169,8 +169,13 @@ body.niveau-2 #btn-retour-corse{display:flex;}
    Brief 25 — exception pour la miniature persistante du doyenne actif
    (.persistente-niveau-2). Sans ce :not(...), la regle !important Brief 19
    masquait aussi la mini active malgre le detach selectif Brief 23, ce qui
-   defaisait toute la fonctionnalite fiche doyenne (cause racine echec MCP). */
-body.niveau-2 .doyenne-mini:not(.persistente-niveau-2),
+   defaisait toute la fonctionnalite fiche doyenne (cause racine echec MCP).
+   Brief 26 — la classe .persistente-niveau-2 est posee par Leaflet sur le
+   wrapper outer (_icon.classList.add), jamais sur le div inner. La regle
+   inner .doyenne-mini:not(.persistente-niveau-2) matchait donc TOUT (y
+   compris l'inner du marker actif). On supprime la regle inner : cacher le
+   wrapper outer suffit a masquer son contenu (les enfants ne s'affichent
+   pas si le parent est display:none). */
 body.niveau-2 .doyenne-mini-marker:not(.persistente-niveau-2){display:none !important;pointer-events:none;}
 
 /* Brief 16 — Legende visuelle (bottom-right, au-dessus attribution Leaflet).
