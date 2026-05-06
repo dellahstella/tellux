@@ -449,6 +449,18 @@ function resolveAssetPath(p) {
   return '/' + p;
 }
 
+// Brief 33 — Bascule WebP responsive : retourne le chemin variant
+//   _thumb (200px) / _medium (700px) / _full (1200px) au format .webp.
+// Accepte un base avec ou sans extension .png (rétro-compat). Pour usage :
+//   - thumb  : minis doyennés N1, sticker N2, popups miniatures
+//   - medium : carte postale Brief 31, panel principal, popup site
+//   - full   : zoom plein cadre (réservé futur)
+function _illustrationUrl(base, size) {
+  if (!base) return base;
+  var stripped = base.replace(/\.png$/i, '');
+  return stripped + '_' + (size || 'medium') + '.webp';
+}
+
 // Brief 8 — Refonte navigation drill-down 2 niveaux (vision macro Soleil 2026-05-04)
 // Niveau 1 (vue Corse) : 6 polygones diocèses pleins + spots illustrés uniquement.
 // Niveau 2 (vue diocèse, déclenché par clic) : pieves + tous les spots du diocèse.
@@ -564,7 +576,7 @@ sitesReady.catch(function(err) { console.error('[Tellux Patrimoine] boot error:'
 
 // Popup builder
 function openPopup(marker, site) {
-  const visualPath = site.visuel ? resolveAssetPath(site.visuel) : '';
+  const visualPath = site.visuel ? resolveAssetPath(_illustrationUrl(site.visuel, 'medium')) : '';
   const imgHtml = visualPath
     ? `<img loading="lazy" class="tlx-popup-img" src="${visualPath}" alt="${escapeHtml(site.nom)}" onerror="this.outerHTML='<div class=\\'tlx-popup-img fallback\\'>Visuel à venir</div>'">`
     : `<div class="tlx-popup-img fallback">Visuel à venir</div>`;
@@ -607,7 +619,7 @@ function openPanel(site) {
   panelTitle.textContent = site.nom || '';
   panelCat.textContent = site.categorie || '';
   if (site.visuel) {
-    panelImg.src = resolveAssetPath(site.visuel);
+    panelImg.src = resolveAssetPath(_illustrationUrl(site.visuel, 'medium'));
     panelImg.alt = site.nom || '';
     panelImg.classList.remove('hidden');
     panelFallback.classList.add('hidden');
@@ -847,8 +859,8 @@ fetch(resolveAssetPath('docs/data/doyennes_polygons.json'))
       const initiale = (d.initiale || display.charAt(0) || '?').toUpperCase();
       // Brief 22 (B22-UX-035) — paths absolus pour eviter resolution
       // relative depuis l'URL courante /patrimoine sur Cloudflare Pages.
-      const speculativePath = d.illustration_path ? resolveAssetPath(d.illustration_path) : '';
-      const recycledPath = DOYENNE_ILLUSTRATIONS[d.slug] ? resolveAssetPath(DOYENNE_ILLUSTRATIONS[d.slug]) : '';
+      const speculativePath = d.illustration_path ? resolveAssetPath(_illustrationUrl(d.illustration_path, 'thumb')) : '';
+      const recycledPath = DOYENNE_ILLUSTRATIONS[d.slug] ? resolveAssetPath(_illustrationUrl(DOYENNE_ILLUSTRATIONS[d.slug], 'thumb')) : '';
       // Si le visuel doyenne dedie existe, on l'utilise (priorite 0). Sinon
       // on tente le recyclage diocese si mappable. Sinon fallback typo.
       const primaryPath = speculativePath || recycledPath;
@@ -1417,7 +1429,7 @@ function onZoneClick(level, name, data, shape) {
   if (level === 'pieve' && data.slugs && data.slugs.length > 0) {
     const firstSlug = data.slugs[0];
     const site = SITES_PATRIMOINE.find(s => s.slug === firstSlug);
-    if (site && site.visuel) visualUrl = site.visuel;
+    if (site && site.visuel) visualUrl = _illustrationUrl(site.visuel, 'thumb');
   }
   const imgHtml = visualUrl
     ? `<img loading="lazy" class="tlx-popup-img" src="${visualUrl}" alt="${escapeHtml(name)}" onerror="this.outerHTML='<div class=\'tlx-popup-img fallback\'>Visuel à venir</div>'">`
@@ -1834,7 +1846,7 @@ function _activateCartePostale(container, fiche) {
   const inner = document.createElement('div');
   inner.className = 'carte-postale-inner';
 
-  const illuPath = resolveAssetPath(fiche.illustration);
+  const illuPath = resolveAssetPath(_illustrationUrl(fiche.illustration, 'medium'));
   const recto = document.createElement('div');
   recto.className = 'carte-face carte-face-recto';
   recto.style.backgroundImage = 'url("' + illuPath + '")';
