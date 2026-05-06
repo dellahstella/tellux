@@ -43,17 +43,16 @@ GEO_2A = CACHE_DIR / "communes-2A.geojson"
 GEO_2B = CACHE_DIR / "communes-2B.geojson"
 OUTPUT_PATH = ROOT / "docs" / "data" / "doyennes_polygons.json"
 
-# Palette ABCD répartie post-fusion (10 doyennés).
+# Palette ABCD répartie post-fusion Bastia->Cap 2026-05-06 (9 doyennés).
 TONE_BY_SLUG = {
     "doyenne_du_cap": "A",
-    "doyenne_de_bastia": "B",
     "doyenne_du_golo": "C",
     "doyenne_balagne": "D",
     "doyenne_cortenais": "A",
     "doyenne_piana_vico_sari": "B",
     "doyenne_plaine_orientale": "D",
     "doyenne_ajaccio": "C",
-    "doyenne_prunelli_taravo_valinco": "A",
+    "doyenne_prunelli_taravo_valinco": "B",
     "doyenne_extreme_sud": "D",
 }
 
