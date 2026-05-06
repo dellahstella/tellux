@@ -68,29 +68,36 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 .tlx-popup-btn{display:block;width:100%;background:var(--tx-maquis);color:var(--tx-pierre);border:none;padding:8px 12px;border-radius:var(--r);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:background .2s;outline:none;}
 .tlx-popup-btn:hover,.tlx-popup-btn:focus,.tlx-popup-btn:active{background:var(--tx-ardoise);color:var(--tx-pierre);}
 .tlx-popup-btn:focus-visible{outline:2px solid var(--tx-ocre);outline-offset:2px;}
-/* Brief 24 — Restauration panel side-pane plein hauteur Brief 18
-   (audit MCP 2026-05-04 : panel modal centré Brief 21 a casse l'usage
-   spot, hauteur auto + transform centrage). Restauration du slide-in
-   right:0 / height:100vh / translateX 0/100% qui etait la version Brief
-   18 originale. Brief 22 (B22-UX-034) z-index 5000 conserve. Backdrop
-   modal Brief 21 supprime (incompatible avec side-pane). */
-#panel{position:fixed;top:0;right:0;width:38vw;min-width:340px;max-width:520px;height:100vh;z-index:5000;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);background:var(--tx-pierre);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;}
-#panel.open{transform:translateX(0);}
-#panel-illustration{flex:1;position:relative;background:var(--tx-brume);overflow:hidden;display:flex;align-items:center;justify-content:center;}
-#panel-img{width:100%;height:100%;object-fit:cover;display:block;}
+/* Brief 24 (2026-05-04) — side-pane droit plein hauteur (object-fit:cover, illustration rognée).
+   Brief 27 (2026-05-06) — bascule en MODAL LIGHTBOX CENTRÉE.
+   Décision Soleil : voir l'illustration entière prime sur l'usage spot side-pane.
+   Le panel devient une lightbox flottante au centre de l'écran, dimensionnée au
+   ratio de l'illustration (object-fit:contain), avec backdrop semi-transparent
+   cliquable pour fermer. Brief 21 (modal centré abandonné en mai) est ainsi
+   réactivé sous une forme allégée — pas de fiche éditoriale, juste l'illustration
+   plein cadre + overlay titre/catégorie. */
+#panel-backdrop{position:fixed;inset:0;background:rgba(31,35,41,0.72);backdrop-filter:blur(4px);z-index:4999;opacity:0;pointer-events:none;transition:opacity .25s ease-out;}
+#panel-backdrop.open{opacity:1;pointer-events:auto;}
+#panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.96);width:auto;height:auto;max-width:90vw;max-height:90vh;z-index:5000;background:var(--tx-pierre);border-radius:var(--r2);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .25s ease-out,transform .25s ease-out;}
+#panel.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1);}
+#panel-illustration{position:relative;background:var(--tx-brume);display:flex;align-items:center;justify-content:center;min-width:280px;min-height:200px;}
+#panel-img{display:block;max-width:90vw;max-height:90vh;width:auto;height:auto;object-fit:contain;}
 #panel-img.hidden{display:none;}
-#panel-fallback{font-style:italic;color:var(--tx-mica);font-size:14px;padding:24px;text-align:center;}
+#panel-fallback{font-style:italic;color:var(--tx-mica);font-size:14px;padding:48px 64px;text-align:center;min-width:320px;}
 #panel-fallback.hidden{display:none;}
-#panel-overlay{position:absolute;left:0;right:0;bottom:0;padding:20px 28px 24px;background:linear-gradient(to top,rgba(31,35,41,0.85),rgba(31,35,41,0));color:var(--tx-pierre);pointer-events:none;}
+#panel-overlay{position:absolute;left:0;right:0;bottom:0;padding:20px 28px 22px;background:linear-gradient(to top,rgba(31,35,41,0.85),rgba(31,35,41,0));color:var(--tx-pierre);pointer-events:none;}
 #panel-overlay #panel-cat{font-size:11px;color:var(--tx-pierre);opacity:0.85;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;}
 #panel-overlay #panel-title{font-family:var(--font-display);font-size:24px;font-weight:600;line-height:1.2;color:var(--tx-pierre);overflow-wrap:break-word;hyphens:auto;text-shadow:0 2px 8px rgba(0,0,0,0.45);}
-#panel-close{position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:var(--tx-pierre);border:1px solid var(--border);cursor:pointer;z-index:10;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;transition:background .2s,transform .2s;}
-#panel-close::before{content:'×';font-size:24px;color:var(--tx-ardoise);line-height:1;}
+#panel-close{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:50%;background:var(--tx-pierre);border:1px solid var(--border);cursor:pointer;z-index:10;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;transition:background .2s,transform .2s;}
+#panel-close::before{content:'×';font-size:26px;color:var(--tx-ardoise);line-height:1;font-weight:300;}
 #panel-close:hover{background:var(--tx-ocre);transform:rotate(90deg);}
 #panel-close:hover::before{color:var(--tx-pierre);}
 /* Mobile */
 @media (max-width:640px){
-  #panel{width:100vw;min-width:100%;}
+  #panel{max-width:96vw;max-height:92vh;}
+  #panel-img{max-width:96vw;max-height:80vh;}
+  #panel-overlay{padding:16px 18px 18px;}
+  #panel-overlay #panel-title{font-size:20px;}
   #tlx-header h1{font-size:16px;}
   #tlx-header .subtitle{display:none;}
 }
@@ -242,6 +249,7 @@ body.niveau-2 .doyenne-mini-marker:not(.persistente-niveau-2){display:none !impo
     </section>
   </div>
 </aside>
+<div id="panel-backdrop" aria-hidden="true"></div>
 <aside id="panel" aria-hidden="true">
   <button id="panel-close" type="button" aria-label="Fermer le panneau"></button>
   <div id="panel-illustration">
@@ -426,14 +434,16 @@ function openPopup(marker, site) {
 }
 
 // Brief 18 — Panel simplifie : viewer illustration plein cadre + overlay
-// titre/categorie en bas. Brief 24 : panel side-pane plein hauteur restaure
-// (backdrop modal Brief 21 supprime, panelBackdrop ref retiree).
+// titre/categorie en bas. Brief 24 (side-pane) puis Brief 27 (modal lightbox
+// centree, decision Soleil 2026-05-06) : retour modal centree avec backdrop,
+// object-fit:contain pour voir l'illustration entiere sans rognage.
 const panel = document.getElementById('panel');
 const panelImg = document.getElementById('panel-img');
 const panelFallback = document.getElementById('panel-fallback');
 const panelCat = document.getElementById('panel-cat');
 const panelTitle = document.getElementById('panel-title');
 const panelClose = document.getElementById('panel-close');
+const panelBackdrop = document.getElementById('panel-backdrop');
 
 function openPanel(site) {
   // Brief 24 (B23-UX-038) — fermer toute popup map ouverte avant d'ouvrir
@@ -456,6 +466,11 @@ function openPanel(site) {
     panelImg.removeAttribute('src');
     panelFallback.classList.remove('hidden');
   }
+  // Brief 27 — backdrop modal sync ouverture (fade-in 0.25s, blur 4px).
+  if (panelBackdrop) {
+    panelBackdrop.classList.add('open');
+    panelBackdrop.setAttribute('aria-hidden', 'false');
+  }
   panel.classList.add('open');
   panel.setAttribute('aria-hidden', 'false');
 }
@@ -463,6 +478,11 @@ function openPanel(site) {
 function closePanel() {
   panel.classList.remove('open');
   panel.setAttribute('aria-hidden', 'true');
+  // Brief 27 — backdrop modal sync fermeture.
+  if (panelBackdrop) {
+    panelBackdrop.classList.remove('open');
+    panelBackdrop.setAttribute('aria-hidden', 'true');
+  }
 }
 
 // Brief 23 — Fiche doyenne (niveau 2, clic miniature persistante).
@@ -487,6 +507,11 @@ panelClose.addEventListener('click', (e) => {
   e.stopPropagation();
   closePanel();
 });
+
+// Brief 27 — clic sur backdrop ferme la modal (UX lightbox standard).
+if (panelBackdrop) {
+  panelBackdrop.addEventListener('click', closePanel);
+}
 
 // ESC pour fermer
 document.addEventListener('keydown', (e) => {
