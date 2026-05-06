@@ -34,6 +34,7 @@ import argparse
 import csv
 import json
 import math
+import re
 import sys
 import time
 from datetime import date
@@ -414,7 +415,7 @@ def is_tier1_eligible(row):
       - FAIBLE 1 source IGN avec concord pieve+doyenné OK et dist<1km
       - FAIBLE 2+ sources avec concord OK et dist<2km
     """
-    if row.get("note") == "DIST_OVER_5000m":
+    if "DIST_OVER_5000m" in (row.get("note") or ""):
         return False
     if not row.get("new_lat") or not row.get("new_lon"):
         return False
@@ -455,6 +456,16 @@ def apply_updates(rows, sites_data):
         site = idx.get(row["slug"])
         if not site:
             continue
+        # Idempotency : si ce site a déjà été audité aujourd'hui avec les mêmes
+        # coords, ne pas re-empiler une 2ème note ni re-écrire.
+        if site.get("gps_audit") == TODAY:
+            try:
+                if abs(float(site.get("lat", 0)) - float(row["new_lat"])) < 1e-6 and \
+                   abs(float(site.get("lon", 0)) - float(row["new_lon"])) < 1e-6:
+                    row["applied"] = "AlreadyApplied"
+                    continue
+            except (ValueError, TypeError):
+                pass
         orig_note = site.get("notes") or ""
         prefix = (orig_note + " | ") if orig_note else ""
         site["notes"] = (
@@ -475,6 +486,133 @@ def load_rows_from_csv(csv_path):
         return list(csv.DictReader(f))
 
 
+def name_variants(name):
+    """Génère 2-3 variantes orthographiques pour les sites ABSENT.
+
+    Stratégie :
+      1. Strip parenthèses désambiguïsantes : "San Giovanni (Bastia haute)" -> "San Giovanni"
+      2. Strip suffixes locatifs : "Santa Maria (Bocognano haute)" -> "Santa Maria"
+      3. Variante FR du préfixe corse : "San" -> "Saint", "Santa" -> "Sainte"
+    Retourne max 3 variantes uniques, name original exclu (ce sont des retries).
+    """
+    out = []
+    seen = {name}
+    # Strip parens
+    no_paren = re.sub(r"\s*\([^)]*\)", "", name).strip()
+    no_paren = re.sub(r"\s+", " ", no_paren)
+    if no_paren and no_paren not in seen:
+        out.append(no_paren); seen.add(no_paren)
+    # Strip suffixes locatifs même hors parens
+    base = no_paren or name
+    cleaned = re.sub(
+        r"\b(haute|basse|village|ville|bas|haut|disparu|détruit|intérieur|versant|plage|station|littoral)\b",
+        "", base, flags=re.IGNORECASE
+    ).strip()
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    if cleaned and cleaned not in seen:
+        out.append(cleaned); seen.add(cleaned)
+    # San/Santa -> Saint/Sainte
+    fr = base
+    fr = re.sub(r"\bSantu\b", "Saint", fr)
+    fr = re.sub(r"\bSan\b(?!\s*[A-Z][a-z]+ed)", "Saint", fr)  # naive but works
+    fr = re.sub(r"\bSanta\b", "Sainte", fr)
+    fr = re.sub(r"\bSant[''']", "Saint-", fr)
+    fr = re.sub(r"\s+", " ", fr).strip()
+    if fr and fr not in seen:
+        out.append(fr); seen.add(fr)
+    return out[:3]
+
+
+def retry_absent(rows, sites_data, pieves_polys, doyennes_polys):
+    """Re-tente les sites ABSENT du CSV avec des variantes orthographiques.
+
+    Modifie rows en place. Retourne (n_retried, n_recovered).
+    """
+    sites_by_slug = {s["slug"]: s for s in sites_data["sites"]}
+    n_retried = 0
+    n_recovered = 0
+    for row in rows:
+        if row.get("confiance") != "ABSENT":
+            continue
+        slug = row.get("slug")
+        site = sites_by_slug.get(slug)
+        if not site:
+            continue
+        variants = name_variants(site.get("name", ""))
+        if not variants:
+            continue
+        n_retried += 1
+        commune = site.get("commune_nom") or ""
+        # Tente chaque variante jusqu'à trouver une source.
+        coords = []
+        sources = []
+        osm_m = wd_m = ign_m = ""
+        used_variant = ""
+        for v in variants:
+            r_osm = query_osm(v, commune)
+            if r_osm and not osm_m:
+                coords.append((r_osm[0], r_osm[1])); sources.append("osm")
+                osm_m = f"{r_osm[0]:.5f},{r_osm[1]:.5f}"
+                used_variant = v
+            r_wd = query_wikidata(v)
+            if r_wd and not wd_m:
+                coords.append((r_wd[0], r_wd[1])); sources.append("wikidata")
+                wd_m = f"{r_wd[0]:.5f},{r_wd[1]:.5f}"
+                used_variant = v
+            r_ign = query_ign(v, commune)
+            if r_ign and not ign_m:
+                coords.append((r_ign[0], r_ign[1])); sources.append("ign")
+                ign_m = f"{r_ign[0]:.5f},{r_ign[1]:.5f}"
+                used_variant = v
+            if coords:
+                break  # 1ère variante qui marche suffit
+        if not coords:
+            continue
+        confidence, n_sources, inter_max, cluster_idx = compute_confidence(coords)
+        new_lat, new_lon = median_coord(coords, cluster_idx if cluster_idx else None)
+        old_lat = site.get("lat"); old_lon = site.get("lon")
+        dist = None
+        if new_lat is not None and old_lat is not None and old_lon is not None:
+            dist = haversine(old_lat, old_lon, new_lat, new_lon)
+        # Reverse geocode
+        pieve_geo = doyenne_geo = ""
+        pieve_concord = doyenne_concord = ""
+        if new_lat is not None:
+            pieve_geo = reverse_geocode(new_lat, new_lon, pieves_polys)
+            doyenne_geo = reverse_geocode(new_lat, new_lon, doyennes_polys)
+            pieve_decl = site.get("pieve_slug") or ""
+            doy_decl = site.get("doyenne_contemporain_slug") or ""
+            if pieve_geo:
+                pieve_concord = "True" if pieve_geo == pieve_decl else "False"
+            else:
+                pieve_concord = "?"
+            if doyenne_geo:
+                doyenne_concord = "True" if doyenne_geo == doy_decl else "False"
+            else:
+                doyenne_concord = "?"
+        note = "RETRY_VARIANT:" + used_variant
+        if dist is not None and dist > 5000:
+            note = "DIST_OVER_5000m | " + note
+        # Update row in place
+        row["new_lat"] = f"{new_lat:.5f}" if new_lat is not None else ""
+        row["new_lon"] = f"{new_lon:.5f}" if new_lon is not None else ""
+        row["distance_m"] = f"{dist:.1f}" if dist is not None else ""
+        row["confiance"] = confidence
+        row["n_sources"] = n_sources
+        row["sources_used"] = "+".join(sources)
+        row["inter_max_m"] = f"{inter_max:.1f}"
+        row["osm_match"] = osm_m
+        row["wikidata_match"] = wd_m
+        row["ign_match"] = ign_m
+        row["pieve_geocoded"] = pieve_geo
+        row["pieve_concordant"] = pieve_concord
+        row["doyenne_geocoded"] = doyenne_geo
+        row["doyenne_concordant"] = doyenne_concord
+        row["note"] = note
+        n_recovered += 1
+    return n_retried, n_recovered
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--phase", required=True, choices=list(PHASE_FILTERS.keys()))
@@ -490,6 +628,8 @@ def main():
                         help="Affiche les slugs cibles sans appel réseau.")
     parser.add_argument("--from-csv", type=Path, default=None,
                         help="Charge les rows d'un CSV existant (skip réseau, utile pour --apply après un --dry-run).")
+    parser.add_argument("--retry-absent", type=Path, default=None,
+                        help="CSV existant : retry les sites ABSENT avec variantes orthographiques (strip parens, San->Saint, etc.).")
     args = parser.parse_args()
 
     if args.apply and args.dry_run:
@@ -510,6 +650,42 @@ def main():
             commune = s.get("commune_nom") or "-"
             name = (s.get("name") or "")[:40]
             print(f"  {s['slug']:<48} | {name:<40} | {commune:<22} | {doy}")
+        return 0
+
+    # Mode --retry-absent : recharge un CSV existant, re-tente les ABSENT
+    # avec variantes orthographiques, ré-écrit le CSV. Implique reverse-geocode.
+    if args.retry_absent:
+        if not args.retry_absent.exists():
+            print(f"ERROR: CSV {args.retry_absent} introuvable", file=sys.stderr)
+            return 2
+        rows = load_rows_from_csv(args.retry_absent)
+        # Charge polygons reverse
+        with PIEVES_PATH.open(encoding="utf-8") as f:
+            pdata = json.load(f)
+        pieves_polys = {p["slug"]: p["polygon"] for p in pdata.get("pieves", []) if p.get("polygon")}
+        with DOYENNES_PATH.open(encoding="utf-8") as f:
+            ddata = json.load(f)
+        doyennes_polys = {d["slug"]: d["polygon"] for d in ddata.get("doyennes", []) if d.get("polygon")}
+        absent_count = sum(1 for r in rows if r.get("confiance") == "ABSENT")
+        print(f"[retry-absent] {absent_count} sites ABSENT à retry dans {args.retry_absent}")
+        n_retried, n_recovered = retry_absent(rows, sites_data, pieves_polys, doyennes_polys)
+        write_csv(rows, args.retry_absent)
+        new_conf = {}
+        for r in rows:
+            new_conf[r.get("confiance", "ABSENT")] = new_conf.get(r.get("confiance", "ABSENT"), 0) + 1
+        print(f"[retry-absent] {n_retried} retried, {n_recovered} recovered (au moins 1 source trouvée)")
+        print(f"[Counts post-retry] HAUTE={new_conf.get('HAUTE',0)} | MOYENNE={new_conf.get('MOYENNE',0)} | FAIBLE={new_conf.get('FAIBLE',0)} | ABSENT={new_conf.get('ABSENT',0)}")
+        if args.apply:
+            backup_path = DRAFTS_DIR / f"sites_patrimoine.backup_{TODAY}.json"
+            if not backup_path.exists():
+                with backup_path.open("w", encoding="utf-8") as f:
+                    json.dump(sites_data, f, ensure_ascii=False, indent=2)
+                print(f"[Backup] {backup_path}")
+            applied, skipped = apply_updates(rows, sites_data)
+            with SITES_PATH.open("w", encoding="utf-8") as f:
+                json.dump(sites_data, f, ensure_ascii=False, indent=2)
+            write_csv(rows, args.retry_absent)
+            print(f"[Apply] {applied} sites mis à jour | {skipped} skip (DIST_OVER_5000m)")
         return 0
 
     # Mode --from-csv : skip réseau, charge les rows existants et applique direct.
