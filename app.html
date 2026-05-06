@@ -6632,41 +6632,37 @@ async function togPointsChauds(btn){
 
 // ═══ Sites géophysiques remarquables ═══
 // Brief 29 (2026-05-06) — migration single source of truth depuis
-// public/data/sites_remarquables_corse.json (10 sites EM-spec) vers
-// docs/data/sites_corse.json (479 sites canoniques Cowork). Periimetre Option
-// gamma valide Soleil 2026-05-06 : 37 sites axe remarquables_geologiques + 6 mines
-// override par slug = 43 sites EM-pertinents (vs 10 anciens). Les 10 sites SR
-// originaux preservent leur semantique 3-cats (ophiolite/minier/surveillance_radio)
-// via description_em.type_specifique encore present dans sites_corse.json.
-// Les 33 nouveaux sites geologiques (Lac de Tolla, Foret Tartagine, Monte Cinto,
-// Capu Bianchi, Gorges Inzecca, etc.) recoivent une 4e categorie "geologique"
-// pour rendu (cercle vert maquis pale, palette DA Tellux v2).
+// public/data/sites_remarquables_corse.json (10 sites EM-spec) vers le corpus
+// canonique Cowork. Brief 33 split (2026-05-06) — bascule vers
+// docs/data/sites_em.json (43 sites pre-filtres = 37 remarquables_geologiques
+// + 6 hydrauliques). Les sites SR ophi_/surv_ preservent leur semantique
+// 3-cats via description_em.type_specifique (objet structure). Les autres
+// recoivent la 4e categorie "geologique" pour rendu (cercle vert maquis pale,
+// palette DA Tellux v2).
 let SITES_REMARQUABLES = [];
 let _srLoadPromise = null;
 
-// Brief 29 — axes corpus EM-pertinents pour la couche Sites remarquables.
-// Liste reduite vs Brief 29 brief litteral 6 axes : on garde uniquement
-// remarquables_geologiques (sites EM-natifs). Les mines (axe patrimoine_divers)
-// sont rapatriees via override slug ci-dessous pour preserver la semantique
-// historique de la couche (10 sites SR originaux conserves).
-const SR_ALLOWED_AXES = ['remarquables_geologiques'];
-const SR_MINE_SLUG_OVERRIDE = [
-  'min_argentella', 'min_canari', 'min_luri',
-  'min_meria', 'min_ersa', 'min_morsiglia'
-];
+// Brief 33 split (2026-05-06) — la curation EM est figee cote data dans
+// docs/data/sites_em.json (43 sites = 37 remarquables_geologiques + 6
+// hydrauliques, livre par Cowork). Les anciennes constantes SR_ALLOWED_AXES
+// et SR_MINE_SLUG_OVERRIDE (Brief 29) sont retirees : leur logique de filtrage
+// runtime est devenue redondante avec le pre-filtre Cowork.
 
-// Brief 29 — adaptateur 2-cas du nouveau schema sites_corse.json vers
+// Brief 29 — adaptateur 2-cas du schema canonique Cowork (Brief 33 sites_em.json) vers
 // les champs attendus par _srFormatTooltip / _srIconHtml / SR_RENDU :
-//   Cas 1 (10 sites SR originaux) : description_em.type_specifique present,
-//     mappe vers categorie granulaire 3-cats historique (ophiolite/minier/
-//     surveillance_radio) pour conserver SR_RENDU et la richesse signature_em.
-//   Cas 2 (33 sites geologiques nouveaux) : pas de description_em, categorie
-//     forced 'geologique' (4e cat ajoutee a SR_RENDU avec cercle).
+//   Cas 1 (sites SR ophi_/surv_) : description_em.type_specifique present (objet
+//     structure), mappe vers categorie granulaire 3-cats historique (ophiolite/
+//     minier/surveillance_radio) pour conserver SR_RENDU et signature_em.
+//   Cas 2 (sites geologiques + hydrauliques) : description_em est string flat,
+//     categorie forced 'geologique' (4e cat avec cercle).
+// Brief 33 split (2026-05-06) — bascule vers sites_em.json. Schema utilise `name`
+// (vs `nom`) et `description_em` est string flat pour non-SR. Tolere les deux.
 function adaptSiteRemarquable(s) {
-  if (s.description_em && s.description_em.type_specifique) {
+  var siteName = s.name || s.nom;
+  if (s.description_em && typeof s.description_em === 'object' && s.description_em.type_specifique) {
     return {
       slug: s.slug,
-      nom: s.nom,
+      nom: siteName,
       lat: s.lat,
       lon: s.lon,
       categorie: mapSRGranulaire(s.slug),
@@ -6674,14 +6670,17 @@ function adaptSiteRemarquable(s) {
       note_ui: s.description_em.signature_em || s.description || ''
     };
   }
+  var noteText = '';
+  if (typeof s.description_em === 'string') noteText = s.description_em;
+  else if (s.description) noteText = s.description;
   return {
     slug: s.slug,
-    nom: s.nom,
+    nom: siteName,
     lat: s.lat,
     lon: s.lon,
     categorie: 'geologique',
     precision_coord: 'documentaire',
-    note_ui: s.description || ''
+    note_ui: noteText
   };
 }
 
@@ -6700,25 +6699,17 @@ function loadSitesRemarquables() {
   if (_srLoadPromise) return _srLoadPromise;
   _srLoadPromise = (async () => {
     try {
-      // Brief 29 — fetch single source of truth (cache partage avec patrimoine.html
-      // si patrimoine visite avant : gain perf accidentel via cache CDN Cloudflare).
-      const r = await fetch('/docs/data/sites_corse.json', { signal: AbortSignal.timeout(5000) });
+      // Brief 29 — fetch single source of truth.
+      // Brief 33 split (2026-05-06) — bascule vers sites_em.json (43 sites
+      // EM-pertinents pre-filtres par Cowork : 37 axe remarquables_geologiques
+      // + 6 axe hydrauliques). Filtrage axe + override mines retire (la
+      // selection EM est desormais figee cote data, pas cote code).
+      const r = await fetch('/docs/data/sites_em.json', { signal: AbortSignal.timeout(5000) });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const d = await r.json();
       const all = d.sites || [];
-      // Filter Option gamma : phase 1 + axe remarquables_geologiques OR slug mine override.
-      const filtered = all.filter(s =>
-        s.phase_publication === 1 && (
-          SR_ALLOWED_AXES.indexOf(s.axe_corpus) !== -1 ||
-          SR_MINE_SLUG_OVERRIDE.indexOf(s.slug) !== -1
-        )
-      );
-      SITES_REMARQUABLES = filtered.map(adaptSiteRemarquable);
-      const meta = d._meta || {};
-      console.log('[Tellux EM] ' + SITES_REMARQUABLES.length +
-        ' sites EM charges (axes: ' + SR_ALLOWED_AXES.join(',') +
-        ' + ' + SR_MINE_SLUG_OVERRIDE.length + ' mines override, corpus ' +
-        all.length + ', v' + (meta.version || '?') + ')');
+      SITES_REMARQUABLES = all.map(adaptSiteRemarquable);
+      console.log('[Tellux EM] sites EM chargés : ' + all.length + ' depuis sites_em.json');
     } catch (e) {
       console.warn('[Tellux EM] Sites remarquables indisponibles : ' + e.message);
     }
