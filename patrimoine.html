@@ -68,20 +68,16 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 .tlx-popup-btn{display:block;width:100%;background:var(--tx-maquis);color:var(--tx-pierre);border:none;padding:8px 12px;border-radius:var(--r);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:background .2s;outline:none;}
 .tlx-popup-btn:hover,.tlx-popup-btn:focus,.tlx-popup-btn:active{background:var(--tx-ardoise);color:var(--tx-pierre);}
 .tlx-popup-btn:focus-visible{outline:2px solid var(--tx-ocre);outline-offset:2px;}
-/* Brief 18 — Panel simplifie : viewer illustration plein cadre + overlay
-   titre/categorie en bas. Suppression du systeme flip recto/verso.
-   Refonte des fiches longues differee (decision Soleil 2026-05-04). */
-/* Brief 21 — Panel illustration en MODAL CENTRE avec backdrop overlay.
-   Animation scale + opacity, click backdrop ferme le panel. object-fit:contain
-   pour ne pas rogner l'illustration.
-   Brief 22 (B22-UX-034) — z-index panel 1500 -> 5000 pour passer au-dessus
-   de tout overlay actuel (legende 1000, backdrop 4999). */
-#panel-backdrop{position:fixed;inset:0;background:rgba(31,35,41,0.6);z-index:4999;display:none;}
-#panel-backdrop.visible{display:block;}
-#panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.95);max-width:90vw;width:520px;max-height:90vh;z-index:5000;opacity:0;pointer-events:none;transition:transform .25s cubic-bezier(.4,0,.2,1),opacity .25s;background:var(--tx-pierre);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;border-radius:var(--r2);}
-#panel.open{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto;}
-#panel-illustration{flex:1;min-height:0;position:relative;background:var(--tx-brume);overflow:hidden;display:flex;align-items:center;justify-content:center;}
-#panel-img{max-width:90vw;max-height:90vh;width:100%;height:auto;object-fit:contain;display:block;}
+/* Brief 24 — Restauration panel side-pane plein hauteur Brief 18
+   (audit MCP 2026-05-04 : panel modal centré Brief 21 a casse l'usage
+   spot, hauteur auto + transform centrage). Restauration du slide-in
+   right:0 / height:100vh / translateX 0/100% qui etait la version Brief
+   18 originale. Brief 22 (B22-UX-034) z-index 5000 conserve. Backdrop
+   modal Brief 21 supprime (incompatible avec side-pane). */
+#panel{position:fixed;top:0;right:0;width:38vw;min-width:340px;max-width:520px;height:100vh;z-index:5000;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);background:var(--tx-pierre);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;}
+#panel.open{transform:translateX(0);}
+#panel-illustration{flex:1;position:relative;background:var(--tx-brume);overflow:hidden;display:flex;align-items:center;justify-content:center;}
+#panel-img{width:100%;height:100%;object-fit:cover;display:block;}
 #panel-img.hidden{display:none;}
 #panel-fallback{font-style:italic;color:var(--tx-mica);font-size:14px;padding:24px;text-align:center;}
 #panel-fallback.hidden{display:none;}
@@ -94,7 +90,7 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 #panel-close:hover::before{color:var(--tx-pierre);}
 /* Mobile */
 @media (max-width:640px){
-  #panel{width:95vw;max-height:85vh;}
+  #panel{width:100vw;min-width:100%;}
   #tlx-header h1{font-size:16px;}
   #tlx-header .subtitle{display:none;}
 }
@@ -237,7 +233,6 @@ body.niveau-2 .doyenne-mini-marker{display:none !important;pointer-events:none;}
     </section>
   </div>
 </aside>
-<div id="panel-backdrop"></div>
 <aside id="panel" aria-hidden="true">
   <button id="panel-close" type="button" aria-label="Fermer le panneau"></button>
   <div id="panel-illustration">
@@ -422,9 +417,9 @@ function openPopup(marker, site) {
 }
 
 // Brief 18 — Panel simplifie : viewer illustration plein cadre + overlay
-// titre/categorie en bas. Suppression du systeme flip recto/verso.
+// titre/categorie en bas. Brief 24 : panel side-pane plein hauteur restaure
+// (backdrop modal Brief 21 supprime, panelBackdrop ref retiree).
 const panel = document.getElementById('panel');
-const panelBackdrop = document.getElementById('panel-backdrop');
 const panelImg = document.getElementById('panel-img');
 const panelFallback = document.getElementById('panel-fallback');
 const panelCat = document.getElementById('panel-cat');
@@ -432,6 +427,10 @@ const panelTitle = document.getElementById('panel-title');
 const panelClose = document.getElementById('panel-close');
 
 function openPanel(site) {
+  // Brief 24 (B23-UX-038) — fermer toute popup map ouverte avant d'ouvrir
+  // le panel pour eviter superposition residuelle (popup spot/doyenne qui
+  // restait visible derriere le panel apres clic "Ouvrir la fiche").
+  if (typeof map !== 'undefined' && map.closePopup) map.closePopup();
   panelTitle.textContent = site.nom || '';
   panelCat.textContent = site.categorie || '';
   if (site.visuel) {
@@ -449,13 +448,11 @@ function openPanel(site) {
     panelFallback.classList.remove('hidden');
   }
   panel.classList.add('open');
-  panelBackdrop.classList.add('visible');
   panel.setAttribute('aria-hidden', 'false');
 }
 
 function closePanel() {
   panel.classList.remove('open');
-  panelBackdrop.classList.remove('visible');
   panel.setAttribute('aria-hidden', 'true');
 }
 
@@ -481,7 +478,6 @@ panelClose.addEventListener('click', (e) => {
   e.stopPropagation();
   closePanel();
 });
-panelBackdrop.addEventListener('click', closePanel);
 
 // ESC pour fermer
 document.addEventListener('keydown', (e) => {
