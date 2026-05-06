@@ -756,6 +756,24 @@ function findDoyenneForPoint(lat, lng) {
   return null;
 }
 
+// Brief 32 — backward compat : ancien doyenné Bastia → Cap
+(function _brief32RedirectBastiaToCap() {
+  function _redirect() {
+    if (window.location.hash === '#doyenne_de_bastia') {
+      console.log('[Tellux patrimoine] Brief 32 — redirection #doyenne_de_bastia → #doyenne_du_cap');
+      const newHash = '#doyenne_du_cap';
+      if (history.replaceState) {
+        history.replaceState(null, '', newHash);
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+      } else {
+        window.location.replace(newHash);
+      }
+    }
+  }
+  _redirect();
+  window.addEventListener('hashchange', _redirect);
+})();
+
 fetch(resolveAssetPath('docs/data/doyennes_polygons.json'))
   .then(r => r.json())
   // Brief 28 — await sitesReady avant d'iterer markersBySlug (race fix).
@@ -866,6 +884,8 @@ fetch(resolveAssetPath('docs/data/doyennes_polygons.json'))
       if (doy) { SPOT_TO_DOYENNE.set(slug, doy); mapped++; } else { unmapped++; }
     }
     console.log('[Tellux patrimoine] Doyennes charges :', data.doyennes.length, '| spots rattaches :', mapped, '| hors polygones :', unmapped);
+    // Brief 32 — log de confirmation post-fusion Bastia → Cap
+    console.log(`[Tellux patrimoine] Brief 32 — fusion doyenné Bastia → Cap effective. ${data.doyennes.length} doyennés actifs.`);
     // LOD Phase C — appliquer le LOD initial apres chargement des doyennes.
     updateZoomLOD();
     // Brief 15 — flag pret pour applyHash initial (apres pieves aussi).
