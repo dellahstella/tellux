@@ -185,6 +185,18 @@ body.niveau-2 #btn-retour-corse{display:flex;}
    pas si le parent est display:none). */
 body.niveau-2 .doyenne-mini-marker:not(.persistente-niveau-2){display:none !important;pointer-events:none;}
 
+/* Brief 30 — sticker miniature doyenné niveau 2 (détaché de la map) */
+#doyenne-mini-sticker{position:fixed;top:16px;right:16px;z-index:650;padding:10px;background:rgba(245,240,231,0.95);border:1px solid rgba(31,35,41,0.18);border-radius:12px;box-shadow:0 6px 20px rgba(31,35,41,0.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);cursor:pointer;transition:transform .2s,box-shadow .2s;pointer-events:auto;}
+#doyenne-mini-sticker:hover{transform:scale(1.05);box-shadow:0 8px 24px rgba(31,35,41,0.25);}
+#doyenne-mini-sticker .doyenne-mini-img,#doyenne-mini-sticker .doyenne-mini-fallback{width:90px;height:90px;}
+#doyenne-mini-sticker .doyenne-mini-label{font-size:13px;margin-top:6px;}
+body.niveau-2-actif .doyenne-mini-marker.persistente-niveau-2{display:none !important;}
+@media(max-width:768px){
+  #doyenne-mini-sticker{top:8px;right:8px;padding:8px;}
+  #doyenne-mini-sticker .doyenne-mini-img,#doyenne-mini-sticker .doyenne-mini-fallback{width:70px;height:70px;}
+  #doyenne-mini-sticker .doyenne-mini-label{font-size:12px;}
+}
+
 /* Brief 16 — Legende visuelle (bottom-right, au-dessus attribution Leaflet).
    Bouton "?" rond toujours visible, panneau s'ouvre au clic vers haut-gauche.
    Replie par defaut, etat persiste via localStorage. */
@@ -1098,6 +1110,9 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   if (activeMiniLayer && activeMiniLayer._icon) {
     activeMiniLayer._icon.classList.add('persistente-niveau-2');
   }
+  // Brief 30 — sticker fixe top-right viewport, libère la zone géographique.
+  document.body.classList.add('niveau-2-actif');
+  _renderDoyenneSticker(doyenneSlug, doyenneName);
   // Brief 25 — tooltip Leaflet hint au-dessus de la mini active : signale
   // la nouvelle fonction (fiche, pas zoom). Bind unique pour la duree N2.
   if (activeMiniLayer && activeMiniLayer.bindTooltip) {
@@ -1138,6 +1153,7 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
 
 function exitNiveau2View() {
   document.body.classList.remove('niveau-2');
+  _removeDoyenneSticker();
 
   // Re-fill les doyennes estompes.
   for (const poly of Object.values(doyenneShapesBySlug)) {
@@ -1675,6 +1691,50 @@ function updateZoomLOD() {
 }
 
 map.on('zoomend', function() { updateZoomLOD(); });
+
+// Brief 30 — sticker miniature doyenné détaché de la map au niveau 2
+function _renderDoyenneSticker(slug, name) {
+  var old = document.getElementById('doyenne-mini-sticker');
+  if (old) old.remove();
+  var sourceMini = document.querySelector(
+    '.doyenne-mini-marker.persistente-niveau-2 .doyenne-mini'
+  );
+  if (!sourceMini) {
+    requestAnimationFrame(function() {
+      var retry = document.querySelector(
+        '.doyenne-mini-marker.persistente-niveau-2 .doyenne-mini'
+      );
+      if (retry) _renderDoyenneSticker(slug, name);
+    });
+    return;
+  }
+  var sticker = document.createElement('div');
+  sticker.id = 'doyenne-mini-sticker';
+  sticker.setAttribute('role', 'button');
+  sticker.setAttribute('tabindex', '0');
+  sticker.setAttribute('aria-label', 'Doyenne ' + name + ' — retour niveau 0');
+  sticker.innerHTML = sourceMini.innerHTML;
+  sticker.addEventListener('click', function() {
+    window.location.hash = '';
+  });
+  sticker.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      sticker.click();
+    }
+  });
+  document.body.appendChild(sticker);
+  console.log('[Tellux patrimoine] Brief 30 — sticker doyenné niveau 2 actif : ' + slug);
+}
+
+function _removeDoyenneSticker() {
+  document.body.classList.remove('niveau-2-actif');
+  var sticker = document.getElementById('doyenne-mini-sticker');
+  if (sticker) {
+    sticker.remove();
+    console.log('[Tellux patrimoine] Brief 30 — sticker doyenné niveau 2 supprimé');
+  }
+}
 </script>
 </body>
 </html>
