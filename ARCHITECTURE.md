@@ -23,9 +23,13 @@ tellux/
 │       ├── postes_sources_corse.json
 │       ├── eoliennes_corse.json
 │       ├── points_chauds_radio_corse.json        # Label UI : « Sites U/Th à mesurer »
-│       ├── sites_remarquables_corse.json         # Sites géophysiques remarquables (10 entrées)
+│       ├── sites_remarquables_corse.json         # [DEPRECATED depuis Brief 29 — non fetché par app.html, gardé pour archive]
 │       └── cartoradio_certified_corse.json       # 30 mesures RF certifiées ANFR/EXEM
 ├── docs/
+│   ├── data/                  # Single source of truth runtime (Brief 28/29)
+│   │   ├── sites_corse.json              # 479 sites canoniques consolidés (191 P1 + 288 P2)
+│   │   ├── doyennes_polygons.json        # 10 doyennés contemporains (Strat A)
+│   │   └── pieves_polygons.json          # 47 pieves Casta v2
 │   ├── data-sources/           # Notes de méthodologie par source de données
 │   │   ├── radon_communes_level3_corse_notes.md
 │   │   ├── tdf_emitters_corse_notes.md
@@ -35,6 +39,8 @@ tellux/
 │   │   ├── bd_foret_v2_corse_notes.md
 │   │   ├── points_chauds_radio_corse_notes.md
 │   │   ├── sites_geophysiques_remarquables_corse_notes.md
+│   │   ├── sites_corse_consolidation_notes.md         # Audit Cowork pipeline 4 sources -> 479 sites
+│   │   ├── sites_corse_deduplication_log.json        # Mapping alias -> canonique
 │   │   └── cartoradio_certified_corse_notes.md
 │   ├── internal/               # Documentation technique interne (gitignored)
 │   ├── physicien/              # Documents de soumission à relecture méthodologique
@@ -164,7 +170,7 @@ Sparkline : SVG 180×40 px, `PROFIL_HORAIRE_CORSE` (24 valeurs MW), marqueur rou
 | `postes_sources_corse.json` | Postes sources HTA/HTB | EDF SEI (enrichissement manuel) | `calcMagneticELF_v2` |
 | `eoliennes_corse.json` | Parcs éoliens | Observatoire éolien / ANFR | `calcMagneticELF_v2` |
 | `points_chauds_radio_corse.json` | 8 entrées documentaires U/Th (label UI « Sites U/Th à mesurer »), `dose_gamma: null` sur toutes, garde défensive `calcGammaAmbient` | Consolidation Cowork 2026-04-23, note de consolidation interne | `loadPointsChaudsRadio()` premier click |
-| `sites_remarquables_corse.json` | 10 sites géophysiques remarquables en 3 catégories (ophiolite / minier historique / surveillance radiologique) | Consolidation Cowork 2026-04-23, note de consolidation interne | Chargement asynchrone |
+| `sites_remarquables_corse.json` | **DEPRECATED (Brief 29, 2026-05-06)** — 10 sites géophysiques remarquables en 3 catégories (ophiolite / minier / surveillance radiologique). Données intégralement absorbées dans `docs/data/sites_corse.json` (pipeline `consolidate_sites.py`). Le fichier reste pour archive historique mais n'est plus fetché par `app.html` ni `patrimoine.html`. | Consolidation Cowork 2026-04-23 (archive) | **Plus chargé** — voir `docs/data/sites_corse.json` |
 | `cartoradio_certified_corse.json` | 30 mesures RF certifiées ANFR/EXEM (29 conformes, 1 dépassement Monticello 29,05 V/m avec re-inspection conformité) | Extraction Cowork 2026-04-23 depuis 30 PDFs ANFR/EXEM | Couche Mesures EM unifiée, layer `lCert` |
 
 Règles pour les nouveaux fichiers `public/data/` :
@@ -172,6 +178,18 @@ Règles pour les nouveaux fichiers `public/data/` :
 - Toujours inclure un champ `_meta` avec `source`, `date_creation`, `version`
 - Ne jamais bundler ces fichiers dans `app.html`
 - Ajouter une note de méthodologie dans `docs/data-sources/`
+
+### 3.bis docs/data/ — Single source of truth (Brief 28/29, 2026-05-06)
+
+Depuis Brief 28 (`patrimoine.html`) et Brief 29 (`app.html`), Tellux utilise un fichier canonique unique pour tous les sites patrimoniaux/géophysiques de Corse.
+
+| Fichier | Contenu | Source | Chargement |
+|---------|---------|--------|-----------|
+| `sites_corse.json` | 479 sites canoniques (191 Phase 1 exposée + 288 Phase 2 latente). Schéma uniforme : `slug`, `nom`, `lat/lon`, `categorie`, `axe_corpus`, `phase_publication`, `commune_insee`, `commune_nom`, `pieve_slug`, `diocese_medieval_slug`, `doyenne_contemporain_slug`, `description_em` (10 sites SR héritiers), `gps_source`, `gps_audit`, `sources_originales[]` | Pipeline Cowork `scripts/consolidate_sites.py` (4 sources fusionnées : SITES_PATRIMOINE inline + SITES_REFERENCE.json + churches_corse Supabase + patrimoine_corse Supabase + sites_remarquables_corse.json) | `loadSitesPatrimoine()` (patrimoine.html, filter P1) ; `loadSitesRemarquables()` (app.html, filter `axe_corpus = remarquables_geologiques` + override 6 mines) |
+| `doyennes_polygons.json` | 10 doyennés contemporains (Strat A : union polygones communes INSEE) | Pipeline `scripts/build_doyennes_polygons.py` | Fetch async patrimoine.html boot |
+| `pieves_polygons.json` | 47 pieves Casta v2 (canonicité médiévale complète Brief 17) | Pipeline `scripts/build_pieves_polygons.py` | Fetch async patrimoine.html boot |
+
+**Note SITES_REFERENCE.json racine** : conservé comme **input historique** du pipeline `consolidate_sites.py` (115 entrées). N'est plus fetché au runtime par aucun fichier HTML. Sera décommissionné quand le pipeline sera réécrit pour ingérer directement Supabase + Cowork drafts (Phase 2).
 
 ---
 
