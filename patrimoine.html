@@ -71,7 +71,11 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 /* Brief 18 — Panel simplifie : viewer illustration plein cadre + overlay
    titre/categorie en bas. Suppression du systeme flip recto/verso.
    Refonte des fiches longues differee (decision Soleil 2026-05-04). */
-#panel{position:fixed;top:0;right:0;width:38vw;min-width:340px;max-width:520px;height:100vh;z-index:1500;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);background:var(--tx-pierre);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;}
+/* Brief 22 (B22-UX-034) — z-index 1500 -> 5000 pour passer au-dessus de la
+   legende (z-index 1000) et de tout autre overlay. Le transform translateX
+   sur #panel cree un nouveau contexte de stacking qui pouvait isoler son
+   z-index ; bumper le z-index resout proprement le conflit visuel. */
+#panel{position:fixed;top:0;right:0;width:38vw;min-width:340px;max-width:520px;height:100vh;z-index:5000;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);background:var(--tx-pierre);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;}
 #panel.open{transform:translateX(0);}
 #panel-illustration{flex:1;position:relative;background:var(--tx-brume);overflow:hidden;display:flex;align-items:center;justify-content:center;}
 #panel-img{width:100%;height:100%;object-fit:cover;display:block;}
@@ -149,8 +153,18 @@ body.niveau-2 #btn-retour-corse{display:flex;}
    positionnee au centroide du polygone via L.divIcon. Cachees en niveau 2. */
 .doyenne-mini{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:transform .2s;pointer-events:auto;}
 .doyenne-mini:hover{transform:scale(1.08);}
-.doyenne-mini-img,.doyenne-mini-fallback{width:64px;height:64px;border-radius:50%;border:2px solid #1F2329;background:#F5F0E7;box-shadow:0 4px 12px rgba(31,35,41,0.25);object-fit:cover;display:flex;align-items:center;justify-content:center;}
-.doyenne-mini-fallback{font-family:'Fraunces',serif;font-size:28px;font-weight:600;color:#1F2329;}
+/* Brief 22 (B22-UX-033) — wrapper unifie cercle 56x56 pour garantir le meme
+   format aux miniatures illustrees ET fallback typo. L'<img> et le <span>
+   fallback partagent les memes proprietes geometriques (taille, border,
+   ombre, palette) mais display:flex est reserve au fallback (replaced
+   element <img> ne supporte pas display:flex correctement, ce qui faisait
+   etirer l'<img> a sa width intrinseque PNG ~1344px ratio paysage). */
+.doyenne-mini-img,.doyenne-mini-fallback{width:56px;height:56px;min-width:56px;border-radius:50%;border:2px solid #1F2329;background:#F5F0E7;box-shadow:0 4px 12px rgba(31,35,41,0.25);overflow:hidden;}
+/* Brief 22 (B22-UX-033) — !important sur width/height de <img> car le browser
+   considere par defaut son aspect-ratio natif (1344x768) qui force width au-
+   dessus de la regle CSS sans !important. */
+.doyenne-mini-img{display:block;object-fit:cover;object-position:center;width:56px !important;height:56px !important;max-width:56px;}
+.doyenne-mini-fallback{display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:24px;font-weight:600;color:#1F2329;line-height:1;}
 .doyenne-mini-label{font-family:'Fraunces',serif;font-size:13px;font-weight:600;color:#1F2329;text-align:center;text-shadow:0 1px 3px rgba(245,240,231,0.95),0 0 8px rgba(245,240,231,0.95);max-width:120px;line-height:1.1;}
 /* Brief 19 — Bug visibilite N2 (Brief 14) : la regle .doyenne-mini cache
    l'inner mais le wrapper Leaflet outer .doyenne-mini-marker reste visible
@@ -268,6 +282,18 @@ const tileStyle = document.createElement('style');
 tileStyle.textContent = '.tlx-tiles{filter:sepia(0.25) saturate(0.85) brightness(1.02) contrast(0.95);}';
 document.head.appendChild(tileStyle);
 
+// Brief 22 (B22-UX-035) — Resoudre les paths assets en absolu pour eviter
+// la resolution relative depuis l'URL courante. Sur Cloudflare Pages, la
+// route /patrimoine est servie via patrimoine.html (sans .html dans l'URL),
+// le browser interprete /patrimoine comme un dossier pour la resolution
+// relative -> docs/assets/foo.png devient /patrimoine/docs/assets/foo.png
+// (404). Helper qui prefixe '/' si le path est relatif simple.
+function resolveAssetPath(p) {
+  if (!p) return p;
+  if (p.startsWith('/') || /^https?:\/\//.test(p) || p.startsWith('data:')) return p;
+  return '/' + p;
+}
+
 // Brief 8 — Refonte navigation drill-down 2 niveaux (vision macro Soleil 2026-05-04)
 // Niveau 1 (vue Corse) : 6 polygones diocèses pleins + spots illustrés uniquement.
 // Niveau 2 (vue diocèse, déclenché par clic) : pieves + tous les spots du diocèse.
@@ -371,7 +397,7 @@ console.log('[Tellux patrimoine] Spots-diocèse exclus:', dioceseSpotsExclus.len
 
 // Popup builder
 function openPopup(marker, site) {
-  const visualPath = site.visuel || '';
+  const visualPath = site.visuel ? resolveAssetPath(site.visuel) : '';
   const imgHtml = visualPath
     ? `<img loading="lazy" class="tlx-popup-img" src="${visualPath}" alt="${escapeHtml(site.nom)}" onerror="this.outerHTML='<div class=\\'tlx-popup-img fallback\\'>Visuel à venir</div>'">`
     : `<div class="tlx-popup-img fallback">Visuel à venir</div>`;
@@ -407,7 +433,7 @@ function openPanel(site) {
   panelTitle.textContent = site.nom || '';
   panelCat.textContent = site.categorie || '';
   if (site.visuel) {
-    panelImg.src = site.visuel;
+    panelImg.src = resolveAssetPath(site.visuel);
     panelImg.alt = site.nom || '';
     panelImg.classList.remove('hidden');
     panelFallback.classList.add('hidden');
@@ -546,7 +572,7 @@ function findDoyenneForPoint(lat, lng) {
   return null;
 }
 
-fetch('docs/data/doyennes_polygons.json')
+fetch(resolveAssetPath('docs/data/doyennes_polygons.json'))
   .then(r => r.json())
   .then(data => {
     for (const d of data.doyennes) {
@@ -573,8 +599,10 @@ fetch('docs/data/doyennes_polygons.json')
       // .doyenne-mini-marker (wrapper Leaflet) en backup.
       const center = poly.getBounds().getCenter();
       const initiale = (d.initiale || display.charAt(0) || '?').toUpperCase();
-      const speculativePath = d.illustration_path || '';
-      const recycledPath = DOYENNE_ILLUSTRATIONS[d.slug] || '';
+      // Brief 22 (B22-UX-035) — paths absolus pour eviter resolution
+      // relative depuis l'URL courante /patrimoine sur Cloudflare Pages.
+      const speculativePath = d.illustration_path ? resolveAssetPath(d.illustration_path) : '';
+      const recycledPath = DOYENNE_ILLUSTRATIONS[d.slug] ? resolveAssetPath(DOYENNE_ILLUSTRATIONS[d.slug]) : '';
       // Si le visuel doyenne dedie existe, on l'utilise (priorite 0). Sinon
       // on tente le recyclage diocese si mappable. Sinon fallback typo.
       const primaryPath = speculativePath || recycledPath;
@@ -582,16 +610,20 @@ fetch('docs/data/doyennes_polygons.json')
       // Si les deux paths sont disponibles, on chaine les fallbacks via deux
       // niveaux d'onerror (img dedie -> img recyclee -> typo). Sinon un seul
       // niveau (img unique -> typo).
+      // Brief 22 (B22-UX-033) — attributs HTML width="56" height="56" inline
+      // pour forcer les dimensions intrinsequees de <img> (la regle CSS
+      // .doyenne-mini-img { width: 56px } est ignoree par certains browsers
+      // sur replaced elements quand le PNG natif a un ratio paysage).
       let html;
       if (speculativePath && recycledPath) {
         html = '<div class="doyenne-mini">'
-          + '<img class="doyenne-mini-img" src="' + speculativePath + '" alt="' + safeDisplay + '"'
+          + '<img class="doyenne-mini-img" width="56" height="56" src="' + speculativePath + '" alt="' + safeDisplay + '"'
           + ' onerror="this.onerror=function(){this.outerHTML=\'<span class=&quot;doyenne-mini-fallback&quot;>' + initiale + '</span>\'};this.src=\'' + recycledPath + '\'">'
           + '<span class="doyenne-mini-label">' + safeDisplay + '</span>'
           + '</div>';
       } else if (primaryPath) {
         html = '<div class="doyenne-mini">'
-          + '<img class="doyenne-mini-img" src="' + primaryPath + '" alt="' + safeDisplay + '"'
+          + '<img class="doyenne-mini-img" width="56" height="56" src="' + primaryPath + '" alt="' + safeDisplay + '"'
           + ' onerror="this.outerHTML=\'<span class=&quot;doyenne-mini-fallback&quot;>' + initiale + '</span>\'">'
           + '<span class="doyenne-mini-label">' + safeDisplay + '</span>'
           + '</div>';
@@ -663,7 +695,7 @@ function findPieveForPoint(lat, lng) {
   return null;
 }
 
-fetch('docs/data/pieves_polygons.json')
+fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
   .then(r => r.json())
   .then(data => {
     for (const p of data.pieves) {
@@ -724,7 +756,7 @@ fetch('docs/data/pieves_polygons.json')
     // des spots adressables = ceux invisibles aux deux niveaux : non illustres
     // (pas dans ILLUSTRATED_SPOTS) ET non rattaches a un doyenne via
     // SPOT_TO_DOYENNE (point-in-polygon doyenne echec).
-    fetch('_drafts/SPOT_DOYENNE_OVERRIDES.json')
+    fetch(resolveAssetPath('_drafts/SPOT_DOYENNE_OVERRIDES.json'))
       .then(r => r.ok ? r.json() : {overrides: {}})
       .then(ovrData => {
         const overrides = (ovrData && ovrData.overrides) || {};
