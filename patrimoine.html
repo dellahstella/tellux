@@ -160,6 +160,11 @@ body.niveau-2 #btn-retour-corse{display:flex;}
    pour ne pas rogner l'illustration diocese recyclee (PNG ratio paysage). */
 .doyenne-mini-img,.doyenne-mini-fallback{width:64px;height:64px;border-radius:var(--r);border:2px solid #1F2329;background:#F5F0E7;box-shadow:0 4px 12px rgba(31,35,41,0.25);object-fit:cover;display:flex;align-items:center;justify-content:center;}
 .doyenne-mini-fallback{font-family:'Fraunces',serif;font-size:28px;font-weight:600;color:#1F2329;}
+/* Brief 23 — Distinction visuelle de la miniature persistante au niveau 2
+   (clic = ouvre fiche doyenne, vs niveau 1 ou clic = drill-down). Bordure
+   ocre + ombre plus marquee pour signaler une interaction differente. */
+.doyenne-mini-marker.persistente-niveau-2 .doyenne-mini-img,
+.doyenne-mini-marker.persistente-niveau-2 .doyenne-mini-fallback{border-color:var(--tx-ocre);box-shadow:0 4px 16px rgba(194,133,51,0.45);}
 .doyenne-mini-label{font-family:'Fraunces',serif;font-size:13px;font-weight:600;color:#1F2329;text-align:center;text-shadow:0 1px 3px rgba(245,240,231,0.95),0 0 8px rgba(245,240,231,0.95);max-width:120px;line-height:1.1;}
 /* Brief 19 — Bug visibilite N2 (Brief 14) : la regle .doyenne-mini cache
    l'inner mais le wrapper Leaflet outer .doyenne-mini-marker reste visible
@@ -454,6 +459,24 @@ function closePanel() {
   panel.setAttribute('aria-hidden', 'true');
 }
 
+// Brief 23 — Fiche doyenne (niveau 2, clic miniature persistante).
+// Reutilise openPanel via objet adapte (memes champs nom/categorie/visuel).
+// Source illustration : DOYENNE_ILLUSTRATIONS recyclage diocese (5/10) ou
+// d.illustration_path speculatif (fallback). Pour les 5 doyennes sans
+// illustration : visuel vide -> fallback "Illustration a venir" centre.
+function openDoyennePanel(d) {
+  const display = d.display_name || d.name || d.slug;
+  const recycled = (typeof DOYENNE_ILLUSTRATIONS === 'object' && DOYENNE_ILLUSTRATIONS[d.slug])
+    ? DOYENNE_ILLUSTRATIONS[d.slug] : '';
+  const speculative = d.illustration_path || '';
+  const visuel = recycled || speculative || '';
+  openPanel({
+    nom: display,
+    categorie: 'Doyenné contemporain',
+    visuel: visuel,
+  });
+}
+
 panelClose.addEventListener('click', (e) => {
   e.stopPropagation();
   closePanel();
@@ -640,7 +663,22 @@ fetch(resolveAssetPath('docs/data/doyennes_polygons.json'))
         iconAnchor: [60, 48],
       });
       const miniMarker = L.marker(center, {icon, interactive: true, keyboard: false, riseOnHover: true});
-      miniMarker.on('click', () => onDoyenneClick(d.slug, display, poly));
+      // Brief 23 — handler clic miniature dependant du niveau :
+      //   N1 : drill-down (idem clic polygone) — comportement Brief 14
+      //   N2 (sur la miniature persistante du doyenne actif uniquement) :
+      //     ouvre fiche doyenne via openDoyennePanel reutilisant openPanel.
+      const doyData = d;
+      miniMarker.on('click', () => {
+        if (document.body.classList.contains('niveau-2')) {
+          if (currentDoyenneSlug === doyData.slug) openDoyennePanel(doyData);
+        } else {
+          onDoyenneClick(doyData.slug, display, poly);
+        }
+      });
+      // Brief 23 — slug stocke sur le marker pour identifier la miniature
+      // active dans enterNiveau2View / exitNiveau2View.
+      miniMarker._doyenneSlug = doyData.slug;
+      miniMarker._doyenneData = doyData;
       doyenneMinisLayer.addLayer(miniMarker);
     }
     doyenneFillLayer.addTo(map);
@@ -856,18 +894,30 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   const el = shape.getElement && shape.getElement();
   if (el) el.classList.add('dim-niveau-2');
 
-  // Brief 20 fix #4 — fade-out spots N1 + miniatures doyennes via classe CSS
-  // .fading-out (250ms) avant detach pour adoucir la disparition.
+  // Brief 20 fix #4 + Brief 23 — fade-out spots N1 + 9 miniatures
+  // (la 10e du doyenne actif reste visible avec classe .persistente-niveau-2).
   const spotsN1Icons = spotsIllustratedLayer.getLayers().map(l => l._icon).filter(Boolean);
-  const minisIcons = doyenneMinisLayer.getLayers().map(l => l._icon).filter(Boolean);
+  const allMiniLayers = doyenneMinisLayer.getLayers();
+  const activeMiniLayer = allMiniLayers.find(m => m._doyenneSlug === doyenneSlug);
+  const otherMiniLayers = allMiniLayers.filter(m => m._doyenneSlug !== doyenneSlug);
+  const otherMiniIcons = otherMiniLayers.map(l => l._icon).filter(Boolean);
   for (const icon of spotsN1Icons) icon.classList.add('fading-out');
-  for (const icon of minisIcons) icon.classList.add('fading-out');
+  for (const icon of otherMiniIcons) icon.classList.add('fading-out');
   setTimeout(() => {
     if (map.hasLayer(spotsIllustratedLayer)) map.removeLayer(spotsIllustratedLayer);
-    if (map.hasLayer(doyenneMinisLayer)) map.removeLayer(doyenneMinisLayer);
+    // Brief 23 — detacher individuellement les 9 miniatures non-actives
+    // (vs detach total Brief 19 §4.6). La miniature active reste attachee.
+    for (const m of otherMiniLayers) {
+      if (map.hasLayer(m)) map.removeLayer(m);
+    }
     for (const icon of spotsN1Icons) icon.classList.remove('fading-out');
-    for (const icon of minisIcons) icon.classList.remove('fading-out');
+    for (const icon of otherMiniIcons) icon.classList.remove('fading-out');
   }, 250);
+  // Brief 23 — distinction visuelle de la miniature persistante (classe
+  // .persistente-niveau-2 sur le wrapper Leaflet pour bordure ocre + ombre).
+  if (activeMiniLayer && activeMiniLayer._icon) {
+    activeMiniLayer._icon.classList.add('persistente-niveau-2');
+  }
 
   // Attacher pieves du doyenne (Brief 9 Strat A pieves_polygons.json).
   const pivlg = pievesByDoyenneLayer.get(doyenneSlug);
@@ -921,7 +971,19 @@ function exitNiveau2View() {
   if (!map.hasLayer(spotsIllustratedLayer)) spotsIllustratedLayer.addTo(map);
 
   // Brief 19 — re-attacher miniatures doyennes au retour vue Corse.
+  // Brief 23 — chaque marker doit etre re-attache individuellement au map
+  // (en plus du LayerGroup global) car les 9 non-actifs ont ete detaches
+  // individuellement dans enterNiveau2View. Le LayerGroup re-attache les
+  // refs internes mais pour s'assurer que chaque marker apparait, on les
+  // ajoute au LayerGroup s'ils n'y sont plus, et on retire la classe
+  // persistente-niveau-2 du marker actif precedent.
   if (!map.hasLayer(doyenneMinisLayer)) doyenneMinisLayer.addTo(map);
+  for (const m of doyenneMinisLayer.getLayers()) {
+    if (!map.hasLayer(m)) m.addTo(map);
+    if (m._icon) m._icon.classList.remove('persistente-niveau-2');
+  }
+  // Brief 23 — fermer la fiche doyenne si elle etait ouverte au retour.
+  if (typeof closePanel === 'function' && panel.classList.contains('open')) closePanel();
 
   // Clear highlights polygones, popup et tooltip persistant (B11-UX-029).
   // Le tooltip Leaflet sticky se reouvre via mouseover residuel pendant le
