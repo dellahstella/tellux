@@ -411,9 +411,12 @@ function loadSitesPatrimoine() {
         .filter(function(s) { return s.phase_publication === 1; })
         .map(adaptSiteSchema);
       console.log('[Tellux patrimoine] sites patrimoniaux chargés : ' + data.sites.length + ' depuis sites_patrimoine.json');
+      // Brief 36 R7 — la version est désormais à la racine du JSON (Brief 35
+      // sites_patrimoine.json v1.2). Fallback _meta.version pour rétro-compat.
+      var schemaVersion = data.version || (SITES_META && SITES_META.version) || '?';
       console.info('[Tellux Patrimoine] ' + SITES_PATRIMOINE.length +
         ' sites P1 charges (corpus ' + data.sites.length +
-        ', v' + (SITES_META && SITES_META.version) + ')');
+        ', v' + schemaVersion + ')');
       return SITES_PATRIMOINE;
     });
 }
