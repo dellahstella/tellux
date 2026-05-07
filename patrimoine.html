@@ -200,6 +200,19 @@ body.niveau-2 .doyenne-mini-marker:not(.persistente-niveau-2){display:none !impo
 #doyenne-mini-sticker .doyenne-mini-img,#doyenne-mini-sticker .doyenne-mini-fallback{width:90px;height:90px;}
 #doyenne-mini-sticker .doyenne-mini-label{font-size:13px;margin-top:6px;}
 body.niveau-2-actif .doyenne-mini-marker.persistente-niveau-2{display:none !important;}
+/* Brief 47 — sticker pieve niveau 3 (sous le sticker doyenné en haut à droite).
+   Position calculée pour éviter chevauchement : sticker doyenné = ~136px haut
+   (10 pad + 90 img + 6 mt + 20 label + 10 pad), donc pieve commence à 164px
+   (16 + 136 + 12 gap). Compact texte-only car pieves n'ont pas d'illustration
+   v2 actuelle. Visible uniquement en niveau-3-actif. */
+#pieve-mini-sticker{position:fixed;top:164px;right:16px;z-index:650;padding:8px 14px;background:rgba(245,240,231,0.95);border:1px solid rgba(31,35,41,0.18);border-radius:12px;box-shadow:0 6px 20px rgba(31,35,41,0.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);cursor:pointer;transition:transform .2s,box-shadow .2s;pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:90px;max-width:160px;font-family:'Fraunces',serif;}
+#pieve-mini-sticker:hover{transform:scale(1.05);box-shadow:0 8px 24px rgba(31,35,41,0.25);}
+#pieve-mini-sticker .pieve-sticker-label{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--tx-mica);font-weight:500;}
+#pieve-mini-sticker .pieve-sticker-name{font-size:14px;font-weight:600;color:var(--tx-encre);text-align:center;line-height:1.2;}
+@media(max-width:768px){
+  #pieve-mini-sticker{top:108px;right:8px;padding:6px 10px;min-width:72px;}
+  #pieve-mini-sticker .pieve-sticker-name{font-size:12px;}
+}
 @media(max-width:768px){
   #doyenne-mini-sticker{top:8px;right:8px;padding:8px;}
   #doyenne-mini-sticker .doyenne-mini-img,#doyenne-mini-sticker .doyenne-mini-fallback{width:70px;height:70px;}
@@ -1210,9 +1223,15 @@ function onPieveClickV2(slug, name, shape) {
   }
   const el = shape.getElement && shape.getElement();
   if (el) el.classList.add('selected');
-  // LOD Phase B — popup fiche v3 (fallback v2 si v3 absent).
+  // Brief 47 — niveau 3 (drill pieve). Pattern poupée russe : sticker pieve
+  // top-right (sous sticker doyenné Brief 30), parité avec drill doyenné
+  // niveau 2. Pas d'auto-open du panel pieve (user clique sticker pour lire),
+  // pas de popup Leaflet transitoire (remplacée). État niveau-2-actif
+  // conservé (sticker doyenné reste visible).
+  document.body.classList.add('niveau-3-actif');
+  if (typeof map !== 'undefined' && map.closePopup) map.closePopup();
   var ficheSlug = slug.replace(/^pieve_/, '');
-  openFichePopup(shape, 'pieves', ficheSlug, name, 'PIEVE MEDIEVALE');
+  _renderPieveSticker(slug, name, ficheSlug);
 }
 
 // === Brief 9 — Drill-down navigation niveau 1 ↔ niveau 2 ===
@@ -1224,6 +1243,11 @@ const corsicaInitialView = { center: [42.15, 9.10], zoom: 9 };
 
 function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   document.body.classList.add('niveau-2');
+  // Brief 47 — switch de doyenné (A→B) depuis niveau 3 : nettoyer l'état
+  // niveau-3 résiduel (sticker pieve obsolète + classe). Le user repart d'un
+  // niveau 2 propre sur le nouveau doyenné.
+  document.body.classList.remove('niveau-3-actif');
+  if (typeof _removePieveSticker === 'function') _removePieveSticker();
 
   // Brief 20 fix #7 — fermer toute popup map ouverte (spot precedent ou popup
   // miniature) avant le pivot N1->N2, evite la superposition residuelle.
@@ -1315,6 +1339,10 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
 function exitNiveau2View() {
   document.body.classList.remove('niveau-2');
   _removeDoyenneSticker();
+  // Brief 47 — exit niveau 2 implique exit niveau 3 (le drill-down s'effondre
+  // jusqu'au niveau 1 / vue Corse). Sticker pieve retire + classe niveau-3-actif.
+  document.body.classList.remove('niveau-3-actif');
+  _removePieveSticker();
 
   // Re-fill les doyennes estompes.
   for (const poly of Object.values(doyenneShapesBySlug)) {
@@ -1442,6 +1470,10 @@ function updateBreadcrumb() {
         for (const p of Object.values(pieveShapesBySlugV2)) { const e = p.getElement && p.getElement(); if (e) e.classList.remove('selected'); }
         const shape = doyenneShapesBySlug[currentDoyenneSlug];
         if (shape) map.fitBounds(shape.getBounds(), {padding:[40,40]});
+        // Brief 47 — retour niveau 2 depuis niveau 3 via breadcrumb : cleanup
+        // sticker pieve + classe niveau-3-actif (sticker doyenné conservé).
+        document.body.classList.remove('niveau-3-actif');
+        if (typeof _removePieveSticker === 'function') _removePieveSticker();
         updateBreadcrumb();
         if (typeof syncHashToUrl === 'function') syncHashToUrl();
       } else if (lvl === 'pieve-v2' && currentPieveSlugV2) {
@@ -1668,6 +1700,10 @@ function applyHash(rawHash) {
         }
         const el = pieveShape.getElement && pieveShape.getElement();
         if (el) el.classList.add('selected');
+        // Brief 47 — niveau-3 actif aussi en deep-hash spotSlug (sticker pieve
+        // doit apparaitre meme quand on entre directement sur un site).
+        document.body.classList.add('niveau-3-actif');
+        _renderPieveSticker(pieveSlug, pieveDisplay, pieveSlug.replace(/^pieve_/, ''));
       } else {
         onPieveClickV2(pieveSlug, pieveDisplay, pieveShape);
       }
@@ -1962,6 +1998,52 @@ function _removeDoyenneSticker() {
   if (sticker) {
     sticker.remove();
     console.log('[Tellux patrimoine] Brief 30 — sticker doyenné niveau 2 supprimé');
+  }
+}
+
+// === Brief 47 — sticker pieve niveau 3 (pattern poupée russe) ===
+// Compact texte-only (Pieve / Nom) car les pieves n'ont pas d'illustration v2
+// dédiée actuellement. Positionné top-right sous le sticker doyenné (CSS top:
+// 164px). Click → openFicheDetailPanel via fichePanelEl (Brief 30 era infra
+// déjà en place).
+function _renderPieveSticker(slug, name, ficheSlug) {
+  _removePieveSticker();
+  var sticker = document.createElement('div');
+  sticker.id = 'pieve-mini-sticker';
+  sticker.setAttribute('role', 'button');
+  sticker.setAttribute('tabindex', '0');
+  sticker.setAttribute('aria-label', 'Pieve ' + name + ' — voir la fiche');
+  var label = document.createElement('span');
+  label.className = 'pieve-sticker-label';
+  label.textContent = 'Pieve';
+  sticker.appendChild(label);
+  var nameSpan = document.createElement('span');
+  nameSpan.className = 'pieve-sticker-name';
+  nameSpan.textContent = name;
+  sticker.appendChild(nameSpan);
+  sticker.addEventListener('click', function(e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    // Brief 47 — ouverture panel pieve via openFicheDetailPanel (Brief 30 infra).
+    // Le panel #fiche-panel s'affiche en side-pane droit, ne masque pas la map.
+    if (typeof openFicheDetailPanel === 'function') {
+      openFicheDetailPanel('pieves', ficheSlug, name, 'PIEVE MEDIEVALE');
+    }
+  });
+  sticker.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      sticker.click();
+    }
+  });
+  document.body.appendChild(sticker);
+  console.log('[Tellux patrimoine] Brief 47 — sticker pieve niveau 3 actif : ' + slug);
+}
+
+function _removePieveSticker() {
+  var sticker = document.getElementById('pieve-mini-sticker');
+  if (sticker) {
+    sticker.remove();
+    console.log('[Tellux patrimoine] Brief 47 — sticker pieve niveau 3 supprimé');
   }
 }
 
