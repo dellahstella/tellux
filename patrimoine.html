@@ -62,7 +62,9 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 .leaflet-popup-content{margin:0;padding:0;width:240px !important;}
 .leaflet-popup-tip{background:var(--tx-pierre);}
 .leaflet-popup-close-button{display:none;}
-.tlx-popup{padding:0;}
+.tlx-popup{padding:0;position:relative;}
+.tlx-popup-close{position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;background:rgba(245,240,231,0.92);border:1px solid rgba(31,35,41,0.12);cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--tx-ardoise);line-height:1;transition:background .2s,transform .2s;padding:0;font-family:var(--font);}
+.tlx-popup-close:hover{background:var(--tx-ocre);color:var(--tx-pierre);transform:rotate(90deg);}
 .tlx-popup-img{width:240px;height:135px;object-fit:cover;border-radius:var(--r2) var(--r2) 0 0;display:block;background:var(--tx-brume);}
 .tlx-popup-img.fallback{display:flex;align-items:center;justify-content:center;color:var(--tx-mica);font-size:11px;font-style:italic;border:1px dashed rgba(63,91,58,0.4);}
 .tlx-popup-body{padding:10px 14px 12px;}
@@ -248,7 +250,7 @@ body.niveau-2-actif .doyenne-mini-marker.persistente-niveau-2{display:none !impo
 
 /* LOD Phase B — popup fiche éditorial (v3) */
 .tlx-fiche-popup-wrapper .leaflet-popup-content{width:320px !important;}
-.tlx-fiche-popup{padding:0;}
+.tlx-fiche-popup{padding:0;position:relative;}
 .tlx-fiche-header{padding:12px 16px 10px;}
 .tlx-fiche-cat{font-size:10px;color:var(--tx-mica);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:3px;}
 .tlx-fiche-title{font-family:var(--font-display);font-size:17px;font-weight:500;color:var(--tx-ardoise);line-height:1.2;}
@@ -634,6 +636,7 @@ function openPopup(marker, site) {
     ? `<img loading="lazy" class="tlx-popup-img" src="${visualPath}" alt="${escapeHtml(site.nom)}" onerror="this.outerHTML='<div class=\\'tlx-popup-img fallback\\'>Visuel à venir</div>'">`
     : `<div class="tlx-popup-img fallback">Visuel à venir</div>`;
   const html = `<div class="tlx-popup">
+    <button class="tlx-popup-close" aria-label="Fermer">&#xD7;</button>
     ${imgHtml}
     <div class="tlx-popup-body">
       <div class="tlx-popup-title">${escapeHtml(site.nom)}</div>
@@ -672,6 +675,8 @@ function _bindPopupBtnDelegation() {
   if (_tlxPopupDelegationBound) return;
   _tlxPopupDelegationBound = true;
   document.addEventListener('click', (e) => {
+    const closeBtn = e.target.closest('.tlx-popup-close');
+    if (closeBtn) { e.stopPropagation(); map.closePopup(); return; }
     const btn = e.target.closest('.tlx-popup-btn');
     if (btn) {
       const slug = btn.getAttribute('data-slug');
@@ -1558,6 +1563,7 @@ function onZoneClick(level, name, data, shape) {
     : `${pluralize(data.n_spots_geographic ?? data.n_spots, 'spot', 'spots')}${data.diocese && data.diocese !== '?' ? ' · ' + formatLabel('diocèse', data.diocese) : ''}`;
   const titleText = level === 'diocese' ? formatDioceseLabel(name) : formatPieveLabel(data.pieve || name);
   const html = `<div class="tlx-popup">
+    <button class="tlx-popup-close" aria-label="Fermer">&#xD7;</button>
     ${imgHtml}
     <div class="tlx-popup-body">
       <div class="tlx-popup-title">${escapeHtml(titleText)}</div>
@@ -1570,6 +1576,8 @@ function onZoneClick(level, name, data, shape) {
     .setContent(html)
     .openOn(map);
   setTimeout(() => {
+    const closeBtn = document.querySelector('.tlx-popup .tlx-popup-close');
+    if (closeBtn) closeBtn.addEventListener('click', (e) => { e.stopPropagation(); map.closePopup(); });
     // Brief 18 — openZonePanel supprime, handlers neutralises pour eviter
     // ReferenceError si onZoneClick etait reactive sans refonte associee.
     const btn = document.querySelector('.tlx-popup-btn[data-zone="' + level + ':' + name + '"]');
@@ -1781,6 +1789,7 @@ function openFichePopup(shape, ficheType, slug, displayName, catLabel) {
   var center = (shape.getBounds ? shape.getBounds().getCenter() : shape.getLatLng ? shape.getLatLng() : shape);
   var pid = 'fp-' + slug.replace(/[^a-z0-9_]/g, '_');
   var html = '<div class="tlx-fiche-popup">'
+    + '<button class="tlx-popup-close" aria-label="Fermer">&#xD7;</button>'
     + '<div class="tlx-fiche-header">'
     + '<div class="tlx-fiche-cat">' + escapeHtml(catLabel) + '</div>'
     + '<div class="tlx-fiche-title">' + escapeHtml(displayName) + '</div>'
@@ -1793,6 +1802,10 @@ function openFichePopup(shape, ficheType, slug, displayName, catLabel) {
     + '</div>';
   L.popup({maxWidth: 320, closeButton: false, autoPan: true, className: 'tlx-fiche-popup-wrapper'})
     .setLatLng(center).setContent(html).openOn(map);
+  setTimeout(() => {
+    const closeBtn = document.querySelector('.tlx-fiche-popup .tlx-popup-close');
+    if (closeBtn) closeBtn.addEventListener('click', (e) => { e.stopPropagation(); map.closePopup(); });
+  }, 50);
   // Tenter v3, puis v2 si absent.
   fetchFiche(ficheType, slug, 'v3').then(function(text) {
     if (text) return text;
