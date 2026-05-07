@@ -605,15 +605,57 @@ function openPopup(marker, site) {
       <button class="tlx-popup-btn" data-slug="${site.slug}">Ouvrir la fiche</button>
     </div>
   </div>`;
+  // Brief 41 fix #1 — fermer toute popup existante AVANT bind+open (Leaflet
+  // ne supporte qu'1 popup global ; sans close explicite, un .openPopup() en
+  // chaîne peut laisser le DOM dans un état orphelin où l'icône popup est
+  // invisible et le bouton .tlx-popup-btn introuvable.)
+  if (typeof map !== 'undefined' && map.closePopup) map.closePopup();
+  // Brief 41 fix #2 — défense si le marker n'est pas monté (cas race condition
+  // applyHash → enterNiveau2View attache la layer mais le marker peut ne pas
+  // avoir son _icon dans certains cas LOD/zoom).
+  if (!marker._map) {
+    // Le marker doit être sur le map pour que openPopup() fonctionne.
+    // On retry au prochain frame, qui suit l'attach de la layer parente.
+    requestAnimationFrame(() => {
+      if (marker._map) openPopup(marker, site);
+    });
+    return;
+  }
   marker.bindPopup(html, {maxWidth:240, autoPan:true, closeButton:false}).openPopup();
-  // Bind click sur bouton (après que la popup soit créée)
-  setTimeout(() => {
-    const btn = document.querySelector('.tlx-popup-btn[data-slug="' + site.slug + '"]');
-    if (btn) btn.addEventListener('click', () => openPanel(site));
-    // Click sur l'image popup → ouvrir panneau aussi
-    const img = document.querySelector('.tlx-popup-img');
-    if (img) img.addEventListener('click', () => openPanel(site));
-  }, 50);
+  // Brief 41 fix #3 — bind click via délégation événementielle plutôt que
+  // setTimeout(50) qui était fragile (clic utilisateur dans les 50 premières
+  // ms manquait son handler). _bindPopupBtnDelegation est idempotent : un
+  // seul listener au document level capture les clics .tlx-popup-btn.
+  _bindPopupBtnDelegation();
+}
+
+// Brief 41 — délégation événementielle .tlx-popup-btn / .tlx-popup-img.
+// Idempotent : flag _tlxPopupDelegationBound évite double-bind.
+let _tlxPopupDelegationBound = false;
+function _bindPopupBtnDelegation() {
+  if (_tlxPopupDelegationBound) return;
+  _tlxPopupDelegationBound = true;
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.tlx-popup-btn');
+    if (btn) {
+      const slug = btn.getAttribute('data-slug');
+      if (slug && markersBySlug[slug]) {
+        openPanel(markersBySlug[slug].site);
+      }
+      return;
+    }
+    // Click sur image popup ouvre aussi le panel — uniquement si on est dans
+    // un .tlx-popup (pas dans un autre img du DOM).
+    const img = e.target.closest('.tlx-popup .tlx-popup-img');
+    if (img) {
+      // Récupérer le slug via le sibling .tlx-popup-btn dans la même popup.
+      const btnInPopup = img.closest('.tlx-popup')?.querySelector('.tlx-popup-btn');
+      const slug = btnInPopup?.getAttribute('data-slug');
+      if (slug && markersBySlug[slug]) {
+        openPanel(markersBySlug[slug].site);
+      }
+    }
+  });
 }
 
 // Brief 18 — Panel simplifie : viewer illustration plein cadre + overlay
@@ -1581,10 +1623,31 @@ function applyHash(rawHash) {
       const doyDisplay = doyenneNameBySlug[doySlug] || doyShort;
       enterNiveau2View(doySlug, doyDisplay, doyShape);
     }
+    // Brief 41 fix #4 — race condition popup pieve vs popup spot. Si le hash
+    // contient pieve ET spot, on skip l'ouverture de la popup pieve (qui
+    // serait immédiatement remplacée par celle du spot, transitoire visuel
+    // qui peut laisser Leaflet dans un état où la popup spot ne s'affiche
+    // pas). Le state currentPieveSlugV2 est néanmoins mis à jour pour le
+    // breadcrumb via onPieveClickV2 — solution : on update le state sans
+    // appeler openFichePopup quand spotSlug est aussi présent.
     if (pieveSlug) {
       const pieveShape = pieveShapesBySlugV2[pieveSlug];
       const pieveDisplay = pieveNameBySlugV2[pieveSlug] || pieveShort;
-      onPieveClickV2(pieveSlug, pieveDisplay, pieveShape);
+      if (spotSlug) {
+        // State only : update breadcrumb sans popup pieve transitoire.
+        currentPieveSlugV2 = pieveSlug;
+        currentSpotSlug = null;
+        if (typeof updateBreadcrumb === 'function') updateBreadcrumb();
+        // Highlight pieve active (côté visuel polygone).
+        for (const p of Object.values(pieveShapesBySlugV2)) {
+          const el = p.getElement && p.getElement();
+          if (el) el.classList.remove('selected');
+        }
+        const el = pieveShape.getElement && pieveShape.getElement();
+        if (el) el.classList.add('selected');
+      } else {
+        onPieveClickV2(pieveSlug, pieveDisplay, pieveShape);
+      }
     }
     if (spotSlug) {
       const m = markersBySlug[spotSlug];
