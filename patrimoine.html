@@ -1895,10 +1895,33 @@ function _renderDoyenneSticker(slug, name, _attempt) {
   sticker.id = 'doyenne-mini-sticker';
   sticker.setAttribute('role', 'button');
   sticker.setAttribute('tabindex', '0');
-  sticker.setAttribute('aria-label', 'Doyenne ' + name + ' — retour niveau 0');
+  // Brief 42 — aria-label updated : le clic n'exit plus, il rouvre la fiche.
+  sticker.setAttribute('aria-label', 'Doyenne ' + name + ' — voir la fiche');
   sticker.innerHTML = stickerHtml;
-  sticker.addEventListener('click', function() {
-    window.location.hash = '';
+  sticker.addEventListener('click', function(e) {
+    // Brief 42 fix — au clic, rouvrir la fiche du doyenné en cours (carte
+    // postale Brief 31 via openDoyennePanel) AU LIEU de retourner niveau 1.
+    // stopPropagation pour éviter remontée vers handlers parents (panel,
+    // backdrop, etc.) qui pourraient interpréter le clic comme un exit.
+    if (e && e.stopPropagation) e.stopPropagation();
+    // Récupère la doyenne data depuis le miniMarker actif (set par boot
+    // via miniMarker._doyenneData, cf. doyenneMinisLayer construction).
+    var fullData = null;
+    try {
+      var minis = (typeof doyenneMinisLayer !== 'undefined' && doyenneMinisLayer.getLayers)
+        ? doyenneMinisLayer.getLayers() : [];
+      var activeMini = minis.find(function(m) { return m._doyenneSlug === slug; });
+      if (activeMini) fullData = activeMini._doyenneData;
+    } catch (_) { /* fallback minimal data ci-dessous */ }
+    var doyData = fullData || {
+      slug: slug,
+      name: name,
+      display_name: name,
+      illustration_path: '',
+    };
+    if (typeof openDoyennePanel === 'function') {
+      openDoyennePanel(doyData);
+    }
   });
   sticker.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' || e.key === ' ') {
