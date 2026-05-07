@@ -1777,27 +1777,51 @@ function updateZoomLOD() {
 map.on('zoomend', function() { updateZoomLOD(); });
 
 // Brief 30 — sticker miniature doyenné détaché de la map au niveau 2
-function _renderDoyenneSticker(slug, name) {
+// Brief 30 — sticker miniature doyenné détaché de la map au niveau 2.
+// Brief 36 R4 (2026-05-06) — robustification : si le clonage DOM (.doyenne-mini)
+// échoue après rAF retry (race avec hash bookmark + LOD detach), reconstruit le
+// sticker depuis les données canoniques (DOYENNE_ILLUSTRATIONS + initiale fallback).
+function _buildStickerHtmlFromData(slug, name) {
+  var safeName = (name || slug).replace(/'/g, '&#39;');
+  var initiale = (safeName.charAt(0) || '?').toUpperCase();
+  var illuRaw = (typeof DOYENNE_ILLUSTRATIONS === 'object' && DOYENNE_ILLUSTRATIONS[slug]) || '';
+  if (illuRaw) {
+    var illuPath = resolveAssetPath(_illustrationUrl(illuRaw, 'thumb'));
+    return '<img class="doyenne-mini-img" width="56" height="56" src="' + illuPath + '" alt="' + safeName + '"'
+      + ' onerror="this.outerHTML=\'<span class=&quot;doyenne-mini-fallback&quot;>' + initiale + '</span>\'">'
+      + '<span class="doyenne-mini-label">' + safeName + '</span>';
+  }
+  return '<span class="doyenne-mini-fallback">' + initiale + '</span>'
+    + '<span class="doyenne-mini-label">' + safeName + '</span>';
+}
+
+function _renderDoyenneSticker(slug, name, _attempt) {
   var old = document.getElementById('doyenne-mini-sticker');
   if (old) old.remove();
+  var attempt = _attempt || 0;
   var sourceMini = document.querySelector(
     '.doyenne-mini-marker.persistente-niveau-2 .doyenne-mini'
   );
-  if (!sourceMini) {
+  var stickerHtml;
+  if (sourceMini) {
+    stickerHtml = sourceMini.innerHTML;
+  } else if (attempt < 3) {
+    // Race avec rendu Leaflet (hash bookmark, LOD detach) : 3 retries rAF max.
     requestAnimationFrame(function() {
-      var retry = document.querySelector(
-        '.doyenne-mini-marker.persistente-niveau-2 .doyenne-mini'
-      );
-      if (retry) _renderDoyenneSticker(slug, name);
+      _renderDoyenneSticker(slug, name, attempt + 1);
     });
     return;
+  } else {
+    // Brief 36 R4 — fallback data-driven : reconstruit depuis DOYENNE_ILLUSTRATIONS.
+    stickerHtml = _buildStickerHtmlFromData(slug, name);
+    console.log('[Tellux patrimoine] Brief 36 R4 — sticker fallback data-driven (clone échoué après ' + attempt + ' rAF) : ' + slug);
   }
   var sticker = document.createElement('div');
   sticker.id = 'doyenne-mini-sticker';
   sticker.setAttribute('role', 'button');
   sticker.setAttribute('tabindex', '0');
   sticker.setAttribute('aria-label', 'Doyenne ' + name + ' — retour niveau 0');
-  sticker.innerHTML = sourceMini.innerHTML;
+  sticker.innerHTML = stickerHtml;
   sticker.addEventListener('click', function() {
     window.location.hash = '';
   });
