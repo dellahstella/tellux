@@ -486,6 +486,177 @@ def load_rows_from_csv(csv_path):
         return list(csv.DictReader(f))
 
 
+def rescue_orphans(sites_data, pieves_polys, doyennes_polys):
+    """Brief 36 R6 — tente de rescue les sites _orphan_brief35: true.
+
+    Pour chaque orphan : essaie nom original + 2-3 variantes via OSM, Wikidata,
+    IGN. Garde la 1ère variante qui produit ≥1 source. Reverse-geocode pour
+    déterminer pieve/doyenne. Considère SUCCESS si le nouveau point tombe dans
+    une pieve Corse (point-in-polygon valide).
+
+    Retourne (rows_csv, n_rescued).
+    """
+    orphans = [s for s in sites_data["sites"] if s.get("_orphan_brief35")]
+    print(f"[rescue] {len(orphans)} sites _orphan_brief35 à rescue")
+    rows = []
+    n_rescued = 0
+    for i, site in enumerate(orphans, 1):
+        slug = site["slug"]
+        name = site.get("name") or ""
+        commune = site.get("commune_nom") or ""
+        old_lat = site.get("lat")
+        old_lon = site.get("lon")
+        print(f"  [{i:>2}/{len(orphans)}] {slug:<48} | {name[:48]}")
+        # Variantes : nom original + retours name_variants()
+        all_variants = [name] + name_variants(name)
+        # Dédoublonne en préservant l'ordre
+        seen = set()
+        all_variants = [v for v in all_variants if v and not (v in seen or seen.add(v))]
+
+        coords = []
+        sources = []
+        osm_m = wd_m = ign_m = ""
+        used_variant = ""
+        for v in all_variants[:4]:  # max 4 variantes
+            if not osm_m:
+                r_osm = query_osm(v, commune)
+                if r_osm:
+                    coords.append((r_osm[0], r_osm[1])); sources.append("osm")
+                    osm_m = f"{r_osm[0]:.5f},{r_osm[1]:.5f}"
+                    used_variant = used_variant or v
+            if not wd_m:
+                r_wd = query_wikidata(v)
+                if r_wd:
+                    coords.append((r_wd[0], r_wd[1])); sources.append("wikidata")
+                    wd_m = f"{r_wd[0]:.5f},{r_wd[1]:.5f}"
+                    used_variant = used_variant or v
+            if not ign_m:
+                r_ign = query_ign(v, commune)
+                if r_ign:
+                    coords.append((r_ign[0], r_ign[1])); sources.append("ign")
+                    ign_m = f"{r_ign[0]:.5f},{r_ign[1]:.5f}"
+                    used_variant = used_variant or v
+            if osm_m and wd_m and ign_m:
+                break  # 3 sources OK, pas besoin de plus de variantes
+            if osm_m or wd_m or ign_m:
+                # Au moins 1 source : on tente quand même les autres variantes
+                # mais sans abandonner.
+                pass
+
+        if not coords:
+            rows.append({
+                "slug": slug, "name": name, "commune_nom": commune,
+                "old_lat": old_lat, "old_lon": old_lon,
+                "new_lat": "", "new_lon": "", "distance_m": "",
+                "confiance": "ABSENT", "n_sources": 0, "sources_used": "",
+                "inter_max_m": "", "osm_match": "", "wikidata_match": "", "ign_match": "",
+                "applied": "", "pieve_declared": site.get("pieve_slug") or "",
+                "pieve_geocoded": "", "pieve_concordant": "?",
+                "doyenne_declared": site.get("doyenne_contemporain_slug") or "",
+                "doyenne_geocoded": "", "doyenne_concordant": "?",
+                "note": "RESCUE_ABSENT",
+            })
+            continue
+
+        confidence, n_sources, inter_max, cluster_idx = compute_confidence(coords)
+        new_lat, new_lon = median_coord(coords, cluster_idx if cluster_idx else None)
+        dist = ""
+        if old_lat is not None and old_lon is not None:
+            dist = haversine(old_lat, old_lon, new_lat, new_lon)
+
+        # Reverse-geocode : pieve/doyenne contenant la nouvelle coord
+        pieve_geo = reverse_geocode(new_lat, new_lon, pieves_polys)
+        doyenne_geo = reverse_geocode(new_lat, new_lon, doyennes_polys)
+
+        is_in_corsica = bool(pieve_geo or doyenne_geo)
+        pieve_decl = site.get("pieve_slug") or ""
+        homonym_risk = (
+            pieve_decl and pieve_geo and pieve_decl != pieve_geo
+            and dist != "" and dist > 5000
+        )
+        # Garde-fous Brief 36 R6 (renforcés post audit dry-run) :
+        #  - Très proche (<1km) : accept même hors polygone (cas îlots/sites
+        #    côtiers comme Giraglia, plage de l'extrême nord, etc.)
+        #  - Sinon dans Corse + ≥2 sources concord (ou HAUTE/MOYENNE)
+        #  - Reject si homonyme (pieve_geo ≠ pieve_decl ET dist >5km)
+        success = False
+        if dist != "" and dist < 1000:
+            success = True  # très proche, peu importe le polygone
+        elif homonym_risk:
+            success = False
+        elif is_in_corsica and confidence in ("HAUTE", "MOYENNE"):
+            success = True
+        elif is_in_corsica and confidence == "FAIBLE" and n_sources >= 2:
+            success = True
+
+        note = "RESCUE_OK" if success else "RESCUE_REJECTED"
+        if not is_in_corsica and dist != "" and dist >= 1000:
+            note += "_HORS_CORSE"
+        if homonym_risk:
+            note += f"_HOMONYM_pieve_decl={pieve_decl}_vs_geo={pieve_geo}"
+        if used_variant != name:
+            note += f" | VARIANT:{used_variant}"
+
+        rows.append({
+            "slug": slug, "name": name, "commune_nom": commune,
+            "old_lat": f"{old_lat:.5f}" if old_lat else "",
+            "old_lon": f"{old_lon:.5f}" if old_lon else "",
+            "new_lat": f"{new_lat:.5f}", "new_lon": f"{new_lon:.5f}",
+            "distance_m": f"{dist:.1f}" if dist else "",
+            "confiance": confidence, "n_sources": n_sources,
+            "sources_used": "+".join(sources), "inter_max_m": f"{inter_max:.1f}",
+            "osm_match": osm_m, "wikidata_match": wd_m, "ign_match": ign_m,
+            "applied": "",
+            "pieve_declared": site.get("pieve_slug") or "",
+            "pieve_geocoded": pieve_geo or "",
+            "pieve_concordant": "True" if pieve_geo else "?",
+            "doyenne_declared": site.get("doyenne_contemporain_slug") or "",
+            "doyenne_geocoded": doyenne_geo or "",
+            "doyenne_concordant": "True" if doyenne_geo else "?",
+            "note": note,
+        })
+        if success:
+            n_rescued += 1
+
+    return rows, n_rescued
+
+
+def apply_rescue(rows, sites_data):
+    """Apply rescue : pour les sites RESCUE_OK, met à jour lat/lon, pieve/doyenne,
+    retire le flag _orphan_brief35. Retourne n_applied."""
+    idx = {s["slug"]: s for s in sites_data["sites"]}
+    n_applied = 0
+    for row in rows:
+        if not row.get("note", "").startswith("RESCUE_OK"):
+            continue
+        site = idx.get(row["slug"])
+        if not site:
+            continue
+        try:
+            new_lat = float(row["new_lat"]); new_lon = float(row["new_lon"])
+        except (ValueError, TypeError):
+            continue
+        orig_note = site.get("notes") or ""
+        prefix = (orig_note + " | ") if orig_note else ""
+        site["notes"] = (
+            prefix + f"gps_rescue_{TODAY[:7]}: orig=({row['old_lat']}, {row['old_lon']})"
+        )
+        site["lat"] = new_lat
+        site["lon"] = new_lon
+        site["gps_audit"] = TODAY
+        site["gps_source"] = row["sources_used"] + "+rescue"
+        # Mise à jour pieve/doyenne depuis reverse-geocode
+        if row.get("pieve_geocoded"):
+            site["pieve_slug"] = row["pieve_geocoded"]
+        if row.get("doyenne_geocoded"):
+            site["doyenne_contemporain_slug"] = row["doyenne_geocoded"]
+        # Retrait du flag orphan
+        site.pop("_orphan_brief35", None)
+        row["applied"] = "True"
+        n_applied += 1
+    return n_applied
+
+
 def name_variants(name):
     """Génère 2-3 variantes orthographiques pour les sites ABSENT.
 
@@ -615,7 +786,8 @@ def retry_absent(rows, sites_data, pieves_polys, doyennes_polys):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--phase", required=True, choices=list(PHASE_FILTERS.keys()))
+    parser.add_argument("--phase", required=False, default=None, choices=list(PHASE_FILTERS.keys()),
+                        help="Phase A-F (requis sauf en mode --rescue-orphans).")
     parser.add_argument("--limit", type=int, default=None,
                         help="Limite le nombre de sites traités (sanity check).")
     parser.add_argument("--dry-run", action="store_true",
@@ -630,6 +802,8 @@ def main():
                         help="Charge les rows d'un CSV existant (skip réseau, utile pour --apply après un --dry-run).")
     parser.add_argument("--retry-absent", type=Path, default=None,
                         help="CSV existant : retry les sites ABSENT avec variantes orthographiques (strip parens, San->Saint, etc.).")
+    parser.add_argument("--rescue-orphans", action="store_true",
+                        help="Brief 36 R6 : tente de rescue les sites avec _orphan_brief35=true via OSM/Wikidata/IGN + variantes ortho. Avec --apply, met à jour lat/lon, pieve/doyenne, retire le flag orphan.")
     args = parser.parse_args()
 
     if args.apply and args.dry_run:
@@ -639,7 +813,11 @@ def main():
     with SITES_PATH.open(encoding="utf-8") as f:
         sites_data = json.load(f)
 
-    targets = filter_phase_sites(sites_data["sites"], args.phase)
+    if not args.rescue_orphans and not args.phase:
+        print("ERROR: --phase est requis (sauf en mode --rescue-orphans)", file=sys.stderr)
+        return 2
+
+    targets = filter_phase_sites(sites_data["sites"], args.phase) if args.phase else []
     if args.limit:
         targets = targets[:args.limit]
 
@@ -686,6 +864,36 @@ def main():
                 json.dump(sites_data, f, ensure_ascii=False, indent=2)
             write_csv(rows, args.retry_absent)
             print(f"[Apply] {applied} sites mis à jour | {skipped} skip (DIST_OVER_5000m)")
+        return 0
+
+    # Mode --rescue-orphans : Brief 36 R6, tente de récupérer les coords des
+    # sites avec _orphan_brief35: true via OSM/Wikidata/IGN + variantes ortho.
+    if args.rescue_orphans:
+        with PIEVES_PATH.open(encoding="utf-8") as f:
+            pdata = json.load(f)
+        pieves_polys = {p["slug"]: p["polygon"] for p in pdata.get("pieves", []) if p.get("polygon")}
+        with DOYENNES_PATH.open(encoding="utf-8") as f:
+            ddata = json.load(f)
+        doyennes_polys = {d["slug"]: d["polygon"] for d in ddata.get("doyennes", []) if d.get("polygon")}
+        rows, n_rescued = rescue_orphans(sites_data, pieves_polys, doyennes_polys)
+        out_csv = DRAFTS_DIR / f"audit_gps_rescue_{TODAY}.csv"
+        write_csv(rows, out_csv)
+        print(f"[rescue] CSV {out_csv}")
+        ok = sum(1 for r in rows if r.get("note", "").startswith("RESCUE_OK"))
+        rejected = sum(1 for r in rows if r.get("note", "").startswith("RESCUE_REJECTED"))
+        absent = sum(1 for r in rows if r.get("note") == "RESCUE_ABSENT")
+        print(f"[Counts] RESCUE_OK={ok} | RESCUE_REJECTED={rejected} | RESCUE_ABSENT={absent}")
+        if args.apply:
+            backup_path = DRAFTS_DIR / f"sites_patrimoine.backup_rescue_{TODAY}.json"
+            if not backup_path.exists():
+                with backup_path.open("w", encoding="utf-8") as f:
+                    json.dump(sites_data, f, ensure_ascii=False, indent=2)
+                print(f"[Backup] {backup_path}")
+            n_applied = apply_rescue(rows, sites_data)
+            with SITES_PATH.open("w", encoding="utf-8") as f:
+                json.dump(sites_data, f, ensure_ascii=False, indent=2)
+            write_csv(rows, out_csv)
+            print(f"[Apply] {n_applied} sites rescued (lat/lon + pieve + doyenne MAJ, flag _orphan_brief35 retiré)")
         return 0
 
     # Mode --from-csv : skip réseau, charge les rows existants et applique direct.
