@@ -28,6 +28,8 @@ Garde-fous :
   - Backup auto avant tout --apply.
   - Pas d'application si distance new/old > 5000 m (flag DIST_OVER_5000m).
   - Coords originales conservées dans le champ notes.
+  - Brief 38 : skip les sites avec gps_locked: true (corrections manuelles
+    Soleil à protéger contre tout écrasement automatique futur).
 """
 
 import argparse
@@ -110,6 +112,13 @@ def filter_phase_sites(sites, phase):
             out.append(s)
         elif d in targets:
             out.append(s)
+    # Brief 38 — skip sites avec gps_locked: true (corrections manuelles Soleil
+    # à protéger contre les écrasements automatiques).
+    locked = [s for s in out if s.get("gps_locked")]
+    if locked:
+        for s in locked:
+            print(f"[gps_locked] {s['slug']} ignoré (lock: {s.get('gps_lock_reason') or 'n/a'})")
+        out = [s for s in out if not s.get("gps_locked")]
     # Skip already audited
     out = [
         s for s in out
@@ -496,8 +505,13 @@ def rescue_orphans(sites_data, pieves_polys, doyennes_polys):
 
     Retourne (rows_csv, n_rescued).
     """
-    orphans = [s for s in sites_data["sites"] if s.get("_orphan_brief35")]
-    print(f"[rescue] {len(orphans)} sites _orphan_brief35 à rescue")
+    all_orphans = [s for s in sites_data["sites"] if s.get("_orphan_brief35")]
+    # Brief 38 — skip gps_locked (corrections manuelles à protéger).
+    locked = [s for s in all_orphans if s.get("gps_locked")]
+    for s in locked:
+        print(f"[gps_locked] {s['slug']} ignoré (lock: {s.get('gps_lock_reason') or 'n/a'})")
+    orphans = [s for s in all_orphans if not s.get("gps_locked")]
+    print(f"[rescue] {len(orphans)} sites _orphan_brief35 à rescue ({len(locked)} skip gps_locked)")
     rows = []
     n_rescued = 0
     for i, site in enumerate(orphans, 1):
