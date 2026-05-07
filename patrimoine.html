@@ -660,7 +660,9 @@ function openPopup(marker, site) {
     });
     return;
   }
-  marker.bindPopup(html, {maxWidth:240, autoPan:true, closeButton:false}).openPopup();
+  if (marker.getPopup()) marker.setPopupContent(html);
+  else marker.bindPopup(html, {maxWidth:240, autoPan:true, closeButton:false});
+  marker.openPopup();
   // Brief 41 fix #3 — bind click via délégation événementielle plutôt que
   // setTimeout(50) qui était fragile (clic utilisateur dans les 50 premières
   // ms manquait son handler). _bindPopupBtnDelegation est idempotent : un
