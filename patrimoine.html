@@ -588,7 +588,7 @@ function initSiteMarkers() {
       iconSize: isPriority ? [18,18] : [14,14],
       iconAnchor: isPriority ? [9,9] : [7,7],
     });
-    const marker = L.marker([site.lat, site.lon], {icon, title: site.nom});
+    const marker = L.marker([site.lat, site.lon], {icon, title: site.nom, zIndexOffset: 1000});
     marker.on('click', () => onSpotClick(marker, site));
     markersBySlug[site.slug] = {marker, site};
 
@@ -1257,6 +1257,7 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   // Brief 20 fix #7 — fermer toute popup map ouverte (spot precedent ou popup
   // miniature) avant le pivot N1->N2, evite la superposition residuelle.
   map.closePopup();
+  if (typeof closePanel === 'function' && panel.classList.contains('open')) closePanel();
 
   // Detacher les couches niveau 2 d'un eventuel doyenne precedent (cas clic A->B
   // sans passer par le bouton retour).
