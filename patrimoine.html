@@ -1248,6 +1248,9 @@ function onPieveClickV2(slug, name, shape) {
 //   Tous les spots du doyenne (illustres + non-illustres). Bouton retour visible.
 const corsicaInitialView = { center: [42.15, 9.10], zoom: 9 };
 
+let _spotsN1FadeTimer = null;
+let _spotsN1FadingIcons = [];
+let _spotsN1FadingMiniIcons = [];
 function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   document.body.classList.add('niveau-2');
   // Brief 47 — switch de doyenné (A→B) depuis niveau 3 : nettoyer l'état
@@ -1286,17 +1289,23 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   const activeMiniLayer = allMiniLayers.find(m => m._doyenneSlug === doyenneSlug);
   const otherMiniLayers = allMiniLayers.filter(m => m._doyenneSlug !== doyenneSlug);
   const otherMiniIcons = otherMiniLayers.map(l => l._icon).filter(Boolean);
+  _spotsN1FadingIcons = spotsN1Icons;
+  _spotsN1FadingMiniIcons = otherMiniIcons;
+  if (_spotsN1FadeTimer !== null) clearTimeout(_spotsN1FadeTimer);
   for (const icon of spotsN1Icons) icon.classList.add('fading-out');
   for (const icon of otherMiniIcons) icon.classList.add('fading-out');
-  setTimeout(() => {
+  _spotsN1FadeTimer = setTimeout(() => {
+    _spotsN1FadeTimer = null;
     if (map.hasLayer(spotsIllustratedLayer)) map.removeLayer(spotsIllustratedLayer);
     // Brief 23 — detacher individuellement les 9 miniatures non-actives
     // (vs detach total Brief 19 §4.6). La miniature active reste attachee.
     for (const m of otherMiniLayers) {
       if (map.hasLayer(m)) map.removeLayer(m);
     }
-    for (const icon of spotsN1Icons) icon.classList.remove('fading-out');
-    for (const icon of otherMiniIcons) icon.classList.remove('fading-out');
+    for (const icon of _spotsN1FadingIcons) icon.classList.remove('fading-out');
+    for (const icon of _spotsN1FadingMiniIcons) icon.classList.remove('fading-out');
+    _spotsN1FadingIcons = [];
+    _spotsN1FadingMiniIcons = [];
   }, 250);
   // Brief 23 — distinction visuelle de la miniature persistante (classe
   // .persistente-niveau-2 sur le wrapper Leaflet pour bordure ocre + ombre).
@@ -1346,6 +1355,19 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
 
 function exitNiveau2View() {
   document.body.classList.remove('niveau-2');
+
+  // Annuler le fade-out spots N1 si l'utilisateur revient avant 250ms
+  // (race condition : setTimeout retire spotsIllustratedLayer apres que
+  // exitNiveau2View a deja decide de ne pas re-attacher car hasLayer=true).
+  if (_spotsN1FadeTimer !== null) {
+    clearTimeout(_spotsN1FadeTimer);
+    _spotsN1FadeTimer = null;
+    for (const icon of _spotsN1FadingIcons) icon.classList.remove('fading-out');
+    for (const icon of _spotsN1FadingMiniIcons) icon.classList.remove('fading-out');
+    _spotsN1FadingIcons = [];
+    _spotsN1FadingMiniIcons = [];
+  }
+
   _removeDoyenneSticker();
   // Brief 47 — exit niveau 2 implique exit niveau 3 (le drill-down s'effondre
   // jusqu'au niveau 1 / vue Corse). Sticker pieve retire + classe niveau-3-actif.
