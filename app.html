@@ -909,7 +909,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   .hypo-panel{top:6px;right:6px;width:calc(100vw - 60px);}
 }
 .mob-toggle{
-  display:none;position:fixed;top:12px;left:12px;z-index:1200;
+  display:none;position:fixed;top:12px;right:12px;z-index:1200;
   width:40px;height:40px;border-radius:50%;
   background:var(--bg);border:1px solid var(--border);
   box-shadow:0 2px 8px rgba(0,0,0,.12);cursor:pointer;
@@ -1114,6 +1114,25 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .cond-badge .badge-val{font-weight:500;color:var(--tx);font-family:var(--mono);}
 .cond-badge .status-dot{margin-right:0;}
 /* === fin UI avancée === */
+/* === Brief 46 — Overlay légende unifié (port pattern patrimoine.html) === */
+#legende{position:absolute;bottom:14px;right:12px;z-index:1000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:none;}
+#legende > *{pointer-events:auto;}
+#legende-toggle{width:36px;height:36px;border-radius:50%;background:rgba(245,240,231,0.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--border);color:var(--tx-ardoise);font-family:var(--font-display,var(--font));font-size:18px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(31,35,41,0.1);transition:background .2s,color .2s,transform .2s;display:flex;align-items:center;justify-content:center;line-height:1;}
+#legende-toggle:hover{background:var(--tx-ocre,#C28533);color:var(--tx-pierre,#F5F0E7);transform:scale(1.05);}
+#legende-toggle:focus-visible{outline:2px solid var(--tx-ocre,#C28533);outline-offset:2px;}
+#legende-content{background:rgba(245,240,231,0.97);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:var(--r2,10px);box-shadow:0 8px 24px rgba(31,35,41,0.15);padding:14px 16px;max-width:320px;width:min(320px,calc(100vw - 32px));max-height:calc(100vh - 120px);overflow-y:auto;font-size:12px;line-height:1.5;color:var(--tx-ardoise);transition:opacity .25s,transform .25s;transform-origin:bottom right;}
+#legende.collapsed #legende-content{display:none;}
+#legende-content > section + section{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+#legende-content .legende-section-title{font-family:var(--font-display,var(--font));font-size:11px;font-weight:600;color:var(--tx-mica,var(--tx3));margin:0 0 8px;letter-spacing:.06em;text-transform:uppercase;}
+#legende-content #conditions-panel{margin-bottom:0;}
+#legende-content #tellux-leg-panel{position:static;background:transparent!important;border:none!important;border-radius:0!important;box-shadow:none!important;padding:0!important;margin:0!important;max-width:none!important;max-height:none!important;overflow:visible!important;}
+[data-theme="dark"] #legende-toggle{background:rgba(26,29,37,0.92);color:var(--tx-pierre,#F5F0E7);}
+[data-theme="dark"] #legende-content{background:rgba(26,29,37,0.95);color:var(--tx-pierre,#F5F0E7);}
+@media (max-width:600px){
+  #legende{bottom:10px;right:8px;}
+  #legende-content{max-width:calc(100vw - 24px);font-size:11.5px;padding:12px 14px;}
+}
+/* === fin Brief 46 === */
 </style>
 </head>
 <body>
@@ -1407,93 +1426,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 
 </div>
 
-<!-- Panneau Conditions actuelles — 3 sous-sections repliees par defaut, resume une ligne. -->
-<div class="cond-panel" id="conditions-panel">
-
-  <!-- Badges temps réel toujours visibles : Kp, charge réseau Corse, statut Supabase, indicateur orage (caché si pas d'orage actif). -->
-  <!-- Synchronisés depuis les sources existantes via syncBadges(), appelée par updateCondSummaries() (cf. bloc script principal). -->
-  <div class="cond-badges" role="group" aria-label="Indicateurs temps réel">
-    <div class="cond-badge" id="badge-kp" title="Indice Kp d'activité géomagnétique (NOAA SWPC)">
-      <span class="badge-key">Kp</span>
-      <span class="badge-val" id="badge-kp-val">—</span>
-    </div>
-    <div class="cond-badge" id="badge-reseau" title="Charge réseau électrique Corse (RTE eco2mix)">
-      <span class="badge-key">Réseau</span>
-      <span class="badge-val" id="badge-reseau-val">—</span>
-    </div>
-    <div class="cond-badge" id="badge-supabase" title="Statut connexion Supabase (contributions live)">
-      <span class="badge-key">Live</span>
-      <span class="badge-val">
-        <span class="status-dot status-dot--pending" id="badge-sb-dot"></span>
-      </span>
-    </div>
-    <div class="cond-badge" id="badge-meteo" hidden title="Activité orageuse (Blitzortung)">
-      <span class="badge-key">Orage</span>
-      <span class="badge-val" id="badge-meteo-val">—</span>
-    </div>
-  </div>
-
-  <div class="cond-section" data-open="false" id="cond-sec-solaire">
-    <button class="cond-header" type="button" onclick="toggleCondSection('solaire')" aria-expanded="false" aria-controls="cond-body-solaire">
-      <span class="cond-chevron">▸</span>
-      <span class="cond-label">Activité solaire</span>
-      <span class="cond-summary" id="cond-summary-solaire">vérification…</span>
-    </button>
-    <div class="cond-body" id="cond-body-solaire" hidden>
-      <div class="cond-row"><span class="cond-key">Kp</span><span class="cond-val" id="kp-v">—</span><span class="cond-src" id="kp-s">NOAA SWPC</span></div>
-      <div class="cond-row"><span class="cond-key">Bz (vent solaire)</span><span class="cond-val" id="sw-bz">—</span><span class="cond-src" id="bz-s">NOAA DSCOVR</span></div>
-      <div class="cond-row"><span class="cond-key">Densité vent solaire</span><span class="cond-val" id="sw-d">—</span><span class="cond-src" id="sw-ds">NOAA</span></div>
-      <div class="cond-row"><span class="cond-key">Flux proton</span><span class="cond-val" id="sw-p">—</span><span class="cond-src" id="p-s">NOAA GOES</span></div>
-    </div>
-  </div>
-
-  <div class="cond-section" data-open="false" id="cond-sec-atmo">
-    <button class="cond-header" type="button" onclick="toggleCondSection('atmo')" aria-expanded="false" aria-controls="cond-body-atmo">
-      <span class="cond-chevron">▸</span>
-      <span class="cond-label">Conditions atmosphériques</span>
-      <span class="cond-summary" id="cond-summary-atmo">—</span>
-    </button>
-    <div class="cond-body" id="cond-body-atmo" hidden>
-      <div class="cond-row"><span class="cond-key">Réfractivité N</span><span class="cond-val" id="meteo-n">—</span><span class="cond-src" id="meteo-s">Open-Meteo</span></div>
-      <div class="cond-row" id="lightning-pc"><span class="cond-key">Activité orageuse</span><span class="cond-val" id="lightning-v">—</span><span class="cond-src" id="lightning-s">Blitzortung</span></div>
-    </div>
-  </div>
-
-  <div class="cond-section" data-open="false" id="cond-sec-reseau">
-    <button class="cond-header" type="button" onclick="toggleCondSection('reseau')" aria-expanded="false" aria-controls="cond-body-reseau">
-      <span class="cond-chevron">▸</span>
-      <span class="cond-label">Réseau électrique</span>
-      <span class="cond-summary" id="cond-summary-reseau">—</span>
-    </button>
-    <div class="cond-body" id="cond-body-reseau" hidden>
-      <div class="cond-row"><span class="cond-key">Charge Corse</span><span class="cond-val" id="res-charge">—</span><span class="cond-src" id="res-charge-s">RTE eco2mix</span></div>
-      <div class="cond-sparkline" id="cond-sparkline-reseau" aria-label="Profil horaire de la charge electrique corse sur 24 h"></div>
-    </div>
-  </div>
-
-  <div class="cond-section" data-open="false" id="cond-sec-contribs">
-    <button class="cond-header" type="button" onclick="toggleCondSection('contribs')" aria-expanded="false" aria-controls="cond-body-contribs">
-      <span class="cond-chevron">▸</span>
-      <span class="cond-label">Contributions terrain</span>
-      <span class="cond-summary" id="cond-summary-contribs">—</span>
-    </button>
-    <div class="cond-body" id="cond-body-contribs" hidden>
-      <div id="contrib-panel">
-        <div id="cert-download-block" style="display:none;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">
-          <div style="font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Sources certifiées</div>
-          <button id="btn-cert-download" type="button" onclick="downloadCertifiedJSON()" style="width:100%;padding:8px 12px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg3);color:var(--tx);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:inherit;transition:all .15s" onmouseover="this.style.background='var(--tx-brume)';this.style.borderColor='var(--tx-mica)'" onmouseout="this.style.background='var(--bg3)';this.style.borderColor='var(--border)'">
-            <span style="font-size:13px">⬇</span>
-            <span style="flex:1;text-align:left">Télécharger les 30 fiches ANFR/EXEM <span style="color:var(--tx3);font-size:10px">(JSON)</span></span>
-          </button>
-          <div style="font-size:10px;color:var(--tx3);margin-top:6px;line-height:1.4">Mesures certifiées de laboratoire (ANFR · EXEM) extraites des PDFs CartoRadio. Déjà visibles sur la carte en losanges colorés.</div>
-        </div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Contributions récentes — base Supabase</div>
-        <div class="contrib-list" id="contrib-list"></div>
-      </div>
-    </div>
-  </div>
-
-</div>
+<!-- Panneau Conditions actuelles — Brief 46 : déplacé dans #legende (cf. .map-col après #map). -->
 
 <main id="main">
 <div id="lightning-warn" style="display:none;background:#fff3e6;border:1px solid #f5a855;border-radius:var(--r);padding:6px 12px;font-size:11px;color:#854d0e;margin-bottom:8px"></div>
@@ -1641,6 +1574,107 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 <div class="op-row" id="hyd-op-row"><span>Nappes</span><input type="range" min="0.1" max="1" step="0.05" value="0.55" oninput="wmsHyd.setOpacity(+this.value)"><span id="hyd-op-v">55%</span></div>
 <div class="op-row" id="emag-op-row"><span>Fond magnétique régional</span><input type="range" min="0.1" max="0.8" step="0.05" value="0.5" oninput="wmsEmag.setOpacity(+this.value)"><span id="emag-op-v">50%</span></div>
 <div id="map"></div>
+<!-- Brief 46 — Overlay légende unifié (Conditions + Légende EM) avec toggle "?" mobile-friendly. Pattern porté de patrimoine.html. -->
+<aside id="legende" class="collapsed" aria-label="Légende et conditions">
+  <button id="legende-toggle" type="button" aria-label="Légende et conditions actuelles" aria-expanded="false">?</button>
+  <div id="legende-content" role="region" aria-label="Contenu légende">
+    <section id="legende-conditions-section">
+      <h3 class="legende-section-title">Conditions actuelles</h3>
+      <div class="cond-panel" id="conditions-panel">
+
+        <!-- Badges temps réel toujours visibles : Kp, charge réseau Corse, statut Supabase, indicateur orage (caché si pas d'orage actif). -->
+        <!-- Synchronisés depuis les sources existantes via syncBadges(), appelée par updateCondSummaries() (cf. bloc script principal). -->
+        <div class="cond-badges" role="group" aria-label="Indicateurs temps réel">
+          <div class="cond-badge" id="badge-kp" title="Indice Kp d'activité géomagnétique (NOAA SWPC)">
+            <span class="badge-key">Kp</span>
+            <span class="badge-val" id="badge-kp-val">—</span>
+          </div>
+          <div class="cond-badge" id="badge-reseau" title="Charge réseau électrique Corse (RTE eco2mix)">
+            <span class="badge-key">Réseau</span>
+            <span class="badge-val" id="badge-reseau-val">—</span>
+          </div>
+          <div class="cond-badge" id="badge-supabase" title="Statut connexion Supabase (contributions live)">
+            <span class="badge-key">Live</span>
+            <span class="badge-val">
+              <span class="status-dot status-dot--pending" id="badge-sb-dot"></span>
+            </span>
+          </div>
+          <div class="cond-badge" id="badge-meteo" hidden title="Activité orageuse (Blitzortung)">
+            <span class="badge-key">Orage</span>
+            <span class="badge-val" id="badge-meteo-val">—</span>
+          </div>
+        </div>
+
+        <div class="cond-section" data-open="false" id="cond-sec-solaire">
+          <button class="cond-header" type="button" onclick="toggleCondSection('solaire')" aria-expanded="false" aria-controls="cond-body-solaire">
+            <span class="cond-chevron">▸</span>
+            <span class="cond-label">Activité solaire</span>
+            <span class="cond-summary" id="cond-summary-solaire">vérification…</span>
+          </button>
+          <div class="cond-body" id="cond-body-solaire" hidden>
+            <div class="cond-row"><span class="cond-key">Kp</span><span class="cond-val" id="kp-v">—</span><span class="cond-src" id="kp-s">NOAA SWPC</span></div>
+            <div class="cond-row"><span class="cond-key">Bz (vent solaire)</span><span class="cond-val" id="sw-bz">—</span><span class="cond-src" id="bz-s">NOAA DSCOVR</span></div>
+            <div class="cond-row"><span class="cond-key">Densité vent solaire</span><span class="cond-val" id="sw-d">—</span><span class="cond-src" id="sw-ds">NOAA</span></div>
+            <div class="cond-row"><span class="cond-key">Flux proton</span><span class="cond-val" id="sw-p">—</span><span class="cond-src" id="p-s">NOAA GOES</span></div>
+          </div>
+        </div>
+
+        <div class="cond-section" data-open="false" id="cond-sec-atmo">
+          <button class="cond-header" type="button" onclick="toggleCondSection('atmo')" aria-expanded="false" aria-controls="cond-body-atmo">
+            <span class="cond-chevron">▸</span>
+            <span class="cond-label">Conditions atmosphériques</span>
+            <span class="cond-summary" id="cond-summary-atmo">—</span>
+          </button>
+          <div class="cond-body" id="cond-body-atmo" hidden>
+            <div class="cond-row"><span class="cond-key">Réfractivité N</span><span class="cond-val" id="meteo-n">—</span><span class="cond-src" id="meteo-s">Open-Meteo</span></div>
+            <div class="cond-row" id="lightning-pc"><span class="cond-key">Activité orageuse</span><span class="cond-val" id="lightning-v">—</span><span class="cond-src" id="lightning-s">Blitzortung</span></div>
+          </div>
+        </div>
+
+        <div class="cond-section" data-open="false" id="cond-sec-reseau">
+          <button class="cond-header" type="button" onclick="toggleCondSection('reseau')" aria-expanded="false" aria-controls="cond-body-reseau">
+            <span class="cond-chevron">▸</span>
+            <span class="cond-label">Réseau électrique</span>
+            <span class="cond-summary" id="cond-summary-reseau">—</span>
+          </button>
+          <div class="cond-body" id="cond-body-reseau" hidden>
+            <div class="cond-row"><span class="cond-key">Charge Corse</span><span class="cond-val" id="res-charge">—</span><span class="cond-src" id="res-charge-s">RTE eco2mix</span></div>
+            <div class="cond-sparkline" id="cond-sparkline-reseau" aria-label="Profil horaire de la charge electrique corse sur 24 h"></div>
+          </div>
+        </div>
+
+        <div class="cond-section" data-open="false" id="cond-sec-contribs">
+          <button class="cond-header" type="button" onclick="toggleCondSection('contribs')" aria-expanded="false" aria-controls="cond-body-contribs">
+            <span class="cond-chevron">▸</span>
+            <span class="cond-label">Contributions terrain</span>
+            <span class="cond-summary" id="cond-summary-contribs">—</span>
+          </button>
+          <div class="cond-body" id="cond-body-contribs" hidden>
+            <div id="contrib-panel">
+              <div id="cert-download-block" style="display:none;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+                <div style="font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Sources certifiées</div>
+                <button id="btn-cert-download" type="button" onclick="downloadCertifiedJSON()" style="width:100%;padding:8px 12px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg3);color:var(--tx);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:inherit;transition:all .15s" onmouseover="this.style.background='var(--tx-brume)';this.style.borderColor='var(--tx-mica)'" onmouseout="this.style.background='var(--bg3)';this.style.borderColor='var(--border)'">
+                  <span style="font-size:13px">⬇</span>
+                  <span style="flex:1;text-align:left">Télécharger les 30 fiches ANFR/EXEM <span style="color:var(--tx3);font-size:10px">(JSON)</span></span>
+                </button>
+                <div style="font-size:10px;color:var(--tx3);margin-top:6px;line-height:1.4">Mesures certifiées de laboratoire (ANFR · EXEM) extraites des PDFs CartoRadio. Déjà visibles sur la carte en losanges colorés.</div>
+              </div>
+              <div style="font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Contributions récentes — base Supabase</div>
+              <div class="contrib-list" id="contrib-list"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+    <section id="legende-em-section">
+      <h3 class="legende-section-title">Légende EM (couches actives)</h3>
+      <!-- #tellux-leg-panel : rempli dynamiquement par updateLegendPanel() — affiché seulement si une couche EM (Champ composite ou Mesures EM) est active. -->
+      <div id="tellux-leg-panel" style="display:none"></div>
+      <div id="legende-em-empty" style="font-size:11px;color:var(--tx3);font-style:italic">Activez « Champ composite » ou « Mesures EM » dans la sidebar pour afficher la légende.</div>
+    </section>
+  </div>
+</aside>
 <!-- Panneau hypothèses migré vers patrimoine.html (purge 6/10).
      XP/badges encore présents — retrait prévu au commit 7. -->
 
@@ -2168,7 +2202,6 @@ const LEGEND_CORE_IDS=new Set(['hot','con']);
 const LEGEND_MAX_CONTEXT=3;
 const LEGEND_ACTIVE_CORE=new Set();
 const LEGEND_ACTIVE_CONTEXT=[];
-let _legendCtrl=null;
 const LEGEND_HTML={
   hot:'<div class="leg-block"><b class="leg-title">Champ ELF 50 Hz (nT)</b><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#8b92a5">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · PROD_ELECTRIQUE</div></div>',
   geo:'<div class="leg-block"><b class="leg-title">Geologie</b><div class="leg-row"><span style="color:#8B4513">&#9632;</span> Granit</div><div class="leg-row"><span style="color:#DAA520">&#9632;</span> Sedimentaire</div><div class="leg-row"><span style="color:#4682B4">&#9632;</span> Metamorphique</div><div class="leg-src">BRGM Geologie</div></div>',
@@ -2462,17 +2495,21 @@ function validateContrib(){
   return {ok:true};
 }
 function updateLegendPanel(){
-  // Zone 1 (core) : control Leaflet bottomright — hot + con uniquement, toujours visibles.
-  if(!_legendCtrl){_legendCtrl=L.control({position:'bottomright'});_legendCtrl.onAdd=function(){const d=L.DomUtil.create('div');d.id='tellux-leg-panel';d.style.cssText='background:rgba(247,248,250,.97);border:1px solid rgba(0,0,0,.08);border-radius:10px;font-family:var(--font);font-size:10px;max-width:170px;max-height:calc(100vh - 120px);overflow-y:auto;margin-top:10px;box-shadow:0 2px 10px rgba(0,0,0,.1);display:none';L.DomEvent.disableClickPropagation(d);return d;};_legendCtrl.addTo(map);}
+  // Brief 46 — Zone 1 (core) : rendue dans #tellux-leg-panel à l'intérieur de #legende (cf. .map-col).
+  // L'ancien control Leaflet bottomright a été retiré ; le toggle "?" gère désormais l'affichage global.
   const corePanel=document.getElementById('tellux-leg-panel');
+  const emptyMsg=document.getElementById('legende-em-empty');
   if(corePanel){
     const coreOrder=['hot','con'];
     const coreActive=coreOrder.filter(id=>LEGEND_ACTIVE_CORE.has(id)&&LEGEND_HTML[id]);
     if(!coreActive.length){
       corePanel.style.display='none';
+      corePanel.innerHTML='';
+      if(emptyMsg)emptyMsg.style.display='block';
     }else{
       corePanel.style.display='block';
-      corePanel.innerHTML=coreActive.map((id,i)=>(i>0?'<div style="height:1px;background:rgba(0,0,0,.06);margin:0 8px"></div>':'')+LEGEND_HTML[id]).join('');
+      corePanel.innerHTML=coreActive.map((id,i)=>(i>0?'<div style="height:1px;background:rgba(0,0,0,.06);margin:8px 0"></div>':'')+LEGEND_HTML[id]).join('');
+      if(emptyMsg)emptyMsg.style.display='none';
     }
   }
   // Zone 2 (context) : conteneur sous la carte, FIFO max 3, ordre chrono d'ajout (plus ancien a gauche).
@@ -6632,41 +6669,37 @@ async function togPointsChauds(btn){
 
 // ═══ Sites géophysiques remarquables ═══
 // Brief 29 (2026-05-06) — migration single source of truth depuis
-// public/data/sites_remarquables_corse.json (10 sites EM-spec) vers
-// docs/data/sites_corse.json (479 sites canoniques Cowork). Periimetre Option
-// gamma valide Soleil 2026-05-06 : 37 sites axe remarquables_geologiques + 6 mines
-// override par slug = 43 sites EM-pertinents (vs 10 anciens). Les 10 sites SR
-// originaux preservent leur semantique 3-cats (ophiolite/minier/surveillance_radio)
-// via description_em.type_specifique encore present dans sites_corse.json.
-// Les 33 nouveaux sites geologiques (Lac de Tolla, Foret Tartagine, Monte Cinto,
-// Capu Bianchi, Gorges Inzecca, etc.) recoivent une 4e categorie "geologique"
-// pour rendu (cercle vert maquis pale, palette DA Tellux v2).
+// public/data/sites_remarquables_corse.json (10 sites EM-spec) vers le corpus
+// canonique Cowork. Brief 33 split (2026-05-06) — bascule vers
+// docs/data/sites_em.json (43 sites pre-filtres = 37 remarquables_geologiques
+// + 6 hydrauliques). Les sites SR ophi_/surv_ preservent leur semantique
+// 3-cats via description_em.type_specifique (objet structure). Les autres
+// recoivent la 4e categorie "geologique" pour rendu (cercle vert maquis pale,
+// palette DA Tellux v2).
 let SITES_REMARQUABLES = [];
 let _srLoadPromise = null;
 
-// Brief 29 — axes corpus EM-pertinents pour la couche Sites remarquables.
-// Liste reduite vs Brief 29 brief litteral 6 axes : on garde uniquement
-// remarquables_geologiques (sites EM-natifs). Les mines (axe patrimoine_divers)
-// sont rapatriees via override slug ci-dessous pour preserver la semantique
-// historique de la couche (10 sites SR originaux conserves).
-const SR_ALLOWED_AXES = ['remarquables_geologiques'];
-const SR_MINE_SLUG_OVERRIDE = [
-  'min_argentella', 'min_canari', 'min_luri',
-  'min_meria', 'min_ersa', 'min_morsiglia'
-];
+// Brief 33 split (2026-05-06) — la curation EM est figee cote data dans
+// docs/data/sites_em.json (43 sites = 37 remarquables_geologiques + 6
+// hydrauliques, livre par Cowork). Les anciennes constantes SR_ALLOWED_AXES
+// et SR_MINE_SLUG_OVERRIDE (Brief 29) sont retirees : leur logique de filtrage
+// runtime est devenue redondante avec le pre-filtre Cowork.
 
-// Brief 29 — adaptateur 2-cas du nouveau schema sites_corse.json vers
+// Brief 29 — adaptateur 2-cas du schema canonique Cowork (Brief 33 sites_em.json) vers
 // les champs attendus par _srFormatTooltip / _srIconHtml / SR_RENDU :
-//   Cas 1 (10 sites SR originaux) : description_em.type_specifique present,
-//     mappe vers categorie granulaire 3-cats historique (ophiolite/minier/
-//     surveillance_radio) pour conserver SR_RENDU et la richesse signature_em.
-//   Cas 2 (33 sites geologiques nouveaux) : pas de description_em, categorie
-//     forced 'geologique' (4e cat ajoutee a SR_RENDU avec cercle).
+//   Cas 1 (sites SR ophi_/surv_) : description_em.type_specifique present (objet
+//     structure), mappe vers categorie granulaire 3-cats historique (ophiolite/
+//     minier/surveillance_radio) pour conserver SR_RENDU et signature_em.
+//   Cas 2 (sites geologiques + hydrauliques) : description_em est string flat,
+//     categorie forced 'geologique' (4e cat avec cercle).
+// Brief 33 split (2026-05-06) — bascule vers sites_em.json. Schema utilise `name`
+// (vs `nom`) et `description_em` est string flat pour non-SR. Tolere les deux.
 function adaptSiteRemarquable(s) {
-  if (s.description_em && s.description_em.type_specifique) {
+  var siteName = s.name || s.nom;
+  if (s.description_em && typeof s.description_em === 'object' && s.description_em.type_specifique) {
     return {
       slug: s.slug,
-      nom: s.nom,
+      nom: siteName,
       lat: s.lat,
       lon: s.lon,
       categorie: mapSRGranulaire(s.slug),
@@ -6674,14 +6707,20 @@ function adaptSiteRemarquable(s) {
       note_ui: s.description_em.signature_em || s.description || ''
     };
   }
+  var noteText = '';
+  if (typeof s.description_em === 'string') noteText = s.description_em;
+  else if (s.description) noteText = s.description;
+  // Brief 33 P2 — routage par axe_em pour cas 2 (description_em string flat).
+  // hydrauliques -> 5e cat dediee, sinon fallback geologique.
+  var cat2 = (s.axe_em === 'hydrauliques') ? 'hydraulique' : 'geologique';
   return {
     slug: s.slug,
-    nom: s.nom,
+    nom: siteName,
     lat: s.lat,
     lon: s.lon,
-    categorie: 'geologique',
+    categorie: cat2,
     precision_coord: 'documentaire',
-    note_ui: s.description || ''
+    note_ui: noteText
   };
 }
 
@@ -6700,25 +6739,22 @@ function loadSitesRemarquables() {
   if (_srLoadPromise) return _srLoadPromise;
   _srLoadPromise = (async () => {
     try {
-      // Brief 29 — fetch single source of truth (cache partage avec patrimoine.html
-      // si patrimoine visite avant : gain perf accidentel via cache CDN Cloudflare).
-      const r = await fetch('/docs/data/sites_corse.json', { signal: AbortSignal.timeout(5000) });
+      // Brief 29 — fetch single source of truth.
+      // Brief 33 split (2026-05-06) — bascule vers sites_em.json (43 sites
+      // EM-pertinents pre-filtres par Cowork : 37 axe remarquables_geologiques
+      // + 6 axe hydrauliques). Filtrage axe + override mines retire (la
+      // selection EM est desormais figee cote data, pas cote code).
+      const r = await fetch('/docs/data/sites_em.json', { signal: AbortSignal.timeout(5000) });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const d = await r.json();
       const all = d.sites || [];
-      // Filter Option gamma : phase 1 + axe remarquables_geologiques OR slug mine override.
-      const filtered = all.filter(s =>
-        s.phase_publication === 1 && (
-          SR_ALLOWED_AXES.indexOf(s.axe_corpus) !== -1 ||
-          SR_MINE_SLUG_OVERRIDE.indexOf(s.slug) !== -1
-        )
-      );
-      SITES_REMARQUABLES = filtered.map(adaptSiteRemarquable);
-      const meta = d._meta || {};
-      console.log('[Tellux EM] ' + SITES_REMARQUABLES.length +
-        ' sites EM charges (axes: ' + SR_ALLOWED_AXES.join(',') +
-        ' + ' + SR_MINE_SLUG_OVERRIDE.length + ' mines override, corpus ' +
-        all.length + ', v' + (meta.version || '?') + ')');
+      SITES_REMARQUABLES = all.map(adaptSiteRemarquable);
+      console.log('[Tellux EM] sites EM chargés : ' + all.length + ' depuis sites_em.json');
+      // Brief 33 P2 — log repartition par categorie de rendu.
+      var rep = {};
+      SITES_REMARQUABLES.forEach(function(s) { rep[s.categorie] = (rep[s.categorie] || 0) + 1; });
+      var repStr = Object.keys(rep).sort().map(function(k) { return rep[k] + ' ' + k; }).join(' / ');
+      console.log('[Tellux EM] répartition : ' + repStr);
     } catch (e) {
       console.warn('[Tellux EM] Sites remarquables indisponibles : ' + e.message);
     }
@@ -6732,11 +6768,14 @@ function loadSitesRemarquables() {
 // rapatries via Option gamma (Lac de Tolla, Foret Tartagine, Monte Cinto, Capu
 // Bianchi, Gorges Inzecca, etc.). Couleur maquis_pale (DA Tellux v2), shape
 // circle distinct des 3 cats SR historiques (pentagon/diamond/star).
+// Brief 33 P2 (2026-05-06) — ajout 5e cat 'hydraulique' pour les 6 barrages
+// (axe_em=hydrauliques). Triangle bleu eau, distinct des 4 autres shapes.
 const SR_RENDU = {
   'ophiolite':        { color: '#1F3A5F', shape: 'pentagon' },
   'minier':           { color: '#C28533', shape: 'diamond' },
   'surveillance_radio': { color: '#3F5B3A', shape: 'star' },
-  'geologique':       { color: '#5C7A3A', shape: 'circle' }
+  'geologique':       { color: '#5C7A3A', shape: 'circle' },
+  'hydraulique':      { color: '#3D7BA8', shape: 'triangle' }
 };
 
 function _srIconHtml(categorie) {
@@ -6751,16 +6790,22 @@ function _srIconHtml(categorie) {
   if (r.shape === 'circle') {
     return '<svg width="14" height="14" viewBox="0 0 14 14" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))"><circle cx="7" cy="7" r="5" fill="' + r.color + '" stroke="#F5F0E7" stroke-width="1.5"/></svg>';
   }
+  // Brief 33 P2 — 5e shape triangle pointe-bas pour cat hydraulique (barrages).
+  if (r.shape === 'triangle') {
+    return '<svg width="14" height="14" viewBox="0 0 14 14" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))"><polygon points="7,12 1,2 13,2" fill="' + r.color + '" stroke="#F5F0E7" stroke-width="1.5"/></svg>';
+  }
   return '<div style="width:12px;height:12px;background:' + r.color + ';transform:rotate(45deg);border:2px solid #F5F0E7;box-shadow:0 1px 3px rgba(0,0,0,.35);"></div>';
 }
 
 function _srFormatTooltip(s) {
   // Brief 29 — ajout label "Site géologique" pour la 4e cat.
+  // Brief 33 P2 — ajout label "Ouvrage hydraulique" pour la 5e cat.
   const categorieLabel = {
     'ophiolite': 'Ophiolite',
     'minier': 'Site minier historique',
     'surveillance_radio': 'Surveillance radiologique',
-    'geologique': 'Site géologique'
+    'geologique': 'Site géologique',
+    'hydraulique': 'Ouvrage hydraulique'
   }[s.categorie] || s.categorie;
   const precisionLabel = s.precision_coord === 'communal'
     ? '<br><span style="font-size:10px;color:#C28533;font-weight:600">⚠ Précision communale — localisation à affiner</span>'
@@ -7663,6 +7708,31 @@ async function saveObservation(){
   }
 })();
 /* === fin Phase 2 JS === */
+
+/* === Brief 46 — Toggle "?" overlay légende unifié (port pattern patrimoine.html) === */
+(function initLegendeOverlay(){
+  const overlay = document.getElementById('legende');
+  const toggle = document.getElementById('legende-toggle');
+  if (!overlay || !toggle) return;
+  const STORAGE_KEY = 'tlx_app_legende_open';
+  const isMobile = window.matchMedia('(max-width: 600px)').matches;
+  // Restauration état localStorage. Défaut : ouvert sur desktop, replié sur mobile.
+  let open;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === '1') open = true;
+    else if (stored === '0') open = false;
+    else open = !isMobile;
+  } catch (_) { open = !isMobile; }
+  if (open) overlay.classList.remove('collapsed'); else overlay.classList.add('collapsed');
+  toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  toggle.addEventListener('click', () => {
+    const willOpen = overlay.classList.toggle('collapsed') === false;
+    toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    try { localStorage.setItem(STORAGE_KEY, willOpen ? '1' : '0'); } catch (_) {}
+  });
+})();
+/* === fin Brief 46 === */
 </script>
 
 <div id="tellux-legends-context" aria-label="Légendes des couches contextuelles activées"></div>
