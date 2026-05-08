@@ -350,6 +350,16 @@ La validation physique préalable (littérature ou mesures terrain) est un prér
 
 ---
 
+### SITES-NAME-NULL-001 — menhirs_du_rizzanese : champ name = null
+
+**Constat :** `docs/data/sites_patrimoine.json`, index 448, slug `menhirs_du_rizzanese` — champ `name` = `null`. Présent sur `origin/main`. Détecté lors de l'audit JSON du 2026-05-08.
+
+**Correction :** renseigner le nom canonique `"Menhirs du Rizzanese"`.
+
+**Priorité :** basse.
+
+---
+
 ## Dettes fermées récemment
 
 - **EMAG-CRUSTAL-AUDIT-001** (1ᵉʳ mai 2026) — fermée par audit (verdict : couches fonctionnellement distinctes). Investigation conduite sur `app.html` après que la portion « wdmam » de la dette ait été implicitement résolue par la fermeture de `WDMAM-NAMING-001` le 27 avril 2026. Constats : la couche `emag` (l.2098) est un `L.imageOverlay` raster régional Corse pointant sur l'endpoint NOAA NCEI EMAG2v3 ImageServer (`gis.ngdc.noaa.gov/arcgis/rest/services/EMAG2v3/ImageServer/exportImage`) avec bbox `[[41.3, 8.5], [43.1, 9.65]]` et `renderingRule={"rasterFunction":"EMAG2_Color_Scale"}` ; la couche `crustal` (l.2657-2700+) est un `L.layerGroup` vectoriel construit à partir du tableau hardcodé `CRUSTAL_REFS` (5 entrées : Bangui, Kursk, Vredefort, Ries, Chicxulub) avec 5 cercles + 5 markers divIcon, accompagné d'un panneau Leaflet Control `topright` (`_crustalGauge`) qui combine la valeur EMAG2v3 locale au centre carte (via `fetchEMAG2()`) avec les 5 références mondiales en barres logarithmiques. Datasets différents (raster EMAG2v3 régional vs 5 références hardcodées mondiales), mécanismes différents (raster ImageServer NOAA vs vectoriel Leaflet local), finalités différentes (overlay régional Corse vs panneau comparatif pédagogique mondial). Les deux couches peuvent être superposées (chacune a son propre flag dans `ACTIVE`) ; le panneau comparatif `crustal` *utilise* EMAG2v3 (complémentarité, pas redondance). Aucune modification de code requise. Note : un rollback du pattern bbox-dynamique introduit en PR #190 (commenté l.2092-2097) a depuis remis `wmsEmag` en bbox fixe — incohérence de note avec la fermeture WDMAM-NAMING-001 qui décrit un pattern bbox-dynamique. Hors périmètre de cet audit, à arbitrer dans un sprint ultérieur si harmonisation souhaitée.
