@@ -1,0 +1,56 @@
+name: Veille Scholar hebdomadaire
+
+# Synthèse hebdo des Google Scholar Alerts via Anthropic API,
+# committée dans le repo privé tellux-corpus-internal.
+# Brief : .github/scripts/veille_scholar.py
+
+on:
+  schedule:
+    # Tous les lundis à 8h UTC (~9h Paris hiver / 10h Paris été)
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+    inputs:
+      lookback_days:
+        description: "Fenêtre de recherche en jours"
+        required: false
+        default: "7"
+      dry_run:
+        description: "Si '1', n'écrit pas dans le repo privé"
+        required: false
+        default: "0"
+
+permissions:
+  contents: read
+
+jobs:
+  veille:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repo (script seul)
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install --no-cache-dir \
+            google-auth-oauthlib \
+            google-auth-httplib2 \
+            google-api-python-client \
+            anthropic \
+            requests
+
+      - name: Run veille_scholar
+        env:
+          GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+          GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
+          LOOKBACK_DAYS: ${{ github.event.inputs.lookback_days || '7' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
+        run: python .github/scripts/veille_scholar.py
