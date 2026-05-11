@@ -428,6 +428,37 @@ Le commit `fd5f309` est très probablement une **tentative antérieure du sympt�
 
 **Condition de déblocage :** Arbitrage Soleil sur flag `worktree-isolation` + brief ops cleanup. Identifiée Phase B sprint (2026-05-11), enrichie sprint dettes post-Phase-B (audit détaillé branches `claude/*` + identification anomalie `brave-poincare`).
 
+**Post-sprint cleanup à exécuter par Soleil manuellement (Git Bash) :**
+
+```
+# En Git Bash, après merge dev→main du sprint dettes :
+cd /c/Users/lucas/Documents/Claude/Projects/Tellux
+
+# 1. Libérer le worktree CWD agent Code (sprint dettes terminé)
+git worktree remove --force .claude/worktrees/hungry-austin-0b60a4
+git branch -D claude/hungry-austin-0b60a4
+
+# 2. Libérer fix/patrimoine-audit-phase-b initial du worktree root
+git checkout main  # ou dev
+git branch -D fix/patrimoine-audit-phase-b  # safe, 0 commit propre vs dev
+
+# 3. Optionnel : ménage worktrees résiduels (inspiring-fermat, sweet-buck, etc.)
+git worktree list --porcelain  # identifier
+git worktree remove --force <chemin>  # un par un selon audit
+```
+
+Raison du report : le worktree CWD agent Code ne peut pas s'auto-supprimer. Le worktree root ne peut pas être `worktree remove` (worktree principal) ; nécessite checkout préalable que Code n'a pas la main pour faire côté Soleil.
+
+---
+
+### ARCHIVE-BRANCH-BRAVE-POINCARE-001 — Tentative antérieure fix race N1↔N2
+
+Branche `claude/brave-poincare-28cbc7` (HEAD `fd5f309`) contient une tentative antérieure non-mergée de fix sur "race condition markers non cliquables après N1→N2→N1". Notre fix S1 solution A (commit `5f1b480`, prod 11 mai 2026 via PR #470) résout le même symptôme avec approche symétrique enter/exit. Branche conservée pour comparaison si edge-case réapparaît. À supprimer si > 6 mois sans rappel.
+
+Worktree associée `brave-poincare-28cbc7` supprimée 11 mai 2026 (detached HEAD `2789698` indépendant de la branche `claude/brave-poincare-28cbc7` à `fd5f309`, donc safe).
+
+**Statut :** ARCHIVÉE, non bloquant. Reminder à 11 novembre 2026 pour décision suppression définitive.
+
 ---
 
 ### SITES-COORDS-COTIERES-VERIFICATION-001 — 3 sites en lon<8.85 à vérifier (côtiers vs erreur)
