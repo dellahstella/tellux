@@ -81,9 +81,9 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
    cliquable pour fermer. Brief 21 (modal centré abandonné en mai) est ainsi
    réactivé sous une forme allégée — pas de fiche éditoriale, juste l'illustration
    plein cadre + overlay titre/catégorie. */
-#panel-backdrop{position:fixed;inset:0;background:rgba(31,35,41,0.72);backdrop-filter:blur(4px);z-index:4999;opacity:0;pointer-events:none;transition:opacity .25s ease-out;}
+#panel-backdrop{position:fixed;inset:0;background:rgba(31,35,41,0.72);backdrop-filter:blur(4px);z-index:5019;opacity:0;pointer-events:none;transition:opacity .25s ease-out;}
 #panel-backdrop.open{opacity:1;pointer-events:auto;}
-#panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.96);width:auto;height:auto;max-width:90vw;max-height:90vh;z-index:5000;background:var(--tx-pierre);border-radius:var(--r2);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .25s ease-out,transform .25s ease-out;}
+#panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.96);width:auto;height:auto;max-width:90vw;max-height:90vh;z-index:5020;background:var(--tx-pierre);border-radius:var(--r2);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .25s ease-out,transform .25s ease-out;}
 #panel.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1);}
 /* Brief 43 → Brief 45 — bascule portrait 540×700 → paysage 720×410 (ratio
    1.75 matchant les illustrations Nano Banana 1344×768 natives). En portrait,
@@ -1268,6 +1268,12 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   // miniature) avant le pivot N1->N2, evite la superposition residuelle.
   map.closePopup();
   if (typeof closePanel === 'function' && panel.classList.contains('open')) closePanel();
+  // Fermer #fiche-panel s'il est ouvert : sinon il recouvre #panel doyenne
+  // (z-index 5010 > 5000) au prochain openDoyennePanel.
+  if (fichePanelEl && fichePanelEl.classList.contains('open')) {
+    fichePanelEl.classList.remove('open');
+    fichePanelEl.setAttribute('aria-hidden', 'true');
+  }
 
   // Detacher les couches niveau 2 d'un eventuel doyenne precedent (cas clic A->B
   // sans passer par le bouton retour).
