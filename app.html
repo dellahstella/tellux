@@ -2842,6 +2842,12 @@ async function updateCrustalGauge(){
   if(!panel)return;
   const c=map.getCenter();
   const localV=await fetchEMAG2(c.lat,c.lng);
+  const igrfV=igrfFallback(c.lat,c.lng);
+  const CONTEXT_REFS=[
+    {name:'Champ total (IGRF-14)',nT:igrfV,desc:'Champ géomagnétique total local — fond naturel terrestre'},
+    {name:'Tempête Kp9',nT:500,desc:'Variation maximale lors d\'une tempête géomagnétique extrême'},
+    {name:'Variation diurne (Sq)',nT:40,desc:'Oscillation quotidienne naturelle du champ (~06h-18h)'}
+  ];
   const vEl=document.getElementById('crustal-local-v');
   const barsEl=document.getElementById('crustal-bars');
   if(!vEl||!barsEl)return;
@@ -2853,7 +2859,7 @@ async function updateCrustalGauge(){
     vEl.innerHTML=sign+localV+'<span style="font-size:10px;color:var(--tx3);font-weight:400;margin-left:6px">nT au centre carte</span>';
   }
   // Barres log |nT|
-  const maxAbs=Math.max.apply(null,CRUSTAL_REFS.map(r=>Math.abs(r.nT)).concat([Math.abs(localV||0),10]));
+  const maxAbs=Math.max.apply(null,CRUSTAL_REFS.map(r=>Math.abs(r.nT)).concat([Math.abs(localV||0),Math.abs(igrfV||0),10]));
   const logMax=Math.log10(maxAbs);
   const refsSorted=CRUSTAL_REFS.slice().sort((a,b)=>Math.abs(b.nT)-Math.abs(a.nT));
   let html='';
@@ -2882,6 +2888,19 @@ async function updateCrustalGauge(){
       '<div style="width:48px;text-align:right;font-family:var(--mono);font-size:9px;font-weight:600;color:var(--ardoise)">'+sign+localV+' nT</div>'+
       '</div>';
   }
+  // Références de contexte
+  html+='<div style="font-size:9px;color:var(--tx3);font-style:italic;margin-top:8px;padding-top:6px;border-top:1px solid rgba(0,0,0,.1)">Références de contexte (nT)</div>';
+  CONTEXT_REFS.forEach(r=>{
+    const pct=Math.max(2,(Math.log10(Math.max(Math.abs(r.nT),1))/logMax)*100);
+    const sign=r.nT>0?'+':'';
+    html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px" title="'+r.desc+'">'+
+      '<div style="width:72px;font-size:9px;color:var(--ardoise-clair);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+r.name.split(' (')[0]+'</div>'+
+      '<div style="flex:1;height:6px;background:var(--pierre-ombre);border-radius:3px;position:relative">'+
+      '<div style="width:'+pct+'%;height:100%;background:#3F5B3A;border-radius:3px"></div>'+
+      '</div>'+
+      '<div style="width:48px;text-align:right;font-family:var(--mono);font-size:9px;color:var(--ardoise-clair)">'+sign+r.nT+' nT</div>'+
+      '</div>';
+  });
   barsEl.innerHTML=html;
 }
 function igrfFallback(lat,lon){ return Math.round(interpIDW(IGRF14_GRID,lat,lon)); }
