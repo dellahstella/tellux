@@ -758,9 +758,12 @@ function closePanel() {
 
 // Brief 23 — Fiche doyenne (niveau 2, clic miniature persistante).
 // Reutilise openPanel via objet adapte (memes champs nom/categorie/visuel).
-// Source illustration : DOYENNE_ILLUSTRATIONS recyclage diocese (5/10) ou
-// d.illustration_path speculatif (fallback). Pour les 5 doyennes sans
-// illustration : visuel vide -> fallback "Illustration a venir" centre.
+// Source illustration : DOYENNE_ILLUSTRATIONS (priorite 0, recyclage diocese
+// pour les 4 doyennes sans visuel dedie : ajaccio/du_cap/plaine_orientale/
+// piana_vico_sari) ou d.illustration_path speculatif (fallback pour les 5
+// doyennes avec visuel dedie : balagne/cortenais/du_golo/extreme_sud/
+// prunelli_taravo_valinco). Post-Phase B 2026-05-11 : les 9 doyennes ont une
+// source illustration valide (S6 DOYENNE-ILLUSTRATIONS-OBSOLETE-001 fermee).
 function openDoyennePanel(d) {
   const display = d.display_name || d.name || d.slug;
   const recycled = (typeof DOYENNE_ILLUSTRATIONS === 'object' && DOYENNE_ILLUSTRATIONS[d.slug])
@@ -874,10 +877,14 @@ const LOD_ZOOM_DIOCESE = 8;    // zoom < 8 : dioceses medievaux
 const LOD_ZOOM_PIEVE = 10;     // zoom >= 10 : toutes les pieves
 const LOD_ZOOM_SPOTS = 12;     // zoom > 12 : tous les spots
 
-// Brief 19 — Mapping illustrations diocese -> doyenne (5/10 doyennes).
-// Recyclage des visuels diocese existants pour donner une identite visuelle
-// aux miniatures. Les 5 autres doyennes gardent le fallback typographique
-// (initiale du display_name, geree par onerror du <img>).
+// Brief 19 (mise a jour Phase B 2026-05-11, S6 ferme) — Mapping illustrations
+// pour les 9 doyennes contemporains actifs (Brief 32 : fusion Bastia -> Cap).
+// Deux categories :
+//  - 4 doyennes en recyclage diocese (visuels diocese existants, faute de
+//    visuel doyenne dedie) : ajaccio, du_cap, plaine_orientale, piana_vico_sari
+//  - 5 doyennes avec visuel dedie (redondant avec d.illustration_path de
+//    doyennes_polygons.json, conserve en defense en profondeur) : balagne,
+//    cortenais, du_golo, extreme_sud, prunelli_taravo_valinco
 const DOYENNE_ILLUSTRATIONS = {
   doyenne_ajaccio: 'docs/assets/visuels/diocese_d_ajaccio_tellux_v2.png',
   doyenne_plaine_orientale: 'docs/assets/visuels/diocese_d_aleria_tellux_v2.png',
@@ -950,7 +957,8 @@ fetch(resolveAssetPath('docs/data/doyennes_polygons.json'))
       // Priorites de path :
       //   1) d.illustration_path (Brief 14, chemin speculatif futur visuel
       //      doyenne dedie : doyenne_<slug>_tellux_v2.png)
-      //   2) DOYENNE_ILLUSTRATIONS[d.slug] (Brief 19, recyclage diocese 5/10)
+      //   2) DOYENNE_ILLUSTRATIONS[d.slug] (Brief 19 maj Phase B : 9/9 doyennes,
+      //      4 recyclage diocese + 5 dedies redondants en defense en profondeur)
       //   3) onerror -> fallback typographique (initiale du display_name)
       // Brief 19 : marker attache a doyenneMinisLayer (detache en N2 via
       // enterNiveau2View, reattache via exitNiveau2View). CSS defensif sur
