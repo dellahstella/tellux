@@ -2239,7 +2239,11 @@ const LEGEND_HTML={
     '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#C28533;opacity:0.4;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Catégorie 3 — potentiel élevé</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#EDD59A;opacity:0.6;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Catégorie 2 — potentiel modéré</div>'+
     '<div class="leg-src">ASNR · Décret 2018-434 · 216 cat.3 + 37 cat.2</div>'+
-    '</div>'
+    '</div>',
+  postesSources:'<div class="leg-block"><b class="leg-title">Postes sources EDF SEI</b>'+
+    '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Poste source &#x2264; 63 kV</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Poste source &#x2265; 150 kV</div>'+
+    '<div class="leg-src">EDF SEI · OSM · 21 postes</div></div>'
 };
 
 // Contraintes par instrument
@@ -2627,7 +2631,14 @@ function info(h, type, duration){
     _infoCurrentToken = null;
   }
 }
-function setStatus(t){document.getElementById('hdr-status').textContent=t;}
+var _persistentStatus='';
+function setStatus(t,persistent){
+  var el=document.getElementById('hdr-status');
+  if(!el)return;
+  el.textContent=t;
+  if(persistent){_persistentStatus=t;}
+  else{setTimeout(function(){if(el)el.textContent=_persistentStatus;},3000);}
+}
 function mkIcon(c,sq,sz){const s=sz||9;return L.divIcon({html:`<div style="width:${s}px;height:${s}px;background:${c};border:1.5px solid rgba(255,255,255,.9);${sq?'border-radius:2px;transform:rotate(45deg)':'border-radius:50%'};box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>`,className:'',iconSize:[s+3,s+3],iconAnchor:[(s+3)/2,(s+3)/2]});}
 
 // ============================================================
@@ -4801,7 +4812,7 @@ async function loadAnt(){try{
   const nOnshore = rows.length - nSeaFiltered - nSkipped;
   console.log('Antennes : '+nOnshore+' affichees ('+nSkipped+' rejetees par filtre cotier, '+nSeaFiltered+' hors bbox)');
   const hdr=document.getElementById('hdr-status');
-  if(hdr)hdr.textContent=nOnshore+' antennes';
+  if(hdr)setStatus(nOnshore+' antennes',true);
   const anfrC=document.getElementById('anfr-count');
   if(anfrC)anfrC.textContent=nOnshore+' antennes';
   // Emetteurs broadcast TDF — dataset-driven (public/data/tdf_emitters_corse.json)
@@ -6612,11 +6623,11 @@ function _renderPostesSources() {
 }
 async function togPostesSources(btn){
   if(map.hasLayer(lPostesSources)){
-    map.removeLayer(lPostesSources); btn.className='lbtn'; return;
+    map.removeLayer(lPostesSources); showLegend('postesSources',false); btn.className='lbtn'; return;
   }
   await loadPostesSources();
   _renderPostesSources();
-  lPostesSources.addTo(map); btn.className='lbtn on-postes';
+  lPostesSources.addTo(map); showLegend('postesSources',true); btn.className='lbtn on-postes';
   info('Postes sources EDF SEI chargés — ' + (POSTES_SOURCES||[]).length + ' postes (OSM)',null,5000);
 }
 
