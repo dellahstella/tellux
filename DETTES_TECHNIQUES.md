@@ -420,11 +420,35 @@ Le commit `fd5f309` est très probablement une **tentative antérieure du sympt�
 - `fix/patrimoine-audit-phase-b` initial (HEAD `4621a1a`, 0 ahead dev) — pointée par worktree racine `C:/Users/lucas/Documents/Claude/Projects/Tellux` (ne peut PAS être `worktree remove`, nécessite checkout dev d'abord)
 
 **Action requise :**
-- Arbitrage Soleil sur réglage CLI Code pour désactiver worktree-isolation.
-- Brief ops séparé pour nettoyage : `git worktree remove` explicite sur les 14 worktrees, puis `git branch -D` sur les 11 branches orphelines après audit individuel.
+- Arbitrage Soleil sur réglage CLI Code pour désactiver worktree-isolation. → **Résolu par investigation** (cf. ci-dessous + sous-ticket `OPS-CODE-WORKTREE-ISOLATION-FLAG-001`).
+- Brief ops séparé pour nettoyage : `git worktree remove` explicite sur les 14 worktrees, puis `git branch -D` sur les 11 branches orphelines après audit individuel. → **Partiellement traité** sprint dettes 2026-05-11 (7 worktrees + 6 branches supprimés, cf. ci-dessous post-sprint cleanup section).
 - À traiter avant prochain sprint Code pour éviter récidive.
 
-**Priorité :** Moyenne (non bloquant Phase B, mais pollution disque + traçabilité git dégradée).
+**Investigation cause racine (sprint dettes 2026-05-11) :**
+
+Via agent `claude-code-guide` cross-référé avec docs officielles Anthropic (https://code.claude.com/docs/en/desktop.md section "Work in parallel with sessions") :
+
+> "For Git repositories, each session gets its own isolated copy of your project using Git worktrees, so changes in one session don't affect other sessions until you commit them."
+
+**Diagnostic :** la création automatique de worktrees `.claude/worktrees/<random-name>/` à chaque session est une **propriété intrinsèque hardcodée du desktop app Claude Code**. PAS un flag configurable. Aucun moyen de la désactiver côté desktop.
+
+**Cleavage CLI vs desktop :**
+- **CLI Claude Code** (`claude`, `claude --continue`) : pas de worktree automatique. N'en crée que si argument explicite `--worktree` passé.
+- **Desktop app Claude Code** : chaque session = 1 worktree dédié, automatique, non-désactivable.
+
+**Setting `worktree.baseRef`** (le seul existant) : dans `.claude/settings.json` ou `settings.local.json`, contrôle UNIQUEMENT la ref de base depuis laquelle le worktree branche (`"fresh"` default = `origin/<default-branch>`, `"head"` = HEAD local). Ne contrôle PAS la création elle-même.
+
+**Doctrine Anthropic vs Tellux :**
+- **Anthropic :** worktrees recommandés pour sessions parallèles (design pattern).
+- **Tellux PROJECT_INSTRUCTIONS :** « jamais worktree ».
+- **Incompatibilité irréconciliable** côté desktop app.
+
+**Remediation :**
+1. Migrer à 100% sur **CLI Claude Code** pour ce projet (`claude` / `claude --continue` depuis le repo principal).
+2. Prohiber l'usage du desktop app sur ce repo (cf. CLAUDE.md à enrichir).
+3. Optionnel : ajouter `.claude/settings.json` avec `"worktree.baseRef": "head"` pour limiter le drift si desktop app utilisé en dépannage.
+
+**Priorité :** Moyenne (non bloquant Phase B, mais pollution disque + traçabilité git dégradée). Réduite par investigation : le comportement est documenté/connu, la remediation est connue.
 
 **Condition de déblocage :** Arbitrage Soleil sur flag `worktree-isolation` + brief ops cleanup. Identifiée Phase B sprint (2026-05-11), enrichie sprint dettes post-Phase-B (audit détaillé branches `claude/*` + identification anomalie `brave-poincare`).
 
@@ -448,6 +472,25 @@ git worktree remove --force <chemin>  # un par un selon audit
 ```
 
 Raison du report : le worktree CWD agent Code ne peut pas s'auto-supprimer. Le worktree root ne peut pas être `worktree remove` (worktree principal) ; nécessite checkout préalable que Code n'a pas la main pour faire côté Soleil.
+
+---
+
+### OPS-CODE-WORKTREE-ISOLATION-FLAG-001 — Désactivation création auto worktrees desktop app
+
+**Sous-ticket de `OPS-WORKTREE-CREATION-001`.**
+
+**Description :** L'app desktop Claude Code crée automatiquement et de façon non-désactivable un git worktree sous `.claude/worktrees/<random-name>/` à chaque session ouverte (cf. https://code.claude.com/docs/en/desktop.md section "Work in parallel with sessions"). Le projet Tellux a une doctrine « jamais worktree » (PROJECT_INSTRUCTIONS), incompatible avec ce comportement.
+
+**Conclusion investigation 2026-05-11 :** aucun flag, env var, ou setting (autre que `worktree.baseRef` qui contrôle juste la ref de base) ne permet de désactiver la création automatique côté desktop app. Le seul moyen de respecter la doctrine projet est d'utiliser exclusivement le **CLI Claude Code** pour ce repo et de prohiber le desktop app.
+
+**Priorité :** Basse (workaround connu : usage CLI exclusif).
+
+**Condition de déblocage :**
+1. **Court terme** : enrichir `.claude/CLAUDE.md` (instructions Claude Code locales du projet) avec mention explicite « usage CLI uniquement, desktop app prohibé sur ce repo ». À traiter dans brief séparé.
+2. **Moyen terme** : si Anthropic ouvre un flag de désactivation dans une release future, mettre à jour `.claude/settings.json` du projet. Surveiller release notes CLI Claude Code.
+3. **Long terme** : si la doctrine projet évolue ou si Anthropic rend obligatoire le desktop, réconcilier les doctrines.
+
+Identifiée sprint dettes post-Phase-B (2026-05-11), suite à investigation de la cause racine `OPS-WORKTREE-CREATION-001`.
 
 ---
 
