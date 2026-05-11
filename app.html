@@ -1115,6 +1115,28 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .cond-badge .status-dot{margin-right:0;}
 /* === fin UI avancée === */
 /* === Brief 46 — Overlay légende unifié (port pattern patrimoine.html) === */
+/* WIREFRAME Item 1 — Barre conditions permanente bas de carte (STOP A).
+   Position fixed bottom full-width, bordures dashed pour visualisation wireframe.
+   Z-index 999 (sous #legende qui est 1000), pointer-events auto sur la barre. */
+#conditions-bar{position:absolute;left:12px;right:12px;bottom:14px;z-index:999;background:rgba(245,240,231,0.97);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:2px dashed #C28533;border-radius:var(--r2,10px);box-shadow:0 -4px 16px rgba(31,35,41,0.08);font-size:12px;line-height:1.4;color:var(--tx-ardoise);}
+#conditions-bar-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:8px 14px;background:none;border:none;cursor:pointer;font:inherit;color:inherit;text-align:left;}
+#conditions-bar-summary{display:flex;flex-wrap:wrap;gap:14px;align-items:center;flex:1;}
+.cbar-item{display:flex;align-items:center;gap:5px;padding:2px 8px;border:1px dashed var(--tx-mica,#5a3f2a);border-radius:14px;background:rgba(255,255,255,0.5);}
+.cbar-item .cbar-k{font-family:var(--mono);font-size:10px;color:var(--tx-mica,#5a3f2a);text-transform:uppercase;letter-spacing:.04em;}
+.cbar-item .cbar-v{font-weight:600;font-size:12px;color:var(--tx-ardoise);}
+.cbar-chevron{font-size:14px;color:var(--tx-mica,#5a3f2a);transition:transform .25s;flex-shrink:0;}
+#conditions-bar:not(.collapsed) .cbar-chevron{transform:rotate(180deg);}
+#conditions-bar-details{padding:0 14px 14px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px;border-top:1px dashed var(--border,#d4c8a8);margin-top:0;padding-top:12px;}
+.cbar-sec{border:1px dashed var(--tx-mica,#5a3f2a);border-radius:var(--r,8px);padding:10px 12px;background:rgba(255,255,255,0.5);}
+.cbar-sec-title{font-family:var(--font-display,var(--font));font-size:11px;font-weight:600;color:var(--tx-mica,#5a3f2a);margin:0 0 6px;letter-spacing:.06em;text-transform:uppercase;}
+.cbar-sec-placeholder{font-family:var(--mono);font-size:10px;color:var(--tx3);font-style:italic;}
+@media(max-width:720px){
+  #conditions-bar{left:8px;right:8px;bottom:10px;}
+  #conditions-bar-summary{gap:8px;}
+  .cbar-item{padding:2px 6px;}
+  .cbar-item .cbar-k{font-size:9px;}
+  #conditions-bar-details{grid-template-columns:1fr;}
+}
 #legende{position:absolute;bottom:14px;right:12px;z-index:1000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:none;}
 #legende > *{pointer-events:auto;}
 #legende-toggle{width:36px;height:36px;border-radius:50%;background:rgba(245,240,231,0.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--border);color:var(--tx-ardoise);font-family:var(--font-display,var(--font));font-size:18px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(31,35,41,0.1);transition:background .2s,color .2s,transform .2s;display:flex;align-items:center;justify-content:center;line-height:1;}
@@ -1575,6 +1597,40 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 <div class="op-row" id="hyd-op-row"><span>Nappes</span><input type="range" min="0.1" max="1" step="0.05" value="0.55" oninput="wmsHyd.setOpacity(+this.value)"><span id="hyd-op-v">55%</span></div>
 <div class="op-row" id="emag-op-row"><span>Fond magnétique régional</span><input type="range" min="0.1" max="0.8" step="0.05" value="0.5" oninput="wmsEmag.setOpacity(+this.value)"><span id="emag-op-v">50%</span></div>
 <div id="map"></div>
+
+<!-- WIREFRAME Item 1 — Barre conditions permanente (STOP A : forme uniquement, pas de logique JS).
+     Containers vides avec bordures et labels pour validation Soleil avant migration handlers. -->
+<aside id="conditions-bar" class="wireframe collapsed" aria-label="Conditions live (wireframe)">
+  <button id="conditions-bar-toggle" type="button" aria-label="Déplier les détails conditions" aria-expanded="false">
+    <div id="conditions-bar-summary" role="group" aria-label="Indicateurs temps réel résumé">
+      <div class="cbar-item" data-key="kp"><span class="cbar-k">Kp</span><span class="cbar-v">—</span></div>
+      <div class="cbar-item" data-key="reseau"><span class="cbar-k">Réseau</span><span class="cbar-v">×—</span></div>
+      <div class="cbar-item" data-key="live"><span class="cbar-k">Live</span><span class="cbar-v"><span class="status-dot status-dot--pending"></span></span></div>
+      <div class="cbar-item" data-key="orage"><span class="cbar-k">Orage</span><span class="cbar-v">—</span></div>
+      <div class="cbar-item" data-key="contribs"><span class="cbar-k">Contribs</span><span class="cbar-v">—</span></div>
+    </div>
+    <span class="cbar-chevron" aria-hidden="true">▾</span>
+  </button>
+  <div id="conditions-bar-details" hidden>
+    <section class="cbar-sec" data-key="solaire">
+      <h4 class="cbar-sec-title">Activité solaire</h4>
+      <div class="cbar-sec-placeholder">[ rows : Kp · Bz · densité · proton ]</div>
+    </section>
+    <section class="cbar-sec" data-key="atmo">
+      <h4 class="cbar-sec-title">Conditions atmosphériques</h4>
+      <div class="cbar-sec-placeholder">[ rows : Réfractivité N · activité orageuse ]</div>
+    </section>
+    <section class="cbar-sec" data-key="reseau">
+      <h4 class="cbar-sec-title">Réseau électrique</h4>
+      <div class="cbar-sec-placeholder">[ rows : Charge Corse + sparkline 24h ]</div>
+    </section>
+    <section class="cbar-sec" data-key="contribs">
+      <h4 class="cbar-sec-title">Contributions terrain</h4>
+      <div class="cbar-sec-placeholder">[ bloc certifié ANFR/EXEM + liste contribs Supabase ]</div>
+    </section>
+  </div>
+</aside>
+
 <!-- Brief 46 — Overlay légende unifié (Conditions + Légende EM) avec toggle "?" mobile-friendly. Pattern porté de patrimoine.html. -->
 <aside id="legende" class="collapsed" aria-label="Légende et conditions">
   <button id="legende-toggle" type="button" aria-label="Légende et conditions actuelles" aria-expanded="false">?</button>
@@ -7125,6 +7181,22 @@ function toggleCondSection(id){
   if(willOpen){ body.removeAttribute('hidden'); }
   else { body.setAttribute('hidden',''); }
 }
+
+// WIREFRAME Item 1 — Toggle minimal de la barre conditions permanente (STOP A).
+// Seul comportement actif : expand/collapse vers le bas. Pas de migration handlers
+// data live (Kp, Bz, Réseau, etc.) tant que Soleil n'a pas validé la forme.
+(function wireframeConditionsBar(){
+  const bar = document.getElementById('conditions-bar');
+  const btn = document.getElementById('conditions-bar-toggle');
+  const details = document.getElementById('conditions-bar-details');
+  if(!bar || !btn || !details) return;
+  btn.addEventListener('click', () => {
+    const isCollapsed = bar.classList.toggle('collapsed');
+    btn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+    if(isCollapsed){ details.setAttribute('hidden',''); }
+    else { details.removeAttribute('hidden'); }
+  });
+})();
 
 // Profil horaire type Corse (MW par heure, moyenne RTE 2020-2024)
 // Utilise par loadChargeReseau (fallback) + renderChargeSparkline.
