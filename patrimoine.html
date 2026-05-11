@@ -586,7 +586,7 @@ function initSiteMarkers() {
       iconAnchor: isPriority ? [9,9] : [7,7],
     });
     const marker = L.marker([site.lat, site.lon], {icon, title: site.nom, zIndexOffset: 1000});
-    marker.on('click', () => onSpotClick(marker, site));
+    marker.on('click', (ev) => onSpotClick(marker, site, ev));
     markersBySlug[site.slug] = {marker, site};
 
     const isIllustrated = ILLUSTRATED_SPOTS.has(site.slug);
@@ -1113,7 +1113,7 @@ fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
       for (const doy of doyennesVisibles) {
         const poly = L.polygon(p.polygon, {className: 'pieve-polygon-v2'});
         poly.bindTooltip(tooltipLabel, {sticky:true, direction:'top', className:'tlx-tt'});
-        poly.on('click', () => onPieveClickV2(p.slug, p.name, poly));
+        poly.on('click', (ev) => onPieveClickV2(p.slug, p.name, poly, ev));
         if (!pievesByDoyenneLayer.has(doy)) pievesByDoyenneLayer.set(doy, L.layerGroup());
         pievesByDoyenneLayer.get(doy).addLayer(poly);
         // Premiere instance reference dans pieveShapesBySlugV2 (suffit pour
@@ -1214,7 +1214,8 @@ fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
     console.error('[Tellux patrimoine] Echec chargement pieves_polygons.json :', err);
   });
 
-function onPieveClickV2(slug, name, shape) {
+function onPieveClickV2(slug, name, shape, ev) {
+  if (ev) L.DomEvent.stopPropagation(ev);
   currentPieveSlugV2 = slug;
   currentSpotSlug = null;
   updateBreadcrumb();
@@ -1520,7 +1521,8 @@ function updateBreadcrumb() {
 }
 
 // === Click handler spot (marker) — alimente breadcrumb avec chaîne complète ===
-function onSpotClick(marker, site) {
+function onSpotClick(marker, site, ev) {
+  if (ev) L.DomEvent.stopPropagation(ev);
   if (document.body.classList.contains('niveau-2')) {
     const doy = SPOT_TO_DOYENNE.get(site.slug);
     const pv  = SPOT_TO_PIEVE_V2.get(site.slug);
