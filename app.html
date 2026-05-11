@@ -1137,12 +1137,16 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   #conditions-bar-summary .badge-val{font-size:11px;}
   #conditions-bar-details{grid-template-columns:1fr;}
 }
-#legende{position:absolute;bottom:14px;right:12px;z-index:1000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:none;}
+/* Sprint app-ui-polish (mai 2026) — bottom remonte de 14px a 60px pour passer au-dessus
+   de #conditions-bar (barre permanente bas de carte qui couvre ~50px collapsed). */
+#legende{position:absolute;bottom:60px;right:12px;z-index:1000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:none;}
 #legende > *{pointer-events:auto;}
 #legende-toggle{width:36px;height:36px;border-radius:50%;background:rgba(245,240,231,0.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--border);color:var(--tx-ardoise);font-family:var(--font-display,var(--font));font-size:18px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(31,35,41,0.1);transition:background .2s,color .2s,transform .2s;display:flex;align-items:center;justify-content:center;line-height:1;}
 #legende-toggle:hover{background:var(--tx-ocre,#C28533);color:var(--tx-pierre,#F5F0E7);transform:scale(1.05);}
 #legende-toggle:focus-visible{outline:2px solid var(--tx-ocre,#C28533);outline-offset:2px;}
-#legende-content{background:rgba(245,240,231,0.97);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:var(--r2,10px);box-shadow:0 8px 24px rgba(31,35,41,0.15);padding:14px 16px;max-width:320px;width:min(320px,calc(100vw - 32px));max-height:calc(100vh - 120px);overflow-y:auto;font-size:12px;line-height:1.5;color:var(--tx-ardoise);transition:opacity .25s,transform .25s;transform-origin:bottom right;}
+/* Sprint app-ui-polish (mai 2026) — panel slim (légende EM seule, conditions migrées vers #conditions-bar).
+   max-width réduit 320→280px, padding compacté pour cohérence avec contenu réduit. */
+#legende-content{background:rgba(245,240,231,0.97);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:var(--r2,10px);box-shadow:0 8px 24px rgba(31,35,41,0.15);padding:12px 14px;max-width:280px;width:min(280px,calc(100vw - 32px));max-height:calc(100vh - 180px);overflow-y:auto;font-size:12px;line-height:1.5;color:var(--tx-ardoise);transition:opacity .25s,transform .25s;transform-origin:bottom right;}
 #legende.collapsed #legende-content{display:none;}
 #legende-content > section + section{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
 #legende-content .legende-section-title{font-family:var(--font-display,var(--font));font-size:11px;font-weight:600;color:var(--tx-mica,var(--tx3));margin:0 0 8px;letter-spacing:.06em;text-transform:uppercase;}
@@ -1151,7 +1155,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 [data-theme="dark"] #legende-toggle{background:rgba(26,29,37,0.92);color:var(--tx-pierre,#F5F0E7);}
 [data-theme="dark"] #legende-content{background:rgba(26,29,37,0.95);color:var(--tx-pierre,#F5F0E7);}
 @media (max-width:600px){
-  #legende{bottom:10px;right:8px;}
+  /* Sprint app-ui-polish (mai 2026) — bottom mobile = 56px (au-dessus #conditions-bar
+     collapsed ~46px sur mobile, marge ~10px). */
+  #legende{bottom:56px;right:8px;}
   #legende-content{max-width:calc(100vw - 24px);font-size:11.5px;padding:12px 14px;}
 }
 /* === fin Brief 46 === */
@@ -1691,10 +1697,13 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   </div>
 </aside>
 
-<!-- Brief 46 — Overlay légende unifié (Conditions + Légende EM) avec toggle "?" mobile-friendly. Pattern porté de patrimoine.html. -->
-<aside id="legende" class="collapsed" aria-label="Légende et conditions">
-  <button id="legende-toggle" type="button" aria-label="Légende et conditions actuelles" aria-expanded="false">?</button>
-  <div id="legende-content" role="region" aria-label="Contenu légende">
+<!-- Brief 46 → Sprint app-ui-polish (mai 2026) — Panel "?" slim, contient maintenant
+     seulement la légende EM dynamique. Les conditions live sont migrées vers
+     #conditions-bar (barre permanente bas de carte). ID #legende conservé pour
+     éviter régression CSS sur les selectors enfants. -->
+<aside id="legende" class="collapsed" aria-label="Légende EM">
+  <button id="legende-toggle" type="button" aria-label="Légende EM (couches actives)" aria-expanded="false">?</button>
+  <div id="legende-content" role="region" aria-label="Légende EM">
     <section id="legende-em-section">
       <h3 class="legende-section-title">Légende EM (couches actives)</h3>
       <!-- #tellux-leg-panel : rempli dynamiquement par updateLegendPanel() — affiché seulement si une couche EM (Champ composite ou Mesures EM) est active. -->
