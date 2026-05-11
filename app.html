@@ -822,6 +822,14 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-sim{background:#fdf8ef!important;color:#713f12!important;border-color:#c9a56c!important;font-weight:500;}
 .delta-popup .leaflet-popup-content-wrapper{background:rgba(247,248,250,.97);border:1px solid rgba(0,0,0,.1);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.12);padding:8px 12px;}
 .delta-popup .leaflet-popup-tip{background:rgba(247,248,250,.97);}
+/* Sprint app-ui-polish (mai 2026) — Item 3 : contenir le popup dans viewport.
+   Sans ces regles, le contenu volumineux du calc Tellux (gradients par domaine,
+   8+ rows) peut deborder au-dessus du viewport quand on clique en haut de carte.
+   max-height = viewport moins place pour header + marge. autoPan complete cote JS. */
+.delta-popup .leaflet-popup-content{max-height:calc(100vh - 140px);overflow-y:auto;overflow-x:hidden;}
+@media(max-width:720px){
+  .delta-popup .leaflet-popup-content{max-height:calc(100vh - 120px);}
+}
 /* Badge NC */
 .nc-badge{display:inline-block;background:#7c0000;color:#ffd700;font-family:var(--mono);font-size:9px;font-weight:500;padding:2px 6px;border-radius:4px;border:1px solid #ffd70055;letter-spacing:.03em;vertical-align:middle;}
 /* Panneau stats corpus */
@@ -1115,12 +1123,44 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .cond-badge .status-dot{margin-right:0;}
 /* === fin UI avancée === */
 /* === Brief 46 — Overlay légende unifié (port pattern patrimoine.html) === */
-#legende{position:absolute;bottom:14px;right:12px;z-index:1000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:none;}
+/* Item 1 — Barre conditions permanente bas de carte (DA v2 final, post STOP A).
+   Position absolute bottom:0 left:0 right:0 (collée bord, arbitrage Soleil),
+   z-index 999 (sous #legende=1000 pour ne pas masquer le bouton ?).
+   Toggle replie/déplie le bloc details vers le bas via classe .collapsed. */
+#conditions-bar{position:absolute;left:0;right:0;bottom:0;z-index:999;background:rgba(245,240,231,0.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-top:1px solid rgba(31,35,41,0.08);font-size:12px;line-height:1.4;color:var(--tx-ardoise);}
+#conditions-bar-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:8px 14px;background:none;border:none;cursor:pointer;font:inherit;color:inherit;text-align:left;}
+#conditions-bar-toggle:hover{background:rgba(31,35,41,0.03);}
+#conditions-bar-summary{display:flex;flex-wrap:wrap;gap:10px;align-items:center;flex:1;}
+#conditions-bar-summary .cond-badge{display:flex;align-items:center;gap:5px;padding:2px 8px;border:1px solid var(--border,rgba(31,35,41,0.12));border-radius:14px;background:rgba(255,255,255,0.4);}
+#conditions-bar-summary .badge-key{font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;}
+#conditions-bar-summary .badge-val{font-weight:600;font-size:12px;color:var(--tx-ardoise);}
+.cbar-chevron{font-size:14px;color:var(--tx3);transition:transform .25s;flex-shrink:0;}
+#conditions-bar:not(.collapsed) .cbar-chevron{transform:rotate(180deg);}
+#conditions-bar-details{padding:12px 14px 14px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px;border-top:1px dashed rgba(31,35,41,0.12);}
+/* Sprint complement (mai 2026) — Item B fix : sans cette regle, #conditions-bar-details
+   reste visible au load car #conditions-bar-details{display:grid;...} override
+   l'attribut HTML [hidden] (qui par defaut UA = display:none mais easily overridden).
+   2 regles defensives : selector par classe parent .collapsed ET selector [hidden]. */
+#conditions-bar.collapsed #conditions-bar-details,
+#conditions-bar-details[hidden]{display:none;}
+#conditions-bar-details .cond-section{margin:0;}
+@media(max-width:720px){
+  #conditions-bar-summary{gap:6px;}
+  #conditions-bar-summary .cond-badge{padding:2px 6px;}
+  #conditions-bar-summary .badge-key{font-size:9px;}
+  #conditions-bar-summary .badge-val{font-size:11px;}
+  #conditions-bar-details{grid-template-columns:1fr;}
+}
+/* Sprint app-ui-polish (mai 2026) — bottom remonte de 14px a 60px pour passer au-dessus
+   de #conditions-bar (barre permanente bas de carte qui couvre ~50px collapsed). */
+#legende{position:absolute;bottom:60px;right:12px;z-index:1000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:none;}
 #legende > *{pointer-events:auto;}
 #legende-toggle{width:36px;height:36px;border-radius:50%;background:rgba(245,240,231,0.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--border);color:var(--tx-ardoise);font-family:var(--font-display,var(--font));font-size:18px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(31,35,41,0.1);transition:background .2s,color .2s,transform .2s;display:flex;align-items:center;justify-content:center;line-height:1;}
 #legende-toggle:hover{background:var(--tx-ocre,#C28533);color:var(--tx-pierre,#F5F0E7);transform:scale(1.05);}
 #legende-toggle:focus-visible{outline:2px solid var(--tx-ocre,#C28533);outline-offset:2px;}
-#legende-content{background:rgba(245,240,231,0.97);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:var(--r2,10px);box-shadow:0 8px 24px rgba(31,35,41,0.15);padding:14px 16px;max-width:320px;width:min(320px,calc(100vw - 32px));max-height:calc(100vh - 120px);overflow-y:auto;font-size:12px;line-height:1.5;color:var(--tx-ardoise);transition:opacity .25s,transform .25s;transform-origin:bottom right;}
+/* Sprint app-ui-polish (mai 2026) — panel slim (légende EM seule, conditions migrées vers #conditions-bar).
+   max-width réduit 320→280px, padding compacté pour cohérence avec contenu réduit. */
+#legende-content{background:rgba(245,240,231,0.97);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:var(--r2,10px);box-shadow:0 8px 24px rgba(31,35,41,0.15);padding:12px 14px;max-width:280px;width:min(280px,calc(100vw - 32px));max-height:calc(100vh - 180px);overflow-y:auto;font-size:12px;line-height:1.5;color:var(--tx-ardoise);transition:opacity .25s,transform .25s;transform-origin:bottom right;}
 #legende.collapsed #legende-content{display:none;}
 #legende-content > section + section{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
 #legende-content .legende-section-title{font-family:var(--font-display,var(--font));font-size:11px;font-weight:600;color:var(--tx-mica,var(--tx3));margin:0 0 8px;letter-spacing:.06em;text-transform:uppercase;}
@@ -1129,7 +1169,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 [data-theme="dark"] #legende-toggle{background:rgba(26,29,37,0.92);color:var(--tx-pierre,#F5F0E7);}
 [data-theme="dark"] #legende-content{background:rgba(26,29,37,0.95);color:var(--tx-pierre,#F5F0E7);}
 @media (max-width:600px){
-  #legende{bottom:10px;right:8px;}
+  /* Sprint app-ui-polish (mai 2026) — bottom mobile = 56px (au-dessus #conditions-bar
+     collapsed ~46px sur mobile, marge ~10px). */
+  #legende{bottom:56px;right:8px;}
   #legende-content{max-width:calc(100vw - 24px);font-size:11.5px;padding:12px 14px;}
 }
 /* === fin Brief 46 === */
@@ -1575,99 +1617,107 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 <div class="op-row" id="hyd-op-row"><span>Nappes</span><input type="range" min="0.1" max="1" step="0.05" value="0.55" oninput="wmsHyd.setOpacity(+this.value)"><span id="hyd-op-v">55%</span></div>
 <div class="op-row" id="emag-op-row"><span>Fond magnétique régional</span><input type="range" min="0.1" max="0.8" step="0.05" value="0.5" oninput="wmsEmag.setOpacity(+this.value)"><span id="emag-op-v">50%</span></div>
 <div id="map"></div>
-<!-- Brief 46 — Overlay légende unifié (Conditions + Légende EM) avec toggle "?" mobile-friendly. Pattern porté de patrimoine.html. -->
-<aside id="legende" class="collapsed" aria-label="Légende et conditions">
-  <button id="legende-toggle" type="button" aria-label="Légende et conditions actuelles" aria-expanded="false">?</button>
-  <div id="legende-content" role="region" aria-label="Contenu légende">
-    <section id="legende-conditions-section">
-      <h3 class="legende-section-title">Conditions actuelles</h3>
-      <div class="cond-panel" id="conditions-panel">
 
-        <!-- Badges temps réel toujours visibles : Kp, charge réseau Corse, statut Supabase, indicateur orage (caché si pas d'orage actif). -->
-        <!-- Synchronisés depuis les sources existantes via syncBadges(), appelée par updateCondSummaries() (cf. bloc script principal). -->
-        <div class="cond-badges" role="group" aria-label="Indicateurs temps réel">
-          <div class="cond-badge" id="badge-kp" title="Indice Kp d'activité géomagnétique (NOAA SWPC)">
-            <span class="badge-key">Kp</span>
-            <span class="badge-val" id="badge-kp-val">—</span>
-          </div>
-          <div class="cond-badge" id="badge-reseau" title="Charge réseau électrique Corse (RTE eco2mix)">
-            <span class="badge-key">Réseau</span>
-            <span class="badge-val" id="badge-reseau-val">—</span>
-          </div>
-          <div class="cond-badge" id="badge-supabase" title="Statut connexion Supabase (contributions live)">
-            <span class="badge-key">Live</span>
-            <span class="badge-val">
-              <span class="status-dot status-dot--pending" id="badge-sb-dot"></span>
-            </span>
-          </div>
-          <div class="cond-badge" id="badge-meteo" hidden title="Activité orageuse (Blitzortung)">
-            <span class="badge-key">Orage</span>
-            <span class="badge-val" id="badge-meteo-val">—</span>
-          </div>
-        </div>
-
-        <div class="cond-section" data-open="false" id="cond-sec-solaire">
-          <button class="cond-header" type="button" onclick="toggleCondSection('solaire')" aria-expanded="false" aria-controls="cond-body-solaire">
-            <span class="cond-chevron">▸</span>
-            <span class="cond-label">Activité solaire</span>
-            <span class="cond-summary" id="cond-summary-solaire">vérification…</span>
-          </button>
-          <div class="cond-body" id="cond-body-solaire" hidden>
-            <div class="cond-row"><span class="cond-key">Kp</span><span class="cond-val" id="kp-v">—</span><span class="cond-src" id="kp-s">NOAA SWPC</span></div>
-            <div class="cond-row"><span class="cond-key">Bz (vent solaire)</span><span class="cond-val" id="sw-bz">—</span><span class="cond-src" id="bz-s">NOAA DSCOVR</span></div>
-            <div class="cond-row"><span class="cond-key">Densité vent solaire</span><span class="cond-val" id="sw-d">—</span><span class="cond-src" id="sw-ds">NOAA</span></div>
-            <div class="cond-row"><span class="cond-key">Flux proton</span><span class="cond-val" id="sw-p">—</span><span class="cond-src" id="p-s">NOAA GOES</span></div>
-          </div>
-        </div>
-
-        <div class="cond-section" data-open="false" id="cond-sec-atmo">
-          <button class="cond-header" type="button" onclick="toggleCondSection('atmo')" aria-expanded="false" aria-controls="cond-body-atmo">
-            <span class="cond-chevron">▸</span>
-            <span class="cond-label">Conditions atmosphériques</span>
-            <span class="cond-summary" id="cond-summary-atmo">—</span>
-          </button>
-          <div class="cond-body" id="cond-body-atmo" hidden>
-            <div class="cond-row"><span class="cond-key">Réfractivité N</span><span class="cond-val" id="meteo-n">—</span><span class="cond-src" id="meteo-s">Open-Meteo</span></div>
-            <div class="cond-row" id="lightning-pc"><span class="cond-key">Activité orageuse</span><span class="cond-val" id="lightning-v">—</span><span class="cond-src" id="lightning-s">Blitzortung</span></div>
-          </div>
-        </div>
-
-        <div class="cond-section" data-open="false" id="cond-sec-reseau">
-          <button class="cond-header" type="button" onclick="toggleCondSection('reseau')" aria-expanded="false" aria-controls="cond-body-reseau">
-            <span class="cond-chevron">▸</span>
-            <span class="cond-label">Réseau électrique</span>
-            <span class="cond-summary" id="cond-summary-reseau">—</span>
-          </button>
-          <div class="cond-body" id="cond-body-reseau" hidden>
-            <div class="cond-row"><span class="cond-key">Charge Corse</span><span class="cond-val" id="res-charge">—</span><span class="cond-src" id="res-charge-s">RTE eco2mix</span></div>
-            <div class="cond-sparkline" id="cond-sparkline-reseau" aria-label="Profil horaire de la charge electrique corse sur 24 h"></div>
-          </div>
-        </div>
-
-        <div class="cond-section" data-open="false" id="cond-sec-contribs">
-          <button class="cond-header" type="button" onclick="toggleCondSection('contribs')" aria-expanded="false" aria-controls="cond-body-contribs">
-            <span class="cond-chevron">▸</span>
-            <span class="cond-label">Contributions terrain</span>
-            <span class="cond-summary" id="cond-summary-contribs">—</span>
-          </button>
-          <div class="cond-body" id="cond-body-contribs" hidden>
-            <div id="contrib-panel">
-              <div id="cert-download-block" style="display:none;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">
-                <div style="font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Sources certifiées</div>
-                <button id="btn-cert-download" type="button" onclick="downloadCertifiedJSON()" style="width:100%;padding:8px 12px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg3);color:var(--tx);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:inherit;transition:all .15s" onmouseover="this.style.background='var(--tx-brume)';this.style.borderColor='var(--tx-mica)'" onmouseout="this.style.background='var(--bg3)';this.style.borderColor='var(--border)'">
-                  <span style="font-size:13px">⬇</span>
-                  <span style="flex:1;text-align:left">Télécharger les 30 fiches ANFR/EXEM <span style="color:var(--tx3);font-size:10px">(JSON)</span></span>
-                </button>
-                <div style="font-size:10px;color:var(--tx3);margin-top:6px;line-height:1.4">Mesures certifiées de laboratoire (ANFR · EXEM) extraites des PDFs CartoRadio. Déjà visibles sur la carte en losanges colorés.</div>
-              </div>
-              <div style="font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Contributions récentes — base Supabase</div>
-              <div class="contrib-list" id="contrib-list"></div>
-            </div>
-          </div>
-        </div>
-
+<!-- Item 1 — Barre conditions permanente (post STOP A validation Soleil).
+     Bas de carte full-width, summary 5 chips toujours visibles + details accordéon
+     vers le bas avec les 4 sections live (solaire, atmo, réseau, contribs).
+     IDs internes (kp-v, sw-bz, sw-d, meteo-n, res-charge, lightning-v, cond-summary-*,
+     contrib-list, etc.) préservés pour ne pas casser les handlers existants. -->
+<aside id="conditions-bar" class="collapsed" aria-label="Conditions live et indicateurs temps réel">
+  <button id="conditions-bar-toggle" type="button" aria-label="Déplier les détails conditions" aria-expanded="false">
+    <div id="conditions-bar-summary" role="group" aria-label="Indicateurs temps réel résumé">
+      <div class="cond-badge" id="badge-kp" title="Indice Kp d'activité géomagnétique (NOAA SWPC)">
+        <span class="badge-key">Kp</span>
+        <span class="badge-val" id="badge-kp-val">—</span>
       </div>
-    </section>
+      <div class="cond-badge" id="badge-reseau" title="Charge réseau électrique Corse (RTE eco2mix)">
+        <span class="badge-key">Réseau</span>
+        <span class="badge-val" id="badge-reseau-val">—</span>
+      </div>
+      <div class="cond-badge" id="badge-supabase" title="Statut connexion Supabase (contributions live)">
+        <span class="badge-key">Live</span>
+        <span class="badge-val">
+          <span class="status-dot status-dot--pending" id="badge-sb-dot"></span>
+        </span>
+      </div>
+      <div class="cond-badge" id="badge-meteo" title="Activité orageuse (Blitzortung)">
+        <span class="badge-key">Orage</span>
+        <span class="badge-val" id="badge-meteo-val">—</span>
+      </div>
+      <div class="cond-badge" id="badge-contribs" title="Nombre de contributions terrain récentes (Supabase)">
+        <span class="badge-key">Contribs</span>
+        <span class="badge-val" id="badge-contribs-val">—</span>
+      </div>
+    </div>
+    <span class="cbar-chevron" aria-hidden="true">▾</span>
+  </button>
+  <div id="conditions-bar-details" hidden>
+    <div class="cond-section" data-open="false" id="cond-sec-solaire">
+      <button class="cond-header" type="button" onclick="toggleCondSection('solaire')" aria-expanded="false" aria-controls="cond-body-solaire">
+        <span class="cond-chevron">▸</span>
+        <span class="cond-label">Activité solaire</span>
+        <span class="cond-summary" id="cond-summary-solaire">vérification…</span>
+      </button>
+      <div class="cond-body" id="cond-body-solaire" hidden>
+        <div class="cond-row"><span class="cond-key">Kp</span><span class="cond-val" id="kp-v">—</span><span class="cond-src" id="kp-s">NOAA SWPC</span></div>
+        <div class="cond-row"><span class="cond-key">Bz (vent solaire)</span><span class="cond-val" id="sw-bz">—</span><span class="cond-src" id="bz-s">NOAA DSCOVR</span></div>
+        <div class="cond-row"><span class="cond-key">Densité vent solaire</span><span class="cond-val" id="sw-d">—</span><span class="cond-src" id="sw-ds">NOAA</span></div>
+        <div class="cond-row"><span class="cond-key">Flux proton</span><span class="cond-val" id="sw-p">—</span><span class="cond-src" id="p-s">NOAA GOES</span></div>
+      </div>
+    </div>
+    <div class="cond-section" data-open="false" id="cond-sec-atmo">
+      <button class="cond-header" type="button" onclick="toggleCondSection('atmo')" aria-expanded="false" aria-controls="cond-body-atmo">
+        <span class="cond-chevron">▸</span>
+        <span class="cond-label">Conditions atmosphériques</span>
+        <span class="cond-summary" id="cond-summary-atmo">—</span>
+      </button>
+      <div class="cond-body" id="cond-body-atmo" hidden>
+        <div class="cond-row"><span class="cond-key">Réfractivité N</span><span class="cond-val" id="meteo-n">—</span><span class="cond-src" id="meteo-s">Open-Meteo</span></div>
+        <div class="cond-row" id="lightning-pc"><span class="cond-key">Activité orageuse</span><span class="cond-val" id="lightning-v">—</span><span class="cond-src" id="lightning-s">Blitzortung</span></div>
+      </div>
+    </div>
+    <div class="cond-section" data-open="false" id="cond-sec-reseau">
+      <button class="cond-header" type="button" onclick="toggleCondSection('reseau')" aria-expanded="false" aria-controls="cond-body-reseau">
+        <span class="cond-chevron">▸</span>
+        <span class="cond-label">Réseau électrique</span>
+        <span class="cond-summary" id="cond-summary-reseau">—</span>
+      </button>
+      <div class="cond-body" id="cond-body-reseau" hidden>
+        <div class="cond-row"><span class="cond-key">Charge Corse</span><span class="cond-val" id="res-charge">—</span><span class="cond-src" id="res-charge-s">RTE eco2mix</span></div>
+        <div class="cond-sparkline" id="cond-sparkline-reseau" aria-label="Profil horaire de la charge electrique corse sur 24 h"></div>
+      </div>
+    </div>
+    <div class="cond-section" data-open="false" id="cond-sec-contribs">
+      <button class="cond-header" type="button" onclick="toggleCondSection('contribs')" aria-expanded="false" aria-controls="cond-body-contribs">
+        <span class="cond-chevron">▸</span>
+        <span class="cond-label">Contributions terrain</span>
+        <span class="cond-summary" id="cond-summary-contribs">—</span>
+      </button>
+      <div class="cond-body" id="cond-body-contribs" hidden>
+        <div id="contrib-panel">
+          <div id="cert-download-block" style="display:none;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Sources certifiées</div>
+            <button id="btn-cert-download" type="button" onclick="downloadCertifiedJSON()" style="width:100%;padding:8px 12px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg3);color:var(--tx);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:inherit;transition:all .15s" onmouseover="this.style.background='var(--tx-brume)';this.style.borderColor='var(--tx-mica)'" onmouseout="this.style.background='var(--bg3)';this.style.borderColor='var(--border)'">
+              <span style="font-size:13px">⬇</span>
+              <span style="flex:1;text-align:left">Télécharger les 30 fiches ANFR/EXEM <span style="color:var(--tx3);font-size:10px">(JSON)</span></span>
+            </button>
+            <div style="font-size:10px;color:var(--tx3);margin-top:6px;line-height:1.4">Mesures certifiées de laboratoire (ANFR · EXEM) extraites des PDFs CartoRadio. Déjà visibles sur la carte en losanges colorés.</div>
+          </div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Contributions récentes — base Supabase</div>
+          <div class="contrib-list" id="contrib-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Brief 46 → Sprint app-ui-polish (mai 2026) — Panel "?" slim, contient maintenant
+     seulement la légende EM dynamique. Les conditions live sont migrées vers
+     #conditions-bar (barre permanente bas de carte). ID #legende conservé pour
+     éviter régression CSS sur les selectors enfants. -->
+<aside id="legende" class="collapsed" aria-label="Légende EM">
+  <button id="legende-toggle" type="button" aria-label="Légende EM (couches actives)" aria-expanded="false">?</button>
+  <div id="legende-content" role="region" aria-label="Légende EM">
     <section id="legende-em-section">
       <h3 class="legende-section-title">Légende EM (couches actives)</h3>
       <!-- #tellux-leg-panel : rempli dynamiquement par updateLegendPanel() — affiché seulement si une couche EM (Champ composite ou Mesures EM) est active. -->
@@ -4593,7 +4643,10 @@ function showInterp(lat,lng,igrf,human,water,score,delta){
 map.on('click',async e=>{
   if(e.originalEvent&&e.originalEvent._handled)return;
   const{lat,lng}=e.latlng;
-  const calcPopup=L.popup({closeButton:true,className:'delta-popup'})
+  // Sprint app-ui-polish (mai 2026) \u2014 Item 3 : autoPan force Leaflet a recentrer
+  // la carte pour garder le popup dans le viewport. autoPanPaddingTopLeft reserve
+  // de la place pour le header tlx en haut (80px) et marge gauche (20px).
+  const calcPopup=L.popup({closeButton:true,className:'delta-popup',autoPan:true,autoPanPaddingTopLeft:[20,80],autoPanPaddingBottomRight:[20,20]})
     .setLatLng(e.latlng).setContent('<span style="font-size:12px">\u23f3 calcul\u2026</span>').openOn(map);
   const igrf=fetchIGRF(lat,lng);
   // Resolution commune officielle (decret radon 2018-434) + altitude IGN RGE Alti
@@ -4784,6 +4837,23 @@ map.on('click',async e=>{
     '<div style="font-size:8px;color:#b0b5c0;margin-top:2px;font-style:italic">Source : Biot-Savart EDF SEI · CartoRadio ANFR · Modèle Tellux</div>'+
     '</div>'
   );
+  // Sprint complement app-ui-polish (mai 2026) — Item A fix autoPan effective.
+  // Cause racine : Leaflet autoPan ne se declenche qu'au openOn(map) avec le
+  // contenu initial (placeholder '⏳ calcul…' court → rien a panner). Apres
+  // setContent(html) avec le contenu final volumineux (~700px), Leaflet ne
+  // re-pan PAS automatiquement. Fix : check viewport + panBy manuel via rAF
+  // (apres layout finalise). Padding 80px en haut (header tlx) + 60px en bas
+  // (conditions-bar collapsed).
+  requestAnimationFrame(() => {
+    if(!calcPopup._container) return;
+    const r = calcPopup._container.getBoundingClientRect();
+    const padTop = 80, padBottom = 60;
+    if(r.top < padTop){
+      map.panBy([0, r.top - padTop], {animate: true, duration: 0.3});
+    } else if(r.bottom > window.innerHeight - padBottom){
+      map.panBy([0, r.bottom - (window.innerHeight - padBottom)], {animate: true, duration: 0.3});
+    }
+  });
   document.getElementById('btn-export-model').onclick=()=>exportModel(lat,lng,igrf,human,water,nRFcalib);
   // v8 : rec (recommandation matériaux) extrait vers agronomie.html
   _geoLastPoint={lat,lng,igrf,human,geo,crustal,susc_nT,skinD,tellPct,geoType,solLabel,indice:indiceTellux,label:itLabel,verdict:itVerdict,implanTip,rf:nRFcalib,radon_class,gamma_nSvh};
@@ -7126,6 +7196,22 @@ function toggleCondSection(id){
   else { body.setAttribute('hidden',''); }
 }
 
+// WIREFRAME Item 1 — Toggle minimal de la barre conditions permanente (STOP A).
+// Seul comportement actif : expand/collapse vers le bas. Pas de migration handlers
+// data live (Kp, Bz, Réseau, etc.) tant que Soleil n'a pas validé la forme.
+(function wireframeConditionsBar(){
+  const bar = document.getElementById('conditions-bar');
+  const btn = document.getElementById('conditions-bar-toggle');
+  const details = document.getElementById('conditions-bar-details');
+  if(!bar || !btn || !details) return;
+  btn.addEventListener('click', () => {
+    const isCollapsed = bar.classList.toggle('collapsed');
+    btn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+    if(isCollapsed){ details.setAttribute('hidden',''); }
+    else { details.removeAttribute('hidden'); }
+  });
+})();
+
 // Profil horaire type Corse (MW par heure, moyenne RTE 2020-2024)
 // Utilise par loadChargeReseau (fallback) + renderChargeSparkline.
 const PROFIL_HORAIRE_CORSE = [130,125,122,120,120,122,135,155,175,195,210,220,
@@ -7271,14 +7357,23 @@ function syncBadges(){
   var meteoBadge = document.getElementById('badge-meteo');
   var meteoVal = document.getElementById('badge-meteo-val');
   if(ltSrc && meteoBadge && meteoVal){
+    // Sprint app-ui-polish (mai 2026) — chip Orage TOUJOURS visible (largeur barre stable).
+    // Valeur "—" par defaut si pas d'orage actif, sinon texte de l'evenement.
     var ltTxt = ltSrc.textContent || '';
     var stormActive = /orage|storm|foudre|éclair/i.test(ltTxt) && !/aucun|—|vérif/i.test(ltTxt);
     if(stormActive){
       meteoVal.textContent = ltTxt;
-      meteoBadge.removeAttribute('hidden');
     } else {
-      meteoBadge.setAttribute('hidden', '');
+      meteoVal.textContent = '—';
     }
+    meteoBadge.removeAttribute('hidden');
+  }
+  // Sprint app-ui-polish (mai 2026) — chip Contribs synchro depuis #contrib-list.
+  var contribBadge = document.getElementById('badge-contribs-val');
+  var contribListEl = document.getElementById('contrib-list');
+  if(contribBadge && contribListEl){
+    var n = contribListEl.children.length;
+    contribBadge.textContent = n > 0 ? String(n) : '—';
   }
 }
 // === fin UI avancée ===
