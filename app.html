@@ -822,6 +822,14 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-sim{background:#fdf8ef!important;color:#713f12!important;border-color:#c9a56c!important;font-weight:500;}
 .delta-popup .leaflet-popup-content-wrapper{background:rgba(247,248,250,.97);border:1px solid rgba(0,0,0,.1);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.12);padding:8px 12px;}
 .delta-popup .leaflet-popup-tip{background:rgba(247,248,250,.97);}
+/* Sprint app-ui-polish (mai 2026) — Item 3 : contenir le popup dans viewport.
+   Sans ces regles, le contenu volumineux du calc Tellux (gradients par domaine,
+   8+ rows) peut deborder au-dessus du viewport quand on clique en haut de carte.
+   max-height = viewport moins place pour header + marge. autoPan complete cote JS. */
+.delta-popup .leaflet-popup-content{max-height:calc(100vh - 140px);overflow-y:auto;overflow-x:hidden;}
+@media(max-width:720px){
+  .delta-popup .leaflet-popup-content{max-height:calc(100vh - 120px);}
+}
 /* Badge NC */
 .nc-badge{display:inline-block;background:#7c0000;color:#ffd700;font-family:var(--mono);font-size:9px;font-weight:500;padding:2px 6px;border-radius:4px;border:1px solid #ffd70055;letter-spacing:.03em;vertical-align:middle;}
 /* Panneau stats corpus */
@@ -4629,7 +4637,10 @@ function showInterp(lat,lng,igrf,human,water,score,delta){
 map.on('click',async e=>{
   if(e.originalEvent&&e.originalEvent._handled)return;
   const{lat,lng}=e.latlng;
-  const calcPopup=L.popup({closeButton:true,className:'delta-popup'})
+  // Sprint app-ui-polish (mai 2026) \u2014 Item 3 : autoPan force Leaflet a recentrer
+  // la carte pour garder le popup dans le viewport. autoPanPaddingTopLeft reserve
+  // de la place pour le header tlx en haut (80px) et marge gauche (20px).
+  const calcPopup=L.popup({closeButton:true,className:'delta-popup',autoPan:true,autoPanPaddingTopLeft:[20,80],autoPanPaddingBottomRight:[20,20]})
     .setLatLng(e.latlng).setContent('<span style="font-size:12px">\u23f3 calcul\u2026</span>').openOn(map);
   const igrf=fetchIGRF(lat,lng);
   // Resolution commune officielle (decret radon 2018-434) + altitude IGN RGE Alti
