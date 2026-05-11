@@ -1300,6 +1300,16 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   _spotsN1FadeTimer = setTimeout(() => {
     _spotsN1FadeTimer = null;
     if (map.hasLayer(spotsIllustratedLayer)) map.removeLayer(spotsIllustratedLayer);
+    // Brief 27 — Fix S1 N2-ILLUSTRATED-SHARED-MARKER : les markers partagés
+    // entre spotsIllustratedLayer (N1) et spotsLevel2ByDoyenne (N2) sont
+    // collatéralement détachés du DOM quand spotsIllustratedLayer est retiré.
+    // Les ré-attacher individuellement (9 markers concernés cf. brief).
+    const slg = spotsLevel2ByDoyenne.get(doyenneSlug);
+    if (slg) {
+      for (const m of slg.getLayers()) {
+        if (!map.hasLayer(m)) m.addTo(map);
+      }
+    }
     // Brief 23 — detacher individuellement les 9 miniatures non-actives
     // (vs detach total Brief 19 §4.6). La miniature active reste attachee.
     for (const m of otherMiniLayers) {
@@ -1386,6 +1396,19 @@ function exitNiveau2View() {
   // Detacher toutes les pieves attachees (niveau 2).
   for (const lg of pievesByDoyenneLayer.values()) {
     if (map.hasLayer(lg)) map.removeLayer(lg);
+  }
+
+  // Brief 27 — Fix S1 symétrique : avant de réattacher spotsIllustratedLayer
+  // (qui contient les markers shared), détacher individuellement les markers
+  // du LG N2 précédemment actif qui ont été ré-attachés en enter (sinon
+  // duplication DOM côté Leaflet). currentDoyenneSlug encore non-reset ici.
+  if (currentDoyenneSlug) {
+    const oldSlg = spotsLevel2ByDoyenne.get(currentDoyenneSlug);
+    if (oldSlg) {
+      for (const m of oldSlg.getLayers()) {
+        if (map.hasLayer(m)) map.removeLayer(m);
+      }
+    }
   }
 
   // Detacher tous les spots-niveau-2.
