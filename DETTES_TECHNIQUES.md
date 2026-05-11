@@ -392,6 +392,33 @@ La validation physique préalable (littérature ou mesures terrain) est un prér
 
 **Doctrine projet :** « jamais worktree » (PROJECT_INSTRUCTIONS_v3). Violation systématique par Claude Code en mode agentic. Cause racine probable : flag `worktree-isolation` actif par défaut dans la CLI Code.
 
+**Audit détaillé sprint dettes post-Phase-B (11 mai 2026) :**
+
+7 branches `claude/*` recensées (vs 9 estimées initialement) — vérification `git log origin/dev..claude/<branche> --oneline` :
+
+| Branche | HEAD | Commits ahead dev | Statut audit |
+|---|---|---|---|
+| `claude/bold-cannon-75df9e` | `f1ce4d2` | 0 | Vide, safe delete |
+| `claude/dreamy-bose-c3e3ee` | `f1ce4d2` | 0 | Vide, safe delete |
+| `claude/hopeful-almeida-0f3f86` | `f1ce4d2` | 0 | Vide, safe delete |
+| `claude/hungry-austin-0b60a4` | `2789698` | 0 | Vide, safe delete (mais worktree associée = CWD agent courant) |
+| `claude/musing-herschel-2603b1` | `f1ce4d2` | 0 | Vide, safe delete |
+| `claude/pensive-murdock-652a9a` | `18f371e` | 0 | Vide, safe delete |
+| `claude/brave-poincare-28cbc7` | `fd5f309` | **2** | ⚠️ À ARBITRER — 2 commits uniques |
+
+**Anomalie `claude/brave-poincare-28cbc7`** — 2 commits uniques détectés :
+
+```
+fd5f309 fix(patrimoine): corriger race condition markers non cliquables après N1→N2→N1
+df717c2 fix(mobile): déplacer bouton accordéon mob-toggle de left vers right
+```
+
+Le commit `fd5f309` est très probablement une **tentative antérieure du symptôme S1 Phase A** (résolu sprint 2026-05-11 commit `5f1b480` solution A symétrique enter/exit, cf. ci-dessous `N2-ILLUSTRATED-SHARED-MARKER-001` fermée récemment). Diff vs `origin/dev` massif (suppressions visuels webp + .gitignore + ROADMAP + app.html -88 lignes) car branche basée sur état du repo très ancien. À supprimer dès validation prod du fix `5f1b480`, OU à conserver archivage pour comparaison historique. Arbitrage Soleil requis.
+
+**Branches orphelines hors `claude/*`** identifiées au STOP 1 sprint Phase B, toujours présentes (non nettoyées) :
+- `fix/spot-illustres-disparu` (HEAD `69bb6bb`, 0 ahead dev) — worktree `distracted-cohen-9850e9`
+- `fix/patrimoine-audit-phase-b` initial (HEAD `4621a1a`, 0 ahead dev) — pointée par worktree racine `C:/Users/lucas/Documents/Claude/Projects/Tellux` (ne peut PAS être `worktree remove`, nécessite checkout dev d'abord)
+
 **Action requise :**
 - Arbitrage Soleil sur réglage CLI Code pour désactiver worktree-isolation.
 - Brief ops séparé pour nettoyage : `git worktree remove` explicite sur les 14 worktrees, puis `git branch -D` sur les 11 branches orphelines après audit individuel.
@@ -399,7 +426,7 @@ La validation physique préalable (littérature ou mesures terrain) est un prér
 
 **Priorité :** Moyenne (non bloquant Phase B, mais pollution disque + traçabilité git dégradée).
 
-**Condition de déblocage :** Arbitrage Soleil sur flag `worktree-isolation` + brief ops cleanup. Identifiée Phase B sprint (2026-05-11).
+**Condition de déblocage :** Arbitrage Soleil sur flag `worktree-isolation` + brief ops cleanup. Identifiée Phase B sprint (2026-05-11), enrichie sprint dettes post-Phase-B (audit détaillé branches `claude/*` + identification anomalie `brave-poincare`).
 
 ---
 
