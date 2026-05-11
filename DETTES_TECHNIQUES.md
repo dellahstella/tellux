@@ -1,6 +1,6 @@
 # Tellux — Dettes techniques ouvertes
 
-**Dernière mise à jour :** 11 mai 2026 (Sprint Phase B post-audit Cowork patrimoine.html) — résolution de 3 dettes via branche `fix/patrimoine-audit-phase-b-v2` : `SITES-NAME-NULL-001` (suppression doublon `menhirs_du_rizzanese`, commit `7f8f592`), `N2-ILLUSTRATED-SHARED-MARKER-001` (créée + résolue, fix solution A symétrique enter/exit, commit `5f1b480`), `N2-SPOT-CLICK-PROPAGATION-001` (créée + résolue, `L.DomEvent.stopPropagation` sur marker/pieve clicks, commit `4b077f4`). Création de 5 nouvelles dettes ouvertes : `HASH-SPOT-SEUL-001` (S7), `DOYENNE-ILLUSTRATIONS-OBSOLETE-001` (S6), `ILLUSTRATED-WHITELIST-DRIFT-001` (S5), `OPS-WORKTREE-CREATION-001` (14 worktrees parasites + violation doctrine), `SITES-COORDS-COTIERES-VERIFICATION-001` (3 sites lon<8.85 à investigater). Précédente : 6 mai 2026 (Brief 29 app.html migration sites_corse.json) — ajout 4 nouvelles dettes consolidation `PATRIMOINE-BASTIA-PIEVES-SOUS-ATTRIBUEES`, `SITES-CORSE-HAMEAUX-CHURCHES-INSEE-001`, `SITES-CORSE-TOPONYMES-LOCAUX-001`, `TOUR-AGNELLO-GPS-DISCORDANCE-001` (audits Cowork à programmer post-Brief 29). Statut `PATRIMOINE-ORPHANS-INVISIBLES-001` actualisé (43 sites invisibles vs 18 avant Brief 28, lié à l'élargissement de corpus et résorbable via `_drafts/SPOT_DOYENNE_OVERRIDES.json`). Précédente : 6 mai 2026 (Brief 28 patrimoine.html migration sites_corse.json) — ajout `PATRIMOINE-CLICK-CONFLICTS-001` (conflits zones de clic miniatures/polygones, identifié Brief 27) et `PATRIMOINE-LOAD-PERF-001` (3 fetches au boot, sérialisation polygones derrière sites_corse.json). Précédente : 5 mai 2026 (Brief 17 Phase A + B) — résolution `PATRIMOINE-PIEVES-39-VS-47-CASTA-001` via livraison Cowork v2 (`pieves_communes_mapping_v2_canonicite_casta.json`) : 8 pieves Casta restaurées + 39 transferts de communes appliqués par le pipeline. Sortie `pieves_polygons.json` passe de 39 à 47 pieves. Phase A préservée : `PATRIMOINE-ORPHANS-INVISIBLES-001` en voie d'éclaircissement via `_drafts/SPOT_DOYENNE_OVERRIDES.json`. Précédente : 4 mai 2026 (Brief 9 patrimoine drill-down niveau 2) — ajout de `PATRIMOINE-PIEVES-39-VS-47-CASTA-001` (périmètre 39 pieves alignées Brief 2 vs 47 Casta canoniques, 8 pieves implicitement absorbées ou sans rattachement clair). Précédente : 4 mai 2026 (Brief 8 patrimoine révisé) — actualisation des deux entrées `PATRIMOINE-TILES-ZOOM-001` et `PATRIMOINE-ORPHANS-INVISIBLES-001` pour refléter le pivot patrimoine.html sur les 10 doyennés contemporains du diocèse d'Ajaccio (vision macro Soleil 2026-05-04, drill-down 2 niveaux retiré, ~105 spots invisibles dans la nav v1). Précédente : 1ᵉʳ mai 2026 (soir, post sprints J et L) — recensement de 4 dettes nouvelles issues de l'audit Lighthouse du sprint L (`mairies.html`) : `ROBOTS-TXT-001`, `A11Y-CONTRAST-001`, `MAIRIES-CLS-TBT-001`, `MAIRIES-REDIRECTS-001`. Précédente : 1ᵉʳ mai 2026 (soir) — audit cohérence post-cycle audit Phase D : fix wording note de fermeture `WDMAM-NAMING-001` (rollback bbox-dynamique → bbox fixe par PR #190 désormais reflété correctement) ; actualisation terminologique IRSN → ASNR (anciennement IRSN) sur 2 occurrences de la dette `RADON-DATASET-COVERAGE-001` (description + condition de déblocage) selon doctrine D1bis. Précédente : 1ᵉʳ mai 2026 — fermeture EMAG-CRUSTAL-AUDIT-001 par audit (verdict : `emag` et `crustal` fonctionnellement distincts, pas de redondance, voir notes en section "Dettes fermées récemment"). Précédente : 27 avril 2026 (soir) — ajout CAPTEURS-WEB-API-001 (magnétomètre indisponible dans les navigateurs depuis Chrome M116, août 2023 ; module différé d'une éventuelle phase ultérieure couvrant une app Android native). Précédente : 27 avril 2026 — fermeture WDMAM-NAMING-001 (fusion EMAG2/WDMAM en couche unique bbox-dynamique). Précédente : 26 avril 2026 (soir) — ajout RADON-DATASET-COVERAGE-001 (couverture partielle du dataset radon 2B vs décret 2018-434, identifiée lors de l'audit préparatoire aux envois aux institutions). 26 avril 2026 — ajout des dettes CONTRIB-SCHEMA-001 (incohérence schéma stockage contributions, identifiée lors du fix Android PR #154), RADON-CLASS-DUPLICATE et HELPERS-INLINE-CONSTS (issues de la cartographie d'extraction du moteur, `docs/tellux-engine-extraction-plan.md`). 25 avril 2026 — consolidation semaine 21-25 avril : enrichissement BT-CALIBRATION-001 (priorité Haute, mesures ratios ×57 à ×210), nouvelle dette EMAG-CRUSTAL-AUDIT-001 (Cowork Session B), précisions PR # sur les fermetures ELF-CALIB-001/WMM-CROSSCHECK-001/BDFORET-V2-001/ELF-VECTOR-001/BT-ELF-001, ajout en fermées récemment de SUPABASE-COMMUNE-FIELD-001 (PR #137) et ANTENNES-REFRESH-001 (PR #138), liens démarches externes sur TÉLÉ-001/HTA-TENSION-001/RADIO-AERO-001 (lettres envoyées 28-29 avril 2026). 25 avril — ajout RTE-OPENDATA-001. 24 avril — ajout RADON-L3-UNIFICATION-001 + WDMAM-NAMING-001.
+**Dernière mise à jour :** 11 mai 2026 (Sprint dettes post-Phase-B) — résolution de 3 dettes supplémentaires : `DOYENNE-ILLUSTRATIONS-OBSOLETE-001` (S6, commit `bf3415c`, Option A commentaires actualisés), `HASH-SPOT-SEUL-001` (S7, commit `396947e`, `applyHash` étendu single-segment spot), et `SITES-COORDS-COTIERES-VERIFICATION-001` (commit `a966511`, audit GPS + commune pour `capu_di_logu`, `tour_de_capo_di_muro`, `u_paladinu`). Création sous-ticket `OPS-CODE-WORKTREE-ISOLATION-FLAG-001` (investigation cause racine `OPS-WORKTREE-CREATION-001` : worktrees auto-créés par desktop app hardcoded, remediation = usage CLI exclusif). Cleanup 7 worktrees + 6 branches orphelines (commit `c2c7ada`). Précédente : 11 mai 2026 (Sprint Phase B post-audit Cowork patrimoine.html) — résolution de 3 dettes via branche `fix/patrimoine-audit-phase-b-v2` : `SITES-NAME-NULL-001` (suppression doublon `menhirs_du_rizzanese`, commit `7f8f592`), `N2-ILLUSTRATED-SHARED-MARKER-001` (créée + résolue, fix solution A symétrique enter/exit, commit `5f1b480`), `N2-SPOT-CLICK-PROPAGATION-001` (créée + résolue, `L.DomEvent.stopPropagation` sur marker/pieve clicks, commit `4b077f4`). Création de 5 nouvelles dettes ouvertes : `HASH-SPOT-SEUL-001` (S7), `DOYENNE-ILLUSTRATIONS-OBSOLETE-001` (S6), `ILLUSTRATED-WHITELIST-DRIFT-001` (S5), `OPS-WORKTREE-CREATION-001` (14 worktrees parasites + violation doctrine), `SITES-COORDS-COTIERES-VERIFICATION-001` (3 sites lon<8.85 à investigater). Précédente : 6 mai 2026 (Brief 29 app.html migration sites_corse.json) — ajout 4 nouvelles dettes consolidation `PATRIMOINE-BASTIA-PIEVES-SOUS-ATTRIBUEES`, `SITES-CORSE-HAMEAUX-CHURCHES-INSEE-001`, `SITES-CORSE-TOPONYMES-LOCAUX-001`, `TOUR-AGNELLO-GPS-DISCORDANCE-001` (audits Cowork à programmer post-Brief 29). Statut `PATRIMOINE-ORPHANS-INVISIBLES-001` actualisé (43 sites invisibles vs 18 avant Brief 28, lié à l'élargissement de corpus et résorbable via `_drafts/SPOT_DOYENNE_OVERRIDES.json`). Précédente : 6 mai 2026 (Brief 28 patrimoine.html migration sites_corse.json) — ajout `PATRIMOINE-CLICK-CONFLICTS-001` (conflits zones de clic miniatures/polygones, identifié Brief 27) et `PATRIMOINE-LOAD-PERF-001` (3 fetches au boot, sérialisation polygones derrière sites_corse.json). Précédente : 5 mai 2026 (Brief 17 Phase A + B) — résolution `PATRIMOINE-PIEVES-39-VS-47-CASTA-001` via livraison Cowork v2 (`pieves_communes_mapping_v2_canonicite_casta.json`) : 8 pieves Casta restaurées + 39 transferts de communes appliqués par le pipeline. Sortie `pieves_polygons.json` passe de 39 à 47 pieves. Phase A préservée : `PATRIMOINE-ORPHANS-INVISIBLES-001` en voie d'éclaircissement via `_drafts/SPOT_DOYENNE_OVERRIDES.json`. Précédente : 4 mai 2026 (Brief 9 patrimoine drill-down niveau 2) — ajout de `PATRIMOINE-PIEVES-39-VS-47-CASTA-001` (périmètre 39 pieves alignées Brief 2 vs 47 Casta canoniques, 8 pieves implicitement absorbées ou sans rattachement clair). Précédente : 4 mai 2026 (Brief 8 patrimoine révisé) — actualisation des deux entrées `PATRIMOINE-TILES-ZOOM-001` et `PATRIMOINE-ORPHANS-INVISIBLES-001` pour refléter le pivot patrimoine.html sur les 10 doyennés contemporains du diocèse d'Ajaccio (vision macro Soleil 2026-05-04, drill-down 2 niveaux retiré, ~105 spots invisibles dans la nav v1). Précédente : 1ᵉʳ mai 2026 (soir, post sprints J et L) — recensement de 4 dettes nouvelles issues de l'audit Lighthouse du sprint L (`mairies.html`) : `ROBOTS-TXT-001`, `A11Y-CONTRAST-001`, `MAIRIES-CLS-TBT-001`, `MAIRIES-REDIRECTS-001`. Précédente : 1ᵉʳ mai 2026 (soir) — audit cohérence post-cycle audit Phase D : fix wording note de fermeture `WDMAM-NAMING-001` (rollback bbox-dynamique → bbox fixe par PR #190 désormais reflété correctement) ; actualisation terminologique IRSN → ASNR (anciennement IRSN) sur 2 occurrences de la dette `RADON-DATASET-COVERAGE-001` (description + condition de déblocage) selon doctrine D1bis. Précédente : 1ᵉʳ mai 2026 — fermeture EMAG-CRUSTAL-AUDIT-001 par audit (verdict : `emag` et `crustal` fonctionnellement distincts, pas de redondance, voir notes en section "Dettes fermées récemment"). Précédente : 27 avril 2026 (soir) — ajout CAPTEURS-WEB-API-001 (magnétomètre indisponible dans les navigateurs depuis Chrome M116, août 2023 ; module différé d'une éventuelle phase ultérieure couvrant une app Android native). Précédente : 27 avril 2026 — fermeture WDMAM-NAMING-001 (fusion EMAG2/WDMAM en couche unique bbox-dynamique). Précédente : 26 avril 2026 (soir) — ajout RADON-DATASET-COVERAGE-001 (couverture partielle du dataset radon 2B vs décret 2018-434, identifiée lors de l'audit préparatoire aux envois aux institutions). 26 avril 2026 — ajout des dettes CONTRIB-SCHEMA-001 (incohérence schéma stockage contributions, identifiée lors du fix Android PR #154), RADON-CLASS-DUPLICATE et HELPERS-INLINE-CONSTS (issues de la cartographie d'extraction du moteur, `docs/tellux-engine-extraction-plan.md`). 25 avril 2026 — consolidation semaine 21-25 avril : enrichissement BT-CALIBRATION-001 (priorité Haute, mesures ratios ×57 à ×210), nouvelle dette EMAG-CRUSTAL-AUDIT-001 (Cowork Session B), précisions PR # sur les fermetures ELF-CALIB-001/WMM-CROSSCHECK-001/BDFORET-V2-001/ELF-VECTOR-001/BT-ELF-001, ajout en fermées récemment de SUPABASE-COMMUNE-FIELD-001 (PR #137) et ANTENNES-REFRESH-001 (PR #138), liens démarches externes sur TÉLÉ-001/HTA-TENSION-001/RADIO-AERO-001 (lettres envoyées 28-29 avril 2026). 25 avril — ajout RTE-OPENDATA-001. 24 avril — ajout RADON-L3-UNIFICATION-001 + WDMAM-NAMING-001.
 
 Ce document liste les dettes techniques ouvertes identifiées dans l'application Tellux. Chaque dette fait l'objet d'un identifiant pérenne, d'une description factuelle et d'une condition de déblocage documentée. Aucune de ces dettes ne bloque la publication de la phase 1.
 
@@ -350,26 +350,6 @@ La validation physique préalable (littérature ou mesures terrain) est un prér
 
 ---
 
-### HASH-SPOT-SEUL-001 — Hash URL avec spot sans doyenné préfixe
-
-**Description :** Le pattern de hash URL `#<doyenne>/<pieve>/<spot>` permet de restaurer un état N3 (spot ouvert dans un doyenné). Cas non couvert : un hash `#<spot>` seul (sans préfixe doyenné/pieve) lorsque l'utilisateur partage un lien direct vers un site. Le parser `applyHash` ne reconnaît pas ce format simplifié et tombe en vue Corse N1 sans restaurer le spot demandé.
-
-**Priorité :** Basse (cas d'usage marginal vs partage avec contexte doyenné).
-
-**Condition de déblocage :** Étendre `applyHash` pour accepter `#<spot-slug>` seul → lookup `markersBySlug[spot-slug]`, dériver `currentDoyenneSlug` et `currentPieveSlugV2` via `SPOT_TO_DOYENNE` et `SPOT_TO_PIEVE_V2`, puis flow N2→popup. Identifiée Phase A Cowork (2026-05-11) symptôme S7.
-
----
-
-### DOYENNE-ILLUSTRATIONS-OBSOLETE-001 — Mapping DOYENNE_ILLUSTRATIONS partiellement obsolète
-
-**Description :** Après PR #460 (mai 2026), `DOYENNE_ILLUSTRATIONS` mappe les 9 doyennés vers leurs PNG dédiés `doyenne_<slug>_tellux_v2.png`. Mais les 4 doyennés sans visuel propre (`doyenne_ajaccio`, `doyenne_du_cap`, `doyenne_plaine_orientale`, `doyenne_piana_vico_sari`) pointent vers des fichiers absents de `docs/assets/visuels/`. Le fallback recyclage diocèse fonctionne via le chaînage `speculative || recycled` côté code, mais le mapping en lui-même n'est plus la source de vérité.
-
-**Priorité :** Basse (visuellement OK grâce au fallback ; nettoyage cosmétique).
-
-**Condition de déblocage :** Soit générer les 4 PNG dédiés manquants, soit retirer les 4 entrées obsolètes du mapping et formaliser le fallback diocèse côté code. Identifiée Phase A Cowork (2026-05-11) symptôme S6.
-
----
-
 ### ILLUSTRATED-WHITELIST-DRIFT-001 — Risque de désynchro `ILLUSTRATED_SPOTS` vs visuels effectifs
 
 **Description :** La constante `ILLUSTRATED_SPOTS` (Set hardcodé l.527-540 de `patrimoine.html`) liste les slugs dont les markers doivent apparaître en N1 macro-vue. Toute évolution de corpus (ajout/retrait de visuels) doit être manuellement synchronisée avec ce Set, sinon dérive entre HTML et data. Brief Phase B 2026-05-11 a retiré 2 slugs invalides (`cirque_de_bonifato`, `massif_du_haut_asco`) ; la whitelist passe de 14 à 12. Pas d'auto-detection de la dérive.
@@ -392,29 +372,123 @@ La validation physique préalable (littérature ou mesures terrain) est un prér
 
 **Doctrine projet :** « jamais worktree » (PROJECT_INSTRUCTIONS_v3). Violation systématique par Claude Code en mode agentic. Cause racine probable : flag `worktree-isolation` actif par défaut dans la CLI Code.
 
+**Audit détaillé sprint dettes post-Phase-B (11 mai 2026) :**
+
+7 branches `claude/*` recensées (vs 9 estimées initialement) — vérification `git log origin/dev..claude/<branche> --oneline` :
+
+| Branche | HEAD | Commits ahead dev | Statut audit |
+|---|---|---|---|
+| `claude/bold-cannon-75df9e` | `f1ce4d2` | 0 | Vide, safe delete |
+| `claude/dreamy-bose-c3e3ee` | `f1ce4d2` | 0 | Vide, safe delete |
+| `claude/hopeful-almeida-0f3f86` | `f1ce4d2` | 0 | Vide, safe delete |
+| `claude/hungry-austin-0b60a4` | `2789698` | 0 | Vide, safe delete (mais worktree associée = CWD agent courant) |
+| `claude/musing-herschel-2603b1` | `f1ce4d2` | 0 | Vide, safe delete |
+| `claude/pensive-murdock-652a9a` | `18f371e` | 0 | Vide, safe delete |
+| `claude/brave-poincare-28cbc7` | `fd5f309` | **2** | ⚠️ À ARBITRER — 2 commits uniques |
+
+**Anomalie `claude/brave-poincare-28cbc7`** — 2 commits uniques détectés :
+
+```
+fd5f309 fix(patrimoine): corriger race condition markers non cliquables après N1→N2→N1
+df717c2 fix(mobile): déplacer bouton accordéon mob-toggle de left vers right
+```
+
+Le commit `fd5f309` est très probablement une **tentative antérieure du symptôme S1 Phase A** (résolu sprint 2026-05-11 commit `5f1b480` solution A symétrique enter/exit, cf. ci-dessous `N2-ILLUSTRATED-SHARED-MARKER-001` fermée récemment). Diff vs `origin/dev` massif (suppressions visuels webp + .gitignore + ROADMAP + app.html -88 lignes) car branche basée sur état du repo très ancien. À supprimer dès validation prod du fix `5f1b480`, OU à conserver archivage pour comparaison historique. Arbitrage Soleil requis.
+
+**Branches orphelines hors `claude/*`** identifiées au STOP 1 sprint Phase B, toujours présentes (non nettoyées) :
+- `fix/spot-illustres-disparu` (HEAD `69bb6bb`, 0 ahead dev) — worktree `distracted-cohen-9850e9`
+- `fix/patrimoine-audit-phase-b` initial (HEAD `4621a1a`, 0 ahead dev) — pointée par worktree racine `C:/Users/lucas/Documents/Claude/Projects/Tellux` (ne peut PAS être `worktree remove`, nécessite checkout dev d'abord)
+
 **Action requise :**
-- Arbitrage Soleil sur réglage CLI Code pour désactiver worktree-isolation.
-- Brief ops séparé pour nettoyage : `git worktree remove` explicite sur les 14 worktrees, puis `git branch -D` sur les 11 branches orphelines après audit individuel.
+- Arbitrage Soleil sur réglage CLI Code pour désactiver worktree-isolation. → **Résolu par investigation** (cf. ci-dessous + sous-ticket `OPS-CODE-WORKTREE-ISOLATION-FLAG-001`).
+- Brief ops séparé pour nettoyage : `git worktree remove` explicite sur les 14 worktrees, puis `git branch -D` sur les 11 branches orphelines après audit individuel. → **Partiellement traité** sprint dettes 2026-05-11 (7 worktrees + 6 branches supprimés, cf. ci-dessous post-sprint cleanup section).
 - À traiter avant prochain sprint Code pour éviter récidive.
 
-**Priorité :** Moyenne (non bloquant Phase B, mais pollution disque + traçabilité git dégradée).
+**Investigation cause racine (sprint dettes 2026-05-11) :**
 
-**Condition de déblocage :** Arbitrage Soleil sur flag `worktree-isolation` + brief ops cleanup. Identifiée Phase B sprint (2026-05-11).
+Via agent `claude-code-guide` cross-référé avec docs officielles Anthropic (https://code.claude.com/docs/en/desktop.md section "Work in parallel with sessions") :
+
+> "For Git repositories, each session gets its own isolated copy of your project using Git worktrees, so changes in one session don't affect other sessions until you commit them."
+
+**Diagnostic :** la création automatique de worktrees `.claude/worktrees/<random-name>/` à chaque session est une **propriété intrinsèque hardcodée du desktop app Claude Code**. PAS un flag configurable. Aucun moyen de la désactiver côté desktop.
+
+**Cleavage CLI vs desktop :**
+- **CLI Claude Code** (`claude`, `claude --continue`) : pas de worktree automatique. N'en crée que si argument explicite `--worktree` passé.
+- **Desktop app Claude Code** : chaque session = 1 worktree dédié, automatique, non-désactivable.
+
+**Setting `worktree.baseRef`** (le seul existant) : dans `.claude/settings.json` ou `settings.local.json`, contrôle UNIQUEMENT la ref de base depuis laquelle le worktree branche (`"fresh"` default = `origin/<default-branch>`, `"head"` = HEAD local). Ne contrôle PAS la création elle-même.
+
+**Doctrine Anthropic vs Tellux :**
+- **Anthropic :** worktrees recommandés pour sessions parallèles (design pattern).
+- **Tellux PROJECT_INSTRUCTIONS :** « jamais worktree ».
+- **Incompatibilité irréconciliable** côté desktop app.
+
+**Remediation :**
+1. Migrer à 100% sur **CLI Claude Code** pour ce projet (`claude` / `claude --continue` depuis le repo principal).
+2. Prohiber l'usage du desktop app sur ce repo (cf. CLAUDE.md à enrichir).
+3. Optionnel : ajouter `.claude/settings.json` avec `"worktree.baseRef": "head"` pour limiter le drift si desktop app utilisé en dépannage.
+
+**Priorité :** Moyenne (non bloquant Phase B, mais pollution disque + traçabilité git dégradée). Réduite par investigation : le comportement est documenté/connu, la remediation est connue.
+
+**Condition de déblocage :** Arbitrage Soleil sur flag `worktree-isolation` + brief ops cleanup. Identifiée Phase B sprint (2026-05-11), enrichie sprint dettes post-Phase-B (audit détaillé branches `claude/*` + identification anomalie `brave-poincare`).
+
+**Post-sprint cleanup à exécuter par Soleil manuellement (Git Bash) :**
+
+```
+# En Git Bash, après merge dev→main du sprint dettes :
+cd /c/Users/lucas/Documents/Claude/Projects/Tellux
+
+# 1. Libérer le worktree CWD agent Code (sprint dettes terminé)
+git worktree remove --force .claude/worktrees/hungry-austin-0b60a4
+git branch -D claude/hungry-austin-0b60a4
+
+# 2. Libérer fix/patrimoine-audit-phase-b initial du worktree root
+git checkout main  # ou dev
+git branch -D fix/patrimoine-audit-phase-b  # safe, 0 commit propre vs dev
+
+# 3. Optionnel : ménage worktrees résiduels (inspiring-fermat, sweet-buck, etc.)
+git worktree list --porcelain  # identifier
+git worktree remove --force <chemin>  # un par un selon audit
+```
+
+Raison du report : le worktree CWD agent Code ne peut pas s'auto-supprimer. Le worktree root ne peut pas être `worktree remove` (worktree principal) ; nécessite checkout préalable que Code n'a pas la main pour faire côté Soleil.
 
 ---
 
-### SITES-COORDS-COTIERES-VERIFICATION-001 — 3 sites en lon<8.85 à vérifier (côtiers vs erreur)
+### OPS-CODE-WORKTREE-ISOLATION-FLAG-001 — Désactivation création auto worktrees desktop app
 
-**Description :** Audit Phase A Cowork (2026-05-11) a identifié 3 sites encore présents dans `sites_patrimoine.json` avec longitude < 8.85 (zone marine potentielle vs côte ouest) : `capu_di_logu`, `tour_de_capo_di_muro`, `u_paladinu`. Cowork les a notés « probablement légitimes » sans audit terrain confirmé. Hors scope Phase B suppression Rizzanese.
+**Sous-ticket de `OPS-WORKTREE-CREATION-001`.**
 
-**Statut :** À INVESTIGUER. Non bloquant.
+**Description :** L'app desktop Claude Code crée automatiquement et de façon non-désactivable un git worktree sous `.claude/worktrees/<random-name>/` à chaque session ouverte (cf. https://code.claude.com/docs/en/desktop.md section "Work in parallel with sessions"). Le projet Tellux a une doctrine « jamais worktree » (PROJECT_INSTRUCTIONS), incompatible avec ce comportement.
 
-**Condition de déblocage :** Audit GPS individuel des 3 slugs : cross-check Wikipedia / IGN GeoPortail / Megalithic Portal. Confirmer position côtière légitime ou corriger via `gps_audit` + commit `data:`. Identifiée Phase B Soleil (2026-05-11).
+**Conclusion investigation 2026-05-11 :** aucun flag, env var, ou setting (autre que `worktree.baseRef` qui contrôle juste la ref de base) ne permet de désactiver la création automatique côté desktop app. Le seul moyen de respecter la doctrine projet est d'utiliser exclusivement le **CLI Claude Code** pour ce repo et de prohiber le desktop app.
+
+**Priorité :** Basse (workaround connu : usage CLI exclusif).
+
+**Condition de déblocage :**
+1. **Court terme** : enrichir `.claude/CLAUDE.md` (instructions Claude Code locales du projet) avec mention explicite « usage CLI uniquement, desktop app prohibé sur ce repo ». À traiter dans brief séparé.
+2. **Moyen terme** : si Anthropic ouvre un flag de désactivation dans une release future, mettre à jour `.claude/settings.json` du projet. Surveiller release notes CLI Claude Code.
+3. **Long terme** : si la doctrine projet évolue ou si Anthropic rend obligatoire le desktop, réconcilier les doctrines.
+
+Identifiée sprint dettes post-Phase-B (2026-05-11), suite à investigation de la cause racine `OPS-WORKTREE-CREATION-001`.
+
+---
+
+### ARCHIVE-BRANCH-BRAVE-POINCARE-001 — Tentative antérieure fix race N1↔N2
+
+Branche `claude/brave-poincare-28cbc7` (HEAD `fd5f309`) contient une tentative antérieure non-mergée de fix sur "race condition markers non cliquables après N1→N2→N1". Notre fix S1 solution A (commit `5f1b480`, prod 11 mai 2026 via PR #470) résout le même symptôme avec approche symétrique enter/exit. Branche conservée pour comparaison si edge-case réapparaît. À supprimer si > 6 mois sans rappel.
+
+Worktree associée `brave-poincare-28cbc7` supprimée 11 mai 2026 (detached HEAD `2789698` indépendant de la branche `claude/brave-poincare-28cbc7` à `fd5f309`, donc safe).
+
+**Statut :** ARCHIVÉE, non bloquant. Reminder à 11 novembre 2026 pour décision suppression définitive.
 
 ---
 
 ## Dettes fermées récemment
 
+- **SITES-COORDS-COTIERES-VERIFICATION-001** (11 mai 2026, commit `a966511` branche `chore/patrimoine-dettes-post-phase-b`) — résolue par audit GPS + correction commune pour les 3 sites côtiers identifiés. `capu_di_logu` (lat 41.6212→41.62585, lon 8.8424→8.84461, commune Bonifacio→Belvédère-Campomoro, description actualisée vers plateau golfe Valinco) ; `tour_de_capo_di_muro` (lat 41.719→41.7500, lon 8.664→8.6767, commune null→Coti-Chiavari) ; `u_paladinu` (GPS inchangé 41.7313/8.8325 confirmé légitime, commune null→Serra-di-Ferro). Pieve/doyenne_contemporain_slug non touchés (rebalancing pipeline `consolidate_sites.py` séparé si Soleil souhaite).
+- **HASH-SPOT-SEUL-001** (11 mai 2026, commit `396947e` branche `chore/patrimoine-dettes-post-phase-b`) — symptôme S7 Phase A. `applyHash` étendu pour accepter `#<spot-slug>` single-segment : si le segment est un slug de site connu (`markersBySlug`), résolution doyenné via `SPOT_TO_DOYENNE.get(spot)` + pieve via `SPOT_TO_PIEVE_V2.get(spot)`, puis pipeline standard (enter N2 + sticker pieve + popup spot). `syncHashToUrl` canonicalise le hash final vers `#doy/pieve/spot`. Cas non couverts (doy seul, doy/pv, doy/pv/spot, segment inconnu) inchangés.
+- **DOYENNE-ILLUSTRATIONS-OBSOLETE-001** (11 mai 2026, commit `bf3415c` branche `chore/patrimoine-dettes-post-phase-b`) — symptôme S6 Phase A. Commentaires obsolètes (`5/10 doyennes` faux, doctrine fallback typographique périmée) actualisés à 3 endroits dans `patrimoine.html` (L761, L877, L953) pour refléter l'état post-PR #460 : 9 doyennés actifs, 4 entrées recyclage diocèse indispensables (illustration_path retiré de polygons.json), 5 entrées dédiées redondantes (conservées en défense en profondeur). Mapping inchangé fonctionnellement. Option A « minimum invasif » retenue.
 - **SITES-NAME-NULL-001** (11 mai 2026, commit `7f8f592` branche `fix/patrimoine-audit-phase-b-v2`) — résolue par suppression de l'entrée `menhirs_du_rizzanese` (doublon de `rizzanese_frati_sora` selon audit Phase A Cowork, lat 41.648/lon 8.828 vs canonique 41.6468/8.9478, name=null vs `Menhirs du Rizzanese`). Symptôme S2 Phase A. Corpus passe de 168 à 167 sites P1.
 - **N2-ILLUSTRATED-SHARED-MARKER-001** (créée + résolue 11 mai 2026, commit `5f1b480` branche `fix/patrimoine-audit-phase-b-v2`) — symptôme S1 Phase A. 9 markers illustrés étaient invisibles/inclickables en N2 (un par doyenné contemporain sauf 5 ILLUSTRATED_SPOTS sans rattachement doyenné). Cause racine : marker Leaflet partagé entre `spotsIllustratedLayer` (N1) et `spotsLevel2ByDoyenne` (N2). Le `map.removeLayer(spotsIllustratedLayer)` du setTimeout 250ms dans `enterNiveau2View` détache le marker du DOM même s'il appartient encore au LG N2 actif. Fix solution A symétrique enter/exit : re-attache individuelle dans setTimeout enter + detach individuel avant `spotsIllustratedLayer.addTo(map)` en exit. Liste markers affectés : citadelle_de_calvi, citadelle_de_corte, lac_de_nino, bastia_citadelle, couvent_d_orezza, bonifacio_remparts, cargese_grec_latin, lac_de_creno, aleria_antique.
 - **N2-SPOT-CLICK-PROPAGATION-001** (créée + résolue 11 mai 2026, commit `4b077f4` branche `fix/patrimoine-audit-phase-b-v2`) — symptôme S3 Phase A. Le clic marker spot et clic polygone pieve propageaient leur événement aux handlers parents (polygones doyenné/pieve sous-jacents), causant des transitions N1→N2 indésirables et des bascules de breadcrumb incorrectes. Fix : `marker.on('click', (ev) => onSpotClick(..., ev))` + `poly.on('click', (ev) => onPieveClickV2(..., ev))`, avec `if (ev) L.DomEvent.stopPropagation(ev)` en tête des deux handlers. `onDoyenneClick` non touché (légitime à propager). 4 chemins testés : N1 spot, N2 spot, N2 pieve, miniature N2.
