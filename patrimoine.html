@@ -1713,13 +1713,36 @@ function syncHashToUrl() {
 function applyHash(rawHash) {
   // Parse #doy/pieve/spot et declenche les actions correspondantes.
   // Validation : si un segment est invalide, log warning + reset niveau 1.
+  // S7 (2026-05-11) : supporte aussi #<spot> single-segment via derivation
+  // SPOT_TO_DOYENNE / SPOT_TO_PIEVE_V2, puis canonicalisation du hash.
   const hash = (rawHash || '').replace(/^#/, '').trim();
   if (!hash) {
     if (document.body.classList.contains('niveau-2')) exitNiveau2View();
     return;
   }
   const segs = hash.split('/').map(s => s.trim()).filter(Boolean);
-  const [doyShort, pieveShort, spotSlug] = segs;
+  let doyShort, pieveShort, spotSlug;
+  let wasSpotSingleSegmentResolved = false;
+
+  // S7 — single-segment hash : si seg unique = slug site connu, derive
+  // doyenne+pieve depuis SPOT_TO_DOYENNE/SPOT_TO_PIEVE_V2 puis le pipeline
+  // standard prend le relais (enter N2 + sticker pieve + popup spot).
+  // Le hash final sera canonicalise vers #doy/pieve/spot via syncHashToUrl.
+  if (segs.length === 1 && markersBySlug[segs[0]]) {
+    const inferredDoy = SPOT_TO_DOYENNE.get(segs[0]);
+    if (inferredDoy) {
+      const inferredPv = SPOT_TO_PIEVE_V2.get(segs[0]);
+      doyShort = inferredDoy.replace(/^doyenne_/, '');
+      pieveShort = inferredPv ? inferredPv.replace(/^pieve_/, '') : undefined;
+      spotSlug = segs[0];
+      wasSpotSingleSegmentResolved = true;
+    } else {
+      [doyShort, pieveShort, spotSlug] = segs;
+    }
+  } else {
+    [doyShort, pieveShort, spotSlug] = segs;
+  }
+
   const doySlug = doyShort ? _addDoyennePrefix(doyShort) : null;
   const pieveSlug = pieveShort ? _addPievePrefix(pieveShort) : null;
 
@@ -1780,6 +1803,11 @@ function applyHash(rawHash) {
     }
   } finally {
     _isApplyingHash = false;
+  }
+  // S7 — canonicaliser le hash apres resolution single-segment spot
+  // (transforme #spot -> #doy/pieve/spot). No-op si pas de divergence.
+  if (wasSpotSingleSegmentResolved && typeof syncHashToUrl === 'function') {
+    syncHashToUrl();
   }
 }
 
