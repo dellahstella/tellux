@@ -713,7 +713,9 @@ const panelTitle = document.getElementById('panel-title');
 const panelClose = document.getElementById('panel-close');
 const panelBackdrop = document.getElementById('panel-backdrop');
 
+var _panelOpenTime = 0;
 function openPanel(site) {
+  _panelOpenTime = Date.now();
   // Brief 24 (B23-UX-038) — fermer toute popup map ouverte avant d'ouvrir
   // le panel pour eviter superposition residuelle (popup spot/doyenne qui
   // restait visible derriere le panel apres clic "Ouvrir la fiche").
@@ -759,6 +761,7 @@ function openPanel(site) {
 }
 
 function closePanel() {
+  if (Date.now() - _panelOpenTime < 400) return;
   panel.classList.remove('open');
   panel.setAttribute('aria-hidden', 'true');
   // Brief 31 — nettoyage carte postale a la fermeture du panel.
@@ -781,13 +784,11 @@ function openDoyennePanel(d) {
     ? DOYENNE_ILLUSTRATIONS[d.slug] : '';
   const speculative = d.illustration_path || '';
   const visuel = recycled || speculative || '';
-  requestAnimationFrame(function() {
-    openPanel({
-      slug: d.slug,
-      nom: display,
-      categorie: 'Doyenné',
-      visuel: visuel,
-    });
+  openPanel({
+    slug: d.slug,
+    nom: display,
+    categorie: 'Doyenné',
+    visuel: visuel,
   });
 }
 
