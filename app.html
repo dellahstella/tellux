@@ -1183,6 +1183,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <button class="hdr-btn" onclick="openGlossaryDrawer()" title="Glossaire & guides pratiques">Comprendre les termes</button>
     <a class="hdr-btn" href="/glossaire.html" target="_blank" rel="noopener" title="Glossaire technique complet (page publique)" style="text-decoration:none">Glossaire</a>
     <button class="hdr-btn" onclick="openAboutModal()" title="À propos du projet">À propos</button>
+    <a class="hdr-btn" href="patrimoine.html" title="Cartographie patrimoniale de la Corse" style="text-decoration:none">Patrimoine (bêta)</a>
     <a class="hdr-btn" href="mairies.html" title="Outils administratifs pour les communes corses" style="text-decoration:none">Élu·e ? Outils mairie →</a>
     <span id="sb-status-dot" class="status-dot status-dot--pending" title="Supabase connexion en cours…" aria-label="Statut Supabase"></span>
     <span class="hdr-status" id="hdr-status">chargement…</span>
@@ -2198,7 +2199,7 @@ const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,con:lCon,therm:lTherm
 const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag,foret:wmsForet};
 const ACTIVE={bt:false,ant:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,res:false,prod:false,con:true,therm:false,crustal:false,sitesRemarq:false,radon:false};
 
-const LEGEND_CORE_IDS=new Set(['hot','con']);
+const LEGEND_CORE_IDS=new Set(['hot']);
 const LEGEND_MAX_CONTEXT=3;
 const LEGEND_ACTIVE_CORE=new Set();
 const LEGEND_ACTIVE_CONTEXT=[];
@@ -4827,18 +4828,21 @@ async function loadAnt(){try{
     if(ln>9.53)return false;
     return true;
   };
-  let nSkipped=0, nSeaFiltered=0;
+  console.log('Total lignes DB : ' + rows.length);
+  console.log('Unique lat/lon : ' + new Set(rows.map(f=>f.lat+','+f.lon)).size);
+  const seenPos=new Set();
+  let nSkipped=0, nSeaFiltered=0, nOnshore=0;
   rows.forEach(f=>{
     if(f.lon<8.30||f.lon>9.65||f.lat<41.35||f.lat>43.03){nSeaFiltered++;return;}
-    const isLandAnt=isLand(f.lat,f.lon);
-    if(isLandAnt){
-      const gen=f.generation||'default';
+    const posKey=f.lat.toFixed(5)+','+f.lon.toFixed(5);
+    if(!isLand(f.lat,f.lon)){nSkipped++;return;}
+    const gen=f.generation||'default';
+    if(!seenPos.has(posKey)){
       L.marker([f.lat,f.lon],{icon:mkIcon(GC[gen]||GC.default,false,9),zIndexOffset:100}).on('click',()=>info((f.commune||'Corse')+' · '+(f.operateur||'?'))).addTo(lAnt);
-    }else{
-      nSkipped++;
+      seenPos.add(posKey);
+      nOnshore++;
     }
   });
-  const nOnshore = rows.length - nSeaFiltered - nSkipped;
   console.log('Antennes : '+nOnshore+' affichees ('+nSkipped+' rejetees par filtre cotier, '+nSeaFiltered+' hors bbox)');
   const hdr=document.getElementById('hdr-status');
   if(hdr)setStatus(nOnshore+' antennes',true);
