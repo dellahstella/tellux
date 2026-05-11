@@ -50,7 +50,11 @@ jobs:
           GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
           GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
+          # GitHub interdit les secrets commencant par GITHUB_ (préfixe réservé)
+          # → secret renommé GH_PATH côté GitHub, mappé sur env var GITHUB_PAT pour le script
+          GITHUB_PAT: ${{ secrets.GH_PATH }}
           LOOKBACK_DAYS: ${{ github.event.inputs.lookback_days || '7' }}
           DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
+          # PROMPT_PATH non surchargé : le script utilise son défaut
+          # docs/pilotage/prompt_veille_tellux_v2.md (commité 2026-05-11 dans le privé).
         run: python .github/scripts/veille_scholar.py
