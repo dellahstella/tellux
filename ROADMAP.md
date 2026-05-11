@@ -68,6 +68,10 @@ Suivi détaillé des envois et des retours : voir section 7 « Suivi des sollici
 
 Tellux pourra être étendu, à mesure que des financements publics permettent leur conduite scientifique rigoureuse, par des modules thématiques complémentaires. Ces modules ne sont pas activés à ce jour et aucun calendrier public n'est annoncé : leur conduite suppose à la fois la stabilisation de la phase 1 et l'obtention d'un financement dédié.
 
+### Agrégation DIM (Phase 2)
+
+Dépôt contributif des dossiers d'information aux maires (DIM) : les communes qui utilisent Tellux uploadent leurs DIM reçus des opérateurs. Tellux devient le premier agrégateur de DIM corses, complémentaire à CartoRadio. Documents légalement publics (obligation de mise à disposition, L.34-9-1 II D). Prérequis : espace upload authentifié mairies, stockage Supabase fichiers, interface de contribution et modération. Pipeline : courrier MAIRIE_05 → upload DIM → couche Tellux.
+
 ---
 
 ## 4. Jalons
