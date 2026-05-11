@@ -412,6 +412,7 @@ a{color:inherit;}
   .mr-legal-title{font-size:16px;}
   .mr-legal-content p{font-size:12.5px;}
 }
+[hidden]{display:none!important;}
 </style>
 </head>
 <body>
@@ -2219,6 +2220,19 @@ a{color:inherit;}
     initModalDismiss();
     Promise.all([loadCommunes(), loadTemplates()]).then(function(){
       applyUrlCommune();
+      if (!selectedCommune && communesData) {
+        var bastia = communesData.find(function(c){
+          return c.code_insee === '2B033';
+        });
+        if (bastia) {
+          var input = document.getElementById('mr-commune-input');
+          if (input) input.value = bastia.nom + ' (2B)';
+          setSelectedCommune(bastia, false);
+          renderAntennesForCommune(bastia);
+          renderEtabForCommune(bastia);
+          renderGeoAtypForCommune(bastia);
+        }
+      }
     });
     // Chargement anticipe (non bloquant) des datasets Fiche commune
     loadAntennes().catch(function(){ /* silencieux, retry possible depuis UI */ });
