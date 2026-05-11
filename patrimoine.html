@@ -681,6 +681,7 @@ function _bindPopupBtnDelegation() {
     if (closeBtn) { e.stopPropagation(); map.closePopup(); return; }
     const btn = e.target.closest('.tlx-popup-btn');
     if (btn) {
+      e.stopPropagation();
       const slug = btn.getAttribute('data-slug');
       if (slug && markersBySlug[slug]) {
         openPanel(markersBySlug[slug].site);
@@ -691,6 +692,7 @@ function _bindPopupBtnDelegation() {
     // un .tlx-popup (pas dans un autre img du DOM).
     const img = e.target.closest('.tlx-popup .tlx-popup-img');
     if (img) {
+      e.stopPropagation();
       // Récupérer le slug via le sibling .tlx-popup-btn dans la même popup.
       const btnInPopup = img.closest('.tlx-popup')?.querySelector('.tlx-popup-btn');
       const slug = btnInPopup?.getAttribute('data-slug');
@@ -713,9 +715,7 @@ const panelTitle = document.getElementById('panel-title');
 const panelClose = document.getElementById('panel-close');
 const panelBackdrop = document.getElementById('panel-backdrop');
 
-var _panelOpenTime = 0;
 function openPanel(site) {
-  _panelOpenTime = Date.now();
   // Brief 24 (B23-UX-038) — fermer toute popup map ouverte avant d'ouvrir
   // le panel pour eviter superposition residuelle (popup spot/doyenne qui
   // restait visible derriere le panel apres clic "Ouvrir la fiche").
@@ -735,11 +735,6 @@ function openPanel(site) {
     panelImg.classList.add('hidden');
     panelImg.removeAttribute('src');
     panelFallback.classList.remove('hidden');
-  }
-  // Brief 27 — backdrop modal sync ouverture (fade-in 0.25s, blur 4px).
-  if (panelBackdrop) {
-    panelBackdrop.classList.add('open');
-    panelBackdrop.setAttribute('aria-hidden', 'false');
   }
   panel.classList.add('open');
   panel.setAttribute('aria-hidden', 'false');
@@ -761,16 +756,10 @@ function openPanel(site) {
 }
 
 function closePanel() {
-  if (Date.now() - _panelOpenTime < 400) return;
   panel.classList.remove('open');
   panel.setAttribute('aria-hidden', 'true');
   // Brief 31 — nettoyage carte postale a la fermeture du panel.
   _deactivateCartePostale();
-  // Brief 27 — backdrop modal sync fermeture.
-  if (panelBackdrop) {
-    panelBackdrop.classList.remove('open');
-    panelBackdrop.setAttribute('aria-hidden', 'true');
-  }
 }
 
 // Brief 23 — Fiche doyenne (niveau 2, clic miniature persistante).
@@ -797,14 +786,16 @@ panelClose.addEventListener('click', (e) => {
   closePanel();
 });
 
-// Brief 27 — clic sur backdrop ferme la modal (UX lightbox standard).
-if (panelBackdrop) {
-  panelBackdrop.addEventListener('click', closePanel);
-}
-
 // ESC pour fermer
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && panel.classList.contains('open')) closePanel();
+});
+
+// Click outside pour fermer (remplace le backdrop) — ignore si clic dans le panel.
+document.addEventListener('click', function(e) {
+  if (!panel.classList.contains('open')) return;
+  if (panel.contains(e.target)) return;
+  closePanel();
 });
 
 // Util
