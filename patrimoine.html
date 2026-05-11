@@ -714,6 +714,7 @@ const panelClose = document.getElementById('panel-close');
 const panelBackdrop = document.getElementById('panel-backdrop');
 
 function openPanel(site) {
+  console.log('[DBG] openPanel appelé — slug:', site.slug, 'nom:', site.nom);
   // Brief 24 (B23-UX-038) — fermer toute popup map ouverte avant d'ouvrir
   // le panel pour eviter superposition residuelle (popup spot/doyenne qui
   // restait visible derriere le panel apres clic "Ouvrir la fiche").
@@ -759,6 +760,7 @@ function openPanel(site) {
 }
 
 function closePanel() {
+  console.log('[DBG] closePanel appelé depuis :', new Error().stack.split('\n')[2]);
   panel.classList.remove('open');
   panel.setAttribute('aria-hidden', 'true');
   // Brief 31 — nettoyage carte postale a la fermeture du panel.
@@ -1267,6 +1269,7 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   // Brief 20 fix #7 — fermer toute popup map ouverte (spot precedent ou popup
   // miniature) avant le pivot N1->N2, evite la superposition residuelle.
   map.closePopup();
+  console.log('[DBG] enterNiveau2View — panel ouvert:', panel.classList.contains('open'));
   if (typeof closePanel === 'function' && panel.classList.contains('open')) closePanel();
   // Fermer #fiche-panel s'il est ouvert : sinon il recouvre #panel doyenne
   // (z-index 5010 > 5000) au prochain openDoyennePanel.
@@ -1420,6 +1423,7 @@ function exitNiveau2View() {
     if (m.unbindTooltip) m.unbindTooltip();
   }
   // Brief 23 — fermer la fiche doyenne si elle etait ouverte au retour.
+  console.log('[DBG] exitNiveau2View — panel ouvert:', panel.classList.contains('open'));
   if (typeof closePanel === 'function' && panel.classList.contains('open')) closePanel();
 
   // Clear highlights polygones, popup et tooltip persistant (B11-UX-029).
@@ -2012,6 +2016,7 @@ function _renderDoyenneSticker(slug, name, _attempt) {
     // stopPropagation pour éviter remontée vers handlers parents (panel,
     // backdrop, etc.) qui pourraient interpréter le clic comme un exit.
     if (e && e.stopPropagation) e.stopPropagation();
+    console.log('[DBG] sticker click — slug:', slug, 'openDoyennePanel disponible:', typeof openDoyennePanel);
     // Récupère la doyenne data depuis le miniMarker actif (set par boot
     // via miniMarker._doyenneData, cf. doyenneMinisLayer construction).
     var fullData = null;
