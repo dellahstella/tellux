@@ -517,7 +517,7 @@ a{color:inherit;}
   <!-- ONGLET 2 : GÉNÉRER UN COURRIER -->
   <section class="mr-tab-panel" data-panel="courrier" role="tabpanel">
     <h2 class="mr-section-h2">Générer un courrier</h2>
-    <p class="mr-section-sub">Six modèles de courriers administratifs prêts à personnaliser. Sélectionnez un modèle, remplissez les champs, téléchargez le document au format Word. Les textes sont cadrés juridiquement mais restent des modèles que vous validez avant envoi.</p>
+    <p class="mr-section-sub">Six modèles de courriers administratifs prêts à personnaliser. Sélectionnez un modèle, remplissez les champs, téléchargez le document au format PDF. Les textes sont cadrés juridiquement mais restent des modèles que vous validez avant envoi.</p>
     <div class="mr-cards" id="mr-courriers-list">
       <!-- Cards injectées en JS -->
     </div>
@@ -785,7 +785,7 @@ a{color:inherit;}
     var first = nom.charAt(0).toLowerCase();
     var firstNorm = first.normalize ? first.normalize('NFD').replace(/[̀-ͯ]/g, '') : first;
     if (/^[aeiouy]$/.test(firstNorm)){
-      return text.replace(/Mairie de \[NOM DE LA COMMUNE\]/g, 'Mairie d’' + nom);
+      return text.replace(/Mairie de \[NOM DE LA COMMUNE\]/g, 'Mairie d\'' + nom);
     }
     return text;
   }
@@ -1318,7 +1318,7 @@ a{color:inherit;}
       }
     }).catch(function(){
       body.innerHTML = '<div class="mr-antennes-error">Chargement des antennes temporairement indisponible. ' +
-        '<button type="button" onclick="retryAntennes()">Reessayer</button></div>';
+        '<button type="button" onclick="retryAntennes()">Réessayer</button></div>';
     });
   }
 
@@ -1388,12 +1388,12 @@ a{color:inherit;}
       '<div class="mr-antennes-filters">' +
         '<div class="mr-antennes-filter"><label for="mr-filter-op">Opérateur</label><select id="mr-filter-op">' + opOptions + '</select></div>' +
         '<div class="mr-antennes-filter"><label for="mr-filter-tech">Technologie</label><select id="mr-filter-tech">' + techOptions + '</select></div>' +
-        '<div class="mr-antennes-count">' + total + ' support' + (total > 1 ? 's' : '') + ' affiche' + (total > 1 ? 's' : '') + (total !== supports.length ? ' sur ' + supports.length : '') + '</div>' +
+        '<div class="mr-antennes-count">' + total + ' support' + (total > 1 ? 's' : '') + ' affiché' + (total > 1 ? 's' : '') + (total !== supports.length ? ' sur ' + supports.length : '') + '</div>' +
       '</div>';
 
     var listHtml;
     if (total === 0){
-      listHtml = '<div class="mr-antennes-empty">Aucun support ne correspond aux filtres selectionnes.</div>';
+      listHtml = '<div class="mr-antennes-empty">Aucun support ne correspond aux filtres sélectionnés.</div>';
     } else {
       var rows = pageRows.map(function(s){
         return '<div class="mr-antenne-row">' +
@@ -1447,7 +1447,7 @@ a{color:inherit;}
     } else {
       linksHtml += '<a class="mr-antennes-link" href="https://www.cartoradio.fr/" target="_blank" rel="noopener noreferrer">Voir sur cartoradio.fr</a>';
     }
-    linksHtml += '<button type="button" class="mr-antennes-link" id="mr-antennes-export">Telecharger la liste (CSV)</button>';
+    linksHtml += '<button type="button" class="mr-antennes-link" id="mr-antennes-export">Télécharger la liste (CSV)</button>';
     linksHtml += '</div>';
 
     body.innerHTML = kpisHtml + filtersHtml + listHtml + paginationHtml + linksHtml;
@@ -1697,7 +1697,7 @@ a{color:inherit;}
       }
     }).catch(function(){
       body.innerHTML = '<div class="mr-etab-error">Chargement des établissements temporairement indisponible. ' +
-        '<button type="button" onclick="retryEtab()">Reessayer</button></div>';
+        '<button type="button" onclick="retryEtab()">Réessayer</button></div>';
     });
   }
 
@@ -1754,7 +1754,7 @@ a{color:inherit;}
       var eajeOnly = etabByInsee[code] && etabByInsee[code]['petite-enfance'].length > 0 && etabByInsee[code].enseignement.length === 0 && etabByInsee[code]['medico-social'].length === 0;
       body.innerHTML =
         '<div class="mr-etab-empty">' +
-          '<strong>Aucun etablissement sensible recense sur votre commune</strong>' +
+          '<strong>Aucun établissement sensible recense sur votre commune</strong>' +
           'Aucune école, établissement médico-social ou structure petite enfance n\'est référencée sur ' + escapeHtml(communeName) + ' dans les données consolidées.' +
         '</div>' +
         maybeRenderEajeNote(code);
@@ -1822,7 +1822,7 @@ a{color:inherit;}
 
     // Zone critique
     var critiqueHtml = '<div class="mr-etab-zone mr-etab-zone-critique">' +
-      '<div class="mr-etab-zone-title">Zone critique (&lt; 100 m) <span class="mr-etab-zone-count">' + critique.length + ' etablissement' + (critique.length > 1 ? 's' : '') + '</span></div>';
+      '<div class="mr-etab-zone-title">Zone critique (&lt; 100 m) <span class="mr-etab-zone-count">' + critique.length + ' établissement' + (critique.length > 1 ? 's' : '') + '</span></div>';
     if (critique.length === 0){
       critiqueHtml += '<div class="mr-etab-zone-empty">Aucun établissement sensible n\'est situé à moins de 100 mètres d\'une antenne ANFR sur votre commune, d\'après les données consolidées.</div>';
     } else {
@@ -1837,11 +1837,11 @@ a{color:inherit;}
     var attentionHtml = '';
     if (attention.length > 0){
       attentionHtml = '<div class="mr-etab-zone mr-etab-zone-attention">' +
-        '<div class="mr-etab-zone-title">Zone d\'attention (100 - 500 m) <span class="mr-etab-zone-count">' + attention.length + ' etablissement' + (attention.length > 1 ? 's' : '') + '</span></div>' +
+        '<div class="mr-etab-zone-title">Zone d\'attention (100 - 500 m) <span class="mr-etab-zone-count">' + attention.length + ' établissement' + (attention.length > 1 ? 's' : '') + '</span></div>' +
         '<div class="mr-etab-zone-attention-wrap">' +
           '<button type="button" class="mr-etab-zone-attention-toggle" aria-expanded="' + (etabState.attention_open ? 'true' : 'false') + '" onclick="toggleEtabAttention()">' +
-            '<span>' + (etabState.attention_open ? 'Masquer' : 'Afficher') + ' les etablissements en zone d\'attention (' + attention.length + ')</span>' +
-            '<span class="mr-etab-zone-attention-caret">v</span>' +
+            '<span>' + (etabState.attention_open ? 'Masquer' : 'Afficher') + ' les établissements en zone d\'attention (' + attention.length + ')</span>' +
+            '<span class="mr-etab-zone-attention-caret">▾</span>' +
           '</button>' +
           '<div class="mr-etab-zone-attention-list' + (etabState.attention_open ? ' open' : '') + '">' +
             renderEtabRowsHeader() +
@@ -1853,7 +1853,7 @@ a{color:inherit;}
 
     // Export CSV + lien carte
     var linksHtml = '<div class="mr-etab-links">' +
-      '<button type="button" class="mr-etab-link" id="mr-etab-export">Telecharger la liste (CSV)</button>' +
+      '<button type="button" class="mr-etab-link" id="mr-etab-export">Télécharger la liste (CSV)</button>' +
     '</div>';
 
     body.innerHTML = kpisHtml + filtersHtml + critiqueHtml + attentionHtml + maybeRenderEajeNote(code) + linksHtml;
