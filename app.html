@@ -4831,6 +4831,23 @@ map.on('click',async e=>{
     '<div style="font-size:8px;color:#b0b5c0;margin-top:2px;font-style:italic">Source : Biot-Savart EDF SEI · CartoRadio ANFR · Modèle Tellux</div>'+
     '</div>'
   );
+  // Sprint complement app-ui-polish (mai 2026) — Item A fix autoPan effective.
+  // Cause racine : Leaflet autoPan ne se declenche qu'au openOn(map) avec le
+  // contenu initial (placeholder '⏳ calcul…' court → rien a panner). Apres
+  // setContent(html) avec le contenu final volumineux (~700px), Leaflet ne
+  // re-pan PAS automatiquement. Fix : check viewport + panBy manuel via rAF
+  // (apres layout finalise). Padding 80px en haut (header tlx) + 60px en bas
+  // (conditions-bar collapsed).
+  requestAnimationFrame(() => {
+    if(!calcPopup._container) return;
+    const r = calcPopup._container.getBoundingClientRect();
+    const padTop = 80, padBottom = 60;
+    if(r.top < padTop){
+      map.panBy([0, r.top - padTop], {animate: true, duration: 0.3});
+    } else if(r.bottom > window.innerHeight - padBottom){
+      map.panBy([0, r.bottom - (window.innerHeight - padBottom)], {animate: true, duration: 0.3});
+    }
+  });
   document.getElementById('btn-export-model').onclick=()=>exportModel(lat,lng,igrf,human,water,nRFcalib);
   // v8 : rec (recommandation matériaux) extrait vers agronomie.html
   _geoLastPoint={lat,lng,igrf,human,geo,crustal,susc_nT,skinD,tellPct,geoType,solLabel,indice:indiceTellux,label:itLabel,verdict:itVerdict,implanTip,rf:nRFcalib,radon_class,gamma_nSvh};
