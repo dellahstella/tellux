@@ -1247,6 +1247,7 @@ let _spotsN1FadeTimer = null;
 let _spotsN1FadingIcons = [];
 let _spotsN1FadingMiniIcons = [];
 function enterNiveau2View(doyenneSlug, doyenneName, shape) {
+  console.log('[DBG-N2] enterNiveau2View appelé depuis :', new Error().stack.split('\n').slice(1,4).join(' | '));
   document.body.classList.add('niveau-2');
   // Brief 47 — switch de doyenné (A→B) depuis niveau 3 : nettoyer l'état
   // niveau-3 résiduel (sticker pieve obsolète + classe). Le user repart d'un
@@ -1520,11 +1521,12 @@ function updateBreadcrumb() {
 
 // === Click handler spot (marker) — alimente breadcrumb avec chaîne complète ===
 function onSpotClick(marker, site) {
-  // Brief 9 : breadcrumb 4 niveaux Corse > Doyenne > Pieve > Spot.
-  const doy = SPOT_TO_DOYENNE.get(site.slug);
-  const pv = SPOT_TO_PIEVE_V2.get(site.slug);
-  currentDoyenneSlug = doy || currentDoyenneSlug || null;
-  currentPieveSlugV2 = pv || (document.body.classList.contains('niveau-2') ? currentPieveSlugV2 : null);
+  if (document.body.classList.contains('niveau-2')) {
+    const doy = SPOT_TO_DOYENNE.get(site.slug);
+    const pv  = SPOT_TO_PIEVE_V2.get(site.slug);
+    currentDoyenneSlug  = doy || currentDoyenneSlug  || null;
+    currentPieveSlugV2  = pv  || currentPieveSlugV2  || null;
+  }
   currentSpotSlug = site.slug;
   updateBreadcrumb();
   openPopup(marker, site);
