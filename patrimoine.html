@@ -531,14 +531,12 @@ const ILLUSTRATED_SPOTS = new Set([
   'bonifacio_remparts',
   'cap_corse_extreme_nord',
   'cargese_grec_latin',
-  'cirque_de_bonifato',
   'citadelle_de_calvi',
   'citadelle_de_corte',
   'couvent_d_orezza',
   'desert_des_agriate',
   'lac_de_creno',
   'lac_de_nino',
-  'massif_du_haut_asco',
 ]);
 
 // Mapping inverse spot → pieve/diocèse à partir de spot_ids[] des pieves.
@@ -586,7 +584,7 @@ function initSiteMarkers() {
       iconAnchor: isPriority ? [9,9] : [7,7],
     });
     const marker = L.marker([site.lat, site.lon], {icon, title: site.nom, zIndexOffset: 1000});
-    marker.on('click', () => onSpotClick(marker, site));
+    marker.on('click', (ev) => onSpotClick(marker, site, ev));
     markersBySlug[site.slug] = {marker, site};
 
     const isIllustrated = ILLUSTRATED_SPOTS.has(site.slug);
@@ -1113,7 +1111,7 @@ fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
       for (const doy of doyennesVisibles) {
         const poly = L.polygon(p.polygon, {className: 'pieve-polygon-v2'});
         poly.bindTooltip(tooltipLabel, {sticky:true, direction:'top', className:'tlx-tt'});
-        poly.on('click', () => onPieveClickV2(p.slug, p.name, poly));
+        poly.on('click', (ev) => onPieveClickV2(p.slug, p.name, poly, ev));
         if (!pievesByDoyenneLayer.has(doy)) pievesByDoyenneLayer.set(doy, L.layerGroup());
         pievesByDoyenneLayer.get(doy).addLayer(poly);
         // Premiere instance reference dans pieveShapesBySlugV2 (suffit pour
@@ -1214,7 +1212,8 @@ fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
     console.error('[Tellux patrimoine] Echec chargement pieves_polygons.json :', err);
   });
 
-function onPieveClickV2(slug, name, shape) {
+function onPieveClickV2(slug, name, shape, ev) {
+  if (ev) L.DomEvent.stopPropagation(ev);
   currentPieveSlugV2 = slug;
   currentSpotSlug = null;
   updateBreadcrumb();
@@ -1247,7 +1246,6 @@ let _spotsN1FadeTimer = null;
 let _spotsN1FadingIcons = [];
 let _spotsN1FadingMiniIcons = [];
 function enterNiveau2View(doyenneSlug, doyenneName, shape) {
-  console.log('[DBG-N2] enterNiveau2View appelé depuis :', new Error().stack.split('\n').slice(1,4).join(' | '));
   document.body.classList.add('niveau-2');
   // Brief 47 — switch de doyenné (A→B) depuis niveau 3 : nettoyer l'état
   // niveau-3 résiduel (sticker pieve obsolète + classe). Le user repart d'un
@@ -1299,6 +1297,16 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   _spotsN1FadeTimer = setTimeout(() => {
     _spotsN1FadeTimer = null;
     if (map.hasLayer(spotsIllustratedLayer)) map.removeLayer(spotsIllustratedLayer);
+    // Brief 27 — Fix S1 N2-ILLUSTRATED-SHARED-MARKER : les markers partagés
+    // entre spotsIllustratedLayer (N1) et spotsLevel2ByDoyenne (N2) sont
+    // collatéralement détachés du DOM quand spotsIllustratedLayer est retiré.
+    // Les ré-attacher individuellement (9 markers concernés cf. brief).
+    const slg = spotsLevel2ByDoyenne.get(doyenneSlug);
+    if (slg) {
+      for (const m of slg.getLayers()) {
+        if (!map.hasLayer(m)) m.addTo(map);
+      }
+    }
     // Brief 23 — detacher individuellement les 9 miniatures non-actives
     // (vs detach total Brief 19 §4.6). La miniature active reste attachee.
     for (const m of otherMiniLayers) {
@@ -1385,6 +1393,19 @@ function exitNiveau2View() {
   // Detacher toutes les pieves attachees (niveau 2).
   for (const lg of pievesByDoyenneLayer.values()) {
     if (map.hasLayer(lg)) map.removeLayer(lg);
+  }
+
+  // Brief 27 — Fix S1 symétrique : avant de réattacher spotsIllustratedLayer
+  // (qui contient les markers shared), détacher individuellement les markers
+  // du LG N2 précédemment actif qui ont été ré-attachés en enter (sinon
+  // duplication DOM côté Leaflet). currentDoyenneSlug encore non-reset ici.
+  if (currentDoyenneSlug) {
+    const oldSlg = spotsLevel2ByDoyenne.get(currentDoyenneSlug);
+    if (oldSlg) {
+      for (const m of oldSlg.getLayers()) {
+        if (map.hasLayer(m)) map.removeLayer(m);
+      }
+    }
   }
 
   // Detacher tous les spots-niveau-2.
@@ -1520,7 +1541,8 @@ function updateBreadcrumb() {
 }
 
 // === Click handler spot (marker) — alimente breadcrumb avec chaîne complète ===
-function onSpotClick(marker, site) {
+function onSpotClick(marker, site, ev) {
+  if (ev) L.DomEvent.stopPropagation(ev);
   if (document.body.classList.contains('niveau-2')) {
     const doy = SPOT_TO_DOYENNE.get(site.slug);
     const pv  = SPOT_TO_PIEVE_V2.get(site.slug);
