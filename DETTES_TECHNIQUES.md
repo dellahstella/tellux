@@ -542,6 +542,44 @@ Clé `aleria_antique` dans `fiches_patrimoine.json` inchangée (1 fiche restante
 
 ---
 
+### PATRIMOINE-DOYENNE-MARKER-MISMATCH-001 — 2 sites Phase 1 illustrés rattachés à un doyenné qui ne contient pas leur coord — RÉSOLUE
+
+**Constat (12 mai 2026, Sprint U2 audit transcommunaux) :**
+2 sites Phase 1 illustrés s'affichaient en N2 dans un doyenné cible mais leur coord GPS tombait dans un autre doyenné polygon. Effet UX confusant : l'utilisateur drillait dans doyenné X, voyait le marker Y, mais Y appartenait éditorialement à doyenné Z.
+
+| Slug | Coord initiale | Doyenné naturel (PIP) | Doyenné cible (éditorial) |
+|---|---|---|---|
+| `plateau_du_coscione` | (41.88, 9.07) | prunelli_taravo_valinco | doyenne_extreme_sud |
+| `foret_de_tartagine` | (42.46, 8.985) | cortenais | doyenne_balagne |
+
+**Origine :** Le mapping `SPOT_TO_DOYENNE` utilise le champ pré-calculé `doyenne_contemporain_slug` (Brief 28 / Brief 33 split), pas un point-in-polygon runtime. Le décalage entre coord et doyenné cible était invisible à l'œil mais incohérent géographiquement. Pour `plateau_du_coscione`, le champ JSON était `null` + override compensatoire dans `_drafts/SPOT_DOYENNE_OVERRIDES.json`. Pour `foret_de_tartagine`, le champ JSON pointait sur balagne mais la coord tombait dans cortenais polygon.
+
+**Résolution (12 mai 2026, commit `d2cac55` branche `fix/patrimoine-doyenne-marker-placement-2026-05-12`) :** option (a) Soleil — repositionner les markers vers des coords qui tombent dans le doyenné cible polygon, sans inventer une localisation arbitraire (vérification point-in-polygon programmatique + plausibilité géographique).
+
+- `plateau_du_coscione` : (41.88, 9.07) → (41.83, 9.10) zone Quenza/Coscione sud, ~6 km au sud (plateau s'étend jusqu'à Aullène 41.79). `doyenne_contemporain_slug` null → `doyenne_extreme_sud`. `pieve_slug` null → `pieve_tallano` (pieve naturelle PIP). Override `SPOT_DOYENNE_OVERRIDES.json` retiré (redondant).
+- `foret_de_tartagine` : (42.46, 8.985) → (42.475, 8.96) zone Mausoléo/Vallica, ~1.5 km nord-ouest. `doyenne_contemporain_slug` `doyenne_balagne` inchangé, `pieve_slug` `pieve_balagne` inchangé.
+
+**Statut :** **RÉSOLUE** par repositionnement data cohérent.
+
+---
+
+### DOYENNE-EDITORIAL-MISMATCH-RENOSO-DORO-001 — Renoso + Oro initialement ciblés Golo (erreur éditoriale) — RÉSOLUE
+
+**Constat (12 mai 2026, Sprint U2 STOP B audit transcommunaux) :**
+`monte_renoso` (sommet 2352 m, commune réelle Ghisoni) et `monte_d_oro` (sommet 2389 m, commune réelle Vivario) avaient `doyenne_contemporain_slug = doyenne_du_golo` dans `sites_corse.json` + `sites_patrimoine.json`. Géographiquement insoluble : le doyenné du Golo couvre le bassin versant du fleuve Golo (nord-est Corse, Cinto, Niolu, Castagniccia–Bastia, bbox lat 42.34–42.74) ; les sommets Renoso (lat 42.06) et d'Oro (lat 42.14) sont sur d'autres bassins versants centraux. Aucun point géographiquement crédible sur ces massifs ne tombe dans golo polygon (écart 22–30 km).
+
+**Origine :** Erreur de classification éditoriale initiale Cowork — probable confusion zone Golo-fleuve vs zone Golo-sommet ou ciblage par défaut sur un doyenné nord. Le champ `commune_nom = "Monte"` pour ces 2 sites est aussi probablement erroné (Monte est une commune Casinca lat ~42.65), à corriger dans un sprint commune-INSEE séparé (hors scope U2).
+
+**Arbitrage Soleil (12 mai 2026) :** option (iii) — re-cibling formel selon bassin versant réel, garder coord. Évite (i) coord arbitraire dans Golo (visuellement absurde, sommet 2000+m projeté sur plaine) et (ii) override informel laissé dormant.
+
+**Résolution (12 mai 2026, commit `d2cac55` branche `fix/patrimoine-doyenne-marker-placement-2026-05-12`) :**
+- `monte_renoso` : `doyenne_du_golo` → `doyenne_plaine_orientale` (bassin Fium'Orbu, commune Ghisoni). `pieve_slug` `pieve_casacconi` → `pieve_ghisoni` (pieve naturelle PIP). Coord (42.06, 9.13) inchangée.
+- `monte_d_oro` : `doyenne_du_golo` → `doyenne_cortenais` (bassin Tavignano, commune Vivario). `pieve_slug` `pieve_casacconi` → `pieve_vivario` (pieve naturelle PIP). Coord (42.14, 9.10) inchangée.
+
+**Statut :** **RÉSOLUE** par re-cibling éditorial. Cohérence rattachement bassin versant restaurée.
+
+---
+
 ### OPS-WORKTREE-CREATION-001 — Worktrees parasites créés par agents Claude Code
 
 **État au 11 mai 2026 :**
