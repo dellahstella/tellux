@@ -473,6 +473,22 @@ L'architecture data Tellux post-Brief 33 split (2026-05-06+) n'est documentée n
 
 ---
 
+### VISUELS-A-REGENERER-FILITOSA-TOLLA-LOZARI-001 — 3 visuels patrimoine à régénérer en session DA v2
+
+**Constat (13 mai 2026, audit Soleil post-Sprint U3) :** 3 visuels patrimoine identifiés par Soleil comme à régénérer dans une session DA v2 future :
+
+- `filitosa` : cadrage à reprendre
+- `lac_de_tolla` : statues géantes en arrière-plan WTF
+- `casteddu_lozari` : hyperréaliste, hors DA v2
+
+**Statu quo prod :** visuels actuels conservés visibles en N1 illustré (restent dans `ILLUSTRATED_SPOTS` whitelist). Pas de retrait temporaire whitelist. Régénération à planifier dans un sprint Soleil production externe ultérieur.
+
+**Priorité :** 2 (moyenne). Pas bloquant Phase 1, esthétique seulement.
+
+**Statut :** OUVERT.
+
+---
+
 ### VISUEL-EXT-COSMETIC-001 — Champ `visuel` sans extension `.png`
 
 **Constat (11 mai 2026, audit Code sprint complément) :**
