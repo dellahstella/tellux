@@ -89,14 +89,13 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
    horizontale). Le ratio 16:9-ish actuel = pas de crop, image affichee
    integrale. Le min-width/height drive la taille de la carte postale
    (Brief 31) qui s'absolute-positionne via inset:0. */
-#panel-illustration{flex:0 0 auto;aspect-ratio:16/9;width:100%;position:relative;background:var(--tx-brume);overflow:hidden;display:flex;align-items:center;justify-content:center;}
-#panel-img{width:100%;height:100%;object-fit:cover;object-position:center 25%;display:block;}
+#panel-illustration{flex:0 0 auto;aspect-ratio:16/9;width:100%;position:relative;background:var(--tx-ardoise);overflow:hidden;display:flex;align-items:center;justify-content:center;}
+#panel-img{width:100%;height:100%;max-height:60vh;object-fit:contain;display:block;}
 #panel-img.hidden{display:none;}
 #panel-fallback{font-style:italic;color:var(--tx-mica);font-size:14px;padding:48px 64px;text-align:center;min-width:320px;}
 #panel-fallback.hidden{display:none;}
-#panel-overlay{position:absolute;left:0;right:0;bottom:0;padding:20px 28px 22px;background:linear-gradient(to top,rgba(31,35,41,0.85),rgba(31,35,41,0));color:var(--tx-pierre);pointer-events:none;}
-#panel-overlay #panel-cat{font-size:11px;color:var(--tx-pierre);opacity:0.85;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;}
-#panel-overlay #panel-title{font-family:var(--font-display);font-size:30px;font-weight:600;line-height:1.2;color:var(--tx-pierre);overflow-wrap:break-word;hyphens:auto;text-shadow:0 2px 8px rgba(0,0,0,0.45);}
+#panel-meta{padding:12px 20px;background:var(--tx-pierre);border-top:1px solid rgba(31,35,41,0.08);}
+#panel-meta #panel-title{font-family:var(--font-display);font-size:18px;font-weight:500;line-height:1.2;color:var(--tx-ardoise);margin:0;overflow-wrap:break-word;hyphens:auto;}
 #panel-close{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:50%;background:var(--tx-pierre);border:1px solid var(--border);cursor:pointer;z-index:10;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;transition:background .2s,transform .2s;}
 #panel-close::before{content:'×';font-size:26px;color:var(--tx-ardoise);line-height:1;font-weight:300;}
 #panel-close:hover{background:var(--tx-ocre);transform:rotate(90deg);}
@@ -105,8 +104,8 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 @media (max-width:640px){
   #panel{max-width:96vw;max-height:92vh;}
   #panel-img{max-width:96vw;max-height:80vh;}
-  #panel-overlay{padding:16px 18px 18px;}
-  #panel-overlay #panel-title{font-size:20px;}
+  #panel-meta{padding:10px 14px;}
+  #panel-meta #panel-title{font-size:16px;}
   #tlx-header h1{font-size:16px;}
   #tlx-header .subtitle{display:none;}
 }
@@ -311,7 +310,6 @@ body.niveau-2-actif .doyenne-mini-marker.persistente-niveau-2{display:none !impo
 .carte-illustration-partagee{position:absolute;bottom:6px;right:6px;z-index:6;background:rgba(245,240,231,0.85);border:1px solid rgba(31,35,41,0.25);border-radius:8px;padding:2px 7px;font-family:'Fraunces',serif;font-size:9.5px;font-style:italic;color:var(--tx-encre);pointer-events:none;opacity:0.7;}
 .carte-postale.flipped .carte-illustration-partagee{display:none;}
 #panel-illustration.has-carte-postale #panel-img,#panel-illustration.has-carte-postale #panel-fallback{display:none;}
-#panel-illustration.has-carte-postale #panel-overlay{z-index:10;pointer-events:none;}
 /* Brief 43 → Brief 45 — breakpoints responsive paysage 1.75.
    Desktop >=1280px : 720×410 (defini au-dessus).
    Tablette 768-1279 : 600×343 (ratio 1.75 conserve).
@@ -320,14 +318,14 @@ body.niveau-2-actif .doyenne-mini-marker.persistente-niveau-2{display:none !impo
   #panel-illustration{min-width:600px;min-height:343px;width:600px;height:343px;}
   .carte-verso-text{font-size:15px;padding:16px 20px;line-height:1.5;}
   .carte-verso-text p{margin:0 0 7px;}
-  #panel-overlay #panel-title{font-size:26px;}
+  #panel-meta #panel-title{font-size:17px;}
 }
 @media(max-width:768px){
   #panel-illustration{min-width:min(94vw,540px);min-height:0;width:min(94vw,540px);height:auto;aspect-ratio:7/4;max-height:80vh;}
   .carte-verso-text{font-size:14px;padding:12px 14px;line-height:1.45;}
   .carte-verso-text p{margin:0 0 6px;}
   .carte-flip-hint{width:20px;height:20px;font-size:11px;}
-  #panel-overlay #panel-title{font-size:22px;}
+  #panel-meta #panel-title{font-size:16px;}
 }
 </style>
 </head>
@@ -371,10 +369,9 @@ body.niveau-2-actif .doyenne-mini-marker.persistente-niveau-2{display:none !impo
   <div id="panel-illustration">
     <img id="panel-img" alt="" class="hidden" />
     <div id="panel-fallback" class="hidden">Illustration à venir</div>
-    <div id="panel-overlay">
-      <div id="panel-cat"></div>
-      <h2 id="panel-title"></h2>
-    </div>
+  </div>
+  <div id="panel-meta">
+    <h2 id="panel-title"></h2>
   </div>
 </aside>
 <aside id="fiche-panel" aria-hidden="true">
@@ -753,7 +750,6 @@ function _bindPopupBtnDelegation() {
 const panel = document.getElementById('panel');
 const panelImg = document.getElementById('panel-img');
 const panelFallback = document.getElementById('panel-fallback');
-const panelCat = document.getElementById('panel-cat');
 const panelTitle = document.getElementById('panel-title');
 const panelClose = document.getElementById('panel-close');
 
@@ -768,7 +764,6 @@ function openPanel(site) {
   // restait visible derriere le panel apres clic "Ouvrir la fiche").
   if (typeof map !== 'undefined' && map.closePopup) map.closePopup();
   panelTitle.textContent = site.nom || '';
-  panelCat.textContent = site.categorie || '';
   if (site.visuel) {
     panelImg.src = resolveAssetPath(_illustrationUrl(site.visuel, 'medium'));
     panelImg.alt = site.nom || '';
