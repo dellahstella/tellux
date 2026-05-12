@@ -6944,10 +6944,13 @@ function _srFormatTooltip(s) {
     + '<br><em>' + (s.note_ui || '') + '</em>';
 }
 
-// Sprint flash V2 13 mai 2026 — autopan tooltip sr-icon via map.on
-// (le listener par-marker V1 ne se declenchait pas avec sticky:true,
-// Leaflet route les events tooltipopen vers la map). Bind ONE TIME au
-// premier _renderSitesRemarquables() via flag.
+// Sprint flash V3 13 mai 2026 — flip direction tooltip sr-icon (top<->bottom)
+// au lieu de panBy. Cause V2 inerte : map.options.maxBoundsViscosity=1.0
+// absorbait silencieusement les panBy hors-bounds de la Corse.
+// Solution : si tooltip 'top' deborde top viewport -> flip direction='bottom'
+// (tooltip sous le marker, dans viewport). Idem inverse pour bottom.
+// Mecanisme : close + reopen avec direction modifie. Flag _tlxFlipped sur
+// le tooltip pour eviter boucle infinie (close/reopen re-fire tooltipopen).
 let _srRendered = false;
 let _srAutopanBound = false;
 function _bindSrTooltipAutopan() {
@@ -6955,17 +6958,25 @@ function _bindSrTooltipAutopan() {
   _srAutopanBound = true;
   map.on('tooltipopen', (e) => {
     const tt = e.tooltip;
-    if (!tt) return;
+    if (!tt || tt._tlxFlipped) return;
     const el = tt.getElement && tt.getElement();
-    // Filtrer : ne traiter que les tooltips sr-icon (par className).
     if (!el || !el.classList || !el.classList.contains('tellux-sr-tooltip')) return;
     setTimeout(() => {
       const r = el.getBoundingClientRect();
-      console.log('[SR-AUTOPAN]', { y: r.y, bottom: r.bottom, vh: window.innerHeight });
-      if (r.y < 80) {
-        map.panBy([0, r.y - 80], { animate: true, duration: 0.3 });
-      } else if (r.bottom > window.innerHeight - 20) {
-        map.panBy([0, r.bottom - (window.innerHeight - 20)], { animate: true, duration: 0.3 });
+      const dir = tt.options.direction;
+      console.log('[SR-FLIP]', { y: r.y, bottom: r.bottom, vh: window.innerHeight, dir });
+      const overflowsTop = r.y < 10 && dir !== 'bottom';
+      const overflowsBottom = r.bottom > window.innerHeight - 10 && dir !== 'top';
+      if (overflowsTop || overflowsBottom) {
+        tt._tlxFlipped = true;
+        tt.options.direction = overflowsTop ? 'bottom' : 'top';
+        const src = tt._source;
+        if (src && src.closeTooltip && src.openTooltip) {
+          src.closeTooltip();
+          src.openTooltip();
+        }
+        // Reset flag apres re-open complete (laisse Leaflet finir).
+        setTimeout(() => { tt._tlxFlipped = false; }, 150);
       }
     }, 50);
   });
