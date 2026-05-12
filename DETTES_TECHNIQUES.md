@@ -473,6 +473,39 @@ L'architecture data Tellux post-Brief 33 split (2026-05-06+) n'est documentée n
 
 ---
 
+### PIEVE-STATUES-MENHIRS-CLEANUP-FINAL-001 — Retrait final pieve_statues_menhirs prod — RÉSOLUE
+
+**Constat (13 mai 2026)** : malgré l'archivage supposé Sprint U1, le slug `pieve_statues_menhirs` était encore dans `sites_patrimoine.json` + `sites_corse.json` en prod, avec 4 fichiers visuels actifs dans `docs/assets/visuels/`. Le slug n'a jamais représenté un site réel (résidu d'exploration toponymique abandonnée).
+
+**Cause probable** : pipeline `consolidate_sites.py` (réparé Sprint A) non re-run après l'archivage Sprint U1, OU archivage Sprint U1 incomplet (ne couvrait que la whitelist HTML, pas les JSON ni les visuels filesystem).
+
+**Action 13 mai 2026 (commit `73cfeb3`)** : retrait complet :
+- 4 visuels archivés via `git mv` vers `_drafts/visuels_archive/` (rename 100%, historique préservé : `_tellux_v2.png` + 3 webp dérivés)
+- Entrée canonical `sites_corse.json` supprimée (479 → 478 sites)
+- Entrée publié `sites_patrimoine.json` supprimée (466 → 465 sites)
+- Whitelist `ILLUSTRATED_SPOTS` HTML : pieve_statues_menhirs déjà absent (jamais promu N1), no-op
+
+**Intouché** : références `spot_ids` dans `PATRIMOINE_POLYGONS` const `patrimoine.html` (L420) — préservées pour nomenclature pievale historique (Nebbiu / nebbiu). Au runtime, le rendu se base sur `sites_patrimoine.json` async, pas sur ces métadonnées.
+
+**Statut** : **RÉSOLUE**.
+
+---
+
+### DESERT-DES-AGRIATE-DISAPPEAR-N2-001 — desert_des_agriate disparaît en N2 drill-down
+
+**Constat (13 mai 2026, audit Soleil whitelist refonte)** : `desert_des_agriate` apparaît correctement en N1 (whitelist `ILLUSTRATED_SPOTS`) mais disparaît lors du drill-down N2 du doyenné qui le contient. Bug runtime à investiguer.
+
+**Hypothèses** :
+- (a) Rattachement `doyenne_contemporain_slug` incorrect ou null (le désert des Agriate couvre plusieurs communes transcommunales : Santo-Pietro-di-Tenda, Palasca, San-Gavino-di-Tenda, Sorio, Saint-Florent — répartition entre doyennes du_cap / balagne)
+- (b) Filtre N2 trop strict (le marker est ajouté à `spotsLevel2ByDoyenne` uniquement si `SPOT_TO_DOYENNE.has(slug)`, donc absent du LayerGroup N2 si pas de doyenné inline JSON)
+- (c) Override `SPOT_DOYENNE_OVERRIDES.json` manquant ou cassé pour ce slug (seul `cap_corse_extreme_nord` y figure actuellement)
+
+**Priorité** : 2 (moyenne, impact UX visible — site emblématique Corse).
+
+**Statut** : OUVERT, investigation dans sprint séparé. Méthodologie Sprint U2 (point-in-polygon programmatique + arbitrage transcommunal) réutilisable.
+
+---
+
 ### VISUELS-A-REGENERER-FILITOSA-TOLLA-LOZARI-001 — 3 visuels patrimoine à régénérer en session DA v2
 
 **Constat (13 mai 2026, audit Soleil post-Sprint U3) :** 3 visuels patrimoine identifiés par Soleil comme à régénérer dans une session DA v2 future :
