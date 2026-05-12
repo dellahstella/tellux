@@ -491,18 +491,32 @@ L'architecture data Tellux post-Brief 33 split (2026-05-06+) n'est documentée n
 
 ---
 
-### DESERT-DES-AGRIATE-DISAPPEAR-N2-001 — desert_des_agriate disparaît en N2 drill-down
+### DESERT-DES-AGRIATE-DISAPPEAR-N2-001 — desert_des_agriate disparaît en N2 drill-down — RÉSOLUE
 
-**Constat (13 mai 2026, audit Soleil whitelist refonte)** : `desert_des_agriate` apparaît correctement en N1 (whitelist `ILLUSTRATED_SPOTS`) mais disparaît lors du drill-down N2 du doyenné qui le contient. Bug runtime à investiguer.
+**Constat (13 mai 2026, audit Soleil whitelist refonte)** : `desert_des_agriate` apparaît correctement en N1 (whitelist `ILLUSTRATED_SPOTS`) mais disparaît lors du drill-down N2 du doyenné qui le contient.
 
-**Hypothèses** :
-- (a) Rattachement `doyenne_contemporain_slug` incorrect ou null (le désert des Agriate couvre plusieurs communes transcommunales : Santo-Pietro-di-Tenda, Palasca, San-Gavino-di-Tenda, Sorio, Saint-Florent — répartition entre doyennes du_cap / balagne)
-- (b) Filtre N2 trop strict (le marker est ajouté à `spotsLevel2ByDoyenne` uniquement si `SPOT_TO_DOYENNE.has(slug)`, donc absent du LayerGroup N2 si pas de doyenné inline JSON)
-- (c) Override `SPOT_DOYENNE_OVERRIDES.json` manquant ou cassé pour ce slug (seul `cap_corse_extreme_nord` y figure actuellement)
+**Cause racine identifiée (Sprint K 13 mai 2026)** : hypothèse (b) confirmée — `doyenne_contemporain_slug` était `null` côté JSON canonical + publié, donc absent du `SPOT_TO_DOYENNE` map runtime, donc non ajouté à `spotsLevel2ByDoyenne` LayerGroup N2. Le filtre N2 strict ne fait pas de fallback point-in-polygon runtime (cf Brief 28/33 split, mapping pré-calculé Cowork).
 
-**Priorité** : 2 (moyenne, impact UX visible — site emblématique Corse).
+**Résolution (Sprint K commit `9422dc3`)** : rattachement programmatique via point-in-polygon des 48 orphelins Phase 1. `desert_des_agriate` (42.68, 9.10) → unique match `doyenne_du_golo` → `doyenne_contemporain_slug` rempli dans les 2 JSON. Désormais visible en drill-down doyenne_du_golo.
 
-**Statut** : OUVERT, investigation dans sprint séparé. Méthodologie Sprint U2 (point-in-polygon programmatique + arbitrage transcommunal) réutilisable.
+**Effet collateral positif** : 47 autres sites Phase 1 dans la même situation rattachés en même temps (aiguilles_de_bavella, vizzavona, gorges_du_tavignano, etc.). Volumétrie sites Phase 1 sans doyenne_contemporain_slug : 48 → ~0.
+
+**Statut** : **RÉSOLUE**.
+
+---
+
+### PONT-ZIPPITOLI-DISPARU-DESCRIPTION-001 — Pont de Zippitoli disparu 2023, description marker à enrichir
+
+**Constat (13 mai 2026, Sprint K)** : le site `pont_de_zippitoli_disparu_2023` (commune Zigliara, vallée du Taravo, doyenne_prunelli_taravo_valinco) est un pont génois disparu en 2023 (crue ou démolition probable selon le slug). Rattaché doyenne_prunelli_taravo_valinco via point-in-polygon Sprint K, mais sa description marker actuelle ne mentionne pas le statut "disparu".
+
+**Action requise** : au prochain pass éditorial sur les descriptions patrimoine, enrichir la description avec :
+- Statut "disparu en 2023"
+- Contexte historique (pont génois, vallée du Taravo)
+- Éventuelle source / photo d'archive si disponible
+
+**Priorité** : 3 (basse). Pas bloquant, donnée géolocalisée valable comme repère historique.
+
+**Statut** : OUVERT.
 
 ---
 
