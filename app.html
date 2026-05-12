@@ -615,6 +615,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-sites-remarq{background:#faf2e3!important;color:#8A5E22!important;border-color:#C28533!important;font-weight:500;}
 .leaflet-tooltip.tellux-sr-tooltip{
   max-width:300px;
+  max-height:60vh;
+  overflow-y:auto;
   white-space:normal;
   line-height:1.4;
   font-size:12px;
@@ -6955,6 +6957,22 @@ function _renderSitesRemarquables() {
     });
     L.marker([s.lat, s.lon], { icon })
       .bindTooltip(_srFormatTooltip(s), { sticky: true, direction: 'top', className: 'tellux-sr-tooltip', maxWidth: 300 })
+      .on('tooltipopen', (e) => {
+        // Sprint flash 13 mai 2026 — fix overflow viewport tooltip sr-icon.
+        // Bug observe : Anneaux du Cap Corse (lat 43.17) tooltip s'affichait
+        // a y=-203 (hors viewport top). Autopan-like : detecter debordement
+        // et panBy la map. Setimeout 50ms pour laisser Leaflet finir le DOM.
+        setTimeout(() => {
+          const el = e.tooltip && e.tooltip.getElement && e.tooltip.getElement();
+          if (!el) return;
+          const r = el.getBoundingClientRect();
+          if (r.y < 80) {
+            map.panBy([0, r.y - 80], { animate: true });
+          } else if (r.bottom > window.innerHeight - 20) {
+            map.panBy([0, r.bottom - (window.innerHeight - 20)], { animate: true });
+          }
+        }, 50);
+      })
       .addTo(lSitesRemarq);
   });
 }
