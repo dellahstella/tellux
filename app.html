@@ -4646,7 +4646,17 @@ map.on('click',async e=>{
   // Sprint app-ui-polish (mai 2026) \u2014 Item 3 : autoPan force Leaflet a recentrer
   // la carte pour garder le popup dans le viewport. autoPanPaddingTopLeft reserve
   // de la place pour le header tlx en haut (80px) et marge gauche (20px).
-  const calcPopup=L.popup({closeButton:true,className:'delta-popup',autoPan:true,autoPanPaddingTopLeft:[20,80],autoPanPaddingBottomRight:[20,20]})
+  // Sprint flash (mai 2026, edge case Item 3) \u2014 anchor adaptatif : si clic
+  // proche du top (containerPoint.y < 150), le popup s'ouvre EN DESSOUS du
+  // point (offset Y positif) au lieu d'au-dessus (defaut Leaflet). Resout
+  // l'edge case ou panBy fallback etait insuffisant (cap\u00e9 par bounds Leaflet
+  // sud-est Corse).
+  const containerPoint = map.latLngToContainerPoint(e.latlng);
+  const mapHeight = map.getContainer().getBoundingClientRect().height;
+  const isNearTop = containerPoint.y < 150;
+  const popupOffset = isNearTop ? L.point(0, 80) : L.point(0, -10);
+  // autoPanPaddingBottomRight 100px : barre conditions ~80px collapsed + marge.
+  const calcPopup=L.popup({closeButton:true,className:'delta-popup',autoPan:true,keepInView:true,autoPanPaddingTopLeft:L.point(20,80),autoPanPaddingBottomRight:L.point(20,100),offset:popupOffset})
     .setLatLng(e.latlng).setContent('<span style="font-size:12px">\u23f3 calcul\u2026</span>').openOn(map);
   const igrf=fetchIGRF(lat,lng);
   // Resolution commune officielle (decret radon 2018-434) + altitude IGN RGE Alti
