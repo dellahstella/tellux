@@ -647,6 +647,12 @@ sitesReady.catch(function(err) { console.error('[Tellux Patrimoine] boot error:'
 
 // Popup builder
 function openPopup(marker, site) {
+  console.log('[CLICK-DBG] 2/openPopup', {
+    n: window._tlxClickCount,
+    slug: site.slug,
+    hasPopup: !!marker.getPopup(),
+    onMap: !!marker._map,
+  });
   const visualPath = site.visuel ? resolveAssetPath(_illustrationUrl(site.visuel, 'medium')) : '';
   const imgHtml = visualPath
     ? `<img loading="lazy" class="tlx-popup-img" src="${visualPath}" alt="${escapeHtml(site.nom)}" onerror="this.outerHTML='<div class=\\'tlx-popup-img fallback\\'>Visuel à venir</div>'">`
@@ -679,6 +685,14 @@ function openPopup(marker, site) {
   if (marker.getPopup()) marker.setPopupContent(html);
   else marker.bindPopup(html, {maxWidth:240, autoPan:true, closeButton:false});
   marker.openPopup();
+  const _pop = marker.getPopup();
+  console.log('[CLICK-DBG] 3/post-openPopup', {
+    n: window._tlxClickCount,
+    slug: site.slug,
+    popupIsOpen: _pop && _pop.isOpen && _pop.isOpen(),
+    popupHasContainer: !!(_pop && _pop._container),
+    popupContainerInDom: !!(_pop && _pop._container && document.body.contains(_pop._container)),
+  });
   // Brief 41 fix #3 — bind click via délégation événementielle plutôt que
   // setTimeout(50) qui était fragile (clic utilisateur dans les 50 premières
   // ms manquait son handler). _bindPopupBtnDelegation est idempotent : un
@@ -693,9 +707,20 @@ function _bindPopupBtnDelegation() {
   if (_tlxPopupDelegationBound) return;
   _tlxPopupDelegationBound = true;
   document.addEventListener('click', (e) => {
-    const closeBtn = e.target.closest('.tlx-popup-close');
+    const _matchClose = e.target.closest('.tlx-popup-close');
+    const _matchBtn = e.target.closest('.tlx-popup-btn');
+    const _matchImg = e.target.closest('.tlx-popup .tlx-popup-img');
+    if (_matchClose || _matchBtn || _matchImg) {
+      console.log('[CLICK-DBG] 4/popupDelegation', {
+        n: window._tlxClickCount,
+        match: _matchClose ? 'close' : (_matchBtn ? 'btn' : 'img'),
+        panelOpen: panel.classList.contains('open'),
+        targetClass: e.target.className,
+      });
+    }
+    const closeBtn = _matchClose;
     if (closeBtn) { e.stopPropagation(); map.closePopup(); return; }
-    const btn = e.target.closest('.tlx-popup-btn');
+    const btn = _matchBtn;
     if (btn) {
       e.stopPropagation();
       const slug = btn.getAttribute('data-slug');
@@ -706,7 +731,7 @@ function _bindPopupBtnDelegation() {
     }
     // Click sur image popup ouvre aussi le panel — uniquement si on est dans
     // un .tlx-popup (pas dans un autre img du DOM).
-    const img = e.target.closest('.tlx-popup .tlx-popup-img');
+    const img = _matchImg;
     if (img) {
       e.stopPropagation();
       // Récupérer le slug via le sibling .tlx-popup-btn dans la même popup.
@@ -731,6 +756,11 @@ const panelTitle = document.getElementById('panel-title');
 const panelClose = document.getElementById('panel-close');
 
 function openPanel(site) {
+  console.log('[CLICK-DBG] 5a/openPanel-entry', {
+    n: window._tlxClickCount,
+    slug: site && site.slug,
+    panelOpenBefore: panel.classList.contains('open'),
+  });
   // Brief 24 (B23-UX-038) — fermer toute popup map ouverte avant d'ouvrir
   // le panel pour eviter superposition residuelle (popup spot/doyenne qui
   // restait visible derriere le panel apres clic "Ouvrir la fiche").
@@ -753,6 +783,11 @@ function openPanel(site) {
   }
   panel.classList.add('open');
   panel.setAttribute('aria-hidden', 'false');
+  console.log('[CLICK-DBG] 5b/openPanel-exit', {
+    n: window._tlxClickCount,
+    slug: site && site.slug,
+    panelOpenAfter: panel.classList.contains('open'),
+  });
 
   // Brief 31 — carte postale flippable si fiche v3 disponible pour ce slug.
   _deactivateCartePostale();
@@ -771,6 +806,10 @@ function openPanel(site) {
 }
 
 function closePanel() {
+  console.log('[CLICK-DBG] 6/closePanel', {
+    n: window._tlxClickCount,
+    stack: (new Error()).stack.split('\n').slice(1, 4).join(' | '),
+  });
   panel.classList.remove('open');
   panel.setAttribute('aria-hidden', 'true');
   // Brief 31 — nettoyage carte postale a la fermeture du panel.
@@ -1570,7 +1609,16 @@ function updateBreadcrumb() {
 }
 
 // === Click handler spot (marker) — alimente breadcrumb avec chaîne complète ===
+// [CLICK-DBG] compteur global pour distinguer 1er / 2e / Ne clic dans une session.
+window._tlxClickCount = window._tlxClickCount || 0;
 function onSpotClick(marker, site, ev) {
+  window._tlxClickCount++;
+  console.log('[CLICK-DBG] 1/onSpotClick', {
+    n: window._tlxClickCount,
+    slug: site.slug,
+    evTarget: ev && ev.originalEvent && ev.originalEvent.target && ev.originalEvent.target.className,
+    panelOpen: panel.classList.contains('open'),
+  });
   if (ev) L.DomEvent.stopPropagation(ev);
   if (document.body.classList.contains('niveau-2')) {
     const doy = SPOT_TO_DOYENNE.get(site.slug);
