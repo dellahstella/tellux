@@ -603,7 +603,10 @@ function initSiteMarkers() {
       iconSize: isPriority ? [18,18] : [14,14],
       iconAnchor: isPriority ? [9,9] : [7,7],
     });
-    const marker = L.marker([site.lat, site.lon], {icon, title: site.nom, zIndexOffset: 1000});
+    // bubblingMouseEvents:false évite que le clic marker ne propage au map,
+    // ce qui déclencherait closePopupOnClick (défaut Leaflet true) et fermerait
+    // la popup juste ouverte (bug 2e clic, diagnostic CLICK-DBG 13 mai 2026).
+    const marker = L.marker([site.lat, site.lon], {icon, title: site.nom, zIndexOffset: 1000, bubblingMouseEvents: false});
     marker.on('click', (ev) => onSpotClick(marker, site, ev));
     markersBySlug[site.slug] = {marker, site};
 
