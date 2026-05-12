@@ -387,6 +387,33 @@ body.niveau-2-actif .doyenne-mini-marker.persistente-niveau-2{display:none !impo
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
+// === Bug 2e clic patrimoine V4 (13 mai 2026) — instrumentation traceur ===
+// Diagnostic Claude web : marker.getPopup() retourne null entre 1er et 2e clic.
+// Or aucun unbindPopup explicite dans le code. Cause = appel implicite via
+// destruction popup / removeLayer / autre. Patcher prototype Leaflet pour
+// tracer TOUS les appels unbindPopup / bindPopup avec stack du caller.
+// Cleanup quand bug fix confirmé.
+(function _tlxPopupTrace() {
+  if (typeof L === 'undefined' || !L.Marker || !L.Marker.prototype) return;
+  const origUnbind = L.Marker.prototype.unbindPopup;
+  L.Marker.prototype.unbindPopup = function() {
+    console.log('[UNBIND-TRACE] marker.unbindPopup', {
+      n: window._tlxClickCount || 0,
+      hadPopup: !!this._popup,
+      stack: (new Error()).stack.split('\n').slice(1, 6).join(' | '),
+    });
+    return origUnbind.apply(this, arguments);
+  };
+  const origBind = L.Marker.prototype.bindPopup;
+  L.Marker.prototype.bindPopup = function() {
+    console.log('[BIND-TRACE] marker.bindPopup', {
+      n: window._tlxClickCount || 0,
+      stack: (new Error()).stack.split('\n').slice(1, 6).join(' | '),
+    });
+    return origBind.apply(this, arguments);
+  };
+})();
+
 // Données 124 sites patrimoine (manifest généré par .tmp_build_patrimoine.py)
 
 // Données polygones diocèses + pieves (manifest généré).
@@ -659,6 +686,7 @@ function openPopup(marker, site) {
     slug: site.slug,
     hasPopup: !!marker.getPopup(),
     onMap: !!marker._map,
+    popupIsBound: marker._popup === marker.getPopup(),
   });
   const visualPath = site.visuel ? resolveAssetPath(_illustrationUrl(site.visuel, 'medium')) : '';
   const imgHtml = visualPath
