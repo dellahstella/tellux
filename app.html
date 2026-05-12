@@ -6944,10 +6944,36 @@ function _srFormatTooltip(s) {
     + '<br><em>' + (s.note_ui || '') + '</em>';
 }
 
+// Sprint flash V2 13 mai 2026 — autopan tooltip sr-icon via map.on
+// (le listener par-marker V1 ne se declenchait pas avec sticky:true,
+// Leaflet route les events tooltipopen vers la map). Bind ONE TIME au
+// premier _renderSitesRemarquables() via flag.
 let _srRendered = false;
+let _srAutopanBound = false;
+function _bindSrTooltipAutopan() {
+  if (_srAutopanBound) return;
+  _srAutopanBound = true;
+  map.on('tooltipopen', (e) => {
+    const tt = e.tooltip;
+    if (!tt) return;
+    const el = tt.getElement && tt.getElement();
+    // Filtrer : ne traiter que les tooltips sr-icon (par className).
+    if (!el || !el.classList || !el.classList.contains('tellux-sr-tooltip')) return;
+    setTimeout(() => {
+      const r = el.getBoundingClientRect();
+      console.log('[SR-AUTOPAN]', { y: r.y, bottom: r.bottom, vh: window.innerHeight });
+      if (r.y < 80) {
+        map.panBy([0, r.y - 80], { animate: true, duration: 0.3 });
+      } else if (r.bottom > window.innerHeight - 20) {
+        map.panBy([0, r.bottom - (window.innerHeight - 20)], { animate: true, duration: 0.3 });
+      }
+    }, 50);
+  });
+}
 function _renderSitesRemarquables() {
   if (_srRendered) return;
   _srRendered = true;
+  _bindSrTooltipAutopan();
   (SITES_REMARQUABLES || []).forEach(s => {
     const icon = L.divIcon({
       className: 'sr-icon',
@@ -6957,22 +6983,6 @@ function _renderSitesRemarquables() {
     });
     L.marker([s.lat, s.lon], { icon })
       .bindTooltip(_srFormatTooltip(s), { sticky: true, direction: 'top', className: 'tellux-sr-tooltip', maxWidth: 300 })
-      .on('tooltipopen', (e) => {
-        // Sprint flash 13 mai 2026 — fix overflow viewport tooltip sr-icon.
-        // Bug observe : Anneaux du Cap Corse (lat 43.17) tooltip s'affichait
-        // a y=-203 (hors viewport top). Autopan-like : detecter debordement
-        // et panBy la map. Setimeout 50ms pour laisser Leaflet finir le DOM.
-        setTimeout(() => {
-          const el = e.tooltip && e.tooltip.getElement && e.tooltip.getElement();
-          if (!el) return;
-          const r = el.getBoundingClientRect();
-          if (r.y < 80) {
-            map.panBy([0, r.y - 80], { animate: true });
-          } else if (r.bottom > window.innerHeight - 20) {
-            map.panBy([0, r.bottom - (window.innerHeight - 20)], { animate: true });
-          }
-        }, 50);
-      })
       .addTo(lSitesRemarq);
   });
 }
