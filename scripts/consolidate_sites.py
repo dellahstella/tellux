@@ -4,15 +4,79 @@
 Pipeline de consolidation Tellux — sites_corse_v1.json
 Brief Cowork 2026-05-06.
 Lit les sources, normalise, dédoublonne, applique mappings, écrit livrables.
+
+═══════════════════════════════════════════════════════════════════════════
+⚠️  DEPRECATED 2026-05-12 ⚠️
+
+Ce script est OBSOLÈTE et ne doit PAS être exécuté :
+
+1. Paths hardcodés sandbox (`/sessions/busy-awesome-mayer/mnt/Tellux`)
+   non applicables en local. Refactor vers paths relatifs jamais fait.
+
+2. Sources d'entrée non versionnées dans le repo public :
+   - `outputs/churches_dump.json` (Supabase dump)
+   - `outputs/patrimoine_dump.json` (Supabase dump)
+   Le pipeline ne peut donc pas être re-exécuté depuis le repo.
+
+3. Sortie `_drafts/sites_corse_v1.json` jamais consommée en runtime —
+   `sites_patrimoine.json` est désormais la SOURCE CANON runtime
+   (édité directement via briefs ciblés + scripts/brief_pipeline.py).
+
+4. `sites_corse.json` lui-même est DEPRECATED depuis 2026-05-06
+   (Brief 33 split) avec target suppression 2026-06-05. Voir header
+   `_DEPRECATED` ligne 2 du fichier JSON.
+
+═══════════════════════════════════════════════════════════════════════════
+Architecture data Tellux (post-Brief 33 split, 2026-05-06+) :
+
+  - **`docs/data/sites_patrimoine.json`** = SOURCE CANON runtime
+    (consommé par patrimoine.html, édité via briefs ciblés)
+
+  - **`docs/data/sites_em.json`** = dérivé EM (consommé par app.html
+    layer `sitesRemarq`), synchronisé depuis Patrimoine via
+    `scripts/sync_cross_app.py --apply`
+
+  - **`docs/data/sites_corse.json`** = DEPRECATED, à supprimer 2026-06-05
+
+  - **`scripts/sync_cross_app.py`** = OUTIL ACTIF pour propager
+    coords/locks/rattachements depuis Patrimoine vers EM. Fonctionne
+    localement (paths relatifs via `Path(__file__).resolve().parent.parent`).
+
+  - **`scripts/brief_pipeline.py`** = OUTIL ACTIF pour patcher
+    `sites_patrimoine.json` depuis un brief markdown (corrections GPS,
+    ajouts de sites, etc.).
+═══════════════════════════════════════════════════════════════════════════
+
+Pour ne pas casser d'éventuelles références externes au script, le code
+ci-dessous est conservé en l'état. Mais l'execution lève une erreur
+explicite si lancée. Pour reconstruire la consolidation à partir de
+zéro (cas exceptionnel) : refactor complet requis avec paths relatifs
+et sources versionnées.
 """
-import json, re, math, unicodedata, os, sys
+import sys
+
+if __name__ == '__main__':
+    print(
+        '\n[DEPRECATED 2026-05-12] consolidate_sites.py ne doit pas etre execute.\n'
+        'Voir docstring en tete de fichier pour l\'architecture data actuelle.\n'
+        'Outils actifs : scripts/sync_cross_app.py (EM <- Patrimoine) et\n'
+        'scripts/brief_pipeline.py (patches Patrimoine depuis brief markdown).\n',
+        file=sys.stderr,
+    )
+    sys.exit(2)
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CODE HISTORIQUE CONSERVE POUR REFERENCE
+# Ne PAS modifier ni executer. Cf. docstring ci-dessus.
+# ═══════════════════════════════════════════════════════════════════════════
+
+import json, re, math, unicodedata, os
 from datetime import date, datetime
 from collections import Counter, defaultdict
 
-# ---------- Chemins ----------
+# ---------- Chemins (HARDCODES SANDBOX, INEXECUTABLES) ----------
 ROOT = '/sessions/busy-awesome-mayer/mnt/Tellux'
 OUT_DIR = '/sessions/busy-awesome-mayer/mnt/Tellux/_drafts'
-os.makedirs(OUT_DIR, exist_ok=True)
 TODAY = date.today().isoformat()  # ISO YYYY-MM-DD
 
 # ---------- Outputs des sources Supabase pré-extraites (sur disque) ----------
