@@ -505,6 +505,22 @@ L'architecture data Tellux post-Brief 33 split (2026-05-06+) n'est documentée n
 
 ---
 
+### SITES-GEOPHYS-TOOLTIP-OVERFLOW-001 — Tooltip sr-icon débordait viewport — RÉSOLUE
+
+**Constat (13 mai 2026, diagnostic Soleil live)** : la couche "sites géophysiques remarquables" de `app.html` utilise `bindTooltip` (non `bindPopup`) avec classe `tellux-sr-tooltip` sur 48 markers `sr-icon`. Au clic sur un marker en bord de carte (ex. `Anneaux du Cap Corse` lat 43.17 en haut), le tooltip s'affichait à `y=-203` (totalement hors viewport top). Tooltip étroit (~120px) et long (~350px) en format colonne sur certains viewports, sans bouton close ni autopan.
+
+**Origine** : fix Sprint app-ui-polish ne couvrait que `delta-popup` (calc Tellux), pas les tooltips géophys. Le diagnostic Code de l'époque ("sr-icon utilise bindTooltip, pas bindPopup → pas de popup à refactorer") était techniquement vrai mais incomplet.
+
+**Résolution (Sprint flash 13 mai 2026, commit `11981cd`)** : Option A retenue (fix minimal CSS + autopan listener) :
+- CSS `.tellux-sr-tooltip` enrichi : `max-height: 60vh; overflow-y: auto;` (en plus du `max-width: 300px; white-space: normal` déjà présents). Empêche tooltip très long de déborder verticalement.
+- JS listener `tooltipopen` ajouté sur chaque sr-icon marker : `setTimeout 50ms` puis `getBoundingClientRect`, si `r.y < 80` → `map.panBy([0, r.y - 80])` (pan vers le sud), si `r.bottom > viewport-20` → pan vers le nord. Mimique autoPanPadding de Leaflet bindPopup.
+
+**Effet** : tous les markers sr-icon désormais lisibles quelle que soit leur position viewport, y compris bord nord (Anneaux Cap), bord sud (Bonifacio), bord ouest/est. Pas de régression sur autres couches (delta-popup, postes, points chauds, etc.).
+
+**Statut** : **RÉSOLUE**.
+
+---
+
 ### PONT-ZIPPITOLI-DISPARU-DESCRIPTION-001 — Pont de Zippitoli disparu 2023, description marker à enrichir
 
 **Constat (13 mai 2026, Sprint K)** : le site `pont_de_zippitoli_disparu_2023` (commune Zigliara, vallée du Taravo, doyenne_prunelli_taravo_valinco) est un pont génois disparu en 2023 (crue ou démolition probable selon le slug). Rattaché doyenne_prunelli_taravo_valinco via point-in-polygon Sprint K, mais sa description marker actuelle ne mentionne pas le statut "disparu".
