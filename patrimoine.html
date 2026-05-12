@@ -469,7 +469,12 @@ const map = L.map('map', {
   center: [42.15, 9.10],
   zoom: 9,
   zoomControl: false,
-  attributionControl: false
+  attributionControl: false,
+  // Bug 2e clic patrimoine (13 mai 2026) : Leaflet ferme automatiquement
+  // les popups au clic map (defaut closePopupOnClick:true). Le clic marker
+  // propage vers le map handler malgre bubblingMouseEvents:false, fermant
+  // la popup juste ouverte. Desactiver explicitement.
+  closePopupOnClick: false
 });
 L.control.zoom({position: 'bottomleft'}).addTo(map);
 L.control.attribution({prefix:'<a href="https://leafletjs.com/">Leaflet</a> · Tellux Patrimoine v0'}).addTo(map);
@@ -1619,7 +1624,13 @@ function onSpotClick(marker, site, ev) {
     evTarget: ev && ev.originalEvent && ev.originalEvent.target && ev.originalEvent.target.className,
     panelOpen: panel.classList.contains('open'),
   });
-  if (ev) L.DomEvent.stopPropagation(ev);
+  if (ev) {
+    L.DomEvent.stopPropagation(ev);
+    // Bug 2e clic (13 mai 2026) : stopper aussi la propagation DOM
+    // (ev.originalEvent) car L.DomEvent.stopPropagation sur l'event Leaflet
+    // ne stoppe pas systematiquement le bubble vers le map handler.
+    if (ev.originalEvent) L.DomEvent.stopPropagation(ev.originalEvent);
+  }
   if (document.body.classList.contains('niveau-2')) {
     const doy = SPOT_TO_DOYENNE.get(site.slug);
     const pv  = SPOT_TO_PIEVE_V2.get(site.slug);
