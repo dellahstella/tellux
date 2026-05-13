@@ -6944,47 +6944,17 @@ function _srFormatTooltip(s) {
     + '<br><em>' + (s.note_ui || '') + '</em>';
 }
 
-// Sprint flash V3 13 mai 2026 — flip direction tooltip sr-icon (top<->bottom)
-// au lieu de panBy. Cause V2 inerte : map.options.maxBoundsViscosity=1.0
-// absorbait silencieusement les panBy hors-bounds de la Corse.
-// Solution : si tooltip 'top' deborde top viewport -> flip direction='bottom'
-// (tooltip sous le marker, dans viewport). Idem inverse pour bottom.
-// Mecanisme : close + reopen avec direction modifie. Flag _tlxFlipped sur
-// le tooltip pour eviter boucle infinie (close/reopen re-fire tooltipopen).
+// Sprint flash V4 13 mai 2026 — direction tooltip choisie au moment du clic
+// selon position du marker dans le viewport. V2 (panBy) et V3 (flip via
+// tooltipopen) inertes : maxBoundsViscosity=1.0 absorbait panBy, flip via
+// close+reopen post-open faisait flicker sans repositionner correctement.
+// Approche V4 : intercepter le click marker AVANT openTooltip, calculer
+// la direction adaptee via latLngToContainerPoint, re-bind tooltip si
+// direction differente. Marker dans moitie haute viewport -> 'bottom'.
 let _srRendered = false;
-let _srAutopanBound = false;
-function _bindSrTooltipAutopan() {
-  if (_srAutopanBound) return;
-  _srAutopanBound = true;
-  map.on('tooltipopen', (e) => {
-    const tt = e.tooltip;
-    if (!tt || tt._tlxFlipped) return;
-    const el = tt.getElement && tt.getElement();
-    if (!el || !el.classList || !el.classList.contains('tellux-sr-tooltip')) return;
-    setTimeout(() => {
-      const r = el.getBoundingClientRect();
-      const dir = tt.options.direction;
-      console.log('[SR-FLIP]', { y: r.y, bottom: r.bottom, vh: window.innerHeight, dir });
-      const overflowsTop = r.y < 10 && dir !== 'bottom';
-      const overflowsBottom = r.bottom > window.innerHeight - 10 && dir !== 'top';
-      if (overflowsTop || overflowsBottom) {
-        tt._tlxFlipped = true;
-        tt.options.direction = overflowsTop ? 'bottom' : 'top';
-        const src = tt._source;
-        if (src && src.closeTooltip && src.openTooltip) {
-          src.closeTooltip();
-          src.openTooltip();
-        }
-        // Reset flag apres re-open complete (laisse Leaflet finir).
-        setTimeout(() => { tt._tlxFlipped = false; }, 150);
-      }
-    }, 50);
-  });
-}
 function _renderSitesRemarquables() {
   if (_srRendered) return;
   _srRendered = true;
-  _bindSrTooltipAutopan();
   (SITES_REMARQUABLES || []).forEach(s => {
     const icon = L.divIcon({
       className: 'sr-icon',
@@ -6992,9 +6962,35 @@ function _renderSitesRemarquables() {
       iconSize: [18, 18],
       iconAnchor: [9, 9]
     });
-    L.marker([s.lat, s.lon], { icon })
-      .bindTooltip(_srFormatTooltip(s), { sticky: true, direction: 'top', className: 'tellux-sr-tooltip', maxWidth: 300 })
-      .addTo(lSitesRemarq);
+    const marker = L.marker([s.lat, s.lon], { icon });
+    marker.bindTooltip(_srFormatTooltip(s), {
+      sticky: false,
+      direction: 'top',
+      className: 'tellux-sr-tooltip',
+      maxWidth: 300,
+      offset: [0, -10]
+    });
+    marker.on('click', function () {
+      const cp = map.latLngToContainerPoint(this.getLatLng());
+      const vh = map._container.clientHeight;
+      const direction = (cp.y < vh / 2) ? 'bottom' : 'top';
+      const tt = this.getTooltip();
+      console.log('[SR-DIR]', { slug: s.slug, cpy: cp.y, vh, direction, current: tt && tt.options.direction });
+      if (tt && tt.options.direction !== direction) {
+        const content = tt.getContent();
+        this.closeTooltip();
+        this.unbindTooltip();
+        this.bindTooltip(content, {
+          className: 'tellux-sr-tooltip',
+          direction,
+          offset: direction === 'bottom' ? [0, 10] : [0, -10],
+          sticky: false,
+          maxWidth: 300
+        });
+        this.openTooltip();
+      }
+    });
+    marker.addTo(lSitesRemarq);
   });
 }
 
