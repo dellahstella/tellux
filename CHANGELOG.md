@@ -7,6 +7,83 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Non publié] — Sprint 2 mégalithes + consolidation dettes (13 mai 2026)
+
+### data — Sprint 2 Phase B mégalithes (PR #538)
+
+- `docs/data/sites_patrimoine.json` : +7 entrées mégalithes + 5 enrichissements existants
+  - **Phase 1 (4)** : `tola_di_u_turmentu` (Serra-di-Ferro), `renicciu_coggia` (Coggia), `paomia_i` (Cargèse), `tivulaghju_porto_vecchio` (Porto-Vecchio, Tramoni 2007)
+  - **Phase 2 latent (3)** : `casalabriva_contra_maio`, `tremica_casaglione`, `vasculaghju` (centroid commune, `gps_status: centroid_a_preciser`)
+  - **Enrichissements** : `palaggiu` (MH PA00099118 + Grosjean BSPF 1972), `statue_menhir_santa_naria` (commune + dimensions + GPS T4T35 secondaire), `tivulaggio_alignement` (commune complétée), `capu_di_logu` (MH PA00099074 + Giraux, anti-doublon A1), `casa_di_l_orca` (Leandri 2012 + PA2B000037 + Wikidata Q17539593, alias Monte Revincu complexe A2)
+- Mégalithes total : 63 → 70 (P1=67, P2 latent=3)
+- Sites total : 465 → 472
+- Anomalies Phase A redressées : A1 (`capu_di_logu` était déjà à Belvédère-Campomoro, pas Bonifacio — doublon évité) et A2 (slug `monte_revincu` déjà pris par sommet géologique, axe `remarquables_geologiques` — `casa_di_l_orca` enrichi à la place)
+
+### docs — Consolidation dettes session 13 mai 2026 (PR docs séparée)
+
+- 5 nouvelles dettes : `SITES-EM-JSON-UNTERMINATED-STRING-001`, `SITES-REFERENCE-JSON-DEPRECATION-001`, `REMARQUABLES-GEOLOGIQUES-DRIFT-001`, `SITES-PATRIMOINE-INSEE-BELVEDERE-CAMPOMORO-001` (A3), `CORPUS-META-AXES-INCOMPLET-001` (A4)
+- 1 fermeture par invalidation : `SITES-PATRIMOINE-JSON-L13034-001` (audit Code H1 — fichier dev/main JSON valide, cause réelle = sandbox Cowork stale, pattern `OPS-COWORK-SANDBOX-GIT-DRIFT-001`)
+- Rappel des 3 dettes ajoutées plus tôt dans la même journée : `OPS-COWORK-SANDBOX-GIT-DRIFT-001`, `SITES-PATRIMOINE-JSON-L13034-001` (immédiatement fermée ci-dessus), `CLEANUP-PATRIMOINE-INSTRUMENTATION-001`
+
+### Cibles non atteintes (notées en dette)
+
+- Cible brief Cowork de 72 mégalithes (Sprint 2) → réalisé 70 sans doublons (A1 + A2 redressés)
+- Iconographie : les 7 nouvelles entrées P1 + P2 latent n'ont pas de champ `visuel` rempli (sprint dédié à programmer, mêmes verrous que Sprint 1)
+
+---
+
+## [Non publié] — Sprint 1 patrimoine (13 mai 2026, PRs #536 + #537)
+
+### data
+
+- `docs/data/sites_patrimoine.json` : 54 églises romanes activées Phase 2 → Phase 1 sur l'axe `edifices_romans`
+- Axe `edifices_romans` Phase 1 : 27 → 81 entrées (+54)
+- Distribution 8-10 par doyenné contemporain (vs précédente : max 5, min 0)
+- Zone blanche `doyenne_ajaccio` comblée : 0 → 9 P1
+- Critère C3 hybride appliqué : 44 MH classés/inscrits + 10 complément éditorial qualité
+- Q2 Bonifacio diversifié : 2 MH gardés, 2 substituts (Porto-Vecchio + Sartène)
+
+### chore
+
+- Restauration de la troncation L.13034 introduite par un bug outil Cowork pendant le commit (entrée `plateau_du_coscione_tellux_v2`, déjà P1, restaurée à l'identique depuis HEAD)
+
+---
+
+## [Non publié] — Consolidation sites EM (13 mai 2026, PRs #529 + #530 + #531)
+
+### data — M1
+
+- Création de `public/data/sites_app.json` (61 sites EM/UTH/thermales consolidés et typés)
+- `gps_audit` obligatoire sur 61/61 entrées
+- 3 sources auditées (`sites_em`, `points_chauds_radio`, `sites_remarquables`)
+- Corrections Soleil-signalées : `ophi_farinole`, `surv_bonifacio`, `Pietrapola`, `Caldane` (commune corrigée Sainte-Lucie-de-Tallano)
+- Suppression de l'entrée fantôme "Lac thermal de Tora" (typo historique Tolla, source inexistante)
+
+### refactor — M2
+
+- `app.html` consomme `sites_app.json` via `loadSitesApp()` (thin wrappers), suppression des 3 sources séparées en frontend
+
+### chore — M3
+
+- Suppression des 3 JSONs obsolètes (`sites_em.json`, `points_chauds_radio_corse.json`, `sites_remarquables_corse.json`)
+- Code mort `app.html` retiré (`adaptSiteRemarquable`, `mapSRGranulaire`, `_srLoadPromise`, commentaires orphelins Brief 29/33, ~70 lignes)
+- Scripts Python adaptés à `sites_app.json` (`sync_cross_app.py`, `corpus_health_check.py`, `brief_pipeline.py`, `tools/build_sites_app.py`)
+- ~74 KB de redondance dataset supprimés
+
+---
+
+## [Non publié] — Fix bug 2e clic patrimoine (13 mai 2026, PR #532)
+
+### Fixed
+
+- `patrimoine.html` : Leaflet `bindPopup()` attache automatiquement un handler `click: _openPopup` (toggle) sur le marker, qui se déclenche au 2e clic APRÈS `marker.openPopup()` piloté par `onSpotClick` et referme la popup immédiatement. Fix : `marker.off('click', marker._openPopup, marker)` après chaque `bindPopup`. Le 2e clic sur un marker patrimoine rouvre désormais sa fiche au lieu de la fermer
+
+### Notes
+
+- Instrumentation `[CLICK-DBG]` / `[BIND-TRACE]` / `[UNBIND-TRACE]` (~30 lignes) laissée en place pour observabilité (dette `CLEANUP-PATRIMOINE-INSTRUMENTATION-001` programmée 5-7 jours post-merge)
+
+---
+
 ## [2.10.4] — 2026-05-01
 
 ### Changed — Alignement canonique sprint U (PR à venir, sprint `chore/glossaire-canonical-alignment`)
