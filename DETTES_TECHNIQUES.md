@@ -777,6 +777,42 @@ Worktree associée `brave-poincare-28cbc7` supprimée 11 mai 2026 (detached HEAD
 
 ---
 
+### GPS-AUDIT-BRGM-001 — Indices uranium Cortenais/Venaco — coord BRGM non publiques
+
+**Description :** L'entrée `uth_cortenais_venaco` (slug app `CORTENAIS_VENACO`) de `points_chauds_radio_corse.json` repose sur le rapport BRGM 1979 (`79-RDM-070-FE`, « Les minéralisations intragranitiques de la Corse »), qui décrit des indices d'autunite et torbernite (phosphates secondaires d'uranium) dans des filons hydrothermaux du Cortenais sans publier de coordonnées GPS précises. La coordonnée actuelle 42.29/9.152 (precision_coord `communal`) est un centroïde géographique cohérent entre Corte et Venaco, validée en clôture M1 (2026-05-13) faute de meilleure source publique.
+
+**Priorité :** Basse
+
+**Condition de déblocage :** Audit dédié BRGM InfoTerre (portail public `infoterre.brgm.fr`) pour récupérer les coordonnées précises des indices d'autunite/torbernite, ou consultation du rapport `79-RDM-070-FE` archivé. Mise à jour de l'entrée `uth_cortenais_venaco` de `public/data/sites_app.json` (lat/lon + `gps_source` + `gps_audit` + éventuellement `precision_coord` → `ponctuel`).
+
+**Identifiée :** clôture M1 sites_app.json (2026-05-13).
+
+---
+
+### GPS-AUDIT-BRGM-002 — Indices uranium Balagne Giussani — coord BRGM non publiques
+
+**Description :** L'entrée `uth_balagne_giussani` (slug app `BALAGNE_GIUSSANI`) repose sur le rapport BRGM 1980 (`80-RDM-003-FE`, « Activités minières en Corse »), qui mentionne le Giussani comme secteur à anomalies radioactives dans les granites de la Balagne intérieure. Coordonnée actuelle 42.529/9.02 (precision_coord `communal`) = centroïde Giussani (4 communes : Olmi-Cappella, Pioggiola, Mausoléo, Vallica). Validée en clôture M1 (2026-05-13) faute de coord publique précise.
+
+**Priorité :** Basse
+
+**Condition de déblocage :** Idem GPS-AUDIT-BRGM-001 — consultation InfoTerre ou rapport `80-RDM-003-FE` archivé. Mise à jour de l'entrée `uth_balagne_giussani` de `public/data/sites_app.json`.
+
+**Identifiée :** clôture M1 sites_app.json (2026-05-13).
+
+---
+
+### GPS-AUDIT-BRGM-003 — Source thermale de Guitera — émergence Taravo non publiée
+
+**Description :** L'entrée `source_thermale_guitera` (THERMAL_SOURCES_CORSE) repose sur la coord du village de Guitera-les-Bains (41.88/9.07, alt 621 m, CP 20153), récupérée auprès de la Communauté de communes Pieve de l'Ornano et du Taravo. La source thermale réelle émerge au bord du Taravo, mais le point d'émergence exact n'est pas publié sur les sources web consultées (Wikipedia, pieveornano.fr, corseweb.corsica). La station thermale est fermée depuis plusieurs années (status `fermee_depuis_plusieurs_annees`). Coordonnée acceptée en clôture M1 (2026-05-13) en `precision_coord: secteur`.
+
+**Priorité :** Basse
+
+**Condition de déblocage :** Audit dédié — consultation BRGM `RP-55916-FR` (« Inventaire des sources thermominérales de Corse ») disponible sur infoterre.brgm.fr, ou recherche IGN Géoportail pour le toponyme « Bagni di Vutera ». Mise à jour `source_thermale_guitera` (lat/lon + `gps_source` + `precision_coord` → `ponctuel` ou `exacte`).
+
+**Identifiée :** clôture M1 sites_app.json (2026-05-13).
+
+---
+
 ## Dettes fermées récemment
 
 - **SITES-COORDS-COTIERES-VERIFICATION-001** (11 mai 2026, commit `a966511` branche `chore/patrimoine-dettes-post-phase-b`) — résolue par audit GPS + correction commune pour les 3 sites côtiers identifiés. `capu_di_logu` (lat 41.6212→41.62585, lon 8.8424→8.84461, commune Bonifacio→Belvédère-Campomoro, description actualisée vers plateau golfe Valinco) ; `tour_de_capo_di_muro` (lat 41.719→41.7500, lon 8.664→8.6767, commune null→Coti-Chiavari) ; `u_paladinu` (GPS inchangé 41.7313/8.8325 confirmé légitime, commune null→Serra-di-Ferro). Pieve/doyenne_contemporain_slug non touchés (rebalancing pipeline `consolidate_sites.py` séparé si Soleil souhaite).
