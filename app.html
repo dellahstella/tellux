@@ -6807,72 +6807,11 @@ async function togPointsChauds(btn){
 }
 
 // ═══ Sites géophysiques remarquables ═══
-// Brief 29 (2026-05-06) — migration single source of truth depuis
-// public/data/sites_remarquables_corse.json (10 sites EM-spec) vers le corpus
-// canonique Cowork. Brief 33 split (2026-05-06) — bascule vers
-// docs/data/sites_em.json (43 sites pre-filtres = 37 remarquables_geologiques
-// + 6 hydrauliques). Les sites SR ophi_/surv_ preservent leur semantique
-// 3-cats via description_em.type_specifique (objet structure). Les autres
-// recoivent la 4e categorie "geologique" pour rendu (cercle vert maquis pale,
-// palette DA Tellux v2).
+// M2 (2026-05-13) — source unique public/data/sites_app.json (filter type=site_em).
+// Le loader unifié `loadSitesApp()` (L.3835) peuple SITES_REMARQUABLES via
+// `adaptSiteEMFromApp` (L.3853). loadSitesRemarquables() est conservé comme
+// thin wrapper rétro-compat.
 let SITES_REMARQUABLES = [];
-let _srLoadPromise = null;
-
-// Brief 33 split (2026-05-06) — la curation EM est figee cote data dans
-// docs/data/sites_em.json (43 sites = 37 remarquables_geologiques + 6
-// hydrauliques, livre par Cowork). Les anciennes constantes SR_ALLOWED_AXES
-// et SR_MINE_SLUG_OVERRIDE (Brief 29) sont retirees : leur logique de filtrage
-// runtime est devenue redondante avec le pre-filtre Cowork.
-
-// Brief 29 — adaptateur 2-cas du schema canonique Cowork (Brief 33 sites_em.json) vers
-// les champs attendus par _srFormatTooltip / _srIconHtml / SR_RENDU :
-//   Cas 1 (sites SR ophi_/surv_) : description_em.type_specifique present (objet
-//     structure), mappe vers categorie granulaire 3-cats historique (ophiolite/
-//     minier/surveillance_radio) pour conserver SR_RENDU et signature_em.
-//   Cas 2 (sites geologiques + hydrauliques) : description_em est string flat,
-//     categorie forced 'geologique' (4e cat avec cercle).
-// Brief 33 split (2026-05-06) — bascule vers sites_em.json. Schema utilise `name`
-// (vs `nom`) et `description_em` est string flat pour non-SR. Tolere les deux.
-function adaptSiteRemarquable(s) {
-  var siteName = s.name || s.nom;
-  if (s.description_em && typeof s.description_em === 'object' && s.description_em.type_specifique) {
-    return {
-      slug: s.slug,
-      nom: siteName,
-      lat: s.lat,
-      lon: s.lon,
-      categorie: mapSRGranulaire(s.slug),
-      precision_coord: s.description_em.precision_coord || 'documentaire',
-      note_ui: s.description_em.signature_em || s.description || ''
-    };
-  }
-  var noteText = '';
-  if (typeof s.description_em === 'string') noteText = s.description_em;
-  else if (s.description) noteText = s.description;
-  // Brief 33 P2 — routage par axe_em pour cas 2 (description_em string flat).
-  // hydrauliques -> 5e cat dediee, sinon fallback geologique.
-  var cat2 = (s.axe_em === 'hydrauliques') ? 'hydraulique' : 'geologique';
-  return {
-    slug: s.slug,
-    nom: siteName,
-    lat: s.lat,
-    lon: s.lon,
-    categorie: cat2,
-    precision_coord: 'documentaire',
-    note_ui: noteText
-  };
-}
-
-// Brief 29 — mapping cat 3-cats SR via prefixe SLUG (les 10 sites SR
-// originaux suivent la convention ophi_* / min_* / surv_*). type_specifique
-// n'est PAS fiable comme discriminant : ex ophi_farinole.type_specifique
-// = 'mine_magnetite_serpentinite' (decrit la mineralisation, pas la cat SR).
-function mapSRGranulaire(slug) {
-  if (slug.startsWith('ophi_')) return 'ophiolite';
-  if (slug.startsWith('min_')) return 'minier';
-  if (slug.startsWith('surv_')) return 'surveillance_radio';
-  return 'geologique';
-}
 
 function loadSitesRemarquables() { return loadSitesApp(); }
 
