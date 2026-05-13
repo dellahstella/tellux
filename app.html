@@ -613,10 +613,15 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-postes{background:#faf2e3!important;color:#8A5E22!important;border-color:#C28533!important;font-weight:500;}
 .on-points-chauds{background:#fdf4f3!important;color:#8E2F1F!important;border-color:#c16b5a!important;font-weight:500;}
 .on-sites-remarq{background:#faf2e3!important;color:#8A5E22!important;border-color:#C28533!important;font-weight:500;}
+/* Tooltip sites geophys remarquables — aligne sur pattern tellux-pc-tooltip
+   (Points chauds U/Th). Le commentaire ligne 219-222 explique pourquoi
+   width:max-content + max-width:280px est obligatoire : sans width
+   max-content, le tooltip absolu shrink-to-fit prendrait min-content
+   (mot le plus long ~100px) et wrapperait en colonne 99px observe en prod.
+   Sprint V5 13 mai 2026 — vraie cause format colonne identifiee. */
 .leaflet-tooltip.tellux-sr-tooltip{
-  max-width:300px;
-  max-height:60vh;
-  overflow-y:auto;
+  width:max-content;
+  max-width:280px;
   white-space:normal;
   line-height:1.4;
   font-size:12px;
@@ -2165,8 +2170,13 @@ async function fetchAltitudeIGN(lat, lon) {
 }
 
 const map=L.map('map',{maxZoom:20}).setView([42.0,9.0],8);
-map.setMaxBounds([[40.5,7.5],[43.5,10.5]]);
-map.options.maxBoundsViscosity=1.0;
+// Sprint V5 13 mai 2026 — bounds nord etendus 43.5 -> 44.0 pour
+// permettre navigation Cap Corse extreme (Tour Agnello 43.005,
+// Tour Giraglia 43.027, Anneaux 43.176). Viscosity 1.0 -> 0.8 :
+// l'utilisateur peut tirer un peu au-dela des bounds avec retour
+// elastique (moins strict, meilleur UX pan).
+map.setMaxBounds([[40.5,7.5],[44.0,10.5]]);
+map.options.maxBoundsViscosity=0.8;
 // Fond unique : IGN Plan V2 — Géoplateforme (sans clé, depuis bascule 2024).
 // ═══ FONDS DE CARTE — 3 options (CartoDB clair par défaut + 2 IGN) ═══
 // CartoDB Positron (variante dark/light) : fond par défaut, sobre, laisse les
@@ -6944,13 +6954,11 @@ function _srFormatTooltip(s) {
     + '<br><em>' + (s.note_ui || '') + '</em>';
 }
 
-// Sprint flash V4 13 mai 2026 — direction tooltip choisie au moment du clic
-// selon position du marker dans le viewport. V2 (panBy) et V3 (flip via
-// tooltipopen) inertes : maxBoundsViscosity=1.0 absorbait panBy, flip via
-// close+reopen post-open faisait flicker sans repositionner correctement.
-// Approche V4 : intercepter le click marker AVANT openTooltip, calculer
-// la direction adaptee via latLngToContainerPoint, re-bind tooltip si
-// direction differente. Marker dans moitie haute viewport -> 'bottom'.
+// Sprint V5 13 mai 2026 — retour au pattern bindTooltip simple identique
+// a tellux-pc-tooltip (qui marche). Revert zele V2 (panBy + tooltipopen
+// listener inertes), V3 (flip direction close+reopen), V4 (re-bind on
+// click direction switch). La vraie cause format colonne etait CSS
+// (manque de width:max-content), pas JS.
 let _srRendered = false;
 function _renderSitesRemarquables() {
   if (_srRendered) return;
@@ -6962,35 +6970,9 @@ function _renderSitesRemarquables() {
       iconSize: [18, 18],
       iconAnchor: [9, 9]
     });
-    const marker = L.marker([s.lat, s.lon], { icon });
-    marker.bindTooltip(_srFormatTooltip(s), {
-      sticky: false,
-      direction: 'top',
-      className: 'tellux-sr-tooltip',
-      maxWidth: 300,
-      offset: [0, -10]
-    });
-    marker.on('click', function () {
-      const cp = map.latLngToContainerPoint(this.getLatLng());
-      const vh = map._container.clientHeight;
-      const direction = (cp.y < vh / 2) ? 'bottom' : 'top';
-      const tt = this.getTooltip();
-      console.log('[SR-DIR]', { slug: s.slug, cpy: cp.y, vh, direction, current: tt && tt.options.direction });
-      if (tt && tt.options.direction !== direction) {
-        const content = tt.getContent();
-        this.closeTooltip();
-        this.unbindTooltip();
-        this.bindTooltip(content, {
-          className: 'tellux-sr-tooltip',
-          direction,
-          offset: direction === 'bottom' ? [0, 10] : [0, -10],
-          sticky: false,
-          maxWidth: 300
-        });
-        this.openTooltip();
-      }
-    });
-    marker.addTo(lSitesRemarq);
+    L.marker([s.lat, s.lon], { icon })
+      .bindTooltip(_srFormatTooltip(s), { sticky: true, direction: 'top', className: 'tellux-sr-tooltip', maxWidth: 300 })
+      .addTo(lSitesRemarq);
   });
 }
 
