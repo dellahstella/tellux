@@ -6,6 +6,14 @@ brief_pipeline.py - Pipeline d'automatisation des briefs corrections GPS.
 Parse un brief Soleil (markdown), applique les corrections data,
 genere rapport + manifest + commande git prete a coller pour Code.
 
+Adapte en M3 (sprint sites_app.json, 2026-05-13) : sites_em.json a ete
+supprime du repo ; le pipeline itere maintenant uniquement sur
+sites_patrimoine.json et sites_corse.json. Les corrections GPS qui
+concernaient un slug aussi present dans sites_em.json doivent etre
+propagees vers public/data/sites_app.json (filter type=site_em) via
+`scripts/sync_cross_app.py --apply` apres ce pipeline. Voir
+docs/internal/AUDIT_COORDS_APP_2026-05-13.md pour le contexte.
+
 Usage :
   python scripts/brief_pipeline.py --input _drafts/brief_NNN_input.md --brief-id NNN --dry-run
   python scripts/brief_pipeline.py --input _drafts/brief_NNN_input.md --brief-id NNN --apply
@@ -154,7 +162,11 @@ def find_site_in_jsons(slug, jsons):
 def apply_corrections(corrections, brief_id, dry_run=True):
     today = date.today().isoformat()
     jsons = {}
-    for fn in ["sites_patrimoine.json", "sites_em.json", "sites_corse.json"]:
+    # M3 (2026-05-13) : sites_em.json supprime du repo. Le pipeline itere
+    # uniquement sur sites_patrimoine.json (canon) + sites_corse.json (deprecated).
+    # Pour propager dans sites_app.json type=site_em, lancer scripts/sync_cross_app.py
+    # apres ce pipeline.
+    for fn in ["sites_patrimoine.json", "sites_corse.json"]:
         path, data, items = load_json_with_fallback(fn, "sites")
         if path:
             jsons[fn] = (path, data, items)

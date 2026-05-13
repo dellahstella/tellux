@@ -6,9 +6,14 @@ corpus_health_check.py - Validateur invariants corpus Tellux Patrimoine.
 A lancer apres chaque PR (ou avant un brief Cowork) pour valider la sante
 du corpus. Sortie : markdown report + exit code (0 = OK, 1 = warnings, 2 = erreurs).
 
+Adapte en M3 (sprint sites_app.json, 2026-05-13) : sites_em.json a ete
+supprime ; les 48 entrees site_em vivent dans public/data/sites_app.json
+a cote des 8 site_uth et 5 source_thermale. Le check `sites_em` filtre
+desormais type=site_em depuis sites_app.json. Voir AUDIT_COORDS_APP_2026-05-13.md.
+
 INVARIANTS verifies :
 
-1. JSON validity : sites_patrimoine.json + sites_em.json + sites_corse.json
+1. JSON validity : sites_patrimoine.json + sites_app.json + sites_corse.json
    doivent etre des JSON valides.
 
 2. Slugs uniques : chaque slug est unique a l'interieur de chaque fichier.
@@ -144,9 +149,14 @@ def main():
     # === 1. JSON validity ===
     add("## 1. JSON validity")
     add()
+    # Adapte en M3 (sprint sites_app.json, 2026-05-13) : sites_em.json a ete
+    # supprime, les 48 entrees site_em vivent dans public/data/sites_app.json
+    # a cote des site_uth et source_thermale. La validation utilise donc
+    # sites_app.json (chargement via fallback path public/data/), et le
+    # decompte/cross-app cible le filtre type=site_em ci-dessous.
     files_to_check = [
         ("sites_patrimoine.json", "sites"),
-        ("sites_em.json", "sites"),
+        ("sites_app.json", "sites"),
         ("sites_corse.json", "sites"),
         ("doyennes_polygons.json", "doyennes"),
         ("pieves_polygons.json", "pieves"),
@@ -167,7 +177,9 @@ def main():
     add()
 
     sites_patrim = loaded.get("sites_patrimoine.json") or []
-    sites_em = loaded.get("sites_em.json") or []
+    # M3 : sites_em (48) extrait de sites_app.json par filtre type=site_em.
+    all_app_sites = loaded.get("sites_app.json") or []
+    sites_em = [s for s in all_app_sites if s.get("type") == "site_em"]
     sites_corse = loaded.get("sites_corse.json") or []
     doyennes = loaded.get("doyennes_polygons.json") or []
     pieves = loaded.get("pieves_polygons.json") or []
