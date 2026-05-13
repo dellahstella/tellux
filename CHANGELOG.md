@@ -21,7 +21,7 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ### docs — Consolidation dettes session 13 mai 2026 (PR docs séparée)
 
-- 5 nouvelles dettes : `SITES-EM-JSON-UNTERMINATED-STRING-001`, `SITES-REFERENCE-JSON-DEPRECATION-001`, `REMARQUABLES-GEOLOGIQUES-DRIFT-001`, `SITES-PATRIMOINE-INSEE-BELVEDERE-CAMPOMORO-001` (A3), `CORPUS-META-AXES-INCOMPLET-001` (A4)
+- 6 nouvelles dettes : `SITES-EM-JSON-UNTERMINATED-STRING-001`, `SITES-REFERENCE-JSON-DEPRECATION-001`, `REMARQUABLES-GEOLOGIQUES-DRIFT-001`, `SITES-PATRIMOINE-INSEE-BELVEDERE-CAMPOMORO-001` (A3), `CORPUS-META-AXES-INCOMPLET-001` (A4), `PATRIMOINE-HASH-DEEPLINK-CADRAGE-001` (cadrage map cassé sur navigation hash directe N2, identifiée pendant validation preview PR #538)
 - 1 fermeture par invalidation : `SITES-PATRIMOINE-JSON-L13034-001` (audit Code H1 — fichier dev/main JSON valide, cause réelle = sandbox Cowork stale, pattern `OPS-COWORK-SANDBOX-GIT-DRIFT-001`)
 - Rappel des 3 dettes ajoutées plus tôt dans la même journée : `OPS-COWORK-SANDBOX-GIT-DRIFT-001`, `SITES-PATRIMOINE-JSON-L13034-001` (immédiatement fermée ci-dessus), `CLEANUP-PATRIMOINE-INSTRUMENTATION-001`
 
