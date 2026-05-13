@@ -711,7 +711,14 @@ function openPopup(marker, site) {
     return;
   }
   if (marker.getPopup()) marker.setPopupContent(html);
-  else marker.bindPopup(html, {maxWidth:240, autoPan:true, closeButton:false});
+  else {
+    marker.bindPopup(html, {maxWidth:240, autoPan:true, closeButton:false});
+    // Bug 2e clic patrimoine fix (2026-05-13) : bindPopup attache automatiquement
+    // un handler `click: _openPopup` (toggle) sur le marker. Au 2e clic, ce handler
+    // s'execute APRES notre marker.openPopup() et referme la popup qu'on vient
+    // d'ouvrir. On desactive explicitement : openPopup est pilote par onSpotClick.
+    marker.off('click', marker._openPopup, marker);
+  }
   marker.openPopup();
   const _pop = marker.getPopup();
   console.log('[CLICK-DBG] 3/post-openPopup', {
