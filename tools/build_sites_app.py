@@ -3,6 +3,32 @@
 build_sites_app.py — Consolidation M1 sites_app.json
 ====================================================
 
+═══════════════════════════════════════════════════════════════════════════
+⚠️  DEPRECATED 2026-05-13 (M3 cleanup) ⚠️
+
+Ce script est OBSOLÈTE et ne doit PAS être ré-exécuté :
+
+1. Les 3 sources de données qu'il consomme ont été supprimées du repo en M3 :
+   - `docs/data/sites_em.json` (48 sites EM)
+   - `public/data/points_chauds_radio_corse.json` (8 sites U/Th)
+   - L'array `THERMAL_SOURCES_CORSE` hardcodé dans `app.html` (transformé en
+     `let []` populé par `loadSitesApp()` en M2).
+
+2. `public/data/sites_app.json` est désormais la SOURCE CANON runtime,
+   éditée directement (manuellement ou via `scripts/sync_cross_app.py` pour
+   les sync cross-app depuis `sites_patrimoine.json`).
+
+Le script est conservé pour traçabilité historique de la migration M1 : il
+documente le mapping (sources → cible) et les corrections GPS Phase 1.
+Cf. `docs/internal/AUDIT_GPS_M1_2026-05-13.md` pour le rapport détaillé.
+
+Pour modifier sites_app.json :
+  - Édition manuelle directe du JSON (champs simples comme description).
+  - `scripts/sync_cross_app.py --apply` pour propager les coords depuis
+    patrimoine canonical vers les entrées type=site_em.
+
+═══════════════════════════════════════════════════════════════════════════
+
 Lit 3 sources actuelles éparpillées et émet `public/data/sites_app.json` :
   1. `docs/data/sites_em.json` (48 sites EM remarquables, hydrauliques, miniers historiques)
   2. `public/data/points_chauds_radio_corse.json` (8 sites U/Th)
