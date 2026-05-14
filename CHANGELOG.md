@@ -7,6 +7,41 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Non publié] — Clôture Sprint 6 paesi d'altura (14 mai 2026)
+
+### docs
+- 1 dette patrimoine paesi ajoutée : `SITES-PATRIMOINE-PAESI-D-ALTURA-COMPLEMENT-001` (sous-cible 9/25 assumée scénario B, même doctrine Sprint 4 ponts).
+
+### sites_patrimoine.json (rétrospectif Sprint 6)
+- **Création nouvel axe `paesi_d_altura`** dans `_meta.axes_corpus_referentiel` (couleur DA `#A89B8C` Pierre claire)
+- 0 → 9 paesi (sprint monolithique, P1 strict)
+- Doctrine d'altura validée : exclusion par cross-référence avec axe `tours_genoises` (43 communes-tours exclues)
+- Verrou mécanique post-édition : **0 conflit commune-tour détecté**
+- Labels représentés : 2 paesi AVF (Plus Beaux Villages de France 2026 : Sant'Antonino, Pigna)
+- Sources : Wikipedia FR commune infobox coordonnées (cross-source 9 fetches) + Les Plus Beaux Villages de France 2026 + Mérimée Notes voyage Corse 1840 (Sartène)
+- Cible révisée scénario B 25 atteinte à 9/25 = 36% (doctrine « couverture représentative > exhaustivité »)
+- Cas frontière arbitrés Phase A Soleil :
+  - **Piana EXCLU** (AVF officiel mais commune avec Tour Turghiu, doctrine d'altura stricte)
+  - **Corte EXCLU** (citadelle militaire historique, hors périmètre paesi d'altura)
+
+### Distribution finale 9 paesi
+| Paese | Doyenné | Pieve | Label |
+|---|---|---|---|
+| Sant'Antonino | doyenne_balagne | pieve_balagne | AVF |
+| Pigna | doyenne_balagne | pieve_balagne | AVF |
+| Speloncato | doyenne_balagne | pieve_balagne | — |
+| Sartène centre | doyenne_extreme_sud | pieve_sartene | — |
+| Patrimonio | doyenne_du_cap | pieve_nebbiu | — |
+| Aullène | doyenne_extreme_sud | pieve_tallano | — |
+| Levie | doyenne_extreme_sud | pieve_carbini | — |
+| Bastelica | doyenne_ajaccio | pieve_celavo | — |
+| Évisa | doyenne_piana_vico_sari | pieve_vico | — |
+
+### PR Sprint 6
+- #565 Sprint 6 paesi d'altura monolithique (+9 paesi, création axe)
+
+---
+
 ## [Non publié] — Clôture Sprint 5 archéo + castelli (14 mai 2026)
 
 ### docs
