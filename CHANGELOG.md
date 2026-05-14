@@ -10,9 +10,10 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 ## [Non publié] — Clôture Sprint 4 ponts historiques (14 mai 2026)
 
 ### docs
-- 2 dettes patrimoine ponts ajoutées (Sprint 4 série complète) :
+- 2 dettes patrimoine ponts + 1 dette app (CSS orphelin v8) ajoutées :
   `SITES-PATRIMOINE-PONTS-SOUS-CIBLE-SPRINT4-001` (10/15-20 assumé scénario B),
-  `SITES-PATRIMOINE-PONTS-SKIPS-PRECISION-GPS-001` (5 candidats archivés : Zippitoli, Zaglia, Ponti Vecchiu, Trinité, Calzola).
+  `SITES-PATRIMOINE-PONTS-SKIPS-PRECISION-GPS-001` (5 candidats archivés : Zippitoli, Zaglia, Ponti Vecchiu, Trinité, Calzola),
+  `APP-CSS-ORPHELIN-PURGE-V8-001` (~90 lignes CSS orphelin résiduel post-purge v8 d'`app.html`, ferme formellement priorité 1 `PROJECT_INSTRUCTIONS_v3.md` du 22 avril 2026).
 - 1 bonne pratique ajoutée dans `## Bonnes pratiques issues de sprints` :
   `BP-SPRINT4-DOCTRINE-STRICTE-GPS-PUBLIE-001` (skip sans GPS publié, pas de centroïde commune en P1 pour patrimoine bâti, doctrine Sprint 4b/4c).
 
