@@ -1523,11 +1523,17 @@ function enterNiveau3View(pieveSlug, pieveDisplay, pieveShape, opts) {
       elActive.setAttribute('data-pieve-slug', pieveSlug);
     }
   }
-  // Detacher LayerGroup N2 du doyenne courant (focus pieve = pieve seule).
-  // Detacher le LayerGroup entier, sinon les markers se reattachent.
+  // Detacher LayerGroup N2 du doyenne courant + markers individuels.
+  // Brief 27 fix shared-marker re-attache les markers individuellement
+  // (m.addTo(map)) en plus du LayerGroup, donc on doit detacher les deux.
   if (currentDoyenneSlug) {
     const slg = spotsLevel2ByDoyenne.get(currentDoyenneSlug);
-    if (slg && map.hasLayer(slg)) map.removeLayer(slg);
+    if (slg) {
+      for (const m of slg.getLayers()) {
+        if (map.hasLayer(m)) map.removeLayer(m);
+      }
+      if (map.hasLayer(slg)) map.removeLayer(slg);
+    }
   }
   // Construire ou recycler le cluster group N3.
   if (clusterGroupN3) {
@@ -1586,10 +1592,16 @@ function exitNiveau3View(opts) {
     if (elActive) elActive.classList.remove('active-niveau-3');
   }
   _pieveActivePolygonRef = null;
-  // Re-attacher LayerGroup N2 du doyenne si on revient en N2.
+  // Re-attacher LayerGroup N2 du doyenne + markers individuels (symetrie
+  // avec detach dans enterNiveau3View, Brief 27 fix shared-marker).
   if (opts.backToN2 && currentDoyenneSlug) {
     const slg = spotsLevel2ByDoyenne.get(currentDoyenneSlug);
-    if (slg && !map.hasLayer(slg)) slg.addTo(map);
+    if (slg) {
+      if (!map.hasLayer(slg)) slg.addTo(map);
+      for (const m of slg.getLayers()) {
+        if (!map.hasLayer(m)) m.addTo(map);
+      }
+    }
     // Recadrer sur doyenne.
     const doyShape = doyenneShapesBySlug[currentDoyenneSlug];
     if (doyShape) {
