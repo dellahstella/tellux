@@ -8,6 +8,11 @@
 <meta name="description" content="Cartographie patrimoniale corse — sites mégalithiques, édifices romans, sites naturels, architecture LOD diocèses & pieves.">
 <link rel="icon" type="image/svg+xml" href="assets/logo/tellux_logo.svg">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<!-- Brief N3 (14 mai 2026) — Leaflet.markercluster CDN unpkg pinné 1.5.3.
+     Dépendance externe validée Soleil pour le drill-down pieve niveau 3
+     (clustering markers de la pieve focus). Tracée dans CHANGELOG. -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
@@ -143,6 +148,14 @@ body.has-active-diocese .diocese-polygon:hover{fill:rgba(140,110,80,0.18);}
 /* Brief 9 — Bouton retour vue Corse : visible uniquement en niveau 2 (drill-down). */
 #btn-retour-corse{display:none;}
 body.niveau-2 #btn-retour-corse{display:flex;}
+/* Brief N3 (14 mai 2026) — bouton retour pieve, visible uniquement en niveau 3.
+   Stylistique identique au bouton retour Corse pour cohérence. */
+#btn-retour-pieve{display:none;position:absolute;top:60px;left:12px;z-index:1000;background:rgba(245,240,231,0.95);backdrop-filter:blur(8px);padding:8px 14px;border-radius:var(--r);border:1px solid var(--border);color:var(--tx-ardoise);font-family:var(--font);font-size:13px;cursor:pointer;box-shadow:var(--shadow);align-items:center;gap:6px;transition:background .2s,color .2s;}
+#btn-retour-pieve:hover{background:var(--tx-ocre);color:var(--tx-pierre);}
+body.niveau-3 #btn-retour-pieve{display:flex;}
+/* Brief N3 — focus pieve : masquer autres pieves polygones (sauf active) + markers N2 du doyenné. */
+body.niveau-3 .leaflet-interactive[data-pieve-slug]:not(.active-niveau-3){display:none !important;pointer-events:none;}
+body.niveau-3 .leaflet-interactive[data-pieve-slug].active-niveau-3{fill-opacity:0.05;stroke-width:2;stroke:var(--tx-ocre);pointer-events:none;}
 
 /* Brief 8 (revise) — Polygones doyennes contemporains (vision macro 2026-05-04).
    Strategie A : polygones generes par union de polygones communaux INSEE
@@ -203,7 +216,7 @@ body.niveau-2-actif .doyenne-mini-marker.persistente-niveau-2{display:none !impo
    Position calculée pour éviter chevauchement : sticker doyenné = ~136px haut
    (10 pad + 90 img + 6 mt + 20 label + 10 pad), donc pieve commence à 164px
    (16 + 136 + 12 gap). Compact texte-only car pieves n'ont pas d'illustration
-   v2 actuelle. Visible uniquement en niveau-3-actif. */
+   v2 actuelle. Visible uniquement en niveau-3. */
 #pieve-mini-sticker{position:fixed;top:164px;right:16px;z-index:650;padding:8px 14px;background:rgba(245,240,231,0.95);border:1px solid rgba(31,35,41,0.18);border-radius:12px;box-shadow:0 6px 20px rgba(31,35,41,0.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);cursor:pointer;transition:transform .2s,box-shadow .2s;pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:90px;max-width:160px;font-family:'Fraunces',serif;}
 #pieve-mini-sticker:hover{transform:scale(1.05);box-shadow:0 8px 24px rgba(31,35,41,0.25);}
 #pieve-mini-sticker .pieve-sticker-label{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--tx-mica);font-weight:500;}
@@ -347,6 +360,7 @@ body.niveau-2-actif .doyenne-mini-marker.persistente-niveau-2{display:none !impo
   <span class="crumb pieve-crumb" data-level="pieve" style="display:none"></span>
 </nav>
 <button id="btn-retour-corse" type="button" aria-label="Retour vue d'ensemble Corse">← Vue d'ensemble</button>
+<button id="btn-retour-pieve" type="button" aria-label="Retour vue doyenné">← Retour doyenné</button>
 <aside id="legende" class="collapsed">
   <button id="legende-toggle" type="button" aria-label="Légende" aria-expanded="false">?</button>
   <div id="legende-content" role="region" aria-label="Légende patrimoine">
@@ -386,6 +400,7 @@ body.niveau-2-actif .doyenne-mini-marker.persistente-niveau-2{display:none !impo
 </aside>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
 // === Bug 2e clic patrimoine V4 (13 mai 2026) — instrumentation traceur ===
 // Diagnostic Claude web : marker.getPopup() retourne null entre 1er et 2e clic.
@@ -1211,6 +1226,13 @@ fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
       const tooltipLabel = 'Pieve di ' + p.name;
       for (const doy of doyennesVisibles) {
         const poly = L.polygon(p.polygon, {className: 'pieve-polygon-v2'});
+        // Brief N3 — référence slug pieve sur le polygone Leaflet pour
+        // selecteur CSS body.niveau-3 (data-pieve-slug attribut posé en JS).
+        poly._tlxPieveSlug = p.slug;
+        poly.on('add', function() {
+          var el = poly.getElement && poly.getElement();
+          if (el && !el.hasAttribute('data-pieve-slug')) el.setAttribute('data-pieve-slug', p.slug);
+        });
         poly.bindTooltip(tooltipLabel, {sticky:true, direction:'top', className:'tlx-tt'});
         poly.on('click', (ev) => onPieveClickV2(p.slug, p.name, poly, ev));
         if (!pievesByDoyenneLayer.has(doy)) pievesByDoyenneLayer.set(doy, L.layerGroup());
@@ -1317,7 +1339,6 @@ function onPieveClickV2(slug, name, shape, ev) {
   if (ev) L.DomEvent.stopPropagation(ev);
   currentPieveSlugV2 = slug;
   currentSpotSlug = null;
-  updateBreadcrumb();
   // Highlight pieve active (Brief 6 preserve via classe .selected).
   for (const p of Object.values(pieveShapesBySlugV2)) {
     const el = p.getElement && p.getElement();
@@ -1325,15 +1346,12 @@ function onPieveClickV2(slug, name, shape, ev) {
   }
   const el = shape.getElement && shape.getElement();
   if (el) el.classList.add('selected');
-  // Brief 47 — niveau 3 (drill pieve). Pattern poupée russe : sticker pieve
-  // top-right (sous sticker doyenné Brief 30), parité avec drill doyenné
-  // niveau 2. Pas d'auto-open du panel pieve (user clique sticker pour lire),
-  // pas de popup Leaflet transitoire (remplacée). État niveau-2-actif
-  // conservé (sticker doyenné reste visible).
-  document.body.classList.add('niveau-3-actif');
+  // Brief N3 (14 mai 2026) — drill-down niveau 3 complet : recadrage map sur
+  // pieve, autres pieves cachées, markers de la pieve seuls (avec clustering).
+  // Le sticker pieve Brief 47 est supprimé (fiches pieves retirées de prod,
+  // décision Soleil 14 mai). État niveau-2 conservé (sticker doyenné visible).
   if (typeof map !== 'undefined' && map.closePopup) map.closePopup();
-  var ficheSlug = slug.replace(/^pieve_/, '');
-  _renderPieveSticker(slug, name, ficheSlug);
+  enterNiveau3View(slug, name, shape);
 }
 
 // === Brief 9 — Drill-down navigation niveau 1 ↔ niveau 2 ===
@@ -1346,12 +1364,16 @@ const corsicaInitialView = { center: [42.15, 9.10], zoom: 9 };
 let _spotsN1FadeTimer = null;
 let _spotsN1FadingIcons = [];
 let _spotsN1FadingMiniIcons = [];
-function enterNiveau2View(doyenneSlug, doyenneName, shape) {
+function enterNiveau2View(doyenneSlug, doyenneName, shape, opts) {
+  opts = opts || {};
+  // Brief N3 (14 mai 2026) — fix PATRIMOINE-HASH-DEEPLINK-CADRAGE-001.
+  // opts.animate = false (depuis applyHash deeplink) -> fitBounds sync.
+  // opts.animate = true ou undefined (clic doyenne) -> flyToBounds anime.
   document.body.classList.add('niveau-2');
   // Brief 47 — switch de doyenné (A→B) depuis niveau 3 : nettoyer l'état
   // niveau-3 résiduel (sticker pieve obsolète + classe). Le user repart d'un
   // niveau 2 propre sur le nouveau doyenné.
-  document.body.classList.remove('niveau-3-actif');
+  document.body.classList.remove('niveau-3');
   if (typeof _removePieveSticker === 'function') _removePieveSticker();
 
   // Brief 20 fix #7 — fermer toute popup map ouverte (spot precedent ou popup
@@ -1453,8 +1475,14 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
 
   // Zoom auto sur bounds doyenne. Brief 20 fix #3 — easeLinearity 0.5 pour
   // courbe d'animation plus naturelle (vs 0.25 par defaut Leaflet).
+  // Brief N3 — opts.animate=false (deeplink hash) -> fitBounds sync, fix
+  // PATRIMOINE-HASH-DEEPLINK-CADRAGE-001 (markers crees mais pas cadres).
   if (shape) {
-    map.flyToBounds(shape.getBounds(), { padding: [40, 40], duration: 0.8, easeLinearity: 0.5 });
+    if (opts.animate === false) {
+      map.fitBounds(shape.getBounds(), { padding: [40, 40] });
+    } else {
+      map.flyToBounds(shape.getBounds(), { padding: [40, 40], duration: 0.8, easeLinearity: 0.5 });
+    }
   }
 
   // Update breadcrumb (Corse > Doyenne X).
@@ -1464,7 +1492,132 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape) {
   updateBreadcrumb();
 }
 
+// === Brief N3 (14 mai 2026) — Niveau 3 drill-down pieve ===
+// Focus pieve : map.fitBounds(pieveBounds), autres pieves cachées via CSS
+// (data-pieve-slug), markers N2 du doyenné cachés, markers de la pieve dans
+// MarkerClusterGroup (CDN unpkg.com/leaflet.markercluster@1.5.3, validation
+// Soleil pour exception doctrine dépendance externe).
+let clusterGroupN3 = null;
+let _pieveActivePolygonRef = null;
+
+function enterNiveau3View(pieveSlug, pieveDisplay, pieveShape, opts) {
+  opts = opts || {};
+  if (!pieveSlug || !pieveShape) return;
+  document.body.classList.add('niveau-3');
+  _pieveActivePolygonRef = pieveShape;
+  // Marquer le polygone pieve actif (CSS le distingue, autres cachés).
+  for (const p of Object.values(pieveShapesBySlugV2)) {
+    const el = p.getElement && p.getElement();
+    if (el) {
+      el.classList.remove('active-niveau-3');
+      // Ajouter data-pieve-slug pour selecteur CSS body.niveau-3 si absent.
+      if (p._tlxPieveSlug && !el.hasAttribute('data-pieve-slug')) {
+        el.setAttribute('data-pieve-slug', p._tlxPieveSlug);
+      }
+    }
+  }
+  const elActive = pieveShape.getElement && pieveShape.getElement();
+  if (elActive) {
+    elActive.classList.add('active-niveau-3');
+    if (!elActive.hasAttribute('data-pieve-slug')) {
+      elActive.setAttribute('data-pieve-slug', pieveSlug);
+    }
+  }
+  // Detacher markers N2 du doyenne courant (focus pieve = pieve seule).
+  if (currentDoyenneSlug) {
+    const slg = spotsLevel2ByDoyenne.get(currentDoyenneSlug);
+    if (slg) {
+      for (const m of slg.getLayers()) {
+        if (map.hasLayer(m)) map.removeLayer(m);
+      }
+    }
+  }
+  // Construire ou recycler le cluster group N3.
+  if (clusterGroupN3) {
+    if (map.hasLayer(clusterGroupN3)) map.removeLayer(clusterGroupN3);
+    clusterGroupN3.clearLayers();
+  } else if (typeof L.markerClusterGroup === 'function') {
+    clusterGroupN3 = L.markerClusterGroup({
+      showCoverageOnHover: false,
+      spiderfyOnMaxZoom: true,
+      maxClusterRadius: 40,
+    });
+  } else {
+    // Fallback si markercluster non chargé : LayerGroup simple.
+    console.warn('[Tellux N3] Leaflet.markercluster non chargé, fallback LayerGroup');
+    clusterGroupN3 = L.layerGroup();
+  }
+  // Filtrer sites de la pieve et reutiliser les markers existants (markersBySlug)
+  // pour preserver bindPopup + handlers onSpotClick + fix #532.
+  const sitesPieve = (Array.isArray(SITES_PATRIMOINE) ? SITES_PATRIMOINE : []).filter(s => s.pieve_slug === pieveSlug);
+  for (const site of sitesPieve) {
+    const entry = markersBySlug[site.slug];
+    if (entry && entry.marker) {
+      clusterGroupN3.addLayer(entry.marker);
+    }
+  }
+  if (!map.hasLayer(clusterGroupN3)) clusterGroupN3.addTo(map);
+  // Recadrer sur bounds pieve (sync = pas d'animation, ou anime selon opts).
+  try {
+    const bounds = pieveShape.getBounds();
+    if (bounds && bounds.isValid && bounds.isValid()) {
+      if (opts.animate === false) {
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+      } else {
+        map.flyToBounds(bounds, { padding: [40, 40], duration: 0.6, easeLinearity: 0.5, maxZoom: 14 });
+      }
+    }
+  } catch (e) {
+    console.warn('[Tellux N3] fitBounds pieve échoué :', e);
+  }
+  updateBreadcrumb();
+}
+
+function exitNiveau3View(opts) {
+  opts = opts || { backToN2: true };
+  document.body.classList.remove('niveau-3');
+  // Cleanup cluster N3.
+  if (clusterGroupN3 && map.hasLayer(clusterGroupN3)) {
+    map.removeLayer(clusterGroupN3);
+  }
+  if (clusterGroupN3 && clusterGroupN3.clearLayers) clusterGroupN3.clearLayers();
+  // Cleanup classe active-niveau-3 sur polygone pieve.
+  if (_pieveActivePolygonRef) {
+    const elActive = _pieveActivePolygonRef.getElement && _pieveActivePolygonRef.getElement();
+    if (elActive) elActive.classList.remove('active-niveau-3');
+  }
+  _pieveActivePolygonRef = null;
+  // Re-attacher markers N2 du doyenne si on revient en N2.
+  if (opts.backToN2 && currentDoyenneSlug) {
+    const slg = spotsLevel2ByDoyenne.get(currentDoyenneSlug);
+    if (slg) {
+      for (const m of slg.getLayers()) {
+        if (!map.hasLayer(m)) m.addTo(map);
+      }
+    }
+    // Recadrer sur doyenne.
+    const doyShape = doyenneShapesBySlug[currentDoyenneSlug];
+    if (doyShape) {
+      try {
+        map.flyToBounds(doyShape.getBounds(), { padding: [40, 40], duration: 0.6, easeLinearity: 0.5 });
+      } catch (_) {}
+    }
+  }
+  // Cleanup state pieve.
+  currentPieveSlugV2 = null;
+  for (const p of Object.values(pieveShapesBySlugV2)) {
+    const el = p.getElement && p.getElement();
+    if (el) el.classList.remove('selected');
+  }
+  updateBreadcrumb();
+}
+
 function exitNiveau2View() {
+  // Brief N3 — cascade : sortir N3 d'abord si actif (sans backToN2 car on
+  // continue jusqu'a N1 / vue Corse). Cleanup cluster + classe niveau-3.
+  if (document.body.classList.contains('niveau-3')) {
+    exitNiveau3View({ backToN2: false });
+  }
   document.body.classList.remove('niveau-2');
 
   // Annuler le fade-out spots N1 si l'utilisateur revient avant 250ms
@@ -1481,8 +1634,8 @@ function exitNiveau2View() {
 
   _removeDoyenneSticker();
   // Brief 47 — exit niveau 2 implique exit niveau 3 (le drill-down s'effondre
-  // jusqu'au niveau 1 / vue Corse). Sticker pieve retire + classe niveau-3-actif.
-  document.body.classList.remove('niveau-3-actif');
+  // jusqu'au niveau 1 / vue Corse). Sticker pieve retire + classe niveau-3.
+  document.body.classList.remove('niveau-3');
   _removePieveSticker();
 
   // Re-fill les doyennes estompes.
@@ -1571,6 +1724,13 @@ function exitNiveau2View() {
 const btnRetourCorse = document.getElementById('btn-retour-corse');
 if (btnRetourCorse) btnRetourCorse.addEventListener('click', exitNiveau2View);
 
+// Brief N3 — bouton retour pieve (visible uniquement en niveau 3 via CSS).
+// Sort N3 vers N2 (revient au state doyenne sans recharger).
+const btnRetourPieve = document.getElementById('btn-retour-pieve');
+if (btnRetourPieve) btnRetourPieve.addEventListener('click', function() {
+  exitNiveau3View({ backToN2: true });
+});
+
 // === Breadcrumb (Brief 9 — Corse > Doyenne > Pieve > Spot) ===
 const bc = document.getElementById('breadcrumb');
 let currentDoyenneSlug = null;   // slug doyenne actif (clé doyenneNameBySlug)
@@ -1625,8 +1785,8 @@ function updateBreadcrumb() {
         const shape = doyenneShapesBySlug[currentDoyenneSlug];
         if (shape) map.fitBounds(shape.getBounds(), {padding:[40,40]});
         // Brief 47 — retour niveau 2 depuis niveau 3 via breadcrumb : cleanup
-        // sticker pieve + classe niveau-3-actif (sticker doyenné conservé).
-        document.body.classList.remove('niveau-3-actif');
+        // sticker pieve + classe niveau-3 (sticker doyenné conservé).
+        document.body.classList.remove('niveau-3');
         if (typeof _removePieveSticker === 'function') _removePieveSticker();
         updateBreadcrumb();
         if (typeof syncHashToUrl === 'function') syncHashToUrl();
@@ -1873,7 +2033,8 @@ function applyHash(rawHash) {
     if (doySlug) {
       const doyShape = doyenneShapesBySlug[doySlug];
       const doyDisplay = doyenneNameBySlug[doySlug] || doyShort;
-      enterNiveau2View(doySlug, doyDisplay, doyShape);
+      // Brief N3 — animate:false pour deeplink (fix HASH-DEEPLINK-CADRAGE-001).
+      enterNiveau2View(doySlug, doyDisplay, doyShape, { animate: false });
     }
     // Brief 41 fix #4 — race condition popup pieve vs popup spot. Si le hash
     // contient pieve ET spot, on skip l'ouverture de la popup pieve (qui
@@ -1889,7 +2050,6 @@ function applyHash(rawHash) {
         // State only : update breadcrumb sans popup pieve transitoire.
         currentPieveSlugV2 = pieveSlug;
         currentSpotSlug = null;
-        if (typeof updateBreadcrumb === 'function') updateBreadcrumb();
         // Highlight pieve active (côté visuel polygone).
         for (const p of Object.values(pieveShapesBySlugV2)) {
           const el = p.getElement && p.getElement();
@@ -1897,10 +2057,8 @@ function applyHash(rawHash) {
         }
         const el = pieveShape.getElement && pieveShape.getElement();
         if (el) el.classList.add('selected');
-        // Brief 47 — niveau-3 actif aussi en deep-hash spotSlug (sticker pieve
-        // doit apparaitre meme quand on entre directement sur un site).
-        document.body.classList.add('niveau-3-actif');
-        _renderPieveSticker(pieveSlug, pieveDisplay, pieveSlug.replace(/^pieve_/, ''));
+        // Brief N3 — deeplink #doy/pieve/spot : entrer en N3 puis ouvrir popup.
+        enterNiveau3View(pieveSlug, pieveDisplay, pieveShape, { animate: false });
       } else {
         onPieveClickV2(pieveSlug, pieveDisplay, pieveShape);
       }
