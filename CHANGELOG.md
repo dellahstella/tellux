@@ -7,6 +7,47 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Non publié] — Clôture Sprint 7 densification + correction rebalance (14 mai 2026)
+
+### docs
+- 2 dettes patrimoine ajoutées :
+  - `SITES-PATRIMOINE-PIEVES-SOUS-REPRESENTEES-COMPLEMENT-001` (7 pieves restantes < 5 sites : vivario, vallerustie, filosorma, ampugnani, ghisoni, tavagna, giovellina)
+  - `SITES-PATRIMOINE-COMMUNES-MULTI-DOYENNES-EGALITE-001` (15 communes en égalité parfaite multi-doyennés : Monte 4-doyennés, 2 cas 2-2 Cervione+Coti-Chiavari, 12 cas 1-1)
+
+### sites_patrimoine.json — rebalance + Sprint 7 (rétrospectif)
+
+**PR #569 — Sprint correction rebalance doyenne_contemporain_slug** :
+- Pré-audit cartographique 14 mai a révélé 13 pieves multi-doyennés + 32 communes multi-doyennés
+- Décision Soleil Option B minimaliste : aligner doyenne_contemporain_slug sur majorité claire (≥2:1) commune, skip égalités
+- **23 sites migrés** + 1 fix manuel `san_lorenzo_de_ponte_leccia` (commune Lecci → Morosaglia, Ponte-Leccia hameau)
+- Distribution doyennés rebalancée :
+  - doyenne_du_golo : 66 → 60 (-6, **signal Soleil allégé**)
+  - doyenne_du_cap : 69 → 76 (+7)
+  - doyenne_extreme_sud : 88 → 95 (+7)
+  - doyenne_cortenais : 54 → 58 (+4)
+  - doyenne_plaine_orientale : 54 → 58 (+4)
+  - doyenne_balagne : 54 → 56 (+2)
+  - 15 communes en égalité skippées (dette dédiée)
+- Préservation stricte : slug, lat, lon, sources non touchés
+
+**PR #571 — Sprint 7 densification ciblée pieves sous-rep** :
+- Cible Option B Soleil : 8 pieves < 5 sites
+- Doctrine stricte BP-SPRINT4 GPS publié appliquée
+- **+1 entrée** : `pont_de_muricciolu_albertacce` (Albertacce, pieve_niolu, GPS publié Médiathèque Corse 42.326036/8.983954, XVIᵉ-XVIIIᵉ génois, arche unique granit alt 852m, emporté tempête Ciaran novembre 2023, inventaire préliminaire Médiathèque Culturelle Corse)
+- pieve_niolu : 3 → 5 sites (sortie zone sous-rep)
+- 7 pieves restent < 5 sites (dette dédiée)
+
+### Compteurs prod post-Sprint 7
+- 544 sites · 13 axes
+- 11 ponts historiques (10 → 11)
+- doyenne_du_golo allégé -6 sites (signal Soleil traité)
+
+### PRs Sprint 7
+- #569 fix(patrimoine): rebalance doyenne_contemporain_slug (23 sites + 1 fix)
+- #571 data(patrimoine): Sprint 7 densification pieve_niolu (+Muricciolu)
+
+---
+
 ## [Non publié] — Clôture Sprint 6 paesi d'altura (14 mai 2026)
 
 ### docs
