@@ -7,6 +7,36 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Non publié] — Clôture Sprint 5 archéo + castelli (14 mai 2026)
+
+### docs
+- 4 dettes patrimoine archéo ajoutées (Sprint 5 série) :
+  `SITES-PATRIMOINE-ARCHEO-ALERIA-V2-APPROFONDIE-001` (multi-composantes : forum, thermes, basilique, nécropoles),
+  `SITES-PATRIMOINE-ARCHEO-MARIANA-V2-APPROFONDIE-001` (mithraeum, basilique paléochrétienne, baptistère, palais),
+  `SITES-PATRIMOINE-ARCHEO-CITES-ROMAINES-COMPLEMENT-001` (Sagona/Calvi/Centuri antiques skippées Sprint 5b doctrine stricte),
+  `SITES-PATRIMOINE-VILLAGES-MEDIEVAUX-DISPARUS-COMPLEMENT-001` (axe non créé Sprint 5c, candidat Saint-Jean-d'Ortolo PA2A000005 sans GPS publié).
+
+### sites_patrimoine.json (rétrospectif Sprint 5 complet)
+- **Création nouvel axe `archeo_romaine`** dans `_meta.axes_corpus_referentiel` (couleur DA `#8E2F1F` Porphyre)
+- **Création nouvel axe `castelli_oppida`** dans `_meta.axes_corpus_referentiel` (couleur DA `#1F2329` Ardoise)
+- **Axe `villages_medievaux_disparus` non créé** (0 candidat passant doctrine stricte GPS publié)
+- **7 migrations** :
+  - `aleria_antique` : `patrimoine_bati_remarquable` → `archeo_romaine` (préservation stricte gps_locked + priorité étoile + visuel `_tellux_v2`)
+  - 6 castelli protohistoriques : `megalithes` → `castelli_oppida` (`alo_bisuje`, `casteddu_bastelica`, `casteddu_caleca`, `casteddu_lozari`, `castellu_araghju`, `cucuruzzu_capula`)
+- **Compteur `megalithes` : 70 → 64** (cleanup sémantique, redistribution castelli protohistoriques)
+- **1 ajout** : `mariana_antique` (P1 strict, Lucciana 2B148, pieve_mariana, GPS publié 42.53928/9.49597, Mérimée PA00099208)
+- Périmètre chronologique : XIIᵉ av. J.-C. — ~1450
+- Sources : Mérimée POP (PA + IA), Wikipedia FR, INRAP
+- Doctrine `BP-SPRINT4-DOCTRINE-STRICTE-GPS-PUBLIE-001` strictement appliquée → Sprint 5b et 5c vides (cités antiques secondaires + villages désertés sans GPS publié)
+- Doctrine Soleil : Aleria + Mariana = 1 site unique chacun, dettes v2 multi-composantes ouvertes pour exploitation patrimoniale fine ultérieure
+
+### PRs Sprint 5
+- #561 Sprint 5a (création 2 axes + 7 migrations + Mariana, structurant)
+- Sprint 5b : pas de PR (0 candidat passant doctrine, Sagona/Calvi/Centuri archivés dette)
+- Sprint 5c : pas de PR (0 candidat passant doctrine, Saint-Jean-d'Ortolo archivé dette)
+
+---
+
 ## [Non publié] — Clôture Sprint 4 ponts historiques (14 mai 2026)
 
 ### docs
