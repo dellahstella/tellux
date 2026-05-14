@@ -7,6 +7,42 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Non publié] — Clôture Sprint 3 tours littorales (13 mai 2026)
+
+### docs
+- 7 dettes patrimoine consolidées (Sprint 3 série complète) :
+  `SITES-PATRIMOINE-TOURS-PRE-SPRINT3-PIEVE-NULL-001` (4 tours résiduelles),
+  `SITES-PATRIMOINE-TOURS-PRE-SPRINT3-INSEE-NULL-001` (4 tours résiduelles),
+  `SITES-PATRIMOINE-PIEVE-ATTRIBUTIONS-SUSPECTES-001` (Meria, Olmeta-di-Capocorso, Saint-Florent),
+  `SITES-PATRIMOINE-TOURS-CASTELLUCCIO-DOUBLET-001` (audit toponymique),
+  `SITES-PATRIMOINE-TOURS-FARINOLE-GPS-PRECIS-001` (centroïde commune),
+  `SITES-PATRIMOINE-TOURS-POGGIO-ERSA-MAISON-TOUR-001` (PA2B000009 GPS anomal),
+  `SITES-PATRIMOINE-TOURS-MERIMEE-EXHAUSTIF-COMPLEMENT-001` (4 tours résiduelles 66→70).
+- 1 bonne pratique tracée dans nouvelle section `## Bonnes pratiques issues de sprints` :
+  `BP-SPRINT3B-MAPPING-INTEGRE-INGESTION-001` (mapping `pieve_slug` + `commune_insee` dès ingestion Code, pattern Sprint 3b/3c/3d).
+
+### sites_patrimoine.json (rétrospectif Sprint 3 complet, 5 PRs data + 1 mapping correctif)
+- **15 → 66 tours littorales (+51)**
+- 4 zones blanches comblées :
+  - Balagne : 0 → 11
+  - Ajaccio : 1 → 6
+  - Extrême-Sud : 1 → 7
+  - Plaine Orientale côte est : 0 → 7
+- Cap renforcé : 5 → 23
+- Piana-Vico-Sari : 4 → 9
+- Sources : Mérimée POP (25+ références PA*/IA*) + Wikipedia FR cross-référencées
+- Cible brief 70 atteinte à **66/70 = 94%** (4 résiduelles tracées en dette `SITES-PATRIMOINE-TOURS-MERIMEE-EXHAUSTIF-COMPLEMENT-001`)
+- Plafond Sprint 3 : 51/55 ajouts consommés (marge 4 reflète sous-densité historique Plaine Orientale, documentée et acceptée)
+
+### PRs Sprint 3
+- #541 Sprint 3a Cap+Balagne (+28 tours, mapping non intégré)
+- #543 Sprint 3a mapping pieve+INSEE correctif (28 tours patchées + Farinole P1→P2)
+- #545 Sprint 3b Ouest+Sud-Ouest (+10 tours, **mapping intégré dès ingestion** — leçon)
+- #547 Sprint 3c Extrême-Sud + côte est (+11 tours)
+- #549 Sprint 3d complément Plaine Orientale (+2 tours, sous-cible documentée)
+
+---
+
 ## [Non publié] — Sprint 2 mégalithes + consolidation dettes (13 mai 2026)
 
 ### data — Sprint 2 Phase B mégalithes (PR #538)
