@@ -8,11 +8,6 @@
 <meta name="description" content="Cartographie patrimoniale corse — sites mégalithiques, édifices romans, sites naturels, architecture LOD diocèses & pieves.">
 <link rel="icon" type="image/svg+xml" href="assets/logo/tellux_logo.svg">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
-<!-- Brief N3 (14 mai 2026) — Leaflet.markercluster CDN unpkg pinné 1.5.3.
-     Dépendance externe validée Soleil pour le drill-down pieve niveau 3
-     (clustering markers de la pieve focus). Tracée dans CHANGELOG. -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
@@ -400,7 +395,6 @@ body.niveau-2-actif .doyenne-mini-marker.persistente-niveau-2{display:none !impo
 </aside>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
 // === Bug 2e clic patrimoine V4 (13 mai 2026) — instrumentation traceur ===
 // Diagnostic Claude web : marker.getPopup() retourne null entre 1er et 2e clic.
@@ -1495,8 +1489,8 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape, opts) {
 // === Brief N3 (14 mai 2026) — Niveau 3 drill-down pieve ===
 // Focus pieve : map.fitBounds(pieveBounds), autres pieves cachées via CSS
 // (data-pieve-slug), markers N2 du doyenné cachés, markers de la pieve dans
-// MarkerClusterGroup (CDN unpkg.com/leaflet.markercluster@1.5.3, validation
-// Soleil pour exception doctrine dépendance externe).
+// un L.layerGroup() simple (clustering Leaflet.markercluster retiré le
+// 14 mai 2026 — bug résidus visuels au changement de région).
 let clusterGroupN3 = null;
 let _pieveActivePolygonRef = null;
 
@@ -1554,19 +1548,11 @@ function enterNiveau3View(pieveSlug, pieveDisplay, pieveShape, opts) {
       if (map.hasLayer(slg)) map.removeLayer(slg);
     }
   }
-  // Construire ou recycler le cluster group N3.
+  // Construire ou recycler le LayerGroup N3 (clustering retiré 14 mai 2026).
   if (clusterGroupN3) {
     if (map.hasLayer(clusterGroupN3)) map.removeLayer(clusterGroupN3);
     clusterGroupN3.clearLayers();
-  } else if (typeof L.markerClusterGroup === 'function') {
-    clusterGroupN3 = L.markerClusterGroup({
-      showCoverageOnHover: false,
-      spiderfyOnMaxZoom: true,
-      maxClusterRadius: 40,
-    });
   } else {
-    // Fallback si markercluster non chargé : LayerGroup simple.
-    console.warn('[Tellux N3] Leaflet.markercluster non chargé, fallback LayerGroup');
     clusterGroupN3 = L.layerGroup();
   }
   // Filtrer sites de la pieve et reutiliser les markers existants (markersBySlug)
