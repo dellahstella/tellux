@@ -1523,6 +1523,25 @@ function enterNiveau3View(pieveSlug, pieveDisplay, pieveShape, opts) {
       elActive.setAttribute('data-pieve-slug', pieveSlug);
     }
   }
+  // Devancer le timer fade N1->N2 si encore pendant (cas deeplink hash :
+  // applyHash enchaine enterNiveau2View -> enterNiveau3View synchrone, le
+  // setTimeout 250ms de enterNiveau2View tirerait apres, re-attachant les
+  // markers du doyenne via slg.getLayers().addTo(map) -> annule notre detach
+  // ci-dessous. On execute le cleanup du timer manuellement, sans le re-attach.
+  if (_spotsN1FadeTimer !== null) {
+    clearTimeout(_spotsN1FadeTimer);
+    _spotsN1FadeTimer = null;
+    if (map.hasLayer(spotsIllustratedLayer)) map.removeLayer(spotsIllustratedLayer);
+    for (const m of doyenneMinisLayer.getLayers()) {
+      if (m._doyenneSlug !== currentDoyenneSlug && map.hasLayer(m)) {
+        map.removeLayer(m);
+      }
+    }
+    for (const icon of _spotsN1FadingIcons) icon.classList.remove('fading-out');
+    for (const icon of _spotsN1FadingMiniIcons) icon.classList.remove('fading-out');
+    _spotsN1FadingIcons = [];
+    _spotsN1FadingMiniIcons = [];
+  }
   // Detacher LayerGroup N2 du doyenne courant + markers individuels.
   // Brief 27 fix shared-marker re-attache les markers individuellement
   // (m.addTo(map)) en plus du LayerGroup, donc on doit detacher les deux.
