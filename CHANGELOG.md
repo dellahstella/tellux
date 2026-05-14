@@ -7,6 +7,38 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Non publié] — Clôture Sprint 4 ponts historiques (14 mai 2026)
+
+### docs
+- 2 dettes patrimoine ponts ajoutées (Sprint 4 série complète) :
+  `SITES-PATRIMOINE-PONTS-SOUS-CIBLE-SPRINT4-001` (10/15-20 assumé scénario B),
+  `SITES-PATRIMOINE-PONTS-SKIPS-PRECISION-GPS-001` (5 candidats archivés : Zippitoli, Zaglia, Ponti Vecchiu, Trinité, Calzola).
+- 1 bonne pratique ajoutée dans `## Bonnes pratiques issues de sprints` :
+  `BP-SPRINT4-DOCTRINE-STRICTE-GPS-PUBLIE-001` (skip sans GPS publié, pas de centroïde commune en P1 pour patrimoine bâti, doctrine Sprint 4b/4c).
+
+### sites_patrimoine.json (rétrospectif Sprint 4 complet, 3 PRs data)
+- **Création nouvel axe `ponts_historiques`** dans `_meta.axes_corpus_referentiel`
+- Couleur DA v2 `#475569` (gris-bleu ardoise, distinct des 5 couleurs déjà utilisées)
+- **0 → 10 ponts** sur la série 3 sprints
+- Périmètre chronologique : XIIᵉ pisans + XVᵉ-XVIIIᵉ génois + XIXᵉ+ inclus si Mérimée recensés (axe englobant)
+- Distribution finale : 5 P1 strict + 5 P2 latent
+- Bassins couverts :
+  - **Haute-Corse Sprint 4a** : 8 ponts (Castagniccia + Tavignano + Asco + Golo)
+  - **CS-ouest Sprint 4b** : 1 pont (Pianella Ota)
+  - **CS-sud Sprint 4c** : 1 pont (Spina-Cavallu Sartène)
+- Sources : Mérimée POP (PA*/IA* cross-vérifiés fiche) + Wikipedia FR
+- Cible révisée scénario B 15-20 : **10/15 = 67%** (cible basse), doctrine stricte assumée
+- 5 candidats skips précision GPS archivés (dette dédiée)
+- **Anomalie Altiani PA00099257** (en réalité Viaduc Eiffel Venaco) redressée en route Sprint 4a → bonne ref `PA00099154`
+- **Cas Spina-Cavallu** : typologie pisane XIIIᵉ confirmée Wikipedia FR (pas génois malgré la nomenclature courante), élargissement chronologique axe `ponts_historiques` validé ex ante par périmètre incluant pisans
+
+### PRs Sprint 4
+- #553 Sprint 4a Haute-Corse (création axe + 8 ponts)
+- #555 Sprint 4b CS-ouest (+1 pont Pianella Ota)
+- #557 Sprint 4c CS-sud (+1 pont Spina-Cavallu Sartène, clôture série)
+
+---
+
 ## [Non publié] — Clôture Sprint 3 tours littorales (13 mai 2026)
 
 ### docs
