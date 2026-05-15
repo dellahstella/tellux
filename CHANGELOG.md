@@ -7,6 +7,13 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Non publié] — Renommage axe `edifices_romans` → `patrimoine_religieux` (15 mai 2026)
+
+### refactor
+- **Renommage axe `patrimoine_religieux`** : identifiant interne `edifices_romans` renommé en `patrimoine_religieux` dans tout le front (data + scripts). Champ `categorie` mis à jour de `'Édifice roman'` à `'Patrimoine religieux'`. Périmètre : `docs/data/sites_patrimoine.json` (314 occurrences), `docs/data/sites_corse.json` (316 occ.), scripts dépréciés, documentation. Zéro impact runtime — axe consommé génériquement par `patrimoine.html`. Ferme dette `EDIFICES-ROMANS-RENAME-001` (tracée Sprint 1).
+
+---
+
 ## [Non publié] — Clôture série fix N3 patrimoine (15 mai 2026)
 
 ### feat
