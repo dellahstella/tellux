@@ -125,10 +125,10 @@ CAT_MAP = {
     'Mégalithique':                                'megalithes',
     'Remarquable':                                 'remarquables_geologiques',     # → Site naturel remarquable
     'Site remarquable':                            'patrimoine_bati_remarquable',  # → Patrimoine bâti remarquable
-    'B — Édifice roman':                           'edifices_romans',
-    'B — Édifice religieux':                       'edifices_romans',              # autres édifices religieux assimilés
-    'B — Édifice roman tardif (limite XVᵉ)':       'edifices_romans',
-    'B — Édifice roman tardif (limite XIVᵉ, gothique de transition)': 'edifices_romans',
+    'B — Édifice roman':                           'patrimoine_religieux',
+    'B — Édifice religieux':                       'patrimoine_religieux',         # autres édifices religieux assimilés
+    'B — Édifice roman tardif (limite XVᵉ)':       'patrimoine_religieux',
+    'B — Édifice roman tardif (limite XIVᵉ, gothique de transition)': 'patrimoine_religieux',
     'E — Diocèse historique':                      'diocese_medieval',             # entités géographiques abstraites
     'Hydraulique':                                 'hydrauliques',
     'Tour génoise':                                'tours_genoises',
@@ -142,15 +142,15 @@ CAT_MAP = {
     'ophiolite':                                   'remarquables_geologiques',
     'minier':                                      'patrimoine_divers',
     'surveillance_radio':                          'remarquables_geologiques',
-    # churches_corse → toutes en edifices_romans
-    'churches_default':                            'edifices_romans',
+    # churches_corse → toutes en patrimoine_religieux
+    'churches_default':                            'patrimoine_religieux',
 }
 # Catégorie d'affichage finale (label humain)
 CAT_DISPLAY = {
     'megalithes':                  'Mégalithique',
     'remarquables_geologiques':    'Site naturel remarquable',
     'patrimoine_bati_remarquable': 'Patrimoine bâti remarquable',
-    'edifices_romans':             'Édifice roman',
+    'patrimoine_religieux':        'Patrimoine religieux',
     'diocese_medieval':            'Diocèse historique',
     'hydrauliques':                'Hydraulique',
     'tours_genoises':              'Tour génoise',
@@ -473,9 +473,9 @@ def normalize_churches(entries, lookups):
             'nom': nom_full,
             'lat': float(e['lat']),
             'lon': float(e['lon']),
-            'categorie': 'Édifice roman',
-            'axe_corpus': 'edifices_romans',
-            'phase_publication': default_phase('churches_corse', 'edifices_romans'),
+            'categorie': 'Patrimoine religieux',
+            'axe_corpus': 'patrimoine_religieux',
+            'phase_publication': default_phase('churches_corse', 'patrimoine_religieux'),
             'description': e.get('note') or None,
             'commune_insee': insee,
             'commune_nom': nom_canon or commune_text or None,
@@ -559,12 +559,12 @@ def dedupe_sites(all_sites, dist_threshold_m=150):
         'megalithes':                  {'megalithes', 'remarquables_geologiques'},
         'remarquables_geologiques':    {'remarquables_geologiques', 'megalithes', 'patrimoine_bati_remarquable'},
         'patrimoine_bati_remarquable': {'patrimoine_bati_remarquable', 'remarquables_geologiques', 'tours_genoises', 'chateaux_medievaux'},
-        'edifices_romans':             {'edifices_romans', 'patrimoine_divers'},
+        'patrimoine_religieux':        {'patrimoine_religieux', 'patrimoine_divers'},
         'diocese_medieval':            {'diocese_medieval'},
         'hydrauliques':                {'hydrauliques'},
         'tours_genoises':              {'tours_genoises', 'patrimoine_bati_remarquable'},
         'chateaux_medievaux':          {'chateaux_medievaux', 'patrimoine_bati_remarquable'},
-        'patrimoine_divers':           {'patrimoine_divers', 'patrimoine_bati_remarquable', 'tours_genoises', 'chateaux_medievaux', 'edifices_romans'},
+        'patrimoine_divers':           {'patrimoine_divers', 'patrimoine_bati_remarquable', 'tours_genoises', 'chateaux_medievaux', 'patrimoine_religieux'},
     }
 
     canonical = []
