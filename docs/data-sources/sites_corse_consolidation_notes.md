@@ -32,7 +32,7 @@
 
 | axe_corpus | Catégorie display | Nb total | Phase 1 | Phase 2 |
 |-----------|-------------------|---------:|--------:|--------:|
-| `edifices_romans` | Édifice roman | 315 | 27 | 288 |
+| `patrimoine_religieux` | Patrimoine religieux | 315 | 27 | 288 |
 | `megalithes` | Mégalithique | 66 | 66 | 0 |
 | `remarquables_geologiques` | Site naturel remarquable | 37 | 37 | 0 |
 | `patrimoine_divers` | Patrimoine | 22 | 22 | 0 |
@@ -46,7 +46,7 @@
 
 - `Site remarquable` (5 entrées SITES_PATRIMOINE) → `Patrimoine bâti remarquable` / axe `patrimoine_bati_remarquable`
 - `Remarquable` (29 SP + 34 SR) → `Site naturel remarquable` / axe `remarquables_geologiques`
-- Toutes les variantes `B — Édifice roman tardif` etc. unifiées sous `Édifice roman` / axe `edifices_romans`
+- Toutes les variantes `B — Édifice roman tardif` etc. unifiées sous `Patrimoine religieux` / axe `patrimoine_religieux` (renommé depuis `patrimoine_religieux` le 15 mai 2026 pour élargir le scope)
 - `Pont génois`, `Thermalisme`, `Patrimoine & Ressources`, `Patrimoine` unifiés sous `Patrimoine` / axe `patrimoine_divers`
 
 ## 4. Déduplication
@@ -164,23 +164,23 @@ Total : 68 orphans sur 479 sites (14%).
 | Sposata (menhir penché) | `megalithes` | SITES_REFERENCE, sites_corse_supabase | Point-in-polygon contour commune (Phase 2) |
 | Cascades du Voile de la mariée | `remarquables_geologiques` | SITES_REFERENCE, sites_corse_supabase | Point-in-polygon contour commune (Phase 2) |
 | Capula torre | `megalithes` | SITES_REFERENCE, sites_corse_supabase | Point-in-polygon contour commune (Phase 2) |
-| Santa Maria (Pietrapola) | `edifices_romans` | churches_corse | Override JSON hameau→commune |
-| Santa Maria (Vizzavona) | `edifices_romans` | churches_corse | Override JSON hameau→commune |
-| Santa Maria di e Grazie (Sagone littoral) | `edifices_romans` | churches_corse | Override JSON hameau→commune |
-| San Giovanni (Vizzavona village) | `edifices_romans` | churches_corse | Override JSON hameau→commune |
-| Santa Maria (Favone) | `edifices_romans` | churches_corse | Override JSON hameau→commune |
-| Santa Maria (Folelli) | `edifices_romans` | churches_corse | Override JSON hameau→commune |
-| Santa Maria (Moriani-Plage haute) | `edifices_romans` | churches_corse | Override JSON hameau→commune |
-| San Quilicu (Prunete village) | `edifices_romans` | churches_corse | Override JSON hameau→commune |
-| San Giovanni (Zeloso) | `edifices_romans` | churches_corse | Override JSON hameau→commune |
-| San Giuliano (Cuttoli haute) | `edifices_romans` | churches_corse | Override JSON hameau→commune |
-| San Petru (Vallerustie village) | `edifices_romans` | churches_corse | Override JSON hameau→commune |
-| San Cipriano (Sagone basse) | `edifices_romans` | churches_corse | Override JSON hameau→commune |
-| Sant'Appiano fils (Vico golfe) | `edifices_romans` | churches_corse | Override JSON hameau→commune |
-| San Pietro (Lozari) | `edifices_romans` | churches_corse | Override JSON hameau→commune |
-| San Quilicu (Castagniccia-Opino) | `edifices_romans` | churches_corse | Override JSON hameau→commune |
-| San Giovanni (Vizzavona bas) | `edifices_romans` | churches_corse | Override JSON hameau→commune |
-| San Giovanni (Serrabone) | `edifices_romans` | churches_corse | Override JSON hameau→commune |
+| Santa Maria (Pietrapola) | `patrimoine_religieux` | churches_corse | Override JSON hameau→commune |
+| Santa Maria (Vizzavona) | `patrimoine_religieux` | churches_corse | Override JSON hameau→commune |
+| Santa Maria di e Grazie (Sagone littoral) | `patrimoine_religieux` | churches_corse | Override JSON hameau→commune |
+| San Giovanni (Vizzavona village) | `patrimoine_religieux` | churches_corse | Override JSON hameau→commune |
+| Santa Maria (Favone) | `patrimoine_religieux` | churches_corse | Override JSON hameau→commune |
+| Santa Maria (Folelli) | `patrimoine_religieux` | churches_corse | Override JSON hameau→commune |
+| Santa Maria (Moriani-Plage haute) | `patrimoine_religieux` | churches_corse | Override JSON hameau→commune |
+| San Quilicu (Prunete village) | `patrimoine_religieux` | churches_corse | Override JSON hameau→commune |
+| San Giovanni (Zeloso) | `patrimoine_religieux` | churches_corse | Override JSON hameau→commune |
+| San Giuliano (Cuttoli haute) | `patrimoine_religieux` | churches_corse | Override JSON hameau→commune |
+| San Petru (Vallerustie village) | `patrimoine_religieux` | churches_corse | Override JSON hameau→commune |
+| San Cipriano (Sagone basse) | `patrimoine_religieux` | churches_corse | Override JSON hameau→commune |
+| Sant'Appiano fils (Vico golfe) | `patrimoine_religieux` | churches_corse | Override JSON hameau→commune |
+| San Pietro (Lozari) | `patrimoine_religieux` | churches_corse | Override JSON hameau→commune |
+| San Quilicu (Castagniccia-Opino) | `patrimoine_religieux` | churches_corse | Override JSON hameau→commune |
+| San Giovanni (Vizzavona bas) | `patrimoine_religieux` | churches_corse | Override JSON hameau→commune |
+| San Giovanni (Serrabone) | `patrimoine_religieux` | churches_corse | Override JSON hameau→commune |
 
 ## 9. Schéma JSON cible — version définitive
 

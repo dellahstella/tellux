@@ -82,7 +82,7 @@ DISPLAY = {
     'megalithes': 'Mégalithique',
     'remarquables_geologiques': 'Site naturel remarquable',
     'patrimoine_bati_remarquable': 'Patrimoine bâti remarquable',
-    'edifices_romans': 'Édifice roman',
+    'patrimoine_religieux': 'Patrimoine religieux',
     'diocese_medieval': 'Diocèse historique',
     'hydrauliques': 'Hydraulique',
     'tours_genoises': 'Tour génoise',
@@ -96,7 +96,7 @@ md.append(f"**Renommages effectués (Q2) :**")
 md.append(f"")
 md.append(f"- `Site remarquable` (5 entrées SITES_PATRIMOINE) → `Patrimoine bâti remarquable` / axe `patrimoine_bati_remarquable`")
 md.append(f"- `Remarquable` (29 SP + 34 SR) → `Site naturel remarquable` / axe `remarquables_geologiques`")
-md.append(f"- Toutes les variantes `B — Édifice roman tardif` etc. unifiées sous `Édifice roman` / axe `edifices_romans`")
+md.append(f"- Toutes les variantes `B — Édifice roman tardif` etc. unifiées sous `Patrimoine religieux` / axe `patrimoine_religieux`")
 md.append(f"- `Pont génois`, `Thermalisme`, `Patrimoine & Ressources`, `Patrimoine` unifiés sous `Patrimoine` / axe `patrimoine_divers`")
 md.append(f"")
 md.append(f"## 4. Déduplication")
