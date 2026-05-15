@@ -7,6 +7,50 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Non publié] — Clôture série fix N3 patrimoine (15 mai 2026)
+
+### feat
+- **Implémentation niveau 3 patrimoine.html** (PR #577, 14 mai) : drill-down pieve depuis vue N2 doyenné, breadcrumb 3 segments cliquable (Corse › Doyenné › Pieve), bookmarking URL hash 3 niveaux (`#doyenne/pieve`), sticker doyenné top-right en N3, bouton retour pieve, fix `PATRIMOINE-HASH-DEEPLINK-CADRAGE-001` (cadrage map sur deeplink), CDN Leaflet.markercluster 1.5.3 (initial, retiré PR #579 cf. ci-dessous).
+
+### fix (série lots 1-12 audit visuel Soleil, 14-15 mai 2026)
+- **PR #579/#580** : Retrait clustering Leaflet.markercluster (résidus visuels N3 au changement de région). Remplacé par `L.layerGroup()` natif. Projet revient à zéro dépendance externe.
+- **PR #581/#582** : Résolution conflits homonymie pieves (3 cibles : `pieve_verde`, `pieve_rogna`, `pieve_sartene`). 23 retags vers slugs disambiguïsés par doyenné (`*_prunelli_taravo_valinco`, `*_extreme_sud`, `*_plaine_orientale`, `*_ajaccio`).
+- **PR #583/#584** : Cleanup `patrimonio_paese` (1 doublon supprimé, conservation `san_martino_de_patrimonio` église romane).
+- **PR #585/#586** : Rattachements lot 1 (8 sites pieve+doyenné). Pattern `BP-FIX-RATTACHEMENT-COMPLET-001` formalisé.
+- **PR #587/#588** : Lot 2 (15 retags inversion `pieve_rogna` + 1 suppression doublon `pont_d_altiani`).
+- **PR #589/#590** : Lot 3 doyenné Cap (9 retags + investigation `pieve_pino` conservée).
+- **PR #591/#592** : Lot 4 doyenné Golo (7 retags + suppression polygone `pieve_ampugnani` fusion NE Orezza).
+- **PR #593/#594** : Lot 5 doyenné Balagne (Pont Ponte Leccia → pieve_caccia + suppression doublon `tour_de_la_pietra_ile_rousse`).
+- **PR #595/#596** : Lot 6 doyenné Cortenais (10 retags + fix nom `santa_restitude_corte_niolu_versant` double parenthèse).
+- **PR #597/#598** : Lot 7 doyenné Vico (4 retags).
+- **PR #599/#600** : Lot 8 doyenné Ajaccio (2 retags pattern PR 4 incomplet).
+- **PR #601/#602** : Lot 9 doyenné PTV (16 retags option simplifiée, `pieve_verde_PTV` orphelinée).
+- **PR #603/#604** : Lot 10 doyenné Extrême-Sud (16 retags, `pieve_verde_extreme_sud` orphelinée).
+- **PR #605/#606** : Lot 11 doyenné Plaine Orientale (3 fusions polygones anti-conflit homonymie : `pieve_bozio`→`pieve_alesani`, `pieve_campoloro`→`pieve_moriani`, `pieve_verde`→`pieve_fiumorbo` ; 19 retags + 2 polygones supprimés).
+- **PR #607/#608** : Lot 12 doyenné Cap compléments (4 retags : `tour_de_giraglia_ilot` + `anneaux_du_cap_corse` → `pieve_rogliano` ; `tour_de_la_mortella` + `barrage_padula` → `pieve_nebbiu`).
+
+### docs (cette PR)
+- 2 BPs formalisées dans `DETTES_TECHNIQUES.md` :
+  - `BP-FIX-RATTACHEMENT-COMPLET-001` : cohérence `pieve_slug` + `doyenne_contemporain_slug` dans toute PR rattachement
+  - `BP-FUSION-POLYGONE-ARBITRAGE-001` : fusion polygone admise sous arbitrage Soleil Phase A + template plan technique
+- 1 dette fermée : `PATRIMOINE-HASH-DEEPLINK-CADRAGE-001` (résolue PR #577)
+- 3 dettes nouvelles ouvertes :
+  - `PATRIMOINE-PIEVE-NEBBIU-CHEVAUCHE-GOLO-CAP-001` (polygone large couvre 2 doyennés)
+  - `PATRIMOINE-DETROIT-BONIFACIO-ENTREE-MANQUANTE-001` (entité absente du data, ajout différé en PR dédiée)
+  - `PATRIMOINE-PIEVE-CAP-NON-CLIQUABLE-UI-001` (bug visuel non reproductible programmatiquement)
+
+### Bilan compteurs prod post-série fix N3
+- **~140 retags `pieve_slug`** cumulés sur 12 lots
+- **3 polygones supprimés** : `pieve_ampugnani` (PR #591), `pieve_campoloro` + `pieve_verde` (PR #605) — pieves_polygons.json passe de 47 à 44
+- **3 doublons supprimés** : `patrimonio_paese`, `pont_d_altiani`, `tour_de_la_pietra_ile_rousse` — sites_patrimoine.json passe de 544 à 541
+- **N3 patrimoine fonctionnel** pour Phase 1 beta : 12 doyennés audités visuellement par Soleil, slugs pieves consolidés, 0 dépendance externe, drill-down 3 niveaux (N1 Corse → N2 doyenné → N3 pieve) opérationnel
+- **2 doyennés signalés "substantiellement propres" par Soleil** : Balagne (lot 5), Vico (lot 7)
+
+### PRs série fix N3
+#577 (impl) + #579/#580, #581/#582, #583/#584, #585/#586, #587/#588, #589/#590, #591/#592, #593/#594, #595/#596, #597/#598, #599/#600, #601/#602, #603/#604, #605/#606, #607/#608 = **31 PRs cumulées** (1 implémentation + 15 paires fix→deploy)
+
+---
+
 ## [Non publié] — Clôture Sprint 7 densification + correction rebalance (14 mai 2026)
 
 ### docs
