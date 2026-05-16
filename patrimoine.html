@@ -1259,11 +1259,12 @@ fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
         allPievesLodLayer.addLayer(lodPoly);
       }
     }
-    // Mapping spot -> pieve via point-in-polygon (4e niveau breadcrumb).
+    // Mapping spot -> pieve : pieve_slug explicite en priorité, sinon point-in-polygon.
     let mappedPieve = 0, unmappedPieve = 0;
     for (const slug in markersBySlug) {
       const site = markersBySlug[slug].site;
-      const pv = findPieveForPoint(site.lat, site.lon);
+      const explicit = site.pieve_slug && pievePolygonsBySlugV2[site.pieve_slug] ? site.pieve_slug : null;
+      const pv = explicit || findPieveForPoint(site.lat, site.lon);
       if (pv) { SPOT_TO_PIEVE_V2.set(slug, pv); mappedPieve++; } else { unmappedPieve++; }
     }
     // Construire spotsLevel2ByDoyenne : tous les markers groupes par doyenne
