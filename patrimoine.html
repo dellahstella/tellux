@@ -2389,8 +2389,13 @@ function updateZoomLOD() {
     if (!map.hasLayer(doyenneMinisLayer)) doyenneMinisLayer.addTo(map);
   }
 
-  // Toutes les pieves (zoom >= LOD_ZOOM_PIEVE)
-  if (z >= LOD_ZOOM_PIEVE) {
+  // U3 (URGENT FEDER 2026-05-17) — allPievesLodLayer interdite en vue
+  // Corse globale (N1). La couche pollue avec 45 polygons cliquables
+  // qui permettent notamment d'ouvrir un popup pieve depuis N1 sans
+  // drill doyenne (vecteur du bug popup-home U1). Reservee aux drill-down
+  // N2+ : ne s'ajoute que si body.niveau-2 actif (apres clic doyenne).
+  var n2Actif = document.body.classList.contains('niveau-2');
+  if (z >= LOD_ZOOM_PIEVE && n2Actif) {
     if (!map.hasLayer(allPievesLodLayer) && allPievesLodLayer.getLayers().length > 0) allPievesLodLayer.addTo(map);
   } else {
     if (map.hasLayer(allPievesLodLayer)) map.removeLayer(allPievesLodLayer);
