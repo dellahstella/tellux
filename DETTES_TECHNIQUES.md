@@ -1283,6 +1283,27 @@ Les deux sont sur la côte est entre Pinarellu et Fautea (commune Zonza). Leur t
 
 ---
 
+### PIEVE-MAPPING-AMONT-DESYNCHRO-001 — JSON dérivé pieves_polygons.json patché en direct, mapping amont non synchronisé
+
+**Description :** Le JSON dérivé `docs/data/pieves_polygons.json` a été patché en direct Phase QW (commit `1ef64ec`) pour :
+- `stats.pieves_count` (44 → 45) et `stats.total_communes` (360 → 357)
+- `diocese_medieval` ajouté pour `pieve_mezzana`, `pieve_patrimonio`, `pieve_zicavo`, `pieve_verde`
+- Préfixe `Pieve di / Pieve d'` retiré de 7 noms (celavo, tavagna, casacconi, filosorma, luri, talcini, aleria)
+
+Le mapping amont (`_drafts/pieves_communes_mapping.json` + `_drafts/pieves_communes_mapping_v2_canonicite_casta.json`) **n'a PAS été synchronisé** pour ces 3 catégories de modifications. Le script `build_pieves_polygons.py` ne contient pas non plus la logique pour produire ces ajustements (les `name` sont générés via `name = "Pieve di " + base`, les `diocese_medieval` viennent du meta du mapping).
+
+**Conséquence :** Si `build_pieves_polygons.py` est ré-exécuté tel quel, ces ajustements seront **perdus** (stats recalculées correctement mais diocese + name régressés).
+
+**Priorité :** Moyenne (impact futur lors d'une régénération, pas immédiat)
+
+**Condition de déblocage :** Reporter les patches dans le mapping amont (mezzana/patrimonio/zicavo/verde → diocese_medieval explicite) ET dans le script `build_pieves_polygons.py` (logique de strip du préfixe `Pieve di` sur les 7 slugs concernés, ou retrait global du préfixe). Alternative : ajouter une étape de post-traitement au script qui applique ces patches après build.
+
+**Référence :** ADR-001, `docs/operations/PIEVES_REFACTOR_EXEC_CODE_2026-05-17.md` §1.
+
+**Identifiée :** 17 mai 2026 (Phase QW refactor pièves, autorisée par doc PIEVES_REFACTOR_EXEC §1).
+
+---
+
 ## Bonnes pratiques issues de sprints
 
 ### BP-SPRINT3B-MAPPING-INTEGRE-INGESTION-001 — Mapping `pieve_slug` + `commune_insee` intégré dès l'ingestion
