@@ -1266,6 +1266,23 @@ PR Code séparée dédiée après livraison ADR. Bug minimum à fixer en parall�
 
 ---
 
+### PATRIMOINE-PIEVE-VERDE-COTE-EST-NON-RATTACHEE-001 — 2 sites côte est non rattachés à un polygone pieve
+
+**Description :** Suite à l'arbitrage Soleil 2026-05-17 option C (conserver `pieve_verde` qui a un polygone valide en Bavella/Zonza/Levie sud + 5 sites in-polygone), 2 sites tagués `pieve_verde` tombent géométriquement hors de tous les polygones pieve existants :
+
+- `tour_de_pinarellu_zonza` (41.6706, 9.3925) — distance polygone le plus proche (`pieve_verde`) ≈ 0.0044° (~500m)
+- `tour_de_fautea_zonza` (41.7133, 9.4058) — distance polygone le plus proche (`pieve_verde`) ≈ 0.00022° (~25m, quasi-frontière)
+
+Les deux sont sur la côte est entre Pinarellu et Fautea (commune Zonza). Leur tag `pieve_verde` reste cohérent sémantiquement (proches du polygone et de la commune Zonza qui appartient à pieve_verde), mais formellement ils ne sont pas inclus dans le polygone.
+
+**Priorité :** Faible (impact visuel nul, sites apparaissent en N3 pieve_verde normalement).
+
+**Condition de déblocage :** Soit étendre le polygone `pieve_verde` vers la côte est (modif source mapping commune Zonza puis régénération `build_pieves_polygons.py`), soit créer une pieve côtière dédiée (`pieve_costa_zonza` ?) post-FEDER selon le redécoupage Phase 2 patrimoine. À traiter post-FEDER.
+
+**Identifiée :** 17 mai 2026 (Phase QW refactor pièves Soleil arbitrage option C `pieve_verde`).
+
+---
+
 ## Bonnes pratiques issues de sprints
 
 ### BP-SPRINT3B-MAPPING-INTEGRE-INGESTION-001 — Mapping `pieve_slug` + `commune_insee` intégré dès l'ingestion
