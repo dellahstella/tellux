@@ -266,6 +266,11 @@ body.niveau-2-actif .doyenne-mini-marker.persistente-niveau-2{display:none !impo
 .tlx-fiche-cat{font-size:10px;color:var(--tx-mica);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:3px;}
 .tlx-fiche-title{font-family:var(--font-display);font-size:17px;font-weight:500;color:var(--tx-ardoise);line-height:1.2;}
 .tlx-fiche-sep{height:1px;background:var(--border);}
+/* Fix C3 (2026-05-17) — note de rattachement pieve (pattern generique).
+   Inseree entre header et body de fiche, visible uniquement si le JSON
+   pieve definit le champ note_rattachement. */
+.tlx-pieve-note{margin:6px 16px 0;padding:6px 8px;background:rgba(123,119,112,0.08);border-left:2px solid var(--tx-mica);font-size:12px;line-height:1.4;color:var(--tx-ardoise);}
+.tlx-pieve-note strong{color:var(--tx-ocre);}
 .tlx-fiche-body{padding:10px 16px;font-size:13.5px;line-height:1.65;color:var(--tx-ardoise);text-align:justify;max-height:210px;overflow-y:auto;}
 .tlx-fiche-body p{margin:0 0 8px;}
 .tlx-fiche-body p:last-child{margin-bottom:0;}
@@ -1189,6 +1194,9 @@ const pieveShapesBySlugV2 = {};            // pieveSlug -> Leaflet polygon
 const pieveNameBySlugV2 = {};              // pieveSlug -> display name
 const pievePolygonsBySlugV2 = {};          // pieveSlug -> [[lat,lng],...] pour point-in-polygon
 const pieveDoyenneBySlugV2 = {};           // pieveSlug -> doyenneSlug majoritaire
+// Fix C3 (2026-05-17) — pattern generique : pieves avec un champ note_rattachement
+// dans pieves_polygons.json voient leur popup enrichi. Amorce pieve_nebbiu.
+const pieveNoteRattachementBySlugV2 = {}; // pieveSlug -> note pedagogique
 const SPOT_TO_PIEVE_V2 = new Map();        // spot.slug -> pieve.slug
 
 function findPieveForPoint(lat, lng) {
@@ -1221,6 +1229,8 @@ fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
       pieveNameBySlugV2[p.slug] = p.name;
       pievePolygonsBySlugV2[p.slug] = p.polygon;
       pieveDoyenneBySlugV2[p.slug] = p.doyenne_contemporain_majoritaire;
+      // Fix C3 — note de rattachement optionnelle (popup enrichi).
+      if (p.note_rattachement) pieveNoteRattachementBySlugV2[p.slug] = p.note_rattachement;
       // Brief 12 — UNION : overrides manuels (Brief 10) + auto seuil 25%.
       const overrides = p.doyennes_visibles && p.doyennes_visibles.length
         ? p.doyennes_visibles
@@ -2232,12 +2242,27 @@ function fetchFiche(ficheType, slug, version) {
 function openFichePopup(shape, ficheType, slug, displayName, catLabel) {
   var center = (shape.getBounds ? shape.getBounds().getCenter() : shape.getLatLng ? shape.getLatLng() : shape);
   var pid = 'fp-' + slug.replace(/[^a-z0-9_]/g, '_');
+  // Fix C3 (2026-05-17) — pattern generique : pour les pieves avec
+  // note_rattachement dans pieves_polygons.json, injecter un bloc note
+  // pedagogique apres le titre (avant le body charge depuis fiche v2/v3).
+  var pieveNoteHtml = '';
+  if (ficheType === 'pieves') {
+    var pieveFullSlug = slug.indexOf('pieve_') === 0 ? slug : 'pieve_' + slug;
+    var pieveNote = pieveNoteRattachementBySlugV2[pieveFullSlug];
+    if (pieveNote) {
+      pieveNoteHtml = '<div class="tlx-pieve-note">'
+        + '<strong>Note de rattachement :</strong> '
+        + escapeHtml(pieveNote)
+        + '</div>';
+    }
+  }
   var html = '<div class="tlx-fiche-popup">'
     + '<button class="tlx-popup-close" aria-label="Fermer">&#xD7;</button>'
     + '<div class="tlx-fiche-header">'
     + '<div class="tlx-fiche-cat">' + escapeHtml(catLabel) + '</div>'
     + '<div class="tlx-fiche-title">' + escapeHtml(displayName) + '</div>'
     + '</div>'
+    + pieveNoteHtml
     + '<div class="tlx-fiche-sep"></div>'
     + '<div class="tlx-fiche-body loading" id="' + pid + '-body">Chargement...</div>'
     + '<div class="tlx-fiche-footer">'
