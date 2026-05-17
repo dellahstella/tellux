@@ -7,6 +7,31 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Non publié] — Audit Cowork Phase B : 17 orphelins + 18 cross-doyennés retag selon géo (17 mai 2026)
+
+### fix
+- **Cat 1 — 17 sites orphelins retag** (commit `18cd606`) : tous les sites avec `doyenne_contemporain_slug=null` issus de l'audit MCP du 15 mai sont retag (pieve + doyenné) selon géo réelle. Doctrine Soleil : géo prime sur orthodoxie historique pour Phase 1 beta. Méthode : `shapely.contains` pour chaque coord vs polygones pieves + doyennés. Script reproductible `scripts/retag_orphans.py`. **PATRIMOINE-ORPHANS-INVISIBLES-001 réduite 18 → 1 résiduel** (`cap_corse_extreme_nord` orphan transcommunal Cap, légitime documenté).
+- **Cat 2 — 18 sites cross-doyennés retag** (commit `0872308`) : sites avec mismatch `pieve.doyenne_contemporain_majoritaire ≠ site.doyenne_contemporain_slug` corrigés selon géo :
+  - 10 non-mariana cohérents (pieve géo + doyenné géo = doyenné majoritaire)
+  - 4 mariana géo HORS polygone mariana → retag vers vraie pieve géo (`pieve_casinca`, `pieve_casacconi`, `pieve_balagne` ×2)
+  - 4 cas A option Soleil (incohérence pieve.majoritaire vs doyenné géo acceptée, géo prime) : `san_quilicu_lama`/`santa_maria_urtaca` → nebbiu/golo ; `san_cervone_valle_d_alesani`/`pont_genois_d_altiani` → rogna/PO
+  - 10 mariana in_pv=True conservés (exception Mariana mega-fusion, refactor via Cowork)
+- **2 cas suspendus option D** (tag inchangé, dettes ouvertes) : `tour_de_farinole` (coord en mer probable à 700m frontière pieve), `casteddu_bastelica` (doute homonymie nom=Bastelica PTV vs géo Cortenais).
+
+### docs (cette PR)
+- 3 dettes nouvelles ouvertes :
+  - `FARINOLE-COORD-DOUTE-001` (coord centroïde commune mais point hors polygones doyenné)
+  - `CASTEDDU-BASTELICA-COORD-DOUTE-001` (audit toponymique/coord à faire)
+  - `PATRIMOINE-PIEVE-MARIANA-MEGA-FUSION-001` (mega-pieve héritage fusions caccia→giovellina→mariana, refactor via Cowork + ADR ; `doyennes_visibles` manque cortenais en bonus)
+- 1 dette mise à jour : `PATRIMOINE-ORPHANS-INVISIBLES-001` (18 → 1 résiduel `cap_corse_extreme_nord`)
+- Doctrine actée Soleil 2026-05-17 : Tellux n'est pas un atlas Casta strict, géo prime sur orthodoxie historique pour Phase 1 beta, refactor doctrinal possible post-FEDER.
+
+### scripts
+- `scripts/retag_orphans.py` : retag des 17 sites orphelins (Cat 1)
+- `scripts/retag_cross_doyennes.py` : retag des 18 sites cross-doyennés (Cat 2)
+
+---
+
 ## [Non publié] — Renommage axe `edifices_romans` → `patrimoine_religieux` (15 mai 2026)
 
 ### refactor
