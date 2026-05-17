@@ -1262,6 +1262,8 @@ Conséquences : (1) polygone pieve_mariana spanne géographiquement 3+ doyennés
 
 PR Code séparée dédiée après livraison ADR. Bug minimum à fixer en parallèle : ajouter `doyenne_cortenais` à `doyennes_visibles` pour rendre la pieve accessible depuis son doyenné principal (1 ligne JSON, candidat hot-fix).
 
+**Amendement 2026-05-17 (Phase R refactor pièves)** : R-4 (rename `pieve_mariana` → `pieve_piana_di_mariana`) **annulé Phase 1 beta**. Le périmètre 24 communes (plaine Lucciana/Borgo/Furiani + Castagniccia montagneuse Asco) rend tout rename ponctuel trompeur — `piana_di_mariana` (= plaine de Mariana) suggère une zone côtière limitée alors que le territoire englobe des reliefs. Ce n'est pas un rename qui résout le problème, c'est un REDÉCOUPAGE. Le sujet relève d'un redécoupage en 2-3 sous-pièves (ex : `pieve_castagniccia` + `pieve_piana_di_mariana` + `pieve_orezza_extension`) à instruire post-FEDER avec consultation Soleil et ADR dédié. Référence : `PIEVES_REFACTOR_EXEC_CODE_2026-05-17.md` §R-4 annulé. Conséquence : pas d'alias `pieve_mariana` → `pieve_piana_di_mariana` dans `pieve_aliases.json`, la collision slug ↔ diocèse Mariana subsiste comme pour `pieve_aleria` et `pieve_nebbiu` (cohérent avec R-5 déféré).
+
 **Identifiée :** 17 mai 2026 (audit Phase A cat 2 cross-doyennés Cowork, Soleil arbitrage refactor Mariana via Cowork).
 
 ---
@@ -1301,6 +1303,25 @@ Le mapping amont (`_drafts/pieves_communes_mapping.json` + `_drafts/pieves_commu
 **Référence :** ADR-001, `docs/operations/PIEVES_REFACTOR_EXEC_CODE_2026-05-17.md` §1.
 
 **Identifiée :** 17 mai 2026 (Phase QW refactor pièves, autorisée par doc PIEVES_REFACTOR_EXEC §1).
+
+---
+
+### PIEVE-BASTIA-PERIMETRE-RESIDUEL-001 — `pieve_bastia` réduite à 1 commune (Bastia ville)
+
+**Description :** `pieve_bastia` ne contient qu'**1 commune** (Bastia ville), alors que la pieve médiévale Casta correspondante (Lota) couvre 5-6 communes du sud du Cap (Pietranera, Cardo, Toga, Erbalunga, San-Martino-di-Lota côté nord du Cap). Les autres communes sont vraisemblablement absorbées par `pieve_mariana` mega-pieve (cf. `PATRIMOINE-PIEVE-MARIANA-MEGA-FUSION-001`) ou réparties ailleurs lors des passes de mapping antérieures.
+
+Renommage R-1 `pieve_bastia` → `pieve_lota` **annulé Phase 1 beta** (acté Soleil 2026-05-17) : Lota historique exclut explicitement Bastia ville, le rename aurait été factuellement faux et contraire à la doctrine ADR-001 §2.4 (critères lisibilité + géographie).
+
+**Priorité :** Moyenne (impact carto pédagogique, anomalie héritée du mapping antérieur)
+
+**Condition de déblocage :** Refonte post-FEDER. Trois options à instruire :
+- Absorber `pieve_bastia` dans une vraie `pieve_lota` reconstituée avec les communes du sud du Cap (nécessite refactor mapping amont)
+- Absorber `pieve_bastia` dans `pieve_mariana` (cohérent avec l'extension de mariana mega-pieve)
+- Acter un statut spécifique "pieve ville" (Bastia + Ajaccio + Bonifacio formeraient une catégorie à part)
+
+**Référence :** `PIEVES_REFACTOR_EXEC_CODE_2026-05-17.md` §R-1 annulé.
+
+**Identifiée :** 17 mai 2026 (Phase R refactor pièves, écart périmètre détecté pré-rename).
 
 ---
 
