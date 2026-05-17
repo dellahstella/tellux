@@ -1262,7 +1262,66 @@ Conséquences : (1) polygone pieve_mariana spanne géographiquement 3+ doyennés
 
 PR Code séparée dédiée après livraison ADR. Bug minimum à fixer en parallèle : ajouter `doyenne_cortenais` à `doyennes_visibles` pour rendre la pieve accessible depuis son doyenné principal (1 ligne JSON, candidat hot-fix).
 
+**Amendement 2026-05-17 (Phase R refactor pièves)** : R-4 (rename `pieve_mariana` → `pieve_piana_di_mariana`) **annulé Phase 1 beta**. Le périmètre 24 communes (plaine Lucciana/Borgo/Furiani + Castagniccia montagneuse Asco) rend tout rename ponctuel trompeur — `piana_di_mariana` (= plaine de Mariana) suggère une zone côtière limitée alors que le territoire englobe des reliefs. Ce n'est pas un rename qui résout le problème, c'est un REDÉCOUPAGE. Le sujet relève d'un redécoupage en 2-3 sous-pièves (ex : `pieve_castagniccia` + `pieve_piana_di_mariana` + `pieve_orezza_extension`) à instruire post-FEDER avec consultation Soleil et ADR dédié. Référence : `PIEVES_REFACTOR_EXEC_CODE_2026-05-17.md` §R-4 annulé. Conséquence : pas d'alias `pieve_mariana` → `pieve_piana_di_mariana` dans `pieve_aliases.json`, la collision slug ↔ diocèse Mariana subsiste comme pour `pieve_aleria` et `pieve_nebbiu` (cohérent avec R-5 déféré).
+
 **Identifiée :** 17 mai 2026 (audit Phase A cat 2 cross-doyennés Cowork, Soleil arbitrage refactor Mariana via Cowork).
+
+---
+
+### PATRIMOINE-PIEVE-VERDE-COTE-EST-NON-RATTACHEE-001 — 2 sites côte est non rattachés à un polygone pieve
+
+**Description :** Suite à l'arbitrage Soleil 2026-05-17 option C (conserver `pieve_verde` qui a un polygone valide en Bavella/Zonza/Levie sud + 5 sites in-polygone), 2 sites tagués `pieve_verde` tombent géométriquement hors de tous les polygones pieve existants :
+
+- `tour_de_pinarellu_zonza` (41.6706, 9.3925) — distance polygone le plus proche (`pieve_verde`) ≈ 0.0044° (~500m)
+- `tour_de_fautea_zonza` (41.7133, 9.4058) — distance polygone le plus proche (`pieve_verde`) ≈ 0.00022° (~25m, quasi-frontière)
+
+Les deux sont sur la côte est entre Pinarellu et Fautea (commune Zonza). Leur tag `pieve_verde` reste cohérent sémantiquement (proches du polygone et de la commune Zonza qui appartient à pieve_verde), mais formellement ils ne sont pas inclus dans le polygone.
+
+**Priorité :** Faible (impact visuel nul, sites apparaissent en N3 pieve_verde normalement).
+
+**Condition de déblocage :** Soit étendre le polygone `pieve_verde` vers la côte est (modif source mapping commune Zonza puis régénération `build_pieves_polygons.py`), soit créer une pieve côtière dédiée (`pieve_costa_zonza` ?) post-FEDER selon le redécoupage Phase 2 patrimoine. À traiter post-FEDER.
+
+**Identifiée :** 17 mai 2026 (Phase QW refactor pièves Soleil arbitrage option C `pieve_verde`).
+
+---
+
+### PIEVE-MAPPING-AMONT-DESYNCHRO-001 — JSON dérivé pieves_polygons.json patché en direct, mapping amont non synchronisé
+
+**Description :** Le JSON dérivé `docs/data/pieves_polygons.json` a été patché en direct Phase QW (commit `1ef64ec`) pour :
+- `stats.pieves_count` (44 → 45) et `stats.total_communes` (360 → 357)
+- `diocese_medieval` ajouté pour `pieve_mezzana`, `pieve_patrimonio`, `pieve_zicavo`, `pieve_verde`
+- Préfixe `Pieve di / Pieve d'` retiré de 7 noms (celavo, tavagna, casacconi, filosorma, luri, talcini, aleria)
+
+Le mapping amont (`_drafts/pieves_communes_mapping.json` + `_drafts/pieves_communes_mapping_v2_canonicite_casta.json`) **n'a PAS été synchronisé** pour ces 3 catégories de modifications. Le script `build_pieves_polygons.py` ne contient pas non plus la logique pour produire ces ajustements (les `name` sont générés via `name = "Pieve di " + base`, les `diocese_medieval` viennent du meta du mapping).
+
+**Conséquence :** Si `build_pieves_polygons.py` est ré-exécuté tel quel, ces ajustements seront **perdus** (stats recalculées correctement mais diocese + name régressés).
+
+**Priorité :** Moyenne (impact futur lors d'une régénération, pas immédiat)
+
+**Condition de déblocage :** Reporter les patches dans le mapping amont (mezzana/patrimonio/zicavo/verde → diocese_medieval explicite) ET dans le script `build_pieves_polygons.py` (logique de strip du préfixe `Pieve di` sur les 7 slugs concernés, ou retrait global du préfixe). Alternative : ajouter une étape de post-traitement au script qui applique ces patches après build.
+
+**Référence :** ADR-001, `docs/operations/PIEVES_REFACTOR_EXEC_CODE_2026-05-17.md` §1.
+
+**Identifiée :** 17 mai 2026 (Phase QW refactor pièves, autorisée par doc PIEVES_REFACTOR_EXEC §1).
+
+---
+
+### PIEVE-BASTIA-PERIMETRE-RESIDUEL-001 — `pieve_bastia` réduite à 1 commune (Bastia ville)
+
+**Description :** `pieve_bastia` ne contient qu'**1 commune** (Bastia ville), alors que la pieve médiévale Casta correspondante (Lota) couvre 5-6 communes du sud du Cap (Pietranera, Cardo, Toga, Erbalunga, San-Martino-di-Lota côté nord du Cap). Les autres communes sont vraisemblablement absorbées par `pieve_mariana` mega-pieve (cf. `PATRIMOINE-PIEVE-MARIANA-MEGA-FUSION-001`) ou réparties ailleurs lors des passes de mapping antérieures.
+
+Renommage R-1 `pieve_bastia` → `pieve_lota` **annulé Phase 1 beta** (acté Soleil 2026-05-17) : Lota historique exclut explicitement Bastia ville, le rename aurait été factuellement faux et contraire à la doctrine ADR-001 §2.4 (critères lisibilité + géographie).
+
+**Priorité :** Moyenne (impact carto pédagogique, anomalie héritée du mapping antérieur)
+
+**Condition de déblocage :** Refonte post-FEDER. Trois options à instruire :
+- Absorber `pieve_bastia` dans une vraie `pieve_lota` reconstituée avec les communes du sud du Cap (nécessite refactor mapping amont)
+- Absorber `pieve_bastia` dans `pieve_mariana` (cohérent avec l'extension de mariana mega-pieve)
+- Acter un statut spécifique "pieve ville" (Bastia + Ajaccio + Bonifacio formeraient une catégorie à part)
+
+**Référence :** `PIEVES_REFACTOR_EXEC_CODE_2026-05-17.md` §R-1 annulé.
+
+**Identifiée :** 17 mai 2026 (Phase R refactor pièves, écart périmètre détecté pré-rename).
 
 ---
 
