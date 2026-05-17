@@ -7,6 +7,13 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Non publié] — Fix sticker doyenné figé sur drill cross-doyenné N2→N3 (17 mai 2026)
+
+### fix
+- **Sticker doyenné re-render au cross-doyenné** (`onPieveClickV2` dans `patrimoine.html`) : quand un utilisateur entre N3 via clic sur une pieve dont le `doyenne_contemporain_majoritaire` est différent du doyenné N2 courant (ex : N2 Golo → clic `pieve_mariana` qui est majoritaire Cortenais), `currentDoyenneSlug` était correctement mis à jour par B5 mais le sticker top-right restait figé sur l'ancien doyenné. Gap doctrine `BP-FIX-RATTACHEMENT-COMPLET-001` (cohérence pieve+doyenné dans toute mutation). Fix : appel `_renderDoyenneSticker(currentDoyenneSlug, ..., 3)` quand l'ancien et le nouveau diffèrent (`attempt=3` force le fallback data-driven immédiat sans 3 rAF retries inutiles, le nouveau mini n'étant jamais dans le DOM en N2).
+
+---
+
 ## [Non publié] — Audit Cowork Phase B : 17 orphelins + 18 cross-doyennés retag selon géo (17 mai 2026)
 
 ### fix
@@ -18,7 +25,7 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
   - 10 mariana in_pv=True conservés (exception Mariana mega-fusion, refactor via Cowork)
 - **2 cas suspendus option D** (tag inchangé, dettes ouvertes) : `tour_de_farinole` (coord en mer probable à 700m frontière pieve), `casteddu_bastelica` (doute homonymie nom=Bastelica PTV vs géo Cortenais).
 
-### docs (cette PR)
+### docs
 - 3 dettes nouvelles ouvertes :
   - `FARINOLE-COORD-DOUTE-001` (coord centroïde commune mais point hors polygones doyenné)
   - `CASTEDDU-BASTELICA-COORD-DOUTE-001` (audit toponymique/coord à faire)
