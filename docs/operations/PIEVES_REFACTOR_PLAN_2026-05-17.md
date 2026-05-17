@@ -8,6 +8,20 @@
 
 ---
 
+## AMENDEMENT 2026-05-17 — exécution en session Code
+
+État data au moment de l'exécution : **45 pièves** (pas 47 ; `pieve_campoloro` + `pieve_verde_PTV` supprimés post-rédaction de ce plan). Suite à la vérification de cohérence pré-rename par Code :
+
+- **A1 `pieve_verde`** : décision révisée SUPPRESSION → **CONSERVATION (option C)**. Le polygone est valide (Bavella/Zonza/Levie sud) et 9 sites le référencent — pas une entrée fantôme. Actions : `diocese_medieval=Aleria` + retag 2 sites mistagged vers `pieve_carbini` + 2 sites côte est conservés (dette `PATRIMOINE-PIEVE-VERDE-COTE-EST-NON-RATTACHEE-001`).
+- **R-1 `pieve_bastia` → `pieve_lota`** : **ANNULÉ Phase 1 beta**. `pieve_bastia` actuel = 1 commune (Bastia ville), Lota historique exclut explicitement Bastia ville. Rename aurait été factuellement faux. Dette `PIEVE-BASTIA-PERIMETRE-RESIDUEL-001` ouverte pour refonte post-FEDER.
+- **R-4 `pieve_mariana` → `pieve_piana_di_mariana`** : **ANNULÉ Phase 1 beta**. `pieve_mariana` actuel = 24 communes (plaine + Castagniccia), pas 8 attendues. Rename trompeur sur le périmètre étendu. Problème = redécoupage, pas rename. Déféré post-FEDER. Dette `PATRIMOINE-PIEVE-MARIANA-MEGA-FUSION-001` amendée.
+- **R-3 `pieve_ajaccio` → `pieve_gulfo_d_aiacciu`** : **EXÉCUTÉ** (commit `6b5d461`). 11 sites retag, alias hash en place (commit `73b6aae`).
+- **A+ ghost `pieve_sartene_plaine_orientale`** : **DÉJÀ RÉSOLU dans dev** avant exécution. `castidetta` tagué `pieve_sartene` correctement, slug fantôme absent.
+
+`pieve_aliases.json` final ne contient qu'**1 entrée** (`pieve_ajaccio` → `pieve_gulfo_d_aiacciu`) au lieu des 3 prévues.
+
+---
+
 ## 0. Note sur le brief amont
 
 Le brief Cowork mentionne *« pieve_mariana = agrégat post-fusions
