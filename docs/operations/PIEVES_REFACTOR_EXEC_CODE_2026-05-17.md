@@ -7,6 +7,24 @@
 
 ---
 
+## AMENDEMENT 2026-05-17 — exécution session Code
+
+Voir `PIEVES_REFACTOR_PLAN_2026-05-17.md` AMENDEMENT pour détails. Résumé exécution :
+
+| Réf | Statut | Commit |
+|---|---|---|
+| QW (N1-N5) | Exécuté (adapté à l'état data 45 pièves) | `1ef64ec` |
+| D-3 (alignement doyennés) | Exécuté | `bd5f5e9` |
+| R-1 `pieve_bastia` → `pieve_lota` | **ANNULÉ** (périmètre 1 commune ≠ Lota historique) | dette `PIEVE-BASTIA-PERIMETRE-RESIDUEL-001` (commit `2d4d127`) |
+| R-3 `pieve_ajaccio` → `pieve_gulfo_d_aiacciu` | **EXÉCUTÉ** | `6b5d461` |
+| R-4 `pieve_mariana` → `pieve_piana_di_mariana` | **ANNULÉ** (24 communes, redécoupage requis) | dette `PATRIMOINE-PIEVE-MARIANA-MEGA-FUSION-001` amendée (commit `2d4d127`) |
+| ALIAS | Exécuté (1 entrée au lieu de 3) | `73b6aae` |
+| DOC notes différées | Exécuté | `20e98bf` |
+
+Le mapping amont n'a été synchronisé que partiellement (QW patché direct dérivé, R-3 synchronisé bilatéral). Dette `PIEVE-MAPPING-AMONT-DESYNCHRO-001` documente la désynchro (commit `3f8b3e8`).
+
+---
+
 ## 0. Prérequis avant toute exécution
 
 Avant tout, lire dans l'ordre :
