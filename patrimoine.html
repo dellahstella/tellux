@@ -1231,18 +1231,16 @@ fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
       pieveDoyenneBySlugV2[p.slug] = p.doyenne_contemporain_majoritaire;
       // Fix C3 — note de rattachement optionnelle (popup enrichi).
       if (p.note_rattachement) pieveNoteRattachementBySlugV2[p.slug] = p.note_rattachement;
-      // Brief 12 — UNION : overrides manuels (Brief 10) + auto seuil 25%.
-      const overrides = p.doyennes_visibles && p.doyennes_visibles.length
-        ? p.doyennes_visibles
-        : (p.doyenne_contemporain_majoritaire ? [p.doyenne_contemporain_majoritaire] : []);
-      const auto = (p.doyennes_appartenance || [])
-        .filter(a => a.ratio >= SEUIL_PIEVE_DOYENNE)
-        .map(a => a.slug);
-      const doyennesVisibles = Array.from(new Set([...overrides, ...auto]));
+      // U2 (URGENT FEDER 2026-05-17) — Une pieve = un seul polygon dans
+      // la nav. Itere uniquement sur doyenne_contemporain_majoritaire
+      // (annule Brief 10/12 union overrides+auto seuil 25% qui creait
+      // jusqu'a 3 polygons par pieve : pieve_mariana etait visible en
+      // Balagne + Cortenais + Golo).
       // Brief 11 (B11-UX-030) — tooltip pieve prefixe "Pieve di X" pour
       // distinguer du tooltip doyenne (qui affiche juste "Cap", "Bastia"...).
       const tooltipLabel = 'Pieve di ' + p.name;
-      for (const doy of doyennesVisibles) {
+      const doyMaj = p.doyenne_contemporain_majoritaire;
+      if (doyMaj) {
         const poly = L.polygon(p.polygon, {className: 'pieve-polygon-v2'});
         // Brief N3 — référence slug pieve sur le polygone Leaflet pour
         // selecteur CSS body.niveau-3 (data-pieve-slug attribut posé en JS).
@@ -1253,11 +1251,9 @@ fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
         });
         poly.bindTooltip(tooltipLabel, {sticky:true, direction:'top', className:'tlx-tt'});
         poly.on('click', (ev) => onPieveClickV2(p.slug, p.name, poly, ev));
-        if (!pievesByDoyenneLayer.has(doy)) pievesByDoyenneLayer.set(doy, L.layerGroup());
-        pievesByDoyenneLayer.get(doy).addLayer(poly);
-        // Premiere instance reference dans pieveShapesBySlugV2 (suffit pour
-        // selectPolygon/clearSelected ; les duplicatas partagent le meme slug).
-        if (!pieveShapesBySlugV2[p.slug]) pieveShapesBySlugV2[p.slug] = poly;
+        if (!pievesByDoyenneLayer.has(doyMaj)) pievesByDoyenneLayer.set(doyMaj, L.layerGroup());
+        pievesByDoyenneLayer.get(doyMaj).addLayer(poly);
+        pieveShapesBySlugV2[p.slug] = poly;
       }
       // LOD Phase C — instance separee pour allPievesLodLayer (zoom 10-12).
       // Phase D — pieves urbaines (display_mode:'point') : marker centroide.
@@ -2256,25 +2252,45 @@ function openFichePopup(shape, ficheType, slug, displayName, catLabel) {
         + '</div>';
     }
   }
-  var html = '<div class="tlx-fiche-popup">'
-    + '<button class="tlx-popup-close" aria-label="Fermer">&#xD7;</button>'
-    + '<div class="tlx-fiche-header">'
-    + '<div class="tlx-fiche-cat">' + escapeHtml(catLabel) + '</div>'
-    + '<div class="tlx-fiche-title">' + escapeHtml(displayName) + '</div>'
-    + '</div>'
-    + pieveNoteHtml
-    + '<div class="tlx-fiche-sep"></div>'
-    + '<div class="tlx-fiche-body loading" id="' + pid + '-body">Chargement...</div>'
-    + '<div class="tlx-fiche-footer">'
-    + '<button class="tlx-fiche-btn-detail" id="' + pid + '-btn" disabled>Détails factuels</button>'
-    + '</div>'
-    + '</div>';
+  // U1 (URGENT FEDER 2026-05-17) — Brief 47 finalise : les pieves n'ont
+  // plus de fiche markdown en Phase 1 beta. Le popup pieve est sec :
+  // header + note_rattachement (si presente). Pas de body charge, pas de
+  // bouton 'Detail factuel' (panel pieve egalement desactive Phase 1).
+  // Cause racine : ~38% des fiches pieves _v3.md / _v2.md n'existent plus
+  // en prod et Cloudflare SPA fallback renvoie /index.html (status 200),
+  // dont le HTML etait injecte dans le popup -> 'home Tellux dans popup'.
+  var html;
+  if (ficheType === 'pieves') {
+    html = '<div class="tlx-fiche-popup">'
+      + '<button class="tlx-popup-close" aria-label="Fermer">&#xD7;</button>'
+      + '<div class="tlx-fiche-header">'
+      + '<div class="tlx-fiche-cat">' + escapeHtml(catLabel) + '</div>'
+      + '<div class="tlx-fiche-title">' + escapeHtml(displayName) + '</div>'
+      + '</div>'
+      + pieveNoteHtml
+      + '</div>';
+  } else {
+    html = '<div class="tlx-fiche-popup">'
+      + '<button class="tlx-popup-close" aria-label="Fermer">&#xD7;</button>'
+      + '<div class="tlx-fiche-header">'
+      + '<div class="tlx-fiche-cat">' + escapeHtml(catLabel) + '</div>'
+      + '<div class="tlx-fiche-title">' + escapeHtml(displayName) + '</div>'
+      + '</div>'
+      + '<div class="tlx-fiche-sep"></div>'
+      + '<div class="tlx-fiche-body loading" id="' + pid + '-body">Chargement...</div>'
+      + '<div class="tlx-fiche-footer">'
+      + '<button class="tlx-fiche-btn-detail" id="' + pid + '-btn" disabled>Détails factuels</button>'
+      + '</div>'
+      + '</div>';
+  }
   L.popup({maxWidth: 320, closeButton: false, autoPan: true, className: 'tlx-fiche-popup-wrapper'})
     .setLatLng(center).setContent(html).openOn(map);
   setTimeout(() => {
     const closeBtn = document.querySelector('.tlx-fiche-popup .tlx-popup-close');
     if (closeBtn) closeBtn.addEventListener('click', (e) => { e.stopPropagation(); map.closePopup(); });
   }, 50);
+  // Skip fetchFiche pour les pieves (cf. U1 ci-dessus).
+  if (ficheType === 'pieves') return;
   // Tenter v3, puis v2 si absent.
   fetchFiche(ficheType, slug, 'v3').then(function(text) {
     if (text) return text;
@@ -2373,8 +2389,13 @@ function updateZoomLOD() {
     if (!map.hasLayer(doyenneMinisLayer)) doyenneMinisLayer.addTo(map);
   }
 
-  // Toutes les pieves (zoom >= LOD_ZOOM_PIEVE)
-  if (z >= LOD_ZOOM_PIEVE) {
+  // U3 (URGENT FEDER 2026-05-17) — allPievesLodLayer interdite en vue
+  // Corse globale (N1). La couche pollue avec 45 polygons cliquables
+  // qui permettent notamment d'ouvrir un popup pieve depuis N1 sans
+  // drill doyenne (vecteur du bug popup-home U1). Reservee aux drill-down
+  // N2+ : ne s'ajoute que si body.niveau-2 actif (apres clic doyenne).
+  var n2Actif = document.body.classList.contains('niveau-2');
+  if (z >= LOD_ZOOM_PIEVE && n2Actif) {
     if (!map.hasLayer(allPievesLodLayer) && allPievesLodLayer.getLayers().length > 0) allPievesLodLayer.addTo(map);
   } else {
     if (map.hasLayer(allPievesLodLayer)) map.removeLayer(allPievesLodLayer);
