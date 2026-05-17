@@ -8,6 +8,17 @@
 
 ---
 
+## NOTE D'EXÉCUTION 2026-05-17 — refactor Phase 1 beta partiel
+
+La doctrine ADR-001 reste inchangée et stable. Son application concrète Phase 1 beta a produit :
+- **QW + D-3 + R-3 exécutés** (cf. `PIEVES_REFACTOR_PLAN_2026-05-17.md` AMENDEMENT)
+- **R-1 et R-4 annulés** : les périmètres réels (1 commune pour `pieve_bastia`, 24 communes pour `pieve_mariana`) contredisent les renames proposés selon ADR-001 §2.4.2 (géographie d'abord) et §2.4.1 (lisibilité). Cas reportés post-FEDER avec ADR dédié.
+- **A1 `pieve_verde`** : décision révisée SUPPRESSION → CONSERVATION suite à vérif périmètre par Code (polygone valide, sites le référencent). Cohérent avec la doctrine ADR-001 §2.4.2 : pieve géographiquement contiguë + reconnaissable.
+
+Doctrine non révisée par cette exécution.
+
+---
+
 ## 1. Contexte
 
 Tellux embarque actuellement, dans `docs/data/pieves_polygons.json`
