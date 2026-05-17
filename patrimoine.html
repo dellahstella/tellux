@@ -169,6 +169,8 @@ body.niveau-3 .leaflet-interactive[data-pieve-slug].active-niveau-3{fill-opacity
 /* Brief 9 niveau 2 — doyenne actif (drill-down) : fill transparent pour laisser
    apparaitre les pieves et le fond OSM dessous, contour ardoise marque. */
 .doyenne-polygon.dim-niveau-2{fill-opacity:0;stroke-width:2;stroke:#1F2329;cursor:default;pointer-events:none;}
+/* niveau-2 : les doyennés non-actifs restent colorés mais non-interactifs (pas de tooltip) */
+body.niveau-2 .doyenne-polygon:not(.dim-niveau-2){pointer-events:none;cursor:default;}
 
 /* Brief 14 — Miniatures doyennes au niveau 1 (vision macro Soleil 2026-05-04).
    Vignette ronde (image ou fallback typographique) + label nom dessous,
@@ -1257,11 +1259,12 @@ fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
         allPievesLodLayer.addLayer(lodPoly);
       }
     }
-    // Mapping spot -> pieve via point-in-polygon (4e niveau breadcrumb).
+    // Mapping spot -> pieve : pieve_slug explicite en priorité, sinon point-in-polygon.
     let mappedPieve = 0, unmappedPieve = 0;
     for (const slug in markersBySlug) {
       const site = markersBySlug[slug].site;
-      const pv = findPieveForPoint(site.lat, site.lon);
+      const explicit = site.pieve_slug && pievePolygonsBySlugV2[site.pieve_slug] ? site.pieve_slug : null;
+      const pv = explicit || findPieveForPoint(site.lat, site.lon);
       if (pv) { SPOT_TO_PIEVE_V2.set(slug, pv); mappedPieve++; } else { unmappedPieve++; }
     }
     // Construire spotsLevel2ByDoyenne : tous les markers groupes par doyenne
@@ -1331,6 +1334,10 @@ fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
 
 function onPieveClickV2(slug, name, shape, ev) {
   if (ev) L.DomEvent.stopPropagation(ev);
+  // B5 — corriger currentDoyenneSlug si la pieve appartient à un autre doyenné
+  // (ex : pieve Mariana visible en Balagne mais majoritaire en Golo).
+  // Hash et breadcrumb reflètent alors le vrai doyenné parent de la pieve.
+  currentDoyenneSlug = pieveDoyenneBySlugV2[slug] || currentDoyenneSlug;
   currentPieveSlugV2 = slug;
   currentSpotSlug = null;
   // Highlight pieve active (Brief 6 preserve via classe .selected).
@@ -1436,6 +1443,12 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape, opts) {
   }, 250);
   // Brief 23 — distinction visuelle de la miniature persistante (classe
   // .persistente-niveau-2 sur le wrapper Leaflet pour bordure ocre + ombre).
+  // B4 — effacer la classe sur TOUS les minis avant d'en activer un
+  // (évite que deux minis aient la classe simultanément lors d'un switch A→B
+  // sans passer par N1, ce qui trompe querySelector dans _renderDoyenneSticker).
+  for (const m of allMiniLayers) {
+    if (m._icon) m._icon.classList.remove('persistente-niveau-2');
+  }
   if (activeMiniLayer && activeMiniLayer._icon) {
     activeMiniLayer._icon.classList.add('persistente-niveau-2');
   }
@@ -1497,6 +1510,10 @@ let _pieveActivePolygonRef = null;
 function enterNiveau3View(pieveSlug, pieveDisplay, pieveShape, opts) {
   opts = opts || {};
   if (!pieveSlug || !pieveShape) return;
+  // B7 — désactiver le tooltip sticky du doyenné courant : Leaflet le déclenche
+  // via mousemove map même avec pointer-events:none CSS sur le polygone SVG.
+  const _n3DoyShape = doyenneShapesBySlug[currentDoyenneSlug];
+  if (_n3DoyShape && _n3DoyShape.unbindTooltip) _n3DoyShape.unbindTooltip();
   document.body.classList.add('niveau-3');
   _pieveActivePolygonRef = pieveShape;
   // Marquer le polygone pieve actif (CSS le distingue, autres cachés).
@@ -1559,7 +1576,7 @@ function enterNiveau3View(pieveSlug, pieveDisplay, pieveShape, opts) {
   // pour preserver bindPopup + handlers onSpotClick + fix #532.
   // Note schema : SITES_PATRIMOINE est adapte via adaptSiteSchema, champ
   // pieve (pas pieve_slug). On filtre sur les 2 pour robustesse.
-  const sitesPieve = (Array.isArray(SITES_PATRIMOINE) ? SITES_PATRIMOINE : []).filter(s => (s.pieve === pieveSlug) || (s.pieve_slug === pieveSlug));
+  const sitesPieve = (Array.isArray(SITES_PATRIMOINE) ? SITES_PATRIMOINE : []).filter(s => ((s.pieve === pieveSlug) || (s.pieve_slug === pieveSlug)) && (!currentDoyenneSlug || s.doyenne === currentDoyenneSlug));
   for (const site of sitesPieve) {
     const entry = markersBySlug[site.slug];
     if (entry && entry.marker) {
@@ -1615,6 +1632,12 @@ function exitNiveau3View(opts) {
       } catch (_) {}
     }
   }
+  // B7 — rebind tooltip du doyenné courant (supprimé à l'entrée N3).
+  // currentDoyenneSlug est encore valide ici (reset après).
+  const _exitDoyShape = doyenneShapesBySlug[currentDoyenneSlug];
+  if (_exitDoyShape && _exitDoyShape.bindTooltip && currentDoyenneSlug) {
+    _exitDoyShape.bindTooltip(doyenneNameBySlug[currentDoyenneSlug], {sticky:true, direction:'top', className:'tlx-tt'});
+  }
   // Cleanup state pieve.
   currentPieveSlugV2 = null;
   for (const p of Object.values(pieveShapesBySlugV2)) {
@@ -1622,6 +1645,8 @@ function exitNiveau3View(opts) {
     if (el) el.classList.remove('selected');
   }
   updateBreadcrumb();
+  // B2 — sync hash après retour doyenné (exitNiveau3View n'était pas patché par wireUpHashSync).
+  if (typeof syncHashToUrl === 'function') syncHashToUrl();
 }
 
 function exitNiveau2View() {
@@ -1692,7 +1717,10 @@ function exitNiveau2View() {
   if (!map.hasLayer(doyenneMinisLayer)) doyenneMinisLayer.addTo(map);
   for (const m of doyenneMinisLayer.getLayers()) {
     if (!map.hasLayer(m)) m.addTo(map);
+    // B6 — défensif : si _icon non encore rendu (marker re-attaché juste avant),
+    // reporter la suppression de la classe au prochain event 'add' du marker.
     if (m._icon) m._icon.classList.remove('persistente-niveau-2');
+    else m.once('add', function() { if (m._icon) m._icon.classList.remove('persistente-niveau-2'); });
     // Brief 25 — retrait du tooltip "Voir la fiche du doyenné" pose en N2.
     // unbindTooltip est safe sur marker sans tooltip (no-op cote Leaflet).
     if (m.unbindTooltip) m.unbindTooltip();
@@ -1871,6 +1899,17 @@ function selectPolygon(shape) {
   if (el) el.classList.add('selected');
 }
 map.on('popupclose', clearSelectedPolygons);
+// B1 — sync hash + breadcrumb à la fermeture popup site.
+// Vigilance N3 : en N3 on garde currentPieveSlugV2 (le user reste dans la pieve),
+// on efface seulement currentSpotSlug. En N2 (pas N3), onSpotClick avait forcé
+// currentPieveSlugV2 en side-effect sans entrer N3 → annuler pour cohérence hash.
+map.on('popupclose', function() {
+  if (!currentSpotSlug) return;
+  currentSpotSlug = null;
+  if (!document.body.classList.contains('niveau-3')) currentPieveSlugV2 = null;
+  updateBreadcrumb();
+  if (typeof syncHashToUrl === 'function') syncHashToUrl();
+});
 
 // === Click handler zones (diocese / pieve) ===
 // DORMANT post-Brief 8 (revise) : aucun polygone diocèse/pieve n'est attaché au map,
@@ -2003,6 +2042,7 @@ function applyHash(rawHash) {
   const segs = hash.split('/').map(s => s.trim()).filter(Boolean);
   let doyShort, pieveShort, spotSlug;
   let wasSpotSingleSegmentResolved = false;
+  let wasAltDoyResolved = false;
 
   // S7 — single-segment hash : si seg unique = slug site connu, derive
   // doyenne+pieve depuis SPOT_TO_DOYENNE/SPOT_TO_PIEVE_V2 puis le pipeline
@@ -2023,13 +2063,21 @@ function applyHash(rawHash) {
     [doyShort, pieveShort, spotSlug] = segs;
   }
 
-  const doySlug = doyShort ? _addDoyennePrefix(doyShort) : null;
+  let doySlug = doyShort ? _addDoyennePrefix(doyShort) : null;
   const pieveSlug = pieveShort ? _addPievePrefix(pieveShort) : null;
 
+  // B3 — accept both 'cap' and 'du_cap' forms : si doyenne_<slug> inconnu,
+  // tenter doyenne_du_<slug> (ex : #cap -> doyenne_du_cap).
   if (doySlug && !doyenneShapesBySlug[doySlug]) {
-    console.warn('[Tellux patrimoine] Hash invalide — doyenne inconnu :', doyShort);
-    if (document.body.classList.contains('niveau-2')) exitNiveau2View();
-    return;
+    const altSlug = 'doyenne_du_' + doyShort;
+    if (doyenneShapesBySlug[altSlug]) {
+      doySlug = altSlug;
+      wasAltDoyResolved = true;
+    } else {
+      console.warn('[Tellux patrimoine] Hash invalide — doyenne inconnu :', doyShort);
+      if (document.body.classList.contains('niveau-2')) exitNiveau2View();
+      return;
+    }
   }
   if (pieveSlug && !pieveShapesBySlugV2[pieveSlug]) {
     console.warn('[Tellux patrimoine] Hash invalide — pieve inconnu :', pieveShort);
@@ -2084,7 +2132,8 @@ function applyHash(rawHash) {
   }
   // S7 — canonicaliser le hash apres resolution single-segment spot
   // (transforme #spot -> #doy/pieve/spot). No-op si pas de divergence.
-  if (wasSpotSingleSegmentResolved && typeof syncHashToUrl === 'function') {
+  // B3 — canonicaliser egalement si doyenne alt-slug resolu (#cap -> #du_cap).
+  if ((wasSpotSingleSegmentResolved || wasAltDoyResolved) && typeof syncHashToUrl === 'function') {
     syncHashToUrl();
   }
 }
@@ -2310,9 +2359,14 @@ function _renderDoyenneSticker(slug, name, _attempt) {
   var old = document.getElementById('doyenne-mini-sticker');
   if (old) old.remove();
   var attempt = _attempt || 0;
-  var sourceMini = document.querySelector(
-    '.doyenne-mini-marker.persistente-niveau-2 .doyenne-mini'
-  );
+  // B4 — localiser le mini par slug plutôt que par classe CSS pour éviter
+  // la race condition quand deux minis ont persistente-niveau-2 simultanément.
+  var targetMiniLayer = (typeof doyenneMinisLayer !== 'undefined' && doyenneMinisLayer && doyenneMinisLayer.getLayers)
+    ? doyenneMinisLayer.getLayers().find(function(m) { return m._doyenneSlug === slug; })
+    : null;
+  var sourceMini = (targetMiniLayer && targetMiniLayer._icon)
+    ? targetMiniLayer._icon.querySelector('.doyenne-mini')
+    : null;
   var stickerHtml;
   if (sourceMini) {
     stickerHtml = sourceMini.innerHTML;
