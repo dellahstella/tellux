@@ -1337,7 +1337,16 @@ function onPieveClickV2(slug, name, shape, ev) {
   // B5 — corriger currentDoyenneSlug si la pieve appartient à un autre doyenné
   // (ex : pieve Mariana visible en Balagne mais majoritaire en Golo).
   // Hash et breadcrumb reflètent alors le vrai doyenné parent de la pieve.
+  // Gap B5 (BP-FIX-RATTACHEMENT-COMPLET-001) : re-render le sticker si le
+  // doyenné change, sinon il reste figé sur l'ancien (ex : "Golo" affiché en
+  // entrant N3 Mariana depuis N2 Golo, alors qu'on est passé en Cortenais).
+  // attempt=3 force le fallback data-driven immediat (skip les 3 rAF retries
+  // inutiles puisque le nouveau mini n'est jamais dans le DOM en N2).
+  const _prevDoy = currentDoyenneSlug;
   currentDoyenneSlug = pieveDoyenneBySlugV2[slug] || currentDoyenneSlug;
+  if (_prevDoy && _prevDoy !== currentDoyenneSlug && typeof _renderDoyenneSticker === 'function') {
+    _renderDoyenneSticker(currentDoyenneSlug, doyenneNameBySlug[currentDoyenneSlug] || currentDoyenneSlug, 3);
+  }
   currentPieveSlugV2 = slug;
   currentSpotSlug = null;
   // Highlight pieve active (Brief 6 preserve via classe .selected).
