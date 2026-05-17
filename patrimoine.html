@@ -2256,25 +2256,45 @@ function openFichePopup(shape, ficheType, slug, displayName, catLabel) {
         + '</div>';
     }
   }
-  var html = '<div class="tlx-fiche-popup">'
-    + '<button class="tlx-popup-close" aria-label="Fermer">&#xD7;</button>'
-    + '<div class="tlx-fiche-header">'
-    + '<div class="tlx-fiche-cat">' + escapeHtml(catLabel) + '</div>'
-    + '<div class="tlx-fiche-title">' + escapeHtml(displayName) + '</div>'
-    + '</div>'
-    + pieveNoteHtml
-    + '<div class="tlx-fiche-sep"></div>'
-    + '<div class="tlx-fiche-body loading" id="' + pid + '-body">Chargement...</div>'
-    + '<div class="tlx-fiche-footer">'
-    + '<button class="tlx-fiche-btn-detail" id="' + pid + '-btn" disabled>Détails factuels</button>'
-    + '</div>'
-    + '</div>';
+  // U1 (URGENT FEDER 2026-05-17) — Brief 47 finalise : les pieves n'ont
+  // plus de fiche markdown en Phase 1 beta. Le popup pieve est sec :
+  // header + note_rattachement (si presente). Pas de body charge, pas de
+  // bouton 'Detail factuel' (panel pieve egalement desactive Phase 1).
+  // Cause racine : ~38% des fiches pieves _v3.md / _v2.md n'existent plus
+  // en prod et Cloudflare SPA fallback renvoie /index.html (status 200),
+  // dont le HTML etait injecte dans le popup -> 'home Tellux dans popup'.
+  var html;
+  if (ficheType === 'pieves') {
+    html = '<div class="tlx-fiche-popup">'
+      + '<button class="tlx-popup-close" aria-label="Fermer">&#xD7;</button>'
+      + '<div class="tlx-fiche-header">'
+      + '<div class="tlx-fiche-cat">' + escapeHtml(catLabel) + '</div>'
+      + '<div class="tlx-fiche-title">' + escapeHtml(displayName) + '</div>'
+      + '</div>'
+      + pieveNoteHtml
+      + '</div>';
+  } else {
+    html = '<div class="tlx-fiche-popup">'
+      + '<button class="tlx-popup-close" aria-label="Fermer">&#xD7;</button>'
+      + '<div class="tlx-fiche-header">'
+      + '<div class="tlx-fiche-cat">' + escapeHtml(catLabel) + '</div>'
+      + '<div class="tlx-fiche-title">' + escapeHtml(displayName) + '</div>'
+      + '</div>'
+      + '<div class="tlx-fiche-sep"></div>'
+      + '<div class="tlx-fiche-body loading" id="' + pid + '-body">Chargement...</div>'
+      + '<div class="tlx-fiche-footer">'
+      + '<button class="tlx-fiche-btn-detail" id="' + pid + '-btn" disabled>Détails factuels</button>'
+      + '</div>'
+      + '</div>';
+  }
   L.popup({maxWidth: 320, closeButton: false, autoPan: true, className: 'tlx-fiche-popup-wrapper'})
     .setLatLng(center).setContent(html).openOn(map);
   setTimeout(() => {
     const closeBtn = document.querySelector('.tlx-fiche-popup .tlx-popup-close');
     if (closeBtn) closeBtn.addEventListener('click', (e) => { e.stopPropagation(); map.closePopup(); });
   }, 50);
+  // Skip fetchFiche pour les pieves (cf. U1 ci-dessus).
+  if (ficheType === 'pieves') return;
   // Tenter v3, puis v2 si absent.
   fetchFiche(ficheType, slug, 'v3').then(function(text) {
     if (text) return text;
