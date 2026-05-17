@@ -1194,6 +1194,14 @@ function findPieveForPoint(lat, lng) {
   return null;
 }
 
+// Phase ALIAS (2026-05-17) — fetch des aliases pieves pour preserver hash
+// publics. Fire-and-forget : si fetch echoue, PIEVE_ALIASES reste {} et
+// _aliasResolvePieveSlug est un no-op (les hash anciens echouent silencieusement).
+fetch(resolveAssetPath('docs/data/pieve_aliases.json'))
+  .then(r => r.ok ? r.json() : { aliases: {} })
+  .then(d => { PIEVE_ALIASES = d.aliases || {}; })
+  .catch(() => { /* no-op : alias optionnel */ });
+
 fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
   .then(r => r.json())
   // Brief 28 — await sitesReady avant d'iterer markersBySlug (race fix).
@@ -2014,11 +2022,18 @@ console.log(`[Tellux patrimoine] Brief 8 revise (Strat A) — vue doyennes conte
 let _isApplyingHash = false;   // evite feedback updateHash <-> hashchange
 let _doyennesLoaded = false;
 let _pievesLoaded = false;
+// Phase ALIAS pieves (2026-05-17) — mapping ancien_slug -> nouveau_slug.
+// Charge depuis docs/data/pieve_aliases.json au boot. Permet de preserver
+// les hash URL publics deja partages (ex : #doyenne_ajaccio/ajaccio reste
+// valide apres rename pieve_ajaccio -> pieve_gulfo_d_aiacciu).
+// Cumulatif jusqu'a la refonte post-FEDER.
+let PIEVE_ALIASES = {};
 
 function _stripDoyennePrefix(s) { return s ? s.replace(/^doyenne_/, '') : ''; }
 function _addDoyennePrefix(s) { return s && !s.startsWith('doyenne_') ? 'doyenne_' + s : s; }
 function _stripPievePrefix(s) { return s ? s.replace(/^pieve_/, '') : ''; }
 function _addPievePrefix(s) { return s && !s.startsWith('pieve_') ? 'pieve_' + s : s; }
+function _aliasResolvePieveSlug(slug) { return PIEVE_ALIASES[slug] || slug; }
 
 function getCurrentHash() {
   // Reconstruit le hash depuis l'etat in-memory (currentDoyenneSlug, currentPieveSlugV2, currentSpotSlug).
@@ -2073,7 +2088,10 @@ function applyHash(rawHash) {
   }
 
   let doySlug = doyShort ? _addDoyennePrefix(doyShort) : null;
-  const pieveSlug = pieveShort ? _addPievePrefix(pieveShort) : null;
+  // Phase ALIAS (2026-05-17) : resoudre les anciens slugs vers leur nouvelle
+  // valeur via PIEVE_ALIASES (ex : pieve_ajaccio -> pieve_gulfo_d_aiacciu).
+  // No-op si pas d'alias defini pour le slug.
+  const pieveSlug = pieveShort ? _aliasResolvePieveSlug(_addPievePrefix(pieveShort)) : null;
 
   // B3 — accept both 'cap' and 'du_cap' forms : si doyenne_<slug> inconnu,
   // tenter doyenne_du_<slug> (ex : #cap -> doyenne_du_cap).
