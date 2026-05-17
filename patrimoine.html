@@ -2042,6 +2042,7 @@ function applyHash(rawHash) {
   const segs = hash.split('/').map(s => s.trim()).filter(Boolean);
   let doyShort, pieveShort, spotSlug;
   let wasSpotSingleSegmentResolved = false;
+  let wasAltDoyResolved = false;
 
   // S7 — single-segment hash : si seg unique = slug site connu, derive
   // doyenne+pieve depuis SPOT_TO_DOYENNE/SPOT_TO_PIEVE_V2 puis le pipeline
@@ -2071,6 +2072,7 @@ function applyHash(rawHash) {
     const altSlug = 'doyenne_du_' + doyShort;
     if (doyenneShapesBySlug[altSlug]) {
       doySlug = altSlug;
+      wasAltDoyResolved = true;
     } else {
       console.warn('[Tellux patrimoine] Hash invalide — doyenne inconnu :', doyShort);
       if (document.body.classList.contains('niveau-2')) exitNiveau2View();
@@ -2130,7 +2132,8 @@ function applyHash(rawHash) {
   }
   // S7 — canonicaliser le hash apres resolution single-segment spot
   // (transforme #spot -> #doy/pieve/spot). No-op si pas de divergence.
-  if (wasSpotSingleSegmentResolved && typeof syncHashToUrl === 'function') {
+  // B3 — canonicaliser egalement si doyenne alt-slug resolu (#cap -> #du_cap).
+  if ((wasSpotSingleSegmentResolved || wasAltDoyResolved) && typeof syncHashToUrl === 'function') {
     syncHashToUrl();
   }
 }
