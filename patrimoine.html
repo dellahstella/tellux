@@ -173,8 +173,12 @@ body.niveau-3 .leaflet-interactive[data-pieve-slug].active-niveau-3{fill-opacity
 /* Brief 9 niveau 2 — doyenne actif (drill-down) : fill transparent pour laisser
    apparaitre les pieves et le fond OSM dessous, contour ardoise marque. */
 .doyenne-polygon.dim-niveau-2{fill-opacity:0;stroke-width:2;stroke:#1F2329;cursor:default;pointer-events:none;}
-/* niveau-2 : les doyennés non-actifs restent colorés mais non-interactifs (pas de tooltip) */
-body.niveau-2 .doyenne-polygon:not(.dim-niveau-2){pointer-events:none;cursor:default;}
+/* §6 Nav N2→N2 (2026-05-18) — les doyennés voisins en N2 deviennent CLIQUABLES
+   (switch direct A→B sans repasser par N1). Hover : cursor pointer + fill
+   accentué + stroke renforcé. enterNiveau2View gere deja le switch A→B
+   (detach pieves+sticker old, attach new, flyToBounds 1s). */
+body.niveau-2 .doyenne-polygon:not(.dim-niveau-2){pointer-events:auto;cursor:pointer;transition:fill-opacity .2s, stroke-width .2s;}
+body.niveau-2 .doyenne-polygon:not(.dim-niveau-2):hover{fill-opacity:0.85;stroke-width:3;stroke:var(--tx-ocre);}
 
 /* Brief 14 — Miniatures doyennes au niveau 1 (vision macro Soleil 2026-05-04).
    Vignette ronde (image ou fallback typographique) + label nom dessous,
@@ -1173,6 +1177,13 @@ fetch(resolveAssetPath('docs/data/doyennes_polygons.json'))
 
 function onDoyenneClick(slug, name, shape) {
   // Brief 9 — clic doyenne : entree niveau 2 (drill-down pieves medievales).
+  // §6 Nav N2→N2 (2026-05-18) : si on est deja en N2 sur le meme doyenne,
+  // no-op (evite re-render sticker + flyTo inutile). Si on est en N2 sur un
+  // autre doyenne, enterNiveau2View gere deja le switch A->B (cleanup pieves
+  // ancien + sticker + dim, attach nouveau + flyTo 1.0s).
+  if (document.body.classList.contains('niveau-2') && slug === currentDoyenneSlug) {
+    return;
+  }
   enterNiveau2View(slug, name, shape);
 }
 
@@ -1515,7 +1526,9 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape, opts) {
     if (opts.animate === false) {
       map.fitBounds(shape.getBounds(), { padding: [40, 40] });
     } else {
-      map.flyToBounds(shape.getBounds(), { padding: [40, 40], duration: 0.8, easeLinearity: 0.5 });
+      // §6 Nav N2→N2 (2026-05-18) : duration 0.8 -> 1.0 pour transition
+      // plus lisible lors du switch direct entre doyennés voisins.
+      map.flyToBounds(shape.getBounds(), { padding: [40, 40], duration: 1.0, easeLinearity: 0.5 });
     }
   }
 
