@@ -7,6 +7,30 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Cleanup fiches pieves — 2026-05-18]
+
+### Removed (public repo)
+- 68 fiches markdown `fiches_patrimoine/pieves/*.md` (34 pieves × v2 + v3)
+- `fiches_patrimoine/RAPPORT_SESSION_PIEVES_V3.md`
+
+### Added (corpus privé)
+- `_corpus/fiches_pieves/` (66 fiches actives + 1 rapport vague 3)
+- `_corpus/fiches_pieves/_archive_matiere_premiere/` (2 fiches cap_corse + 1 README)
+
+### Notes
+- `_redirects` Cloudflare non ajouté (curl §3.2 non lancé, SPA fallback acceptable)
+- U1 Phase 1 toujours actif : `patrimoine.html` skip `fetchFiche` pour `ficheType === 'pieves'` (lignes 2396, 2414, 2444)
+
+### Reference
+- Doctrine : ADR-001 + U1 Phase 1 (Stratégie D)
+- Commit privé : `909d525` (corpus privé tellux)
+- Ouvre `PATRIMOINE-FICHES-PIEVES-VAGUE4-POST-FEDER-001` (19 pieves prod sans fiche)
+
+### Volume
+- Public retiré : ~607 KB
+
+---
+
 ## [§6 Nav N2→N2 directe] — 18 mai 2026
 
 ### Added
