@@ -117,6 +117,19 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 #breadcrumb .bc-item:hover{color:var(--tx-ardoise);}
 #breadcrumb .bc-item.active{color:var(--tx-ardoise);font-weight:600;cursor:default;}
 #breadcrumb .bc-sep{color:#5a3f2a;margin:0 10px;font-weight:500;}
+/* §6 Nav N2→N2 (2026-05-18) — Pattern 2 : breadcrumb dropdown.
+   En N2 (sans drill pieve), le segment doyenne devient bouton + chevron
+   pour ouvrir une liste des 9 doyennes (switch N2->N2 alternatif). */
+#breadcrumb .bc-doy-trigger{cursor:pointer;color:var(--tx-ardoise);font-weight:600;display:inline-flex;align-items:center;gap:4px;}
+#breadcrumb .bc-doy-trigger .bc-chevron{font-size:10px;color:#8c6e50;transition:transform .2s;}
+#breadcrumb .bc-doy-trigger.open .bc-chevron{transform:rotate(180deg);}
+#bc-doy-dropdown{position:absolute;top:46px;left:50%;transform:translateX(-50%);z-index:1100;background:rgba(245,240,231,0.98);backdrop-filter:blur(8px);border-radius:var(--r);box-shadow:0 8px 32px rgba(31,35,41,0.18);padding:8px;min-width:220px;max-height:60vh;overflow-y:auto;display:none;}
+#bc-doy-dropdown.open{display:block;}
+#bc-doy-dropdown .bc-doy-option{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;cursor:pointer;color:var(--tx-ardoise);font-size:13px;transition:background .15s;}
+#bc-doy-dropdown .bc-doy-option:hover{background:rgba(168,142,98,0.12);}
+#bc-doy-dropdown .bc-doy-option.active{background:rgba(168,142,98,0.20);font-weight:600;cursor:default;}
+#bc-doy-dropdown .bc-doy-mini-img{width:36px;height:24px;object-fit:cover;border-radius:3px;border:1px solid var(--border);flex-shrink:0;}
+#bc-doy-dropdown .bc-doy-mini-fallback{width:36px;height:24px;background:var(--tx-pierre);color:var(--tx-ardoise);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;border-radius:3px;flex-shrink:0;}
 /* Brief 8 — Niveau 1 (vue Corse) : diocèses pleins, fill notable, stroke marqué.
    fill-opacity:1 + stroke-opacity:1 neutralisent les attributs SVG Leaflet (0.2 / 1) pour
    laisser les rgba CSS contrôler entièrement l'opacité. */
@@ -173,8 +186,15 @@ body.niveau-3 .leaflet-interactive[data-pieve-slug].active-niveau-3{fill-opacity
 /* Brief 9 niveau 2 — doyenne actif (drill-down) : fill transparent pour laisser
    apparaitre les pieves et le fond OSM dessous, contour ardoise marque. */
 .doyenne-polygon.dim-niveau-2{fill-opacity:0;stroke-width:2;stroke:#1F2329;cursor:default;pointer-events:none;}
-/* niveau-2 : les doyennés non-actifs restent colorés mais non-interactifs (pas de tooltip) */
-body.niveau-2 .doyenne-polygon:not(.dim-niveau-2){pointer-events:none;cursor:default;}
+/* §6 Nav N2→N2 (2026-05-18) — les doyennés voisins en N2 deviennent CLIQUABLES
+   (switch direct A→B sans repasser par N1). Hover : cursor pointer + fill
+   accentué + stroke renforcé. enterNiveau2View gere deja le switch A→B
+   (detach pieves+sticker old, attach new, flyToBounds 1s). */
+body.niveau-2 .doyenne-polygon:not(.dim-niveau-2){pointer-events:auto;cursor:pointer;transition:fill-opacity .2s, stroke-width .2s;}
+body.niveau-2 .doyenne-polygon:not(.dim-niveau-2):hover{fill-opacity:0.85;stroke-width:3;stroke:var(--tx-ocre);}
+/* §6 Nav N2→N2 — fade swap sticker doyenne (transition douce au switch). */
+#doyenne-mini-sticker{transition:opacity .25s ease;}
+#doyenne-mini-sticker.swapping{opacity:0;}
 
 /* Brief 14 — Miniatures doyennes au niveau 1 (vision macro Soleil 2026-05-04).
    Vignette ronde (image ou fallback typographique) + label nom dessous,
@@ -1061,6 +1081,19 @@ fetch(resolveAssetPath('docs/data/doyennes_polygons.json'))
       const poly = L.polygon(d.polygon, {className: cls});
       poly.bindTooltip(display, {sticky:true, direction:'top', className:'tlx-tt'});
       poly.on('click', () => onDoyenneClick(d.slug, display, poly));
+      // §6 Nav N2→N2 (2026-05-18) — pre-fetch illustration au hover en N2
+      // (cache navigateur generalement deja chaud via vignettes N1, mais on
+      // garantit la dispo immediate au switch).
+      poly.on('mouseover', function() {
+        if (!document.body.classList.contains('niveau-2')) return;
+        if (d.slug === currentDoyenneSlug) return;
+        var raw = (typeof DOYENNE_ILLUSTRATIONS === 'object' && DOYENNE_ILLUSTRATIONS[d.slug]) || '';
+        if (!raw) return;
+        try {
+          var img = new Image();
+          img.src = resolveAssetPath(_illustrationUrl(raw, 'thumb'));
+        } catch (_) { /* no-op */ }
+      });
       doyenneFillLayer.addLayer(poly);
       doyenneShapesBySlug[d.slug] = poly;
       doyenneNameBySlug[d.slug] = display;
@@ -1173,6 +1206,13 @@ fetch(resolveAssetPath('docs/data/doyennes_polygons.json'))
 
 function onDoyenneClick(slug, name, shape) {
   // Brief 9 — clic doyenne : entree niveau 2 (drill-down pieves medievales).
+  // §6 Nav N2→N2 (2026-05-18) : si on est deja en N2 sur le meme doyenne,
+  // no-op (evite re-render sticker + flyTo inutile). Si on est en N2 sur un
+  // autre doyenne, enterNiveau2View gere deja le switch A->B (cleanup pieves
+  // ancien + sticker + dim, attach nouveau + flyTo 1.0s).
+  if (document.body.classList.contains('niveau-2') && slug === currentDoyenneSlug) {
+    return;
+  }
   enterNiveau2View(slug, name, shape);
 }
 
@@ -1515,7 +1555,9 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape, opts) {
     if (opts.animate === false) {
       map.fitBounds(shape.getBounds(), { padding: [40, 40] });
     } else {
-      map.flyToBounds(shape.getBounds(), { padding: [40, 40], duration: 0.8, easeLinearity: 0.5 });
+      // §6 Nav N2→N2 (2026-05-18) : duration 0.8 -> 1.0 pour transition
+      // plus lisible lors du switch direct entre doyennés voisins.
+      map.flyToBounds(shape.getBounds(), { padding: [40, 40], duration: 1.0, easeLinearity: 0.5 });
     }
   }
 
@@ -1823,6 +1865,7 @@ function updateBreadcrumb() {
   if (!currentDoyenneSlug && !currentPieveSlugV2) {
     bc.classList.remove('visible');
     bc.innerHTML = '';
+    _closeBcDoyDropdown();
     return;
   }
   bc.classList.add('visible');
@@ -1832,13 +1875,32 @@ function updateBreadcrumb() {
   if (doyenneDisplay) {
     html += '<span class="bc-sep">›</span>';
     const isActive = !currentPieveSlugV2;
-    html += '<span class="bc-item' + (isActive ? ' active' : '') + '" data-level="doyenne">' + escapeHtml(doyenneDisplay) + '</span>';
+    // §6 Nav N2→N2 (2026-05-18) — Pattern 2 : si en N2 (isActive=true et
+    // niveau-2 sans niveau-3), segment doyenne devient bouton dropdown.
+    const isN2Active = isActive && document.body.classList.contains('niveau-2') && !document.body.classList.contains('niveau-3');
+    if (isN2Active) {
+      html += '<span class="bc-doy-trigger" id="bc-doy-trigger" data-level="doyenne" role="button" tabindex="0" aria-expanded="false" aria-controls="bc-doy-dropdown">'
+        + escapeHtml(doyenneDisplay)
+        + ' <span class="bc-chevron" aria-hidden="true">▾</span>'
+        + '</span>';
+    } else {
+      html += '<span class="bc-item' + (isActive ? ' active' : '') + '" data-level="doyenne">' + escapeHtml(doyenneDisplay) + '</span>';
+    }
   }
   if (pieveDisplay) {
     html += '<span class="bc-sep">›</span>';
     html += '<span class="bc-item active" data-level="pieve-v2">' + escapeHtml(pieveDisplay) + '</span>';
   }
   bc.innerHTML = html;
+  // §6 — handler trigger dropdown
+  const trigger = bc.querySelector('#bc-doy-trigger');
+  if (trigger) {
+    trigger.addEventListener('click', _toggleBcDoyDropdown);
+    trigger.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); _toggleBcDoyDropdown(); }
+    });
+  }
+  _closeBcDoyDropdown();
   bc.querySelectorAll('.bc-item').forEach(el => {
     el.addEventListener('click', () => {
       const lvl = el.dataset.level;
@@ -1867,6 +1929,95 @@ function updateBreadcrumb() {
     });
   });
 }
+
+// §6 Nav N2→N2 (2026-05-18) — Pattern 2 : breadcrumb dropdown ===
+// Bouton declenche un dropdown listant les 9 doyennes (mini-illustration + nom).
+// Clic sur une entree -> switch N2->N2 via enterNiveau2View (qui gere deja le
+// cleanup A->B). Fermeture : clic dehors, Esc, ou selection.
+function _ensureBcDoyDropdownDom() {
+  var dd = document.getElementById('bc-doy-dropdown');
+  if (dd) return dd;
+  dd = document.createElement('ul');
+  dd.id = 'bc-doy-dropdown';
+  dd.setAttribute('role', 'menu');
+  document.body.appendChild(dd);
+  return dd;
+}
+function _toggleBcDoyDropdown() {
+  var dd = _ensureBcDoyDropdownDom();
+  if (dd.classList.contains('open')) { _closeBcDoyDropdown(); return; }
+  _openBcDoyDropdown();
+}
+function _openBcDoyDropdown() {
+  var dd = _ensureBcDoyDropdownDom();
+  var trigger = document.getElementById('bc-doy-trigger');
+  // Ordre alphabetique par display_name pour stabilite UX
+  var sortedSlugs = Object.keys(doyenneShapesBySlug).sort(function(a, b) {
+    return (doyenneNameBySlug[a] || a).localeCompare(doyenneNameBySlug[b] || b);
+  });
+  var html = '';
+  for (var i = 0; i < sortedSlugs.length; i++) {
+    var slug = sortedSlugs[i];
+    var name = doyenneNameBySlug[slug] || slug;
+    var isActive = (slug === currentDoyenneSlug);
+    var illuRaw = (typeof DOYENNE_ILLUSTRATIONS === 'object' && DOYENNE_ILLUSTRATIONS[slug]) || '';
+    var imgHtml = '';
+    if (illuRaw && typeof resolveAssetPath === 'function' && typeof _illustrationUrl === 'function') {
+      var src = resolveAssetPath(_illustrationUrl(illuRaw, 'thumb'));
+      var safeName = escapeHtml(name);
+      imgHtml = '<img class="bc-doy-mini-img" src="' + src + '" alt="' + safeName + '"'
+        + ' onerror="this.outerHTML=\'<span class=&quot;bc-doy-mini-fallback&quot;>'
+        + escapeHtml((name.charAt(0) || '?').toUpperCase()) + '</span>\'">';
+    } else {
+      imgHtml = '<span class="bc-doy-mini-fallback">' + escapeHtml((name.charAt(0) || '?').toUpperCase()) + '</span>';
+    }
+    html += '<li class="bc-doy-option' + (isActive ? ' active' : '') + '" data-slug="'
+      + escapeHtml(slug) + '" role="menuitem" tabindex="0">'
+      + imgHtml + '<span>' + escapeHtml(name) + '</span></li>';
+  }
+  dd.innerHTML = html;
+  dd.classList.add('open');
+  if (trigger) {
+    trigger.classList.add('open');
+    trigger.setAttribute('aria-expanded', 'true');
+  }
+  dd.querySelectorAll('.bc-doy-option').forEach(function(el) {
+    if (el.classList.contains('active')) return;
+    var handler = function(e) {
+      e.stopPropagation();
+      var slug = el.dataset.slug;
+      var name = doyenneNameBySlug[slug];
+      var shape = doyenneShapesBySlug[slug];
+      _closeBcDoyDropdown();
+      if (shape) enterNiveau2View(slug, name, shape);
+    };
+    el.addEventListener('click', handler);
+    el.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(e); }
+    });
+  });
+}
+function _closeBcDoyDropdown() {
+  var dd = document.getElementById('bc-doy-dropdown');
+  if (dd) dd.classList.remove('open');
+  var trigger = document.getElementById('bc-doy-trigger');
+  if (trigger) {
+    trigger.classList.remove('open');
+    trigger.setAttribute('aria-expanded', 'false');
+  }
+}
+// Fermeture clic dehors + Esc
+document.addEventListener('click', function(e) {
+  var dd = document.getElementById('bc-doy-dropdown');
+  if (!dd || !dd.classList.contains('open')) return;
+  if (dd.contains(e.target)) return;
+  var trigger = document.getElementById('bc-doy-trigger');
+  if (trigger && trigger.contains(e.target)) return;
+  _closeBcDoyDropdown();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') _closeBcDoyDropdown();
+});
 
 // === Click handler spot (marker) — alimente breadcrumb avec chaîne complète ===
 // [CLICK-DBG] compteur global pour distinguer 1er / 2e / Ne clic dans une session.
@@ -2434,7 +2585,14 @@ function _buildStickerHtmlFromData(slug, name) {
 
 function _renderDoyenneSticker(slug, name, _attempt) {
   var old = document.getElementById('doyenne-mini-sticker');
-  if (old) old.remove();
+  if (old) {
+    // §6 Nav N2→N2 — fade-out doux de l'ancien sticker avant remove
+    // (transition CSS .25s). Sans fade : flash brutal au switch A->B.
+    // Libere immediatement l'id pour eviter doublon avec le nouveau sticker.
+    old.id = '';
+    old.classList.add('swapping');
+    setTimeout(function() { if (old.parentNode) old.remove(); }, 250);
+  }
   var attempt = _attempt || 0;
   // B4 — localiser le mini par slug plutôt que par classe CSS pour éviter
   // la race condition quand deux minis ont persistente-niveau-2 simultanément.
