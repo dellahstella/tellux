@@ -7,6 +7,28 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [§6 Nav N2→N2 directe] — 18 mai 2026
+
+### Added
+- **Pattern 4 (clic direct polygone doyenné voisin)** : en N2, les polygones des doyennés voisins deviennent cliquables (`pointer-events:auto`), avec curseur pointer, transition d'opacité au hover et stroke ocre épaissi. Clic → switch direct vers le doyenné cible (réutilise `enterNiveau2View` : cleanup pièves+dim+sticker actuel, attach nouveau, `flyToBounds` ~1s).
+- **Pattern 2 (breadcrumb dropdown)** : en N2 actif, le segment doyenné du breadcrumb devient un trigger (`bc-doy-trigger`) avec chevron `▾`. Clic / Enter / Space ouvre un dropdown listant les 9 autres doyennés avec leur vignette (`bc-doy-mini-img`) ou fallback initiale (`bc-doy-mini-fallback`). Sélection → switch vers la cible. Fermeture sur clic extérieur, Escape, ou seconde activation du trigger.
+- **Pré-fetch sticker au hover** : `mouseover` sur polygone doyenné voisin en N2 déclenche un préchargement `new Image()` du thumb correspondant (via `DOYENNE_ILLUSTRATIONS` + `_illustrationUrl(raw, 'thumb')`). Échec silencieux (no-op).
+- **Fade swap sticker** : transition `opacity .25s ease` sur `#doyenne-mini-sticker`. À l'arrivée d'un nouveau sticker, l'ancien perd son `id` (libère l'anti-doublon), reçoit `.swapping` (opacity → 0), puis est retiré du DOM 250 ms plus tard.
+
+### Changed
+- `enterNiveau2View` réutilisable en mode A→B (déjà idempotent : cleanup avant attach).
+- `flyToBounds` ajusté à `duration: 1.0, easeLinearity: 0.5` pour la transition fluide entre doyennés voisins.
+- `updateBreadcrumb` produit deux variantes du segment doyenné selon `niveau-2 && !niveau-3` actif.
+
+### Guards
+- `onDoyenneClick` retourne immédiatement si `slug === currentDoyenneSlug` en N2 (clic sur le doyenné actuel = no-op, évite reset inutile).
+
+### Reference
+- Brief §6 Nav N2→N2 directe (Pattern 4 + Pattern 2 + flyTo 1s + préchargement + fade swap), validé Soleil 2026-05-18.
+- Pas de dette préexistante (`PATRIMOINE-NAV-N2-N2-DIRECTE-001` n'existe pas dans `DETTES_TECHNIQUES.md`).
+
+---
+
 ## [Stratégie D Phase 2 — Splits vico/balagne] — 18 mai 2026
 
 ### Added
