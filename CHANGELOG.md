@@ -7,6 +7,48 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Stratégie D Phase 1 — Containment fix] — 18 mai 2026
+
+### Added
+- Pieve `pieve_biguglia` (11 communes, doyenne_du_golo) — split `pieve_mariana`
+- Pieve `pieve_altiani` (3 communes, doyenne_cortenais) — split `pieve_rogna`
+- Containment check post-build dans `scripts/build_pieves_polygons.py` (`--strict-containment` mode)
+- Alias `pieve_mariana → pieve_castagniccia` dans `pieve_aliases.json` (v2)
+- Mapping amont `_drafts/pieves_communes_mapping_v3_stratD_2026-05-17.json` (2 pieves_added + 29 transferts + 1 rename)
+- Script `scripts/phase_strat_d_patch_derive.py` (patch direct dérivé Voie b)
+- Script `scripts/phase_strat_d_retag_sites.py` (retag 42 sites = 28 brief + 13 ghost rescue + 1 revert)
+
+### Changed
+- `pieve_mariana` renommée `pieve_castagniccia` (7 communes restantes nord-Cortenais : Asco, Castifao, Castiglione, Moltifao, Piedigriggio, Popolasca, Prato-di-Giovellina)
+- `pieve_nebbiu` réduite (8 communes migrées : 6 → patrimonio, 2 → balagne)
+- `pieve_rogna` réduite (3 communes migrées → altiani)
+- `pieve_balagne` enrichie (+4 communes : 2 ex-mariana + 2 ex-nebbiu)
+- `pieve_patrimonio` recalculée (6 communes ex-nebbiu)
+- 42 sites retag (pieve_slug + doyenne_contemporain_slug cohérents) : 28 brief + 13 ghost rescue (sites pieve_mariana hors brief, PIP géo) + 1 revert (`san_cervone_valle_d_alesani` pieve_bozio/cortenais → pieve_alesani/PO suite arbitrage Soleil Q3 option B)
+- Compteurs : 45 → 47 pieves total
+
+### Fixed
+- 29 mismatches commune ↔ pieve ↔ doyenné majoritaire (audit Cowork 2026-05-17) → 0 dans le scope traité
+- Dette `PATRIMOINE-PIEVE-MARIANA-MEGA-FUSION-001` fermée (split résout les 4 catégories d'écarts mariana)
+
+### Notes
+- **Voie (b) patch direct du dérivé adoptée** : la voie (a) régénération propre via `build_pieves_polygons.py` produit aujourd'hui 4 pieves zombies (giovellina/caccia/ampugnani/campoloro) du mapping v1 désynchronisé + perte `pieve_zicavo` + `pieve_patrimonio` sous-représentée. Hors scope Strat D Phase 1.
+- **Escalade priorité `PIEVE-MAPPING-AMONT-DESYNCHRO-001` Moyenne → HAUTE** : PR cleanup mapping amont OBLIGATOIRE post-FEDER (rappel explicite Soleil 2026-05-17).
+- Compteurs visuels légèrement différents de prod pour `pieve_nebbiu` (17→9), `pieve_patrimonio` (9→6) — acceptable Phase 1 beta, à corriger via PR cleanup amont.
+
+### Arbitrages Soleil
+- Q1 (28 sites) : confirmé
+- Q2 (Vezzani 2B347 inclusion altiani) : NON, conservé pieve_venaco
+- Q3 (san_cervone_valle_d_alesani revert) : option B (pieve_alesani/PO)
+- Q4 (note castagniccia) : version Cowork validée
+
+### Reference
+- `docs/operations/PIEVES_STRATEGIE_D_PHASE1_BRIEF_CODE_2026-05-17.md`
+- `docs/operations/ADR-001-pieves-doctrine.md` (Stratégie D actée)
+- `docs/operations/PIEVES_CONTAINMENT_AUDIT_2026-05-17.md` (audit programmatique)
+
+---
+
 ## [Non publié] — Fix sticker doyenné figé sur drill cross-doyenné N2→N3 (17 mai 2026)
 
 ### fix
