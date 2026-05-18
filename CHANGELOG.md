@@ -7,6 +7,29 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Sprint hygiène pré-FEDER, Étape 1] — 2026-05-18
+
+### Fixed (3 corrections data sites)
+- `casteddu_bastelica` (option a Soleil) : `commune_insee 2A031 (Bastelica) → 2B012 (Altiani)`, `commune_nom Bastelica → Altiani`, `pieve_rogna → pieve_altiani`. Coord verrouillé inchangé (42.217/9.255). Nom site conservé (toponymie homonyme à clarifier post-FEDER).
+- `tour_d_isolella_sette_navi` : `commune_insee 2A258 (Renno faux) → 2A228 (Pietrosella officiel)`. Pieve/doyenne déjà cohérents.
+- `pont_genois_de_piedipartino` : `commune_insee 2B231 (Pigna faux) → 2B221 (Piedipartino officiel)`, `pieve_aregno → pieve_orezza`, `doyenne_balagne → doyenne_du_golo` (BP-FIX-RATTACHEMENT-COMPLET-001).
+
+### Closed (7 dettes traitées)
+- 3 résolues par correction data : `CASTEDDU-BASTELICA-COORD-DOUTE-001`, `TOUR-ISOLELLA-INSEE-DISCORDANCE-001`, `PIEVE-PIEDIPARTINO-INSEE-DISCORDANCE-001`
+- 3 fermées par invalidation/cosmétique : `FARINOLE-COORD-DOUTE-001` (faux positif, coord cohérent), `PIEVE-VENACO-OVERFLOW-VISUEL-GEOMETRIQUE-001` (cosmétique acceptable Phase 1 beta), `PIEVE-SORROINSU-CINARCA-POST-MIGRATION-PHASE2-001` (équilibre 4+9 communes OK)
+- Sticker Balagne : documenté non-bug (image fonctionnelle, contraste cosmétique à améliorer en pass design pré-FEDER, hors-scope hygiène)
+
+### Audit
+- Mismatches visuel↔data résiduels : **1 → 0** (audit MCP 2026-05-18)
+- Aucune nouvelle dette ouverte
+
+### Reference
+- INSEE officiels croisés via `scripts/.cache/communes-{2A,2B}.geojson`
+- Doctrine `BP-FIX-RATTACHEMENT-COMPLET-001` strictement appliquée pour piedipartino
+- Préserve doctrine `gps_locked=true` (coord casteddu_bastelica inchangée, seules metadata corrigées)
+
+---
+
 ## [§8 Mécanisme doyenne_contemporain_override + bozio] — 2026-05-18
 
 ### Added
