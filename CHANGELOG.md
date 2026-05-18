@@ -7,6 +7,47 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Stratégie D Phase 2 — Splits vico/balagne] — 18 mai 2026
+
+### Added
+- **4 nouvelles pieves** :
+  - `pieve_piana` (7 communes : Osani, Partinello, Serriera, Ota, Piana, Évisa, Cristinacce) — doyenne_piana_vico_sari. Multipolygon Scandola UNESCO préservé. Note pédagogique golfe de Porto.
+  - `pieve_sagone` (2 communes : Cargèse + Coggia migré cinarca) — doyenne_piana_vico_sari. Note pédagogique diocèse médiéval + Cargèse paese grec.
+  - `pieve_ostriconi` (14 communes : Palasca, Belgodère, Urtaca, Novella, Pietralba, Lama, Occhiatana, Costa, Ville-di-Paraso, Speloncato, Olmi-Cappella, Vallica, Pioggiola, Mausoléo) — doyenne_balagne. Note pédagogique bassin versant NE Balagne.
+  - `pieve_calenzana` (6 communes : Calvi, Lumio, Moncale, Zilia, Montegrosso, Calenzana) — doyenne_balagne. Note pédagogique Calvi+arrière-pays.
+- **Alias** `pieve_balagne → pieve_aregno` dans `pieve_aliases.json` v3.
+- Script `scripts/phase_strat_d_phase2_splits.py` (création/rename pieves + recalcul polygones via shapely).
+- Script `scripts/phase_strat_d_phase2_retag_sites.py` (retag 99 sites + PIP fallback).
+
+### Changed
+- **Rename** `pieve_balagne` → `pieve_aregno` (14 communes centre-Balagne : Île-Rousse, Monticello, Corbara, Algajola, Santa-Reparata, Pigna, Aregno, Sant'Antonino, Lavatoggio, Cateri, Avapessa, Nessa, Feliceto, Muro). Nessa 2B175 + Muro 2B173 nouveaux dans aregno (= les "2 communes extra" de l'audit Cowork PIP=34 vs declared=32).
+- `pieve_vico` réduite (12 → 7 communes : Marignana, Balogna, Vico, Arbori + Renno+Letia+Murzo migrés sorroinsu).
+- `pieve_sorroinsu` réduite (7 → 4 communes : Guagno, Orto, Poggiolo, Soccia).
+- `pieve_cinarca` (9 communes : Coggia migré sagone, base v1 = 10 → -1 net = 9).
+- **99 sites retag** (83 INSEE direct + 10 PIP fallback + 6 no-op).
+
+### Cas particuliers Q-2 / Q-3
+- Q-2 `san_pietro_letia` (Letia 2A141) retag `pieve_celavo → pieve_vico` (cohérence commune INSEE migrée).
+- Q-3 `tour_d_isolella_sette_navi` (INSEE Renno 2A258 mais géo côte sud Ajaccio) conserve `pieve_ornano`. Dette `TOUR-ISOLELLA-INSEE-DISCORDANCE-001` ouverte.
+
+### Notes
+- Voie (b) patch direct du dérivé maintenue (cohérence Phase 1 + évite régression 4 zombies mapping v1).
+- Total **47 → 51 pieves** (typo brief 52 corrigée).
+- Anomalie détectée à auditer : `pont_genois_de_piedipartino` (INSEE 2B231 Pigna ≠ nom Piedipartino). Dette `PIEVE-PIEDIPARTINO-INSEE-DISCORDANCE-001` ouverte.
+
+### Arbitrages Soleil 2026-05-18
+- Q-1 : 47 → 51 pieves confirmé
+- Q-2 : san_pietro_letia retag commune INSEE
+- Q-3 : tour_isolella conservé + dette
+- Q4 : Speloncato/Costa/Mausoléo/Pioggiola → ostriconi, Lumio → calenzana
+- Q7 : multipolygon Scandola préservé pour pieve_piana
+
+### Reference
+- `docs/operations/PIEVES_SPLITS_VICO_BALAGNE_AUDIT_2026-05-18.md` (draft Cowork)
+- `docs/operations/ADR-001-pieves-doctrine.md` (Stratégie D)
+
+---
+
 ## [Stratégie D Phase 1 — Containment fix] — 18 mai 2026
 
 ### Added
