@@ -7,6 +7,36 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [§8 Mécanisme doyenne_contemporain_override + bozio] — 2026-05-18
+
+### Added
+- **Mécanisme générique `doyenne_contemporain_override`** dans `pieves_polygons.json` : champ optionnel string (slug doyenné valide) qui prime sur `doyenne_contemporain_majoritaire` dans toutes les lectures `patrimoine.html` (drill-down N2→N3, `pieveDoyenneBySlugV2`, `pievesByDoyenneLayer`).
+- **`override_rationale`** : champ texte optionnel pour traçabilité doctrinale.
+- **Préservation override sur rebuild** dans `scripts/build_pieves_polygons.py` (même pattern que `note_rattachement`, doctrine voie-b patch direct dérivé).
+
+### Changed
+- `pieve_bozio.doyenne_contemporain_override = "doyenne_cortenais"` (rationale : identité doctrinale Cortenais, paghjella, malgré ratio géo PO 53/47 post-ingestion alesani Phase 1).
+
+### Resolved
+- **9 mismatches visuel↔data → 1** (audit MCP 2026-05-18) :
+  - 8 sites `pieve_bozio` désormais visibles en N2 Cortenais (résolu par override)
+  - 1 résiduel : `casteddu_bastelica` (dette pré-existante `CASTEDDU-BASTELICA-COORD-DOUTE-001`, hors-scope §8)
+
+### Notes
+- `pieve_rogna` : doy_maj = PO conservé (ratio 88% PO, 4/5 sites cohérents). Pas d'override nécessaire.
+- `pieve_sartene` (28/28 Extrême-Sud) et `pieve_gulfo_d_aiacciu` (11/11 Ajaccio) cohérents, pas d'override.
+- `doyenne_contemporain_majoritaire` préservé pour traçabilité du calcul géo brut.
+
+### Compteurs (51 pieves total)
+- `doyenne_cortenais` : 8 → **9** (bozio rejoint)
+- `doyenne_plaine_orientale` : 7 → **6** (bozio quitte)
+
+### Reference
+- Doctrine `BP-FIX-RATTACHEMENT-COMPLET-001` préservée (pas de retag sites, ils sont déjà cortenais déclarés)
+- Audit MCP prod 2026-05-18 : 541 sites, 97% cohérents
+
+---
+
 ## [Cleanup fiches pieves — 2026-05-18]
 
 ### Removed (public repo)
