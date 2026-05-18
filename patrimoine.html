@@ -192,6 +192,9 @@ body.niveau-3 .leaflet-interactive[data-pieve-slug].active-niveau-3{fill-opacity
    (detach pieves+sticker old, attach new, flyToBounds 1s). */
 body.niveau-2 .doyenne-polygon:not(.dim-niveau-2){pointer-events:auto;cursor:pointer;transition:fill-opacity .2s, stroke-width .2s;}
 body.niveau-2 .doyenne-polygon:not(.dim-niveau-2):hover{fill-opacity:0.85;stroke-width:3;stroke:var(--tx-ocre);}
+/* §6 Nav N2→N2 — fade swap sticker doyenne (transition douce au switch). */
+#doyenne-mini-sticker{transition:opacity .25s ease;}
+#doyenne-mini-sticker.swapping{opacity:0;}
 
 /* Brief 14 — Miniatures doyennes au niveau 1 (vision macro Soleil 2026-05-04).
    Vignette ronde (image ou fallback typographique) + label nom dessous,
@@ -1078,6 +1081,19 @@ fetch(resolveAssetPath('docs/data/doyennes_polygons.json'))
       const poly = L.polygon(d.polygon, {className: cls});
       poly.bindTooltip(display, {sticky:true, direction:'top', className:'tlx-tt'});
       poly.on('click', () => onDoyenneClick(d.slug, display, poly));
+      // §6 Nav N2→N2 (2026-05-18) — pre-fetch illustration au hover en N2
+      // (cache navigateur generalement deja chaud via vignettes N1, mais on
+      // garantit la dispo immediate au switch).
+      poly.on('mouseover', function() {
+        if (!document.body.classList.contains('niveau-2')) return;
+        if (d.slug === currentDoyenneSlug) return;
+        var raw = (typeof DOYENNE_ILLUSTRATIONS === 'object' && DOYENNE_ILLUSTRATIONS[d.slug]) || '';
+        if (!raw) return;
+        try {
+          var img = new Image();
+          img.src = resolveAssetPath(_illustrationUrl(raw, 'thumb'));
+        } catch (_) { /* no-op */ }
+      });
       doyenneFillLayer.addLayer(poly);
       doyenneShapesBySlug[d.slug] = poly;
       doyenneNameBySlug[d.slug] = display;
@@ -2569,7 +2585,14 @@ function _buildStickerHtmlFromData(slug, name) {
 
 function _renderDoyenneSticker(slug, name, _attempt) {
   var old = document.getElementById('doyenne-mini-sticker');
-  if (old) old.remove();
+  if (old) {
+    // §6 Nav N2→N2 — fade-out doux de l'ancien sticker avant remove
+    // (transition CSS .25s). Sans fade : flash brutal au switch A->B.
+    // Libere immediatement l'id pour eviter doublon avec le nouveau sticker.
+    old.id = '';
+    old.classList.add('swapping');
+    setTimeout(function() { if (old.parentNode) old.remove(); }, 250);
+  }
   var attempt = _attempt || 0;
   // B4 — localiser le mini par slug plutôt que par classe CSS pour éviter
   // la race condition quand deux minis ont persistente-niveau-2 simultanément.
