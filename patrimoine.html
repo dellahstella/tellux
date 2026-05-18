@@ -1268,18 +1268,23 @@ fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
       // simultanement).
       pieveNameBySlugV2[p.slug] = p.name;
       pievePolygonsBySlugV2[p.slug] = p.polygon;
-      pieveDoyenneBySlugV2[p.slug] = p.doyenne_contemporain_majoritaire;
+      // §8 (2026-05-18) — doyenne_contemporain_override prime sur le calcul
+      // automatique majoritaire. Mecanisme generique pour cas doctrinaux ou
+      // l'identite culturelle de la pieve diverge du ratio geographique
+      // (ex: pieve_bozio = Cortenais doctrinal malgre 53% surface PO post-
+      // ingestion alesani Phase 1).
+      const pDoyenne = p.doyenne_contemporain_override || p.doyenne_contemporain_majoritaire;
+      pieveDoyenneBySlugV2[p.slug] = pDoyenne;
       // Fix C3 — note de rattachement optionnelle (popup enrichi).
       if (p.note_rattachement) pieveNoteRattachementBySlugV2[p.slug] = p.note_rattachement;
       // U2 (URGENT FEDER 2026-05-17) — Une pieve = un seul polygon dans
-      // la nav. Itere uniquement sur doyenne_contemporain_majoritaire
-      // (annule Brief 10/12 union overrides+auto seuil 25% qui creait
-      // jusqu'a 3 polygons par pieve : pieve_mariana etait visible en
-      // Balagne + Cortenais + Golo).
+      // la nav. Itere uniquement sur le doyenne resolu (override ou
+      // majoritaire). Annule Brief 10/12 union overrides+auto seuil 25%
+      // qui creait jusqu'a 3 polygons par pieve.
       // Brief 11 (B11-UX-030) — tooltip pieve prefixe "Pieve di X" pour
       // distinguer du tooltip doyenne (qui affiche juste "Cap", "Bastia"...).
       const tooltipLabel = 'Pieve di ' + p.name;
-      const doyMaj = p.doyenne_contemporain_majoritaire;
+      const doyMaj = pDoyenne;
       if (doyMaj) {
         const poly = L.polygon(p.polygon, {className: 'pieve-polygon-v2'});
         // Brief N3 — référence slug pieve sur le polygone Leaflet pour
