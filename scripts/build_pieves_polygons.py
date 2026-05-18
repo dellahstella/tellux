@@ -281,6 +281,11 @@ def main():
     # avec le mapping amont, dette PIEVE-MAPPING-AMONT-DESYNCHRO-001). Apres
     # regeneration, les notes nebbiu/balagne/etc. ne seraient pas perdues.
     existing_notes_rattachement = {}
+    # §8 (2026-05-18) — preserver aussi doyenne_contemporain_override et
+    # override_rationale du build precedent (meme pattern que notes,
+    # voie-b patch direct du derive).
+    existing_overrides = {}
+    existing_override_rationales = {}
     if OUTPUT_PATH.exists():
         try:
             with OUTPUT_PATH.open(encoding="utf-8") as f:
@@ -288,8 +293,14 @@ def main():
             for p in prev.get("pieves", []):
                 if p.get("note_rattachement"):
                     existing_notes_rattachement[p["slug"]] = p["note_rattachement"]
+                if p.get("doyenne_contemporain_override"):
+                    existing_overrides[p["slug"]] = p["doyenne_contemporain_override"]
+                if p.get("override_rationale"):
+                    existing_override_rationales[p["slug"]] = p["override_rationale"]
             if existing_notes_rattachement:
                 print(f"[build] {len(existing_notes_rattachement)} note_rattachement preservees du build precedent")
+            if existing_overrides:
+                print(f"[build] {len(existing_overrides)} doyenne_contemporain_override preserves du build precedent")
         except Exception as e:
             print(f"[build] WARN impossible de lire les notes precedentes: {e}")
 
@@ -373,6 +384,15 @@ def main():
         note = meta.get("note_rattachement") or existing_notes_rattachement.get(slug)
         if note:
             entry["note_rattachement"] = note
+        # §8 (2026-05-18) — preserver doyenne_contemporain_override doctrinal.
+        # Si override present, le containment check loggera un warning attendu
+        # (override diverge volontairement du calcul geo) mais pas d'erreur.
+        override = meta.get("doyenne_contemporain_override") or existing_overrides.get(slug)
+        if override:
+            entry["doyenne_contemporain_override"] = override
+            rationale = meta.get("override_rationale") or existing_override_rationales.get(slug)
+            if rationale:
+                entry["override_rationale"] = rationale
         out_pieves.append(entry)
 
         print(f"[build] {slug:30s}: {len(polys):3d} communes, "
