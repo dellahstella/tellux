@@ -23,7 +23,7 @@ Sortie : docs/data/pieves_polygons.json (overwrite)
 
 import argparse
 import json
-import sys
+import sys  # noqa: F401 — utilise par containment check
 from pathlib import Path
 
 from shapely.geometry import shape, Polygon, MultiPolygon
@@ -132,6 +132,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--tolerance", type=float, default=0.0005,
                         help="Tolérance simplification shapely (degrés, défaut 0.0005 ≈ 55m)")
+    parser.add_argument("--strict-containment", action="store_true",
+                        help="Strategie D 2026-05-17 : fail build si mismatches commune <-> pieve <-> doyenne detectes (default: warn only)")
     args = parser.parse_args()
 
     print(f"[build] mapping     : {MAPPING_PATH}")
@@ -408,6 +410,47 @@ def main():
         },
         "pieves": out_pieves,
     }
+
+    # Strategie D Phase 1 (2026-05-17) — containment check :
+    # pour chaque commune, verifier que sa pieve a un doyenne_majoritaire qui
+    # correspond au doyenne geographique reel de la commune (PIP). Detecte
+    # les regressions du type "commune affectee a une pieve dont le doyenne
+    # majoritaire diverge de la geographie de la commune".
+    if doyennes_shapes:
+        commune_doy_geo = {}
+        for insee, geom in communes_index.items():
+            rp = geom.representative_point()
+            for d_slug, d_geom in doyennes_shapes.items():
+                if d_geom.contains(rp) or d_geom.intersects(rp):
+                    commune_doy_geo[insee] = d_slug
+                    break
+        pieve_doy_maj = {p["slug"]: p.get("doyenne_contemporain_majoritaire") for p in out_pieves}
+        mismatches_post_build = []
+        for slug, insee_list in pieve_to_communes.items():
+            doy_maj = pieve_doy_maj.get(slug)
+            for insee in insee_list:
+                doy_geo = commune_doy_geo.get(insee)
+                if doy_geo and doy_maj and doy_geo != doy_maj:
+                    mismatches_post_build.append({
+                        "insee": insee, "pieve": slug,
+                        "doy_majoritaire": doy_maj, "doy_geo": doy_geo,
+                    })
+        if mismatches_post_build:
+            print(f"\n[build] WARN containment check : {len(mismatches_post_build)} mismatches commune <-> pieve <-> doyenne detectes")
+            for m in mismatches_post_build[:10]:
+                print(f"  - {m['insee']} pieve={m['pieve']} doy_maj={m['doy_majoritaire']} doy_geo={m['doy_geo']}")
+            if len(mismatches_post_build) > 10:
+                print(f"  ... +{len(mismatches_post_build)-10} autres")
+            if args.strict_containment:
+                print("[build] FAIL containment check (mode --strict-containment)")
+                sys.exit(1)
+        else:
+            print(f"\n[build] OK containment check : 0 mismatch commune <-> pieve <-> doyenne")
+        output["containment_check"] = {
+            "mode": "strict" if args.strict_containment else "warn",
+            "mismatches_count": len(mismatches_post_build),
+            "mismatches": mismatches_post_build,
+        }
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with OUTPUT_PATH.open("w", encoding="utf-8") as f:
