@@ -23,7 +23,7 @@ Sortie : docs/data/pieves_polygons.json (overwrite)
 
 import argparse
 import json
-import sys
+import sys  # noqa: F401 — utilise par containment check
 from pathlib import Path
 
 from shapely.geometry import shape, Polygon, MultiPolygon
@@ -32,6 +32,9 @@ from shapely.ops import unary_union
 ROOT = Path(__file__).resolve().parent.parent
 MAPPING_PATH = ROOT / "_drafts" / "pieves_communes_mapping.json"
 MAPPING_V2_PATH = ROOT / "_drafts" / "pieves_communes_mapping_v2_canonicite_casta.json"
+# Strategie D Phase 1 (2026-05-17) — mapping v3 incremental :
+# pieves_added (biguglia, altiani) + 29 transferts containment + 1 rename (mariana -> castagniccia).
+MAPPING_V3_PATH = ROOT / "_drafts" / "pieves_communes_mapping_v3_stratD_2026-05-17.json"
 OVERRIDES_PATH = ROOT / "_drafts" / "PIEVE_OVERRIDES.json"
 PIEVE_DOY_OVERRIDES_PATH = ROOT / "_drafts" / "PIEVE_DOYENNES_OVERRIDES.json"
 CACHE_DIR = ROOT / "scripts" / ".cache"
@@ -129,6 +132,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--tolerance", type=float, default=0.0005,
                         help="Tolérance simplification shapely (degrés, défaut 0.0005 ≈ 55m)")
+    parser.add_argument("--strict-containment", action="store_true",
+                        help="Strategie D 2026-05-17 : fail build si mismatches commune <-> pieve <-> doyenne detectes (default: warn only)")
     args = parser.parse_args()
 
     print(f"[build] mapping     : {MAPPING_PATH}")
@@ -157,6 +162,18 @@ def main():
               f"{len(mapping_v2.get('transferts', []))} transferts")
     else:
         print(f"[build] mapping v2 absent — fallback v1 39 pieves uniquement")
+
+    # Strategie D Phase 1 (2026-05-17) — chargement mapping v3 incremental
+    # apres v2. Apporte 2 pieves nouvelles (biguglia, altiani), 29 transferts
+    # containment, et 1 rename (pieve_mariana -> pieve_castagniccia).
+    mapping_v3 = None
+    if MAPPING_V3_PATH.exists():
+        with MAPPING_V3_PATH.open(encoding="utf-8") as f:
+            mapping_v3 = json.load(f)
+        print(f"[build] mapping v3 (Strategie D containment) charge : "
+              f"{len(mapping_v3.get('pieves_added', []))} pieves ajoutees, "
+              f"{len(mapping_v3.get('transferts', []))} transferts, "
+              f"{len(mapping_v3.get('renames', []))} renames")
 
     # Brief 10 — overrides "pieve -> [doyennes_visibles]" pour permettre a une
     # pieve d'apparaitre dans plusieurs doyennes a la fois (multi-affectation
@@ -188,7 +205,25 @@ def main():
                 # transferee. On applique quand meme le transfert vers to_p.
                 pass
             commune_to_pieve[insee] = to_p
-            transferts_appliques.append({"insee": insee, "from": current, "to": to_p})
+            transferts_appliques.append({"insee": insee, "from": current, "to": to_p, "via": "v2"})
+
+    # Strategie D Phase 1 — appliquer transferts v3 (containment audit).
+    renames_appliques = []
+    if mapping_v3:
+        for t in mapping_v3.get("transferts", []):
+            insee = t["commune_insee"]
+            to_p = t.get("vers_pieve")
+            current = commune_to_pieve.get(insee)
+            commune_to_pieve[insee] = to_p
+            transferts_appliques.append({"insee": insee, "from": current, "to": to_p, "via": "v3"})
+        # Renames : substitute slug partout (commune_to_pieve values + meta later).
+        for r in mapping_v3.get("renames", []):
+            old_slug = r["from"]
+            new_slug = r["to"]
+            for insee, slug in list(commune_to_pieve.items()):
+                if slug == old_slug:
+                    commune_to_pieve[insee] = new_slug
+            renames_appliques.append({"from": old_slug, "to": new_slug})
 
     # Appliquer overrides (post-mapping Cowork)
     overrides_applied = []
@@ -224,6 +259,39 @@ def main():
     if mapping_v2:
         for p in mapping_v2.get("pieves_added", []):
             meta_by_slug[p["slug"]] = p
+    # Strategie D Phase 1 — ajouter metadonnees des pieves v3 (biguglia, altiani)
+    # + appliquer les renames sur meta_by_slug (changement slug + name + note).
+    if mapping_v3:
+        for p in mapping_v3.get("pieves_added", []):
+            meta_by_slug[p["slug"]] = p
+        for r in mapping_v3.get("renames", []):
+            old_slug = r["from"]
+            new_slug = r["to"]
+            if old_slug in meta_by_slug:
+                meta = dict(meta_by_slug.pop(old_slug))
+                meta["slug"] = new_slug
+                if r.get("new_name"):
+                    meta["name"] = r["new_name"]
+                if r.get("new_note_rattachement"):
+                    meta["note_rattachement"] = r["new_note_rattachement"]
+                meta_by_slug[new_slug] = meta
+
+    # Strategie D Phase 1 — preserver les note_rattachement existantes du JSON
+    # derive precedent (cf. Fix C3 + U4 patches direct du derive non synchronises
+    # avec le mapping amont, dette PIEVE-MAPPING-AMONT-DESYNCHRO-001). Apres
+    # regeneration, les notes nebbiu/balagne/etc. ne seraient pas perdues.
+    existing_notes_rattachement = {}
+    if OUTPUT_PATH.exists():
+        try:
+            with OUTPUT_PATH.open(encoding="utf-8") as f:
+                prev = json.load(f)
+            for p in prev.get("pieves", []):
+                if p.get("note_rattachement"):
+                    existing_notes_rattachement[p["slug"]] = p["note_rattachement"]
+            if existing_notes_rattachement:
+                print(f"[build] {len(existing_notes_rattachement)} note_rattachement preservees du build precedent")
+        except Exception as e:
+            print(f"[build] WARN impossible de lire les notes precedentes: {e}")
 
     out_pieves = []
     total_vertices_before = 0
@@ -300,6 +368,11 @@ def main():
         }
         if dropped:
             entry["multipolygon_dropped_areas_km2"] = dropped
+        # Strategie D Phase 1 — preserver note_rattachement : priorite meta,
+        # fallback existing notes du build precedent (Fix C3 + U4).
+        note = meta.get("note_rattachement") or existing_notes_rattachement.get(slug)
+        if note:
+            entry["note_rattachement"] = note
         out_pieves.append(entry)
 
         print(f"[build] {slug:30s}: {len(polys):3d} communes, "
@@ -307,11 +380,17 @@ def main():
               + (f", dropped {len(dropped)}" if dropped else ""))
 
     output = {
-        "version": "v3-stratA-canonicite-casta" if mapping_v2 else "v1-stratA-from-communes",
+        "version": (
+            "v4-stratD-containment-2026-05-17" if mapping_v3
+            else ("v3-stratA-canonicite-casta" if mapping_v2 else "v1-stratA-from-communes")
+        ),
         "generated_by": "scripts/build_pieves_polygons.py",
         "source_mapping": "_drafts/pieves_communes_mapping.json (Cowork v1)" + (
             " + _drafts/pieves_communes_mapping_v2_canonicite_casta.json (Cowork v2 Brief 17)"
             if mapping_v2 else ""
+        ) + (
+            " + _drafts/pieves_communes_mapping_v3_stratD_2026-05-17.json (Cowork v3 Strategie D)"
+            if mapping_v3 else ""
         ),
         "source_communes": "github.com/gregoiredavid/france-geojson (departements 2A + 2B)",
         "tolerance_degrees": args.tolerance,
@@ -331,6 +410,47 @@ def main():
         },
         "pieves": out_pieves,
     }
+
+    # Strategie D Phase 1 (2026-05-17) — containment check :
+    # pour chaque commune, verifier que sa pieve a un doyenne_majoritaire qui
+    # correspond au doyenne geographique reel de la commune (PIP). Detecte
+    # les regressions du type "commune affectee a une pieve dont le doyenne
+    # majoritaire diverge de la geographie de la commune".
+    if doyennes_shapes:
+        commune_doy_geo = {}
+        for insee, geom in communes_index.items():
+            rp = geom.representative_point()
+            for d_slug, d_geom in doyennes_shapes.items():
+                if d_geom.contains(rp) or d_geom.intersects(rp):
+                    commune_doy_geo[insee] = d_slug
+                    break
+        pieve_doy_maj = {p["slug"]: p.get("doyenne_contemporain_majoritaire") for p in out_pieves}
+        mismatches_post_build = []
+        for slug, insee_list in pieve_to_communes.items():
+            doy_maj = pieve_doy_maj.get(slug)
+            for insee in insee_list:
+                doy_geo = commune_doy_geo.get(insee)
+                if doy_geo and doy_maj and doy_geo != doy_maj:
+                    mismatches_post_build.append({
+                        "insee": insee, "pieve": slug,
+                        "doy_majoritaire": doy_maj, "doy_geo": doy_geo,
+                    })
+        if mismatches_post_build:
+            print(f"\n[build] WARN containment check : {len(mismatches_post_build)} mismatches commune <-> pieve <-> doyenne detectes")
+            for m in mismatches_post_build[:10]:
+                print(f"  - {m['insee']} pieve={m['pieve']} doy_maj={m['doy_majoritaire']} doy_geo={m['doy_geo']}")
+            if len(mismatches_post_build) > 10:
+                print(f"  ... +{len(mismatches_post_build)-10} autres")
+            if args.strict_containment:
+                print("[build] FAIL containment check (mode --strict-containment)")
+                sys.exit(1)
+        else:
+            print(f"\n[build] OK containment check : 0 mismatch commune <-> pieve <-> doyenne")
+        output["containment_check"] = {
+            "mode": "strict" if args.strict_containment else "warn",
+            "mismatches_count": len(mismatches_post_build),
+            "mismatches": mismatches_post_build,
+        }
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with OUTPUT_PATH.open("w", encoding="utf-8") as f:
