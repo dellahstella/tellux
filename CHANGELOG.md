@@ -7,6 +7,34 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Étape 3 sprint pré-FEDER — pieve_lota + labels diocese] — 2026-05-18
+
+### Added
+- **`pieve_lota`** (7 communes, 16 sites, diocese_medieval Mariana, doyenne_du_cap) — fusion Cap Corse sud côte est, regroupant l'ancienne pieve_bastia + pieve_brando + intégration historique Pieve di Lota / Pieve di Sisco. Polygon = UNION shapely 7 communes (~124 km² simplify 0.0005). Hameaux préservés dans `note_rattachement` : Toga/Lupino/Cardo (Bastia), Miomo (Santa-Maria-di-Lota), Erbalunga (Brando). Option A audit Cowork 2026-05-18 validée Soleil.
+- **2 nouveaux aliases v4** : `pieve_bastia → pieve_lota`, `pieve_brando → pieve_lota`. Total aliases : 3 → 5.
+- **Suffixe `(médiéval)`** au label diocese affiché en popup pieve legacy (sujets 1+2) pour clarifier ambiguïté slug ↔ diocese.
+
+### Removed
+- `pieve_bastia` (1 commune Bastia, fusionnée dans pieve_lota)
+- `pieve_brando` (6 communes, fusionnée dans pieve_lota)
+
+### Changed
+- 16 sites retag vers `pieve_lota` : 6 sites pieve_bastia + 8 sites pieve_brando + 2 anomalies double-retag (`oratoire_santa_croce_bastia_haute_bastia_citadelle` ex-pieve_nebbiu/doy_golo, `san_giovanni_bastia_terra_vecchia` ex-pieve_biguglia/doy_golo). Doctrine `BP-FIX-RATTACHEMENT-COMPLET-001` stricte.
+- `pieve_patrimonio` : `diocese_medieval "?" → "Nebbiu"` (Patrimonio historiquement diocèse Nebbiu/Cap), `name "pieve_patrimonio" → "Patrimonio"` (cosmétique).
+
+### Compteurs
+- Pieves : 51 → **50** (-2 supprimées + 1 créée)
+- Aliases : 3 → **5** (+2)
+- Sites retag : **16** (14 simple + 2 anomalies)
+- Anti-ghost validation : 0 site résiduel pieve_bastia / 0 site résiduel pieve_brando
+- pieve_lota total sites : **16** (attendu)
+
+### Reference
+- Doctrine voie-b patch direct du dérivé (cohérence Phase 1+2)
+- Hash legacy `#du_cap/bastia` + `#du_cap/brando` préservés via aliases v4
+
+---
+
 ## [Sprint hygiène pré-FEDER, Étape 1] — 2026-05-18
 
 ### Fixed (3 corrections data sites)
