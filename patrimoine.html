@@ -57,6 +57,8 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
 .tlx-marker.priority{background:var(--tx-ocre);width:18px;height:18px;border:3px solid var(--tx-pierre);box-shadow:0 2px 6px rgba(0,0,0,0.4);}
 .tlx-marker.priority::before{content:'★';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--tx-pierre);font-size:10px;line-height:1;}
 .tlx-marker:hover{transform:scale(1.2);}
+/* B-ZONES — polygone zone au hover : fade in/out 200ms */
+.tlx-zone-hover{transition:opacity 200ms ease-out;}
 /* Popup Tellux v2 */
 .leaflet-popup-content-wrapper{background:var(--tx-pierre);border-radius:var(--r2);box-shadow:var(--shadow-lg);padding:0;}
 .leaflet-popup-content{margin:0;padding:0;width:240px !important;}
@@ -500,6 +502,9 @@ function adaptSiteSchema(s) {
     illustre: s.illustre === true,
     axe_corpus: s.axe_corpus,
     fiche_v3_slug: s.fiche_v3_slug || null,
+    // B-ZONES (Etape 4 pre-FEDER) : zones polygonales au hover.
+    is_zone: s.is_zone === true,
+    zone_geometry: s.zone_geometry || null,
   };
 }
 
@@ -648,6 +653,99 @@ const spotsAllByDioceseLayer = new Map();          // niveau 2 : Map<dioceseDisp
 const markersBySlug = {};
 const orphansInvisibles = [];      // orphan + non illustré (consigné en console pour dette PATRIMOINE-ORPHANS-INVISIBLES-001)
 const dioceseSpotsExclus = [];     // 5 spots-diocèse exclus (slug commence par 'diocese_')
+
+// ===== B-ZONES — zones polygonales au hover (Etape 4 pre-FEDER) =====
+// Les sites is_zone:true gardent leur marqueur. Au survol (desktop) un polygone
+// ocre apparait avec fade-in 200ms ; au mouseout fade-out 200ms. Sur mobile
+// (hover:none) le tap affiche le polygone 1500ms puis ouvre la popup ; un 2e tap
+// pendant l'affichage ouvre la popup directement.
+// CONVENTION COORDS : zone_geometry.coordinates est en GeoJSON [lon, lat].
+// Leaflet L.polygon attend [lat, lon] -> inversion explicite ci-dessous.
+const ZONE_FILL_COLOR    = '#C28533';   // --tx-ocre (DA v2)
+const ZONE_STROKE_COLOR  = '#C28533';
+const ZONE_FILL_OPACITY  = 0.3;
+const ZONE_STROKE_OPACITY= 0.8;
+const ZONE_STROKE_WEIGHT = 2;
+const ZONE_FADE_MS       = 200;
+const ZONE_MOBILE_SHOW_MS= 1500;
+const _zoneState = new WeakMap();       // marker -> {poly, removeTimer}
+const _zoneIsMobile = window.matchMedia('(hover: none)').matches;
+
+function renderZonePolygon(site) {
+  if (!site.is_zone || !site.zone_geometry || !site.zone_geometry.coordinates) return null;
+  // zone_geometry [lon,lat] -> Leaflet [lat,lon]
+  const ring = site.zone_geometry.coordinates[0];
+  if (!ring || ring.length < 4) return null;
+  const leafletCoords = ring.map(function(c){ return [c[1], c[0]]; });
+  return L.polygon(leafletCoords, {
+    color: ZONE_STROKE_COLOR,
+    weight: ZONE_STROKE_WEIGHT,
+    opacity: ZONE_STROKE_OPACITY,
+    fillColor: ZONE_FILL_COLOR,
+    fillOpacity: ZONE_FILL_OPACITY,
+    className: 'tlx-zone-hover',
+    interactive: false,                 // ne capture pas le clic : le pin garde le focus
+  });
+}
+
+function showZone(marker, site) {
+  let st = _zoneState.get(marker);
+  if (st && st.poly) {
+    if (st.removeTimer) { clearTimeout(st.removeTimer); st.removeTimer = null; }
+    if (st.poly._path) st.poly._path.style.opacity = '1';
+    return st.poly;
+  }
+  const poly = renderZonePolygon(site);
+  if (!poly) return null;
+  poly.addTo(map);
+  if (poly._path) {
+    poly._path.style.opacity = '0';
+    void poly._path.getBoundingClientRect();  // reflow force : amorce la transition CSS opacity
+    poly._path.style.opacity = '1';
+  }
+  _zoneState.set(marker, {poly: poly, removeTimer: null});
+  return poly;
+}
+
+function hideZone(marker) {
+  const st = _zoneState.get(marker);
+  if (!st || !st.poly) return;
+  const poly = st.poly;
+  if (poly._path) poly._path.style.opacity = '0';
+  st.removeTimer = setTimeout(function(){
+    if (map.hasLayer(poly)) map.removeLayer(poly);
+    _zoneState.delete(marker);
+  }, ZONE_FADE_MS);
+}
+
+function attachZoneHandlers(marker, site) {
+  if (!site.is_zone || !site.zone_geometry) return;
+  if (_zoneIsMobile) {
+    // Mobile : le tap pilote l'affichage. On remplace le handler click par
+    // defaut (onSpotClick attache ligne ~675) par un handler zone-aware.
+    marker.off('click');
+    marker.on('click', function(ev){
+      const st = _zoneState.get(marker);
+      if (st && st.poly) {
+        if (st.removeTimer) clearTimeout(st.removeTimer);
+        if (map.hasLayer(st.poly)) map.removeLayer(st.poly);
+        _zoneState.delete(marker);
+        onSpotClick(marker, site, ev);
+        return;
+      }
+      const poly = showZone(marker, site);
+      if (!poly) { onSpotClick(marker, site, ev); return; }
+      setTimeout(function(){
+        hideZone(marker);
+        onSpotClick(marker, site, ev);
+      }, ZONE_MOBILE_SHOW_MS);
+    });
+  } else {
+    marker.on('mouseover', function(){ showZone(marker, site); });
+    marker.on('mouseout',  function(){ hideZone(marker); });
+  }
+}
+
 function initSiteMarkers() {
   for (const site of SITES_PATRIMOINE) {
     if (site.lat == null || site.lon == null) continue;
@@ -674,6 +772,7 @@ function initSiteMarkers() {
     const marker = L.marker([site.lat, site.lon], {icon, title: site.nom, zIndexOffset: 1000, bubblingMouseEvents: false});
     marker.on('click', (ev) => onSpotClick(marker, site, ev));
     markersBySlug[site.slug] = {marker, site};
+    attachZoneHandlers(marker, site);  // B-ZONES : polygone au hover/tap si is_zone
 
     const isIllustrated = ILLUSTRATED_SPOTS.has(site.slug);
     const inv = SPOT_TO_PIEVE[site.slug];
