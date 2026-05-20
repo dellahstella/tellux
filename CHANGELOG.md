@@ -7,6 +7,25 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [B-ZONES Tier 2 — 2026-05-20] (Étape 4 pré-FEDER)
+
+### Added (sites_patrimoine.json)
+- Champs `is_zone`, `zone_geometry` (GeoJSON `[lon, lat]`), `zone_source`, `zone_simplification_pts` sur 8 sites Tier 2 favorables.
+- Polygones B-ZONES Tier 2 :
+  - 5 monts (octogones manuels rayon ~2-3 km autour du sommet) : Monte Cinto, San Petrone, Stello, d'Oro, Renoso.
+  - 2 sites OSM : Capu Rossu (relation 9376817, `natural=cape`), Lac de Nino (way 28890021 + buffer ~600 m pour englober les pozzines).
+  - 1 pointe manuelle : Capu Bianchi / extrême nord Cap Corse.
+
+### Compteurs
+- Sites `is_zone: true` : 15 → **23**.
+- Smoke test PIP Corse : **23/23 verts**.
+
+### Reference
+- Prérequis : PR A B-ZONES Tier 1 mergée et validée prod.
+- Brief Code : `docs/operations/B_ZONES_BRIEF_CODE_2026-05-18.md`
+
+---
+
 ## [B-ZONES Tier 1 — 2026-05-20] (Étape 4 pré-FEDER)
 
 ### Added (sites_patrimoine.json)
