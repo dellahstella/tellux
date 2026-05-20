@@ -7,6 +7,46 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [D1 cleanup mapping amont — 2026-05-20] (Étape 5 PR A)
+
+### Method (brief REV2)
+- Source de vérité : scripts ad hoc `phase_strat_d_*.py` (listes explicites) + mappings v1/v2/v3.
+- PIP polygones prod = best-effort pour les communes sans source traçable (arbitrage Soleil 2026-05-20).
+- `communes_count` prod considéré obsolète pour 16/50 pieves (dette PR C).
+
+### Added
+- `_drafts/pieves_communes_mapping_v4_cleanup_2026-05-18.json` — v4 incrémental (modèle v2/v3).
+  - 8 `pieves_added` : piana, sagone, aregno, calenzana, ostriconi, castagniccia, lota, zicavo.
+  - 29 `transferts` : 26 réaffectations zombies (PIP best-effort) + 3 rétro-doc Phase 2 (sorroinsu→vico).
+  - 7 zombies retirés : ampugnani, caccia, campoloro, giovellina, balagne, bastia, brando.
+- `scripts/validate_mapping.py` REV2 — cohérence interne mapping (0 zombie, 0 manquante, 360 communes).
+
+### Removed
+- Référence zombie `pieve_caccia` dans `_drafts/PIEVE_DOYENNES_OVERRIDES.json` (9 → 8 entrées).
+
+### Fixed (mapping amont aligné)
+- 7 zombies (slugs mapping → absent prod) → 0.
+- 8 pieves manquantes (slugs prod → absent mapping) → 0.
+- Total communes mappées : 360 (cohérent).
+
+### Documented as debt (hors scope D1, fix PR C)
+- `POLYGONE-INVALID-SELF-INTERSECTING-001` (3 polygones prod invalides).
+- `COMMUNES-COUNT-OBSOLETE-POST-VOIE-B-001` (16/50 communes_count obsolètes).
+- `MAPPING-PRE-STRATD-AD-HOC-TRANSFERS-UNDOCUMENTED-001` (26 communes PIP best-effort).
+- `MAPPING-PREQW-ORIGIN-UNKNOWN-001` (origine zicavo/patrimonio).
+
+### Unchanged (volontairement, scope strict)
+- `docs/data/pieves_polygons.json` (rebuild en PR C).
+- `docs/data/sites_patrimoine.json`, `docs/data/pieve_aliases.json`.
+- Scripts `scripts/phase_*.py` (archivage en PR B).
+
+### Reference
+- Audit : `docs/operations/PIEVE_MAPPING_AMONT_AUDIT_2026-05-18.md`
+- Brief Code REV2 : `docs/operations/PIEVE_MAPPING_AMONT_D1_BRIEF_CODE_2026-05-18_REV2.md`
+- Dette parent : `PIEVE-MAPPING-AMONT-DESYNCHRO-001` (HAUTE) — reste ouverte, clôture PR C.
+
+---
+
 ## [B-ZONES Tier 2 — 2026-05-20] (Étape 4 pré-FEDER)
 
 ### Added (sites_patrimoine.json)
