@@ -7,6 +7,38 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [B-ZONES Tier 1 — 2026-05-20] (Étape 4 pré-FEDER)
+
+### Added (sites_patrimoine.json)
+- Champs `is_zone`, `zone_geometry` (GeoJSON `[lon, lat]`), `zone_source`, `zone_simplification_pts` sur 15 sites naturels Tier 1.
+- Polygones B-ZONES Tier 1 :
+  - 3 réserves / aires protégées : Réserve de Scandola (OSM RNN), RBI du Tavignano (OSM), Forêt de Bonifatu / Cirque de Bonifato (OSM).
+  - 3 forêts domaniales : Vizzavona, Tartagine, Valdu Niellu (OSM).
+  - 4 gorges / défilés : Spelunca, Tavignano, Inzecca, Lancône (OSM RBI + tracés manuels).
+  - 1 massif de pics : Aiguilles de Bavella (manuel).
+  - 2 massifs : Haut-Asco (manuel restreint à la haute vallée), Ospedale (manuel).
+  - 1 plateau : Coscione (manuel).
+  - 1 désert + 1 calanche : Agriates, Calanche de Piana (manuel).
+
+### Added (patrimoine.html)
+- Renderer Leaflet polygones zones au hover (desktop, fade in/out 200 ms) + tap 1500 ms (mobile).
+- CSS `.tlx-zone-hover` (ocre `#C28533`, fillOpacity 0.3, stroke opacity 0.8).
+- `adaptSiteSchema` étendu : passthrough `is_zone` / `zone_geometry`.
+
+### Added (scripts)
+- `scripts/b_zones_smoke_test.py` — smoke test PIP bbox Corse + containment doyenné (15/15 verts).
+
+### Compteurs
+- Sites `is_zone: true` : 0 → **15**.
+- Polygones zones rendus (au hover) : 0 → **15**.
+
+### Reference
+- Audit : `docs/operations/B_ZONES_AUDIT_2026-05-18.md`
+- Brief Code : `docs/operations/B_ZONES_BRIEF_CODE_2026-05-18.md`
+- Doctrine : ADR-001 (navigation pédagogique), `BP-FIX-RATTACHEMENT-COMPLET-001`
+
+---
+
 ## [Étape 3 sprint pré-FEDER — pieve_lota + labels diocese] — 2026-05-18
 
 ### Added
