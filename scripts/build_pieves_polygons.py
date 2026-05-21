@@ -159,6 +159,8 @@ def main():
                         help="Tolérance simplification shapely (degrés, défaut 0.0005 ≈ 55m)")
     parser.add_argument("--strict-containment", action="store_true",
                         help="Strategie D 2026-05-17 : fail build si mismatches commune <-> pieve <-> doyenne detectes (default: warn only)")
+    parser.add_argument("--strict-mapping", action="store_true",
+                        help="Etape 5 PR C (D4) : fail build si le JSON derive diverge du mapping amont merge (slugs / communes_count). Default: warn only.")
     args = parser.parse_args()
 
     print(f"[build] mapping     : {MAPPING_PATH}")
@@ -564,6 +566,36 @@ def main():
             "mismatches_count": len(mismatches_post_build),
             "mismatches": mismatches_post_build,
         }
+
+    # Étape 5 PR C (D4) — containment check renforcé mapping <-> dérivé.
+    # Vérifie que slugs et communes_count du JSON dérivé concordent avec le
+    # mapping amont mergé (v1+v2+v3+v4 = commune_to_pieve). Mode warn par
+    # défaut, fail si --strict-mapping. Guard anti-régression : détecte tout
+    # futur patch voie-b du dérivé non synchronisé avec le mapping amont.
+    from collections import Counter as _Counter
+    _derive_count = {p["slug"]: p["communes_count"] for p in out_pieves}
+    _mapping_count = _Counter(commune_to_pieve.values())
+    _md_issues = []
+    for s in sorted(set(_mapping_count) - set(_derive_count)):
+        _md_issues.append(f"slug mapping absent du derive : {s}")
+    for s in sorted(set(_derive_count) - set(_mapping_count)):
+        _md_issues.append(f"slug derive absent du mapping : {s}")
+    for s in sorted(set(_derive_count) & set(_mapping_count)):
+        if _derive_count[s] != _mapping_count[s]:
+            _md_issues.append(
+                f"communes_count {s} : mapping={_mapping_count[s]} derive={_derive_count[s]}")
+    if _md_issues:
+        print(f"\n[build] {'FAIL' if args.strict_mapping else 'WARN'} "
+              f"mapping<->derive check : {len(_md_issues)} ecart(s)")
+        for _i in _md_issues[:15]:
+            print(f"  - {_i}")
+        if len(_md_issues) > 15:
+            print(f"  ... +{len(_md_issues) - 15} autres")
+        if args.strict_mapping:
+            print("[build] FAIL mapping<->derive check (mode --strict-mapping)")
+            sys.exit(1)
+    else:
+        print("\n[build] OK mapping<->derive check : 0 ecart")
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     # Étape 5 PR C — sortie minifiée (cohérent prod voie-b + limite Cloudflare
