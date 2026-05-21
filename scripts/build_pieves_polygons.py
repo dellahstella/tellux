@@ -40,6 +40,10 @@ MAPPING_V2_PATH = ROOT / "_drafts" / "pieves_communes_mapping_v2_canonicite_cast
 # Strategie D Phase 1 (2026-05-17) — mapping v3 incremental :
 # pieves_added (biguglia, altiani) + 29 transferts containment + 1 rename (mariana -> castagniccia).
 MAPPING_V3_PATH = ROOT / "_drafts" / "pieves_communes_mapping_v3_stratD_2026-05-17.json"
+# Étape 5 PR A (D1, 2026-05-20) — mapping v4 cleanup : 8 pieves_added, 29
+# transferts (réaffectation zombies + rétro-doc), 3 renames. Aligne le mapping
+# amont sur la prod 50 pieves et rend la voie-a (rebuild) à nouveau viable.
+MAPPING_V4_PATH = ROOT / "_drafts" / "pieves_communes_mapping_v4_cleanup_2026-05-18.json"
 OVERRIDES_PATH = ROOT / "_drafts" / "PIEVE_OVERRIDES.json"
 PIEVE_DOY_OVERRIDES_PATH = ROOT / "_drafts" / "PIEVE_DOYENNES_OVERRIDES.json"
 CACHE_DIR = ROOT / "scripts" / ".cache"
@@ -155,6 +159,8 @@ def main():
                         help="Tolérance simplification shapely (degrés, défaut 0.0005 ≈ 55m)")
     parser.add_argument("--strict-containment", action="store_true",
                         help="Strategie D 2026-05-17 : fail build si mismatches commune <-> pieve <-> doyenne detectes (default: warn only)")
+    parser.add_argument("--strict-mapping", action="store_true",
+                        help="Etape 5 PR C (D4) : fail build si le JSON derive diverge du mapping amont merge (slugs / communes_count). Default: warn only.")
     args = parser.parse_args()
 
     print(f"[build] mapping     : {MAPPING_PATH}")
@@ -195,6 +201,18 @@ def main():
               f"{len(mapping_v3.get('pieves_added', []))} pieves ajoutees, "
               f"{len(mapping_v3.get('transferts', []))} transferts, "
               f"{len(mapping_v3.get('renames', []))} renames")
+
+    # Étape 5 PR C (D3, 2026-05-20) — chargement mapping v4 cleanup apres v3.
+    # Aligne le mapping amont sur la prod 50 pieves (suppression 7 zombies via
+    # transferts/renames, 8 pieves_added, retro-doc transferts ad hoc).
+    mapping_v4 = None
+    if MAPPING_V4_PATH.exists():
+        with MAPPING_V4_PATH.open(encoding="utf-8") as f:
+            mapping_v4 = json.load(f)
+        print(f"[build] mapping v4 (cleanup D1) charge : "
+              f"{len(mapping_v4.get('pieves_added', []))} pieves ajoutees, "
+              f"{len(mapping_v4.get('transferts', []))} transferts, "
+              f"{len(mapping_v4.get('renames', []))} renames")
 
     # Brief 10 — overrides "pieve -> [doyennes_visibles]" pour permettre a une
     # pieve d'apparaitre dans plusieurs doyennes a la fois (multi-affectation
@@ -246,6 +264,26 @@ def main():
                     commune_to_pieve[insee] = new_slug
             renames_appliques.append({"from": old_slug, "to": new_slug})
 
+    # Étape 5 PR C (D3) — appliquer v4 : pieves_added (communes explicites),
+    # puis transferts, puis renames. Meme ordre que validate_mapping.py REV2.
+    if mapping_v4:
+        for p in mapping_v4.get("pieves_added", []):
+            for insee in p["communes_insee"]:
+                commune_to_pieve[insee] = p["slug"]
+        for t in mapping_v4.get("transferts", []):
+            insee = t["commune_insee"]
+            to_p = t.get("vers_pieve")
+            current = commune_to_pieve.get(insee)
+            commune_to_pieve[insee] = to_p
+            transferts_appliques.append({"insee": insee, "from": current, "to": to_p, "via": "v4"})
+        for r in mapping_v4.get("renames", []):
+            old_slug = r["from"]
+            new_slug = r["to"]
+            for insee, slug in list(commune_to_pieve.items()):
+                if slug == old_slug:
+                    commune_to_pieve[insee] = new_slug
+            renames_appliques.append({"from": old_slug, "to": new_slug})
+
     # Appliquer overrides (post-mapping Cowork)
     overrides_applied = []
     for insee, target_slug in overrides.items():
@@ -286,6 +324,22 @@ def main():
         for p in mapping_v3.get("pieves_added", []):
             meta_by_slug[p["slug"]] = p
         for r in mapping_v3.get("renames", []):
+            old_slug = r["from"]
+            new_slug = r["to"]
+            if old_slug in meta_by_slug:
+                meta = dict(meta_by_slug.pop(old_slug))
+                meta["slug"] = new_slug
+                if r.get("new_name"):
+                    meta["name"] = r["new_name"]
+                if r.get("new_note_rattachement"):
+                    meta["note_rattachement"] = r["new_note_rattachement"]
+                meta_by_slug[new_slug] = meta
+
+    # Étape 5 PR C (D3) — metadonnees des 8 pieves_added v4 + renames v4.
+    if mapping_v4:
+        for p in mapping_v4.get("pieves_added", []):
+            meta_by_slug[p["slug"]] = p
+        for r in mapping_v4.get("renames", []):
             old_slug = r["from"]
             new_slug = r["to"]
             if old_slug in meta_by_slug:
@@ -438,8 +492,9 @@ def main():
 
     output = {
         "version": (
-            "v4-stratD-containment-2026-05-17" if mapping_v3
-            else ("v3-stratA-canonicite-casta" if mapping_v2 else "v1-stratA-from-communes")
+            "v7-cleanup-mapping-amont-rebuild-2026-05-18" if mapping_v4
+            else ("v4-stratD-containment-2026-05-17" if mapping_v3
+                  else ("v3-stratA-canonicite-casta" if mapping_v2 else "v1-stratA-from-communes"))
         ),
         "generated_by": "scripts/build_pieves_polygons.py",
         "source_mapping": "_drafts/pieves_communes_mapping.json (Cowork v1)" + (
@@ -448,6 +503,9 @@ def main():
         ) + (
             " + _drafts/pieves_communes_mapping_v3_stratD_2026-05-17.json (Cowork v3 Strategie D)"
             if mapping_v3 else ""
+        ) + (
+            " + _drafts/pieves_communes_mapping_v4_cleanup_2026-05-18.json (Cowork v4 cleanup D1)"
+            if mapping_v4 else ""
         ),
         "source_communes": "github.com/gregoiredavid/france-geojson (departements 2A + 2B)",
         "tolerance_degrees": args.tolerance,
@@ -509,9 +567,41 @@ def main():
             "mismatches": mismatches_post_build,
         }
 
+    # Étape 5 PR C (D4) — containment check renforcé mapping <-> dérivé.
+    # Vérifie que slugs et communes_count du JSON dérivé concordent avec le
+    # mapping amont mergé (v1+v2+v3+v4 = commune_to_pieve). Mode warn par
+    # défaut, fail si --strict-mapping. Guard anti-régression : détecte tout
+    # futur patch voie-b du dérivé non synchronisé avec le mapping amont.
+    from collections import Counter as _Counter
+    _derive_count = {p["slug"]: p["communes_count"] for p in out_pieves}
+    _mapping_count = _Counter(commune_to_pieve.values())
+    _md_issues = []
+    for s in sorted(set(_mapping_count) - set(_derive_count)):
+        _md_issues.append(f"slug mapping absent du derive : {s}")
+    for s in sorted(set(_derive_count) - set(_mapping_count)):
+        _md_issues.append(f"slug derive absent du mapping : {s}")
+    for s in sorted(set(_derive_count) & set(_mapping_count)):
+        if _derive_count[s] != _mapping_count[s]:
+            _md_issues.append(
+                f"communes_count {s} : mapping={_mapping_count[s]} derive={_derive_count[s]}")
+    if _md_issues:
+        print(f"\n[build] {'FAIL' if args.strict_mapping else 'WARN'} "
+              f"mapping<->derive check : {len(_md_issues)} ecart(s)")
+        for _i in _md_issues[:15]:
+            print(f"  - {_i}")
+        if len(_md_issues) > 15:
+            print(f"  ... +{len(_md_issues) - 15} autres")
+        if args.strict_mapping:
+            print("[build] FAIL mapping<->derive check (mode --strict-mapping)")
+            sys.exit(1)
+    else:
+        print("\n[build] OK mapping<->derive check : 0 ecart")
+
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    # Étape 5 PR C — sortie minifiée (cohérent prod voie-b + limite Cloudflare
+    # Workers Assets ~512 KB ; l'ancien indent=2 bloatait le fichier).
     with OUTPUT_PATH.open("w", encoding="utf-8") as f:
-        json.dump(output, f, ensure_ascii=False, indent=2)
+        json.dump(output, f, ensure_ascii=False, separators=(",", ":"))
 
     print(f"\n[build] OK -> {OUTPUT_PATH}")
     print(f"[build] {len(out_pieves)} pieves | "
