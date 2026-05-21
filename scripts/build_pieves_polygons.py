@@ -19,6 +19,11 @@ Usage :
   python scripts/build_pieves_polygons.py [--tolerance 0.0005]
 
 Sortie : docs/data/pieves_polygons.json (overwrite)
+
+Étape 5 PR B (D2, 2026-05-18) — intègre les métadonnées de l'ex-script one-shot
+`phase_qw_pieves.py` (archivé scripts/archive/phase_oneshots/) : fallback
+`diocese_medieval` (QW_DIOCESES_FALLBACK) appliqué si le mapping ne le renseigne
+pas, et strip du préfixe « Pieve di / d' » des noms (QW_NAME_PREFIXES).
 """
 
 import argparse
@@ -45,6 +50,22 @@ OUTPUT_PATH = ROOT / "docs" / "data" / "pieves_polygons.json"
 # par intersection polygonale (vs declaration Cowork qui peut etre incoherente
 # pour les pieves a cheval sur deux doyennes).
 DOYENNES_PATH = ROOT / "docs" / "data" / "doyennes_polygons.json"
+
+# Étape 5 PR B (D2, 2026-05-18) — métadonnées intégrées depuis l'ex-script
+# one-shot phase_qw_pieves.py (archivé scripts/archive/phase_oneshots/).
+# QW_DIOCESES_FALLBACK : diocese_medieval de secours pour les pieves dont le
+# mapping amont ne renseigne pas le diocèse (appliqué seulement si absent / "?").
+# mezzana et verde sont aujourd'hui redondants (le mapping les porte) — conservés
+# comme fallback inoffensif (no-op si déjà renseigné).
+QW_DIOCESES_FALLBACK = {
+    "pieve_mezzana": "Ajaccio",
+    "pieve_patrimonio": "Nebbiu",
+    "pieve_zicavo": "Ajaccio",
+    "pieve_verde": "Aleria",
+}
+# Préfixe de courtoisie retiré des noms de pieves (ex-NAME_STRIPS phase_qw,
+# généralisé : tout nom commençant par "Pieve di " / "Pieve d'").
+QW_NAME_PREFIXES = ("Pieve di ", "Pieve d'")
 
 
 def latlng_polygon_to_shapely(latlng):
@@ -398,6 +419,22 @@ def main():
         print(f"[build] {slug:30s}: {len(polys):3d} communes, "
               f"{before}->{after} vertices, ~{area_km2:.0f} km²"
               + (f", dropped {len(dropped)}" if dropped else ""))
+
+    # Étape 5 PR B (D2, 2026-05-18) — application des métadonnées QW
+    # (ex-phase_qw_pieves.py archivé) : post-construction des pieves,
+    # pré-validation containment.
+    for entry in out_pieves:
+        if entry.get("diocese_medieval") in (None, "", "?"):
+            fallback = QW_DIOCESES_FALLBACK.get(entry["slug"])
+            if fallback:
+                print(f"[build] QW diocese fallback : {entry['slug']} -> {fallback}")
+                entry["diocese_medieval"] = fallback
+        name = entry.get("name", "")
+        for prefix in QW_NAME_PREFIXES:
+            if name.startswith(prefix):
+                entry["name"] = name[len(prefix):]
+                print(f"[build] QW name strip : {name!r} -> {entry['name']!r}")
+                break
 
     output = {
         "version": (
