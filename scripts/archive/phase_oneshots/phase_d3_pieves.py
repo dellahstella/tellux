@@ -1,3 +1,8 @@
+# ============================================================================
+# ARCHIVE 2026-05-18 (Etape 5 PR B / D2) — script one-shot historique.
+# NE PLUS EXECUTER EN PRODUCTION. Conserve pour tracabilite uniquement.
+# Voir scripts/archive/phase_oneshots/README.md
+# ============================================================================
 """
 Phase D-3 refactor pieves : aligner doyennes_majoritaire_declared sur actual.
 
