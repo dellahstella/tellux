@@ -7,6 +7,33 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [D2 archivage scripts ad hoc — 2026-05-20] (Étape 5 PR B)
+
+### Changed (scripts)
+- 5 scripts one-shot historiques archivés vers `scripts/archive/phase_oneshots/` :
+  `phase_d3_pieves.py`, `phase_qw_pieves.py`, `phase_r3_rename_ajaccio.py`,
+  `phase_strat_d_patch_derive.py`, `phase_strat_d_phase2_splits.py` — `git mv`
+  (historique préservé) + en-tête d'archivage. Aucun n'était référencé par la CI.
+- `build_pieves_polygons.py` : intégration des métadonnées de l'ex-`phase_qw_pieves.py` —
+  `QW_DIOCESES_FALLBACK` (diocese_medieval de secours) + strip générique du préfixe
+  « Pieve di / d' », appliqués post-construction, pré-validation containment.
+
+### Added
+- `scripts/archive/phase_oneshots/README.md` (statut des scripts archivés).
+- `scripts/archive/phase_oneshots/phase_strat_d_etape3_fusion_lota.py` — script
+  rétroactif idempotent documentant la fusion `pieve_bastia` + `pieve_brando` →
+  `pieve_lota` (exécutée par PR #648, jamais scriptée à l'époque).
+
+### Unchanged (volontairement, scope strict)
+- `docs/data/` (dérivé prod, mapping v4) — rebuild voie-a réservé à PR C.
+- `phase_strat_d_retag_sites.py` et `phase_strat_d_phase2_retag_sites.py` conservés.
+
+### Reference
+- Brief Code D2 : Étape 5 PR B.
+- Dette parent : `PIEVE-MAPPING-AMONT-DESYNCHRO-001` (HAUTE) — reste ouverte.
+
+---
+
 ## [D1 cleanup mapping amont — 2026-05-20] (Étape 5 PR A)
 
 ### Method (brief REV2)
