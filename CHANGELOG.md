@@ -7,6 +7,21 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Acte source de vérité patrimoine + nettoyage branche morte — 2026-05-21]
+
+### Changed
+- **`ARCHITECTURE.md`** : section data architecture (§ 1 arborescence + § 3.bis) corrigée pour refléter l'architecture réelle post-Brief 33 split. `sites_patrimoine.json` est la **source de vérité runtime** de `patrimoine.html` ; `sites_corse.json` est DEPRECATED, sans consommateur runtime. Documentation du mécanisme `gps_locked` (~80 verrous éditoriaux, Brief 38) et de la doctrine d'édition (briefs ciblés + `scripts/brief_pipeline.py`, pas de pipeline de génération).
+
+### Removed
+- Branche distante `data/pip-corrections-vague-2` (commit unique `81d04c2`) supprimée — elle éditait `sites_corse.json` (fichier déprécié), sans effet runtime.
+
+### Notes
+- Acte formel : `docs/data/sites_patrimoine.json` est la source de vérité runtime du patrimoine (architecture en place depuis le **Brief 33 split**, 2026-05-06 — cf. audit `_drafts/AUDIT_COHERENCE_SOURCES_PATRIMOINE.md`).
+- `sites_corse.json` **n'a pas été archivé** cette session : 2 scripts de maintenance le référencent encore (`scripts/brief_pipeline.py`, `scripts/corpus_health_check.py`). Archivage reporté à un chantier dédié incluant la mise à jour de ces scripts.
+- Aucun changement runtime — mise en cohérence documentation ↔ réalité du repo.
+
+---
+
 ## [D3 rebuild voie-a + D4 containment renforcé — 2026-05-21] (Étape 5 PR C)
 
 ### Changed (docs/data/pieves_polygons.json — dérivé prod régénéré)
