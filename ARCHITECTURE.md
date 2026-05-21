@@ -26,8 +26,9 @@ tellux/
 │       ├── sites_remarquables_corse.json         # [DEPRECATED depuis Brief 29 — non fetché par app.html, gardé pour archive]
 │       └── cartoradio_certified_corse.json       # 30 mesures RF certifiées ANFR/EXEM
 ├── docs/
-│   ├── data/                  # Single source of truth runtime (Brief 28/29)
-│   │   ├── sites_corse.json              # 479 sites canoniques consolidés (191 P1 + 288 P2)
+│   ├── data/                  # Données runtime patrimoine.html (cf. § 3.bis)
+│   │   ├── sites_patrimoine.json         # SOURCE CANON runtime patrimoine.html (Brief 33 split)
+│   │   ├── sites_corse.json              # DEPRECATED (Brief 33 split) — aucun consommateur runtime
 │   │   ├── doyennes_polygons.json        # 10 doyennés contemporains (Strat A)
 │   │   └── pieves_polygons.json          # 47 pieves Casta v2
 │   ├── data-sources/           # Notes de méthodologie par source de données
@@ -179,17 +180,22 @@ Règles pour les nouveaux fichiers `public/data/` :
 - Ne jamais bundler ces fichiers dans `app.html`
 - Ajouter une note de méthodologie dans `docs/data-sources/`
 
-### 3.bis docs/data/ — Single source of truth (Brief 28/29, 2026-05-06)
+### 3.bis docs/data/ — Source de vérité runtime patrimoine (Brief 33 split, 2026-05-06)
 
-Depuis Brief 28 (`patrimoine.html`) et Brief 29 (`app.html`), Tellux utilise un fichier canonique unique pour tous les sites patrimoniaux/géophysiques de Corse.
+Le **Brief 33 split** (2026-05-06) a scindé l'ancien fichier consolidé unique. Depuis, la source de vérité runtime du patrimoine est **`sites_patrimoine.json`** — c'est le fichier que `patrimoine.html` charge effectivement (`loadSitesPatrimoine()`, `fetch('docs/data/sites_patrimoine.json')`). `app.html` a sa propre source, `public/data/sites_app.json` (cf. § 3).
 
-| Fichier | Contenu | Source | Chargement |
-|---------|---------|--------|-----------|
-| `sites_corse.json` | 479 sites canoniques (191 Phase 1 exposée + 288 Phase 2 latente). Schéma uniforme : `slug`, `nom`, `lat/lon`, `categorie`, `axe_corpus`, `phase_publication`, `commune_insee`, `commune_nom`, `pieve_slug`, `diocese_medieval_slug`, `doyenne_contemporain_slug`, `description_em` (10 sites SR héritiers), `gps_source`, `gps_audit`, `sources_originales[]` | Pipeline Cowork `scripts/consolidate_sites.py` (4 sources fusionnées : SITES_PATRIMOINE inline + SITES_REFERENCE.json + churches_corse Supabase + patrimoine_corse Supabase + sites_remarquables_corse.json) | `loadSitesPatrimoine()` (patrimoine.html, filter P1) ; `loadSitesRemarquables()` (app.html, filter `axe_corpus = remarquables_geologiques` + override 6 mines) |
-| `doyennes_polygons.json` | 10 doyennés contemporains (Strat A : union polygones communes INSEE) | Pipeline `scripts/build_doyennes_polygons.py` | Fetch async patrimoine.html boot |
-| `pieves_polygons.json` | 47 pieves Casta v2 (canonicité médiévale complète Brief 17) | Pipeline `scripts/build_pieves_polygons.py` | Fetch async patrimoine.html boot |
+| Fichier | Statut | Contenu | Chargement |
+|---------|--------|---------|-----------|
+| `sites_patrimoine.json` | **SOURCE CANON runtime** | Sites patrimoniaux de Corse. Schéma : `slug`, `name`, `lat/lon`, `categorie`, `axe_corpus`, `phase_publication`, `commune_insee`, `commune_nom`, `pieve_slug`, `diocese_medieval_slug`, `doyenne_contemporain_slug`, `gps_source`, `gps_audit`, `gps_locked`/`gps_lock_reason`, `is_zone`/`zone_geometry`/`zone_source`, `fiche_v3_slug`, `sources_originales[]`. **Édité directement** via briefs ciblés + `scripts/brief_pipeline.py` — il n'existe aucun pipeline de génération automatique. | `loadSitesPatrimoine()` (patrimoine.html, filtre Phase 1) |
+| `sites_corse.json` | **DEPRECATED** | Ancien fichier consolidé. Header JSON `_DEPRECATED` (Brief 33 split, target suppression 2026-06-05). Schéma divergent (`nom` au lieu de `name`, pas de `gps_locked`/`is_zone`). **Aucun consommateur runtime** — non fetché par `patrimoine.html` ni `app.html`. A divergé de `sites_patrimoine.json` (cf. `_drafts/AUDIT_COHERENCE_SOURCES_PATRIMOINE.md`, 2026-05-21). | — (aucun) |
+| `doyennes_polygons.json` | actif | 10 doyennés contemporains (Strat A : union polygones communes INSEE) | Fetch async patrimoine.html boot |
+| `pieves_polygons.json` | actif | 47 pieves Casta v2 (canonicité médiévale complète Brief 17) | Fetch async patrimoine.html boot |
 
-**Note SITES_REFERENCE.json racine** : conservé comme **input historique** du pipeline `consolidate_sites.py` (115 entrées). N'est plus fetché au runtime par aucun fichier HTML. Sera décommissionné quand le pipeline sera réécrit pour ingérer directement Supabase + Cowork drafts (Phase 2).
+**Mécanisme `gps_locked` (Brief 38, 2026-05-07).** `sites_patrimoine.json` porte ~80 sites avec `gps_locked: true` + `gps_lock_reason`. Ce sont des coordonnées auditées et verrouillées manuellement par Soleil (campagnes Briefs 38/39/39bis/39quater/39septies/39octies/39nonies). `scripts/audit_gps_sites_patrimoine.py` et tout outil d'édition automatique **doivent ignorer** ces sites. Verrous = données d'entrée intangibles.
+
+**Doctrine d'édition.** `sites_patrimoine.json` n'est pas régénéré : il est édité en place, soit manuellement via briefs ciblés, soit via `scripts/brief_pipeline.py` (application de corrections GPS de briefs, respecte `gps_locked`). Le pipeline historique `scripts/consolidate_sites.py` est **déprécié et inexécutable** (paths sandbox, sources Supabase non versionnées).
+
+**Note `consolidate_sites.py` / `sites_corse.json` :** le pipeline de consolidation qui produisait l'ancien fichier unique reste dans le repo pour référence mais ne doit pas être exécuté (cf. `DETTES_TECHNIQUES.md` → `CONSOLIDATE-SITES-PY-OBSOLETE-001`). `sites_corse.json` est conservé sur disque jusqu'à sa suppression planifiée — 2 scripts de maintenance le référencent encore (`brief_pipeline.py`, `corpus_health_check.py`).
 
 ---
 
