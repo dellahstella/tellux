@@ -1,3 +1,8 @@
+# ============================================================================
+# ARCHIVE 2026-05-18 (Etape 5 PR B / D2) — script one-shot historique.
+# NE PLUS EXECUTER EN PRODUCTION. Conserve pour tracabilite uniquement.
+# Voir scripts/archive/phase_oneshots/README.md
+# ============================================================================
 """
 Phase Strategie D Phase 2 (2026-05-18) — splits pieve_vico (×3) + pieve_balagne (×3).
 
