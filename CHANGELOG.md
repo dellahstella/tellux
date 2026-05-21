@@ -7,6 +7,36 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [D3 rebuild voie-a + D4 containment renforcé — 2026-05-21] (Étape 5 PR C)
+
+### Changed (docs/data/pieves_polygons.json — dérivé prod régénéré)
+- **Rebuild voie-a** : `docs/data/pieves_polygons.json` régénéré par `build_pieves_polygons.py`
+  depuis le mapping v4 (cleanup D1) — fin de la « voie-b » (patches directs du dérivé).
+- `version` → `v7-cleanup-mapping-amont-rebuild-2026-05-18`.
+- 50 pieves. `stats.pieves_count` 51 → **50**, `stats.total_communes` 347 → **360** (auto-corrigés).
+- Surface 8703.3 km² (écart <0,01 % vs prod). Sortie minifiée.
+- **11 pieves changent de composition** vs l'ancienne prod (carte v4 cohérente ;
+  l'ancienne prod était incohérente post-voie-b) — refonte assumée, arbitrage Soleil.
+- 3 polygones auparavant invalides (`fiumorbo`, `gulfo_d_aiacciu`, `vallerustie`)
+  régénérés valides. Override `pieve_bozio` préservé.
+
+### Added / Changed (build_pieves_polygons.py)
+- Câblage du mapping v4 (`pieves_added` + `transferts` + `renames`).
+- Containment check renforcé **mapping ↔ dérivé** (`--strict-mapping`, mode warn
+  par défaut) — guard anti-régression voie-b. Rebuild actuel : 0 écart.
+- Sortie minifiée (cohérent prod + limite Cloudflare).
+
+### Dettes
+- **Clôturées** : `PIEVE-MAPPING-AMONT-DESYNCHRO-001` (HAUTE), `POLYGONE-INVALID-SELF-INTERSECTING-001`,
+  `COMMUNES-COUNT-OBSOLETE-POST-VOIE-B-001`, `MAPPING-PRE-STRATD-AD-HOC-TRANSFERS-UNDOCUMENTED-001`.
+- **Ouverte** : `MAPPING-PREQW-ORIGIN-UNKNOWN-001` (origine patrimonio/zicavo non investiguée).
+
+### Chantier Étape 5 — terminé
+D1 (mapping v4) + D2 (archivage scripts) + D3 (rebuild voie-a) + D4 (containment renforcé).
+La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
+
+---
+
 ## [D2 archivage scripts ad hoc — 2026-05-20] (Étape 5 PR B)
 
 ### Changed (scripts)
