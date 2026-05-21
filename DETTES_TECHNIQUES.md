@@ -1403,6 +1403,18 @@ Renommage R-1 `pieve_bastia` → `pieve_lota` **annulé Phase 1 beta** (acté So
 
 ---
 
+### SAN-PIETRO-LETIA-GPS-001 — Affinage GPS de l'église Saint-Pierre de Letia
+
+**Statut :** Ouverte, basse priorité.
+
+**Date :** 2026-05-21
+
+**Description :** Le GPS du site `san_pietro_letia` a été corrigé en mini-audit 6 sites au centroïde approximatif de la commune Letia (42.20, 8.83) — l'ancien GPS (42.07, 8.96) tombait à ~16 km au sud-est, en doyenné Ajaccio (PIP). Le centroïde commune est une approximation (~1 km) acceptée par Soleil ; `gps_source` = « centroïde commune Letia, approximation, à affiner vague 3 ». Le site est désormais dans le bon doyenné contemporain (`doyenne_piana_vico_sari`, cohérent avec `pieve_vico`).
+
+**Condition de déblocage :** Campagne GPS vague 3 — rechercher les coordonnées précises de l'église Saint-Pierre de Letia via POP-Mérimée, Wikidata ou IGN Géoportail, puis mettre à jour `lat` / `lon` / `gps_source`.
+
+---
+
 ## Bonnes pratiques issues de sprints
 
 ### BP-SPRINT3B-MAPPING-INTEGRE-INGESTION-001 — Mapping `pieve_slug` + `commune_insee` intégré dès l'ingestion
