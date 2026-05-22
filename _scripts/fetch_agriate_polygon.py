@@ -24,7 +24,7 @@ import os
 import datetime
 
 import requests
-from shapely.geometry import shape, mapping, MultiPolygon
+from shapely.geometry import shape, mapping, MultiPolygon, Polygon
 from shapely.ops import unary_union, transform
 from pyproj import Transformer
 
@@ -33,7 +33,8 @@ TYPENAME = "CONSERVATOIRE_LITTORAL.PARCELLES:parcelles_protegees"
 CQL = "pera_nom = 'AGRIATE'"
 PAGE = 2000
 SIMPLIFY_M = 50.0
-MIN_PART_HA = 10.0  # variante B elaguee : on ecarte les fragments <= 10 ha
+MIN_PART_HA = 10.0   # variante B elaguee : on ecarte les fragments <= 10 ha
+CLOSING_M = 150.0    # fermeture morphologique : fusionne les fragments proches
 SURFACE_OFFICIELLE_HA = 5532
 
 RAW_DIR = "_data/raw_cdl"
@@ -72,6 +73,27 @@ def fetch_parcelles():
             break
         start += PAGE
     return feats
+
+
+def polys_of(geom):
+    """Liste des Polygon d'une geometrie (Polygon/MultiPolygon/GeometryCollection)."""
+    if geom.is_empty:
+        return []
+    if geom.geom_type == "Polygon":
+        return [geom]
+    return [g for g in geom.geoms
+            if g.geom_type == "Polygon" and not g.is_empty]
+
+
+def land_polygon_4326():
+    """Trait de cote approximatif = union des 9 polygones de doyennes
+    (docs/data/doyennes_polygons.json, bati communal). Sert a retirer la mer."""
+    doc = json.load(open("docs/data/doyennes_polygons.json", encoding="utf-8"))
+    polys = []
+    for it in doc["doyennes"]:
+        # le fichier stocke les sommets en [lat, lon] -> Polygon attend (x=lon, y=lat)
+        polys.append(Polygon([(lon, lat) for lat, lon in it["polygon"]]))
+    return unary_union(polys)
 
 
 def count_points(geom):
@@ -134,30 +156,43 @@ def main():
               "w", encoding="utf-8") as f:
         json.dump(mapping(hull_4326), f, indent=2)
 
-    print(f"[5/6] Variante B — multipart simplifie, elague (parts > {MIN_PART_HA} ha)...")
-    all_parts = (list(union_2154.geoms)
-                 if union_2154.geom_type == "MultiPolygon" else [union_2154])
-    kept = [p for p in all_parts if p.area / 10000.0 > MIN_PART_HA]
-    dropped = len(all_parts) - len(kept)
-    dropped_ha = round(sum(p.area for p in all_parts
+    print("[5/6] Variante B — nettoyage (fermeture + retrait mer + comblement trous)...")
+    land_2154 = transform(_to_2154, land_polygon_4326())
+    # 1. fermeture morphologique : buffer +CLOSING_M puis -CLOSING_M. Fusionne les
+    #    fragments separes par routes/ruisseaux (< ~2*CLOSING_M), lisse les bords
+    #    parcellaires dentes, comble les petits trous enclaves.
+    closed = union_2154.buffer(CLOSING_M).buffer(-CLOSING_M)
+    # 2. retrait de la mer : intersection avec la terre (union des doyennes).
+    #    Supprime le debordement maritime des parts cotieres.
+    onland = closed.intersection(land_2154)
+    # 3. comblement des trous restants : on ne conserve que les rings exterieurs
+    #    (supprime les enclaves non-CdL qui s'affichaient en rainures internes).
+    filled = unary_union([Polygon(p.exterior) for p in polys_of(onland)])
+    # 4. simplification Douglas-Peucker + elagage des fragments < MIN_PART_HA.
+    simplified = filled.simplify(SIMPLIFY_M, preserve_topology=True)
+    all_b = polys_of(simplified)
+    parts_b = sorted((p for p in all_b if p.area / 10000.0 > MIN_PART_HA),
+                     key=lambda g: -g.area)
+    dropped = len(all_b) - len(parts_b)
+    dropped_ha = round(sum(p.area for p in all_b
                            if p.area / 10000.0 <= MIN_PART_HA) / 10000.0, 1)
-    multi_2154 = MultiPolygon(kept).simplify(SIMPLIFY_M, preserve_topology=True)
+    multi_2154 = MultiPolygon(parts_b)
     multi_4326 = transform(_to_4326, multi_2154)
     multi_pts = count_points(multi_4326)
-    multi_parts = (len(multi_4326.geoms)
-                   if multi_4326.geom_type == "MultiPolygon" else 1)
+    multi_parts = len(parts_b)
     multi_ha = round(multi_2154.area / 10000.0, 1)
-    print(f"  multipart elague : {multi_parts} parts (> {MIN_PART_HA} ha), "
-          f"{multi_pts} points, {multi_ha} ha")
-    print(f"  {dropped} fragments <= {MIN_PART_HA} ha ecartes ({dropped_ha} ha)")
+    multi_holes = sum(len(p.interiors) for p in parts_b)
+    print(f"  apres nettoyage : {multi_parts} parts, {multi_pts} points, "
+          f"{multi_ha} ha, {multi_holes} trou(s)")
+    print(f"  {dropped} fragment(s) <= {MIN_PART_HA} ha ecarte(s) ({dropped_ha} ha)")
     with open(os.path.join(DRAFTS_DIR, "POLYGONE_AGRIATES_MULTIPART.json"),
               "w", encoding="utf-8") as f:
         json.dump(mapping(multi_4326), f, indent=2)
 
     print("[6/6] Centroide + metadonnees...")
-    rep = union_4326.representative_point()
+    rep = multi_4326.representative_point()
     centroid = {"lat": round(rep.y, 6), "lon": round(rep.x, 6),
-                "source": "representative_point() de l'union des parcelles CdL"}
+                "source": "representative_point() du polygone CdL nettoye (variante B)"}
     with open(os.path.join(DRAFTS_DIR, "POLYGONE_AGRIATES_CENTROID.json"),
               "w", encoding="utf-8") as f:
         json.dump(centroid, f, indent=2)
@@ -186,13 +221,17 @@ def main():
         "convex_hull_surface_ha": hull_ha,
         "convex_hull_verdict": "non viable — englobe mer + interieur des terres "
                                "(propriete eclatee en 123 fragments)",
-        "multipart_variante": "B elaguee — fragments > %s ha conserves" % MIN_PART_HA,
+        "multipart_variante": "B nettoyee — fermeture morphologique %sm + "
+                              "retrait mer (clip terre) + comblement trous + "
+                              "elagage parts > %s ha" % (CLOSING_M, MIN_PART_HA),
+        "multipart_closing_m": CLOSING_M,
         "multipart_min_part_ha": MIN_PART_HA,
         "multipart_parts": multi_parts,
         "multipart_points_total": multi_pts,
         "multipart_surface_ha": multi_ha,
-        "multipart_slivers_ecartes": dropped,
-        "multipart_slivers_surface_ha": dropped_ha,
+        "multipart_trous": multi_holes,
+        "multipart_fragments_ecartes": dropped,
+        "multipart_fragments_surface_ha": dropped_ha,
         "centroid": {"lat": centroid["lat"], "lon": centroid["lon"]},
         "simplification_tolerance_m": SIMPLIFY_M,
         "runtime_note": "Variante B = MultiPolygon : renderZonePolygon() de "
