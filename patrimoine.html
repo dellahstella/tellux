@@ -1790,6 +1790,25 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape, opts) {
 let clusterGroupN3 = null;
 let _pieveActivePolygonRef = null;
 
+// Brief fix isolé pieve_rogliano (2026-05-22, audit Cowork _drafts/AUDIT_PIEVE_ROGLIANO.md).
+// Filtre top 8 niveau 3 (drill-down pieve) : Rogliano contient 15 sites P1 dont 8
+// retenus prioritaires. Cap appliqué pour densifier le rendu visuel + cohérence
+// éditoriale (le Cap Corse extrême nord concentre 8 tours génoises P1 — limitation
+// à 3 tours dans le top 8 pour favoriser la diversité typologique).
+// Mise à jour manuelle après validation Soleil. Les 49 autres pieves NE sont PAS
+// filtrées : si Soleil souhaite étendre (chantier D global), un brief séparé sera
+// nécessaire.
+const PIEVE_ROGLIANO_TOP8 = new Set([
+  "anneaux_du_cap_corse",
+  "barcaggio",
+  "reserve_iles_cap_corse",
+  "santa_maria_della_chiappella_rogliano",
+  "castellacciu_san_colombano",
+  "tour_d_agnello_cap_corse",
+  "tour_de_giraglia_ilot",
+  "tour_de_finocchiarola_rogliano",
+]);
+
 function enterNiveau3View(pieveSlug, pieveDisplay, pieveShape, opts) {
   opts = opts || {};
   if (!pieveSlug || !pieveShape) return;
@@ -1859,7 +1878,15 @@ function enterNiveau3View(pieveSlug, pieveDisplay, pieveShape, opts) {
   // pour preserver bindPopup + handlers onSpotClick + fix #532.
   // Note schema : SITES_PATRIMOINE est adapte via adaptSiteSchema, champ
   // pieve (pas pieve_slug). On filtre sur les 2 pour robustesse.
-  const sitesPieve = (Array.isArray(SITES_PATRIMOINE) ? SITES_PATRIMOINE : []).filter(s => ((s.pieve === pieveSlug) || (s.pieve_slug === pieveSlug)) && (!currentDoyenneSlug || s.doyenne === currentDoyenneSlug));
+  const sitesPieve = (Array.isArray(SITES_PATRIMOINE) ? SITES_PATRIMOINE : []).filter(function(s) {
+    var matchPieve = (s.pieve === pieveSlug) || (s.pieve_slug === pieveSlug);
+    if (!matchPieve) return false;
+    if (currentDoyenneSlug && s.doyenne !== currentDoyenneSlug) return false;
+    // Brief fix isolé pieve_rogliano : ne montrer que les 8 sites prioritaires.
+    // Aucun effet sur les 49 autres pieves (test conditionnel sur pieveSlug).
+    if (pieveSlug === 'pieve_rogliano' && !PIEVE_ROGLIANO_TOP8.has(s.slug)) return false;
+    return true;
+  });
   for (const site of sitesPieve) {
     const entry = markersBySlug[site.slug];
     if (entry && entry.marker) {
