@@ -1809,6 +1809,21 @@ const PIEVE_ROGLIANO_TOP8 = new Set([
   "tour_de_finocchiarola_rogliano",
 ]);
 
+// Brief fix isolé pieve_nebbiu (2026-05-22, audit Cowork _drafts/AUDIT_PIEVE_NEBBIU.md).
+// Filtre top 8 niveau 3 : Nebbiu contient 9 sites P1 dont 8 retenus (cap doctrinal).
+// 1 site exclu : san_cesario_d_olmeta_olmeta_di_capocorso (seul P1 non illustré).
+// Slug canonique = pieve_nebbiu (pas pieve_di_nebbiu). Même mécanique que Rogliano.
+const PIEVE_NEBBIU_TOP8 = new Set([
+  "desert_des_agriate",
+  "defile_de_lancone",
+  "monte_revincu",
+  "san_michele_de_murato",
+  "monte_genova",
+  "casa_di_l_orca",
+  "dolmen_serra",
+  "mamucci",
+]);
+
 function enterNiveau3View(pieveSlug, pieveDisplay, pieveShape, opts) {
   opts = opts || {};
   if (!pieveSlug || !pieveShape) return;
@@ -1885,6 +1900,8 @@ function enterNiveau3View(pieveSlug, pieveDisplay, pieveShape, opts) {
     // Brief fix isolé pieve_rogliano : ne montrer que les 8 sites prioritaires.
     // Aucun effet sur les 49 autres pieves (test conditionnel sur pieveSlug).
     if (pieveSlug === 'pieve_rogliano' && !PIEVE_ROGLIANO_TOP8.has(s.slug)) return false;
+    // Brief fix isolé pieve_nebbiu : ne montrer que les 8 sites prioritaires.
+    if (pieveSlug === 'pieve_nebbiu' && !PIEVE_NEBBIU_TOP8.has(s.slug)) return false;
     return true;
   });
   for (const site of sitesPieve) {
