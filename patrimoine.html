@@ -1545,6 +1545,9 @@ fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
       const site = markersBySlug[slug].site;
       const doy = SPOT_TO_DOYENNE.get(slug);
       if (!doy) continue;
+      // Inversion N2/N3 : la vue doyenne (niveau 2) est limitee au top 8 pour
+      // les pieves Rogliano/Nebbiu. La vue pieve (niveau 3) reste exhaustive.
+      if (!spotVisibleAtNiveau2(site)) continue;
       if (!spotsLevel2ByDoyenne.has(doy)) spotsLevel2ByDoyenne.set(doy, L.layerGroup());
       spotsLevel2ByDoyenne.get(doy).addLayer(markersBySlug[slug].marker);
     }
@@ -1790,14 +1793,11 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape, opts) {
 let clusterGroupN3 = null;
 let _pieveActivePolygonRef = null;
 
-// Brief fix isolé pieve_rogliano (2026-05-22, audit Cowork _drafts/AUDIT_PIEVE_ROGLIANO.md).
-// Filtre top 8 niveau 3 (drill-down pieve) : Rogliano contient 15 sites P1 dont 8
-// retenus prioritaires. Cap appliqué pour densifier le rendu visuel + cohérence
-// éditoriale (le Cap Corse extrême nord concentre 8 tours génoises P1 — limitation
-// à 3 tours dans le top 8 pour favoriser la diversité typologique).
-// Mise à jour manuelle après validation Soleil. Les 49 autres pieves NE sont PAS
-// filtrées : si Soleil souhaite étendre (chantier D global), un brief séparé sera
-// nécessaire.
+// Top 8 pieve_rogliano (audit Cowork _drafts/AUDIT_PIEVE_ROGLIANO.md).
+// Inversion N2/N3 (2026-05-22) : ce Set limite la vue DOYENNE (niveau 2) — la
+// pieve Rogliano (15 sites P1) n'y contribue que ses 8 sites prioritaires. La
+// vue PIEVE (niveau 3) reste exhaustive (les 15 sites). Cap doctrinal : le Cap
+// Corse extrême nord concentre 8 tours génoises P1, limitées à 3 dans le top 8.
 const PIEVE_ROGLIANO_TOP8 = new Set([
   "anneaux_du_cap_corse",
   "barcaggio",
@@ -1809,14 +1809,11 @@ const PIEVE_ROGLIANO_TOP8 = new Set([
   "tour_de_finocchiarola_rogliano",
 ]);
 
-// Brief fix isolé pieve_nebbiu (2026-05-22, audit Cowork _drafts/AUDIT_PIEVE_NEBBIU.md).
-// Filtre top 8 niveau 3 : Nebbiu contient 11 sites P1 dont 8 retenus (cap doctrinal).
-// MAJ 2026-05-22 : le pool est passé de 9 à 11 P1 (cathedrale_du_nebbio +
-// menhirs_agriate rattachés à pieve_nebbiu, fix rattachements Saint-Florent).
-// Le top 8 reste inchangé : menhirs_agriate (score 48, notoriété nulle) est
-// rang 9 ; cathedrale_du_nebbio est en doyenne_du_cap donc filtrée hors du
-// drill-down N3 (golo-scopé) de la pieve quel que soit le Set.
-// Slug canonique = pieve_nebbiu (pas pieve_di_nebbiu). Même mécanique que Rogliano.
+// Top 8 pieve_nebbiu (audit Cowork _drafts/AUDIT_PIEVE_NEBBIU.md).
+// Inversion N2/N3 (2026-05-22) : ce Set limite la vue DOYENNE (niveau 2). La
+// vue PIEVE (niveau 3) reste exhaustive. Pool pieve_nebbiu = 11 sites P1 (dont
+// cathedrale_du_nebbio + menhirs_agriate, fix rattachements Saint-Florent) ;
+// 8 retenus pour le niveau 2. Slug canonique = pieve_nebbiu.
 const PIEVE_NEBBIU_TOP8 = new Set([
   "desert_des_agriate",
   "defile_de_lancone",
@@ -1827,6 +1824,19 @@ const PIEVE_NEBBIU_TOP8 = new Set([
   "dolmen_serra",
   "mamucci",
 ]);
+
+// Inversion N2/N3 : visibilité d'un spot dans la vue DOYENNE (niveau 2).
+// Les pieves dotées d'un top 8 (Rogliano, Nebbiu) n'y exposent que leurs 8
+// sites prioritaires ; les autres pieves exposent tous leurs spots. La vue
+// PIEVE (niveau 3) reste exhaustive et n'utilise pas ce filtre.
+// Declaration de fonction (hoisted) : appelée depuis la construction async de
+// spotsLevel2ByDoyenne, qui s'exécute après l'init des Sets ci-dessus.
+function spotVisibleAtNiveau2(site) {
+  var pv = site.pieve_slug || site.pieve;
+  if (pv === 'pieve_rogliano') return PIEVE_ROGLIANO_TOP8.has(site.slug);
+  if (pv === 'pieve_nebbiu') return PIEVE_NEBBIU_TOP8.has(site.slug);
+  return true;
+}
 
 function enterNiveau3View(pieveSlug, pieveDisplay, pieveShape, opts) {
   opts = opts || {};
@@ -1901,11 +1911,9 @@ function enterNiveau3View(pieveSlug, pieveDisplay, pieveShape, opts) {
     var matchPieve = (s.pieve === pieveSlug) || (s.pieve_slug === pieveSlug);
     if (!matchPieve) return false;
     if (currentDoyenneSlug && s.doyenne !== currentDoyenneSlug) return false;
-    // Brief fix isolé pieve_rogliano : ne montrer que les 8 sites prioritaires.
-    // Aucun effet sur les 49 autres pieves (test conditionnel sur pieveSlug).
-    if (pieveSlug === 'pieve_rogliano' && !PIEVE_ROGLIANO_TOP8.has(s.slug)) return false;
-    // Brief fix isolé pieve_nebbiu : ne montrer que les 8 sites prioritaires.
-    if (pieveSlug === 'pieve_nebbiu' && !PIEVE_NEBBIU_TOP8.has(s.slug)) return false;
+    // Niveau 3 (vue pieve) : exhaustif — tous les sites de la pieve. La
+    // limitation top 8 (Rogliano/Nebbiu) s'applique au niveau 2 (vue doyenne),
+    // cf. spotVisibleAtNiveau2 et la construction de spotsLevel2ByDoyenne.
     return true;
   });
   for (const site of sitesPieve) {
