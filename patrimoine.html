@@ -591,43 +591,117 @@ function _illustrationUrl(base, size) {
 // Niveau 1 (vue Corse) : 6 polygones diocèses pleins + spots illustrés uniquement.
 // Niveau 2 (vue diocèse, déclenché par clic) : pieves + tous les spots du diocèse.
 
-// Liste blanche des spots avec illustration réelle (fichier PNG présent dans
-// docs/assets/visuels/ au moment du build : 14 sur 124 spots).
-// Source : croisement manifest SITES_PATRIMOINE × ls docs/assets/visuels/, en
-// excluant les 5 spots-diocèse (catégorie 'E — Diocèse historique', portent
-// l'identité visuelle du polygone diocèse pas un lieu distinct).
-// Mise à jour manuelle quand un fichier est ajouté/supprimé.
-// Future amélioration éventuelle : pipeline auto (option c, voir Brief 8 §6.1).
-const ILLUSTRATED_SPOTS = new Set([
-  'aiguilles_de_bavella',
-  'aleria_antique',
-  'anneaux_du_cap_corse',
-  'bastia_citadelle',
-  'bonifacio_remparts',
-  'cap_corse_extreme_nord',
-  'capu_rossu',
-  'cargese_grec_latin',
-  'castello_della_rocca',
-  'cathedrale_saint_jean_baptiste_de_calvi',
-  'cirque_de_bonifato',
-  'citadelle_de_corte',
-  'couvent_d_orezza',
-  'desert_des_agriate',
-  'foret_de_tartagine',
-  'la_trinita_de_prunelli_di_fiumorbo',
-  'la_trinite_d_aregno',
-  'lac_de_creno',
-  'lac_de_nino',
-  'monte_cinto',
-  'monte_d_oro',
-  'monte_renoso',
-  'monte_revincu',
-  'monte_san_petrone',
-  'monte_stello',
-  'plateau_du_coscione',
-  'reserve_de_scandola',
-  'san_giovanni_de_santa_maria_siche',
-]);
+// Brief Chantier C (2026-05-22) — top 8 sites niveau 1 par doyenne contemporain.
+// Source : audit Cowork _drafts/AUDIT_NIVEAU1_TOP8.md + _drafts/NIVEAU1_8_SITES_FILTER.json.
+// Remplace l'ancien Set ILLUSTRATED_SPOTS (28 spots hardcodes, Brief 8).
+// 9 doyennes x 8 sites = 72 slugs. Mise a jour manuelle apres validation Soleil.
+//
+// Substitutions Claude Code : 6 slugs du livrable Cowork (iles_sanguinaires_
+// pointe_parata, reserve_iles_cap_corse, conca_d_oru_patrimonio_saint_florent,
+// etang_biguglia, iles_lavezzi, reserve_bouches_bonifacio) sont des sites
+// naturels/reserves absents de sites_patrimoine.json (encore en backlog
+// _drafts/SITES_MANQUANTS_PROPOSALS.json). Remplaces par le rang 9+ existant de
+// chaque doyenne, scoring audit reproduit sur la donnee live (tri -score,
+// slug ASC). A re-arbitrer quand les 6 sites manquants seront integres au corpus.
+const NIVEAU1_TOP8_BY_DOYENNE = {
+  doyenne_ajaccio: [
+    'san_petru_cuttoli_corticchiato',  // substitut de iles_sanguinaires_pointe_parata (absent corpus)
+    'statue_menhir_tavera',
+    'notre_dame_de_l_assomption_cathedrale_d_ajaccio_ajaccio',
+    'san_giovanni_bastelica',
+    'tour_de_la_parata_ajaccio',
+    'san_giovanni_appietto',
+    'san_giovanni_battista_azilone_ampaza',
+    'san_martinu_zicavo',
+  ],
+  doyenne_balagne: [
+    'cirque_de_bonifato',
+    'foret_de_tartagine',
+    'citadelle_de_calvi',
+    'cathedrale_saint_jean_baptiste_de_calvi',
+    'la_trinite_d_aregno',
+    'ile_rousse_pietra',
+    'alignement_montegrosso',
+    'couvent_sant_antoni_de_calvi',
+  ],
+  doyenne_cortenais: [
+    'lac_de_nino',
+    'monte_cinto',
+    'vizzavona',
+    'massif_du_haut_asco',
+    'monte_d_oro',
+    'gorges_du_tavignano',
+    'foret_de_valdu_niellu',
+    'citadelle_de_corte',
+  ],
+  doyenne_du_cap: [
+    'monte_stello',
+    'cap_corse_extreme_nord',
+    'bastia_citadelle',
+    'casa_di_u_banditu',  // substitut de reserve_iles_cap_corse (absent corpus)
+    'cathedrale_du_nebbio',
+    'anneaux_du_cap_corse',
+    'couvent_saint_francois_de_pino',  // substitut de conca_d_oru_patrimonio_saint_florent (absent corpus)
+    'barcaggio',
+  ],
+  doyenne_du_golo: [
+    'desert_des_agriate',
+    'monte_san_petrone',
+    'defile_de_lancone',
+    'monte_revincu',
+    'monte_genova',  // substitut de etang_biguglia (absent corpus)
+    'couvent_d_orezza',
+    'la_canonica',
+    'san_michele_de_murato',
+  ],
+  doyenne_extreme_sud: [
+    'aiguilles_de_bavella',
+    'massif_de_l_ospedale',
+    'plateau_du_coscione',
+    'bonifacio_remparts',
+    'grotte_de_bonifacio',  // substitut de iles_lavezzi (absent corpus)
+    'piscia_di_gallo',  // substitut de reserve_bouches_bonifacio (absent corpus)
+    'cauria_i_stantari',
+    'cauria_renaghju',
+  ],
+  doyenne_piana_vico_sari: [
+    'calanques_de_piana',
+    'reserve_de_scandola',
+    'capu_rossu',
+    'gorges_du_spelunca',
+    'lac_de_creno',
+    'cargese_grec_latin',
+    'menhir_casaglione',
+    'saint_pancrace_de_vico',
+  ],
+  doyenne_plaine_orientale: [
+    'monte_renoso',
+    'gorges_de_l_inzecca',
+    'aleria_antique',
+    'la_trinita_de_prunelli_di_fiumorbo',
+    'san_giovanni_de_san_giovanni_di_moriani',
+    'santa_lucia_cervione',
+    'san_andrea_piedicroce',
+    'san_cervone_valle_d_alesani',
+  ],
+  doyenne_prunelli_taravo_valinco: [
+    'filitosa',
+    'lac_de_tolla',
+    'albitretu',
+    'castaldu',
+    'poggio_di_nazza',
+    'san_giovanni_de_santa_maria_siche',
+    'casteddu_caleca',
+    'castello_della_rocca',
+  ],
+};
+
+// Derivation : union des top_8 de tous les doyennes (72 slugs uniques).
+// Remplace l'ancien Set hardcode. Pas de changement de signature : tout le code
+// aval qui interroge ILLUSTRATED_SPOTS.has(slug) reste fonctionnel.
+const ILLUSTRATED_SPOTS = new Set(
+  Object.values(NIVEAU1_TOP8_BY_DOYENNE).flat()
+);
 
 // Mapping inverse spot → pieve/diocèse à partir de spot_ids[] des pieves.
 // Permet d'alimenter le breadcrumb au clic spot avec la chaîne complète.
