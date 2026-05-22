@@ -476,6 +476,10 @@ const ARBITRAGE_SLUGS = new Set([]);
 // + adaptSiteSchema plus bas. Inline 43kB supprime.
 let SITES_PATRIMOINE = [];
 let SITES_META = null;
+// Brief allègement — polygones zone_geometry externalisés dans
+// docs/data/zone_geometries.json, fusionnés par slug au chargement.
+// Voir loadSitesPatrimoine + adaptSiteSchema.
+let ZONE_GEOMETRIES = {};
 
 // Brief 28 — adaptateur ancien schema SITES_PATRIMOINE inline -> nouveau
 // schema canonique Cowork (sites_corse.json puis sites_patrimoine.json post Brief 33 split). Preserve les noms de champs
@@ -503,8 +507,10 @@ function adaptSiteSchema(s) {
     axe_corpus: s.axe_corpus,
     fiche_v3_slug: s.fiche_v3_slug || null,
     // B-ZONES (Etape 4 pre-FEDER) : zones polygonales au hover.
+    // zone_geometry : inline (rétro-compat) sinon depuis ZONE_GEOMETRIES
+    // (docs/data/zone_geometries.json, fusionné au boot — Brief allègement).
     is_zone: s.is_zone === true,
-    zone_geometry: s.zone_geometry || null,
+    zone_geometry: s.zone_geometry || ZONE_GEOMETRIES[s.slug] || null,
   };
 }
 
@@ -513,12 +519,23 @@ function adaptSiteSchema(s) {
 // Erreur fetch : log + reject. Le boot patrimoine se contentera des couches
 // polygones (doyennes/pieves) sans les markers — mode degrade observable.
 function loadSitesPatrimoine() {
-  return fetch(resolveAssetPath('docs/data/sites_patrimoine.json'), {cache: 'default'})
-    .then(function(res) {
-      if (!res.ok) throw new Error('sites_patrimoine.json HTTP ' + res.status);
-      return res.json();
-    })
-    .then(function(data) {
+  // Brief allègement — chargement parallèle : sites + polygones zone_geometry
+  // externalisés. L'échec de zone_geometries.json est non bloquant (les zones
+  // perdent leur polygone, le reste du boot patrimoine continue).
+  return Promise.all([
+    fetch(resolveAssetPath('docs/data/sites_patrimoine.json'), {cache: 'default'})
+      .then(function(res) {
+        if (!res.ok) throw new Error('sites_patrimoine.json HTTP ' + res.status);
+        return res.json();
+      }),
+    fetch(resolveAssetPath('docs/data/zone_geometries.json'), {cache: 'default'})
+      .then(function(res) { return res.ok ? res.json() : null; })
+      .catch(function() { return null; })
+  ])
+    .then(function(results) {
+      var data = results[0];
+      var zonesDoc = results[1];
+      ZONE_GEOMETRIES = (zonesDoc && zonesDoc.zones) || {};
       SITES_META = data._meta;
       SITES_PATRIMOINE = data.sites
         .filter(function(s) { return s.phase_publication === 1; })
@@ -529,7 +546,7 @@ function loadSitesPatrimoine() {
       var schemaVersion = data.version || (SITES_META && SITES_META.version) || '?';
       console.info('[Tellux Patrimoine] ' + SITES_PATRIMOINE.length +
         ' sites P1 charges (corpus ' + data.sites.length +
-        ', v' + schemaVersion + ')');
+        ', v' + schemaVersion + ', ' + Object.keys(ZONE_GEOMETRIES).length + ' zones)');
       return SITES_PATRIMOINE;
     });
 }
