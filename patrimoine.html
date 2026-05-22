@@ -511,6 +511,9 @@ function adaptSiteSchema(s) {
     // (docs/data/zone_geometries.json, fusionné au boot — Brief allègement).
     is_zone: s.is_zone === true,
     zone_geometry: s.zone_geometry || ZONE_GEOMETRIES[s.slug] || null,
+    // zone_color : override optionnel de la couleur du polygone (ex: bleu pour
+    // les sites marins). Absent -> couleur ocre standard ZONE_FILL_COLOR.
+    zone_color: s.zone_color || null,
   };
 }
 
@@ -781,11 +784,14 @@ function renderZonePolygon(site) {
     if (!ring || ring.length < 4) return null;
     leafletCoords = swapRing(ring);
   }
+  // Override couleur optionnel (site.zone_color) : ocre par defaut, bleu pour
+  // les sites marins. Stroke et fill partagent la teinte.
+  const zoneColor = site.zone_color || ZONE_FILL_COLOR;
   return L.polygon(leafletCoords, {
-    color: ZONE_STROKE_COLOR,
+    color: zoneColor,
     weight: ZONE_STROKE_WEIGHT,
     opacity: ZONE_STROKE_OPACITY,
-    fillColor: ZONE_FILL_COLOR,
+    fillColor: zoneColor,
     fillOpacity: ZONE_FILL_OPACITY,
     className: 'tlx-zone-hover',
     interactive: false,                 // ne capture pas le clic : le pin garde le focus
