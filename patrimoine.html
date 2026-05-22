@@ -765,9 +765,22 @@ const _zoneIsMobile = window.matchMedia('(hover: none)').matches;
 function renderZonePolygon(site) {
   if (!site.is_zone || !site.zone_geometry || !site.zone_geometry.coordinates) return null;
   // zone_geometry [lon,lat] -> Leaflet [lat,lon]
-  const ring = site.zone_geometry.coordinates[0];
-  if (!ring || ring.length < 4) return null;
-  const leafletCoords = ring.map(function(c){ return [c[1], c[0]]; });
+  const geom = site.zone_geometry;
+  const swapRing = function(ring){ return ring.map(function(c){ return [c[1], c[0]]; }); };
+  let leafletCoords;
+  if (geom.type === 'MultiPolygon') {
+    // coordinates = [ [ringExt, ringTrou...], ... ] : on construit le latlngs
+    // multi-polygone attendu par L.polygon (un seul layer, un seul path SVG).
+    leafletCoords = geom.coordinates
+      .map(function(poly){ return poly.map(swapRing); })
+      .filter(function(poly){ return poly[0] && poly[0].length >= 4; });
+    if (!leafletCoords.length) return null;
+  } else {
+    // Polygon : ring exterieur uniquement (comportement historique inchange).
+    const ring = geom.coordinates[0];
+    if (!ring || ring.length < 4) return null;
+    leafletCoords = swapRing(ring);
+  }
   return L.polygon(leafletCoords, {
     color: ZONE_STROKE_COLOR,
     weight: ZONE_STROKE_WEIGHT,
