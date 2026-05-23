@@ -1793,48 +1793,192 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape, opts) {
 let clusterGroupN3 = null;
 let _pieveActivePolygonRef = null;
 
-// Top 8 pieve_rogliano (audit Cowork _drafts/AUDIT_PIEVE_ROGLIANO.md).
-// Inversion N2/N3 (2026-05-22) : ce Set limite la vue DOYENNE (niveau 2) — la
-// pieve Rogliano (15 sites P1) n'y contribue que ses 8 sites prioritaires. La
-// vue PIEVE (niveau 3) reste exhaustive (les 15 sites). Cap doctrinal : le Cap
-// Corse extrême nord concentre 8 tours génoises P1, limitées à 3 dans le top 8.
-const PIEVE_ROGLIANO_TOP8 = new Set([
-  "anneaux_du_cap_corse",
-  "barcaggio",
-  "reserve_iles_cap_corse",
-  "santa_maria_della_chiappella_rogliano",
-  "castellacciu_san_colombano",
-  "tour_d_agnello_cap_corse",
-  "tour_de_giraglia_ilot",
-  "tour_de_finocchiarola_rogliano",
-]);
-
-// Top 8 pieve_nebbiu (audit Cowork _drafts/AUDIT_PIEVE_NEBBIU.md).
-// Inversion N2/N3 (2026-05-22) : ce Set limite la vue DOYENNE (niveau 2). La
-// vue PIEVE (niveau 3) reste exhaustive. Pool pieve_nebbiu = 11 sites P1 (dont
-// cathedrale_du_nebbio + menhirs_agriate, fix rattachements Saint-Florent) ;
-// 8 retenus pour le niveau 2. Slug canonique = pieve_nebbiu.
-const PIEVE_NEBBIU_TOP8 = new Set([
-  "desert_des_agriate",
-  "defile_de_lancone",
-  "monte_revincu",
-  "san_michele_de_murato",
-  "monte_genova",
-  "casa_di_l_orca",
-  "dolmen_serra",
-  "mamucci",
+// === Chantier D global (2026-05-23) : Top 8 sites par pieve (vue N2 doyenne) ===
+// 15 pieves > 8 sites P1 (post-hard-exclusions doctrinales mine_/min_/barrage_).
+// Pattern initie par Rogliano (BRIEF_CODE_PIEVE_ROGLIANO_TOP8.md) et Nebbiu
+// (BRIEF_CODE_PIEVE_NEBBIU_TOP8.md), generalise a 13 autres pieves via
+// BRIEF_CODE_PIEVES_TOP8_CHANTIER_D.md + _drafts/AUDIT_PIEVES_TOP8_CONSOLIDE.json
+// (audit Cowork 2026-05-23, scoring axe_corpus + illustration + zone +
+// notoriete curated par Soleil).
+//
+// Inversion N2/N3 (doctrine acquise 2026-05-22, preservee Chantier D) :
+// - Vue DOYENNE (niveau 2) : ces Sets limitent les sites exposes (top 8 par pieve)
+// - Vue PIEVE (niveau 3) : exhaustive (tous les sites de la pieve), pas de filtre
+//
+// Arbitrages Soleil preserves a l'identique :
+// - Rogliano : 8 sites mergees brief Rogliano (Cap doctrinal, 3 tours genoises max)
+// - Nebbiu : 8 sites mergees brief Nebbiu (incluant cathedrale_du_nebbio + menhirs_agriate)
+//
+// Arbitrage Sartene 2026-05-23 : tri-alpha par defaut sur 15 megalithes ex-aequo
+// score=48 (palaggiu/fontanaccia/lion_de_roccapina exclus par tri-alpha — brief
+// ajustement post-curatage notoriete spawned post-merge).
+const PIEVE_TOP8 = new Map([
+  ['pieve_rogliano', new Set([
+    "anneaux_du_cap_corse",
+    "barcaggio",
+    "reserve_iles_cap_corse",
+    "santa_maria_della_chiappella_rogliano",
+    "castellacciu_san_colombano",
+    "tour_d_agnello_cap_corse",
+    "tour_de_giraglia_ilot",
+    "tour_de_finocchiarola_rogliano",
+  ])],
+  ['pieve_nebbiu', new Set([
+    "desert_des_agriate",
+    "defile_de_lancone",
+    "monte_revincu",
+    "san_michele_de_murato",
+    "monte_genova",
+    "casa_di_l_orca",
+    "dolmen_serra",
+    "mamucci",
+  ])],
+  ['pieve_sartene', new Set([
+    // ARBITRAGE SOLEIL 2026-05-23 : tri-alpha defaut sur 15 megalithes
+    // ex-aequo score=48. Sites iconiques exclus (palaggiu, dolmen_fontanaccia,
+    // lion_de_roccapina, alo_bisuje) — brief ajustement spawne post-merge.
+    "appazu",
+    "bizzicu_rossu",
+    "bocca_di_a_pila",
+    "capu_di_logu",
+    "cardiccia",
+    "castidetta",
+    "cauria_i_stantari",
+    "cauria_renaghju",
+  ])],
+  ['pieve_carbini', new Set([
+    "piscia_di_gallo",
+    "ceccia_torre",
+    "ciutulaghja",
+    "pacciunituli",
+    "castellu_araghju",
+    "cucuruzzu_capula",
+    "san_giovanni_battista_carbini",
+    "reserve_iles_cerbicales",
+  ])],
+  ['pieve_calenzana', new Set([
+    "cirque_de_bonifato",
+    "citadelle_de_calvi",
+    "alignement_montegrosso",
+    "cathedrale_saint_jean_baptiste_de_calvi",
+    "couvent_sant_antoni_de_calvi",
+    "menhir_calenzana",
+    "refuge_carozzu",
+    "refuge_ortu_di_u_piobbu",
+  ])],
+  ['pieve_piana', new Set([
+    "calanques_de_piana",
+    "gorges_du_spelunca",
+    "reserve_de_scandola",
+    "capu_rossu",
+    "coeur_des_calanques_piana",
+    "col_de_vergio",
+    "refuge_puscaghia",
+    "santa_maria_piana_haute",
+  ])],
+  ['pieve_istria', new Set([
+    "albitretu",
+    "filitosa",
+    "casteddu_caleca",
+    "san_nicolao_petreto_bicchisano",
+    "san_pietro_olmeto",
+    "santa_maria_figaniella_figaniella_sollacaro",
+    "scalsa_murta",
+    "statue_menhir_santa_naria",
+  ])],
+  ['pieve_ornano', new Set([
+    "lac_de_tolla",
+    "castello_della_rocca",
+    "san_bartolomeo_serra_di_ferro",
+    "san_giovanni_bastelicaccia",
+    "san_nicolao_coti_chiavari",
+    "u_cantonu",
+    "bastelica_paese",
+    "caldane_zevaco",
+  ])],
+  ['pieve_bonifacio', new Set([
+    "grotte_de_bonifacio",
+    "bonifacio_remparts",
+    "san_giovanni_de_bonifacio",
+    "sainte_marie_majeure_bonifacio",
+    "iles_lavezzi",
+    "reserve_bouches_bonifacio",
+    "reserve_tre_padule_suartone",
+    "san_giovanni_battista_bonifacio",
+  ])],
+  ['pieve_talcini', new Set([
+    "gorges_du_tavignano",
+    "lac_de_nino",
+    "citadelle_de_corte",
+    "san_giovanni_battista_de_corte",
+    "gorges_de_la_restonica",
+    "massif_du_monte_ritondu",
+    "plateau_d_alzu",
+    "lac_de_capitello",
+  ])],
+  ['pieve_aregno', new Set([
+    "ile_rousse_pietra",
+    "casa_di_u_banditu",
+    "la_trinite_d_aregno",
+    "san_cervone_santa_reparata_santa_reparata_di_balagna",
+    "san_pietro_muro",
+    "san_pietro_pigna",
+    "pigna",
+    "sant_antonino",
+  ])],
+  ['pieve_vico', new Set([
+    "menhir_casaglione",
+    "saint_pancrace_de_vico",
+    "san_giovanni_de_coggia",
+    "cascades_d_aitone",
+    "renicciu_coggia",
+    "san_pancrazio_couvent_de_vico_vico",
+    "san_pietro_letia",
+    "sant_appiano_cathedrale_de_sagone_sagone_vico",
+  ])],
+  ['pieve_gulfo_d_aiacciu', new Set([
+    "iles_sanguinaires_pointe_parata",
+    "notre_dame_de_l_assomption_cathedrale_d_ajaccio_ajaccio",
+    "san_giovanni_appietto",
+    "san_pietro_ajaccio_castelluccio",
+    "san_roccu_ajaccio_vieille_ville",
+    "santa_maria_della_neve_grosseto_prugna_basse",
+    "tour_de_capo_di_feno_ajaccio",
+    "tour_de_castellucio_ajaccio",
+  ])],
+  ['pieve_castagniccia', new Set([
+    "monte_cinto",
+    "massif_du_haut_asco",
+    "refuge_asco_stagnu",
+    "capu_biancu_cinto_2562m",
+    "capu_larghja",
+    "monte_padru",
+    "punta_minuta",
+    "pont_genois_d_asco",
+  ])],
+  ['pieve_niolu', new Set([
+    "foret_de_valdu_niellu",
+    "cascade_radule",
+    "refuge_ciottulu_a_i_mori",
+    "refuge_tighiettu",
+    "capu_a_u_verdatu",
+    "capu_falu",
+    "capu_rossu_cinto_2498m",
+    "santa_restitude_corte_niolu_versant",
+  ])],
 ]);
 
 // Inversion N2/N3 : visibilité d'un spot dans la vue DOYENNE (niveau 2).
-// Les pieves dotées d'un top 8 (Rogliano, Nebbiu) n'y exposent que leurs 8
-// sites prioritaires ; les autres pieves exposent tous leurs spots. La vue
-// PIEVE (niveau 3) reste exhaustive et n'utilise pas ce filtre.
+// Les pieves > 8 sites P1 (15 au total post-Chantier D global) n'exposent
+// que leurs 8 sites prioritaires en N2 ; les autres pieves (≤ 8 sites)
+// exposent tous leurs spots. La vue PIEVE (niveau 3) reste exhaustive
+// et n'utilise pas ce filtre.
 // Declaration de fonction (hoisted) : appelée depuis la construction async de
-// spotsLevel2ByDoyenne, qui s'exécute après l'init des Sets ci-dessus.
+// spotsLevel2ByDoyenne, qui s'exécute après l'init de la Map ci-dessus.
 function spotVisibleAtNiveau2(site) {
   var pv = site.pieve_slug || site.pieve;
-  if (pv === 'pieve_rogliano') return PIEVE_ROGLIANO_TOP8.has(site.slug);
-  if (pv === 'pieve_nebbiu') return PIEVE_NEBBIU_TOP8.has(site.slug);
+  var top8 = PIEVE_TOP8.get(pv);
+  if (top8) return top8.has(site.slug);
   return true;
 }
 
