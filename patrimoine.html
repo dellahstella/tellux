@@ -168,7 +168,14 @@ body.niveau-3 #btn-retour-corse{display:none;}
 #btn-retour-pieve:hover{background:var(--tx-ocre);color:var(--tx-pierre);}
 body.niveau-3 #btn-retour-pieve{display:flex;}
 /* Brief N3 — focus pieve : masquer autres pieves polygones (sauf active) + markers N2 du doyenné. */
-body.niveau-3 .leaflet-interactive[data-pieve-slug]:not(.active-niveau-3){display:none !important;pointer-events:none;}
+/* Brief N3 nav direct pivot A->B (22/05/2026, applique 23/05/2026) :
+   les pieves voisines du doyenne courant restent visibles (stroke pointille
+   discret) et cliquables pour permettre le pivot direct sans retour intermediaire.
+   La pieve active garde son highlight ocre et reste non-cliquable (re-clic no-op).
+   enterNiveau3View est idempotent : un clic sur pieve voisine fait le pivot
+   (cleanup clusterGroupN3 + rebuild filtree pieve B + flyToBounds). */
+body.niveau-3 .leaflet-interactive[data-pieve-slug]:not(.active-niveau-3){fill-opacity:0;stroke-width:1;stroke:rgba(31,35,41,0.35);stroke-dasharray:3,3;pointer-events:auto;cursor:pointer;}
+body.niveau-3 .leaflet-interactive[data-pieve-slug]:not(.active-niveau-3):hover{stroke:var(--tx-ocre);stroke-width:1.5;stroke-dasharray:none;fill-opacity:0.03;}
 body.niveau-3 .leaflet-interactive[data-pieve-slug].active-niveau-3{fill-opacity:0.05;stroke-width:2;stroke:var(--tx-ocre);pointer-events:none;}
 
 /* Brief 8 (revise) — Polygones doyennes contemporains (vision macro 2026-05-04).
