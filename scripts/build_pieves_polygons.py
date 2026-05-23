@@ -44,6 +44,13 @@ MAPPING_V3_PATH = ROOT / "_drafts" / "pieves_communes_mapping_v3_stratD_2026-05-
 # transferts (réaffectation zombies + rétro-doc), 3 renames. Aligne le mapping
 # amont sur la prod 50 pieves et rend la voie-a (rebuild) à nouveau viable.
 MAPPING_V4_PATH = ROOT / "_drafts" / "pieves_communes_mapping_v4_cleanup_2026-05-18.json"
+# Vague Pieves 22/05/2026 PR1 (2026-05-23) — mapping v5 incremental :
+# 6 transferts (Coggia, Osani, 4 Solenzara), pieves_added vide. Resout les
+# Modifs 1+4 de l'audit Cowork BRIEF_COWORK_OUVERTURE_PATRIMOINE_POST_22052026.
+# Modif 2a (Bastelicaccia) = patch _drafts/doyennes_communes_mapping.json (debordement doyenne).
+MAPPING_V5_PATH = ROOT / "_drafts" / "pieves_communes_mapping_v5_vague_22052026.json"
+# Vague Pieves 22/05/2026 PR2 (a venir) — mapping v5 pr2 arbitrages Soleil.
+MAPPING_V5_PR2_PATH = ROOT / "_drafts" / "pieves_communes_mapping_v5_pr2_arbitrages.json"
 OVERRIDES_PATH = ROOT / "_drafts" / "PIEVE_OVERRIDES.json"
 PIEVE_DOY_OVERRIDES_PATH = ROOT / "_drafts" / "PIEVE_DOYENNES_OVERRIDES.json"
 CACHE_DIR = ROOT / "scripts" / ".cache"
@@ -214,6 +221,27 @@ def main():
               f"{len(mapping_v4.get('transferts', []))} transferts, "
               f"{len(mapping_v4.get('renames', []))} renames")
 
+    # Vague Pieves 22/05/2026 PR1 (2026-05-23) — chargement mapping v5 incremental
+    # apres v4. 6 transferts (Modif 1 Coggia/Osani explicitation + Modif 4 4 Solenzara).
+    mapping_v5 = None
+    if MAPPING_V5_PATH.exists():
+        with MAPPING_V5_PATH.open(encoding="utf-8") as f:
+            mapping_v5 = json.load(f)
+        print(f"[build] mapping v5 (Vague Pieves 22052026 PR1) charge : "
+              f"{len(mapping_v5.get('pieves_added', []))} pieves ajoutees, "
+              f"{len(mapping_v5.get('transferts', []))} transferts, "
+              f"{len(mapping_v5.get('renames', []))} renames")
+
+    # Vague Pieves 22/05/2026 PR2 (a venir) — mapping v5 pr2 (creation pieve nord PO + Valinco sud).
+    mapping_v5_pr2 = None
+    if MAPPING_V5_PR2_PATH.exists():
+        with MAPPING_V5_PR2_PATH.open(encoding="utf-8") as f:
+            mapping_v5_pr2 = json.load(f)
+        print(f"[build] mapping v5 PR2 (Vague Pieves 22052026 PR2) charge : "
+              f"{len(mapping_v5_pr2.get('pieves_added', []))} pieves ajoutees, "
+              f"{len(mapping_v5_pr2.get('transferts', []))} transferts, "
+              f"{len(mapping_v5_pr2.get('renames', []))} renames")
+
     # Brief 10 — overrides "pieve -> [doyennes_visibles]" pour permettre a une
     # pieve d'apparaitre dans plusieurs doyennes a la fois (multi-affectation
     # arbitree manuellement par Soleil sans modifier les frontieres doyennes).
@@ -284,6 +312,44 @@ def main():
                     commune_to_pieve[insee] = new_slug
             renames_appliques.append({"from": old_slug, "to": new_slug})
 
+    # Vague Pieves 22/05/2026 PR1 — appliquer v5 (meme pattern v4).
+    if mapping_v5:
+        for p in mapping_v5.get("pieves_added", []):
+            for insee in p["communes_insee"]:
+                commune_to_pieve[insee] = p["slug"]
+        for t in mapping_v5.get("transferts", []):
+            insee = t["commune_insee"]
+            to_p = t.get("vers_pieve")
+            current = commune_to_pieve.get(insee)
+            commune_to_pieve[insee] = to_p
+            transferts_appliques.append({"insee": insee, "from": current, "to": to_p, "via": "v5"})
+        for r in mapping_v5.get("renames", []):
+            old_slug = r["from"]
+            new_slug = r["to"]
+            for insee, slug in list(commune_to_pieve.items()):
+                if slug == old_slug:
+                    commune_to_pieve[insee] = new_slug
+            renames_appliques.append({"from": old_slug, "to": new_slug})
+
+    # Vague Pieves 22/05/2026 PR2 — appliquer v5 pr2 (meme pattern).
+    if mapping_v5_pr2:
+        for p in mapping_v5_pr2.get("pieves_added", []):
+            for insee in p["communes_insee"]:
+                commune_to_pieve[insee] = p["slug"]
+        for t in mapping_v5_pr2.get("transferts", []):
+            insee = t["commune_insee"]
+            to_p = t.get("vers_pieve")
+            current = commune_to_pieve.get(insee)
+            commune_to_pieve[insee] = to_p
+            transferts_appliques.append({"insee": insee, "from": current, "to": to_p, "via": "v5_pr2"})
+        for r in mapping_v5_pr2.get("renames", []):
+            old_slug = r["from"]
+            new_slug = r["to"]
+            for insee, slug in list(commune_to_pieve.items()):
+                if slug == old_slug:
+                    commune_to_pieve[insee] = new_slug
+            renames_appliques.append({"from": old_slug, "to": new_slug})
+
     # Appliquer overrides (post-mapping Cowork)
     overrides_applied = []
     for insee, target_slug in overrides.items():
@@ -340,6 +406,24 @@ def main():
         for p in mapping_v4.get("pieves_added", []):
             meta_by_slug[p["slug"]] = p
         for r in mapping_v4.get("renames", []):
+            old_slug = r["from"]
+            new_slug = r["to"]
+            if old_slug in meta_by_slug:
+                meta = dict(meta_by_slug.pop(old_slug))
+                meta["slug"] = new_slug
+                if r.get("new_name"):
+                    meta["name"] = r["new_name"]
+                if r.get("new_note_rattachement"):
+                    meta["note_rattachement"] = r["new_note_rattachement"]
+                meta_by_slug[new_slug] = meta
+
+    # Vague Pieves 22/05/2026 — metadonnees v5 + v5_pr2.
+    for _mp in (mapping_v5, mapping_v5_pr2):
+        if not _mp:
+            continue
+        for p in _mp.get("pieves_added", []):
+            meta_by_slug[p["slug"]] = p
+        for r in _mp.get("renames", []):
             old_slug = r["from"]
             new_slug = r["to"]
             if old_slug in meta_by_slug:
@@ -492,9 +576,11 @@ def main():
 
     output = {
         "version": (
-            "v7-cleanup-mapping-amont-rebuild-2026-05-18" if mapping_v4
-            else ("v4-stratD-containment-2026-05-17" if mapping_v3
-                  else ("v3-stratA-canonicite-casta" if mapping_v2 else "v1-stratA-from-communes"))
+            "v8-vague-pieves-22052026-pr2" if mapping_v5_pr2
+            else ("v8-vague-pieves-22052026-pr1" if mapping_v5
+                  else ("v7-cleanup-mapping-amont-rebuild-2026-05-18" if mapping_v4
+                        else ("v4-stratD-containment-2026-05-17" if mapping_v3
+                              else ("v3-stratA-canonicite-casta" if mapping_v2 else "v1-stratA-from-communes"))))
         ),
         "generated_by": "scripts/build_pieves_polygons.py",
         "source_mapping": "_drafts/pieves_communes_mapping.json (Cowork v1)" + (
@@ -506,6 +592,12 @@ def main():
         ) + (
             " + _drafts/pieves_communes_mapping_v4_cleanup_2026-05-18.json (Cowork v4 cleanup D1)"
             if mapping_v4 else ""
+        ) + (
+            " + _drafts/pieves_communes_mapping_v5_vague_22052026.json (Cowork v5 Vague Pieves PR1)"
+            if mapping_v5 else ""
+        ) + (
+            " + _drafts/pieves_communes_mapping_v5_pr2_arbitrages.json (Cowork v5 Vague Pieves PR2)"
+            if mapping_v5_pr2 else ""
         ),
         "source_communes": "github.com/gregoiredavid/france-geojson (departements 2A + 2B)",
         "tolerance_degrees": args.tolerance,
