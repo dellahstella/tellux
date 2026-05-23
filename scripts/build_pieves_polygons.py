@@ -77,6 +77,11 @@ MAPPING_V9_PATH = ROOT / "_drafts" / "pieves_communes_mapping_v9_fix_zombies_orp
 # 31.4 km2 visible doyenne_PVS (pieve_sagone etait MultiPolygon Cargese+Coggia,
 # Coggia dropped au build). pieve_sagone residuelle = Cargese seule.
 MAPPING_V10_PATH = ROOT / "_drafts" / "pieves_communes_mapping_v10_fix_zone_orpheline_vico.json"
+# Fix label pieve_patrimonio (2026-05-23) — mapping v11 :
+# declaration retroactive de pieve_patrimonio dans pieves_added pour fournir
+# le meta_by_slug.name. La pieve etait creee implicitement via transferts v3
+# (6 communes ex-nebbiu) mais jamais declaree, d'ou bug runtime name === slug.
+MAPPING_V11_PATH = ROOT / "_drafts" / "pieves_communes_mapping_v11_declare_pieve_patrimonio.json"
 OVERRIDES_PATH = ROOT / "_drafts" / "PIEVE_OVERRIDES.json"
 PIEVE_DOY_OVERRIDES_PATH = ROOT / "_drafts" / "PIEVE_DOYENNES_OVERRIDES.json"
 CACHE_DIR = ROOT / "scripts" / ".cache"
@@ -327,6 +332,18 @@ def main():
               f"{len(mapping_v10.get('transferts', []))} transferts, "
               f"{len(mapping_v10.get('renames', []))} renames")
 
+    # Fix label pieve_patrimonio (2026-05-23) — mapping v11 incremental.
+    # 1 pieves_added declarant retroactivement pieve_patrimonio (meta only,
+    # pas de changement commune_to_pieve : les 6 communes y sont deja via v3).
+    mapping_v11 = None
+    if MAPPING_V11_PATH.exists():
+        with MAPPING_V11_PATH.open(encoding="utf-8") as f:
+            mapping_v11 = json.load(f)
+        print(f"[build] mapping v11 (declare pieve_patrimonio) charge : "
+              f"{len(mapping_v11.get('pieves_added', []))} pieves ajoutees, "
+              f"{len(mapping_v11.get('transferts', []))} transferts, "
+              f"{len(mapping_v11.get('renames', []))} renames")
+
     # Brief 10 — overrides "pieve -> [doyennes_visibles]" pour permettre a une
     # pieve d'apparaitre dans plusieurs doyennes a la fois (multi-affectation
     # arbitree manuellement par Soleil sans modifier les frontieres doyennes).
@@ -534,6 +551,25 @@ def main():
                     commune_to_pieve[insee] = new_slug
             renames_appliques.append({"from": old_slug, "to": new_slug})
 
+    # Fix label pieve_patrimonio (2026-05-23) — appliquer v11.
+    if mapping_v11:
+        for p in mapping_v11.get("pieves_added", []):
+            for insee in p["communes_insee"]:
+                commune_to_pieve[insee] = p["slug"]
+        for t in mapping_v11.get("transferts", []):
+            insee = t["commune_insee"]
+            to_p = t.get("vers_pieve")
+            current = commune_to_pieve.get(insee)
+            commune_to_pieve[insee] = to_p
+            transferts_appliques.append({"insee": insee, "from": current, "to": to_p, "via": "v11"})
+        for r in mapping_v11.get("renames", []):
+            old_slug = r["from"]
+            new_slug = r["to"]
+            for insee, slug in list(commune_to_pieve.items()):
+                if slug == old_slug:
+                    commune_to_pieve[insee] = new_slug
+            renames_appliques.append({"from": old_slug, "to": new_slug})
+
     # Appliquer overrides (post-mapping Cowork)
     overrides_applied = []
     for insee, target_slug in overrides.items():
@@ -601,8 +637,8 @@ def main():
                     meta["note_rattachement"] = r["new_note_rattachement"]
                 meta_by_slug[new_slug] = meta
 
-    # Vague Pieves + Tavignano + Vezzani + Rogna + Vallerustie + Vico — metadonnees v5 -> v10.
-    for _mp in (mapping_v5, mapping_v5_pr2, mapping_v6, mapping_v7, mapping_v8, mapping_v9, mapping_v10):
+    # Vague Pieves + Tavignano + Vezzani + Rogna + Vallerustie + Vico + Patrimonio — metadonnees v5 -> v11.
+    for _mp in (mapping_v5, mapping_v5_pr2, mapping_v6, mapping_v7, mapping_v8, mapping_v9, mapping_v10, mapping_v11):
         if not _mp:
             continue
         for p in _mp.get("pieves_added", []):
@@ -760,16 +796,17 @@ def main():
 
     output = {
         "version": (
-            "v13-fix-zone-orpheline-vico-2026-05-23" if mapping_v10
-            else ("v12-fix-zombies-orphelines-vallerustie-2026-05-23" if mapping_v9
-                  else ("v11-rogna-audit-bustanico-sermano-2026-05-23" if mapping_v8
-                        else ("v10-vezzani-avancee-fine-2026-05-23" if mapping_v7
-                              else ("v9-creation-pieve-tavignano-2026-05-23" if mapping_v6
-                                    else ("v8-vague-pieves-22052026-pr2" if mapping_v5_pr2
-                                          else ("v8-vague-pieves-22052026-pr1" if mapping_v5
-                                                else ("v7-cleanup-mapping-amont-rebuild-2026-05-18" if mapping_v4
-                                                      else ("v4-stratD-containment-2026-05-17" if mapping_v3
-                                                            else ("v3-stratA-canonicite-casta" if mapping_v2 else "v1-stratA-from-communes")))))))))
+            "v14-declare-pieve-patrimonio-2026-05-23" if mapping_v11
+            else ("v13-fix-zone-orpheline-vico-2026-05-23" if mapping_v10
+                  else ("v12-fix-zombies-orphelines-vallerustie-2026-05-23" if mapping_v9
+                        else ("v11-rogna-audit-bustanico-sermano-2026-05-23" if mapping_v8
+                              else ("v10-vezzani-avancee-fine-2026-05-23" if mapping_v7
+                                    else ("v9-creation-pieve-tavignano-2026-05-23" if mapping_v6
+                                          else ("v8-vague-pieves-22052026-pr2" if mapping_v5_pr2
+                                                else ("v8-vague-pieves-22052026-pr1" if mapping_v5
+                                                      else ("v7-cleanup-mapping-amont-rebuild-2026-05-18" if mapping_v4
+                                                            else ("v4-stratD-containment-2026-05-17" if mapping_v3
+                                                                  else ("v3-stratA-canonicite-casta" if mapping_v2 else "v1-stratA-from-communes"))))))))))
         ),
         "generated_by": "scripts/build_pieves_polygons.py",
         "source_mapping": "_drafts/pieves_communes_mapping.json (Cowork v1)" + (
@@ -802,6 +839,9 @@ def main():
         ) + (
             " + _drafts/pieves_communes_mapping_v10_fix_zone_orpheline_vico.json (Cowork v10 Vico fix zone orpheline)"
             if mapping_v10 else ""
+        ) + (
+            " + _drafts/pieves_communes_mapping_v11_declare_pieve_patrimonio.json (Cowork v11 declare pieve_patrimonio meta)"
+            if mapping_v11 else ""
         ),
         "source_communes": "github.com/gregoiredavid/france-geojson (departements 2A + 2B)",
         "tolerance_degrees": args.tolerance,
