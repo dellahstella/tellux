@@ -1294,7 +1294,14 @@ fetch(resolveAssetPath('docs/data/doyennes_polygons.json'))
       // Le name complet reste dans le JSON pour traces / coherence canonique.
       const display = d.display_name || d.name;
       const cls = 'doyenne-polygon tone-' + (d.tone || 'a').toLowerCase();
-      const poly = L.polygon(d.polygon, {className: cls});
+      // Op B audit 22-23/05/2026 — si d.polygons (multi-rings) present, on rend
+      // toutes les parts (main + iles whitelist Op D). Leaflet attend triple-
+      // nested pour multi-polygone : chaque ring devient son propre outer.
+      // Fallback d.polygon (single ring) pour retro-compat.
+      const polyData = Array.isArray(d.polygons) && d.polygons.length > 1
+        ? d.polygons.map(function(ring) { return [ring]; })
+        : d.polygon;
+      const poly = L.polygon(polyData, {className: cls});
       poly.bindTooltip(display, {sticky:true, direction:'top', className:'tlx-tt'});
       poly.on('click', () => onDoyenneClick(d.slug, display, poly));
       // §6 Nav N2→N2 (2026-05-18) — pre-fetch illustration au hover en N2
