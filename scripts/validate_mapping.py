@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-validate_mapping.py REV3 — coherence mapping + validator preventif name/slug.
+validate_mapping.py REV4 — coherence mapping + validator preventif name/slug.
 
 Bloc 1 (REV2 historique) : coherence mapping pieves
 1. 0 zombie : tout slug reference dans mapping doit exister dans pieves_polygons.json prod
@@ -16,7 +16,14 @@ en prod, on durcit les invariants. Audit cross-corpus 24/05 confirme corpus clea
 - DOYENNE: name commence par "Doyenne ", display_name present, slug commence par "doyenne_"
 - SITE   : name pas slug brut, pieve_slug et doyenne_contemporain_slug connus
 
-Exit code 1 si erreurs (l'un ou l'autre bloc), 0 sinon. Integration future :
+Bloc 3 (REV4 ajoute 2026-05-24) : cumulative loader etendu v1 -> v11
+Auparavant le loader s'arretait a v4 (cleanup 2026-05-18). REV4 ingere v5_vague,
+v5_pr2, v6, v7, v8, v9, v10, v11 selon la chaine `extends` chronologique, et gere
+le champ `removed_zombies` (introduit v4, deliberement honore v6 pour pieve_ghisoni
+arbitrage Soleil Option A 2026-05-23). Resorbe 3 false-positives REV2 baseline :
+pieve_ghisoni zombie, pieve_ampugnani missing, pieve_tavignano missing.
+
+Exit code 1 si erreurs (un quelconque bloc), 0 sinon. Integration future :
 pre-commit hook + CI guard.
 """
 import json
@@ -28,6 +35,23 @@ MAPPING_V1 = ROOT / "_drafts" / "pieves_communes_mapping.json"
 MAPPING_V2 = ROOT / "_drafts" / "pieves_communes_mapping_v2_canonicite_casta.json"
 MAPPING_V3 = ROOT / "_drafts" / "pieves_communes_mapping_v3_stratD_2026-05-17.json"
 MAPPING_V4 = ROOT / "_drafts" / "pieves_communes_mapping_v4_cleanup_2026-05-18.json"
+
+# REV4 (2026-05-24) — extension du loader aux mappings v5-v11 livres
+# post-Vague Pieves PR1/PR2 (22-23/05). Auparavant le validator s'arretait
+# a v4 (cleanup 2026-05-18), ce qui generait 3 false-positives REV2 :
+# pieve_ghisoni zombie (supprimee v6), pieve_ampugnani missing (creee v5_pr2),
+# pieve_tavignano missing (creee v6). Chaine `extends` verifiee 2026-05-24 :
+# v5_vague->v4, v5_pr2->v5_vague, v6->v5_pr2, v7->v6, v8->v7, v9->v8,
+# v10->v9, v11->v10.
+MAPPING_V5_VAGUE   = ROOT / "_drafts" / "pieves_communes_mapping_v5_vague_22052026.json"
+MAPPING_V5_PR2     = ROOT / "_drafts" / "pieves_communes_mapping_v5_pr2_arbitrages.json"
+MAPPING_V6         = ROOT / "_drafts" / "pieves_communes_mapping_v6_tavignano_2026-05-23.json"
+MAPPING_V7         = ROOT / "_drafts" / "pieves_communes_mapping_v7_vezzani_2026-05-23.json"
+MAPPING_V8         = ROOT / "_drafts" / "pieves_communes_mapping_v8_rogna_audit_2026-05-23.json"
+MAPPING_V9         = ROOT / "_drafts" / "pieves_communes_mapping_v9_fix_zombies_orphelines_vallerustie.json"
+MAPPING_V10        = ROOT / "_drafts" / "pieves_communes_mapping_v10_fix_zone_orpheline_vico.json"
+MAPPING_V11        = ROOT / "_drafts" / "pieves_communes_mapping_v11_declare_pieve_patrimonio.json"
+
 PIEVES_PROD = ROOT / "docs" / "data" / "pieves_polygons.json"
 DOYENNES_PROD = ROOT / "docs" / "data" / "doyennes_polygons.json"
 SITES_PROD = ROOT / "docs" / "data" / "sites_patrimoine.json"
@@ -42,46 +66,68 @@ def load(p):
 
 
 def merge_mappings():
-    """Reproduit logique build_pieves_polygons.py + v4."""
-    commune_to_pieve = {}
+    """Reproduit logique build_pieves_polygons.py + chaine cumulative v1 -> v11.
 
+    REV4 (2026-05-24) : la chaine est determinee par le champ `extends` de chaque
+    mapping (verifie 2026-05-24). Ordre chronologique strict :
+      v1 < v2 < v3 < v4 < v5_vague < v5_pr2 < v6 < v7 < v8 < v9 < v10 < v11
+
+    REV4 ajoute aussi la prise en compte du champ `removed_zombies` (slug seul
+    ou objet {slug, rationale}) — introduit v4, deliberement honore v6 pour
+    pieve_ghisoni arbitrage Soleil Option A 2026-05-23.
+    """
+    commune_to_pieve = {}
+    removed_pieves = set()
+
+    # Base v1 — declare les pieves originelles.
     m1 = load(MAPPING_V1)
     for p in m1.get("pieves", []):
         for insee in p["communes_insee"]:
             commune_to_pieve[insee] = p["slug"]
 
-    if MAPPING_V2.exists():
-        m2 = load(MAPPING_V2)
-        for p in m2.get("pieves_added", []):
+    # Chaine cumulative v2 -> v11 (extensions ordonnees selon `extends`).
+    CHAIN = [
+        MAPPING_V2, MAPPING_V3, MAPPING_V4,
+        MAPPING_V5_VAGUE, MAPPING_V5_PR2,
+        MAPPING_V6, MAPPING_V7, MAPPING_V8,
+        MAPPING_V9, MAPPING_V10, MAPPING_V11,
+    ]
+    for path in CHAIN:
+        if not path.exists():
+            continue
+        mv = load(path)
+        for p in mv.get("pieves_added", []):
             for insee in p["communes_insee"]:
                 commune_to_pieve[insee] = p["slug"]
-        for t in m2.get("transferts", []):
+            # REV4 — pieves_added ressuscite la pieve : si un v<n> antecedent
+            # l'avait declaree zombie, la sortir du set removed_pieves (cas
+            # pieve_ampugnani : v4 removed_zombies puis v5_pr2 pieves_added).
+            removed_pieves.discard(p["slug"])
+        for t in mv.get("transferts", []):
             commune_to_pieve[t["commune_insee"]] = t["vers_pieve"]
-
-    if MAPPING_V3.exists():
-        m3 = load(MAPPING_V3)
-        for p in m3.get("pieves_added", []):
-            for insee in p["communes_insee"]:
-                commune_to_pieve[insee] = p["slug"]
-        for t in m3.get("transferts", []):
-            commune_to_pieve[t["commune_insee"]] = t["vers_pieve"]
-        for r in m3.get("renames", []):
+            # REV4 — un transfert vers une pieve ressuscite aussi la cible
+            # (defense en profondeur, cas v7+ qui peut alimenter une pieve
+            # anciennement zombifiee sans pieves_added explicite).
+            removed_pieves.discard(t["vers_pieve"])
+        for r in mv.get("renames", []):
             for insee, slug in list(commune_to_pieve.items()):
                 if slug == r["from"]:
                     commune_to_pieve[insee] = r["to"]
+            # REV4 — rename "ressuscite" implicitement la cible.
+            removed_pieves.discard(r["to"])
+        # REV4 : prise en compte des suppressions explicites (format slug ou dict).
+        for rz in mv.get("removed_zombies", []):
+            slug = rz["slug"] if isinstance(rz, dict) else rz
+            removed_pieves.add(slug)
 
-    if MAPPING_V4.exists():
-        m4 = load(MAPPING_V4)
-        for p in m4.get("pieves_added", []):
-            for insee in p["communes_insee"]:
-                commune_to_pieve[insee] = p["slug"]
-        for t in m4.get("transferts", []):
-            commune_to_pieve[t["commune_insee"]] = t["vers_pieve"]
-        for r in m4.get("renames", []):
-            for insee, slug in list(commune_to_pieve.items()):
-                if slug == r["from"]:
-                    commune_to_pieve[insee] = r["to"]
-
+    # Filtrage final : retirer toute commune mappee a une pieve explicitement
+    # supprimee (defense en profondeur — normalement les transferts v6+ ont
+    # deja deplace les communes vers leur nouvelle pieve ; ce filtre rattrape
+    # un eventuel oubli de transfert).
+    commune_to_pieve = {
+        insee: slug for insee, slug in commune_to_pieve.items()
+        if slug not in removed_pieves
+    }
     return commune_to_pieve
 
 
