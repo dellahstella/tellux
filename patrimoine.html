@@ -1668,6 +1668,28 @@ function enterNiveau2View(doyenneSlug, doyenneName, shape, opts) {
   document.body.classList.remove('niveau-3');
   if (typeof _removePieveSticker === 'function') _removePieveSticker();
 
+  // Brief Nav N3->N2 cross-doyenne (2026-05-23) — cleanup clusterGroupN3
+  // residuel : si on saute de N3 (pieve X du doyenne A) directement vers N2
+  // du doyenne B sans passer par "Retour doyenne", clusterGroupN3 reste
+  // attache au map et les markers de la pieve precedente restent visibles.
+  // Symetrique avec le cleanup fait dans exitNiveau3View.
+  if (clusterGroupN3 && map.hasLayer(clusterGroupN3)) {
+    map.removeLayer(clusterGroupN3);
+  }
+  if (clusterGroupN3 && clusterGroupN3.clearLayers) {
+    clusterGroupN3.clearLayers();
+  }
+  // Reset etat pieve active (ref polygone + classes) pour coherence visuelle.
+  if (_pieveActivePolygonRef) {
+    const elActive = _pieveActivePolygonRef.getElement && _pieveActivePolygonRef.getElement();
+    if (elActive) elActive.classList.remove('active-niveau-3');
+    _pieveActivePolygonRef = null;
+  }
+  for (const p of Object.values(pieveShapesBySlugV2)) {
+    const el = p.getElement && p.getElement();
+    if (el) el.classList.remove('selected');
+  }
+
   // Brief 20 fix #7 — fermer toute popup map ouverte (spot precedent ou popup
   // miniature) avant le pivot N1->N2, evite la superposition residuelle.
   map.closePopup();
