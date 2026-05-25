@@ -546,6 +546,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .acq-dot--ok{background:var(--acc);box-shadow:0 0 0 2px rgba(63,91,58,.25);}
 .acq-dot--warn{background:var(--warn);box-shadow:0 0 0 2px rgba(180,140,80,.25);}
 .acq-dot--danger{background:var(--danger);box-shadow:0 0 0 2px rgba(180,60,40,.25);}
+/* Sprint astro v2 2026-05-25 (W11) : hint pedagogique cible anomalie sous le bandeau */
+.acq-target-hint{padding:6px 4px 0;border-top:1px dashed var(--border);margin-top:2px;font-size:10px;color:var(--tx3);font-style:italic;line-height:1.4;}
+.acq-target-hint strong{color:var(--tx-ardoise);font-style:normal;}
 /* Modale contribution a onglets */
 .ctab-btn{background:none;border:none;padding:10px 14px;font-family:var(--font);font-size:12px;color:var(--tx3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;font-weight:500;}
 .ctab-btn:hover:not(.disabled){color:var(--ardoise-clair);}
@@ -1678,6 +1681,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
         <div class="cond-row"><span class="cond-key">Dst</span><span class="cond-val" id="dst-v">—</span><span class="cond-src" id="dst-s">Kyoto WDC via NOAA</span></div>
         <div class="cond-row"><span class="cond-key">Correction utilisée</span><span class="cond-val" id="ext-corr-v">—</span><span class="cond-src" id="ext-corr-s">—</span></div>
         <div class="cond-row acq-row"><span class="cond-key">Acquisition EM</span><span class="cond-val"><span class="acq-dot" id="acq-dot"></span><span id="acq-label">vérification…</span></span><span class="cond-src" id="acq-detail">—</span></div>
+        <div class="acq-target-hint">Pour anomalies <strong>&gt;50 nT</strong> : fenêtre orange acceptable. Pour anomalies <strong>&lt;20 nT</strong> : fenêtre verte stricte recommandée.</div>
       </div>
     </div>
     <div class="cond-section" data-open="false" id="cond-sec-atmo">
@@ -3048,56 +3052,80 @@ let aquExternalCorr = null; // nT, null = non disponible
 let curDst = null;          // nT, null = non disponible
 let dstLastTimestamp = null;
 
+// ─── Hiérarchie INTERMAGNET — AQU > DUR > CTS par distance Corse ───
+// Sprint astro v2 2026-05-25 (W12) : fallback multi-observatoires italiens
+// pour robustesse en cas d'indisponibilité ponctuelle d'un observatoire.
+// AQU = L'Aquila, 360 km E (Italie centrale)
+// DUR = Duronia, 470 km E (INGV Italie)
+// CTS = Castello Tesino, 480 km NE (INGV Italie)
+// Tous accessibles via le même service BGS data_service.
+// Référence : Lepidi et al. 2021 Remote Sensing 13(16), 3111.
+const INTERMAGNET_OBSERVATORIES = [
+  {code: 'AQU', lat: 42.38, lon: 13.32, alt: 682,  dist_km_corse: 360},
+  {code: 'DUR', lat: 41.65, lon: 14.46, alt: 765,  dist_km_corse: 470},
+  {code: 'CTS', lat: 46.05, lon: 11.65, alt: 1180, dist_km_corse: 480}
+];
+
 async function loadAQU(){
-  // Observatoire L'Aquila (AQU), lat=42.38°N, lon=13.32°E.
-  // Sprint astro 2026-05-25 : baseline 30 jours glissante (médiane) côté client
-  // remplace l'ancien AQU_REF=46700 codé en dur. Fallback statique 46700 nT
-  // si moins de 24h de données disponibles.
-  try{
-    const d = await fetchEnv(
-      'https://geomag.bgs.ac.uk/data_service/data/hourly_means/AQU/2025/json/',
-      6000
-    );
-    const obs = d?.obs_data;
-    if(!obs?.length) return;
+  // Wrapper retro-compat : delegue a loadINTERMAGNETObservatory() (sprint v2).
+  // Conserve nom 'loadAQU' pour compat bootstrap + ID HTML aqu-status historique.
+  return loadINTERMAGNETObservatory();
+}
 
-    const now = new Date();
-    const cutoff = now.getTime() - 30 * 86400 * 1000;
-    const recentF = obs
-      .filter(function(o){
-        const t = new Date(o.date || o.timestamp || o.time).getTime();
-        return !isNaN(t) && t >= cutoff;
-      })
-      .map(function(o){ return parseFloat(o.total_f || o.f); })
-      .filter(function(v){ return !isNaN(v); })
-      .sort(function(a,b){ return a - b; });
+async function loadINTERMAGNETObservatory(){
+  // Iteration sur les observatoires par distance Corse croissante.
+  // Premier observatoire avec >=24h de donnees recentes = succes.
+  for(let i = 0; i < INTERMAGNET_OBSERVATORIES.length; i++){
+    const obs = INTERMAGNET_OBSERVATORIES[i];
+    try{
+      const d = await fetchEnv(
+        'https://geomag.bgs.ac.uk/data_service/data/hourly_means/' + obs.code + '/2025/json/',
+        4000  // timeout court par observatoire
+      );
+      const obsData = d?.obs_data;
+      if(!obsData?.length) continue;
 
-    const last = obs[obs.length - 1];
-    const F = parseFloat(last?.total_f || last?.f);
+      // Calcul baseline 30j glissants (mediane robuste).
+      const now = Date.now();
+      const cutoff = now - 30 * 86400 * 1000;
+      const recentF = obsData
+        .filter(function(o){
+          const t = new Date(o.date || o.timestamp || o.time).getTime();
+          return !isNaN(t) && t >= cutoff;
+        })
+        .map(function(o){ return parseFloat(o.total_f || o.f); })
+        .filter(function(v){ return !isNaN(v); })
+        .sort(function(a,b){ return a - b; });
 
-    if(recentF.length < 24){
-      // Moins de 24h disponibles -> fallback constante historique 2025
-      console.warn('[Tellux] AQU baseline 30j : donnees insuffisantes ('+recentF.length+'h), fallback statique 46700 nT');
-      if(!isNaN(F)) aquExternalCorr = Math.round(F - 46700);
-      const _aqf = document.getElementById('aqu-status');
-      if(_aqf && !isNaN(F)) _aqf.textContent = 'AQU ' + F.toFixed(0) + ' nT (baseline statique 46700 nT)';
-      if(typeof _updateDstUI === 'function') _updateDstUI();
-      return;
-    }
+      if(recentF.length < 24){
+        // Pas assez de donnees sur cet observatoire, essayer suivant.
+        continue;
+      }
 
-    const median = recentF[Math.floor(recentF.length / 2)];
-    if(!isNaN(F) && !isNaN(median)){
+      const median = recentF[Math.floor(recentF.length / 2)];
+      const last = obsData[obsData.length - 1];
+      const F = parseFloat(last?.total_f || last?.f);
+      if(isNaN(F) || isNaN(median)) continue;
+
       aquExternalCorr = Math.round(F - median);
-      window._aquBaseline = Math.round(median);
-      window._aquNSamples = recentF.length;
+      window._intermagnetSource = obs.code;
+      window._intermagnetBaseline = Math.round(median);
+      window._intermagnetNSamples = recentF.length;
+      // Alias retro-compat pour code existant referencant ces variables.
+      window._aquBaseline = window._intermagnetBaseline;
+      window._aquNSamples = window._intermagnetNSamples;
       const _aq = document.getElementById('aqu-status');
-      if(_aq) _aq.textContent = 'AQU ' + F.toFixed(0) + ' nT (baseline 30j ' + Math.round(median) + ' nT, n=' + recentF.length + 'h)';
+      if(_aq) _aq.textContent = obs.code + ' ' + F.toFixed(0) + ' nT (baseline 30j ' + Math.round(median) + ' nT, n=' + recentF.length + 'h)';
+      if(typeof _updateDstUI === 'function') _updateDstUI();
+      return;  // succes, on s'arrete
+    }catch(e){
+      // observatoire indisponible, essayer le suivant
+      continue;
     }
-    if(typeof _updateDstUI === 'function') _updateDstUI();
-  }catch(e){
-    const _aq2 = document.getElementById('aqu-status');
-    if(_aq2) _aq2.style.display = 'none';
   }
+  // Aucun observatoire INTERMAGNET disponible -> fallback Dst (niveau 2)
+  const _aq2 = document.getElementById('aqu-status');
+  if(_aq2) _aq2.style.display = 'none';
 }
 
 // ─── Dst index (Kyoto WDC via NOAA SWPC) ───
@@ -3139,20 +3167,54 @@ async function loadDst(){
 }
 
 // ─── Conversion Dst équateur → perturbation locale Corse ───
-// Dst mesure la composante H au dipôle équateur (ring current effect).
-// Pour latitude moyenne, perturbation H ≈ Dst × cos(latitude_dipole).
-// Pour total F : F_pert ≈ Dst × cos(latitude_dipole) × cos(inclination).
-// Corse dip latitude ~38°, inclination ~58°.
-// Donc F_pert ≈ Dst × 0.79 × 0.53 ≈ Dst × 0.42.
-// Référence : Mayaud P.N. 1980 « Derivation, Meaning and Use of Geomagnetic Indices »
-// AGU Geophysical Monograph Series Vol 22, chap. 5.
+// Le Dst (Sugiura 1964) représente l'effet du ring current magnétosphérique
+// sur la composante H mesurée à l'équateur magnétique.
+// À latitude dipolaire λ_dip, perturbation H locale ≈ Dst × cos(λ_dip)
+// (approximation ring current axisymétrique standard).
+// Pour intensité totale F : ∂F ≈ cos(I_local) × ∂H + sin(I_local) × ∂Z
+// Avec ring current axisymétrique : ∂Z ≈ 0 à mi-latitude → ∂F ≈ cos(I_local) × ∂H.
+// Donc F_pert ≈ Dst × cos(λ_dip) × cos(I_local).
+// Corse : λ_dip ≈ 38° (geomagnetic latitude), I_local ≈ 58° (inclination).
+//   cos(38°) × cos(58°) ≈ 0.788 × 0.530 ≈ 0.418 → arrondi 0.42.
+//
+// Précision F locale par régime (cf. cadre-scientifique.html section 5.3) :
+//   Calme (Dst > -30 nT)         : ±5 nT  (~12%)
+//   Modéré (-30 à -50 nT)        : ±15 nT (~30%)
+//   Storm modéré (-50 à -100)    : ±25 nT (~30%)
+//   Storm fort (-100 à -200)     : ±40 nT (~30-40%)
+//   Storm extrême (< -200)       : ±60 nT (>40%)
+//
+// Limite : composante asymétrique du ring current (ASY-H, Iyemori 1990)
+// non captée. Devient significative en phase main de tempête (Sandhu 2021)
+// mais est exclue par les seuils acquisition rouge Tellux (Dst ≤ -50 nT).
+//
+// Références :
+//   Sugiura M. 1964 — introduction du Dst
+//   Iyemori T. 1990 J. Geomag. Geoelectr. 42, 1249 — SYM-H / ASY-H
+//   Wanliss & Showalter 2006 JGR 10.1029/2005JA011034 — Dst ≈ SYM-H
+//   Sandhu et al. 2021 JGR 10.1029/2020JA028423 — Challenging ring current indices
+//   Burke W.J. et al. 2011 JGR 10.1029/2010JA015310 — Application mid-latitude
 function calcDstCorrection(lat, lon){
   if(curDst === null || isNaN(curDst)) return null;
-  // Approximation Corse : facteur unique 0.42 (lat moyenne 42° dip 38°).
-  // Pour précision étendue : recalculer dip_lat depuis IGRF (hors scope sprint 1).
   return Math.round(curDst * 0.42);
 }
 
+// ─── Architecture de correction Tellux — choix méthodologique ───
+// Couvre les deux composantes dominantes du champ magnétique externe
+// à mi-latitude Corse (W6 + W10 + W13 corpus scientifique) :
+//   1. Sq diurnal ionospheric current (calcSq, Campbell 1989 Rev. Geophys.)
+//   2. Ring current symétrique (Dst Kyoto, Sugiura 1964 + Daglis 2017)
+//
+// Composantes non corrigées (<10 nT à 42°N en conditions calmes) :
+//   - Ring current asymétrique (ASY-H, Iyemori 1990) — pas d'endpoint CORS
+//   - Auroral electrojet (AE) — peu pertinent à mid-latitude
+//   - Birkeland currents (R1/R2 FAC, Coxon 2014) — ferment à haute latitude
+//
+// Régimes où ces composantes deviendraient significatives sont exclus
+// par les seuils acquisition rouge (Kp ≥ 5 ou Dst ≤ -50 nT).
+//
+// Cadre physique : Dungey cycle 1961 + Milan 2007 + Daglis 2017.
+// Documenté dans cadre-scientifique.html section 5.3 (Chaîne Soleil-Terre 7 étapes).
 function calcExternalCorr(lat, lon){
   // Args optionnels : centre Corse par défaut (le décalage lat est minime
   // 0.42 ± 0.02 sur toute l'île, donc args optionnels = OK).
