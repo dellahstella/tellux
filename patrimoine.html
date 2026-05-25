@@ -91,7 +91,7 @@ html,body{height:100%;width:100%;margin:0;padding:0;font-family:var(--font);colo
    horizontale). Le ratio 16:9-ish actuel = pas de crop, image affichee
    integrale. Le min-width/height drive la taille de la carte postale
    (Brief 31) qui s'absolute-positionne via inset:0. */
-#panel-illustration{flex:0 0 auto;aspect-ratio:16/9;width:100%;position:relative;background:var(--tx-ardoise);overflow:hidden;display:flex;align-items:center;justify-content:center;}
+#panel-illustration{flex:0 0 auto;aspect-ratio:7/4;min-width:720px;min-height:410px;width:720px;height:410px;position:relative;background:var(--tx-ardoise);overflow:hidden;display:flex;align-items:center;justify-content:center;}
 #panel-img{width:100%;height:100%;max-height:60vh;object-fit:contain;display:block;}
 #panel-img.hidden{display:none;}
 #panel-fallback{font-style:italic;color:var(--tx-mica);font-size:14px;padding:48px 64px;text-align:center;min-width:320px;}
@@ -359,9 +359,12 @@ body.niveau-2-actif .doyenne-mini-marker.persistente-niveau-2{display:none !impo
 .carte-postale.flipped .carte-illustration-partagee{display:none;}
 #panel-illustration.has-carte-postale #panel-img,#panel-illustration.has-carte-postale #panel-fallback{display:none;}
 /* Brief 43 → Brief 45 — breakpoints responsive paysage 1.75.
-   Desktop >=1280px : 720×410 (defini au-dessus).
+   Desktop >=1280px : 720×410 (defini au-dessus L94, ratio 7/4).
    Tablette 768-1279 : 600×343 (ratio 1.75 conserve).
-   Mobile <768 : min(94vw, 540px) avec aspect-ratio 1.75 (auto-height). */
+   Mobile <768 : min(94vw, 540px) avec aspect-ratio 1.75 (auto-height).
+   Fix 2026-05-25 : restaure min-width/height/width/height fixes desktop
+   sur L94 (commit 2e8a696 7/05 avait drop -> #panel 0x0 sur desktop
+   car parent #panel a width:auto et child width:100% s'effondre). */
 @media(max-width:1279px){
   #panel-illustration{min-width:600px;min-height:343px;width:600px;height:343px;}
   .carte-verso-text{font-size:15px;padding:16px 20px;line-height:1.5;}
