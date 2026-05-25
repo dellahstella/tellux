@@ -212,6 +212,26 @@ def commit_synthesis(content: str, today: dt.date) -> None:
         print(content[:300])
         return
 
+    # Preflight GET pour recuperer le SHA si le fichier existe deja.
+    # GitHub API PUT /contents exige `sha` obligatoire en mode UPDATE,
+    # sinon retourne 422 Validation Failed (cf. fail cron lundi 2026-05-25
+    # quand le run scheduled re-ecrasait un fichier deja commite par le
+    # run manuel rattrapage le meme matin).
+    print(f"[github] GET {url} (preflight SHA check)")
+    r_get = requests.get(url, headers=headers, params={"ref": "main"}, timeout=30)
+    if r_get.status_code == 200:
+        existing_sha = r_get.json().get("sha")
+        if existing_sha:
+            payload["sha"] = existing_sha
+            print(f"[github] Fichier existant detecte (sha={existing_sha[:8]}), mode UPDATE")
+    elif r_get.status_code == 404:
+        print("[github] Fichier inexistant, mode CREATE")
+    else:
+        # Cas degraded : on continue en mode CREATE (sera 422 si fichier
+        # existe), mais on log au moins le code retour pour diagnostic.
+        # Ne fail() pas ici pour ne pas masquer un eventuel succes downstream.
+        print(f"[github] Preflight GET retourne {r_get.status_code} (continue en CREATE)")
+
     print(f"[github] PUT {url}")
     r = requests.put(url, headers=headers, json=payload, timeout=30)
     if r.status_code in (200, 201):
