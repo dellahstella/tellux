@@ -512,8 +512,50 @@ $$</p>
   <p>Résonances électromagnétiques globales de la cavité ionosphère-sol, excitées principalement par l'activité orageuse. La fondamentale est à 7,83 Hz, avec des harmoniques à 14,3, 20,8, 27,3 et 33,8 Hz environ. Les amplitudes du champ magnétique associé sont de l'ordre du picotesla, plusieurs ordres de grandeur inférieures au champ principal. Les revues récentes (notamment Zhou Q, Williams ER, Boldi R. <em>Impact of Solar Activity on Schumann Resonance: Model and Experiment</em>. Atmosphere 2025;16(6):648, et la synthèse Atmosphere 2023;15(14):3557 sur les avancées récentes en observation des résonances de Schumann) documentent une modulation des fréquences de résonance par l'activité solaire (variation non monotone du fait de l'effet conjugué des rayons X et des protons énergétiques) et une altération de la cohérence lors des tempêtes géomagnétiques.</p>
 
   <h4>Représentation dans Tellux</h4>
-  <p>Pour chaque composante temporelle, Tellux choisit la représentation suivante. Les indices Kp et Dst sont affichés en bandeau contextuel à côté de la couche magnétique statique, sans être intégrés à la valeur du champ représentée sur la carte. Les variations Sq ne sont pas représentées à l'échelle territoriale (amplitude trop faible et variation quasi-uniforme sur la Corse). La résonance de Schumann est mentionnée dans la documentation mais n'est pas cartographiée (phénomène global, non local). Les orages géomagnétiques forts font l'objet d'une alerte visuelle lorsque le seuil Kp supérieur ou égal à 5 est franchi.</p>
+  <p>Pour chaque composante temporelle, Tellux choisit la représentation suivante. Les indices Kp et Dst sont affichés en bandeau contextuel à côté de la couche magnétique statique, et l'indice Dst est intégré à la correction externe appliquée au champ statique de référence (cf. sous-section 5.3 ci-dessous). Les variations Sq ne sont pas représentées à l'échelle territoriale (amplitude trop faible et variation quasi-uniforme sur la Corse), mais une approximation analytique est ajoutée à la valeur instantanée du champ pour traçabilité méthodologique. La résonance de Schumann est mentionnée dans la documentation mais n'est pas cartographiée (phénomène global, non local). Les orages géomagnétiques forts font l'objet d'une alerte visuelle lorsque le seuil Kp supérieur ou égal à 5 est franchi.</p>
   <p>La littérature sur d'éventuels effets biologiques des variations temporelles naturelles du champ magnétique reste peu conclusive à ce jour. Cette question ne fait pas partie du périmètre de Tellux, qui cartographie ces variations comme facteurs temporels du modèle composite sans en tirer d'implication sanitaire.</p>
+
+  <h3>5.3 Corrections géomagnétiques temps réel — Russell-McPherron, Sq, Dst</h3>
+
+  <h4>Pourquoi corriger les mesures EM in situ</h4>
+  <p>Le champ géomagnétique mesurable en surface est la somme du <strong>champ principal</strong> (généré par la dynamo du noyau terrestre, environ 99,5 % de l'intensité totale en Corse), des <strong>anomalies crustales</strong> (lithosphère, environ 1 % et notre cible scientifique), et de <strong>perturbations externes</strong> (ionosphère et magnétosphère, jusqu'à plusieurs centaines de nanoteslas en tempête).</p>
+  <p>Une mesure ponctuelle non corrigée mélange ces trois composantes. Les <strong>anomalies crustales corses typiques</strong> (contacts granite-schiste, dykes, gisements de magnétite) se situent dans la plage <strong>10 à 100 nT</strong>. Or :</p>
+  <ul>
+    <li>Les <strong>variations diurnes Sq</strong> (Solar quiet, courants ionosphériques diurnes) atteignent <strong>25 à 50 nT</strong> en milieu de latitude (Yamazaki et Maute 2017, <em>Space Sci. Rev.</em>, DOI 10.1007/s11214-016-0282-z).</li>
+    <li>Les <strong>tempêtes géomagnétiques modérées</strong> (G2 à G3) génèrent des perturbations de <strong>50 à 200 nT</strong>.</li>
+    <li>Les <strong>événements extrêmes</strong> (G5 du 10 et 11 mai 2024 : Dst égal à -412 nT) dépassent <strong>400 nT</strong>.</li>
+  </ul>
+  <p>Sans correction temporelle, il est physiquement impossible de séparer une anomalie crustale d'une signature ionosphérique ou magnétosphérique.</p>
+
+  <h4>Architecture choisie par Tellux</h4>
+  <p>La fonction <code>calcExternalCorr(lat, lon)</code> dans <code>app.html</code> applique une hiérarchie à 3 niveaux pour estimer la perturbation externe :</p>
+  <ol>
+    <li><strong>AQU INTERMAGNET (priorité 1)</strong> — observatoire de L'Aquila (Italie centrale, 270 à 700 km de la Corse), données horaires via le service BGS. La perturbation est calculée comme <code>F_AQU(t) − médiane_30_jours(F_AQU)</code>, baseline glissante mise à jour côté client à chaque rafraîchissement. Méthode la plus précise lorsque l'observatoire est disponible.</li>
+    <li><strong>Dst Kyoto WDC (priorité 2)</strong> — indice global du courant annulaire magnétosphérique, mis à jour horairement par le World Data Center for Geomagnetism, Kyoto, et redistribué par NOAA SWPC. Conversion équateur vers latitude Corse via <code>F_perturbation ≈ Dst × cos(λ_dip) × cos(I_local) ≈ Dst × 0,42</code>, où λ_dip ≈ 38° (latitude dipolaire Corse) et I_local ≈ 58° (inclinaison locale). Référence : Mayaud P.N. 1980, <em>Derivation, Meaning and Use of Geomagnetic Indices</em>, AGU Geophys. Monogr. Ser. 22 (DOI 10.1029/GM022).</li>
+    <li><strong>Kp empirique (priorité 3, fallback)</strong> — formule paramétrique de Menvielle et Berthelier 1991 (<em>Annales Geophysicae</em> 9, 384-394) : <code>correction(Kp) = f(Kp)</code> par paliers (0 nT pour Kp inférieur à 2 ; jusqu'à 110 nT pour Kp égal à 6 ; au-delà, extrapolation linéaire). Utilisée uniquement si AQU et Dst sont indisponibles.</li>
+  </ol>
+  <p>Le badge <strong>Correction utilisée</strong> dans la barre conditions affiche la source effective en temps réel (AQU / Dst / Kp) avec la valeur appliquée en nanoteslas.</p>
+
+  <h4>Effet Russell-McPherron et fenêtres équinoxiales</h4>
+  <p>Les indices Kp et Dst capturent indirectement l'effet Russell-McPherron (Russell et McPherron 1973, ré-analysé par Zhao et Zong 2012, <em>J. Geophys. Res. Space Physics</em>, DOI 10.1029/2012JA017845) : aux équinoxes, la géométrie Terre-Soleil maximise la probabilité d'une composante Bz sud du champ magnétique interplanétaire, ce qui amplifie la reconnexion magnétique côté jour et donc l'activité géomagnétique. Statistiquement, l'amplitude semi-annuelle représente +20 à +40 % d'activité géomagnétique aux équinoxes par rapport aux solstices. Tellux n'a pas besoin de modéliser explicitement cet effet : il est intégré par construction via les indices temps réel.</p>
+
+  <h4>Recommandation acquisition EM in situ</h4>
+  <p>Pour des mesures EM in situ rigoureuses, Tellux affiche un indicateur <strong>Fenêtre acquisition EM</strong> dans la section « Activité solaire » de la barre conditions :</p>
+  <ul>
+    <li><strong>Vert</strong> : Kp inférieur ou égal à 2 et Dst supérieur ou égal à -30 nT — précision optimale.</li>
+    <li><strong>Orange</strong> : Kp inférieur ou égal à 4 ou Dst entre -50 et -30 nT — précision dégradée, correction temps réel encore valide.</li>
+    <li><strong>Rouge</strong> : Kp supérieur ou égal à 5 ou Dst inférieur ou égal à -50 nT — tempête géomagnétique, mesures à différer après accalmie.</li>
+  </ul>
+  <p>Cette stratification suit les seuils opérationnels NOAA G-Scale (<a href="https://www.swpc.noaa.gov/noaa-scales-explanation" rel="noopener noreferrer">swpc.noaa.gov/noaa-scales-explanation</a>) et les bonnes pratiques INTERMAGNET d'acquisition magnétométrique.</p>
+
+  <h4>Limites assumées</h4>
+  <ul>
+    <li><strong>Indice AE (Auroral Electrojet)</strong> : non intégré actuellement. AE indique l'activité des courants auroraux et complémenterait Dst pour les évènements de sous-orages. Aucune source CORS-friendly publique fiable n'était disponible au moment du développement — sprint séparé envisagé via proxy server-side (Cloudflare Worker scrapant <code>wdc.kugi.kyoto-u.ac.jp/ae_realtime/</code>).</li>
+    <li><strong>Effet Russell-McPherron explicite</strong> : non modélisé séparément, mais capturé indirectement via Kp et Dst temps réel — pas de redondance utile.</li>
+    <li><strong>Latence Kyoto QuickLook Dst</strong> : environ 30 minutes. Les valeurs final et provisional sont publiées 1 à 3 mois plus tard avec corrections mineures — l'historique exposé restera approximatif jusqu'à révision Kyoto.</li>
+    <li><strong>Distance AQU-Corse</strong> : 270 km (proximité Bonifacio) à 700 km (Cap Corse). Pour des anomalies très localisées (inférieures à 10 nT), un observatoire dédié Corse serait préférable. Pas d'observatoire INTERMAGNET en Corse à ce jour — opportunité d'installation future.</li>
+    <li><strong>Conversion Dst équateur vers Corse</strong> : facteur dipolaire 0,42 approximé pour la latitude moyenne 42° N. Le décalage sur l'île entière est inférieur à 0,02 (négligeable au regard de l'incertitude Dst horaire de l'ordre de 5 nT).</li>
+  </ul>
 </section>
 
 <section id="section-6">
