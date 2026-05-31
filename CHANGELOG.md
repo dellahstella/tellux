@@ -7,6 +7,20 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Harmonisation chiffres ANFR landing + doc scientifique + app — 2026-05-31]
+
+### Fixed
+- **`index.html`** (stat hero `.lp-map-stats`) : « 566 sites documentés / sites ANFR (mai 2026) » → « 3 000 antennes / 1 026 supports - 219 communes / Source ANFR CartoRadio - extraction avril 2026 ». Aligne le chiffre visible de la landing sur le snapshot Supabase `antennas_corse` du 24 avril 2026.
+- **`cadre-scientifique.html`** (§ 9.2 Phénoménologie en Corse) : phrase « densité de l'ordre de 0,11 site/km² … 449 sites Corse-du-Sud + 511 sites Haute-Corse, soit environ 960 sites cumulés » remplacée par la formulation source ANFR validée Soleil : « 2 986 antennes individuelles géolocalisées (2G/3G/4G/5G), 1 026 supports distincts, 219 des 360 communes corses, 14 antennes offshore Cerbicale/môle de Bastia ». Ajout d'une phrase de densité dérivée : « environ 8 700 km², densité moyenne de l'ordre de 0,12 support/km² » — restaure l'antécédent de la phrase suivante « Cette densité reste inférieure à celle des grandes agglomérations métropolitaines » (arbitrage Soleil : ajouter densité sourcée par support plutôt que supprimer la comparaison).
+- **`app.html`** (2 occurrences L1451 légende couche, L1468 panneau sources) : « 974 supports » → « 1 026 supports ». Le compteur runtime du header (`nOnshore + ' antennes'`, calculé live sur le fetch Supabase) n'est pas touché — il était déjà correct.
+
+### Notes
+- Source de vérité unique : snapshot Supabase `antennas_corse` 2026-04-24 (`docs/data-sources/antennes_corse_notes.md`) — 3 000 antennes, 2 986 géolocalisées, 14 offshore, 1 026 supports (groupage lat/lon/opérateur), 219 communes.
+- Régression silencieuse historique : la landing était passée de « ~960 sites » (PR #274) à « 566 sites » sans entrée CHANGELOG — cette entrée trace aussi cette dérive a posteriori (cf. AUDIT_SITE_PHASE_D « Écart 3.4 »).
+- Hors scope (intacts) : compteur runtime header `app.html`, 30 fiches mesures ANFR/EXEM, fichiers `_archive/*`.
+
+---
+
 ## [Acte source de vérité patrimoine + nettoyage branche morte — 2026-05-21]
 
 ### Changed
