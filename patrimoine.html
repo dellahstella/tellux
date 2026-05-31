@@ -2362,16 +2362,35 @@ function updateBreadcrumb() {
         if (document.body.classList.contains('niveau-2')) exitNiveau2View();
         else { currentDoyenneSlug = null; currentPieveSlugV2 = null; currentSpotSlug = null; map.closePopup(); clearSelectedPolygons(); map.setView([42.15, 9.10], 9); updateBreadcrumb(); if (typeof syncHashToUrl === 'function') syncHashToUrl(); }
       } else if (lvl === 'doyenne' && currentDoyenneSlug) {
-        currentPieveSlugV2 = null; currentSpotSlug = null;
-        for (const p of Object.values(pieveShapesBySlugV2)) { const e = p.getElement && p.getElement(); if (e) e.classList.remove('selected'); }
-        const shape = doyenneShapesBySlug[currentDoyenneSlug];
-        if (shape) map.fitBounds(shape.getBounds(), {padding:[40,40]});
-        // Brief 47 — retour niveau 2 depuis niveau 3 via breadcrumb : cleanup
-        // sticker pieve + classe niveau-3 (sticker doyenné conservé).
-        document.body.classList.remove('niveau-3');
-        if (typeof _removePieveSticker === 'function') _removePieveSticker();
-        updateBreadcrumb();
-        if (typeof syncHashToUrl === 'function') syncHashToUrl();
+        // Fix N3->N2 breadcrumb (2026-05-31) : si on est en niveau 3,
+        // deleguer a exitNiveau3View qui re-attache correctement le calque
+        // N2 (spotsLevel2ByDoyenne) et ses markers individuels. Le cleanup
+        // manuel precedent oubliait ce re-attach et laissait seuls les
+        // markers de la pieve courante visibles (40 -> 9 sites).
+        // exitNiveau3View prend en charge : retrait classe niveau-3,
+        // cleanup clusterGroupN3 + active-niveau-3, re-attach slg + markers,
+        // flyToBounds doyenne, rebind tooltip doyenne, reset
+        // currentPieveSlugV2 + selected polygones, updateBreadcrumb,
+        // syncHashToUrl.
+        if (document.body.classList.contains('niveau-3')) {
+          // Brief 47 — sticker pieve retire ici car exitNiveau3View ne
+          // s'en occupe pas (sticker doyenne conserve).
+          if (typeof _removePieveSticker === 'function') _removePieveSticker();
+          exitNiveau3View({ backToN2: true });
+        } else {
+          // Defensive : cas "deja en N2" (pas de N3 a sortir). En pratique
+          // updateBreadcrumb rend le segment doyenne comme bc-doy-trigger
+          // en N2 pur (pas bc-item), donc ce chemin n'est sollicite que
+          // dans des etats inconsistants ; on conserve le comportement
+          // historique pour ne pas regresser.
+          currentPieveSlugV2 = null; currentSpotSlug = null;
+          for (const p of Object.values(pieveShapesBySlugV2)) { const e = p.getElement && p.getElement(); if (e) e.classList.remove('selected'); }
+          const shape = doyenneShapesBySlug[currentDoyenneSlug];
+          if (shape) map.fitBounds(shape.getBounds(), {padding:[40,40]});
+          if (typeof _removePieveSticker === 'function') _removePieveSticker();
+          updateBreadcrumb();
+          if (typeof syncHashToUrl === 'function') syncHashToUrl();
+        }
       } else if (lvl === 'pieve-v2' && currentPieveSlugV2) {
         currentSpotSlug = null;
         const shape = pieveShapesBySlugV2[currentPieveSlugV2];
