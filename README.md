@@ -81,11 +81,11 @@ Voir [`LICENSE`](LICENSE).
 
 ## Porteur
 
-**Lucas IANNACCONE**, à Bastia.
+**Porteur du projet Tellux**, à Bastia.
 
 Le projet est développé en autonomie, sans mandat ni partenariat institutionnel à la date de publication de cette page. Les démarches d'accès à certaines données institutionnelles (réseaux publics nationaux français) sont en cours.
 
-Contact : [stelladluca@proton.me](mailto:stelladluca@proton.me)
+Contact : [tellux.veille@gmail.com](mailto:tellux.veille@gmail.com)
 
 ---
 
