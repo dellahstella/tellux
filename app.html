@@ -5138,41 +5138,33 @@ async function loadAnt(){try{
     if(batch.length<pageSize)break;
     page++;
   }
-  // Filtre côtier RENFORCÉ — rejette les antennes en mer
-  const isLand=(lt,ln)=>{
-    if(lt<41.37||lt>43.01||ln<8.56||ln>9.56)return false;
-    if(lt>42.95&&(ln<9.25||ln>9.45))return false;
-    if(lt>42.90&&(ln<9.18||ln>9.48))return false;
-    if(lt>42.85&&ln<9.12)return false;
-    if(lt>42.75&&ln>9.50)return false;
-    if(lt>42.75&&lt<42.95&&ln<9.15)return false;
-    if(lt>42.15&&lt<42.40&&ln<8.58)return false;
-    if(lt>42.10&&lt<42.25&&ln<8.60)return false;
-    if(lt>42.05&&lt<42.15&&ln<8.63)return false;
-    if(lt>41.80&&lt<42.00&&ln<8.62)return false;
-    if(lt>41.62&&lt<41.78&&ln<8.80)return false;
-    if(lt<41.39)return false;
-    if(lt<41.60&&ln>9.30)return false;
-    if(lt>41.55&&lt<41.65&&ln>9.30)return false;
-    if(ln>9.53)return false;
-    return true;
-  };
+  // Filtre offshore — snapshot Supabase 2026-04-24 (docs/data-sources/antennes_corse_notes.md) :
+  // 14 antennes offshore connues (10 Cerbicale, 4 mole nord Bastia) ont commune null/vide.
+  // L'ancien filtre geometrique isLand (12 clauses bbox) rejetait ~180 antennes individuelles
+  // dont ~166 onshore a tort, plafonnant le compteur affiche a 534 vs 2 986 attendues
+  // (cf. diagnostic 2026-06-01, prod commit 2745b9d). On utilise desormais le champ commune
+  // dispo dans le SELECT (L5131) : !f.commune => offshore. Plus robuste, pas de geometrie
+  // a deviner. Bbox primaire L ci-dessous conservee en safeguard pour les lignes hors Corse
+  // (donnees aberrantes potentielles).
+  // Compteur affiche = nOnshore = nb d'antennes individuelles onshore (~2 986, coherent
+  // libelle landing "3 000 antennes"). Markers Leaflet sont dedoublonnes par posKey
+  // (lat/lon 5-decimales) pour la performance (~552 markers vs 2 986).
   console.log('Total lignes DB : ' + rows.length);
   console.log('Unique lat/lon : ' + new Set(rows.map(f=>f.lat+','+f.lon)).size);
   const seenPos=new Set();
-  let nSkipped=0, nSeaFiltered=0, nOnshore=0;
+  let nOffshore=0, nSeaFiltered=0, nOnshore=0;
   rows.forEach(f=>{
     if(f.lon<8.30||f.lon>9.65||f.lat<41.35||f.lat>43.03){nSeaFiltered++;return;}
+    if(!f.commune){nOffshore++;return;}
+    nOnshore++;
     const posKey=f.lat.toFixed(5)+','+f.lon.toFixed(5);
-    if(!isLand(f.lat,f.lon)){nSkipped++;return;}
     const gen=f.generation||'default';
     if(!seenPos.has(posKey)){
       L.marker([f.lat,f.lon],{icon:mkIcon(GC[gen]||GC.default,false,9),zIndexOffset:100}).on('click',()=>info((f.commune||'Corse')+' · '+(f.operateur||'?'))).addTo(lAnt);
       seenPos.add(posKey);
-      nOnshore++;
     }
   });
-  console.log('Antennes : '+nOnshore+' affichees ('+nSkipped+' rejetees par filtre cotier, '+nSeaFiltered+' hors bbox)');
+  console.log('Antennes : '+nOnshore+' onshore individuelles ('+seenPos.size+' positions distinctes, '+nOffshore+' offshore commune-null, '+nSeaFiltered+' hors bbox)');
   const hdr=document.getElementById('hdr-status');
   if(hdr)setStatus(nOnshore+' antennes',true);
   const anfrC=document.getElementById('anfr-count');
