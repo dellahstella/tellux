@@ -8,6 +8,18 @@ Ce document liste les dettes techniques ouvertes identifiées dans l'application
 
 ## Dettes actives
 
+### LEGAL-PAGES-FUSION-CLEANUP-001 — suppression des 2 pages sources redirigées
+
+**Statut :** Ouverte, basse priorité.
+
+**Date :** 2026-05-31
+
+**Description :** `donnees-vie-privee.html` et `retractations.html` ont été fusionnées respectivement dans `mentions-legales.html#confidentialite` et `transparence.html#retractations` (PR `fix/footer-redirects-legales-fusion-2026-05-31`). Les 2 pages sources sont conservées dans le repo et court-circuitées au runtime par les règles `_redirects` 301 (Cloudflare Pages). Les liens internes cliquables (`<a href>`) ont été repointés vers les ancres cibles. Les balises `<link rel="canonical">` self-référantes restent en place sur les pages sources mais ne sont jamais servies (le redirect 301 intercepte avant le rendu HTML).
+
+**Condition de déblocage :** PR `chore` dédiée — supprimer les 2 fichiers HTML sources après vérification qu'aucun lien externe ou privé (mail, document partagé, signalétique imprimée) ne cible encore `/donnees-vie-privee.html` ou `/retractations.html` directement. Les règles `_redirects` peuvent rester (idempotentes, court-circuitent quoi qu'il arrive).
+
+---
+
 ### MAPPING-PREQW-ORIGIN-UNKNOWN-001 — origine de pieve_zicavo / pieve_patrimonio non tracée
 
 **Statut :** Ouverte, basse priorité.
