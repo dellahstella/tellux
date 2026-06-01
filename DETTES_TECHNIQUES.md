@@ -8,6 +8,18 @@ Ce document liste les dettes techniques ouvertes identifiées dans l'application
 
 ## Dettes actives
 
+### TRANSPARENCE-FUSION-CLEANUP-001 — suppression de la page source `transparence.html` redirigée
+
+**Statut :** Ouverte, basse priorité.
+
+**Date :** 2026-05-31
+
+**Description :** `transparence.html` (sections 2 à 6) a été fusionnée dans `methode-et-limites.html` (nouvelles sections 9, 10 et 11 avec ancres `#sources-et-statuts`, `#zones-gelees`, `#cadres-archi-signalement` — PR `fix/refonte-doc-architecture-2026-05-31`). Le fichier source est conservé dans le repo et court-circuité au runtime par la règle `_redirects` 301 (Cloudflare Pages, `/transparence.html` → `/methode-et-limites.html`). Tous les liens internes cliquables (`<a href>`) du site ont été repointés vers `methode-et-limites.html` (avec ancre spécifique quand pertinent : `#sources-et-statuts`, `#zones-gelees`, `#cadres-archi-signalement`). La balise `<link rel="canonical">` self-référante reste en place sur la page source mais n'est jamais servie (le redirect 301 intercepte avant le rendu HTML).
+
+**Condition de déblocage :** PR `chore` dédiée — supprimer `transparence.html` après vérification qu'aucun lien externe ou privé (mail, document partagé, signalétique imprimée) ne cible encore `/transparence.html` directement. La règle `_redirects` peut rester (idempotente, court-circuite quoi qu'il arrive).
+
+---
+
 ### LEGAL-PAGES-FUSION-CLEANUP-001 — suppression des 2 pages sources redirigées
 
 **Statut :** Ouverte, basse priorité.
