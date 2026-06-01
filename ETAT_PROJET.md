@@ -1,6 +1,6 @@
 # Tellux — Etat du projet au 1er juin 2026
 
-**Auteur :** Lucas Iannaccone-Frasseto, projet Tellux Corse.
+**Auteur :** porteur du projet Tellux Corse.
 **Objet :** photo nette de l'etat du projet a la date de publication, Phase 1 EM-mairie publique. Renvoie vers `ROADMAP.md`, `ARCHITECTURE.md`, `DETTES_TECHNIQUES.md` et `CHANGELOG.md` pour les details techniques par axe.
 **Destination proposee :** racine du repo public `dellahstella/tellux`, fichier `ETAT_PROJET.md` (succede `docs/internal/ETAT_PROJET_2026-04-25.md` qui restait prive).
 
