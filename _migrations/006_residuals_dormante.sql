@@ -6,7 +6,7 @@
 -- le schéma cible, mais ne sera appliquée à la base qu'au moment de
 -- l'amorçage de la phase 1 du chantier, après décision explicite.
 --
--- Référence : docs/auto-affinage-conception-v1.md
+-- Référence : docs/em-mairie/auto-affinage-conception-v1.md
 -- Date de conception : 26 avril 2026
 -- Statut : DORMANTE (non appliquée)
 -- ===========================================================================
@@ -58,7 +58,7 @@ CREATE TRIGGER residuals_updated_at
 
 -- Documentation des colonnes
 COMMENT ON TABLE public.residuals IS
-  'Auto-affinage du modele Tellux : ecart mesure - prediction par contribution. Migration dormante au moment de la creation, voir docs/auto-affinage-conception-v1.md.';
+  'Auto-affinage du modele Tellux : ecart mesure - prediction par contribution. Migration dormante au moment de la creation, voir docs/em-mairie/auto-affinage-conception-v1.md.';
 COMMENT ON COLUMN public.residuals.domain IS
   'Domaine physique : M_static (magnetique statique), M_elf (basse frequence), RF (radiofrequence), I_gamma (rayonnement ionisant).';
 COMMENT ON COLUMN public.residuals.confidence_level IS
