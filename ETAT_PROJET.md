@@ -53,7 +53,7 @@ HTML monolithique sans bundler ni framework cote client, mobilisant Leaflet, Tur
 
 ### 2.4 Couche ANFR — chiffres canoniques
 
-Source : snapshot Supabase `antennas_corse` du 24 avril 2026. Cf. `docs/data-sources/antennes_corse_notes.md` et `cadre-scientifique.html` § 9.2.
+Source : snapshot Supabase `antennas_corse` du 24 avril 2026. Cf. `docs/em-mairie/data-sources/antennes_corse_notes.md` et `cadre-scientifique.html` § 9.2.
 
 - **3 000 antennes individuelles** geolocalisees (2G, 3G, 4G, 5G non millimetrique, tous operateurs).
 - **2 986 antennes** dans les contours communaux IGN de **219 des 360 communes corses**.

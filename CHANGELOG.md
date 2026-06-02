@@ -15,7 +15,7 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 - **`app.html`** (2 occurrences L1451 légende couche, L1468 panneau sources) : « 974 supports » → « 1 026 supports ». Le compteur runtime du header (`nOnshore + ' antennes'`, calculé live sur le fetch Supabase) n'est pas touché — il était déjà correct.
 
 ### Notes
-- Source de vérité unique : snapshot Supabase `antennas_corse` 2026-04-24 (`docs/data-sources/antennes_corse_notes.md`) — 3 000 antennes, 2 986 géolocalisées, 14 offshore, 1 026 supports (groupage lat/lon/opérateur), 219 communes.
+- Source de vérité unique : snapshot Supabase `antennas_corse` 2026-04-24 (`docs/em-mairie/data-sources/antennes_corse_notes.md`) — 3 000 antennes, 2 986 géolocalisées, 14 offshore, 1 026 supports (groupage lat/lon/opérateur), 219 communes.
 - Régression silencieuse historique : la landing était passée de « ~960 sites » (PR #274) à « 566 sites » sans entrée CHANGELOG — cette entrée trace aussi cette dérive a posteriori (cf. AUDIT_SITE_PHASE_D « Écart 3.4 »).
 - Hors scope (intacts) : compteur runtime header `app.html`, 30 fiches mesures ANFR/EXEM, fichiers `_archive/*`.
 
@@ -127,8 +127,8 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 - Scripts `scripts/phase_*.py` (archivage en PR B).
 
 ### Reference
-- Audit : `docs/operations/PIEVE_MAPPING_AMONT_AUDIT_2026-05-18.md`
-- Brief Code REV2 : `docs/operations/PIEVE_MAPPING_AMONT_D1_BRIEF_CODE_2026-05-18_REV2.md`
+- Audit : `docs/em-mairie/operations/PIEVE_MAPPING_AMONT_AUDIT_2026-05-18.md`
+- Brief Code REV2 : `docs/em-mairie/operations/PIEVE_MAPPING_AMONT_D1_BRIEF_CODE_2026-05-18_REV2.md`
 - Dette parent : `PIEVE-MAPPING-AMONT-DESYNCHRO-001` (HAUTE) — reste ouverte, clôture PR C.
 
 ---
@@ -148,7 +148,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 
 ### Reference
 - Prérequis : PR A B-ZONES Tier 1 mergée et validée prod.
-- Brief Code : `docs/operations/B_ZONES_BRIEF_CODE_2026-05-18.md`
+- Brief Code : `docs/em-mairie/operations/B_ZONES_BRIEF_CODE_2026-05-18.md`
 
 ---
 
@@ -178,8 +178,8 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 - Polygones zones rendus (au hover) : 0 → **15**.
 
 ### Reference
-- Audit : `docs/operations/B_ZONES_AUDIT_2026-05-18.md`
-- Brief Code : `docs/operations/B_ZONES_BRIEF_CODE_2026-05-18.md`
+- Audit : `docs/em-mairie/operations/B_ZONES_AUDIT_2026-05-18.md`
+- Brief Code : `docs/em-mairie/operations/B_ZONES_BRIEF_CODE_2026-05-18.md`
 - Doctrine : ADR-001 (navigation pédagogique), `BP-FIX-RATTACHEMENT-COMPLET-001`
 
 ---
@@ -347,8 +347,8 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 - Q7 : multipolygon Scandola préservé pour pieve_piana
 
 ### Reference
-- `docs/operations/PIEVES_SPLITS_VICO_BALAGNE_AUDIT_2026-05-18.md` (draft Cowork)
-- `docs/operations/ADR-001-pieves-doctrine.md` (Stratégie D)
+- `docs/em-mairie/operations/PIEVES_SPLITS_VICO_BALAGNE_AUDIT_2026-05-18.md` (draft Cowork)
+- `docs/em-mairie/operations/ADR-001-pieves-doctrine.md` (Stratégie D)
 
 ---
 
@@ -388,9 +388,9 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 - Q4 (note castagniccia) : version Cowork validée
 
 ### Reference
-- `docs/operations/PIEVES_STRATEGIE_D_PHASE1_BRIEF_CODE_2026-05-17.md`
-- `docs/operations/ADR-001-pieves-doctrine.md` (Stratégie D actée)
-- `docs/operations/PIEVES_CONTAINMENT_AUDIT_2026-05-17.md` (audit programmatique)
+- `docs/em-mairie/operations/PIEVES_STRATEGIE_D_PHASE1_BRIEF_CODE_2026-05-17.md`
+- `docs/em-mairie/operations/ADR-001-pieves-doctrine.md` (Stratégie D actée)
+- `docs/em-mairie/operations/PIEVES_CONTAINMENT_AUDIT_2026-05-17.md` (audit programmatique)
 
 ---
 
@@ -1110,7 +1110,7 @@ Cas particulier signalé pour clarté du lecteur : une section `#inscription-ter
 
 - Suppression de `patrimoine.html` et `agronomie.html`. Les deux fichiers existaient dans le dépôt public sans être liés depuis la landing ; ils sont retirés à l'occasion de l'audit de transparence du 27 avril 2026 pour aligner le périmètre public sur la phase 1 effectivement publiée (cartographie EM, outils communaux, corpus). Contenus conservés en interne pour réactivation éventuelle dans une phase ultérieure financée.
 - Mise à jour en cascade : `index.html` (bloc état d'avancement, références bibliographiques, sources territoire), `README.md`, `ROADMAP.md` (section périmètre, sections Phase 2/3/4 consolidées en une note neutre, renumérotation), `ARCHITECTURE.md`, `app.html` (lien biblio redirigé vers `corpus.html`).
-- Anonymisation de la mention nominative du destinataire de la première sollicitation méthodologique externe dans `ROADMAP.md` (section 7) et `docs/auto-affinage-conception-v1.md`.
+- Anonymisation de la mention nominative du destinataire de la première sollicitation méthodologique externe dans `ROADMAP.md` (section 7) et `docs/em-mairie/auto-affinage-conception-v1.md`.
 - Reformulation de la cible candidature financement (FEDER en priorité) dans les contextes publics.
 - Reformulation de l'accroche grand public (`index.html`, `mairies.html`) en cadrage dialogue institutionnel non anxiogène.
 - Retrait du chiffre « 130+ études peer-reviewed » du bloc numbers de la landing — non auditable publiquement.
@@ -1203,7 +1203,7 @@ Ratios urbains reviennent à des valeurs physiquement réalistes :
 - Dataset `public/data/points_chauds_radio_corse.json` — 5 sites U/Th documentaires (Argentella, Saleccia, Manso, Cap Corse, Murato)
 - Loaders idempotents : `loadPostesSources`, `loadEoliennes`, `loadPointsChaudsRadio`
 - Couches visuelles Leaflet + boutons menu : `b-postes`, `b-eoliennes` (Groupe 2), `b-points-chauds` (Groupe 3)
-- Notes méthodologiques : `docs/data-sources/postes_sources_corse_notes.md`, `eoliennes_corse_notes.md`, `points_chauds_radio_corse_notes.md`
+- Notes méthodologiques : `docs/em-mairie/data-sources/postes_sources_corse_notes.md`, `eoliennes_corse_notes.md`, `points_chauds_radio_corse_notes.md`
 
 ### Modifié — Calculs physiques
 
@@ -1252,7 +1252,7 @@ Ratios urbains reviennent à des valeurs physiquement réalistes :
 - Intégration 10 émetteurs TDF/radiodiffusion corse dans `calcRF` (modèle isotrope S = PAR/4πd², plafond 50 000 µW/m²)
 - Jeu de données `public/data/radon_communes_level3_corse.json` — 28 communes niveau 3 décret 2018-434 (IRSN)
 - Jeu de données `public/data/tdf_emitters_corse.json` — 10 émetteurs avec PAR estimées (ANFR/CSA)
-- Notes méthodologie sources : `docs/data-sources/radon_communes_level3_corse_notes.md`, `docs/data-sources/tdf_emitters_corse_notes.md`
+- Notes méthodologie sources : `docs/em-mairie/data-sources/radon_communes_level3_corse_notes.md`, `docs/em-mairie/data-sources/tdf_emitters_corse_notes.md`
 - Détection radon triple : règle département 2A entier + INSEE explicite + nom de commune normalisé
 - Handler click carte rendu asynchrone avec `Promise.all([reverseGeocodeCommune, fetchAltitudeIGN])`
 
