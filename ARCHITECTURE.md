@@ -178,7 +178,7 @@ Règles pour les nouveaux fichiers `public/data/` :
 - JSON compact (pas de whitespace inutile pour > 100 ko)
 - Toujours inclure un champ `_meta` avec `source`, `date_creation`, `version`
 - Ne jamais bundler ces fichiers dans `app.html`
-- Ajouter une note de méthodologie dans `docs/data-sources/`
+- Ajouter une note de méthodologie dans `docs/em-mairie/data-sources/`
 
 ### 3.bis docs/data/ — Source de vérité runtime patrimoine (Brief 33 split, 2026-05-06)
 
