@@ -56,7 +56,7 @@ BOUNDS_CORSE = {
 # Tellux ne curate pas OSM, mais filtre les anomalies evidentes ou le tag
 # amenity=kindergarten est en contradiction manifeste avec d'autres tags
 # de l'element (name, description). Chaque exclusion doit etre justifiee
-# et documentee dans docs/data-sources/etablissements_corse_notes.md.
+# et documentee dans docs/em-mairie/data-sources/etablissements_corse_notes.md.
 EXCLUDED_OSM_IDS = {
     "osm_node_7899283685": (
         "Olmeta-di-Capocorso (2B187), tag amenity=kindergarten mais name='Mairie'. "
