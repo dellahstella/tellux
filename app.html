@@ -811,30 +811,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .mat-chip input{display:none;}
 .ctx-btn.active{background:var(--maquis-pale);border-color:var(--maquis-clair);color:var(--acc);font-weight:500;}
 /* Module Simulation */
-.sim-panel{background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-top:10px;display:none;}
-.sim-panel-title{font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
-.sim-toolbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
-.sim-type-btn{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--pierre-ombre);color:var(--ardoise-clair);cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .15s;}
-.sim-type-btn.active{font-weight:500;}
-.sim-type-btn.perturb{border-color:#f87171;color:#991b1b;background:#fee2e2;}
-.sim-type-btn.attenu{border-color:#2dd4bf;color:#0f766e;background:#ccfbf1;}
-.sim-objects{max-height:180px;overflow-y:auto;margin-bottom:10px;}
-.sim-obj{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--r);border:1px solid var(--border);background:var(--pierre-ombre);margin-bottom:5px;font-size:12px;}
-.sim-obj-toggle{width:28px;height:16px;border-radius:8px;border:none;cursor:pointer;flex-shrink:0;position:relative;transition:background .2s;}
-.sim-obj-toggle.on{background:var(--maquis-clair);}
-.sim-obj-toggle.off{background:var(--bg3);}
-.sim-obj-dot{position:absolute;width:12px;height:12px;background:white;border-radius:50%;top:2px;transition:left .2s;box-shadow:0 1px 2px rgba(0,0,0,.2);}
-.sim-obj-toggle.on .sim-obj-dot{left:14px;}
-.sim-obj-toggle.off .sim-obj-dot{left:2px;}
-.sim-obj-info{flex:1;}
-.sim-obj-name{font-weight:500;color:var(--tx);}
-.sim-obj-meta{font-family:var(--mono);font-size:10px;color:var(--tx3);}
-.sim-obj-del{font-size:14px;color:var(--tx3);cursor:pointer;padding:0 4px;line-height:1;}
-.sim-obj-del:hover{color:var(--danger);}
-.sim-compare{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
-.sim-cmp-box{background:var(--pierre-ombre);border-radius:var(--r);padding:8px 10px;border:1px solid var(--border);}
-.sim-cmp-lbl{font-size:10px;color:var(--tx3);font-family:var(--mono);margin-bottom:4px;}
-.sim-cmp-val{font-size:16px;font-weight:500;}
+/* CSS .sim-* (simulateur bâtiment) purgé 2026-06-03 — module migré vers agronomie.html */
 .on-sim{background:#fdf8ef!important;color:#713f12!important;border-color:#c9a56c!important;font-weight:500;}
 .delta-popup .leaflet-popup-content-wrapper{background:rgba(247,248,250,.97);border:1px solid rgba(0,0,0,.1);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.12);padding:8px 12px;}
 .delta-popup .leaflet-popup-tip{background:rgba(247,248,250,.97);}
@@ -883,9 +860,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 [data-theme="dark"] .disclaimer-box h2{color:#e4e7ef;}
 [data-theme="dark"] .disclaimer-box p{color:#a0a7b8;}
 [data-theme="dark"] .leg-title{color:#e4e7ef!important;}
-[data-theme="dark"] .sim-type-btn{background:var(--pierre-ombre)!important;color:var(--tx)!important;border-color:var(--border)!important;}
-[data-theme="dark"] .sim-type-btn.perturb{background:#2a1a1a!important;color:#ef4444!important;border-color:#7f1d1d!important;}
-[data-theme="dark"] .sim-type-btn.attenu{background:#1a2a1a!important;color:#3ec9ab!important;border-color:#1a5c4b!important;}
+/* dark-mode .sim-type-btn purgé 2026-06-03 (simulateur migré agronomie.html) */
 [data-theme="dark"] .mat-chip{background:var(--pierre-ombre)!important;color:var(--ardoise-clair)!important;border-color:var(--border)!important;}
 [data-theme="dark"] #tellux-leg-panel{background:rgba(26,29,37,.97)!important;border-color:rgba(255,255,255,.08)!important;}
 /* Scrollbar discrète quand le contenu du panneau légende dépasse max-height */
@@ -1939,11 +1914,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   </div>
 </div>
 
-<!-- Simulateur bâtiment (panneau + toolbar + preco corpus) migré vers agronomie.html
-     chore/move-simulateur — réintégration UI au compte-goutte quand le moment viendra.
-     Les fonctions JS (togSim, setSim, startDrawRect, addRectBuilding, recalcSim, clearSim,
-     saveScenario, loadScenario, SIM_TYPES, simObjects, MATÉRIAUX ITU-R P.2040-2) restent
-     dans le fichier comme code dormant — elles seront extraites dans un second temps. -->
+<!-- Simulateur bâtiment migré vers agronomie.html — code JS dormant purgé 2026-06-03
+     (fix/app-purge-batiment-residus). Seuls calcN_RF (modèle Friis utilisé par
+     calcN_RF_calib) et calcSimDelta (stub neutre, retourne 0) sont conservés. -->
 
 <!-- PANNEAU MODE PROSPECTEUR TERRAIN -->
 <div class="geo-panel" id="geo-panel" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px">
@@ -6211,51 +6184,6 @@ document.addEventListener('DOMContentLoaded', function() {
   setTimeout(applyHashToMap, 800);
 });
 
-// ---- MODULE SIMULATION ----
-// SIM_TYPES — deux catégories distinctes selon la physique
-// SOURCES EM (effet sur nT magnétique statique) : antennes, lignes HT
-// MATÉRIAUX (effet sur V/m RF uniquement) : bâtiments — source ITU-R P.2040-2 (2021)
-// Restauré après cleanup v8 (bloc legitime EM supprimé par erreur avec patrimoine).
-const SIM_TYPES = {
-  // --- SOURCES EM (modèle nT, champ magnétique) ---
-  ant5g:    {label:'Antenne 5G',      icon:'📡', signe:+1, intensite:180, rayon:3.0, color:'#991b1b', domaine:'nT'},
-  ant4g:    {label:'Antenne 4G',      icon:'📶', signe:+1, intensite:130, rayon:2.5, color:'#b85c00', domaine:'nT'},
-  htline:   {label:'Ligne HT 63kV',   icon:'⚡', signe:+1, intensite:350, rayon:1.5, color:'#854d0e', domaine:'nT'},
-  htline_ht:{label:'Ligne HT 225kV',  icon:'⚡', signe:+1, intensite:700, rayon:2.5, color:'#5c2000', domaine:'nT'},
-  emetteur: {label:'Émetteur radio',  icon:'📻', signe:+1, intensite:200, rayon:5.0, color:'#1a4b8c', domaine:'nT'},
-  supp_ant: {label:'Retirer antenne', icon:'🚫', signe:-1, intensite:150, rayon:3.0, color:'#5c0000', domaine:'nT'},
-  supp_fh:  {label:'Retirer FH',      icon:'🚫', signe:-1, intensite:120, rayon:2.0, color:'#3a005c', domaine:'nT'},
-  // --- MATÉRIAUX BÂTIMENT (modèle RF en dB, ITU-R P.2040-2) ---
-  verre:    {label:'Vitrage standard', icon:'🪟', signe:-1, atten_db:3,  epaisseur:'4mm',   rayon:0.02, color:'#5ba3d4', domaine:'RF', note:'ITU-R P.2040: 2–5 dB selon fréquence'},
-  bois:     {label:'Paroi bois',       icon:'🌲', signe:-1, atten_db:5,  epaisseur:'20cm',  rayon:0.02, color:'#854d0e', domaine:'RF', note:'ITU-R P.2040: 4–8 dB'},
-  brique:   {label:'Mur brique',       icon:'🧱', signe:-1, atten_db:8,  epaisseur:'10cm',  rayon:0.03, color:'#b85c00', domaine:'RF', note:'ITU-R P.2040: 7–10 dB'},
-  beton_l:  {label:'Béton léger',      icon:'🏗', signe:-1, atten_db:12, epaisseur:'15cm',  rayon:0.04, color:'#0f766e', domaine:'RF', note:'ITU-R P.2040: 10–18 dB'},
-  beton_a:  {label:'Béton armé 20cm',  icon:'🏗', signe:-1, atten_db:18, epaisseur:'20cm',  rayon:0.05, color:'#0a5048', domaine:'RF', note:'ITU-R P.2040: 14–20 dB'},
-  beton_ep: {label:'Béton armé 40cm',  icon:'🏗', signe:-1, atten_db:25, epaisseur:'40cm',  rayon:0.05, color:'#063830', domaine:'RF', note:'ITU-R P.2040: 20–35 dB'},
-  acier:    {label:'Structure acier',  icon:'🔩', signe:-1, atten_db:45, epaisseur:'>1mm',  rayon:0.05, color:'#1a4b8c', domaine:'RF', note:'ITU-R P.2040: 40–60 dB — µr statique élevé si cage fermée'},
-  alu:      {label:'Paroi aluminium',  icon:'🔲', signe:-1, atten_db:50, epaisseur:'1mm',   rayon:0.04, color:'#2d5a8c', domaine:'RF', note:'ITU-R P.2040: 45–65 dB — excellent blindage RF'},
-  faraday:  {label:'Cage Faraday',     icon:'🛡', signe:-1, atten_db:80, epaisseur:'cage',  rayon:0.02, color:'#1a5c8c', domaine:'RF+nT', note:'Blindage RF total + µr acier sur champs BF'},
-  granit:   {label:'Mur granit',       icon:'🪨', signe:0,  atten_db:2,  epaisseur:'>1m',   rayon:0.02, color:'#5c3a9b', domaine:'RF', note:'µr ≈ 1.0 → aucun effet sur champ statique nT. Légère atténuation RF uniquement.'},
-};
-
-let simObjects=[], simMode=null, simMarkers=L.layerGroup(), lastClickedLatLng=null;
-simMarkers.addTo(map);
-
-function setSim(type){
-  simMode=type;
-  const t=SIM_TYPES[type];
-  const hint=document.getElementById('sim-hint');
-  hint.style.display='block';
-  let desc='';
-  if(t.domaine==='nT') desc=`${t.signe>0?'Perturbateur':'Atténuateur'} champ magnétique · ${t.signe>0?'+':'−'}${t.intensite} nT · rayon ${t.rayon}km`;
-  else if(t.domaine==='RF') desc=`Atténuation RF uniquement · −${t.atten_db} dB (${t.epaisseur}) · Pas d'effet sur le champ nT statique`;
-  else if(t.domaine==='RF+nT') desc=`Blindage RF −${t.atten_db} dB + effet champ statique`;
-  if(t.note) desc+=` · ${t.note}`;
-  hint.innerHTML=`${t.icon} <b>${t.label}</b> — ${desc}<br><span style="font-size:10px;color:var(--tx3)">Clic droit sur la carte pour placer · Source : ITU-R P.2040-2</span>`;
-  document.querySelectorAll('.sim-type-btn').forEach(b=>b.style.fontWeight='400');
-  event.target.style.fontWeight='700';
-}
-
 // ============================================================
 // MODÈLE EXPOSITION RF N_RF(lat,lon) — en V/m
 // Équation de Friis (1946) : E = √(30×EIRP) / d (champ libre)
@@ -6277,256 +6205,10 @@ function calcN_RF(lat,lon){
   return Math.sqrt(E2); // V/m
 }
 
-function calcSimDelta(lat,lon){
-  let d=0;
-  simObjects.filter(o=>o.actif).forEach(o=>{
-    const km=dist(lat,lon,o.lat,o.lon);
-    if(o.type==='_rect'){
-      if(km<o._rayon){const decay=Math.max(0,1-(km/o._rayon)**1.5);d+=o._signe*o._intensite*decay;}
-      return;
-    }
-    if(o.type==='_rect'){
-      return `<div class="sim-obj">
-        <button class="sim-obj-toggle ${o.actif?'on':'off'}" onclick="toggleSimObj(${i})"><div class="sim-obj-dot"></div></button>
-        <div class="sim-obj-info">
-          <div class="sim-obj-name">${o._icon} ${o._label}</div>
-          <div class="sim-obj-meta">${o.lat.toFixed(4)}°N · ${o._signe>0?'+':o._signe<0?'-':'±'}${o._intensite} nT · rayon ~${(o._rayon*1000).toFixed(0)}m</div>
-        </div>
-        <span class="sim-obj-del" onclick="removeSimObj(${i})" title="Supprimer">✕</span>
-      </div>`;
-    }
-    const t=SIM_TYPES[o.type];
-    if(km<t.rayon){const decay=Math.max(0,1-(km/t.rayon)**1.5);d+=t.signe*t.intensite*decay;}
-  });
-  return Math.round(d);
-}
-
-function renderSimObjects(){
-  // Guard : DOM simulateur migré vers agronomie.html
-  const el=document.getElementById('sim-objects');
-  if(!el)return;
-  if(!simObjects.length){
-    el.innerHTML='<div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px">Aucun objet simulé — sélectionnez un type puis cliquez sur la carte</div>';
-    const _cmp=document.getElementById('sim-compare');if(_cmp)_cmp.style.display='none';
-    return;
-  }
-  el.innerHTML=simObjects.map((o,i)=>{
-    const isRect=o.type==='_rect';
-    const icon=isRect?o._icon:SIM_TYPES[o.type].icon;
-    const label=isRect?o._label:SIM_TYPES[o.type].label;
-    const signe=isRect?o._signe:SIM_TYPES[o.type].signe;
-    const intensite=isRect?o._intensite:SIM_TYPES[o.type].intensite;
-    const rayon=isRect?o._rayon:SIM_TYPES[o.type].rayon;
-    return '<div class="sim-obj">'+
-      '<button class="sim-obj-toggle '+(o.actif?'on':'off')+'" onclick="toggleSimObj('+i+')"><div class="sim-obj-dot"></div></button>'+
-      '<div class="sim-obj-info">'+
-      '<div class="sim-obj-name">'+icon+' '+label+'</div>'+
-      '<div class="sim-obj-meta">'+o.lat.toFixed(4)+'°N · '+(signe>0?'+':signe<0?'-':'±')+intensite+' nT · '+(rayon<1?Math.round(rayon*1000)+'m':rayon+'km')+'</div>'+
-      '</div>'+
-      '<span class="sim-obj-del" onclick="removeSimObj('+i+')" title="Supprimer">✕</span>'+
-    '</div>';
-  }).join('');
-}
-
-function toggleSimObj(i){simObjects[i].actif=!simObjects[i].actif;renderSimObjects();updateSimCompare();}
-function removeSimObj(i){
-  simMarkers.clearLayers();
-  simObjects.splice(i,1);
-  simObjects.forEach(o=>{
-    if(o.type==='_rect')return; // rectangles re-drawn separately
-    const t=SIM_TYPES[o.type];
-    L.circleMarker([o.lat,o.lon],{radius:6,color:t.color,fillColor:t.color,fillOpacity:0.7,weight:2}).addTo(simMarkers);
-  });
-  renderSimObjects();updateSimCompare();
-}
-function clearSim(){
-  simObjects=[];simMarkers.clearLayers();
-  rectDrawState=null;
-  if(rectPreview){map.removeLayer(rectPreview);rectPreview=null;}
-  renderSimObjects();updateSimCompare();
-  document.getElementById('sim-hint').style.display='none';
-  document.getElementById('btn-draw-rect').style.fontWeight='400';
-  simMode=null;
-}
-
-// --- Mode dessin rectangle ---
-let rectDrawState=null,rectPreview=null,rectCorner1=null;
-
-function startDrawRect(){
-  simMode=null;
-  rectDrawState='waiting_first';
-  const hint=document.getElementById('sim-hint');
-  hint.style.display='block';
-  hint.textContent='✏ 1er clic = coin SW du bâtiment — 2ème clic = coin NE';
-  document.getElementById('btn-draw-rect').style.fontWeight='700';
-}
-
-function addRectBuilding(sw,ne,material){
-  const types={
-    beton:{label:'Béton armé',signe:-1,intensite:30,icon:'🏗',color:'#0f766e'},
-    acier:{label:'Acier',signe:-1,intensite:80,icon:'🔩',color:'#0f766e'},
-    granit:{label:'Granit',signe:+1,intensite:15,icon:'🪨',color:'#5c3a9b'},
-    bois:{label:'Bois/naturel',signe:0,intensite:0,icon:'🌲',color:'#854d0e'},
-  };
-  const t=types[material]||types.beton;
-  const clat=(sw.lat+ne.lat)/2,clon=(sw.lng+ne.lng)/2;
-  const rayon=Math.max(
-    Math.abs(ne.lat-sw.lat)*111/2,
-    Math.abs(ne.lng-sw.lng)*111*Math.cos(clat*Math.PI/180)/2
-  );
-  simObjects.push({type:'_rect',lat:clat,lon:clon,actif:true,
-    _label:t.label+' (bâtiment)',_icon:t.icon,_signe:t.signe,
-    _intensite:t.intensite,_rayon:Math.max(rayon,0.02),_color:t.color});
-  // Dessiner le rectangle sur la carte
-  const rect=L.rectangle([sw,ne],{color:t.color,weight:1.5,opacity:.7,fillColor:t.color,fillOpacity:.15});
-  rect.bindTooltip(`${t.icon} ${t.label}`,{permanent:false}).addTo(simMarkers);
-  renderSimObjects();updateSimCompare();
-  if(rectPreview){map.removeLayer(rectPreview);rectPreview=null;}
-}
-
-function updateSimCompare(){
-  // Simulateur bâtiment migré vers agronomie.html — DOM absent côté app.html.
-  // Guard tolérant : on sort silencieusement si les nœuds ne sont plus là.
-  const _cmp=document.getElementById('sim-compare');
-  if(!_cmp)return;
-  if(!lastClickedLatLng||!simObjects.length){_cmp.style.display='none';return;}
-  const {lat,lng}=lastClickedLatLng;
-  const {human:beforeNt}=calcAll(lat,lng);
-  const deltaNt=calcSimDelta(lat,lng);
-  const afterNt=beforeNt+deltaNt;
-  const rfDb=calcSimRF(lat,lng);
-  _cmp.style.display='grid';
-  // Champ nT
-  const _bef=document.getElementById('sim-before');
-  const _aft=document.getElementById('sim-after');
-  if(_bef)_bef.innerHTML=`<div style="font-size:11px;color:var(--tx3);margin-bottom:2px">Champ magnétique</div>${beforeNt} nT`;
-  const colNt=deltaNt>50?'var(--danger)':deltaNt<-50?'var(--acc)':'var(--ardoise-clair)';
-  if(_aft){
-    _aft.innerHTML=
-      `<div style="font-size:11px;color:var(--tx3);margin-bottom:2px">Champ magnétique</div>`+
-      `<span style="color:${colNt}">${deltaNt>=0?'+':''}${deltaNt} nT → ${afterNt} nT</span>`+
-      (rfDb>0?`<br><div style="font-size:11px;color:var(--tx3);margin-top:4px">Atténuation RF</div><span style="color:var(--acc)">−${rfDb} dB <span style="font-size:10px">(×${(Math.pow(10,-rfDb/20)).toFixed(3)} en V/m)</span></span>`:'');
-    _aft.style.color='';
-  }
-}
-
-function recalcSim(){
-  if(simObjects.length){
-    // Zoom adaptatif : résolution fine si objets à portée courte (<200m)
-    const hasLocal=simObjects.some(o=>SIM_TYPES[o.type].rayon<0.2);
-    if(hasLocal&&lastClickedLatLng){
-      buildHotLocal(lastClickedLatLng.lat,lastClickedLatLng.lng,0.5,0.003);
-    } else if(lHot.getLayers().length>0){
-      lHot.clearLayers();buildHot();
-    }
-  }
-  if(lastClickedLatLng)map.fire('click',{latlng:lastClickedLatLng,layerPoint:map.latLngToLayerPoint(lastClickedLatLng),containerPoint:map.latLngToContainerPoint(lastClickedLatLng)});
-  info('<span style="color:var(--acc)">Carte recalculée avec les objets simulés.</span>',null,5000);
-}
-
-// Recalcul local haute résolution autour d'un point (rayon en degrés, step en degrés)
-function buildHotLocal(clat,clon,radius,step){
-  // Supprimer les rectangles locaux précédents (classe CSS sim-local)
-  lHot.eachLayer(l=>{if(l._simLocal)lHot.removeLayer(l);});
-  for(let a=clat-radius;a<clat+radius;a+=step){
-    for(let o=clon-radius;o<clon+radius;o+=step){
-      const {human:h,water:w,geo:g,score:sc}=calcAll(a,o);
-      if(sc>80){
-        const {fill,opacity}=scoreColor(sc);
-        const rect=L.rectangle([[a,o],[a+step,o+step]],{
-          color:fill,weight:0.3,opacity:0.5,fillColor:fill,fillOpacity:opacity+0.1
-        });
-        rect._simLocal=true;
-        rect.addTo(lHot);
-      }
-    }
-  }
-}
-
-// Clic droit ou clic en mode sim → placer objet
-// Gestion clics en mode dessin rectangle (clic gauche)
-map.on('click',e=>{
-  if(rectDrawState==='waiting_first'){
-    rectCorner1=e.latlng;
-    rectDrawState='waiting_second';
-    const hint=document.getElementById('sim-hint');
-    hint.textContent='✏ 2ème clic = coin opposé du bâtiment';
-    if(rectPreview){map.removeLayer(rectPreview);rectPreview=null;}
-    return;
-  }
-  if(rectDrawState==='waiting_second'&&rectCorner1){
-    const sw=L.latLng(Math.min(rectCorner1.lat,e.latlng.lat),Math.min(rectCorner1.lng,e.latlng.lng));
-    const ne=L.latLng(Math.max(rectCorner1.lat,e.latlng.lat),Math.max(rectCorner1.lng,e.latlng.lng));
-    rectDrawState=null;
-    document.getElementById('btn-draw-rect').style.fontWeight='400';
-    // Demander le matériau
-    const mat=prompt('Matériau du bâtiment :\n- beton (béton armé, atténuation)\n- acier (structure métallique, forte atténuation)\n- granit (granit, légère amplification piézo)\n- bois (matériaux naturels, neutre)\n\nEntrez le type :','beton');
-    if(mat)addRectBuilding(sw,ne,mat.trim().toLowerCase());
-    const hint=document.getElementById('sim-hint');
-    hint.style.display='none';
-    return;
-  }
-});
-
-map.on('contextmenu',e=>{
-  if(!simMode)return;
-  L.DomEvent.preventDefault(e);
-  const t=SIM_TYPES[simMode];
-  simObjects.push({type:simMode,lat:e.latlng.lat,lon:e.latlng.lng,actif:true});
-  L.circleMarker([e.latlng.lat,e.latlng.lng],{radius:6,color:t.color,fillColor:t.color,fillOpacity:0.7,weight:2})
-    .bindTooltip(`${t.icon} ${t.label}`,{permanent:false,direction:'top'}).addTo(simMarkers);
-  renderSimObjects();updateSimCompare();
-  info(`${t.icon} <b>${t.label}</b> placé en ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)} · ${simObjects.length} objet(s) simulé(s)`,null,5000);
-});
-
-// Préview rectangle en cours de dessin
-map.on('mousemove',e=>{
-  if(rectDrawState==='waiting_second'&&rectCorner1){
-    if(rectPreview)map.removeLayer(rectPreview);
-    const sw=L.latLng(Math.min(rectCorner1.lat,e.latlng.lat),Math.min(rectCorner1.lng,e.latlng.lng));
-    const ne=L.latLng(Math.max(rectCorner1.lat,e.latlng.lat),Math.max(rectCorner1.lng,e.latlng.lng));
-    rectPreview=L.rectangle([sw,ne],{color:'#1a4b8c',weight:1.5,opacity:.7,fillColor:'#1a4b8c',fillOpacity:.1,dashArray:'5 4'}).addTo(map);
-  }
-});
-
-// Stocker le dernier clic pour le compare
-const _origMapClick=map._events.click?.[0]?.fn;
-map.on('click',e=>{lastClickedLatLng=e.latlng;updateSimCompare();});
-
-function saveScenario(){
-  if(!simObjects.length){info('<span style="color:var(--warn)">Aucun objet à sauvegarder.</span>',null,5000);return;}
-  const name=prompt('Nom du scénario :','Scénario 1');
-  if(!name)return;
-  try{
-    const scenarios=JSON.parse(localStorage.getItem('tellux_scenarios')||'{}');
-    scenarios[name]={objects:simObjects.map(o=>({...o})),date:new Date().toLocaleDateString('fr-FR')};
-    localStorage.setItem('tellux_scenarios',JSON.stringify(scenarios));
-    info('Scenario "'+name+'" sauvegarde ('+simObjects.length+' objet(s)).','success',5000);
-  }catch(e){info('Erreur sauvegarde localStorage.','error',5000);}
-}
-
-function loadScenario(){
-  try{
-    const scenarios=JSON.parse(localStorage.getItem('tellux_scenarios')||'{}');
-    const names=Object.keys(scenarios);
-    if(!names.length){info('Aucun scenario sauvegarde.','warn',5000);return;}
-    const list=names.map((n,i)=>`${i+1}. ${n} (${scenarios[n].date})`).join('\n');
-    const choice=prompt('Scénarios disponibles :\n'+list+'\n\nEntrez le numéro ou le nom :');
-    if(!choice)return;
-    const idx=parseInt(choice)-1;
-    const key=isNaN(idx)?choice:names[idx];
-    if(!scenarios[key]){info('Scenario introuvable.','error',5000);return;}
-    simObjects=scenarios[key].objects;
-    simMarkers.clearLayers();
-    simObjects.forEach(o=>{
-      if(o.type==='_rect')return; // rectangles non re-dessinés (positions stockées)
-      const t=SIM_TYPES[o.type];
-      if(t)L.circleMarker([o.lat,o.lon],{radius:6,color:t.color,fillColor:t.color,fillOpacity:0.7,weight:2}).addTo(simMarkers);
-    });
-    renderSimObjects();updateSimCompare();
-    info('Scenario "'+key+'" charge — '+simObjects.length+' objet(s).','success',5000);
-  }catch(e){info('Erreur chargement.','error',5000);}
-}
+// Stub neutre — simulateur bâtiment migré vers agronomie.html (2026-06-03).
+// calcSimDelta est appelée par calcAll() ; on retourne 0 pour ne perturber
+// aucun calcul nT côté app.html (aucun objet simulé n'est plus posable ici).
+function calcSimDelta(lat,lon){return 0;}
 
 // Météo locale — pression et humidité influencent la propagation RF
 // Source : ITU-R P.453 (réfractivité troposphérique)
