@@ -54,10 +54,16 @@ SCHOLAR_FROM = "scholaralerts-noreply@google.com"
 PROMPT_PATH = os.environ.get(
     "PROMPT_PATH", "docs/pilotage/prompt_veille_tellux_v2.md"
 )
+INTEGRATION_PROMPT_PATH = os.environ.get(
+    "INTEGRATION_PROMPT_PATH", "docs/pilotage/prompt_integration_corpus.md"
+)
 PRIVATE_REPO = os.environ.get("PRIVATE_REPO", "dellahstella/tellux-corpus-internal")
 ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5")
 LOOKBACK_DAYS = int(os.environ.get("LOOKBACK_DAYS", "7"))
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "_corpus_veille/syntheses")
+INTEGRATION_OUTPUT_DIR = os.environ.get(
+    "INTEGRATION_OUTPUT_DIR", "_corpus_veille/integrations"
+)
 DRY_RUN = os.environ.get("DRY_RUN", "0") == "1"
 
 REQUIRED_SECRETS = [
@@ -143,9 +149,13 @@ def fetch_scholar_emails(service: Any, lookback_days: int) -> list[dict[str, str
     return out
 
 
-def fetch_prompt_from_private_repo() -> str:
-    """Récupère le prompt depuis le repo privé via API GitHub (PAT)."""
-    url = f"https://api.github.com/repos/{PRIVATE_REPO}/contents/{PROMPT_PATH}"
+def fetch_prompt_from_private_repo(path: str = PROMPT_PATH) -> str:
+    """Récupère un prompt depuis le repo privé via API GitHub (PAT).
+
+    Utilisée pour le prompt veille (PROMPT_PATH) et le prompt intégration
+    (INTEGRATION_PROMPT_PATH).
+    """
+    url = f"https://api.github.com/repos/{PRIVATE_REPO}/contents/{path}"
     headers = {
         "Authorization": f"Bearer {os.environ['GITHUB_PAT']}",
         "Accept": "application/vnd.github.v3.raw",
@@ -154,9 +164,8 @@ def fetch_prompt_from_private_repo() -> str:
     r = requests.get(url, headers=headers, timeout=30)
     if r.status_code == 404:
         fail(
-            f"Prompt absent : {PROMPT_PATH} sur {PRIVATE_REPO}. "
-            f"Vérifier que le fichier existe (le brief mentionne v2 — "
-            f"si seulement v1 est dispo, surcharger PROMPT_PATH dans le workflow)."
+            f"Prompt absent : {path} sur {PRIVATE_REPO}. "
+            f"Vérifier que le fichier existe."
         )
     r.raise_for_status()
     return r.text
@@ -241,45 +250,163 @@ def commit_synthesis(content: str, today: dt.date) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Integration corpus (best-effort, etape 2 du run)
+
+
+def call_anthropic_integration(integration_prompt: str, synthesis: str) -> str:
+    """Appelle Claude API pour produire la note d'integration corpus.
+
+    Input = synthese hebdo deja produite par l'etape 1. Output = note
+    d'integration markdown (recommandations par axe, statuts epistemiques,
+    candidats amendements corpus + implications appli flaggees "a arbitrer").
+    """
+    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
+    user_message = (
+        f"{integration_prompt}\n\n"
+        f"---\n\n"
+        f"# Synthèse veille hebdomadaire à intégrer\n\n"
+        f"{synthesis}"
+    )
+
+    print(f"[integration] Modèle {ANTHROPIC_MODEL}, {len(user_message)} caractères en input")
+    msg = client.messages.create(
+        model=ANTHROPIC_MODEL,
+        max_tokens=8192,
+        messages=[{"role": "user", "content": user_message}],
+    )
+    return "".join(block.text for block in msg.content if block.type == "text")
+
+
+def commit_integration(content: str, today: dt.date) -> str:
+    """Commit la note d'integration dans le repo prive. Retourne le path."""
+    filename = f"note_integration_{today.isoformat()}.md"
+    path = f"{INTEGRATION_OUTPUT_DIR}/{filename}"
+    url = f"https://api.github.com/repos/{PRIVATE_REPO}/contents/{path}"
+    headers = {
+        "Authorization": f"Bearer {os.environ['GITHUB_PAT']}",
+        "Accept": "application/vnd.github+json",
+    }
+    encoded = base64.b64encode(content.encode("utf-8")).decode("ascii")
+    payload = {
+        "message": f"data: note d'intégration veille Scholar {today.isoformat()}",
+        "content": encoded,
+        "branch": "main",
+    }
+
+    if DRY_RUN:
+        print(f"[dry-run] integration PUT {url} ({len(content)} chars)")
+        return path
+
+    # Preflight GET pour SHA si fichier existe (idempotence cron, cf. commit_synthesis)
+    print(f"[integration] GET {url} (preflight SHA check)")
+    r_get = requests.get(url, headers=headers, params={"ref": "main"}, timeout=30)
+    if r_get.status_code == 200:
+        existing_sha = r_get.json().get("sha")
+        if existing_sha:
+            payload["sha"] = existing_sha
+            print(f"[integration] Fichier existant (sha={existing_sha[:8]}), mode UPDATE")
+    elif r_get.status_code == 404:
+        print("[integration] Fichier inexistant, mode CREATE")
+    else:
+        print(f"[integration] Preflight GET retourne {r_get.status_code} (continue en CREATE)")
+
+    print(f"[integration] PUT {url}")
+    r = requests.put(url, headers=headers, json=payload, timeout=30)
+    if r.status_code in (200, 201):
+        print(f"[ok] Note d'intégration commitée : {path}")
+        return path
+    else:
+        # Best-effort : on log l'erreur mais on ne fail() pas — la synthese
+        # a deja ete commitee avec succes a l'etape 1, on ne casse pas le run.
+        raise RuntimeError(f"Commit integration échoué : {r.status_code} — {r.text[:200]}")
+
+
+def run_integration_step(today: dt.date, synthesis_content: str) -> str | None:
+    """Lance l'etape integration best-effort. Retourne le path commite ou None.
+
+    Encapsule fetch prompt + call Claude + commit dans try/except global. Toute
+    erreur logge un WARN mais ne fait pas echouer le run (la synthese passe
+    quand meme, la note d'integration est un bonus du cycle).
+    """
+    try:
+        print(f"[integration] start")
+        integration_prompt = fetch_prompt_from_private_repo(INTEGRATION_PROMPT_PATH)
+        note = call_anthropic_integration(integration_prompt, synthesis_content)
+        header = (
+            f"# Note d'intégration veille Scholar — {today.isoformat()}\n\n"
+            f"**Modèle** : {ANTHROPIC_MODEL}\n"
+            f"**Synthèse source** : `{OUTPUT_DIR}/synthese_{today.isoformat()}.md`\n"
+            f"**Prompt intégration** : `{INTEGRATION_PROMPT_PATH}`\n\n"
+            f"---\n\n"
+        )
+        path = commit_integration(header + note, today)
+        print(f"[integration] done")
+        return path
+    except Exception as e:
+        print(f"[integration] WARN — étape échouée (non fatale) : {e}")
+        return None
+
+
+# ---------------------------------------------------------------------------
 # Notification (best-effort)
 
 
-def notify_synthesis_created(today: dt.date, n_emails: int) -> None:
-    """Ouvre une issue dans le repo prive pour signaler la synthese produite.
+def notify_run_complete(
+    today: dt.date,
+    n_emails: int,
+    synthesis_path: str,
+    integration_path: str | None,
+) -> None:
+    """Ouvre une issue dans le repo prive pour signaler la production du run.
 
-    Best-effort : si l'API GitHub echoue (rate limit, scope insuffisant, etc.),
-    on log un warning sans faire echouer le run (la synthese a deja ete commitee
-    avec succes, la notification est un bonus).
+    L'issue lie la synthese ET la note d'integration (si produite). Si la note
+    d'integration a echoue, l'issue le signale explicitement pour que Soleil
+    sache que le cycle est partiel.
 
-    Canal retenu : GitHub issue dans tellux-corpus-internal via le PAT deja
-    present (GITHUB_PAT, scope `repo` couvre les issues). Aucun nouveau secret
-    requis. Soleil peut activer les notifications GitHub Mobile/email sur le
-    repo prive pour recevoir un ping a chaque issue cree.
+    Best-effort : si l'API GitHub echoue, on log un warning sans faire echouer
+    le run (la synthese et eventuellement la note sont deja commitees, la
+    notification est un bonus).
     """
     if DRY_RUN:
         print(f"[dry-run] notification issue skipped")
         return
 
-    filename = f"synthese_{today.isoformat()}.md"
-    path = f"{OUTPUT_DIR}/{filename}"
-    file_url = f"https://github.com/{PRIVATE_REPO}/blob/main/{path}"
+    synthesis_url = f"https://github.com/{PRIVATE_REPO}/blob/main/{synthesis_path}"
     url = f"https://api.github.com/repos/{PRIVATE_REPO}/issues"
     headers = {
         "Authorization": f"Bearer {os.environ['GITHUB_PAT']}",
         "Accept": "application/vnd.github+json",
     }
-    title = f"[veille] Synthèse hebdomadaire — {today.isoformat()}"
+    title = f"[veille] Synthèse + intégration — {today.isoformat()}"
+
+    integration_section = ""
+    if integration_path:
+        integration_url = f"https://github.com/{PRIVATE_REPO}/blob/main/{integration_path}"
+        integration_section = (
+            f"\n## Note d'intégration corpus\n\n"
+            f"- **Fichier** : `{integration_path}`\n"
+            f"- **Lien** : {integration_url}\n"
+        )
+    else:
+        integration_section = (
+            f"\n## Note d'intégration corpus\n\n"
+            f"⚠️ **Étape intégration échouée** ce cycle (best-effort, non fatal). "
+            f"Voir les logs du run pour la cause. La synthèse hebdo ci-dessus est en place.\n"
+        )
+
     body = (
-        f"Synthèse veille Scholar produite et commitée dans le repo privé.\n\n"
-        f"- **Date** : {today.isoformat()}\n"
+        f"Run veille hebdomadaire terminé pour le **{today.isoformat()}**.\n\n"
+        f"## Synthèse veille\n\n"
         f"- **Fenêtre** : {LOOKBACK_DAYS} jours\n"
         f"- **Emails analysés** : {n_emails}\n"
         f"- **Modèle** : `{ANTHROPIC_MODEL}`\n"
-        f"- **Fichier** : `{path}`\n"
-        f"- **Lien** : {file_url}\n\n"
-        f"Cette issue est générée automatiquement par le workflow `veille_scholar.yml`. "
-        f"La fermer (ou la laisser) n'a pas d'impact ; elle sert uniquement de signal "
-        f"de production hebdomadaire."
+        f"- **Fichier** : `{synthesis_path}`\n"
+        f"- **Lien** : {synthesis_url}\n"
+        f"{integration_section}\n"
+        f"---\n\n"
+        f"Issue générée automatiquement par le workflow `veille_scholar.yml`. "
+        f"Fermer (ou laisser) sans impact ; sert uniquement de signal de production hebdomadaire."
     )
     payload = {"title": title, "body": body}
 
@@ -311,10 +438,11 @@ def main() -> int:
         print("[stop] Aucun email Scholar trouvé — pas de synthèse à produire.")
         return 0
 
+    # Etape 1 — Synthese veille (etape critique, fail si KO)
     prompt = fetch_prompt_from_private_repo()
     synthesis = call_anthropic(prompt, emails)
 
-    header = (
+    synthesis_header = (
         f"# Synthèse veille Scholar — {today.isoformat()}\n\n"
         f"**Modèle** : {ANTHROPIC_MODEL}\n"
         f"**Fenêtre** : {LOOKBACK_DAYS} jours\n"
@@ -322,10 +450,15 @@ def main() -> int:
         f"**Prompt source** : `{PROMPT_PATH}`\n\n"
         f"---\n\n"
     )
-    commit_synthesis(header + synthesis, today)
+    synthesis_full = synthesis_header + synthesis
+    commit_synthesis(synthesis_full, today)
+    synthesis_path = f"{OUTPUT_DIR}/synthese_{today.isoformat()}.md"
 
-    # Notification (best-effort : n'altere pas le code retour du run)
-    notify_synthesis_created(today, len(emails))
+    # Etape 2 — Note d'integration corpus (best-effort, ne casse pas le run)
+    integration_path = run_integration_step(today, synthesis_full)
+
+    # Etape 3 — Notification issue (best-effort, lie synthese + integration)
+    notify_run_complete(today, len(emails), synthesis_path, integration_path)
 
     print("[done]")
     return 0
