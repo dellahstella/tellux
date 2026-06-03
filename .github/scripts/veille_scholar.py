@@ -241,6 +241,60 @@ def commit_synthesis(content: str, today: dt.date) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Notification (best-effort)
+
+
+def notify_synthesis_created(today: dt.date, n_emails: int) -> None:
+    """Ouvre une issue dans le repo prive pour signaler la synthese produite.
+
+    Best-effort : si l'API GitHub echoue (rate limit, scope insuffisant, etc.),
+    on log un warning sans faire echouer le run (la synthese a deja ete commitee
+    avec succes, la notification est un bonus).
+
+    Canal retenu : GitHub issue dans tellux-corpus-internal via le PAT deja
+    present (GITHUB_PAT, scope `repo` couvre les issues). Aucun nouveau secret
+    requis. Soleil peut activer les notifications GitHub Mobile/email sur le
+    repo prive pour recevoir un ping a chaque issue cree.
+    """
+    if DRY_RUN:
+        print(f"[dry-run] notification issue skipped")
+        return
+
+    filename = f"synthese_{today.isoformat()}.md"
+    path = f"{OUTPUT_DIR}/{filename}"
+    file_url = f"https://github.com/{PRIVATE_REPO}/blob/main/{path}"
+    url = f"https://api.github.com/repos/{PRIVATE_REPO}/issues"
+    headers = {
+        "Authorization": f"Bearer {os.environ['GITHUB_PAT']}",
+        "Accept": "application/vnd.github+json",
+    }
+    title = f"[veille] Synthèse hebdomadaire — {today.isoformat()}"
+    body = (
+        f"Synthèse veille Scholar produite et commitée dans le repo privé.\n\n"
+        f"- **Date** : {today.isoformat()}\n"
+        f"- **Fenêtre** : {LOOKBACK_DAYS} jours\n"
+        f"- **Emails analysés** : {n_emails}\n"
+        f"- **Modèle** : `{ANTHROPIC_MODEL}`\n"
+        f"- **Fichier** : `{path}`\n"
+        f"- **Lien** : {file_url}\n\n"
+        f"Cette issue est générée automatiquement par le workflow `veille_scholar.yml`. "
+        f"La fermer (ou la laisser) n'a pas d'impact ; elle sert uniquement de signal "
+        f"de production hebdomadaire."
+    )
+    payload = {"title": title, "body": body}
+
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=15)
+        if r.status_code in (200, 201):
+            issue_url = r.json().get("html_url", "")
+            print(f"[notify] Issue ouverte : {issue_url}")
+        else:
+            print(f"[notify] WARN — POST issues retourne {r.status_code} : {r.text[:200]}")
+    except Exception as e:
+        print(f"[notify] WARN — exception (non fatale) : {e}")
+
+
+# ---------------------------------------------------------------------------
 # Main
 
 
@@ -269,6 +323,10 @@ def main() -> int:
         f"---\n\n"
     )
     commit_synthesis(header + synthesis, today)
+
+    # Notification (best-effort : n'altere pas le code retour du run)
+    notify_synthesis_created(today, len(emails))
+
     print("[done]")
     return 0
 
