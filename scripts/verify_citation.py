@@ -32,6 +32,16 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+# Force UTF-8 sur stdout/stderr pour eviter UnicodeEncodeError sur Windows (cp1252)
+# face aux noms de famille diacritiques courants en literature scientifique
+# (e.g. nom croate "Karačić", grec "Spendier", suedois "Lindström").
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
+
 REGISTRY_PATH = Path(__file__).parent / "citations_registry.json"
 USER_AGENT = "Tellux-CitationVerifier/0.1 (https://github.com/dellahstella/tellux ; mailto:contact@tellux.pages.dev)"
 CROSSREF_URL = "https://api.crossref.org/works/{doi}"
@@ -228,7 +238,7 @@ def resolve(arg: str) -> dict[str, Any] | None:
         rec = fetch_pubmed_by_pmc(m.group(1))
         if rec:
             return pubmed_to_quad(rec)
-    # ScienceDirect PII (Elsevier) : trois strategies dans l'ordre.
+    # ScienceDirect PII (Elsevier) : quatre strategies dans l'ordre.
     pii_match = SCIENCEDIRECT_PII_RE.search(arg)
     if pii_match:
         pii = pii_match.group(1)
@@ -238,7 +248,13 @@ def resolve(arg: str) -> dict[str, Any] | None:
             msg = fetch_crossref(doi_from_s2)
             if msg:
                 return crossref_to_quad(msg)
-        # 2) HTML scrape (ScienceDirect retourne souvent 403 pour les bots,
+        # 2) OpenAlex search par PII (gratuit, anonyme, rate-limit genereux ~100k/jour)
+        doi_from_openalex = fetch_doi_from_openalex_pii(pii)
+        if doi_from_openalex:
+            msg = fetch_crossref(doi_from_openalex)
+            if msg:
+                return crossref_to_quad(msg)
+        # 3) HTML scrape (ScienceDirect retourne souvent 403 pour les bots,
         #    mais utile pour les editeurs plus permissifs sous le meme pattern PII)
         doi_from_html = fetch_doi_from_html(arg)
         if doi_from_html:
@@ -252,6 +268,37 @@ def resolve(arg: str) -> dict[str, Any] | None:
             msg = fetch_crossref(doi_from_html)
             if msg:
                 return crossref_to_quad(msg)
+    return None
+
+
+def fetch_doi_from_openalex_pii(pii: str) -> str | None:
+    """Resout un PII Elsevier en DOI via OpenAlex.
+
+    Note : OpenAlex n'indexe pas directement les PII Elsevier comme cle de
+    recherche. La strategie qui fonctionne empiriquement est de chercher par
+    titre — donc cette resolution PII-direct echoue silencieusement la plupart
+    du temps. Conservee comme stub pour signaler la limite et pour invocation
+    explicite avec un mot-cle de titre via --search (hors scope CLI actuel).
+
+    Si vous connaissez le titre de l'article, faire la recherche manuellement :
+        curl 'https://api.openalex.org/works?search=<titre>&per-page=3'
+    et passer le DOI trouve a verify_citation.py.
+    """
+    qs = urllib.parse.urlencode({"search": pii, "per-page": "3"})
+    try:
+        raw = http_get(f"https://api.openalex.org/works?{qs}", timeout=15)
+    except urllib.error.HTTPError:
+        return None
+    except urllib.error.URLError:
+        return None
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except json.JSONDecodeError:
+        return None
+    for w in data.get("results", []) or []:
+        doi_url = w.get("doi") or ""
+        if "doi.org/" in doi_url:
+            return doi_url.split("doi.org/", 1)[1]
     return None
 
 
