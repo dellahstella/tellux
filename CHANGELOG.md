@@ -11,7 +11,7 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ### Fixed
 - **`index.html`** (stat hero `.lp-map-stats`) : « 566 sites documentés / sites ANFR (mai 2026) » → « 3 000 antennes / 1 026 supports - 219 communes / Source ANFR CartoRadio - extraction avril 2026 ». Aligne le chiffre visible de la landing sur le snapshot Supabase `antennas_corse` du 24 avril 2026.
-- **`cadre-scientifique.html`** (§ 9.2 Phénoménologie en Corse) : phrase « densité de l'ordre de 0,11 site/km² … 449 sites Corse-du-Sud + 511 sites Haute-Corse, soit environ 960 sites cumulés » remplacée par la formulation source ANFR validée Soleil : « 2 986 antennes individuelles géolocalisées (2G/3G/4G/5G), 1 026 supports distincts, 219 des 360 communes corses, 14 antennes offshore Cerbicale/môle de Bastia ». Ajout d'une phrase de densité dérivée : « environ 8 700 km², densité moyenne de l'ordre de 0,12 support/km² » — restaure l'antécédent de la phrase suivante « Cette densité reste inférieure à celle des grandes agglomérations métropolitaines » (arbitrage Soleil : ajouter densité sourcée par support plutôt que supprimer la comparaison).
+- **`cadre-scientifique.html`** (§ 9.2 Phénoménologie en Corse) : phrase « densité de l'ordre de 0,11 site/km² … 449 sites Corse-du-Sud + 511 sites Haute-Corse, soit environ 960 sites cumulés » remplacée par la formulation source ANFR validée en interne : « 2 986 antennes individuelles géolocalisées (2G/3G/4G/5G), 1 026 supports distincts, 219 des 360 communes corses, 14 antennes offshore Cerbicale/môle de Bastia ». Ajout d'une phrase de densité dérivée : « environ 8 700 km², densité moyenne de l'ordre de 0,12 support/km² » — restaure l'antécédent de la phrase suivante « Cette densité reste inférieure à celle des grandes agglomérations métropolitaines » (arbitrage interne : ajouter densité sourcée par support plutôt que supprimer la comparaison).
 - **`app.html`** (2 occurrences L1451 légende couche, L1468 panneau sources) : « 974 supports » → « 1 026 supports ». Le compteur runtime du header (`nOnshore + ' antennes'`, calculé live sur le fetch Supabase) n'est pas touché — il était déjà correct.
 
 ### Notes
@@ -45,7 +45,7 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 - 50 pieves. `stats.pieves_count` 51 → **50**, `stats.total_communes` 347 → **360** (auto-corrigés).
 - Surface 8703.3 km² (écart <0,01 % vs prod). Sortie minifiée.
 - **11 pieves changent de composition** vs l'ancienne prod (carte v4 cohérente ;
-  l'ancienne prod était incohérente post-voie-b) — refonte assumée, arbitrage Soleil.
+  l'ancienne prod était incohérente post-voie-b) — refonte assumée, arbitrage interne.
 - 3 polygones auparavant invalides (`fiumorbo`, `gulfo_d_aiacciu`, `vallerustie`)
   régénérés valides. Override `pieve_bozio` préservé.
 
@@ -97,7 +97,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 
 ### Method (brief REV2)
 - Source de vérité : scripts ad hoc `phase_strat_d_*.py` (listes explicites) + mappings v1/v2/v3.
-- PIP polygones prod = best-effort pour les communes sans source traçable (arbitrage Soleil 2026-05-20).
+- PIP polygones prod = best-effort pour les communes sans source traçable (arbitrage interne 2026-05-20).
 - `communes_count` prod considéré obsolète pour 16/50 pieves (dette PR C).
 
 ### Added
@@ -133,7 +133,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 
 ---
 
-## [B-ZONES Tier 2 — 2026-05-20] (Étape 4 pré-FEDER)
+## [B-ZONES Tier 2 — 2026-05-20] (Étape 4 sprint)
 
 ### Added (sites_patrimoine.json)
 - Champs `is_zone`, `zone_geometry` (GeoJSON `[lon, lat]`), `zone_source`, `zone_simplification_pts` sur 8 sites Tier 2 favorables.
@@ -152,7 +152,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 
 ---
 
-## [B-ZONES Tier 1 — 2026-05-20] (Étape 4 pré-FEDER)
+## [B-ZONES Tier 1 — 2026-05-20] (Étape 4 sprint)
 
 ### Added (sites_patrimoine.json)
 - Champs `is_zone`, `zone_geometry` (GeoJSON `[lon, lat]`), `zone_source`, `zone_simplification_pts` sur 15 sites naturels Tier 1.
@@ -184,10 +184,10 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 
 ---
 
-## [Étape 3 sprint pré-FEDER — pieve_lota + labels diocese] — 2026-05-18
+## [Étape 3 sprint — pieve_lota + labels diocese] — 2026-05-18
 
 ### Added
-- **`pieve_lota`** (7 communes, 16 sites, diocese_medieval Mariana, doyenne_du_cap) — fusion Cap Corse sud côte est, regroupant l'ancienne pieve_bastia + pieve_brando + intégration historique Pieve di Lota / Pieve di Sisco. Polygon = UNION shapely 7 communes (~124 km² simplify 0.0005). Hameaux préservés dans `note_rattachement` : Toga/Lupino/Cardo (Bastia), Miomo (Santa-Maria-di-Lota), Erbalunga (Brando). Option A audit Cowork 2026-05-18 validée Soleil.
+- **`pieve_lota`** (7 communes, 16 sites, diocese_medieval Mariana, doyenne_du_cap) — fusion Cap Corse sud côte est, regroupant l'ancienne pieve_bastia + pieve_brando + intégration historique Pieve di Lota / Pieve di Sisco. Polygon = UNION shapely 7 communes (~124 km² simplify 0.0005). Hameaux préservés dans `note_rattachement` : Toga/Lupino/Cardo (Bastia), Miomo (Santa-Maria-di-Lota), Erbalunga (Brando). Option A audit Cowork 2026-05-18 validée en interne.
 - **2 nouveaux aliases v4** : `pieve_bastia → pieve_lota`, `pieve_brando → pieve_lota`. Total aliases : 3 → 5.
 - **Suffixe `(médiéval)`** au label diocese affiché en popup pieve legacy (sujets 1+2) pour clarifier ambiguïté slug ↔ diocese.
 
@@ -212,17 +212,17 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 
 ---
 
-## [Sprint hygiène pré-FEDER, Étape 1] — 2026-05-18
+## [Sprint hygiène, Étape 1] — 2026-05-18
 
 ### Fixed (3 corrections data sites)
-- `casteddu_bastelica` (option a Soleil) : `commune_insee 2A031 (Bastelica) → 2B012 (Altiani)`, `commune_nom Bastelica → Altiani`, `pieve_rogna → pieve_altiani`. Coord verrouillé inchangé (42.217/9.255). Nom site conservé (toponymie homonyme à clarifier post-FEDER).
+- `casteddu_bastelica` (option a interne) : `commune_insee 2A031 (Bastelica) → 2B012 (Altiani)`, `commune_nom Bastelica → Altiani`, `pieve_rogna → pieve_altiani`. Coord verrouillé inchangé (42.217/9.255). Nom site conservé (toponymie homonyme à clarifier en phase ultérieure).
 - `tour_d_isolella_sette_navi` : `commune_insee 2A258 (Renno faux) → 2A228 (Pietrosella officiel)`. Pieve/doyenne déjà cohérents.
 - `pont_genois_de_piedipartino` : `commune_insee 2B231 (Pigna faux) → 2B221 (Piedipartino officiel)`, `pieve_aregno → pieve_orezza`, `doyenne_balagne → doyenne_du_golo` (BP-FIX-RATTACHEMENT-COMPLET-001).
 
 ### Closed (7 dettes traitées)
 - 3 résolues par correction data : `CASTEDDU-BASTELICA-COORD-DOUTE-001`, `TOUR-ISOLELLA-INSEE-DISCORDANCE-001`, `PIEVE-PIEDIPARTINO-INSEE-DISCORDANCE-001`
 - 3 fermées par invalidation/cosmétique : `FARINOLE-COORD-DOUTE-001` (faux positif, coord cohérent), `PIEVE-VENACO-OVERFLOW-VISUEL-GEOMETRIQUE-001` (cosmétique acceptable Phase 1 beta), `PIEVE-SORROINSU-CINARCA-POST-MIGRATION-PHASE2-001` (équilibre 4+9 communes OK)
-- Sticker Balagne : documenté non-bug (image fonctionnelle, contraste cosmétique à améliorer en pass design pré-FEDER, hors-scope hygiène)
+- Sticker Balagne : documenté non-bug (image fonctionnelle, contraste cosmétique à améliorer en pass design en phase préliminaire, hors-scope hygiène)
 
 ### Audit
 - Mismatches visuel↔data résiduels : **1 → 0** (audit MCP 2026-05-18)
@@ -282,7 +282,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 ### Reference
 - Doctrine : ADR-001 + U1 Phase 1 (Stratégie D)
 - Commit privé : `909d525` (corpus privé tellux)
-- Ouvre `PATRIMOINE-FICHES-PIEVES-VAGUE4-POST-FEDER-001` (19 pieves prod sans fiche)
+- Ouvre suivi interne sur la vague 4 des fiches pieves (19 pieves prod sans fiche)
 
 ### Volume
 - Public retiré : ~607 KB
@@ -306,7 +306,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 - `onDoyenneClick` retourne immédiatement si `slug === currentDoyenneSlug` en N2 (clic sur le doyenné actuel = no-op, évite reset inutile).
 
 ### Reference
-- Brief §6 Nav N2→N2 directe (Pattern 4 + Pattern 2 + flyTo 1s + préchargement + fade swap), validé Soleil 2026-05-18.
+- Brief §6 Nav N2→N2 directe (Pattern 4 + Pattern 2 + flyTo 1s + préchargement + fade swap), validé en interne 2026-05-18.
 - Pas de dette préexistante (`PATRIMOINE-NAV-N2-N2-DIRECTE-001` n'existait pas dans le suivi interne).
 
 ---
@@ -339,7 +339,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 - Total **47 → 51 pieves** (typo brief 52 corrigée).
 - Anomalie détectée à auditer : `pont_genois_de_piedipartino` (INSEE 2B231 Pigna ≠ nom Piedipartino). Dette `PIEVE-PIEDIPARTINO-INSEE-DISCORDANCE-001` ouverte.
 
-### Arbitrages Soleil 2026-05-18
+### Arbitrages internes 2026-05-18
 - Q-1 : 47 → 51 pieves confirmé
 - Q-2 : san_pietro_letia retag commune INSEE
 - Q-3 : tour_isolella conservé + dette
@@ -369,7 +369,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 - `pieve_rogna` réduite (3 communes migrées → altiani)
 - `pieve_balagne` enrichie (+4 communes : 2 ex-mariana + 2 ex-nebbiu)
 - `pieve_patrimonio` recalculée (6 communes ex-nebbiu)
-- 42 sites retag (pieve_slug + doyenne_contemporain_slug cohérents) : 28 brief + 13 ghost rescue (sites pieve_mariana hors brief, PIP géo) + 1 revert (`san_cervone_valle_d_alesani` pieve_bozio/cortenais → pieve_alesani/PO suite arbitrage Soleil Q3 option B)
+- 42 sites retag (pieve_slug + doyenne_contemporain_slug cohérents) : 28 brief + 13 ghost rescue (sites pieve_mariana hors brief, PIP géo) + 1 revert (`san_cervone_valle_d_alesani` pieve_bozio/cortenais → pieve_alesani/PO suite arbitrage interne Q3 option B)
 - Compteurs : 45 → 47 pieves total
 
 ### Fixed
@@ -378,10 +378,10 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 
 ### Notes
 - **Voie (b) patch direct du dérivé adoptée** : la voie (a) régénération propre via `build_pieves_polygons.py` produit aujourd'hui 4 pieves zombies (giovellina/caccia/ampugnani/campoloro) du mapping v1 désynchronisé + perte `pieve_zicavo` + `pieve_patrimonio` sous-représentée. Hors scope Strat D Phase 1.
-- **Escalade priorité `PIEVE-MAPPING-AMONT-DESYNCHRO-001` Moyenne → HAUTE** : PR cleanup mapping amont OBLIGATOIRE post-FEDER (rappel explicite Soleil 2026-05-17).
+- **Escalade priorité `PIEVE-MAPPING-AMONT-DESYNCHRO-001` Moyenne → HAUTE** : PR cleanup mapping amont obligatoire en phase ultérieure (rappel interne 2026-05-17).
 - Compteurs visuels légèrement différents de prod pour `pieve_nebbiu` (17→9), `pieve_patrimonio` (9→6) — acceptable Phase 1 beta, à corriger via PR cleanup amont.
 
-### Arbitrages Soleil
+### Arbitrages internes
 - Q1 (28 sites) : confirmé
 - Q2 (Vezzani 2B347 inclusion altiani) : NON, conservé pieve_venaco
 - Q3 (san_cervone_valle_d_alesani revert) : option B (pieve_alesani/PO)
@@ -404,11 +404,11 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 ## [Non publié] — Audit Cowork Phase B : 17 orphelins + 18 cross-doyennés retag selon géo (17 mai 2026)
 
 ### fix
-- **Cat 1 — 17 sites orphelins retag** (commit `18cd606`) : tous les sites avec `doyenne_contemporain_slug=null` issus de l'audit MCP du 15 mai sont retag (pieve + doyenné) selon géo réelle. Doctrine Soleil : géo prime sur orthodoxie historique pour Phase 1 beta. Méthode : `shapely.contains` pour chaque coord vs polygones pieves + doyennés. Script reproductible `scripts/retag_orphans.py`. **PATRIMOINE-ORPHANS-INVISIBLES-001 réduite 18 → 1 résiduel** (`cap_corse_extreme_nord` orphan transcommunal Cap, légitime documenté).
+- **Cat 1 — 17 sites orphelins retag** (commit `18cd606`) : tous les sites avec `doyenne_contemporain_slug=null` issus de l'audit MCP du 15 mai sont retag (pieve + doyenné) selon géo réelle. Doctrine interne : géo prime sur orthodoxie historique pour Phase 1 beta. Méthode : `shapely.contains` pour chaque coord vs polygones pieves + doyennés. Script reproductible `scripts/retag_orphans.py`. **PATRIMOINE-ORPHANS-INVISIBLES-001 réduite 18 → 1 résiduel** (`cap_corse_extreme_nord` orphan transcommunal Cap, légitime documenté).
 - **Cat 2 — 18 sites cross-doyennés retag** (commit `0872308`) : sites avec mismatch `pieve.doyenne_contemporain_majoritaire ≠ site.doyenne_contemporain_slug` corrigés selon géo :
   - 10 non-mariana cohérents (pieve géo + doyenné géo = doyenné majoritaire)
   - 4 mariana géo HORS polygone mariana → retag vers vraie pieve géo (`pieve_casinca`, `pieve_casacconi`, `pieve_balagne` ×2)
-  - 4 cas A option Soleil (incohérence pieve.majoritaire vs doyenné géo acceptée, géo prime) : `san_quilicu_lama`/`santa_maria_urtaca` → nebbiu/golo ; `san_cervone_valle_d_alesani`/`pont_genois_d_altiani` → rogna/PO
+  - 4 cas A option interne (incohérence pieve.majoritaire vs doyenné géo acceptée, géo prime) : `san_quilicu_lama`/`santa_maria_urtaca` → nebbiu/golo ; `san_cervone_valle_d_alesani`/`pont_genois_d_altiani` → rogna/PO
   - 10 mariana in_pv=True conservés (exception Mariana mega-fusion, refactor via Cowork)
 - **2 cas suspendus option D** (tag inchangé, dettes ouvertes) : `tour_de_farinole` (coord en mer probable à 700m frontière pieve), `casteddu_bastelica` (doute homonymie nom=Bastelica PTV vs géo Cortenais).
 
@@ -418,7 +418,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
   - `CASTEDDU-BASTELICA-COORD-DOUTE-001` (audit toponymique/coord à faire)
   - `PATRIMOINE-PIEVE-MARIANA-MEGA-FUSION-001` (mega-pieve héritage fusions caccia→giovellina→mariana, refactor via Cowork + ADR ; `doyennes_visibles` manque cortenais en bonus)
 - 1 dette mise à jour : `PATRIMOINE-ORPHANS-INVISIBLES-001` (18 → 1 résiduel `cap_corse_extreme_nord`)
-- Doctrine actée Soleil 2026-05-17 : Tellux n'est pas un atlas Casta strict, géo prime sur orthodoxie historique pour Phase 1 beta, refactor doctrinal possible post-FEDER.
+- Doctrine actée en interne 2026-05-17 : Tellux n'est pas un atlas Casta strict, géo prime sur orthodoxie historique pour Phase 1 beta, refactor doctrinal possible à un stade ultérieur.
 
 ### scripts
 - `scripts/retag_orphans.py` : retag des 17 sites orphelins (Cat 1)
@@ -438,7 +438,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 ### feat
 - **Implémentation niveau 3 patrimoine.html** (PR #577, 14 mai) : drill-down pieve depuis vue N2 doyenné, breadcrumb 3 segments cliquable (Corse › Doyenné › Pieve), bookmarking URL hash 3 niveaux (`#doyenne/pieve`), sticker doyenné top-right en N3, bouton retour pieve, fix `PATRIMOINE-HASH-DEEPLINK-CADRAGE-001` (cadrage map sur deeplink), CDN Leaflet.markercluster 1.5.3 (initial, retiré PR #579 cf. ci-dessous).
 
-### fix (série lots 1-12 audit visuel Soleil, 14-15 mai 2026)
+### fix (série lots 1-12 audit visuel interne, 14-15 mai 2026)
 - **PR #579/#580** : Retrait clustering Leaflet.markercluster (résidus visuels N3 au changement de région). Remplacé par `L.layerGroup()` natif. Projet revient à zéro dépendance externe.
 - **PR #581/#582** : Résolution conflits homonymie pieves (3 cibles : `pieve_verde`, `pieve_rogna`, `pieve_sartene`). 23 retags vers slugs disambiguïsés par doyenné (`*_prunelli_taravo_valinco`, `*_extreme_sud`, `*_plaine_orientale`, `*_ajaccio`).
 - **PR #583/#584** : Cleanup `patrimonio_paese` (1 doublon supprimé, conservation `san_martino_de_patrimonio` église romane).
@@ -458,7 +458,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 ### docs (cette PR)
 - 2 BPs formalisées en suivi interne :
   - `BP-FIX-RATTACHEMENT-COMPLET-001` : cohérence `pieve_slug` + `doyenne_contemporain_slug` dans toute PR rattachement
-  - `BP-FUSION-POLYGONE-ARBITRAGE-001` : fusion polygone admise sous arbitrage Soleil Phase A + template plan technique
+  - `BP-FUSION-POLYGONE-ARBITRAGE-001` : fusion polygone admise sous arbitrage interne Phase A + template plan technique
 - 1 dette fermée : `PATRIMOINE-HASH-DEEPLINK-CADRAGE-001` (résolue PR #577)
 - 3 dettes nouvelles ouvertes :
   - `PATRIMOINE-PIEVE-NEBBIU-CHEVAUCHE-GOLO-CAP-001` (polygone large couvre 2 doyennés)
@@ -469,8 +469,8 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 - **~140 retags `pieve_slug`** cumulés sur 12 lots
 - **3 polygones supprimés** : `pieve_ampugnani` (PR #591), `pieve_campoloro` + `pieve_verde` (PR #605) — pieves_polygons.json passe de 47 à 44
 - **3 doublons supprimés** : `patrimonio_paese`, `pont_d_altiani`, `tour_de_la_pietra_ile_rousse` — sites_patrimoine.json passe de 544 à 541
-- **N3 patrimoine fonctionnel** pour Phase 1 beta : 12 doyennés audités visuellement par Soleil, slugs pieves consolidés, 0 dépendance externe, drill-down 3 niveaux (N1 Corse → N2 doyenné → N3 pieve) opérationnel
-- **2 doyennés signalés "substantiellement propres" par Soleil** : Balagne (lot 5), Vico (lot 7)
+- **N3 patrimoine fonctionnel** pour Phase 1 beta : 12 doyennés audités visuellement en interne, slugs pieves consolidés, 0 dépendance externe, drill-down 3 niveaux (N1 Corse → N2 doyenné → N3 pieve) opérationnel
+- **2 doyennés signalés "substantiellement propres" en interne** : Balagne (lot 5), Vico (lot 7)
 
 ### PRs série fix N3
 #577 (impl) + #579/#580, #581/#582, #583/#584, #585/#586, #587/#588, #589/#590, #591/#592, #593/#594, #595/#596, #597/#598, #599/#600, #601/#602, #603/#604, #605/#606, #607/#608 = **31 PRs cumulées** (1 implémentation + 15 paires fix→deploy)
@@ -488,10 +488,10 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 
 **PR #569 — Sprint correction rebalance doyenne_contemporain_slug** :
 - Pré-audit cartographique 14 mai a révélé 13 pieves multi-doyennés + 32 communes multi-doyennés
-- Décision Soleil Option B minimaliste : aligner doyenne_contemporain_slug sur majorité claire (≥2:1) commune, skip égalités
+- Décision interne Option B minimaliste : aligner doyenne_contemporain_slug sur majorité claire (≥2:1) commune, skip égalités
 - **23 sites migrés** + 1 fix manuel `san_lorenzo_de_ponte_leccia` (commune Lecci → Morosaglia, Ponte-Leccia hameau)
 - Distribution doyennés rebalancée :
-  - doyenne_du_golo : 66 → 60 (-6, **signal Soleil allégé**)
+  - doyenne_du_golo : 66 → 60 (-6, **signal interne allégé**)
   - doyenne_du_cap : 69 → 76 (+7)
   - doyenne_extreme_sud : 88 → 95 (+7)
   - doyenne_cortenais : 54 → 58 (+4)
@@ -501,7 +501,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 - Préservation stricte : slug, lat, lon, sources non touchés
 
 **PR #571 — Sprint 7 densification ciblée pieves sous-rep** :
-- Cible Option B Soleil : 8 pieves < 5 sites
+- Cible Option B interne : 8 pieves < 5 sites
 - Doctrine stricte BP-SPRINT4 GPS publié appliquée
 - **+1 entrée** : `pont_de_muricciolu_albertacce` (Albertacce, pieve_niolu, GPS publié Médiathèque Corse 42.326036/8.983954, XVIᵉ-XVIIIᵉ génois, arche unique granit alt 852m, emporté tempête Ciaran novembre 2023, inventaire préliminaire Médiathèque Culturelle Corse)
 - pieve_niolu : 3 → 5 sites (sortie zone sous-rep)
@@ -510,7 +510,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 ### Compteurs prod post-Sprint 7
 - 544 sites · 13 axes
 - 11 ponts historiques (10 → 11)
-- doyenne_du_golo allégé -6 sites (signal Soleil traité)
+- doyenne_du_golo allégé -6 sites (signal interne traité)
 
 ### PRs Sprint 7
 - #569 fix(patrimoine): rebalance doyenne_contemporain_slug (23 sites + 1 fix)
@@ -531,7 +531,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 - Labels représentés : 2 paesi AVF (Plus Beaux Villages de France 2026 : Sant'Antonino, Pigna)
 - Sources : Wikipedia FR commune infobox coordonnées (cross-source 9 fetches) + Les Plus Beaux Villages de France 2026 + Mérimée Notes voyage Corse 1840 (Sartène)
 - Cible révisée scénario B 25 atteinte à 9/25 = 36% (doctrine « couverture représentative > exhaustivité »)
-- Cas frontière arbitrés Phase A Soleil :
+- Cas frontière arbitrés Phase A en interne :
   - **Piana EXCLU** (AVF officiel mais commune avec Tour Turghiu, doctrine d'altura stricte)
   - **Corte EXCLU** (citadelle militaire historique, hors périmètre paesi d'altura)
 
@@ -574,7 +574,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 - Périmètre chronologique : XIIᵉ av. J.-C. — ~1450
 - Sources : Mérimée POP (PA + IA), Wikipedia FR, INRAP
 - Doctrine `BP-SPRINT4-DOCTRINE-STRICTE-GPS-PUBLIE-001` strictement appliquée → Sprint 5b et 5c vides (cités antiques secondaires + villages désertés sans GPS publié)
-- Doctrine Soleil : Aleria + Mariana = 1 site unique chacun, dettes v2 multi-composantes ouvertes pour exploitation patrimoniale fine ultérieure
+- Doctrine interne : Aleria + Mariana = 1 site unique chacun, dettes v2 multi-composantes ouvertes pour exploitation patrimoniale fine ultérieure
 
 ### PRs Sprint 5
 - #561 Sprint 5a (création 2 axes + 7 migrations + Mariana, structurant)
@@ -701,7 +701,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 - Création de `public/data/sites_app.json` (61 sites EM/UTH/thermales consolidés et typés)
 - `gps_audit` obligatoire sur 61/61 entrées
 - 3 sources auditées (`sites_em`, `points_chauds_radio`, `sites_remarquables`)
-- Corrections Soleil-signalées : `ophi_farinole`, `surv_bonifacio`, `Pietrapola`, `Caldane` (commune corrigée Sainte-Lucie-de-Tallano)
+- Corrections signalées en interne : `ophi_farinole`, `surv_bonifacio`, `Pietrapola`, `Caldane` (commune corrigée Sainte-Lucie-de-Tallano)
 - Suppression de l'entrée fantôme "Lac thermal de Tora" (typo historique Tolla, source inexistante)
 
 ### refactor — M2
@@ -992,7 +992,7 @@ Volume total prose ajouté : ≈ 3 820 mots.
 
 - Sommaire enrichi de 4 entrées (Sections 7 à 10) entre Section 6 et Annexe A.
 - Liens cliquables inter-sections ajoutés dans la prose des 4 nouvelles sections (Section 7 ↔ 8, Section 8 ↔ 6/7, Section 9 ↔ 8/10, Section 10 ↔ 7/8/9, Section 7 ↔ Annexe A) — recommandation Cowork retenue pour faciliter la navigation.
-- Section 1 reformulée pour retirer la mention publique d'une candidature FEDER/ANR/Collectivité de Corse (cohérence avec la doctrine éditoriale post-cycle audit Phase D : pas de mention publique d'attribution conditionnelle). Avant : « Le projet vise une mise à disposition publique via tellux.pages.dev, ainsi qu'une valorisation dans des dossiers de financement auprès de la Collectivité de Corse, de l'Agence nationale de la recherche, et des dispositifs FEDER. » Après : « Le projet est mis à disposition publique via tellux.pages.dev. »
+- Section 1 reformulée pour retirer toute mention publique de cible de financement (cohérence avec la doctrine éditoriale post-cycle audit Phase D : pas de mention publique d'attribution conditionnelle). Après reformulation : « Le projet est mis à disposition publique via tellux.pages.dev. »
 - Footer : « Dernière mise à jour : avril 2026 » → « mai 2026 » (cohérent avec la modification substantielle de la page).
 
 ### Anomalies hors périmètre signalées par Cowork
@@ -1023,7 +1023,7 @@ Web vitals (avant → après) : LCP 6.1 s → 1.5 s, FCP 6.1 s → 1.5 s, Speed 
 
 - **Lazy load `pdfmake`** : retrait des deux balises `<script src="...pdfmake...">` du `<head>` (chargement synchrone au boot, ~600 ko + ~200 ko de fonts). Nouvelle fonction `loadPdfMake()` qui injecte dynamiquement les deux scripts CDN au premier clic sur « Télécharger PDF », avec indication visuelle « Préparation du PDF… » sur le bouton et retry au prochain clic en cas d'échec réseau. Integrity hashes conservés.
 - **Élision française** sur le préfixe `Mairie de [NOM DE LA COMMUNE]` dans la génération PDF des courriers : nouvelle fonction `applyMairieElision()` appliquée comme pré-traitement dans `substitute()` et `substituteHtml()` avant la substitution générique. Voyelle ou voyelle accentuée → « Mairie d'Ajaccio », « Mairie d'Évisa ». Article L' déjà inclus dans le nom officiel (« L'Île-Rousse ») → « Mairie de l'Île-Rousse » (article minusculé). Apostrophe typographique cohérente avec les templates existants.
-- **Open Graph et Twitter Cards** : enrichissement des meta tags dans le `<head>`. Ajout `og:type`, `og:locale` (`fr_FR`), `og:site_name`, `og:image`, `og:image:alt` et les 4 balises `twitter:card`/`title`/`description`/`image`. Image temporaire : `assets/logo/favicon_512.png` (512×512, ratio 1:1) avec `twitter:card` en `summary` (cohérent avec ratio carré). Asset Open Graph dédié 1200×630 (1.91:1) à produire en session Soleil dédiée — non créé d'autorité dans ce sprint.
+- **Open Graph et Twitter Cards** : enrichissement des meta tags dans le `<head>`. Ajout `og:type`, `og:locale` (`fr_FR`), `og:site_name`, `og:image`, `og:image:alt` et les 4 balises `twitter:card`/`title`/`description`/`image`. Image temporaire : `assets/logo/favicon_512.png` (512×512, ratio 1:1) avec `twitter:card` en `summary` (cohérent avec ratio carré). Asset Open Graph dédié 1200×630 (1.91:1) à produire en session dédiée — non créé d'autorité dans ce sprint.
 - **Hiérarchie h1** : audit confirme un seul `<h1>` (l.436 « Outils administratifs · Communes corses »), hiérarchie h1 → h2 → h3 propre. Aucune modification requise.
 
 **Notes** :
@@ -1044,7 +1044,7 @@ Modifications cosmétiques appliquées :
 - **Fix wording `WDMAM-NAMING-001`** (note de fermeture, section « Dettes fermées récemment ») : la note décrivait un pattern « bbox-dynamique reconstruit à chaque activation » qui ne correspondait plus à l'état actuel du code après le rollback de la PR #190. La note précise désormais le rollback vers la bbox fixe `[[41.3, 8.5], [43.1, 9.65]]` et la raison du rollback (URL dynamique manquant le `renderingRule EMAG2_Color_Scale` rendant l'image transparente), avec renvoi vers le commentaire `app.html:2092-2097`.
 - **Actualisation terminologique IRSN → ASNR** sur 2 occurrences de la dette `RADON-DATASET-COVERAGE-001` (description et condition de déblocage), formulation `ASNR (anciennement IRSN)` selon la doctrine appliquée par les sprints `audit-D1`, `audit-D1bis`, `audit-D1ter`. Préserve la traçabilité historique vers les fiches data.gouv.fr publiées sous le slug IRSN tout en utilisant le nom d'autorité actuel.
 
-Pas de fermeture, recadrage ou ouverture de dette dans ce sprint. Les arbitrages non triviaux sont remontés dans la description de la PR pour décision Soleil.
+Pas de fermeture, recadrage ou ouverture de dette dans ce sprint. Les arbitrages non triviaux sont remontés dans la description de la PR pour décision interne.
 
 ---
 
@@ -1074,7 +1074,7 @@ Nouvelle page publique de journal des rétractations, retraits et reformulations
 - `mentions-legales.html` : ajout du lien `Rétractations` dans le footer après `Accueil`. Date de mise à jour avril 2026 → mai 2026.
 - `donnees-vie-privee.html` : ajout du lien `Rétractations` dans le footer après `Accueil`. Date de mise à jour avril 2026 → mai 2026.
 
-Hors périmètre validé Soleil : footers de `mairies.html`, `cadre-scientifique.html`, `methode-et-limites.html`, `guide-utilisation.html` non modifiés dans ce sprint, à arbitrer ultérieurement si besoin.
+Hors périmètre validé en interne : footers de `mairies.html`, `cadre-scientifique.html`, `methode-et-limites.html`, `guide-utilisation.html` non modifiés dans ce sprint, à arbitrer ultérieurement si besoin.
 
 ---
 
@@ -1100,7 +1100,7 @@ Nouvelle section 4 dans `transparence.html` détaillant l'articulation envisagé
 
 ### Added then Removed — Section « Inscription territoriale » sur la landing (PR [#276](https://github.com/dellahstella/tellux/pull/276) puis [#281](https://github.com/dellahstella/tellux/pull/281))
 
-Cas particulier signalé pour clarté du lecteur : une section `#inscription-territoriale` a été ajoutée à `index.html` par la PR [#276](https://github.com/dellahstella/tellux/pull/276) (entre `#projet` et `#ressources`, 3 cartes empilées détaillant l'articulation au PO FEDER-FSE+ Corse 2021-2027, au SDTAN Smart Isula et au SPDIAC), puis retirée par la PR [#281](https://github.com/dellahstella/tellux/pull/281) sur décision éditoriale (sobriété de la landing publique, la cohérence narrative institutionnelle est portée par le dossier FEDER lui-même). Bilan net pour la version `[2.8.0]` : section absente du site public. Le draft markdown source (`_drafts/audit-D1/section_spdiac_landing.md`, untracked) est conservé localement pour usage potentiel ultérieur (par exemple page À propos dédiée).
+Cas particulier signalé pour clarté du lecteur : une section `#inscription-territoriale` a été ajoutée à `index.html` par la PR [#276](https://github.com/dellahstella/tellux/pull/276) (entre `#projet` et `#ressources`, 3 cartes empilées détaillant l'articulation institutionnelle), puis retirée par la PR [#281](https://github.com/dellahstella/tellux/pull/281) sur décision éditoriale (sobriété de la landing publique, la cohérence narrative institutionnelle est portée par les dossiers internes). Bilan net pour la version `[2.8.0]` : section absente du site public. Le draft markdown source (`_drafts/audit-D1/section_spdiac_landing.md`, untracked) est conservé localement pour usage potentiel ultérieur (par exemple page À propos dédiée).
 
 ---
 
@@ -1108,10 +1108,10 @@ Cas particulier signalé pour clarté du lecteur : une section `#inscription-ter
 
 ### Removed — Retrait des modules patrimoine et agronomie du dépôt public (PR `refactor/audit-transparence-corpus-public`)
 
-- Suppression de `patrimoine.html` et `agronomie.html`. Les deux fichiers existaient dans le dépôt public sans être liés depuis la landing ; ils sont retirés à l'occasion de l'audit de transparence du 27 avril 2026 pour aligner le périmètre public sur la phase 1 effectivement publiée (cartographie EM, outils communaux, corpus). Contenus conservés en interne pour réactivation éventuelle dans une phase ultérieure financée.
+- Suppression de `patrimoine.html` et `agronomie.html`. Les deux fichiers existaient dans le dépôt public sans être liés depuis la landing ; ils sont retirés à l'occasion de l'audit de transparence du 27 avril 2026 pour aligner le périmètre public sur la phase 1 effectivement publiée (cartographie EM, outils communaux, corpus). Contenus conservés en interne pour réactivation éventuelle dans une phase ultérieure.
 - Mise à jour en cascade : `index.html` (bloc état d'avancement, références bibliographiques, sources territoire), `README.md`, `ROADMAP.md` (section périmètre, sections Phase 2/3/4 consolidées en une note neutre, renumérotation), `ARCHITECTURE.md`, `app.html` (lien biblio redirigé vers `corpus.html`).
-- Anonymisation de la mention nominative du destinataire de la première sollicitation méthodologique externe dans `ROADMAP.md` (section 7) et `docs/em-mairie/auto-affinage-conception-v1.md`.
-- Reformulation de la cible candidature financement (FEDER en priorité) dans les contextes publics.
+- Anonymisation des mentions nominatives dans la documentation interne.
+- Reformulation des cibles de financement dans les contextes publics.
 - Reformulation de l'accroche grand public (`index.html`, `mairies.html`) en cadrage dialogue institutionnel non anxiogène.
 - Retrait du chiffre « 130+ études peer-reviewed » du bloc numbers de la landing — non auditable publiquement.
 - Documents de session internes-style (`AUDIT_SECTION_7_CORPUS.md`, `DATASETS_PATCH_COWORK_FIX.md`, `PILIERS_AB_RECOS_COWORK.md`) déplacés vers `docs/internal/` (gitignored).

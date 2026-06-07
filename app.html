@@ -2223,7 +2223,7 @@ const wmsForet=L.tileLayer.wms('https://data.geopf.fr/wms-v/ows',{layers:'FORETS
 // Rollback du pattern bbox-dynamique introduit en PR #190 (raccord cassé en prod —
 // l'URL dynamique manquait notamment le renderingRule EMAG2_Color_Scale rendant
 // l'image transparente). Fusion en façade conservée (un seul bouton b-emag, pas de
-// b-wdmam ; suivi interne WDMAM-NAMING-001 fermé).
+// b-wdmam ; suivi interne fermé).
 const wmsEmag=L.imageOverlay(
   'https://gis.ngdc.noaa.gov/arcgis/rest/services/EMAG2v3/ImageServer/exportImage?bbox=8.5,41.3,9.65,43.1&bboxSR=4326&imageSR=4326&size=512,800&format=png32&renderingRule={"rasterFunction":"EMAG2_Color_Scale"}&f=image',
   [[41.3,8.5],[43.1,9.65]],
@@ -3380,7 +3380,7 @@ const FH_POINTS=[
 // Source : RTE Data portail + littérature réseau électrique française.
 // ============================================================
 const HTA_BASE_CURRENT_A = 225;
-const BT_BASE_CURRENT_A  = 60; // courant moyen distribution résidentielle BT (dette BT-ELF-001)
+const BT_BASE_CURRENT_A  = 60; // courant moyen distribution résidentielle BT
 
 // ============================================================
 // Grille spatiale d'indexation des segments HTA
@@ -3392,7 +3392,7 @@ const BT_BASE_CURRENT_A  = 60; // courant moyen distribution résidentielle BT (
 const TILE_SIZE_DEG = 1 / 111.32;
 let HTA_SEGMENTS_DATA = null;
 let SEGMENT_GRID = null;
-// Grille BT (chargement asynchrone, dette BT-ELF-001)
+// Grille BT (chargement asynchrone)
 let BT_SEGMENTS_DATA = null;
 let BT_SEGMENT_GRID  = null;
 
@@ -3446,7 +3446,7 @@ function getSegmentsNear(lat, lon) {
   return SEGMENT_GRID[tileKey(lat, lon)] || [];
 }
 
-// Grille spatiale BT (dette BT-ELF-001) — structure identique à la grille HTA
+// Grille spatiale BT — structure identique à la grille HTA
 function buildBTSegmentGrid(polylines) {
   console.log('[Tellux] Construction grille BT...');
   const t0 = performance.now();
@@ -3581,7 +3581,7 @@ function calcBiotSavartSegment(segLat1, segLon1, segLat2, segLon2, obsLat, obsLo
   return B_pic_nT / Math.SQRT2; // pic → RMS
 }
 
-// Variante vectorielle 2D (dette ELF-VECTOR-001)
+// Variante vectorielle 2D
 // Retourne {bx, by} en nT dans le repère local horizontal (X=est, Y=nord).
 // Le vecteur est perpendiculaire au segment, orienté selon la règle de la main droite.
 // Retourne {bx:0, by:0} si segment à plus de 2 km (pruning identique au scalaire).
@@ -3744,7 +3744,7 @@ function calcMagneticELF_v1(lat, lon, chargeFactor) {
 // Courant HTA : HTA_BASE_CURRENT_A = 225 A (Option B, sans voltage Supabase)
 // Courant BT  : BT_BASE_CURRENT_A  = 60 A
 // Correction triphasée k=0.5 au-delà de 20 m · RMS explicite · pruning 2 km
-// Sommation vectorielle 2D (Bx, By) — ferme la dette ELF-VECTOR-001.
+// Sommation vectorielle 2D (Bx, By).
 // Fallback : si grille non prête, délègue à v1.
 // ============================================================
 function calcMagneticELF_v2(lat, lon, chargeFactor) {
@@ -3756,7 +3756,7 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
   let totalBx = 0, totalBy = 0;
   const contributions = [];
 
-  // === LIGNES HTA — sommation vectorielle (dette ELF-VECTOR-001) ===
+  // === LIGNES HTA — sommation vectorielle ===
   const I_hta = HTA_BASE_CURRENT_A * htFactor;
   const nearby = getSegmentsNear(lat, lon);
   let nHtaContrib = 0;
@@ -3771,11 +3771,11 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
     contributions.push({ source_type: 'HTA', B_nT: Math.round(B_hta*10)/10, distance_m: null, identifier: nHtaContrib + ' segments réels (vectoriel)' });
   }
 
-  // === LIGNES BT réelles — sommation vectorielle (dette BT-ELF-001) ===
-  // Désactivée par défaut depuis hotfix v2.6.1 (BT-CALIBRATION-001).
+  // === LIGNES BT réelles — sommation vectorielle ===
+  // Désactivée par défaut depuis hotfix v2.6.1 (calibration BT insuffisante).
   // BT_ZONES proxy (legacy v2.5) reprennent le relais plus bas.
   if (!USE_BT_SEGMENTS && !window._btDisabledWarned) {
-    console.warn('[Tellux] BT-CALIBRATION-001 : calcul BT segments désactivé (hotfix). '
+    console.warn('[Tellux] Calcul BT segments désactivé (hotfix calibration). '
       + 'Contribution ELF limitée à HTA vectoriel + BT_ZONES proxy + postes sources + éoliennes.');
     window._btDisabledWarned = true;
   }
@@ -3885,7 +3885,7 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
 // Flag de bascule v1/v2 — rollback d'urgence en cas de régression
 const USE_ELF_V2 = true;
 
-// ═══ Flag de désactivation BT suite bug calibration (BT-CALIBRATION-001) ═══
+// ═══ Flag de désactivation BT suite bug calibration ═══
 //
 // Le modèle Biot-Savart + correction triphasée k=0.5 actuel est calibré sur
 // géométrie pylône HTA (phases espacées 1–3 m). Il est inadapté au câble BT
@@ -5854,7 +5854,7 @@ async function loadReseau(){
     // Construction grille Biot-Savart v2 (une fois, au premier chargement)
     if (typeof buildSegmentGrid === 'function' && !SEGMENT_GRID) {
       buildSegmentGrid(all);
-      // Chargement asynchrone BT après HTA (dette BT-ELF-001)
+      // Chargement asynchrone BT après HTA
       setTimeout(loadBTLinesAsync, 200);
     }
   }catch(e){

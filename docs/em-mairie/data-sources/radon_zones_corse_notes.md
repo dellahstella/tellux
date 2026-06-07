@@ -2,7 +2,7 @@
 ## Production de `public/data/radon_zones_corse.geojson`
 
 **Version :** 1.0 — 2026-04-24  
-**Statut :** Plan B1 — script de production fourni, exécution requise par Soleil  
+**Statut :** Plan B1 — script de production fourni, exécution déléguée  
 **Auteur :** Cowork / Tellux  
 
 ---
@@ -78,7 +78,7 @@ API Géorisques (consultation par commune) : https://www.georisques.gouv.fr/minf
 
 ### Approche retenue : Plan B1
 
-Le **Cowork ne peut pas télécharger directement** les fichiers gouvernementaux depuis son environnement sandbox (réseau restreint aux domaines npm/pypi/GitHub). La production du GeoJSON final est donc déléguée à Soleil via un **script Python autonome**.
+Le **Cowork ne peut pas télécharger directement** les fichiers gouvernementaux depuis son environnement sandbox (réseau restreint aux domaines npm/pypi/GitHub). La production du GeoJSON final est donc déléguée à l'exécution locale via un **script Python autonome**.
 
 ### Script fourni
 

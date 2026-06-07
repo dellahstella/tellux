@@ -1,7 +1,7 @@
 # Notes compagnon — radon_communes_level3_corse.json
 
 **Date de production** : 2026-04-20
-**Producteur** : Cowork session datasets (Soleil / Tellux Corse)
+**Producteur** : Cowork session datasets (Tellux Corse)
 **Statut** : partiel vérifié, **à compléter impérativement en phase 2**
 
 ---
