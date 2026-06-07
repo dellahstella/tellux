@@ -1,7 +1,7 @@
 # `verify_citation.py` — Résolveur de citations primaires (anti-Frankenstein)
 
 > Outil CLI léger pour résoudre un DOI ou une URL d'article scientifique en quadruplet vérifié (auteurs, année, titre, journal/volume:pages) via Crossref REST + fallbacks PubMed E-utilities et bioRxiv API.
-> Référentiel : `PROTOCOLE_AUTO_ITERATION.md` §10 (gate citations).
+> Référentiel : gate citations §10 (suivi interne).
 
 ---
 
@@ -80,7 +80,7 @@ Murr L. E. (1966), The biophysics of plant growth in a reversed electrostatic fi
 ```bash
 python3 scripts/verify_citation.py 10.1007/BF01426859 \
   --register \
-  --used-in axe_em/recherche/em-meta-synthese-2026-06-03/SYNTHESE.md
+  --used-in path/to/livrable.md
 ```
 
 Le registre `scripts/citations_registry.json` consigne pour chaque DOI : quadruplet + date + API source + livrables où la citation a été utilisée.

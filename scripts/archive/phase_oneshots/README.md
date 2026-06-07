@@ -1,7 +1,7 @@
 # Scripts one-shot historiques — archive
 
 **Date d'archivage :** 2026-05-18 (Étape 5 PR B — D2 archivage scripts ad hoc).
-**Référence :** audit Cowork `docs/em-mairie/operations/PIEVE_MAPPING_AMONT_AUDIT_2026-05-18.md` + brief D2.
+**Référence :** audit interne PIEVE_MAPPING_AMONT 2026-05-18 + brief D2.
 
 Ces scripts ont patché directement les JSON dérivés prod (« voie-b ») lors des
 refontes pieves de mai 2026. Ils sont **one-shot** : leur effet est déjà appliqué
