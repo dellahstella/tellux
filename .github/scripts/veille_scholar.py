@@ -3,29 +3,29 @@ Veille Scholar automatisée — Tellux Corse.
 
 Workflow hebdomadaire (cron lundi 8h UTC) :
 1. Récupère les emails Google Scholar Alerts des 7 derniers jours via Gmail API.
-2. Lit le prompt de veille depuis le repo privé tellux-corpus-internal.
+2. Lit le prompt de veille depuis un dépôt de coordination interne.
 3. Synthétise via Anthropic API.
-4. Commite la note dans le repo privé via API GitHub.
+4. Commite la note dans le dépôt interne via API GitHub.
 
 Aucun secret en clair dans le script — tout vient de variables d'environnement
 fournies par GitHub Actions Secrets.
 
 Variables d'env requises :
-    GMAIL_REFRESH_TOKEN   — refresh_token OAuth (compte tellux.veille@gmail.com)
+    GMAIL_REFRESH_TOKEN   — refresh_token OAuth (compte de service)
     GMAIL_CLIENT_ID       — client_id OAuth Desktop
     GMAIL_CLIENT_SECRET   — client_secret OAuth Desktop
     ANTHROPIC_API_KEY     — clé API Anthropic
-    GITHUB_PAT            — Personal Access Token avec scope `repo` sur tellux-corpus-internal
+    GITHUB_PAT            — Personal Access Token avec scope `repo` sur le dépôt cible
+    PRIVATE_REPO          — slug `owner/repo` du dépôt de coordination cible
 
 Variables d'env optionnelles :
-    PROMPT_PATH           — chemin du prompt dans le repo privé
+    PROMPT_PATH           — chemin du prompt dans le dépôt cible
                             (défaut : docs/pilotage/prompt_veille_tellux_v2.md)
-    PRIVATE_REPO          — défaut : dellahstella/tellux-corpus-internal
     ANTHROPIC_MODEL       — défaut : claude-sonnet-4-5
     LOOKBACK_DAYS         — fenêtre de recherche en jours (défaut : 7)
-    OUTPUT_DIR            — dossier dans le repo privé pour les synthèses
+    OUTPUT_DIR            — dossier dans le dépôt cible pour les synthèses
                             (défaut : _corpus_veille/syntheses)
-    DRY_RUN               — si "1", n'écrit rien dans le repo privé (debug)
+    DRY_RUN               — si "1", n'écrit rien dans le dépôt cible (debug)
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ PROMPT_PATH = os.environ.get(
 INTEGRATION_PROMPT_PATH = os.environ.get(
     "INTEGRATION_PROMPT_PATH", "docs/pilotage/prompt_integration_corpus.md"
 )
-PRIVATE_REPO = os.environ.get("PRIVATE_REPO", "dellahstella/tellux-corpus-internal")
+PRIVATE_REPO = os.environ.get("PRIVATE_REPO", "")
 ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5")
 LOOKBACK_DAYS = int(os.environ.get("LOOKBACK_DAYS", "7"))
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "_corpus_veille/syntheses")
@@ -72,6 +72,7 @@ REQUIRED_SECRETS = [
     "GMAIL_CLIENT_SECRET",
     "ANTHROPIC_API_KEY",
     "GITHUB_PAT",
+    "PRIVATE_REPO",
 ]
 
 
