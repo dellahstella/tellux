@@ -12,7 +12,7 @@ Document de référence publique présentant la trajectoire générale du projet
 
 Tellux est aujourd'hui structuré autour d'**une application principale publique** : la cartographie électromagnétique territoriale (`app.html`), accompagnée d'outils communaux (`mairies.html`) et d'une documentation publique en trois volets (démarche scientifique, méthode et limites, guide d'utilisation). Cette phase 1 est en cours de stabilisation.
 
-Des modules d'extension thématiques pourront être envisagés sous condition d'obtention d'un financement public (FEDER en priorité), sans calendrier public à ce stade.
+Des modules d'extension thématiques pourront être envisagés sous condition de stabilisation préalable de la phase 1, sans calendrier public à ce stade.
 
 ---
 
@@ -43,37 +43,30 @@ La mise à jour de la landing vers une cohérence totale avec la phase 1 publiqu
 - **2026-04-23** : fermeture `INTL-CRUSTAL-001` (module de comparaison crustale mondiale en EM pur) et `CSS-HARMONISATION-001` (palette DA v2 sémantique).
 - **2026-04-24** : Cowork Session B — clarification du modèle EMAG2v3 vs WDMAM (note de recherche `docs/EMAG2_WDMAM_NOTE_RECHERCHE.md`), production des géométries officielles radon par commune (253 polygones ASNR intégrés via PR #130), correction de 5 coordonnées GPS U/Th (PR #131). Cowork Session A — production de la version 1 publique de `mairies.html` (PRs #136 à #140), fermeture `SUPABASE-COMMUNE-FIELD-001` (PR #137) et `ANTENNES-REFRESH-001` (PR #138).
 - **2026-04-25** : finalisation du document de spécification méthodologique (23 pages) destiné à une relecture critique externe par un physicien tiers. Document archivé hors du repo public.
-- **2026-05-01** : audit Phase D livré sur le site public (sprints `audit-D1`, `audit-D2`, `audit-D1bis`, `audit-D1ter`, `retrait-section-spdiac`). Alignement de la terminologie ASNR sur 14 mentions d'actualité (`index.html`, `methode-et-limites.html`, `guide-utilisation.html`, `transparence.html`, `cadre-scientifique.html`, `app.html`), ajout d'une section « Cadres éthiques de référence » sur `transparence.html` (Charte data Corse + Guide IA Smart Isula), fixes structurants landing (compteur antennes, footer SIRET, libellé contact projet). Une section « Inscription territoriale » a été ajoutée puis retirée de la landing dans le même cycle, sur décision éditoriale. Détail dans `CHANGELOG.md` `[2.8.0]`. En parallèle, révisions du dossier de pré-candidature FEDER appliquées hors repo public (bascule EUPL → MIT sur 17 occurrences, reformulation Supabase 2.3.7 autour de l'audit CLOUD Act).
-- **2026-05-01 (soir)** : intégration des Sections 7-10 méthodologiques par domaine physique sur `cadre-scientifique.html` (sprint J, PR [#295](https://github.com/dellahstella/tellux/pull/295)). Quatre sections homogènes ajoutées entre la Section 6 et l'Annexe A (Magnétique statique, Magnétique basse fréquence ELF 50 Hz, Radiofréquences, Rayonnement ionisant), chacune en 7 sous-sections (définition, phénoménologie, sources, formules, incertitudes, dettes associées, ce que la modélisation permet/ne permet pas). Volume total ajouté : ≈ 3 820 mots de prose. Sommaire enrichi (passe de 7 à 11 entrées), liens cliquables inter-sections, retrait éditorial mention publique candidature FEDER/ANR/Collectivité de Corse en Section 1 (cohérence doctrine éditoriale post-cycle audit Phase D). Détail dans `CHANGELOG.md` `[2.8.5]`. Livre le chantier ROADMAP « Documentation méthodologique par domaine physique ».
-- **2026-05-01 (soir)** : optimisation SEO et performance de `mairies.html` (sprint L, PR [#293](https://github.com/dellahstella/tellux/pull/293) + [#294](https://github.com/dellahstella/tellux/pull/294)). Score Lighthouse Performance 57 → **81** (+24), LCP/FCP 6.1 s → 1.5 s, TTI 7.6 s → 2.2 s grâce au lazy load `pdfmake` (chargement différé au premier clic « Télécharger PDF »). Élision française appliquée sur le préfixe « Mairie de [NOM DE LA COMMUNE] » dans la génération PDF des courriers (Ajaccio → « Mairie d'Ajaccio », L'Île-Rousse → « Mairie de l'Île-Rousse »). Enrichissement Open Graph et Twitter Cards (9 meta tags ajoutées). Détail dans `CHANGELOG.md` `[2.8.4]`. Livre le chantier ROADMAP « Backlog SEO post-release `mairies.html` ». Quatre anomalies hors périmètre détectées par Lighthouse et formalisées en dettes techniques (cf. `DETTES_TECHNIQUES.md` : `ROBOTS-TXT-001`, `A11Y-CONTRAST-001`, `MAIRIES-CLS-TBT-001`, `MAIRIES-REDIRECTS-001`).
+- **2026-05-01** : audit Phase D livré sur le site public (sprints `audit-D1`, `audit-D2`, `audit-D1bis`, `audit-D1ter`, `retrait-section-spdiac`). Alignement de la terminologie ASNR sur 14 mentions d'actualité (`index.html`, `methode-et-limites.html`, `guide-utilisation.html`, `transparence.html`, `cadre-scientifique.html`, `app.html`), ajout d'une section « Cadres éthiques de référence » sur `transparence.html` (Charte data Corse + Guide IA Smart Isula), fixes structurants landing (compteur antennes, footer SIRET, libellé contact projet). Une section « Inscription territoriale » a été ajoutée puis retirée de la landing dans le même cycle, sur décision éditoriale. Détail dans `CHANGELOG.md` `[2.8.0]`. En parallèle, révisions documentaires internes appliquées hors repo public (bascule EUPL → MIT sur 17 occurrences, reformulation Supabase 2.3.7 autour de l'audit CLOUD Act).
+- **2026-05-01 (soir)** : intégration des Sections 7-10 méthodologiques par domaine physique sur `cadre-scientifique.html` (sprint J, PR [#295](https://github.com/dellahstella/tellux/pull/295)). Quatre sections homogènes ajoutées entre la Section 6 et l'Annexe A (Magnétique statique, Magnétique basse fréquence ELF 50 Hz, Radiofréquences, Rayonnement ionisant), chacune en 7 sous-sections (définition, phénoménologie, sources, formules, incertitudes, dettes associées, ce que la modélisation permet/ne permet pas). Volume total ajouté : ≈ 3 820 mots de prose. Sommaire enrichi (passe de 7 à 11 entrées), liens cliquables inter-sections, retraits éditoriaux en Section 1 (cohérence doctrine éditoriale post-cycle audit Phase D). Détail dans `CHANGELOG.md` `[2.8.5]`. Livre le chantier ROADMAP « Documentation méthodologique par domaine physique ».
+- **2026-05-01 (soir)** : optimisation SEO et performance de `mairies.html` (sprint L, PR [#293](https://github.com/dellahstella/tellux/pull/293) + [#294](https://github.com/dellahstella/tellux/pull/294)). Score Lighthouse Performance 57 → **81** (+24), LCP/FCP 6.1 s → 1.5 s, TTI 7.6 s → 2.2 s grâce au lazy load `pdfmake` (chargement différé au premier clic « Télécharger PDF »). Élision française appliquée sur le préfixe « Mairie de [NOM DE LA COMMUNE] » dans la génération PDF des courriers (Ajaccio → « Mairie d'Ajaccio », L'Île-Rousse → « Mairie de l'Île-Rousse »). Enrichissement Open Graph et Twitter Cards (9 meta tags ajoutées). Détail dans `CHANGELOG.md` `[2.8.4]`. Livre le chantier ROADMAP « Backlog SEO post-release `mairies.html` ». Quatre anomalies hors périmètre détectées par Lighthouse et formalisées en suivi interne (`ROBOTS-TXT-001`, `A11Y-CONTRAST-001`, `MAIRIES-CLS-TBT-001`, `MAIRIES-REDIRECTS-001`).
 - **2026-05-01 (nuit)** : phase d'UI avancée sur `app.html` (sprint O, PR [#298](https://github.com/dellahstella/tellux/pull/298) + [#299](https://github.com/dellahstella/tellux/pull/299), commit prod `2e23a0b`). Sélecteur de domaines physiques (5 chips de filtre additifs en haut de la sidebar : Tous / Statique / ELF / RF / Ionisant) et 4 badges temps réel toujours visibles dans le panneau Conditions (Kp NOAA SWPC, Réseau RTE eco2mix, Live Supabase, Orage Blitzortung caché si pas d'activité). 18 boutons annotés `data-domains`. Synchronisation des badges via hook dans `updateCondSummaries()` (rythme 30 s déjà en place), pas de `setInterval` dédié. Aucune nouvelle variable CSS racine, palette DA v2 gelée respectée. Détail dans `CHANGELOG.md` `[2.9.0]`. Livre le chantier ROADMAP « Phase d'UI avancée ».
 - **2026-05-01 (nuit)** : intégration du glossaire technique public (sprints P et Q, PR [#300](https://github.com/dellahstella/tellux/pull/300) + [#302](https://github.com/dellahstella/tellux/pull/302), commits prod `34aa961` et `fa2678a`). Nouvelle page publique `/glossaire.html` à la racine (~48 ko, 642 lignes, 94 entrées alphabétiques sur 21 lettres, fontes auto-hébergées Fraunces + IBM Plex Sans, aucune dépendance externe). Lien Glossaire ajouté dans les footers/headers des 9 pages éditoriales du repo public : 5 pages prioritaires sprint P (`index.html`, `transparence.html`, `retractations.html`, `mentions-legales.html`, `donnees-vie-privee.html`) et 4 pages restantes sprint Q (`cadre-scientifique.html`, `methode-et-limites.html`, `mairies.html`, `app.html` via nouveau lien `hdr-btn` `target="_blank"` sans toucher au drawer interne `openGlossaryDrawer()`). `corpus.html` confirmé absent du repo public, exclu du périmètre. Détail dans `CHANGELOG.md` `[2.10.0]` et `[2.10.1]`. Livre le chantier ROADMAP « Glossaire technique intégré ».
 - **2026-05-25 / 2026-05-26** : corrections géomagnétiques temps réel sur `app.html` (sprint astro v1 + v2, PR [#742](https://github.com/dellahstella/tellux/pull/742)-[#744](https://github.com/dellahstella/tellux/pull/744)). Hiérarchie à trois niveaux pour la composante magnétique statique : indice Dst si disponible, sinon Kp NOAA SWPC pondéré, sinon IGRF-14 statique de base. Multi-observatoires INTERMAGNET intégrés au pipeline d'enrichissement. Section 5.3 « Corrections géomagnétiques temps réel » ajoutée sur `cadre-scientifique.html` pour documenter la chaîne complète.
 - **2026-05-31** : harmonisation des chiffres ANFR sur les trois surfaces publiques (PR [#749](https://github.com/dellahstella/tellux/pull/749)). Source de vérité unique : extraction CartoRadio du 24 avril 2026 documentée dans `docs/em-mairie/data-sources/antennes_corse_notes.md` — **3 000 antennes individuelles**, **1 026 supports distincts** (groupage lat/lon/opérateur), **219 des 360 communes corses**. Tuile stat de la landing alignée (« 3 000 antennes / 1 026 supports »), légendes d'`app.html` mises à jour (974 → 1 026 supports), `cadre-scientifique.html` § 9.2 reformulé. Régression silencieuse historique tracée dans `CHANGELOG.md` (la landing était passée de « ~960 sites » à « 566 sites » sans entrée de suivi).
-- **2026-06-01** : refonte du footer en 5 liens / 2 clusters identique sur les 11 pages publiques du repo (cluster « Le projet » : Application carte / Outils mairies / Ressources — cluster « Légal & gouvernance » : Mentions légales & confidentialité / Transparence) et pose des redirects 301 sur les pages légales fusionnées (PR [#751](https://github.com/dellahstella/tellux/pull/751)). `donnees-vie-privee.html` redirige désormais vers `mentions-legales.html#confidentialite` et `retractations.html` vers `transparence.html#retractations` ; les fichiers sources sont conservés pendant une période d'amortissement (suivi via `LEGAL-PAGES-FUSION-CLEANUP-001` dans `DETTES_TECHNIQUES.md`). Glossaire ajouté en 5ᵉ carte de la section `#ressources` de la landing. Retrait du compteur partiel « 219 communes » de la tuile stat antennes de la landing, ambigu sans contexte (PR [#753](https://github.com/dellahstella/tellux/pull/753)).
+- **2026-06-01** : refonte du footer en 5 liens / 2 clusters identique sur les 11 pages publiques du repo (cluster « Le projet » : Application carte / Outils mairies / Ressources — cluster « Légal & gouvernance » : Mentions légales & confidentialité / Transparence) et pose des redirects 301 sur les pages légales fusionnées (PR [#751](https://github.com/dellahstella/tellux/pull/751)). `donnees-vie-privee.html` redirige désormais vers `mentions-legales.html#confidentialite` et `retractations.html` vers `transparence.html#retractations` ; les fichiers sources sont conservés pendant une période d'amortissement (suivi interne `LEGAL-PAGES-FUSION-CLEANUP-001`). Glossaire ajouté en 5ᵉ carte de la section `#ressources` de la landing. Retrait du compteur partiel « 219 communes » de la tuile stat antennes de la landing, ambigu sans contexte (PR [#753](https://github.com/dellahstella/tellux/pull/753)).
 - **2026-06-01** : correction du compteur d'antennes ANFR d'`app.html`, plafonné à 534 en production alors que la base recense 3 000 antennes individuelles (PR [#756](https://github.com/dellahstella/tellux/pull/756)). Diagnostic chiffré : filtre côtier géométrique (12 clauses bbox) rejetait 180 antennes individuelles dont environ 166 onshore à tort. Remplacement par un filtre commune-based exploitant le champ `commune` déjà présent dans le SELECT Supabase (les antennes sans rattachement administratif à une commune corse sont considérées offshore). Découplage de deux compteurs : nombre d'antennes individuelles affiché à l'utilisateur (~3 000), nombre de positions distinctes pour les marqueurs Leaflet (~552, performance). Amendement éditorial de `cadre-scientifique.html` § 9.2 pour aligner sur le total 3 000 antennes individuelles (PR [#758](https://github.com/dellahstella/tellux/pull/758)) : décomposition entre 2 986 antennes dans les contours communaux IGN et 14 sur sites littoraux ou portuaires hors contour strict (îlots Cerbicale au sud-est de Porto-Vecchio, môle nord du port de Bastia), incluses dans le total par la déclaration ANFR.
 - **2026-06-01** : harmonisation visuelle du logo et du footer d'`app.html` avec la landing (PR [#760](https://github.com/dellahstella/tellux/pull/760)). Logo cliquable retournant à l'accueil (`href="/"` au lieu de `#`), `aria-label` ajouté, hover aligné sur la landing (`opacity:0.85`). Footer aligné sur le motif 5 liens / 2 clusters, suppression du lien redondant `tellux.pages.dev` (déjà accessible depuis chaque page). Barre d'outils carto strictement inchangée.
 
-### Démarches institutionnelles d'accès aux données
-
-- **2026-04** : initiation des démarches institutionnelles d'accès aux données améliorées (ASNR Téléray, EDF SEI Corse, BRGM Corse, ASNR cellule radon). Première sollicitation méthodologique externe transmise à la direction d'une UMR locale (sciences pour l'environnement) en vue d'orientation vers un relecteur physicien tiers.
-- **2026-04-28** : envoi du document de spécification méthodologique à la même direction d'UMR pour orientation vers un relecteur physicien tiers.
-
-Suivi détaillé des envois et des retours : voir section 7 « Suivi des sollicitations institutionnelles ».
-
 ### Chantiers techniques prioritaires en cours
 
-- ~~**Audit `emag` vs `crustal` dans `app.html`** : confirmer que les couches ne pointent pas vers les mêmes tuiles (cf. dette `EMAG-CRUSTAL-AUDIT-001` dans `DETTES_TECHNIQUES.md`).~~ **Clôturé** — la dette `EMAG-CRUSTAL-AUDIT-001` a été fermée après audit (`emag` et `crustal` fonctionnellement distincts, pas de redondance, cf. historique `DETTES_TECHNIQUES.md`).
+- ~~**Audit `emag` vs `crustal` dans `app.html`** : confirmer que les couches ne pointent pas vers les mêmes tuiles (suivi interne `EMAG-CRUSTAL-AUDIT-001`).~~ **Clôturé** — `EMAG-CRUSTAL-AUDIT-001` a été fermé après audit (`emag` et `crustal` fonctionnellement distincts, pas de redondance).
 - ~~**Pages publiques `/transparence` et `/retractations`** sur `tellux.pages.dev`~~ **Publiées et opérationnelles** — `/transparence.html` est en production et a été enrichie le 1ᵉʳ mai 2026 d'une section « Cadres éthiques de référence » (audit Phase D, PR [#276](https://github.com/dellahstella/tellux/pull/276)). `/retractations.html` est également publiée et accessible directement ; depuis le chantier footer/redirects du 1ᵉʳ juin 2026 (PR [#751](https://github.com/dellahstella/tellux/pull/751)), elle est aussi atteignable via l'ancre `#retractations` de `/transparence.html`.
 - ~~**Backlog SEO post-release `mairies.html`** : ajustements `h1`, lazy load `pdfmake`, élision « Mairie d'Ajaccio », Twitter Cards, audit Lighthouse. Non urgent, à traiter après stabilisation v1.~~ **Livré 1ᵉʳ mai 2026 (sprint L, PR [#293](https://github.com/dellahstella/tellux/pull/293) + [#294](https://github.com/dellahstella/tellux/pull/294))**, gain Lighthouse Performance +24.
 
 ---
 
-## 3. Modules d'extension envisagés (sous condition de financement)
+## 3. Modules d'extension envisagés
 
-Tellux pourra être étendu, à mesure que des financements publics permettent leur conduite scientifique rigoureuse, par des modules thématiques complémentaires. Ces modules ne sont pas activés à ce jour et aucun calendrier public n'est annoncé : leur conduite suppose à la fois la stabilisation de la phase 1 et l'obtention d'un financement dédié.
+Tellux pourra être étendu, à mesure que les conditions de conduite scientifique rigoureuse sont réunies, par des modules thématiques complémentaires. Ces modules ne sont pas activés à ce jour et aucun calendrier public n'est annoncé : leur conduite suppose la stabilisation préalable de la phase 1.
 
-### Agrégation DIM (Phase 2)
+### Agrégation DIM
 
 Dépôt contributif des dossiers d'information aux maires (DIM) : les communes qui utilisent Tellux uploadent leurs DIM reçus des opérateurs. Tellux devient le premier agrégateur de DIM corses, complémentaire à CartoRadio. Documents légalement publics (obligation de mise à disposition, L.34-9-1 II D). Prérequis : espace upload authentifié mairies, stockage Supabase fichiers, interface de contribution et modération. Pipeline : courrier MAIRIE_05 → upload DIM → couche Tellux.
 
@@ -85,9 +78,8 @@ Dépôt contributif des dossiers d'information aux maires (DIM) : les communes q
 |-------|----------|---------|
 | 1 | Stabilisation architecturale (landing cohérente, périmètre phase 1 figé) | 2026 T2 |
 | 2 | Première relecture méthodologique externe | 2026-2027 |
-| 3 | Candidature à appels publics de financement | 2026-2027 |
-| 4 | Déblocage des constantes gelées post-relecture | 2026 T3 ou ultérieur |
-| 5 | Publication phase 1 stabilisée + communication publique | 2026 T3 |
+| 3 | Déblocage des constantes gelées post-relecture | 2026 T3 ou ultérieur |
+| 4 | Publication phase 1 stabilisée + communication publique | 2026 T3 |
 
 ---
 
@@ -111,28 +103,15 @@ Chaque phase est strictement cadrée. Les modules suivants existent techniquemen
 - Ouverture des données et du code selon les principes FAIR
 - Pré-enregistrement des protocoles avant collecte de données
 
-### Financements
-
-Stratégie de financement basée sur des candidatures à des appels publics (FEDER en priorité, 2026-2027). Aucun partenariat ni collaboration scientifique formalisé à ce jour. Premières démarches de relecture méthodologique externe initiées en avril 2026 (cf. section 7).
-
 ### Indépendance
 
 Projet indépendant. Architecture modulaire permettant la montée en gamme progressive.
 
 ---
 
-## 6. Chantiers différés — déclenchement relecture physicien tiers
+## 6. Chantiers différés — déclenchement relecture méthodologique externe
 
-Les chantiers suivants sont suspendus en attente de deux conditions conjointes :
-
-- Identification et engagement d'un relecteur physicien tiers pour validation méthodologique
-- Phase de soumission aux institutions de financement (FEDER, programmes nationaux et européens) atteinte
-
-### Préparation soumission physicien tiers — statut
-
-Le document de soumission au physicien tiers est préparé et à jour au 2026-04-23 (version v1.2). Il intègre les ajustements scientifiques du jour (reformulation S10, amendement S8 avec cadre éthique, ajustements cosmétiques et pédagogiques complémentaires) et demande au relecteur une validation explicite sur les deux points les plus sensibles (questions Q7.6 et Q7.7).
-
-Le document a été transmis le 28 avril 2026 à la direction d'UMR sollicitée ainsi qu'à quatre institutions (cf. section 7). Les chantiers ci-dessous s'activeront après réception d'au moins un retour de relecture.
+Les chantiers suivants sont suspendus en attente de la validation méthodologique externe sur les zones gelées du modèle de calcul.
 
 ### Chantier 1 — Enrichissement éditorial du Guide d'utilisation
 
@@ -153,27 +132,9 @@ Le document a été transmis le 28 avril 2026 à la direction d'UMR sollicitée 
 
 ---
 
-## 7. Suivi des sollicitations institutionnelles
+## 7. Limites techniques
 
-Tableau de suivi des courriers envoyés aux institutions et chercheurs en lien avec la phase 1 (cartographie EM) et la préparation de la relecture méthodologique externe (cf. section 6). Les colonnes « Date retour » et « Commentaire » sont renseignées au fil des semaines.
-
-| Date envoi | Destinataire | Canal | Objet | Statut | Date retour | Commentaire |
-|---|---|---|---|---|---|---|
-| 2026-04-28 | Direction UMR locale (sciences pour l'environnement) | Email | Demande d'orientation vers relecteur physicien tiers (relecture méthodologique) | Envoyé | — | — |
-| 2026-04-28 | ASNR — Direction Téléray | Email | Accès programmatique balises Téléray AJA + BAP | Envoyé | — | — |
-| 2026-04-28 | ASNR — Cellule radon | Email | Géométries polygonales communales + mesures indoor Corse | Envoyé | — | — |
-| 2026-04-29 | EDF SEI — Direction Corse | Email | Validation classification HTA + tensions/courants nominaux du réseau Corse | Envoyé | — | — |
-| 2026-04-29 | BRGM — Direction régionale Corse | Email | Aéromagnétisme + spectrogamma + flux WFS géologie Corse | Envoyé | — | — |
-
-### Démarches différées
-
-- **RTE Open Data** : demande de cadrage différée post-financement (cf. dette `RTE-OPENDATA-001` dans `DETTES_TECHNIQUES.md`). Motif : le canal officiel RTE passe par un formulaire de contact ODRÉ limité aux messages courts, inadapté à une demande structurée multi-points. Reformulation prévue dans un cadre institutionnel adapté une fois le financement Phase 1 obtenu. En attendant, Tellux continue d'utiliser eco2mix sandbox dans le respect du quota officiel.
-
----
-
-## 8. Dette technique
-
-Voir `DETTES_TECHNIQUES.md` pour la liste des dettes techniques ouvertes et leur statut.
+Le suivi détaillé des limites techniques ouvertes et fermées est tenu en interne.
 
 ---
 
