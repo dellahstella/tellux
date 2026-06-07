@@ -1,7 +1,7 @@
 # Tellux — Etat du projet au 1er juin 2026
 
 **Auteur :** porteur du projet Tellux Corse.
-**Objet :** photo nette de l'etat du projet a la date de publication, Phase 1 EM-mairie publique. Renvoie vers `ROADMAP.md`, `ARCHITECTURE.md`, `DETTES_TECHNIQUES.md` et `CHANGELOG.md` pour les details techniques par axe.
+**Objet :** photo nette de l'etat du projet a la date de publication, Phase 1 EM-mairie publique. Renvoie vers `ROADMAP.md`, `ARCHITECTURE.md` et `CHANGELOG.md` pour les details techniques par axe.
 **Destination proposee :** racine du repo public `dellahstella/tellux`, fichier `ETAT_PROJET.md` (succede `docs/internal/ETAT_PROJET_2026-04-25.md` qui restait prive).
 
 ---
@@ -89,7 +89,7 @@ Une PR de **nettoyage des fichiers internes de travail** (`chore/untrack-interna
 
 ## 5. Dettes ouvertes
 
-Le tracker public `DETTES_TECHNIQUES.md` reste la source de verite (acces complet via le depot GitHub). Les dettes critiques au 1er juin sont :
+Les dettes critiques au 1er juin sont :
 
 - **GELE-001** : ponderations et bornes du mode Expertise, en attente de relecture physicien tiers.
 - **NCRP-001** : composante terrestre du fond gamma (formule NCRP 94 utilisee comme placeholder), liee a GELE-001.
@@ -142,7 +142,6 @@ Les sources mobilisees sont publiques et institutionnelles (ANFR, ASNR, BRGM, IG
 
 - `ROADMAP.md` — feuille de route detaillee.
 - `ARCHITECTURE.md` — architecture technique du moteur de calcul et des donnees.
-- `DETTES_TECHNIQUES.md` — tracker public des dettes ouvertes et fermees.
 - `CHANGELOG.md` — historique des changements.
 - `cadre-scientifique.html` — specification methodologique complete (10 sections + annexe).
 - `methode-et-limites.html` — posture epistemique et vocabulaire.
