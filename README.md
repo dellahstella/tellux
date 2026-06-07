@@ -38,7 +38,7 @@ Sources publiques intégrées :
 - **Réseaux électriques (fallback)** : OSM Overpass
 - **Radon** : classification officielle en vigueur
 
-Des démarches sont en cours pour l'accès à d'autres données institutionnelles (réseaux publics nationaux français) afin d'enrichir les modèles en magnétique basse fréquence, en rayonnement ionisant et en radiométrie aérienne. Voir [`DETTES_TECHNIQUES.md`](DETTES_TECHNIQUES.md) pour les chantiers ouverts.
+Des démarches sont en cours pour l'accès à d'autres données institutionnelles (réseaux publics nationaux français) afin d'enrichir les modèles en magnétique basse fréquence, en rayonnement ionisant et en radiométrie aérienne.
 
 [`ROADMAP.md`](ROADMAP.md) présente la trajectoire générale du projet.
 
@@ -92,7 +92,6 @@ Contact : [tellux.veille@gmail.com](mailto:tellux.veille@gmail.com)
 ## Documentation publique
 
 - [`ROADMAP.md`](ROADMAP.md) — feuille de route, phases de développement, principes de pilotage
-- [`DETTES_TECHNIQUES.md`](DETTES_TECHNIQUES.md) — dettes techniques ouvertes et fermées récemment
 - [`LICENSE`](LICENSE) — licence du projet
 
 Application : [tellux.pages.dev](https://tellux.pages.dev)
