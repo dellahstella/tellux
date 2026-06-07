@@ -8,7 +8,7 @@
 
 ## 1. Synthese executive
 
-Tellux est une plateforme cartographique consacree a la distribution territoriale des champs electromagnetiques en Corse, croisee avec les donnees geologiques, patrimoniales et environnementales de l'ile. Le projet est porte par la micro-entreprise Stella Canis Majoris, sous licence MIT, sans publicite ni revente de donnees.
+Tellux est une plateforme cartographique consacree a la distribution territoriale des champs electromagnetiques en Corse, croisee avec les donnees geologiques, patrimoniales et environnementales de l'ile. Le projet est publie sous licence MIT, sans publicite ni revente de donnees.
 
 Le perimetre **Phase 1** publie au 1er juin 2026 couvre :
 
@@ -89,27 +89,23 @@ Une PR de **nettoyage des fichiers internes de travail** (`chore/untrack-interna
 
 ## 5. Dettes ouvertes
 
-Les dettes critiques au 1er juin sont :
+Les limites techniques connues au 1er juin sont les suivantes :
 
-- **GELE-001** : ponderations et bornes du mode Expertise, en attente de relecture physicien tiers.
-- **NCRP-001** : composante terrestre du fond gamma (formule NCRP 94 utilisee comme placeholder), liee a GELE-001.
-- **TELE-001** : integration temps reel de l'API Teleray ASNR (demande adressee a l'autorite competente fin avril 2026).
-- **HTA-TENSION-001** : voltage par segment des lignes HTA / HTB absent du dataset public (demande adressee a EDF SEI fin avril 2026).
-- **BT-CALIBRATION-001** : modele Biot-Savart appliquE aux lignes basse tension torsadees, calibration insuffisante, lignes BT desactivees dans le moteur en attendant recalibration physique dediee.
-- **RTE-OPENDATA-001** : cadrage RTE differe post-financement.
-- **RADIO-AERO-001** : radiometrie aerienne BRGM non integree (demande adressee a BRGM fin avril 2026).
+- Les ponderations et bornes du mode Expertise sont gelees, en attente de validation methodologique externe.
+- La composante terrestre du fond gamma (formule NCRP 94) est laissee en placeholder, dans l'attente de la meme validation methodologique externe.
+- L'integration temps reel de l'API Teleray ASNR pour le debit de dose gamma ambiant reste a mettre en place.
+- Le voltage par segment des lignes HTA / HTB est absent du dataset public ; un courant uniforme de repli est utilise.
+- Le modele Biot-Savart applique aux lignes basse tension torsadees presente une calibration insuffisante ; le calcul segmente basse tension est desactive dans le moteur en attendant une recalibration physique dediee.
+- L'integration plus complete des donnees de charge nationale RTE eco2mix est envisagee a un stade ulterieur.
+- La radiometrie aerienne BRGM n'est pas integree a date.
 
-Plusieurs dettes ont ete fermees recemment, notamment EMAG-CRUSTAL-AUDIT-001 (1er mai 2026, audit verdict : couches fonctionnellement distinctes), WDMAM-NAMING-001 (27 avril, fusion EMAG2/WDMAM en couche unique bbox-dynamique), SUPABASE-COMMUNE-FIELD-001 (PR #137), ANTENNES-REFRESH-001 (PR #138, GitHub Actions mensuel actif).
-
-Aucune dette ouverte ne bloque la publication de la Phase 1.
+Aucune de ces limites ne bloque la publication de la Phase 1.
 
 ---
 
-## 6. FEDER / financement
+## 6. Sources mobilisees et cadres de reference
 
-Le projet est en preparation d'une candidature au PO Corse FEDER-FSE+ (priorite 1, OS innovation + mediation). Le calendrier vise est un depot a horizon Q4 2026. Le perimetre publie au 1er juin (Phase 1 EM-mairie) constitue la base technique du dossier. Des declinaisons thematiques ulterieures sont envisagees post-FEDER selon le calendrier des financements ; elles ne font pas l'objet de cette photo Phase 1 et leur eventuel deploiement sera trace dans `ROADMAP.md` au moment voulu.
-
-Les sources mobilisees sont publiques et institutionnelles (ANFR, ASNR, BRGM, IGRF-14, EMAG2v3 NOAA, NOAA Space Weather Prediction Center, EDF SEI, IGN, INPN), avec adhesion envisagee a la Charte de la donnee et de l'IA de la Corse (21 principes en 9 titres) et au Guide de bonne pratique IA Smart Isula (12 bonnes pratiques) — adoption formelle conditionnelle a l'obtention du financement, articulation prefiguree par les pratiques actuelles (licence MIT, hebergement europeen, absence de tracker, polices auto-hebergees, code ouvert).
+Les sources mobilisees sont publiques et institutionnelles (ANFR, ASNR, BRGM, IGRF-14, EMAG2v3 NOAA, NOAA Space Weather Prediction Center, EDF SEI, IGN, INPN). Les pratiques actuelles (licence MIT, hebergement europeen, absence de tracker, polices auto-hebergees, code ouvert) prefigurent une articulation possible avec la Charte de la donnee et de l'IA de la Corse (21 principes en 9 titres) et le Guide de bonne pratique IA Smart Isula (12 bonnes pratiques).
 
 ---
 
@@ -119,21 +115,20 @@ Les sources mobilisees sont publiques et institutionnelles (ANFR, ASNR, BRGM, IG
 
 - Refonte de l'architecture documentaire : creation d'une page « Demarche scientifique - synthese » accessible non specialiste, condensation de la section position epistemique du document dense, fusion editoriale de la page Transparence dans la page Methode et limites. Preparation Cowork terminee, integration Code en attente.
 - Promotion `dev -> main` des modifications du cycle 1er juin.
-- Suppression effective des fichiers sources des pages legales fusionnees (`donnees-vie-privee.html`, `retractations.html`), au sens d'une PR `chore` dediee apres verification qu'aucun lien externe ne les cible directement (cf. dette `LEGAL-PAGES-FUSION-CLEANUP-001`).
+- Suppression effective des fichiers sources des pages legales fusionnees (`donnees-vie-privee.html`, `retractations.html`), au sens d'une PR `chore` dediee apres verification qu'aucun lien externe ne les cible directement.
 - Actualisation de `CHANGELOG.md` pour consolider le cycle 1er juin en une entree groupee.
 
 **Moyen terme.**
 
-- Acces API Teleray ASNR (`TELE-001`), permettant l'integration temps reel du debit de dose gamma ambiant a la cartographie.
-- Cadrage tension HTA par segment (`HTA-TENSION-001`), permettant un modele Biot-Savart plus precis.
-- Recalibration physique du modele basse tension torsadee (`BT-CALIBRATION-001`).
+- Acces API Teleray ASNR, permettant l'integration temps reel du debit de dose gamma ambiant a la cartographie.
+- Cadrage tension HTA par segment, permettant un modele Biot-Savart plus precis.
+- Recalibration physique du modele basse tension torsadee.
 - Densification de la couverture in situ par mesures certifiees, au-dela des 30 fiches ANFR/EXEM integrees.
-- Eventuelle activation des declinaisons thematiques mentionnees dans la `ROADMAP.md`, conditionnee aux financements et aux calendriers institutionnels.
+- Eventuelle activation des declinaisons thematiques mentionnees dans la `ROADMAP.md`, selon la trajectoire de developpement.
 
 **Reperes calendaires.**
 
-- Le moteur de calcul est en phase de validation methodologique, pas de demonstration. Aucune dette ouverte ne bloque la publication Phase 1.
-- La candidature FEDER vise un depot Q4 2026.
+- Le moteur de calcul est en phase de validation methodologique, pas de demonstration. Aucune limite connue ne bloque la publication Phase 1.
 - Le cycle de releases reste mensuel a bimensuel selon l'activite.
 
 ---

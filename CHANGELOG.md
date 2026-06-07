@@ -1091,12 +1091,12 @@ Alignement de la terminologie « ASNR » (active depuis le 1ᵉʳ janvier 2025, 
 ### Changed — Audit Phase D, fixes structurants landing (PR [#274](https://github.com/dellahstella/tellux/pull/274))
 
 - Compteur antennes du bloc statistiques hero d'`index.html` aligné sur le chiffre exact daté `~960 sites ANFR` (avril 2026), avec mention en infobulle `title=` « plus de 3000 antennes individuelles ».
-- Footer d'`index.html` enrichi avec le statut juridique : `Stella Canis Majoris · micro-entreprise SIRET 993 881 481 00010 · 20200 Bastia · 2026`.
-- Ancre `#contact` d'`index.html` enrichie d'un libellé explicite : `Contact projet — Lucas Iannaccone Frasseto, porteur du projet Tellux Corse`.
+- Footer d'`index.html` enrichi avec l'identification légale requise par la LCEN.
+- Ancre `#contact` d'`index.html` enrichie d'un libellé explicite identifiant le porteur du projet Tellux Corse.
 
 ### Added — Section « Cadres éthiques de référence » sur la page Transparence (PR [#276](https://github.com/dellahstella/tellux/pull/276))
 
-Nouvelle section 4 dans `transparence.html` détaillant l'adhésion envisagée à la Charte de la donnée et de l'IA Corse (21 principes en 9 titres) et au Guide de bonne pratique IA Smart Isula (12 bonnes pratiques), conditionnelle à l'obtention d'un financement FEDER. Articulation préfigurée par les pratiques actuelles déjà visibles sur le site (MIT, RLS, polices auto-hébergées, pas de tracker). Renumérotation des sections actuelles 4 et 5 en 5 et 6.
+Nouvelle section 4 dans `transparence.html` détaillant l'articulation envisagée avec la Charte de la donnée et de l'IA Corse (21 principes en 9 titres) et le Guide de bonne pratique IA Smart Isula (12 bonnes pratiques). Articulation préfigurée par les pratiques actuelles déjà visibles sur le site (MIT, RLS, polices auto-hébergées, pas de tracker). Renumérotation des sections actuelles 4 et 5 en 5 et 6.
 
 ### Added then Removed — Section « Inscription territoriale » sur la landing (PR [#276](https://github.com/dellahstella/tellux/pull/276) puis [#281](https://github.com/dellahstella/tellux/pull/281))
 
