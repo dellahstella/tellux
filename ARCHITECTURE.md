@@ -195,7 +195,7 @@ Le **Brief 33 split** (2026-05-06) a scindé l'ancien fichier consolidé unique.
 
 **Doctrine d'édition.** `sites_patrimoine.json` n'est pas régénéré : il est édité en place, soit manuellement via briefs ciblés, soit via `scripts/brief_pipeline.py` (application de corrections GPS de briefs, respecte `gps_locked`). Le pipeline historique `scripts/consolidate_sites.py` est **déprécié et inexécutable** (paths sandbox, sources Supabase non versionnées).
 
-**Note `consolidate_sites.py` / `sites_corse.json` :** le pipeline de consolidation qui produisait l'ancien fichier unique reste dans le repo pour référence mais ne doit pas être exécuté (cf. `DETTES_TECHNIQUES.md` → `CONSOLIDATE-SITES-PY-OBSOLETE-001`). `sites_corse.json` est conservé sur disque jusqu'à sa suppression planifiée — 2 scripts de maintenance le référencent encore (`brief_pipeline.py`, `corpus_health_check.py`).
+**Note `consolidate_sites.py` / `sites_corse.json` :** le pipeline de consolidation qui produisait l'ancien fichier unique reste dans le repo pour référence mais ne doit pas être exécuté. `sites_corse.json` est conservé sur disque jusqu'à sa suppression planifiée — 2 scripts de maintenance le référencent encore (`brief_pipeline.py`, `corpus_health_check.py`).
 
 ---
 
@@ -229,7 +229,7 @@ Push direct sur `main` interdit (workflow imposé par les instructions internes 
 
 ## 6. Dettes techniques actives
 
-La liste complète et à jour des dettes techniques est maintenue dans `DETTES_TECHNIQUES.md`. Le tableau ci-dessous reprend les dettes principales à date pour permettre une lecture de référence rapide en session Claude Code, sans se substituer au document canonique.
+Le tableau ci-dessous reprend les limites techniques principales à date pour permettre une lecture de référence rapide en session.
 
 | ID | Description | Condition de déblocage |
 |----|-------------|----------------------|

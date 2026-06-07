@@ -26,7 +26,7 @@ SKIP :
 - _drafts/sites_patrimoine.backup_*.json : snapshots historiques (immuables)
 - _drafts/brief_*.csv, audit_*.csv : logs historiques (immuables)
 - docs/em-mairie/operations/PIEVES_*.md : docs originaux (acter R-3 ailleurs)
-- DETTES_TECHNIQUES.md : references historiques
+- suivi interne : references historiques
 - scripts/retag_cross_doyennes.py : script archive
 """
 import json
