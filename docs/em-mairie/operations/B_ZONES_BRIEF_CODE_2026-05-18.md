@@ -412,7 +412,7 @@ sites.forEach(site => {
 
 #### Commit 4 (PR A) : `docs(dettes,changelog): B-ZONES Tier 1`
 
-`DETTES_TECHNIQUES.md` — ajouter en début préambule, ouvrir :
+Suivi interne — ajouter en début préambule, ouvrir :
 - `PATRIMOINE-B-ZONES-TIER1-001` (closed at merge — 15 sites zones polygonales actives)
 - `PATRIMOINE-B-ZONES-TIER2-FAVORABLE-001` (ouverte — 8 sites à traiter PR B)
 - `PATRIMOINE-B-ZONES-T2-DEFAVORABLE-001` (ouverte basse priorité — 3 sites à laisser pin, documentation décision)
