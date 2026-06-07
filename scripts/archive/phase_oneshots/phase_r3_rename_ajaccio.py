@@ -25,7 +25,7 @@ SKIP :
 - docs/data/sites_corse.json : DEPRECATED
 - _drafts/sites_patrimoine.backup_*.json : snapshots historiques (immuables)
 - _drafts/brief_*.csv, audit_*.csv : logs historiques (immuables)
-- docs/em-mairie/operations/PIEVES_*.md : docs originaux (acter R-3 ailleurs)
+- PIEVES_* : docs originaux internes (acter R-3 ailleurs)
 - suivi interne : references historiques
 - scripts/retag_cross_doyennes.py : script archive
 """
