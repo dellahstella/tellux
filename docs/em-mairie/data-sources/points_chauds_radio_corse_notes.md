@@ -121,7 +121,7 @@ Le dataset évoluera :
 
 1. **Mesures terrain Tellux ou partenaire.** Campagne gamma ambiante avec spectromètre portable calibré sur les 8 sites, substituant les `null` par des valeurs analytiques site par site.
 2. **Accès Téléray ASNR.** API en attente d'autorisation (lettre 01 ASNR du 2026-04-14). Fournira une baseline régionale mesurée, calibrant l'hypothèse de fond naturel corse granitique.
-3. **Radiométrie aérienne BRGM.** Dossier `RADIO-AERO-001` (voir `DETTES_TECHNIQUES.md`). Cartes U/Th/K aéroportées à 1:250 000 donneraient la couverture totale avec mesures réelles.
+3. **Radiométrie aérienne BRGM.** Suivi interne `RADIO-AERO-001`. Cartes U/Th/K aéroportées à 1:250 000 donneraient la couverture totale avec mesures réelles.
 
 À chaque mise à jour, incrémenter `version` et `date_maj` dans le JSON, et mettre à jour le présent fichier.
 
