@@ -95,9 +95,9 @@ Trois coordonnées différentes coexistent pour la "Tour d'Agnello" :
 |--------|-----|-----|--------------------------|
 | `patrimoine_corse` Supabase id=2 | 42.973 | 9.355 | ~5,2 km SW |
 | `SITES_REFERENCE` id correspondant | 42.973 | 9.415 | ~3,7 km SE |
-| GPS de référence cité par Soleil 2026-05-06 | 43.00917 | 9.4225 | ~2,7 km E |
+| GPS de référence (suivi interne 2026-05-06) | 43.00917 | 9.4225 | ~2,7 km E |
 
-La pipeline a fusionné les deux premiers (matching nom). La référence Soleil n'est pas dans le corpus actuel.
+La pipeline a fusionné les deux premiers (matching nom). La référence de suivi interne n'est pas dans le corpus actuel.
 **Action recommandée :** audit GPS dédié Tour d'Agnello dans une prochaine session avec source documentée (BRGM Mérimée, OSM, photo-aérienne).
 
 ### 6.2 Hameaux et lieux-dits dans `churches_corse` non résolus en INSEE
@@ -205,7 +205,7 @@ Tous dans `_drafts/` (pas d'intégration runtime sans Brief 28) :
 
 ## 11. Prochaines actions (hors périmètre Brief actuel)
 
-1. **Brief 28 (intégration repo)** — Soleil pousse `sites_corse_v1.json` vers `public/data/sites_corse.json`, met à jour `patrimoine.html` pour fetch + filtrer `phase_publication === 1`
+1. **Brief 28 (intégration repo)** — pousser `sites_corse_v1.json` vers `public/data/sites_corse.json`, mettre à jour `patrimoine.html` pour fetch + filtrer `phase_publication === 1`
 2. **Override JSON hameaux** (à créer) — résoudre les ~17 hameaux churches_corse non rattachables auto à une commune INSEE
 3. **Audit GPS Tour d'Agnello** — arbitrer entre les 3 coords (42.973/9.355, 42.973/9.415, 43.00917/9.4225)
 4. **Polygones communes Corse (GeoJSON)** — pour résoudre par point-in-polygon les ~22 sites SITES_REFERENCE/patrimoine_corse sans toponyme
@@ -213,4 +213,4 @@ Tous dans `_drafts/` (pas d'intégration runtime sans Brief 28) :
 
 ---
 
-_Stop Point §6.2 obligatoire avant intégration repo. Soleil arbitre._
+_Stop Point §6.2 obligatoire avant intégration repo. Arbitrage interne._

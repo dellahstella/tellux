@@ -191,7 +191,7 @@ Le **Brief 33 split** (2026-05-06) a scindé l'ancien fichier consolidé unique.
 | `doyennes_polygons.json` | actif | 10 doyennés contemporains (Strat A : union polygones communes INSEE) | Fetch async patrimoine.html boot |
 | `pieves_polygons.json` | actif | 47 pieves Casta v2 (canonicité médiévale complète Brief 17) | Fetch async patrimoine.html boot |
 
-**Mécanisme `gps_locked` (Brief 38, 2026-05-07).** `sites_patrimoine.json` porte ~80 sites avec `gps_locked: true` + `gps_lock_reason`. Ce sont des coordonnées auditées et verrouillées manuellement par Soleil (campagnes Briefs 38/39/39bis/39quater/39septies/39octies/39nonies). `scripts/audit_gps_sites_patrimoine.py` et tout outil d'édition automatique **doivent ignorer** ces sites. Verrous = données d'entrée intangibles.
+**Mécanisme `gps_locked`.** `sites_patrimoine.json` porte ~80 sites avec `gps_locked: true` + `gps_lock_reason`. Ce sont des coordonnées auditées et verrouillées manuellement. `scripts/audit_gps_sites_patrimoine.py` et tout outil d'édition automatique **doivent ignorer** ces sites. Verrous = données d'entrée intangibles.
 
 **Doctrine d'édition.** `sites_patrimoine.json` n'est pas régénéré : il est édité en place, soit manuellement via briefs ciblés, soit via `scripts/brief_pipeline.py` (application de corrections GPS de briefs, respecte `gps_locked`). Le pipeline historique `scripts/consolidate_sites.py` est **déprécié et inexécutable** (paths sandbox, sources Supabase non versionnées).
 
@@ -227,19 +227,19 @@ Push direct sur `main` interdit (workflow imposé par les instructions internes 
 
 ---
 
-## 6. Dettes techniques actives
+## 6. Limites techniques actives
 
 Le tableau ci-dessous reprend les limites techniques principales à date pour permettre une lecture de référence rapide en session.
 
-| ID | Description | Condition de déblocage |
-|----|-------------|----------------------|
-| GELÉ-001 | `EXPERT_WEIGHTS_DEFAULT`, `EXPERT_BOUNDS_DEFAULT`, formule NCRP : constantes gelées | Relecture physicien tiers — document de soumission transmis en avril 2026 (cf. `ROADMAP.md` section 7) |
-| TÉLÉ-001 | API Téléray ASNR (gamma temps réel) non intégrée | Accès API ASNR (courrier transmis en avril 2026, cf. `ROADMAP.md` section 7) |
-| NCRP-001 | Fond naturel terrestre NCRP 94 dans `calcGammaAmbient` gelé | Relecture physicien tiers (lié GELÉ-001) |
-| BT-CALIBRATION-001 | Calcul BT segments désactivé (flag `USE_BT_SEGMENTS = false`), proxy `BT_ZONES` legacy actif | Recalibration physique du modèle Biot-Savart BT, session dédiée |
-| HTA-TENSION-001 | Dataset `hta_lines` sans champ voltage, courant uniforme 225 A | Migration SQL + enrichissement dataset |
-| MIGN-001 | ~6 appelants legacy `calcAll` non migrés vers `calcAll_v2` | Session dédiée (non bloquant) |
-| CORPUS-PILIERS-001 (ex H1-H88-ELF-001, reformulée 2026-04-23) | Relecture des fiches du Pilier A (S1-S14) et du Pilier B (P1-P20) post-migration Biot-Savart. La formulation H1-H88 est obsolète depuis la scission du 2026-04-21 ; la correspondance H-numéro → S/P reste consultable dans le corpus interne | Session dédiée post-merge Biot-Savart, par pilier |
+| Domaine | Description | Condition de déblocage |
+|---|---|---|
+| Zones gelées (`GELÉ-001`) | `EXPERT_WEIGHTS_DEFAULT`, `EXPERT_BOUNDS_DEFAULT`, formule NCRP : constantes gelées | Validation méthodologique externe |
+| Téléray ASNR | API Téléray (gamma temps réel) non intégrée | Accès API ASNR à mettre en place |
+| Fond gamma terrestre (`NCRP-001`) | Composante NCRP 94 dans `calcGammaAmbient` gelée | Validation méthodologique externe (liée à `GELÉ-001`) |
+| Calibration BT | Calcul BT segments désactivé (flag `USE_BT_SEGMENTS = false`), proxy `BT_ZONES` legacy actif | Recalibration physique du modèle Biot-Savart BT, session dédiée |
+| Voltage HTA | Dataset `hta_lines` sans champ voltage, courant uniforme 225 A | Migration SQL + enrichissement dataset |
+| Migration `calcAll` | Quelques appelants legacy `calcAll` non migrés vers `calcAll_v2` | Session dédiée (non bloquant) |
+| Relecture corpus piliers | Relecture des fiches Pilier A et Pilier B post-migration Biot-Savart | Session dédiée post-merge Biot-Savart, par pilier |
 
 ---
 

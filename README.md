@@ -38,7 +38,7 @@ Sources publiques intégrées :
 - **Réseaux électriques (fallback)** : OSM Overpass
 - **Radon** : classification officielle en vigueur
 
-Des démarches sont en cours pour l'accès à d'autres données institutionnelles (réseaux publics nationaux français) afin d'enrichir les modèles en magnétique basse fréquence, en rayonnement ionisant et en radiométrie aérienne.
+L'accès à d'autres données institutionnelles (réseaux publics nationaux français) reste à mettre en place pour enrichir les modèles en magnétique basse fréquence, en rayonnement ionisant et en radiométrie aérienne.
 
 [`ROADMAP.md`](ROADMAP.md) présente la trajectoire générale du projet.
 
@@ -56,7 +56,7 @@ Tellux est aujourd'hui structuré autour d'une application principale publique :
 - `transparence.html` — page de transparence éditoriale (sources, statuts épistémiques, limites connues, cadres éthiques)
 - `retractations.html` — journal public des retraits et reformulations substantielles
 
-Des modules d'extension thématiques pourront être envisagés sous condition d'obtention d'un financement public, sans calendrier public à ce stade.
+Des modules d'extension thématiques pourront être envisagés à un stade ultérieur, sans calendrier public à ce stade.
 
 ## Stack technique
 
@@ -81,9 +81,9 @@ Voir [`LICENSE`](LICENSE).
 
 ## Porteur
 
-**Porteur du projet Tellux**, à Bastia.
+**Porteur du projet Tellux Corse.**
 
-Le projet est développé en autonomie, sans mandat ni partenariat institutionnel à la date de publication de cette page. Les démarches d'accès à certaines données institutionnelles (réseaux publics nationaux français) sont en cours.
+Le projet est développé en autonomie, sans mandat ni partenariat institutionnel à la date de publication de cette page.
 
 Contact : [tellux.veille@gmail.com](mailto:tellux.veille@gmail.com)
 

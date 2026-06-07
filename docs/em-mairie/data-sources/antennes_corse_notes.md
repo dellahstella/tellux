@@ -105,7 +105,7 @@ Pour les nouvelles antennes insérées dans `antennas_corse`, la colonne `code_i
 
 `SUPABASE-COMMUNE-FIELD-001` : **RÉSOLU** le 2026-04-24.
 
-Option 2 retenue (ajout d'une colonne propre, non destructive, rétrocompatible) sur recommandation du ticket. Les garde-fous imposés par Soleil lors de l'arbitrage ont été respectés :
+Option 2 retenue (ajout d'une colonne propre, non destructive, rétrocompatible) sur recommandation du ticket. Les garde-fous d'arbitrage interne ont été respectés :
 
 - Dump local complet préalable (`_backups/antennas_corse_2026-04-24.json`, 342 KB, non commité)
 - Test point-in-polygon sur 10 antennes témoins avant ALTER TABLE (10/10 OK)
@@ -115,10 +115,7 @@ Option 2 retenue (ajout d'une colonne propre, non destructive, rétrocompatible)
 - Aucune autre table Supabase modifiée
 - Migration versionnée : `antennas_corse_add_code_insee_commune` (nom snake_case, query SQL stockée)
 
-Voir aussi :
-- [docs/tickets/EAJE-CORSE-001.md](../tickets/EAJE-CORSE-001.md) (dette connexe sur la source EAJE)
-- `tellux_dettes_techniques/SUPABASE-COMMUNE-FIELD-001.md` (ticket d'origine)
-- `tellux_dettes_techniques/ANTENNES-REFRESH-001.md` (dette connexe sur la cadence de refresh)
+Voir aussi : suivi interne (ticket d'origine SUPABASE-COMMUNE-FIELD, cadence de refresh ANTENNES-REFRESH, source EAJE).
 
 ---
 

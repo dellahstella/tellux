@@ -65,11 +65,11 @@ Couche **visuelle seule** dans le Groupe 3 "Contexte naturel".
 
 **Aucune modulation des calculs** `calcGammaAmbient` ni `calcRadonPotential`.
 
-Les coefficients de modulation gamma/radon par couvert forestier seront calibrés ultérieurement via le protocole de 6 zones forestières de test conduit par Soleil. Ce protocole validera scientifiquement les coefficients avant tout impact sur le modèle composite.
+Les coefficients de modulation gamma/radon par couvert forestier seront calibrés ultérieurement via un protocole de 6 zones forestières de test. Ce protocole validera scientifiquement les coefficients avant tout impact sur le modèle composite.
 
-## Dettes restantes
+## Limites restantes
 
-**BDFORET-GRANULARITE-001** : BD Forêt V2/V3 complète avec essences détaillées (pin laricio, chênes sempervirents, châtaignier) toujours inaccessible via WMS public. Deux voies ouvertes :
+**Granularité BD Forêt** : BD Forêt V2/V3 complète avec essences détaillées (pin laricio, chênes sempervirents, châtaignier) toujours inaccessible via WMS public. Deux voies ouvertes :
 
 - **Attente BD Forêt V3 production** : la V3 BETA (mars 2026) est en test sur `data.geopf.fr/wms-v` sous `BETA-IGN_BDFORETV3_TEST` mais couverture Corse non effective au test du 2026-04-21. Suivre la progression IGN.
 

@@ -3,7 +3,7 @@
 **Fichiers :**
 - `public/data/corse/ecoles.geojson`
 - `public/data/corse/medicosocial.geojson`
-- `public/data/corse/eaje.geojson` (alimenté en v2 depuis OSM, ticket EAJE-CORSE-001 résolu en scénario B)
+- `public/data/corse/eaje.geojson` (alimenté en v2 depuis OSM, suivi interne EAJE-CORSE résolu en scénario B)
 
 **Date d'extraction :** 2026-04-24 (version 1.0)
 **Pipeline producteur :** `scripts/build_etablissements_corse.py`
@@ -73,7 +73,7 @@ Chaque fichier est une `FeatureCollection` GeoJSON standard, WGS84 (EPSG:4326), 
 
 Un bloc `metadata` en tête de chaque FeatureCollection précise `source`, `date_extraction`, `licence`, `projection`, `attribution`.
 
-Pour `eaje.geojson`, le bloc `metadata` contient en plus `status: "empty_no_source"`, une `coverage_note` documentant l'absence de source nationale, et `ticket: "EAJE-CORSE-001"`.
+Pour `eaje.geojson`, le bloc `metadata` contient en plus `status: "empty_no_source"`, une `coverage_note` documentant l'absence de source nationale, et un identifiant de suivi interne.
 
 ---
 
@@ -97,7 +97,7 @@ Après régénération, renommer les sorties selon la convention courte si `--ou
 2. Adapter `download_finess()` au nouveau schéma si nécessaire (colonnes, encoding, séparateur, type de ligne).
 3. Réviser `MAPPING_FINESS` à la lumière de la nomenclature mise à jour.
 
-### 4.3 EAJE : OSM (ticket EAJE-CORSE-001 clos en scénario B)
+### 4.3 EAJE : OSM (suivi interne EAJE-CORSE clos en scénario B)
 
 Le fichier `eaje.geojson` est alimenté depuis OpenStreetMap via le script dédié `scripts/build_eaje_osm_corse.py` (séparé du pipeline FINESS / Annuaire Éducation pour respecter la cadence différente d'OSM).
 
@@ -111,7 +111,7 @@ python scripts/build_eaje_osm_corse.py --output public/data/corse --verbose
 
 Le script POSTe une requête Overpass filtrant `amenity=kindergarten` et `amenity=childcare` sur les areas ISO3166-2 FR-2A et FR-2B, convertit chaque feature au schéma Tellux, fait du reverse-géocodage via `geo.api.gouv.fr/communes` pour obtenir code INSEE et commune (les tags OSM `addr:*` étant absents sur les features Corse à la date de cette extraction).
 
-**Volumétrie initiale (25 avril 2026) :** 15 features valides (11 sur 2B + 4 sur 2A), 1 rejetée (anomalie de tagging filtrée, voir §5.3). Couverture estimée 25 % du total attendu (60 EAJE Corse). Voir `docs/tickets/EAJE-CORSE-001.md` pour le détail de la résolution.
+**Volumétrie initiale (25 avril 2026) :** 15 features valides (11 sur 2B + 4 sur 2A), 1 rejetée (anomalie de tagging filtrée, voir §5.3). Couverture estimée 25 % du total attendu (60 EAJE Corse). Le détail de la résolution est documenté en suivi interne.
 
 **Garde-fou :** si le delta de feature_count dépasse 50 % vs la version précédente, ne pas écraser le fichier sans validation manuelle (l'OSM peut perdre des nodes par vandalisme ou erreur de tagging).
 
@@ -143,13 +143,13 @@ Le script POSTe une requête Overpass filtrant `amenity=kindergarten` et `amenit
 **Métadonnées hétérogènes :** 4 features sur 15 sans nom (« Crèche sans nom »), aucun tag `kindergarten:FR` (sous-catégorisation par heuristique sur le nom, fallback `creche_collective`), aucun tag `addr:*` (reverse-géocodage IGN obligatoire).
 
 **Anomalies de tagging filtrées (liste `EXCLUDED_OSM_IDS` du script) :**
-- `osm_node_7899283685` (Olmeta-di-Capocorso, 2B187) : tag `amenity=kindergarten` mais `name="Mairie"`. Incohérence tag amenity / name, présomption d'erreur de mapping OSM amont. Exclu jusqu'à correction (signalement OSM possible). Décision Soleil 2026-04-25.
+- `osm_node_7899283685` (Olmeta-di-Capocorso, 2B187) : tag `amenity=kindergarten` mais `name="Mairie"`. Incohérence tag amenity / name, présomption d'erreur de mapping OSM amont. Exclu jusqu'à correction (signalement OSM possible). Décision interne du 2026-04-25.
 
 Si OSM corrige ces anomalies, retirer les IDs concernés de la liste `EXCLUDED_OSM_IDS` au prochain refresh pour réintégrer les features.
 
 **Pas de scope assistantes maternelles individuelles** (hors périmètre de la Loi Abeille, pas de référentiel open data adapté).
 
-Détail complet : [docs/tickets/EAJE-CORSE-001.md](../tickets/EAJE-CORSE-001.md).
+Détail complet en suivi interne.
 
 ---
 
@@ -164,7 +164,7 @@ Détail complet : [docs/tickets/EAJE-CORSE-001.md](../tickets/EAJE-CORSE-001.md)
 ## 7. Documents de référence
 
 - [DATASETS_PATCH_COWORK_FIX.md](../../DATASETS_PATCH_COWORK_FIX.md) — trace détaillée des 6 corrections appliquées au script Cowork.
-- [docs/tickets/EAJE-CORSE-001.md](../tickets/EAJE-CORSE-001.md) — ticket ouvert pour la source EAJE.
+- Suivi interne EAJE-CORSE — ticket ouvert pour la source EAJE.
 - `tellux_mairies_datasets/README_DATASETS_CORSE.md` (hors repo public) — documentation Cowork initiale.
 - `tellux_mairies_datasets/DATASETS_PATCH_COWORK.md` (hors repo public) — décisions de design Cowork.
 - `tellux_mairies_datasets/COWORK_SESSION_RECAP.md` (hors repo public) — récap livraison Cowork.
