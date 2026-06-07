@@ -307,7 +307,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 
 ### Reference
 - Brief §6 Nav N2→N2 directe (Pattern 4 + Pattern 2 + flyTo 1s + préchargement + fade swap), validé Soleil 2026-05-18.
-- Pas de dette préexistante (`PATRIMOINE-NAV-N2-N2-DIRECTE-001` n'existe pas dans `DETTES_TECHNIQUES.md`).
+- Pas de dette préexistante (`PATRIMOINE-NAV-N2-N2-DIRECTE-001` n'existait pas dans le suivi interne).
 
 ---
 
@@ -456,7 +456,7 @@ La voie-a est redevenue viable : mapping amont ↔ dérivé prod alignés.
 - **PR #607/#608** : Lot 12 doyenné Cap compléments (4 retags : `tour_de_giraglia_ilot` + `anneaux_du_cap_corse` → `pieve_rogliano` ; `tour_de_la_mortella` + `barrage_padula` → `pieve_nebbiu`).
 
 ### docs (cette PR)
-- 2 BPs formalisées dans `DETTES_TECHNIQUES.md` :
+- 2 BPs formalisées en suivi interne :
   - `BP-FIX-RATTACHEMENT-COMPLET-001` : cohérence `pieve_slug` + `doyenne_contemporain_slug` dans toute PR rattachement
   - `BP-FUSION-POLYGONE-ARBITRAGE-001` : fusion polygone admise sous arbitrage Soleil Phase A + template plan technique
 - 1 dette fermée : `PATRIMOINE-HASH-DEEPLINK-CADRAGE-001` (résolue PR #577)
@@ -1035,7 +1035,7 @@ Web vitals (avant → après) : LCP 6.1 s → 1.5 s, FCP 6.1 s → 1.5 s, Speed 
 
 ## [2.8.3] — 2026-05-01
 
-### Changed — Audit cohérence `DETTES_TECHNIQUES.md` post-cycle audit Phase D (PR à venir, sprint `chore/audit-dettes-coherence-post-phase-d`)
+### Changed — Audit cohérence registre interne des dettes techniques post-cycle audit Phase D (PR à venir, sprint `chore/audit-dettes-coherence-post-phase-d`)
 
 Audit documentaire des dettes techniques pour fermer l'anomalie 4 hors périmètre signalée par la PR [#283](https://github.com/dellahstella/tellux/pull/283) (sprint hygiène repo) et l'anomalie hors périmètre signalée par la PR [#289](https://github.com/dellahstella/tellux/pull/289) (sprint audit EMAG-CRUSTAL).
 
@@ -1052,7 +1052,7 @@ Pas de fermeture, recadrage ou ouverture de dette dans ce sprint. Les arbitrages
 
 ### Changed — Fermeture de la dette `EMAG-CRUSTAL-AUDIT-001` après audit (PR à venir, sprint `chore/audit-emag-crustal-fermeture`)
 
-Investigation conduite sur `app.html` pour confirmer ou infirmer la duplication potentielle entre les couches `emag` et `crustal`. Verdict : couches fonctionnellement distinctes, pas de redondance. Aucune modification de code applicatif requise. La dette est déplacée en section « Dettes fermées récemment » de [`DETTES_TECHNIQUES.md`](DETTES_TECHNIQUES.md) avec note d'audit détaillée.
+Investigation conduite sur `app.html` pour confirmer ou infirmer la duplication potentielle entre les couches `emag` et `crustal`. Verdict : couches fonctionnellement distinctes, pas de redondance. Aucune modification de code applicatif requise. La dette est déplacée en section « Dettes fermées récemment » du suivi interne avec note d'audit détaillée.
 
 - `emag` (l.2098 d'`app.html`) : `L.imageOverlay` raster régional Corse, endpoint NOAA NCEI EMAG2v3 ImageServer, bbox fixe `[[41.3, 8.5], [43.1, 9.65]]`.
 - `crustal` (l.2657-2700+ d'`app.html`) : `L.layerGroup` vectoriel construit à partir du tableau `CRUSTAL_REFS` (5 entrées hardcodées Bangui, Kursk, Vredefort, Ries, Chicxulub) avec cercles + markers + panneau comparatif `_crustalGauge` qui *utilise* EMAG2v3 (complémentarité, pas redondance).

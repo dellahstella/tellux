@@ -329,7 +329,7 @@ Si Soleil active polygones pour les 3, le hover sur le pin sommet (genova/revinc
 
 | Tâche | Effort |
 |-------|--------|
-| `DETTES_TECHNIQUES.md` mise à jour | 15 min |
+| Suivi interne mis à jour | 15 min |
 | `CHANGELOG.md` | 10 min |
 | Commit(s) atomiques + push + PR | 15 min |
 

@@ -263,7 +263,7 @@ La constante `USE_BT_SEGMENTS` (ligne 3446) est à `false` depuis le hotfix `BT-
 
 ### 6.4 Composante terrestre gamma gelée (NCRP-001)
 
-La composante terrestre de `calcGammaAmbient` est un placeholder explicite (`terrestrial_nSv_h = null`, ligne 4161). La formule `13·U + 5.4·Th + 42·K` est commentée mais non implémentée, en attente de validation par le physicien tiers (cf. `DETTES_TECHNIQUES.md` `NCRP-001`). L'extraction doit conserver ce placeholder et exposer une signature qui permettra de brancher la formule sans casser les appelants.
+La composante terrestre de `calcGammaAmbient` est un placeholder explicite (`terrestrial_nSv_h = null`, ligne 4161). La formule `13·U + 5.4·Th + 42·K` est commentée mais non implémentée, en attente de validation par le physicien tiers (suivi interne `NCRP-001`). L'extraction doit conserver ce placeholder et exposer une signature qui permettra de brancher la formule sans casser les appelants.
 
 ### 6.5 Constantes Expert gelées (GELE-001)
 
