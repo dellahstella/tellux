@@ -762,8 +762,8 @@ def _to_float(x) -> float | None:
 # avec des metadonnees explicitant l'absence de source, pour que le bloc
 # Etablissements sensibles de mairies.html puisse charger les 3 GeoJSON
 # uniformement sans if/else sur la disponibilite.
-# Voir docs/em-mairie/tickets/EAJE-CORSE-001.md pour les pistes alternatives a explorer
-# (CAF Corse direct, OpenStreetMap amenity=kindergarten, contact ARS Corse).
+# Pistes alternatives a explorer (suivi interne ticket EAJE-CORSE-001) :
+# CAF Corse direct, OpenStreetMap amenity=kindergarten, contact ARS Corse.
 def download_eaje() -> Iterator[Feature]:
     """Produit un iterateur vide (aucune source EAJE nationale geolocalisee).
 
@@ -774,7 +774,7 @@ def download_eaje() -> Iterator[Feature]:
         "EAJE : aucune source nationale geolocalisee disponible en open data "
         "(data.gouv.fr, data.caf.fr). La Corse-du-Sud et la Haute-Corse ne "
         "publient pas de dataset EAJE. Le fichier de sortie sera vide. "
-        "Voir docs/em-mairie/tickets/EAJE-CORSE-001.md pour les pistes alternatives."
+        "Voir suivi interne ticket EAJE-CORSE-001 pour les pistes alternatives."
     )
     return
     yield  # pragma: no cover  rend la fonction un generator
