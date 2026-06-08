@@ -8,7 +8,7 @@
  *
  * Ce test est désactivé (tous les it() sont en skip) tant que le moteur n'est
  * pas extrait de app.html vers lib/tellux-engine.js (phase 0 du chantier
- * auto-affinage, cf. docs/em-mairie/auto-affinage-conception-v1.md §7 phase 0).
+ * auto-affinage, conception interne §7 phase 0).
  *
  * Pour activer :
  *   1. Remplacer l'import ci-dessous par le chemin réel du module extrait.
