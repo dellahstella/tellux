@@ -396,11 +396,73 @@ def _extract_dois(markdown: str) -> list[str]:
     return seen
 
 
+# Pattern d'article ID parasite (style Oxford Academic) : DOI canonique
+# suivi de `/<digits>` correspondant à l'ID d'article dans l'URL publisher.
+# Exemple récurrent : URL https://academic.oup.com/jrr/advance-article/doi/
+# 10.1093/jrr/rrag041/8702477 → le DOI Crossref canonique est en réalité
+# 10.1093/jrr/rrag041 (sans /8702477). Le regex `_DOI_RE` est volontairement
+# greedy pour capter tous les caractères du suffixe DOI, mais cela emporte
+# au passage ce type d'ID quand le markdown contient l'URL publisher.
+_TRAILING_ARTICLE_ID_RE = re.compile(r"^(10\.\d{4,9}/[^\s]+?)/(\d+)$", re.IGNORECASE)
+
+
+def _normalize_doi_candidates(doi: str) -> list[str]:
+    """Retourne le DOI tel quel, puis ses normalisations candidates.
+
+    Tronque récursivement les segments finaux `/<digits>` (article IDs
+    publisher) tant que le pattern se répète. Garantit que l'ordre essayé
+    par le gate est : original d'abord, puis truncated. Si l'original résout,
+    on ne sait jamais qu'on aurait pu tronquer ; si l'original échoue, on
+    tente les candidats progressivement.
+    """
+    candidates = [doi]
+    current = doi
+    while True:
+        m = _TRAILING_ARTICLE_ID_RE.match(current)
+        if not m:
+            break
+        truncated = m.group(1)
+        if truncated == current or truncated in candidates:
+            break
+        candidates.append(truncated)
+        current = truncated
+    return candidates
+
+
+def _verify_single_doi(doi: str) -> tuple[bool, str]:
+    """Lance verify_citation.py sur un seul DOI. Retourne (ok, message).
+
+    ok=True si rc=0. message contient la dernière ligne stderr (cause) si
+    rc≠0, ou un libellé d'exception si subprocess plante.
+    """
+    try:
+        result = subprocess.run(
+            [sys.executable, str(_VERIFY_CITATION_PATH), doi],
+            capture_output=True,
+            text=True,
+            timeout=45,
+        )
+        if result.returncode == 0:
+            return True, ""
+        stderr_brief = (result.stderr or "").strip().splitlines()
+        last = stderr_brief[-1] if stderr_brief else f"rc={result.returncode}"
+        return False, f"rc={result.returncode} — {last[:200]}"
+    except subprocess.TimeoutExpired:
+        return False, "timeout 45s"
+    except Exception as exc:  # noqa: BLE001 — robustesse runtime cron
+        return False, f"exception : {str(exc)[:200]}"
+
+
 def gate_citations(markdown: str, source_label: str = "intégration") -> None:
     """Exécute verify_citation.py sur chaque DOI extrait de `markdown`.
 
     Lève CitationGateError si au moins une citation échoue. Aucune écriture
     en sortie — c'est un gate pur.
+
+    Pour chaque DOI extrait, tente verify_citation sur l'original PUIS sur
+    ses candidats normalisés (cf. `_normalize_doi_candidates`). Cela évite
+    les faux positifs récurrents sur les URL publisher Oxford Academic et
+    équivalents (DOI suivi d'un article ID numérique).
 
     Args:
         markdown: contenu markdown à scanner pour DOIs.
@@ -422,27 +484,24 @@ def gate_citations(markdown: str, source_label: str = "intégration") -> None:
     passed: list[str] = []
     failed: list[tuple[str, str]] = []
     for doi in dois:
-        try:
-            result = subprocess.run(
-                [sys.executable, str(_VERIFY_CITATION_PATH), doi],
-                capture_output=True,
-                text=True,
-                timeout=45,
-            )
-            if result.returncode == 0:
-                passed.append(doi)
-                print(f"[gate] PASS  {doi}")
-            else:
-                stderr_brief = (result.stderr or "").strip().splitlines()
-                last = stderr_brief[-1] if stderr_brief else f"rc={result.returncode}"
-                failed.append((doi, last[:200]))
-                print(f"[gate] FAIL  {doi} (rc={result.returncode}) — {last[:200]}")
-        except subprocess.TimeoutExpired:
-            failed.append((doi, "timeout 45s"))
-            print(f"[gate] FAIL  {doi} (timeout 45s)")
-        except Exception as exc:  # noqa: BLE001 — robustesse runtime cron
-            failed.append((doi, str(exc)[:200]))
-            print(f"[gate] FAIL  {doi} (exception : {exc})")
+        candidates = _normalize_doi_candidates(doi)
+        resolved_as: str | None = None
+        last_error: str = ""
+        for candidate in candidates:
+            ok, msg = _verify_single_doi(candidate)
+            if ok:
+                resolved_as = candidate
+                break
+            last_error = msg
+        if resolved_as is None:
+            failed.append((doi, last_error))
+            print(f"[gate] FAIL  {doi} — {last_error}")
+        elif resolved_as == doi:
+            passed.append(doi)
+            print(f"[gate] PASS  {doi}")
+        else:
+            passed.append(doi)
+            print(f"[gate] PASS  {doi} (normalisé → {resolved_as})")
 
     print(f"[gate] {source_label} — résultat : {len(passed)} OK, {len(failed)} échec(s)")
     if failed:
