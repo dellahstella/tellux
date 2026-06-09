@@ -53,8 +53,15 @@ jobs:
           # GitHub interdit les secrets commencant par GITHUB_ (préfixe réservé)
           # → secret renommé GH_PATH côté GitHub, mappé sur env var GITHUB_PAT pour le script
           GITHUB_PAT: ${{ secrets.GH_PATH }}
+          # Slug owner/repo du dépôt de coordination interne (cible des écritures).
+          PRIVATE_REPO: ${{ secrets.PRIVATE_REPO }}
           LOOKBACK_DAYS: ${{ github.event.inputs.lookback_days || '7' }}
           DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
+          # Garde-fou d'archi (décision 2026-06-08) : le cron hebdo collecte uniquement
+          # (digest dans une file inbox du dépôt cible). L'intégration au corpus est
+          # mensuelle, séparée, gatée par scripts/verify_citation.py. RUN_INTEGRATION
+          # reste à "0" en cron ; manuel uniquement (workflow_dispatch ou run local).
+          RUN_INTEGRATION: '0'
           # PROMPT_PATH non surchargé : le script utilise son défaut
           # docs/pilotage/prompt_veille_tellux_v2.md (commité 2026-05-11 dans le privé).
         run: python .github/scripts/veille_scholar.py
