@@ -5101,7 +5101,7 @@ async function loadAnt(){try{
   // Chargement paginé — fetch direct sans AbortSignal (évite l'erreur postMessage clonage)
   let rows=[], page=0, pageSize=500;
   while(true){
-    const url=SB_URL+'/rest/v1/antennas_corse?select=lat,lon,generation,commune,operateur&order=id.asc'+
+    const url=SB_URL+'/rest/v1/antennas_corse?select=lat,lon,generation,commune,code_insee_commune,operateur&order=id.asc'+
       '&offset='+(page*pageSize)+'&limit='+pageSize;
     const r=await fetch(url,{headers:sbH()});
     if(!r.ok) throw new Error('Supabase HTTP '+r.status);
@@ -5112,13 +5112,16 @@ async function loadAnt(){try{
     page++;
   }
   // Filtre offshore — snapshot Supabase 2026-04-24 (docs/em-mairie/data-sources/antennes_corse_notes.md) :
-  // 14 antennes offshore connues (10 Cerbicale, 4 mole nord Bastia) ont commune null/vide.
+  // 14 antennes offshore connues (10 Cerbicale, 4 mole nord Bastia) ont code_insee_commune null.
   // L'ancien filtre geometrique isLand (12 clauses bbox) rejetait ~180 antennes individuelles
   // dont ~166 onshore a tort, plafonnant le compteur affiche a 534 vs 2 986 attendues
-  // (cf. diagnostic 2026-06-01, prod commit 2745b9d). On utilise desormais le champ commune
-  // dispo dans le SELECT (L5131) : !f.commune => offshore. Plus robuste, pas de geometrie
-  // a deviner. Bbox primaire L ci-dessous conservee en safeguard pour les lignes hors Corse
-  // (donnees aberrantes potentielles).
+  // (cf. diagnostic 2026-06-01, prod commit 2745b9d). On utilise desormais le champ source-de-
+  // verite code_insee_commune (ajoute 2026-04-24, ticket SUPABASE-COMMUNE-FIELD-001) :
+  // !f.code_insee_commune => offshore. Le champ legacy `commune` est gardé dans le SELECT
+  // uniquement pour le label affiché du tooltip (ne PAS filtrer dessus — documenté
+  // explicitement « champ legacy pollué » dans antennes_corse_notes.md §1). Bbox primaire
+  // L ci-dessous conservee en safeguard pour les lignes hors Corse (donnees aberrantes
+  // potentielles).
   // Compteur affiche = nOnshore = nb d'antennes individuelles onshore (~2 986, coherent
   // libelle landing "3 000 antennes"). Markers Leaflet sont dedoublonnes par posKey
   // (lat/lon 5-decimales) pour la performance (~552 markers vs 2 986).
@@ -5128,7 +5131,7 @@ async function loadAnt(){try{
   let nOffshore=0, nSeaFiltered=0, nOnshore=0;
   rows.forEach(f=>{
     if(f.lon<8.30||f.lon>9.65||f.lat<41.35||f.lat>43.03){nSeaFiltered++;return;}
-    if(!f.commune){nOffshore++;return;}
+    if(!f.code_insee_commune){nOffshore++;return;}
     nOnshore++;
     const posKey=f.lat.toFixed(5)+','+f.lon.toFixed(5);
     const gen=f.generation||'default';
@@ -5137,7 +5140,7 @@ async function loadAnt(){try{
       seenPos.add(posKey);
     }
   });
-  console.log('Antennes : '+nOnshore+' onshore individuelles ('+seenPos.size+' positions distinctes, '+nOffshore+' offshore commune-null, '+nSeaFiltered+' hors bbox)');
+  console.log('Antennes : '+nOnshore+' onshore individuelles ('+seenPos.size+' positions distinctes, '+nOffshore+' offshore code_insee_commune-null, '+nSeaFiltered+' hors bbox)');
   const hdr=document.getElementById('hdr-status');
   if(hdr)setStatus(nOnshore+' antennes',true);
   const anfrC=document.getElementById('anfr-count');
