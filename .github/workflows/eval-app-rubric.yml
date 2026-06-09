@@ -1,0 +1,158 @@
+name: eval-app-rubric
+
+# Évaluateur Playwright Axe APP — rubrique §5.1 PROTOCOLE_AUTO_ITERATION.
+#
+# Phase A (ce ticket) : check INFORMATIF, NON-BLOQUANT. Poste le score dans
+# les logs + résumé GitHub mais ne fait pas tomber la PR. Permet de mesurer
+# la stabilité du score en environnement Linux (Ubuntu CI) avant de
+# promouvoir en check requis (Phase B, décision séparée).
+#
+# Pourquoi non-bloquant en Phase A :
+# - Score baseline ~8.5/10 (margin ~1.5 vs seuil 7.0) — confortable mais
+#   pas infini.
+# - Variance mesurée en local 2026-06-09 : Δ=0.3 sur 5 runs, StDev~0.16.
+#   Wobble localisé sur le critère Robustesse (erreur console
+#   `RangeError: Maximum call stack size exceeded` post-interaction,
+#   intermittente). Pas correctement diagnostiquée — pas raison de bloquer.
+# - Bloquant en PR app.html alors qu'on est en lecture seule sur l'app
+#   (FEDER-first) créerait du friction injustifiée. Phase B promotion à
+#   bloquant après ≥ 20 runs CI stables.
+#
+# Scope : déclenche UNIQUEMENT sur PR qui touchent app.html. Ne tourne pas
+# sur les PR veille / data / docs / tooling — évite le bruit et garde le
+# CI focalisé.
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+    paths:
+      - 'app.html'
+      - '.github/workflows/eval-app-rubric.yml'
+      - 'tests/blindage-harness/eval-app-rubric.mjs'
+      - 'tests/blindage-harness/package.json'
+  workflow_dispatch:
+    inputs:
+      app_url:
+        description: "URL de l'app à évaluer (vide = serveur local app.html du checkout)"
+        required: false
+        default: ""
+      threshold:
+        description: "Seuil pondéré (défaut 7.0 — protocole §5.1)"
+        required: false
+        default: "7.0"
+      heads_up_only:
+        description: "Si '0', l'eval bloque la PR sur exit code (Phase B). Défaut '1' = informatif."
+        required: false
+        default: "1"
+
+# Pas de permission write : on n'a besoin que de checkout + run.
+permissions:
+  contents: read
+
+jobs:
+  eval-rubric:
+    name: Eval Playwright Axe APP §5.1 (informatif)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # IMPORTANT : `continue-on-error: true` rend ce job NON-BLOQUANT pour la
+    # PR globale en Phase A. Le job apparaît avec son verdict (✅ / ❌) mais
+    # sa rouge ne fait PAS tomber la PR. Phase B (séparée) inversera ça via
+    # un commit dédié sur ce yml.
+    continue-on-error: true
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: tests/blindage-harness/package-lock.json
+
+      - name: Install npm deps (tests/blindage-harness)
+        working-directory: tests/blindage-harness
+        run: npm ci
+
+      - name: Install Chromium for Playwright
+        working-directory: tests/blindage-harness
+        run: npx playwright install --with-deps chromium
+
+      - name: Run eval-app-rubric (informatif, Phase A)
+        id: eval
+        working-directory: tests/blindage-harness
+        env:
+          # Seuil protocole §5.1. Surchargeable via workflow_dispatch.
+          EVAL_THRESHOLD: ${{ github.event.inputs.threshold || '7.0' }}
+          # APP_URL vide → serveur statique local sur le checkout (déterministe).
+          APP_URL: ${{ github.event.inputs.app_url || '' }}
+          # En CI, l'erreur console `RangeError` post-interaction est
+          # intermittente. On l'observe sans bloquer (continue-on-error).
+        run: |
+          set -o pipefail
+          node eval-app-rubric.mjs > eval-result.json
+          EXIT=$?
+          echo "exit_code=$EXIT" >> "$GITHUB_OUTPUT"
+          # Extraire métriques pour summary
+          SCORE=$(jq -r '.scoring.score_pondere' eval-result.json)
+          THRESH=$(jq -r '.scoring.threshold' eval-result.json)
+          MET=$(jq -r '.scoring.threshold_met' eval-result.json)
+          FONC=$(jq -r '.scoring.par_critere.fonctionnalite.note' eval-result.json)
+          REGR=$(jq -r '.scoring.par_critere.non_regression.note' eval-result.json)
+          CRAFT=$(jq -r '.scoring.par_critere.craft_ux.note' eval-result.json)
+          ROBUST=$(jq -r '.scoring.par_critere.robustesse.note' eval-result.json)
+          COUCHES=$(jq -r '.sondes.couches_chargees' eval-result.json)
+          CONS_BOOT=$(jq -r '.sondes.erreurs_console_boot' eval-result.json)
+          CONS_INT=$(jq -r '.sondes.erreurs_console_interact' eval-result.json)
+          CORS_FILT=$(jq -r '.sondes.cors_noise_filtered' eval-result.json)
+          {
+            echo "## Eval Playwright Axe APP — rubrique §5.1"
+            echo ""
+            echo "**Statut Phase A** : check informatif, non-bloquant."
+            echo ""
+            if [ "$MET" = "true" ]; then
+              echo "### ✅ Seuil atteint — **$SCORE / 10** (seuil $THRESH)"
+            else
+              echo "### ❌ Sous le seuil — **$SCORE / 10** (seuil $THRESH)"
+            fi
+            echo ""
+            echo "| Critère | Note | Poids |"
+            echo "|---|---|---|"
+            echo "| Fonctionnalité | $FONC/10 | 0.35 |"
+            echo "| Non-régression données | $REGR/10 | 0.30 |"
+            echo "| Craft / UX | $CRAFT/10 | 0.20 |"
+            echo "| Robustesse | $ROBUST/10 | 0.15 |"
+            echo ""
+            echo "| Sonde | Valeur |"
+            echo "|---|---|"
+            echo "| Couches chargées | $COUCHES / 9 |"
+            echo "| Erreurs console (boot) | $CONS_BOOT |"
+            echo "| Erreurs console (interact) | $CONS_INT |"
+            echo "| CORS noise filtré | $CORS_FILT |"
+            echo ""
+            echo "Exit eval : $EXIT (0 = seuil atteint, 2 = sous seuil)."
+            echo ""
+            echo "<details><summary>JSON complet (debug)</summary>"
+            echo ""
+            echo '```json'
+            cat eval-result.json
+            echo ""
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+          # Phase A : ne pas bloquer même si EXIT=2 (le job entier est
+          # `continue-on-error: true`).
+          # Phase B (futur) : enlever `continue-on-error` et `exit $EXIT`.
+          if [ "${{ github.event.inputs.heads_up_only || '1' }}" = "0" ]; then
+            exit $EXIT
+          fi
+
+      - name: Upload eval JSON artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-app-rubric-result
+          path: tests/blindage-harness/eval-result.json
+          retention-days: 14
