@@ -5111,14 +5111,19 @@ async function loadAnt(){try{
     if(batch.length<pageSize)break;
     page++;
   }
-  // Filtre offshore — snapshot Supabase 2026-04-24 (docs/em-mairie/data-sources/antennes_corse_notes.md) :
-  // 14 antennes offshore connues (10 Cerbicale, 4 mole nord Bastia) ont commune null/vide.
-  // L'ancien filtre geometrique isLand (12 clauses bbox) rejetait ~180 antennes individuelles
-  // dont ~166 onshore a tort, plafonnant le compteur affiche a 534 vs 2 986 attendues
-  // (cf. diagnostic 2026-06-01, prod commit 2745b9d). On utilise desormais le champ commune
-  // dispo dans le SELECT (L5131) : !f.commune => offshore. Plus robuste, pas de geometrie
-  // a deviner. Bbox primaire L ci-dessous conservee en safeguard pour les lignes hors Corse
-  // (donnees aberrantes potentielles).
+  // Filtre offshore — etat post-backfill 2026-06-10 :
+  // Le champ legacy `commune` est conserve pour tracabilite. Apres le pipeline
+  // fix_supabase_commune_insee.py (polygones IGN + fallback reverse-geocode BAN),
+  // toutes les antennes Corse ont desormais un `code_insee_commune` resolu —
+  // y compris les 14 antennes portuaires precedemment mal identifiees comme
+  // "Cerbicale / mole nord Bastia" mais en realite : 10 @ Solenzara marina
+  // (INSEE 2A269 Sari-Solenzara, distance 31 m du quai) + 4 @ Saint-Florent
+  // port (INSEE 2B298, distance 21 m). Cf. scripts/fix_supabase_commune_insee.py
+  // §"Fallback reverse-geocode" et docs/em-mairie/data-sources/antennes_corse_notes.md.
+  // Filtre courant L5131 (`!f.commune` => offshore) : conserve comme safeguard
+  // si la base regressait. Avec donnee saine, nOffshore = 0 et le filtre est
+  // un no-op — aucune antenne reelle masquee. Bbox primaire ci-dessous gardee
+  // en safeguard pour les lignes hors Corse (donnees aberrantes potentielles).
   // Compteur affiche = nOnshore = nb d'antennes individuelles onshore (~2 986, coherent
   // libelle landing "3 000 antennes"). Markers Leaflet sont dedoublonnes par posKey
   // (lat/lon 5-decimales) pour la performance (~552 markers vs 2 986).
