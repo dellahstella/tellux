@@ -41,16 +41,18 @@ Passe unique le 2026-04-24 via `scripts/fix_supabase_commune_insee.py`, méthode
 | Métrique | Valeur |
 |---|---|
 | Lignes totales | 3000 |
-| `code_insee_commune` NON NULL | 2986 (99.5 %) |
-| `code_insee_commune` NULL | 14 (offshore) |
+| `code_insee_commune` NON NULL (polygones IGN) | 2986 (99.5 %) |
+| `code_insee_commune` NULL après polygones, backfillé par reverse-geocode BAN | 14 (0.5 %) |
+| `code_insee_commune` NULL après fallback (vraiment en mer ou aberrant) | 0 |
 | Codes INSEE distincts | 219 |
-| Durée d'exécution (calcul + UPDATE 6 batches de 500) | ~5 s |
+| Durée d'exécution (calcul + UPDATE 6 batches de 500 + reverse-geocode ~19 s) | ~25 s |
 
-**Les 14 NULL** sont toutes des antennes offshore hors contours communaux IGN :
-- 10 antennes à (41.856667, 9.403889), label `commune = "PORT DE PLAISANCE"` (Bouygues + Free + SFR) — îles Cerbicale au sud-est de Porto-Vecchio
-- 4 antennes à (42.679444, 9.301111), label `commune = "Le Port"` (Orange) — môle nord Bastia
+**Les 14 antennes hors polygones IGN** — diagnostic corrigé 2026-06-10 (l'identification "Cerbicale / môle nord Bastia" indiquée avant cette date était fausse — les coordonnées ne tombent pas en mer mais sur des installations portuaires juste hors enveloppe IGN AdminExpress) :
 
-Ces valeurs NULL sont conformes et n'indiquent pas une régression. Elles correspondent aux 14 antennes déjà identifiées comme offshore dans le pipeline v1.0 de `build_antennes_par_commune_corse.py` (avant résolution du ticket).
+- **10 antennes à (41.856667, 9.403889)**, label `commune = "PORT DE PLAISANCE"` (Bouygues + Free + SFR) — **Solenzara marina**, commune Sari-Solenzara (**INSEE 2A269**, BAN distance 31 m du quai, exact housenumber match "2 Piazza Dumenicu Marfisi").
+- **4 antennes à (42.679444, 9.301111)**, label `commune = "Le Port"` (Orange) — **Saint-Florent**, Cap Corse nord-ouest (**INSEE 2B298**, BAN distance 21 m, exact housenumber match "Rue des Sauveteurs en Mer"). *Ce n'est PAS Bastia* (Bastia est à environ 25 km au sud-est sur la côte est ; l'erreur d'identification précédente a été propagée depuis le label `commune = "Le Port"` qui ne désigne pas la ville de Bastia).
+
+Ces 14 antennes sont **portuaires réelles**, pas offshore. Elles sont désormais backfillées via le **fallback reverse-geocode BAN** ajouté à `scripts/fix_supabase_commune_insee.py` (2026-06-10), section `reverse_geocode_fallback()`. Doctrine donnée stricte : assigne UNIQUEMENT si reverse pointe une commune en Corse (2A/2B) à moins de 500 m. Sinon, NULL conservé pour revue manuelle (aucune valeur inventée).
 
 **Top 5 communes par nombre d'antennes** :
 
