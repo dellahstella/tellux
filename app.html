@@ -5144,6 +5144,26 @@ async function loadAnt(){try{
   if(anfrC)anfrC.textContent=nOnshore+' antennes';
   var legAnt=document.getElementById('leg-ant-count');
   if(legAnt)legAnt.textContent=nOnshore;
+  // Hook de debug léger pour les sondes d'évaluation (Playwright § Axe APP)
+  // — publie le compteur de chaque couche en lecture seule. Suggéré §8
+  // PROTOCOLE_AUTO_ITERATION (« exposer un hook de debug léger ... facilite
+  // énormément les sondes »). Lecture seule, non gelée, no-op si déjà set.
+  try {
+    window.__telluxLayers = Object.assign(window.__telluxLayers || {}, {
+      HTA_segments: Array.isArray(HTA_SEGMENTS_DATA) ? HTA_SEGMENTS_DATA.length : null,
+      WMM_grid: Array.isArray(WMM_GRID) ? WMM_GRID.length : null,
+      TDF_emitters: Array.isArray(TDF_EMITTERS) ? TDF_EMITTERS.length : null,
+      postes_sources: Array.isArray(POSTES_SOURCES) ? POSTES_SOURCES.length : null,
+      eoliennes: Array.isArray(EOLIENNES_DATA) ? EOLIENNES_DATA.length : null,
+      hotspots_uth: Array.isArray(POINTS_CHAUDS_RADIO) ? POINTS_CHAUDS_RADIO.length : null,
+      mesures_certifiees: Array.isArray(MESURES_CERTIFIEES) ? MESURES_CERTIFIEES.length : null,
+      radon_communes_L3: (typeof RADON_L3_INSEE_SET !== 'undefined' && RADON_L3_INSEE_SET && RADON_L3_INSEE_SET.size) || null,
+      antennes_anfr: nOnshore,
+      antennes_offshore: nOffshore,
+      antennes_sea_filtered: nSeaFiltered,
+      published_at: Date.now(),
+    });
+  } catch (_e) { /* hook best-effort, ne doit pas casser le boot */ }
   // Emetteurs broadcast TDF — dataset-driven (public/data/tdf_emitters_corse.json)
   // Icone croix, info-bulle listant PAR + services + notes.
   await loadTDFEmitters();
