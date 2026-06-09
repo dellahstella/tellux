@@ -5,7 +5,14 @@ Workflow hebdomadaire (cron lundi 8h UTC) :
 1. Récupère les emails Google Scholar Alerts des 7 derniers jours via Gmail API.
 2. Lit le prompt de veille depuis un dépôt de coordination interne.
 3. Synthétise via Anthropic API.
-4. Commite la note dans le dépôt interne via API GitHub.
+4. Écrit le digest dans la file inbox du dépôt de coordination interne.
+
+Garde-fou d'archi (décision 2026-06-08) : le cron hebdo collecte uniquement
+et écrit dans `_inbox/scholar/syntheses/` du dépôt cible. Le commit ne va
+jamais directement dans le corpus. L'intégration au corpus reste mensuelle,
+séparée, gatée par `scripts/verify_citation.py` — RUN_INTEGRATION reste à "0"
+en cron ; uniquement utilisable en manuel (override par workflow_dispatch
+ou exécution locale).
 
 Aucun secret en clair dans le script — tout vient de variables d'environnement
 fournies par GitHub Actions Secrets.
@@ -21,10 +28,16 @@ Variables d'env requises :
 Variables d'env optionnelles :
     PROMPT_PATH           — chemin du prompt dans le dépôt cible
                             (défaut : docs/pilotage/prompt_veille_tellux_v2.md)
+    INTEGRATION_PROMPT_PATH — chemin du prompt d'intégration
+                            (défaut : docs/pilotage/prompt_integration_corpus.md)
     ANTHROPIC_MODEL       — défaut : claude-sonnet-4-5
     LOOKBACK_DAYS         — fenêtre de recherche en jours (défaut : 7)
     OUTPUT_DIR            — dossier dans le dépôt cible pour les synthèses
-                            (défaut : _corpus_veille/syntheses)
+                            (défaut : _inbox/scholar/syntheses ; garde-fou cron)
+    INTEGRATION_OUTPUT_DIR — dossier pour la note d'intégration corpus
+                            (défaut : _inbox/scholar/integrations)
+    RUN_INTEGRATION       — si "1", exécute l'étape d'intégration corpus
+                            (défaut "0" ; cron ne déclenche jamais l'intégration)
     DRY_RUN               — si "1", n'écrit rien dans le dépôt cible (debug)
 """
 
@@ -60,11 +73,18 @@ INTEGRATION_PROMPT_PATH = os.environ.get(
 PRIVATE_REPO = os.environ.get("PRIVATE_REPO", "")
 ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5")
 LOOKBACK_DAYS = int(os.environ.get("LOOKBACK_DAYS", "7"))
-OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "_corpus_veille/syntheses")
+# Garde-fou cron : OUTPUT_DIR pointe sur la file inbox par défaut. Le commit
+# direct dans le corpus est interdit en cron — l'intégration au corpus est un
+# processus séparé, mensuel, gaté par scripts/verify_citation.py.
+OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "_inbox/scholar/syntheses")
 INTEGRATION_OUTPUT_DIR = os.environ.get(
-    "INTEGRATION_OUTPUT_DIR", "_corpus_veille/integrations"
+    "INTEGRATION_OUTPUT_DIR", "_inbox/scholar/integrations"
 )
 DRY_RUN = os.environ.get("DRY_RUN", "0") == "1"
+# Étape d'intégration corpus : désactivée par défaut. Le cron ne lance que la
+# collecte → digest. L'intégration au corpus public/_corpus_veille reste
+# manuelle (curation + verify_citation.py).
+RUN_INTEGRATION = os.environ.get("RUN_INTEGRATION", "0") == "1"
 
 REQUIRED_SECRETS = [
     "GMAIL_REFRESH_TOKEN",
@@ -456,7 +476,14 @@ def main() -> int:
     synthesis_path = f"{OUTPUT_DIR}/synthese_{today.isoformat()}.md"
 
     # Etape 2 — Note d'integration corpus (best-effort, ne casse pas le run)
-    integration_path = run_integration_step(today, synthesis_full)
+    # Garde-fou cron : désactivée par défaut (RUN_INTEGRATION=0). L'intégration
+    # au corpus reste mensuelle, séparée, gatée par scripts/verify_citation.py.
+    integration_path = None
+    if RUN_INTEGRATION:
+        integration_path = run_integration_step(today, synthesis_full)
+    else:
+        print("[skip] Étape d'intégration corpus désactivée (RUN_INTEGRATION=0) — "
+              "le cron ne fait que collecter ; l'intégration est manuelle et gatée.")
 
     # Etape 3 — Notification issue (best-effort, lie synthese + integration)
     notify_run_complete(today, len(emails), synthesis_path, integration_path)
