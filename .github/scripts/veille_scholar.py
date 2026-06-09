@@ -47,9 +47,12 @@ import base64
 import datetime as dt
 import json
 import os
+import re
+import subprocess
 import sys
 from email import message_from_bytes
 from email.policy import default as email_default_policy
+from pathlib import Path
 from typing import Any
 
 import anthropic
@@ -57,6 +60,16 @@ import requests
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+
+# Force UTF-8 sur stdout/stderr pour éviter UnicodeEncodeError sur consoles
+# Windows (cp1252) lors des tests locaux. Sur GitHub Actions Linux, locale est
+# déjà UTF-8 et ce no-op est silencieux.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(encoding="utf-8")
+        except Exception:  # noqa: BLE001 — best-effort, ne doit pas casser le run
+            pass
 
 # ---------------------------------------------------------------------------
 # Config
@@ -343,29 +356,140 @@ def commit_integration(content: str, today: dt.date) -> str:
         raise RuntimeError(f"Commit integration échoué : {r.status_code} — {r.text[:200]}")
 
 
-def run_integration_step(today: dt.date, synthesis_content: str) -> str | None:
-    """Lance l'etape integration best-effort. Retourne le path commite ou None.
+# ---------------------------------------------------------------------------
+# Gate §10 — verify_citation.py
+#
+# Garde-fou anti-Frankenstein : toute citation produite par l'étape
+# d'intégration doit être résolvable par scripts/verify_citation.py
+# (Crossref / PubMed / bioRxiv) avant d'écrire quoi que ce soit dans le
+# dépôt cible. Si une seule citation échoue, l'intégration est avortée
+# avec un exit non-zéro — aucune écriture.
 
-    Encapsule fetch prompt + call Claude + commit dans try/except global. Toute
-    erreur logge un WARN mais ne fait pas echouer le run (la synthese passe
-    quand meme, la note d'integration est un bonus du cycle).
+
+# DOI canonical pattern (Crossref doc) : 10.{4-9 digits}/{path}. La partie
+# locale tolère caractères URL-safe ; on coupe la ponctuation finale au
+# nettoyage.
+_DOI_RE = re.compile(r"\b10\.\d{4,9}/[^\s\"<>()\[\]]+", re.IGNORECASE)
+
+# Chemins du script gate (résolus depuis la racine du repo).
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_VERIFY_CITATION_PATH = _REPO_ROOT / "scripts" / "verify_citation.py"
+
+
+class CitationGateError(RuntimeError):
+    """Levée si le gate §10 bloque une ou plusieurs citations.
+
+    Cette exception est explicitement PROPAGÉE (pas avalée par les
+    try/except best-effort) — gate failure = exit non-zéro, aucun
+    commit corpus.
     """
+
+
+def _extract_dois(markdown: str) -> list[str]:
+    """Extrait l'ensemble des DOIs uniques du markdown, ponctuation nettoyée."""
+    raw = _DOI_RE.findall(markdown)
+    seen: list[str] = []
+    for doi in raw:
+        cleaned = doi.rstrip(".,;:)]\"'>").lower()
+        if cleaned and cleaned not in seen:
+            seen.append(cleaned)
+    return seen
+
+
+def gate_citations(markdown: str, source_label: str = "intégration") -> None:
+    """Exécute verify_citation.py sur chaque DOI extrait de `markdown`.
+
+    Lève CitationGateError si au moins une citation échoue. Aucune écriture
+    en sortie — c'est un gate pur.
+
+    Args:
+        markdown: contenu markdown à scanner pour DOIs.
+        source_label: étiquette pour les logs (ex. "intégration", "test").
+    """
+    if not _VERIFY_CITATION_PATH.exists():
+        raise CitationGateError(
+            f"[gate] verify_citation.py introuvable à {_VERIFY_CITATION_PATH} — "
+            f"gate §10 indisponible, intégration bloquée par précaution."
+        )
+
+    dois = _extract_dois(markdown)
+    if not dois:
+        print(f"[gate] {source_label} — aucun DOI détecté ; gate passe par défaut.")
+        return
+
+    print(f"[gate] {source_label} — {len(dois)} DOI(s) à vérifier via "
+          f"scripts/verify_citation.py")
+    passed: list[str] = []
+    failed: list[tuple[str, str]] = []
+    for doi in dois:
+        try:
+            result = subprocess.run(
+                [sys.executable, str(_VERIFY_CITATION_PATH), doi],
+                capture_output=True,
+                text=True,
+                timeout=45,
+            )
+            if result.returncode == 0:
+                passed.append(doi)
+                print(f"[gate] PASS  {doi}")
+            else:
+                stderr_brief = (result.stderr or "").strip().splitlines()
+                last = stderr_brief[-1] if stderr_brief else f"rc={result.returncode}"
+                failed.append((doi, last[:200]))
+                print(f"[gate] FAIL  {doi} (rc={result.returncode}) — {last[:200]}")
+        except subprocess.TimeoutExpired:
+            failed.append((doi, "timeout 45s"))
+            print(f"[gate] FAIL  {doi} (timeout 45s)")
+        except Exception as exc:  # noqa: BLE001 — robustesse runtime cron
+            failed.append((doi, str(exc)[:200]))
+            print(f"[gate] FAIL  {doi} (exception : {exc})")
+
+    print(f"[gate] {source_label} — résultat : {len(passed)} OK, {len(failed)} échec(s)")
+    if failed:
+        details = "\n".join(f"  - {doi} :: {reason}" for doi, reason in failed)
+        raise CitationGateError(
+            f"{len(failed)} citation(s) bloquée(s) sur {len(dois)} — "
+            f"intégration corpus avortée (aucune écriture).\n{details}"
+        )
+
+
+def run_integration_step(today: dt.date, synthesis_content: str) -> str | None:
+    """Lance l'étape intégration. Le gate §10 sur les citations EST FATAL.
+
+    Le commit / réseau / appel Claude restent best-effort (non fatals). Mais
+    une CitationGateError remonte volontairement à l'appelant pour avorter
+    le run avec exit non-zéro et SANS commit.
+    """
+    print(f"[integration] start")
     try:
-        print(f"[integration] start")
         integration_prompt = fetch_prompt_from_private_repo(INTEGRATION_PROMPT_PATH)
         note = call_anthropic_integration(integration_prompt, synthesis_content)
+    except Exception as e:
+        print(f"[integration] WARN — préparation note échouée (non fatale) : {e}")
+        return None
+
+    # Gate §10 — AVANT toute écriture. Levée d'exception fatale si KO.
+    gate_citations(note, source_label="intégration corpus")
+
+    if DRY_RUN:
+        print("[integration] DRY_RUN=1 — gate validé, écriture corpus skippée "
+              "(mode dry-run explicit demandé).")
+        return None
+
+    try:
         header = (
             f"# Note d'intégration veille Scholar — {today.isoformat()}\n\n"
             f"**Modèle** : {ANTHROPIC_MODEL}\n"
             f"**Synthèse source** : `{OUTPUT_DIR}/synthese_{today.isoformat()}.md`\n"
             f"**Prompt intégration** : `{INTEGRATION_PROMPT_PATH}`\n\n"
+            f"**Gate §10 (`verify_citation.py`)** : ✅ toutes citations validées.\n\n"
             f"---\n\n"
         )
         path = commit_integration(header + note, today)
         print(f"[integration] done")
         return path
     except Exception as e:
-        print(f"[integration] WARN — étape échouée (non fatale) : {e}")
+        print(f"[integration] WARN — commit échoué (non fatal) : {e}")
         return None
 
 
@@ -378,12 +502,19 @@ def notify_run_complete(
     n_emails: int,
     synthesis_path: str,
     integration_path: str | None,
+    gate_failed: bool = False,
+    gate_error_message: str = "",
 ) -> None:
     """Ouvre une issue dans le repo prive pour signaler la production du run.
 
     L'issue lie la synthese ET la note d'integration (si produite). Si la note
     d'integration a echoue, l'issue le signale explicitement pour que Soleil
     sache que le cycle est partiel.
+
+    Si `gate_failed=True`, le titre et le corps signalent explicitement que
+    l'intégration a été bloquée par le gate §10 (verify_citation.py) et que
+    le run a été marqué en échec (exit non-zéro). Aucune écriture corpus n'a
+    eu lieu.
 
     Best-effort : si l'API GitHub echoue, on log un warning sans faire echouer
     le run (la synthese et eventuellement la note sont deja commitees, la
@@ -399,15 +530,30 @@ def notify_run_complete(
         "Authorization": f"Bearer {os.environ['GITHUB_PAT']}",
         "Accept": "application/vnd.github+json",
     }
-    title = f"[veille] Synthèse + intégration — {today.isoformat()}"
+    if gate_failed:
+        title = f"[veille] ⛔ Gate §10 BLOQUE — intégration avortée — {today.isoformat()}"
+    else:
+        title = f"[veille] Synthèse + intégration — {today.isoformat()}"
 
     integration_section = ""
-    if integration_path:
+    if gate_failed:
+        integration_section = (
+            f"\n## Note d'intégration corpus\n\n"
+            f"⛔ **Intégration corpus AVORTÉE par le gate §10** "
+            f"(`scripts/verify_citation.py`).\n\n"
+            f"Aucune écriture corpus n'a eu lieu. Le run est marqué en échec "
+            f"(exit non-zéro) afin d'apparaître clairement dans l'historique "
+            f"GitHub Actions.\n\n"
+            f"**Détail du blocage** :\n\n"
+            f"```\n{gate_error_message}\n```\n"
+        )
+    elif integration_path:
         integration_url = f"https://github.com/{PRIVATE_REPO}/blob/main/{integration_path}"
         integration_section = (
             f"\n## Note d'intégration corpus\n\n"
             f"- **Fichier** : `{integration_path}`\n"
             f"- **Lien** : {integration_url}\n"
+            f"- **Gate §10** : ✅ toutes citations validées.\n"
         )
     else:
         integration_section = (
@@ -475,12 +621,29 @@ def main() -> int:
     commit_synthesis(synthesis_full, today)
     synthesis_path = f"{OUTPUT_DIR}/synthese_{today.isoformat()}.md"
 
-    # Etape 2 — Note d'integration corpus (best-effort, ne casse pas le run)
+    # Etape 2 — Note d'integration corpus.
     # Garde-fou cron : désactivée par défaut (RUN_INTEGRATION=0). L'intégration
     # au corpus reste mensuelle, séparée, gatée par scripts/verify_citation.py.
+    # Si RUN_INTEGRATION=1, le gate §10 EST FATAL — toute citation non résolue
+    # avorte le run avec exit 2 et aucune écriture.
     integration_path = None
     if RUN_INTEGRATION:
-        integration_path = run_integration_step(today, synthesis_full)
+        try:
+            integration_path = run_integration_step(today, synthesis_full)
+        except CitationGateError as e:
+            print(f"[gate] FATAL — intégration corpus avortée par le gate §10.")
+            print(str(e))
+            # Best-effort : on essaie quand même de notifier le blocage (signal
+            # visible), mais on exit non-zéro pour que la run apparaisse en
+            # échec dans GitHub Actions.
+            try:
+                notify_run_complete(
+                    today, len(emails), synthesis_path, None,
+                    gate_failed=True, gate_error_message=str(e),
+                )
+            except Exception as notify_exc:
+                print(f"[notify] WARN — notification gate-fail échouée : {notify_exc}")
+            return 2
     else:
         print("[skip] Étape d'intégration corpus désactivée (RUN_INTEGRATION=0) — "
               "le cron ne fait que collecter ; l'intégration est manuelle et gatée.")
@@ -492,5 +655,39 @@ def main() -> int:
     return 0
 
 
+def cli_test_gate() -> int:
+    """CLI : `python veille_scholar.py --test-gate <path>`.
+
+    Lit le markdown du fichier, extrait les DOIs, exécute le gate §10
+    (verify_citation.py) sur chacun, sans aucun side-effect réseau au-delà
+    des appels Crossref/PubMed/bioRxiv eux-mêmes. Exit 0 si gate OK, exit 2
+    si gate bloque (cohérent avec verify_citation.py).
+
+    Usage prouvable :
+        python .github/scripts/veille_scholar.py --test-gate path/to/file.md
+    """
+    if len(sys.argv) < 3:
+        print("Usage : python veille_scholar.py --test-gate <path/to/markdown>", file=sys.stderr)
+        return 1
+    target = Path(sys.argv[2])
+    if not target.exists():
+        print(f"[test-gate] Fichier introuvable : {target}", file=sys.stderr)
+        return 1
+    content = target.read_text(encoding="utf-8")
+    print(f"[test-gate] source : {target} ({len(content)} chars)")
+    try:
+        gate_citations(content, source_label=f"test-gate ({target.name})")
+        print("[test-gate] OK — gate §10 validé (aucune citation bloquée).")
+        return 0
+    except CitationGateError as exc:
+        print(f"[test-gate] BLOQUÉ — {exc}", file=sys.stderr)
+        return 2
+
+
 if __name__ == "__main__":
+    # Mode test isolé : `--test-gate <path>` exécute uniquement le gate sur
+    # un fichier markdown, sans toucher au reste du pipeline (pas de Gmail,
+    # pas d'Anthropic, pas de commit).
+    if len(sys.argv) >= 2 and sys.argv[1] == "--test-gate":
+        sys.exit(cli_test_gate())
     sys.exit(main())
