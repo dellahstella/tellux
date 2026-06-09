@@ -14,6 +14,14 @@ Calcule `code_insee_commune` pour chaque antenne de la table Supabase
 Le champ `commune` historique (pollue) est conserve pour tracabilite.
 La colonne `code_insee_commune` devient la source de verite.
 
+Fallback reverse-geocode (ajoute 2026-06-10) :
+  Certaines antennes portuaires/maritimes ont des coordonnees tombant juste
+  hors des polygones AdminExpress (digues, marinas, jetees). Pour ces cas,
+  un second passage interroge `api-adresse.data.gouv.fr/reverse/`. Si la
+  reponse pointe une commune de Corse (2A/2B) a moins de SEUIL_REVERSE_M
+  metres, l'INSEE est assigne. Sinon, l'antenne reste NULL et est listee
+  comme suspecte (revue manuelle, ne pas forcer).
+
 Prerequis :
   1. Colonne `code_insee_commune TEXT` existante sur `antennas_corse`.
   2. Variables d'environnement :
@@ -65,6 +73,14 @@ LOG = logging.getLogger("fix_supabase_commune_insee")
 # ---------------------------------------------------------------------------
 
 GEO_API = "https://geo.api.gouv.fr/communes"
+
+# Fallback reverse-geocode (BAN — api-adresse.data.gouv.fr) pour les
+# antennes dont les coordonnees tombent hors de tout polygone IGN
+# AdminExpress (typiquement portuaires : Solenzara marina, Saint-Florent
+# port). Validation stricte : citycode dans la Corse (2A/2B) ET distance
+# inferieure au seuil. Sinon, on ne force pas — l'antenne reste NULL.
+BAN_REVERSE_API = "https://api-adresse.data.gouv.fr/reverse/"
+SEUIL_REVERSE_M = 500  # metres ; > 500 m = coord probablement aberrante
 
 # Clef anon publique (lecture seule, RLS) : permet les SELECT pour verification.
 # Pour les UPDATE, SUPABASE_SERVICE_ROLE_KEY est requise.
@@ -161,6 +177,45 @@ def assign_insee(lat: float, lon: float, polygons: list[dict]) -> str | None:
     return None
 
 
+def reverse_geocode_fallback(
+    lat: float, lon: float, valid_codes: set[str]
+) -> tuple[str | None, str]:
+    """Resolve INSEE via reverse-geocoding (BAN) for points outside any polygon.
+
+    Returns (code, reason). `code` est None si pas de match acceptable.
+    `reason` explique le verdict pour le journal de revue.
+    Doctrine donnee stricte : on ne force jamais. Si le resultat sort des
+    cases (hors Corse, trop loin, pas de citycode), on flag.
+    """
+    url = f"{BAN_REVERSE_API}?lat={lat}&lon={lon}"
+    try:
+        data = http_json(url, timeout=15)
+    except RuntimeError as exc:
+        return None, f"reverse-api-error:{exc}"
+    if not data or not data.get("features"):
+        return None, "reverse-no-result"
+    feat = data["features"][0]
+    props = feat.get("properties", {}) or {}
+    citycode = props.get("citycode")
+    distance = props.get("distance")
+    city = props.get("city")
+    if not citycode:
+        return None, f"reverse-no-citycode (city={city!r})"
+    if citycode not in valid_codes:
+        return None, (
+            f"reverse-hors-corse citycode={citycode} city={city!r} "
+            f"distance={distance}m"
+        )
+    if distance is None or distance > SEUIL_REVERSE_M:
+        return None, (
+            f"reverse-trop-loin citycode={citycode} city={city!r} "
+            f"distance={distance}m > {SEUIL_REVERSE_M}m"
+        )
+    return citycode, (
+        f"reverse-ok citycode={citycode} city={city!r} distance={distance}m"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Supabase IO
 # ---------------------------------------------------------------------------
@@ -227,7 +282,14 @@ def run(dry_run: bool, batch_size: int):
     n_null = 0
     for r in rows:
         code = assign_insee(r["lat"], r["lon"], polygons)
-        computed.append({"id": r["id"], "code_insee_commune": code, "current": r.get("code_insee_commune")})
+        computed.append({
+            "id": r["id"],
+            "lat": r["lat"],
+            "lon": r["lon"],
+            "code_insee_commune": code,
+            "current": r.get("code_insee_commune"),
+            "source": "polygon" if code else None,
+        })
         if code is None:
             n_null += 1
     dt = time.time() - t0
@@ -237,9 +299,62 @@ def run(dry_run: bool, batch_size: int):
     LOG.info("  Termine en %.1fs : %d places, %d NULL, %d codes INSEE distincts",
              dt, n_placed, n_null, distinct)
 
-    # Points d'arret de securite
+    # ----- Fallback reverse-geocode pour les NULL -------------------------
+    # Antennes typiques : portuaires (Solenzara marina, Saint-Florent port)
+    # dont les coordonnees tombent juste hors polygones IGN AdminExpress.
+    # Doctrine donnee stricte : on assigne UNIQUEMENT si reverse pointe une
+    # commune de Corse a moins de SEUIL_REVERSE_M m. Sinon on flag.
+    valid_codes = {p["code"] for p in polygons}
+    null_indices = [i for i, c in enumerate(computed) if c["code_insee_commune"] is None]
+    n_reverse_ok = 0
+    flagged: list[dict] = []
+    if null_indices:
+        LOG.info(
+            "Fallback reverse-geocode (BAN) sur %d antennes hors polygones...",
+            len(null_indices),
+        )
+        t0 = time.time()
+        for i in null_indices:
+            c = computed[i]
+            code, reason = reverse_geocode_fallback(c["lat"], c["lon"], valid_codes)
+            if code:
+                c["code_insee_commune"] = code
+                c["source"] = "reverse"
+                c["reverse_reason"] = reason
+                n_reverse_ok += 1
+                LOG.info("  id=%s lat=%.6f lon=%.6f -> %s (%s)",
+                         c["id"], c["lat"], c["lon"], code, reason)
+            else:
+                c["reverse_reason"] = reason
+                flagged.append({
+                    "id": c["id"], "lat": c["lat"], "lon": c["lon"], "reason": reason,
+                })
+                LOG.warning("  FLAG id=%s lat=%.6f lon=%.6f : %s",
+                            c["id"], c["lat"], c["lon"], reason)
+        LOG.info("Reverse termine en %.1fs : %d backfill, %d flagged.",
+                 time.time() - t0, n_reverse_ok, len(flagged))
+
+    n_null = sum(1 for c in computed if c["code_insee_commune"] is None)
+    n_placed = len(computed) - n_null
+    distinct = len({c["code_insee_commune"] for c in computed if c["code_insee_commune"]})
+    LOG.info(
+        "Apres fallback : %d places (polygon=%d, reverse=%d), %d NULL flagged, %d communes distinctes",
+        n_placed,
+        sum(1 for c in computed if c.get("source") == "polygon"),
+        n_reverse_ok,
+        n_null,
+        distinct,
+    )
+
+    if flagged:
+        LOG.warning("=== %d antenne(s) restent NULL apres fallback ===", len(flagged))
+        LOG.warning("Revue manuelle requise — doctrine donnee stricte, pas de valeur inventee :")
+        for f in flagged:
+            LOG.warning("  id=%s @ (%.6f, %.6f) : %s", f["id"], f["lat"], f["lon"], f["reason"])
+
+    # Points d'arret de securite (post-fallback)
     if n_null > 30:
-        LOG.error("Trop de NULL (%d > 30), probable regression. ABORT.", n_null)
+        LOG.error("Trop de NULL apres fallback (%d > 30), probable regression. ABORT.", n_null)
         return 1
     if distinct < 200:
         LOG.error("Trop peu de codes INSEE distincts (%d < 200), probable regression. ABORT.",
