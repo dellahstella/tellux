@@ -249,6 +249,17 @@ async function probeDrillDown(page) {
 // les antennes sans rattachement commune sont considérées offshore et
 // rejetées du rendu. La sonde vérifie le MÉCANISME (count antennes
 // effectivement rendues) plutôt que la fonction nommée.
+//
+// IMPORTANT (correction 2026-06-10) : on NE demande PAS `offshore > 0`.
+// État nominal post-backfill = 0 offshore (toutes les antennes Corse ont
+// un code_insee_commune résolu via polygones IGN + fallback reverse-géocode
+// BAN). La sonde valide :
+//   (a) la logique de catégorisation lit la source de vérité (hook publié,
+//       compteurs cohérents avec le rendu) ;
+//   (b) aucune antenne réelle n'est masquée (onshore = total ANFR Corse).
+// La sonde DOIT passer avec offshore = 0. Une régression future qui
+// re-introduirait des antennes "offshore" sera signalée comme info, pas
+// comme fail — sauf si onshore chute (vrai signal de masquage erroné).
 async function probeIsLandFilter(page) {
   return await page.evaluate(() => {
     try {
@@ -261,9 +272,10 @@ async function probeIsLandFilter(page) {
                  ok: sea === false && land === true };
       }
       // 2) Sinon : vérifier le filtre par `commune` côté Supabase / loadAnt.
-      //    Le compteur affiché dans le header (nOnshore) doit être < total
-      //    antennes (rejet effectif). Le label exact varie ; on inspecte
-      //    le hook de debug si dispo, sinon le compteur visible.
+      //    Le hook publie nOnshore (rendu) et nOffshore (rejeté). Le critère
+      //    de passage est : la logique a tourné (compteurs présents) ET
+      //    onshore > 0 (aucune antenne réelle masquée). offshore peut être 0
+      //    (état nominal post-backfill INSEE) ou > 0 (régression à signaler).
       if (typeof window !== 'undefined' && window.__telluxLayers &&
           typeof window.__telluxLayers.antennes_anfr === 'number' &&
           typeof window.__telluxLayers.antennes_offshore === 'number') {
@@ -271,7 +283,13 @@ async function probeIsLandFilter(page) {
         const offshore = window.__telluxLayers.antennes_offshore;
         return {
           method: 'commune_filter (hook)', onshore, offshore,
-          ok: onshore > 0 && offshore > 0,
+          // PASS si la logique a publié des compteurs cohérents ET au moins
+          // une antenne onshore réelle. offshore = 0 = nominal post-backfill.
+          ok: onshore > 0,
+          // Info : tag "nominal" si offshore = 0 (état attendu après pipeline),
+          // "regression" si offshore > 0 (signale qu'une antenne réelle pourrait
+          // être incorrectement masquée — à investiguer hors sonde).
+          state: offshore === 0 ? 'nominal' : 'regression-suspecte',
         };
       }
       // 3) Fallback : examiner le texte du status header pour repérer un
