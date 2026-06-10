@@ -7883,5 +7883,422 @@ async function saveObservation(){
 </div>
 <div id="glossary-backdrop" class="glossary-backdrop" onclick="closeGlossaryDrawer()"></div>
 
+<!-- ═══════════════════════════════════════════════════════════════════════
+     i18n corsu (bêta) — feat/i18n-corsu-beta (2026-06-10)
+     Bascule UNIQUEMENT via ?lang=co — aucun bouton public. Promotion en
+     toggle visible seulement APRÈS validation d'un relecteur bilingue.
+     FR = source de vérité : par défaut (sans ?lang=co) ce bloc ne touche
+     RIEN au DOM (early return avant toute lecture du dictionnaire).
+     Chaque entrée porte le FR verbatim en garde anti-drift : si le texte
+     courant ne correspond plus au FR attendu, la chaîne est SAUTÉE
+     (console.warn, listée dans window.__telluxI18n.skipped) — additif,
+     jamais destructif.
+     Périmètre : chrome UI (navigation, boutons, titres de panneaux,
+     tooltips, libellés). Prose scientifique dense, canon, textes légaux
+     (RGPD/consentements) et chaînes générées en JS : DIFFÉRÉS — liste
+     dans docs/i18n/REVUE_FR_CO_app.md (table de revue bilingue, générée
+     par scripts/export_i18n_co_table.mjs depuis ce bloc).
+     Zones gelées (EXPERT_WEIGHTS/BOUNDS, calcGammaAmbient, GELE-001,
+     NCRP-001) et logique calc* : non touchées — affichage pur.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+  'use strict';
+  var lang;
+  try { lang = (new URLSearchParams(window.location.search).get('lang') || 'fr').toLowerCase(); }
+  catch (_e) { return; }
+  if (lang !== 'co') return; // défaut FR : zéro mutation DOM
+
+  // Entrées [clé, sélecteur, attr, fr, co] — JSON pur entre les marqueurs
+  // (extrait par scripts/export_i18n_co_table.mjs pour la table de revue).
+  // attr '' = nœud texte (celui qui matche le FR, sinon l'unique nœud),
+  // 'tf' = premier nœud texte, 'doc-title' = document.title,
+  // sinon nom d'attribut HTML (title, aria-label, placeholder, label).
+  // Sélecteur suffixé '@N' = querySelectorAll(base)[N].
+  var I18N_ENTRIES=/* I18N-CO-ENTRIES-BEGIN */[
+["page_title","","doc-title","Tellux — Révéler l'invisible · Cartographie électromagnétique Corse","Tellux — Palesà l'invisibile · Cartugrafia elettromagnetica Corsica"],
+["skip_link",".skip-link","","Aller au contenu","Andà à u cuntenutu"],
+["h1_hidden","h1.visually-hidden","","Tellux — Cartographie électromagnétique de la Corse","Tellux — Cartugrafia elettromagnetica di a Corsica"],
+["disclaimer_title","#disclaimer-title","","Bienvenue sur Tellux","Benvenuti nant'à Tellux"],
+["d_lead_em",".d-lead em","","Révéler l'invisible.","Palesà l'invisibile."],
+["d_lead_text",".d-lead","","Un outil de cartographie électromagnétique de la Corse — conçu pour l'exploration scientifique et citoyenne du territoire.","Un attrezzu di cartugrafia elettromagnetica di a Corsica — cuncipitu per l'esplurazione scentifica è citatina di u territoriu."],
+["d_block_title_em",".d-block-title@0","","Champs électromagnétiques","Campi elettromagnetichi"],
+["d_block_title_contrib",".d-block-title@1","","Contribuer","Cuntribuisce"],
+["d_block_title_privacy",".d-block-title@2","","Données & vie privée","Dati è vita privata"],
+["d_foot_text",".d-foot","tf","Tellux ne remplace pas une mesure professionnelle.","Tellux ùn rimpiazza micca una misura prufessiunale."],
+["d_foot_link",".d-foot a","","Méthodologie complète →","Metodulugia cumpleta →"],
+["d_btn",".d-btn","","Accéder à la carte","Accede à a carta"],
+["logo_title","#tx-logo","title","Tellux — Révéler l'invisible","Tellux — Palesà l'invisibile"],
+["logo_aria","#tx-logo","aria-label","Retour à l'accueil Tellux","Ritornu à l'accolta Tellux"],
+["tagline_em",".hdr-tagline em","","Révéler l'invisible","Palesà l'invisibile"],
+["tagline_suffix",".hdr-tagline","","· Corse","· Corsica"],
+["nav_methodo",".hdr-actions button[onclick='toggleMethodology()']","","Méthodologie","Metodulugia"],
+["nav_methodo_tt",".hdr-actions button[onclick='toggleMethodology()']","title","Méthodologie & sources","Metodulugia è fonti"],
+["nav_termes",".hdr-actions button[onclick='openGlossaryDrawer()']","","Comprendre les termes","Capisce i termini"],
+["nav_termes_tt",".hdr-actions button[onclick='openGlossaryDrawer()']","title","Glossaire & guides pratiques","Glussariu è guide pratiche"],
+["nav_glossaire",".hdr-actions a[href='/guide-et-glossaire.html#glossaire']","","Glossaire","Glussariu"],
+["nav_glossaire_tt",".hdr-actions a[href='/guide-et-glossaire.html#glossaire']","title","Guide et glossaire technique complet (page publique)","Guida è glussariu tecnicu cumpletu (pagina publica)"],
+["nav_apropos",".hdr-actions button[onclick='openAboutModal()']","","À propos","À prupositu"],
+["nav_apropos_tt",".hdr-actions button[onclick='openAboutModal()']","title","À propos du projet","À prupositu di u prugettu"],
+["nav_patrimoine",".hdr-actions a[href='patrimoine.html']","","Patrimoine (bêta)","Patrimoniu (beta)"],
+["nav_patrimoine_tt",".hdr-actions a[href='patrimoine.html']","title","Cartographie patrimoniale de la Corse","Cartugrafia patrimuniale di a Corsica"],
+["nav_mairies",".hdr-actions a[href='mairies.html']","","Élu·e ? Outils mairie →","Elettu·a ? Strumenti merria →"],
+["nav_mairies_tt",".hdr-actions a[href='mairies.html']","title","Outils administratifs pour les communes corses","Strumenti amministrativi per e cumune corse"],
+["sb_dot_tt","#sb-status-dot","title","Supabase connexion en cours…","Supabase cunnessione in corsu…"],
+["sb_dot_aria","#sb-status-dot","aria-label","Statut Supabase","Statu Supabase"],
+["hdr_status","#hdr-status","","chargement…","caricamentu…"],
+["about_title","#about-title","","À propos de Tellux","À prupositu di Tellux"],
+["about_h4_pas","#about-modal h4@0","","Ce que Tellux n'est pas","Ciò chì Tellux ùn hè micca"],
+["about_h4_episteme","#about-modal h4@1","","Position épistémique","Pusizione epistemica"],
+["about_h4_porteur","#about-modal h4@2","","Porteur du projet","Purtadore di u prugettu"],
+["about_h4_sources","#about-modal h4@3","","Sources de données","Fonti di dati"],
+["about_h4_contact","#about-modal h4@4","","Contributions & contact","Cuntribuzione è cuntattu"],
+["expert_modal_title","#expert-title","","Mode Expertise","Modu Espertu"],
+["expert_modal_cancel","#expert-modal button@0","","Annuler","Annullà"],
+["expert_modal_ok","#expert-modal button@1","","Compris","Capitu"],
+["contrib_title","#contrib-title","","Contribuer à Tellux","Cuntribuisce à Tellux"],
+["contrib_close_aria","#contrib-level-modal header button","aria-label","Fermer","Chjode"],
+["ctab_obs",".ctab-btn[data-tab='obs']","","Observation","Osservazione"],
+["ctab_mes",".ctab-btn[data-tab='mes']","","Mesure technique","Misura tecnica"],
+["ctab_cap",".ctab-btn[data-tab='cap']","","Capteurs appareil","Sensori di l'apparechju"],
+["obs_intro","#ctab-obs > p","","Partagez une observation libre associée à un point sur la carte. Votre observation sera vérifiée avant publication.","Spartite un'osservazione libera ligata à un puntu nant'à a carta. A vostra osservazione sarà verificata prima d'esse publicata."],
+["obs_position","#obs-position-info","","Cliquez d'abord sur la carte pour placer le point, puis rouvrez ce formulaire. Ou saisissez manuellement ci-dessous.","Cliccate prima nant'à a carta per piazzà u puntu, po riaprite stu formulariu. O entrite à manu quì sottu."],
+["obs_lat_ph","#obs-lat","placeholder","Latitude (ex: 42.308)","Latitudine (es: 42.308)"],
+["obs_lon_ph","#obs-lon","placeholder","Longitude (ex: 9.150)","Longitudine (es: 9.150)"],
+["obs_note_label","label[for='obs-note']","","Que souhaitez-vous partager ?","Chì vulete sparte ?"],
+["obs_note_ph","#obs-note","placeholder","Ressenti, observation visuelle, contexte particulier… (300 caractères max)","Sensazione, osservazione visuale, cuntestu particulare… (300 caratteri max)"],
+["obs_cancel","#ctab-obs button[onclick='closeContribLevelModal()']","","Annuler","Annullà"],
+["obs_send","#btn-obs-send","","Envoyer","Mandà"],
+["mes_avant","#ctab-mes p@0","","Avant de mesurer","Prima di misurà"],
+["mes_precautions","#ctab-mes p@1","","Pour une lecture exploitable : activez le mode avion, posez le téléphone à plat pendant 30 secondes minimum, débranchez la charge USB, et écartez les objets métalliques (clés, montre, étui aimanté) à plus de 30 cm du capteur.","Per una lettura sfruttevule : attivate u modu aviò, pusate u telefonu à pianu durante 30 secondi à u minimu, staccate a carica USB, è alluntanate l'ogetti metallichi (chjave, mostra, astucciu magneticu) à più di 30 cm da u sensore."],
+["mes_pourquoi","#ctab-mes a[href='/guide-et-glossaire.html#mesure-smartphone']","","Pourquoi ces précautions ?","Perchè ste precauzione ?"],
+["mes_formulaire","#ctab-mes p@2","","Formulaire complet pour les utilisateurs équipés : magnétomètre smartphone (Phyphox), capteur externe (TriField, Cornet), RTL-SDR ou mesure ANFR certifiée.","Formulariu cumpletu per l'utilizatori equipati : magnetometru smartphone (Phyphox), sensore esternu (TriField, Cornet), RTL-SDR o misura ANFR certificata."],
+["mes_li_pointage","#ctab-mes li@0","","Pointage carte obligatoire (Corse uniquement)","Puntamentu carta ubligatoriu (Corsica sola)"],
+["mes_li_saisie","#ctab-mes li@1","","Saisie instrument, valeur et unité","Inserimentu strumentu, valore è unità"],
+["mes_li_csv","#ctab-mes li@2","","Import CSV Phyphox / Physics Toolbox","Importu CSV Phyphox / Physics Toolbox"],
+["mes_li_ctx","#ctab-mes li@3","","Contexte intérieur optionnel (étage, matériaux murs, appareils actifs)","Cuntestu internu ozzionale (pianu, materiali muri, apparechji attivi)"],
+["mes_cancel","#ctab-mes button[onclick='closeContribLevelModal()']","","Annuler","Annullà"],
+["mes_open_form","#ctab-mes button[onclick='chooseContribLevelN0()']","","Ouvrir le formulaire","Apre u formulariu"],
+["cap_h3",".cap-intro h3","","Mesure automatisée — module en développement","Misura autumatizata — modulu in sviluppu"],
+["cap_position_label",".cap-position label","","Position","Pusizione"],
+["cap_geoloc",".cap-position button","","Utiliser ma position actuelle","Aduprà a mo pusizione attuale"],
+["cap_small",".cap-position small","","Ou cliquez sur la carte avant d'ouvrir cette fenêtre.","O cliccate nant'à a carta prima d'apre sta finestra."],
+["cap_mag",".cap-reading-label@0","","Magnétomètre","Magnetometru"],
+["cap_orient",".cap-reading-label@1","","Orientation","Orientazione"],
+["cap_acc",".cap-reading-label@2","","Accéléromètre","Accelerometru"],
+["cap_start","#cap-btn-start","","Démarrer l'enregistrement (10 s)","Principià l'arregistramentu (10 s)"],
+["cap_stop","#cap-btn-stop","","Arrêter","Piantà"],
+["cap_results","#cap-results h4","","Résultats","Risultati"],
+["cap_mean",".cap-stat-label@0","","Moyenne","Media"],
+["cap_std",".cap-stat-label@2","","Écart-type","Scartu tipu"],
+["cap_n",".cap-stat-label@3","","Échantillons","Campioni"],
+["cap_note_ph","#cap-note","placeholder","Notes optionnelles (contexte, observations…)","Note ozzionale (cuntestu, osservazione…)"],
+["cap_submit","#cap-btn-submit","","Envoyer la mesure","Mandà a misura"],
+["methodo_title","#methodology-title","","🔬 Méthodologie & Audit","🔬 Metodulugia è Audit"],
+["mob_toggle_aria","#mob-toggle","aria-label","Couches","Strati"],
+["sidebar_toggle_aria","#sidebar-toggle","aria-label","Réduire la sidebar","Riduce a colonna laterale"],
+["sidebar_toggle_tt","#sidebar-toggle","title","Réduire la sidebar","Riduce a colonna laterale"],
+["chips_aria",".domain-chips","aria-label","Filtre par domaine physique","Filtru per duminiu fisicu"],
+["chip_label",".chip-label","","Domaine","Duminiu"],
+["chip_all",".domain-chip[data-domain-filter='all']","","Tous","Tutti"],
+["chip_statique",".domain-chip[data-domain-filter='statique']","","Statique","Staticu"],
+["chip_statique_tt",".domain-chip[data-domain-filter='statique']","title","Magnétique statique : géomagnétisme, anomalies crustales, susceptibilité lithologique","Magneticu staticu : geomagnetismu, anumalie crustale, suscettibilità litulogica"],
+["chip_elf_tt",".domain-chip[data-domain-filter='elf']","title","Magnétique basse fréquence ELF 50 Hz : lignes HT/BT, postes sources, production","Magneticu à bassa frequenza ELF 50 Hz : linee HT/BT, posti surgente, pruduzzione"],
+["chip_rf_tt",".domain-chip[data-domain-filter='rf']","title","Radiofréquences : antennes ANFR, émetteurs TDF","Radiofrequenze : antenne ANFR, emettitori TDF"],
+["chip_ionisant",".domain-chip[data-domain-filter='ionisant']","","Ionisant","Ionizante"],
+["chip_ionisant_tt",".domain-chip[data-domain-filter='ionisant']","title","Rayonnement ionisant : radon, sites U/Th","Radiazione ionizante : radon, siti U/Th"],
+["cat_modele",".accordion-cat-header > span:nth-child(2)@0","","Modèle EM","Mudellu EM"],
+["cat_anthropique",".accordion-cat-header > span:nth-child(2)@1","","Sources anthropiques","Fonti antropiche"],
+["cat_naturel",".accordion-cat-header > span:nth-child(2)@2","","Contexte naturel","Cuntestu naturale"],
+["subgroup_a",".subgroup-header@0","","A. Substrat magnétique","A. Sustratu magneticu"],
+["subgroup_b",".subgroup-header@1","","B. Contexte territorial (géologie, hydro, forêts)","B. Cuntestu territuriale (geulugia, idrulugia, fureste)"],
+["subgroup_c",".subgroup-header@2","","C. Sites documentaires","C. Siti ducumentari"],
+["lyr_hot","#b-hot","","Champ composite","Campu cumpostu"],
+["lyr_hot_tt","#b-hot","title","Champ composite estimé par le modèle Tellux (agrégation de 4 domaines physiques)","Campu cumpostu stimatu da u mudellu Tellux (agregazione di 4 duminii fisichi)"],
+["lyr_con","#b-con","","Mesures EM","Misure EM"],
+["lyr_con_tt","#b-con","title","Mesures EM — contributions citoyennes + 30 fiches ANFR/EXEM certifiées (2024-2026)","Misure EM — cuntribuzione citatine + 30 schede ANFR/EXEM certificate (2024-2026)"],
+["lyr_ant","#b-ant","","Antennes ANFR + TDF","Antenne ANFR + TDF"],
+["lyr_ant_tt","#b-ant","title","Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF","Antenne 2G/3G/4G/5G ANFR + emettitori broadcast TDF"],
+["lyr_res","#b-res","","Réseau HT","Reta HT"],
+["lyr_res_tt","#b-res","title","Lignes et postes électriques haute tension (50 Hz)","Linee è posti elettrichi alta tensione (50 Hz)"],
+["lyr_bt","#b-bt","","Réseau BT","Reta BT"],
+["lyr_bt_tt","#b-bt","title","Réseau basse tension BT — EDF SEI · zoom ≥ 12","Reta bassa tensione BT — EDF SEI · zoom ≥ 12"],
+["lyr_prod","#b-prod","","Sites de production","Siti di pruduzzione"],
+["lyr_prod_tt","#b-prod","title","Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions","Centrale idrauliche, eoliane, diesel, TAC, biogas, intercunnessione"],
+["lyr_postes","#b-postes","","Postes sources EDF","Posti surgente EDF"],
+["lyr_postes_tt","#b-postes","title","Postes sources EDF SEI (transformateurs HTB/HTA) — 21 postes OSM","Posti surgente EDF SEI (trasfurmatori HTB/HTA) — 21 posti OSM"],
+["lyr_geo","#b-geo","","Géologie BRGM","Geulugia BRGM"],
+["lyr_geo_tt","#b-geo","title","Carte géologique BRGM — granite, schiste, calcaire","Carta geulogica BRGM — granitu, schistu, calcariu"],
+["lyr_failles","#b-failles","","Failles tectoniques","Faglie tettoniche"],
+["lyr_failles_tt","#b-failles","title","Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)","Faglie tettoniche BRGM — 8 faglie principale (attive + quaternarie)"],
+["lyr_radon_tt","#b-radon","title","Potentiel radon géologique — zones ASNR cat. 2/3","Putenziale radon geulogicu — zone ASNR cat. 2/3"],
+["lyr_emag","#b-emag","","Fond magnétique régional","Fondu magneticu regiunale"],
+["lyr_emag_tt","#b-emag","title","Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse","Fondu magneticu regiunale NOAA EMAG2v3 — anumalie di u zoccalu prufondu corsu"],
+["lyr_cav","#b-cav","","Cavités","Cavità"],
+["lyr_cav_tt","#b-cav","title","Cavités souterraines — grottes, mines, karst (BRGM)","Cavità sutterranee — grotte, mine, karst (BRGM)"],
+["lyr_therm","#b-therm","","Émergences thermales","Surgenti termali"],
+["lyr_therm_tt","#b-therm","title","Émergences thermales — observations de surface, marqueurs de failles actives","Surgenti termali — osservazione di superficia, marcatori di faglie attive"],
+["lyr_hyd","#b-hyd","","Hydrographie","Idrugrafia"],
+["lyr_hyd_tt","#b-hyd","title","Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct","Falde è corsi d'acqua sutterranei (BRGM REMNAPPE) — stratu visuale ; u calculu adopra un dataset distintu"],
+["lyr_foret","#b-foret","","Forêts publiques","Fureste publiche"],
+["lyr_foret_tt","#b-foret","title","Forêts publiques ONF via WMS IGN Géoplateforme — couche visuelle niveau A (pas de modulation calcul). BD Forêt V2 complète non disponible en WMS public.","Fureste publiche ONF via WMS IGN Géoplateforme — stratu visuale livellu A (nisuna mudulazione di calculu). BD Forêt V2 cumpleta micca dispunibule in WMS publicu."],
+["lyr_uth","#b-points-chauds","","Sites U/Th à mesurer","Siti U/Th da misurà"],
+["lyr_uth_tt","#b-points-chauds","title","Sites U/Th à mesurer — catalogue de sites candidats à des mesures radiométriques (doses non mesurées, sources documentaires BRGM ou analogies géologiques)","Siti U/Th da misurà — catalogu di siti candidati à misure radiometriche (dose micca misurate, fonti ducumentarie BRGM o analugie geulogiche)"],
+["lyr_remarq","#b-sites-remarq","","Sites géophysiques remarquables","Siti geofisichi rimarchevuli"],
+["lyr_remarq_tt","#b-sites-remarq","title","Sites géophysiques remarquables — 10 sites ponctuels à signature singulière (mines historiques, serpentinites ophiolitiques, surveillance radiologique marine). Données documentaires, mesures in situ souvent requises.","Siti geofisichi rimarchevuli — 10 siti puntuali à signatura singulare (mine storiche, serpentinite ofiolitiche, surviglianza radiulogica marina). Dati ducumentarii, misure in situ à spessu richieste."],
+["lyr_crustal","#b-crustal","","Anomalies de référence (mondiales)","Anumalie di riferenza (mundiale)"],
+["lyr_crustal_tt","#b-crustal","title","5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF) — opt-in, comparaison locale/mondiale","5 anumalie magnetiche crustale mundiale di riferenza (crateri d'impattu + BIF) — opt-in, paragone lucale/mundiale"],
+["btn_expert_aria","#btn-expert","aria-label","Outils experts","Strumenti esperti"],
+["btn_expert","#btn-expert span@1","","Outils experts","Strumenti esperti"],
+["btn_share_aria","button[onclick='shareURL()']","aria-label","Partager la vue","Sparte a vista"],
+["btn_share","button[onclick='shareURL()'] span@1","","Partager la vue","Sparte a vista"],
+["xp_header","#expert-panel div[style*='uppercase']@0","","⚙ Indice composite","⚙ Indice cumpostu"],
+["xp_lastpoint","#expert-index-val ~ div","","sur le dernier point analysé ◆","nant'à l'ultimu puntu analizatu ◆"],
+["xp_stats","#expert-panel div[style*='uppercase']@1","","Statistiques du modèle","Statistiche di u mudellu"],
+["xp_anfr_loading","#anfr-count","","chargement…","caricamentu…"],
+["xp_reset","#expert-panel button[onclick='resetExpertSliders()']","","Réinitialiser","Rimette à zeru"],
+["xp_csv","#expert-panel button[onclick='exportExpertCSV()']","","↓ CSV expert","↓ CSV espertu"],
+["xp_off","#expert-panel button[onclick='closeExpertMode()']","","Désactiver ✕","Disattivà ✕"],
+["bandeau_label","#expert-bandeau span@1","","Indice composite (mode Expertise)","Indice cumpostu (modu Espertu)"],
+["bandeau_close_aria","#expert-bandeau button","aria-label","Désactiver le mode Expertise","Disattivà u modu Espertu"],
+["op_geo","#geo-op-row > span:first-child","","Géologie","Geulugia"],
+["op_hyd","#hyd-op-row > span:first-child","","Nappes","Falde"],
+["op_emag","#emag-op-row > span:first-child","","Fond magnétique régional","Fondu magneticu regiunale"],
+["cbar_aria","#conditions-bar","aria-label","Conditions live et indicateurs temps réel","Cundizione live è indicatori in tempu reale"],
+["cbar_toggle_aria","#conditions-bar-toggle","aria-label","Déplier les détails conditions","Sviluppà i ditagli cundizione"],
+["cbar_summary_aria","#conditions-bar-summary","aria-label","Indicateurs temps réel résumé","Indicatori in tempu reale riassuntu"],
+["badge_kp_tt","#badge-kp","title","Indice Kp d'activité géomagnétique (NOAA SWPC)","Indice Kp d'attività geomagnetica (NOAA SWPC)"],
+["badge_reseau_tt","#badge-reseau","title","Charge réseau électrique Corse (RTE eco2mix)","Carica di a reta elettrica corsa (RTE eco2mix)"],
+["badge_reseau","#badge-reseau .badge-key","","Réseau","Reta"],
+["badge_sb_tt","#badge-supabase","title","Statut connexion Supabase (contributions live)","Statu cunnessione Supabase (cuntribuzione live)"],
+["badge_meteo_tt","#badge-meteo","title","Activité orageuse (Blitzortung)","Attività timpurale (Blitzortung)"],
+["badge_meteo","#badge-meteo .badge-key","","Orage","Timpurale"],
+["badge_contribs_tt","#badge-contribs","title","Nombre de contributions terrain récentes (Supabase)","Numeru di cuntribuzione di terrenu recente (Supabase)"],
+["cond_solaire",".cond-label@0","","Activité solaire","Attività sulare"],
+["cond_atmo",".cond-label@1","","Conditions atmosphériques","Cundizione atmosferiche"],
+["cond_reseau",".cond-label@2","","Réseau électrique","Reta elettrica"],
+["cond_contribs",".cond-label@3","","Contributions terrain","Cuntribuzione di terrenu"],
+["cond_sum_solaire","#cond-summary-solaire","","vérification…","verificazione…"],
+["cond_key_bz",".cond-key@1","","Bz (vent solaire)","Bz (ventu sulare)"],
+["cond_key_dens",".cond-key@2","","Densité vent solaire","Densità di u ventu sulare"],
+["cond_key_proton",".cond-key@3","","Flux proton","Flussu di prutoni"],
+["cond_key_corr",".cond-key@5","","Correction utilisée","Currezzione aduprata"],
+["cond_key_acq",".cond-key@6","","Acquisition EM","Acquisizione EM"],
+["cond_key_refrac",".cond-key@7","","Réfractivité N","Rifrattività N"],
+["cond_key_orage",".cond-key@8","","Activité orageuse","Attività timpurale"],
+["cond_key_charge",".cond-key@9","","Charge Corse","Carica Corsica"],
+["acq_label","#acq-label","","vérification…","verificazione…"],
+["sparkline_aria","#cond-sparkline-reseau","aria-label","Profil horaire de la charge electrique corse sur 24 h","Prufilu orariu di a carica elettrica corsa nant'à 24 ore"],
+["cert_header","#cert-download-block > div:first-child","","Sources certifiées","Fonti certificate"],
+["cert_btn","#btn-cert-download span@1","tf","Télécharger les 30 fiches ANFR/EXEM","Scaricà e 30 schede ANFR/EXEM"],
+["cert_desc","#cert-download-block > div:nth-child(3)","","Mesures certifiées de laboratoire (ANFR · EXEM) extraites des PDFs CartoRadio. Déjà visibles sur la carte en losanges colorés.","Misure certificate di laburatoriu (ANFR · EXEM) estratte da i PDF CartoRadio. Dighjà visibule nant'à a carta in rombi culuriti."],
+["contrib_recent","#contrib-panel > div:nth-child(2)","","Contributions récentes — base Supabase","Cuntribuzione recente — basa Supabase"],
+["legende_aria","#legende","aria-label","Légende EM","Legenda EM"],
+["legende_toggle_aria","#legende-toggle","aria-label","Légende EM (couches actives)","Legenda EM (strati attivi)"],
+["legende_content_aria","#legende-content","aria-label","Légende EM","Legenda EM"],
+["legende_title",".legende-section-title","","Légende EM (couches actives)","Legenda EM (strati attivi)"],
+["legende_empty","#legende-em-empty","","Activez « Champ composite » ou « Mesures EM » dans la sidebar pour afficher la légende.","Attivate « Campu cumpostu » o « Misure EM » in a colonna per affissà a legenda."],
+["legends_ctx_aria","#tellux-legends-context","aria-label","Légendes des couches contextuelles activées","Legende di i strati cuntestuali attivati"],
+["ms_naturel",".ms-l@0","","N naturel IGRF+LCS1","N naturale IGRF+LCS1"],
+["ms_composite",".ms-l@1","","N+H composite total","N+H cumpostu tutale"],
+["ms_delta",".ms-l@2","","Δ anomalie terrain","Δ anumalia di terrenu"],
+["ms_reel",".ms-l@3","","R — mesure réelle terrain","R — misura reale di terrenu"],
+["m_delta_hint","#m-delta","","cliquez sur la carte","cliccate nant'à a carta"],
+["md_delta",".md-l@0","","Δ anomalie","Δ anumalia"],
+["md_note",".md-l@1","","Note modèle","Nota mudellu"],
+["md_hydro",".md-l@2","","Facteur hydro","Fattore idru"],
+["md_fh",".md-l@3","","Faisceaux hertziens","Fasci hertziani"],
+["md_score",".md-l@4","tf","Score physique","Puntegiu fisicu"],
+["md_score_mesure",".md-l span","","(mesuré)","(misuratu)"],
+["mpanel_close_tt",".mpanel button[title='Fermer']","title","Fermer","Chjode"],
+["cform_title",".cform-title","","Contribution terrain","Cuntribuzione di terrenu"],
+["cform_epistemic","#contrib-epistemic-note","","Contribution terrain — données à valeur indicative, non certifiées.","Cuntribuzione di terrenu — dati à valore indicativu, micca certificati."],
+["cform_position","#c-position-info","","Cliquez sur la carte pour placer le point","Cliccate nant'à a carta per piazzà u puntu"],
+["cform_reposition","#btn-reposition","","Repositionner le point","Ripusiziunà u puntu"],
+["cform_step1",".cform-step@0","","Etape 1 — Contexte","Tappa 1 — Cuntestu"],
+["cform_step2",".cform-step@1","","Etape 2 — Instrument","Tappa 2 — Strumentu"],
+["cform_step3",".cform-step@2","","Etape 3 — Mesure","Tappa 3 — Misura"],
+["cform_step_cond",".cform-step@3","","Conditions de mesure","Cundizione di misura"],
+["cform_step4",".cform-step@4","","Etape 4 — Details interieur","Tappa 4 — Ditagli internu"],
+["cform_step5",".cform-step@5","","Etape 5 — Observations","Tappa 5 — Osservazione"],
+["ctx_ext","#ctx-ext","","Exterieur","Esternu"],
+["ctx_int","#ctx-int","","Interieur","Internu"],
+["cform_instr_label",".cform > label@0","","Instrument de mesure","Strumentu di misura"],
+["optgroup_phone","#c-type optgroup@0","label","📱 Smartphone (intégré)","📱 Smartphone (integratu)"],
+["optgroup_ext","#c-type optgroup@1","label","🔧 Capteur externe (~50-200€)","🔧 Sensore esternu (~50-200€)"],
+["optgroup_cert","#c-type optgroup@2","label","✅ Mesure certifiée","✅ Misura certificata"],
+["optgroup_obs","#c-type optgroup@3","label","👁 Observation","👁 Osservazione"],
+["opt_mag","#c-type option[value='smartphone_mag']","","Magnétomètre téléphone (Physics Toolbox, Sensor Kinetics…)","Magnetometru telefonu (Physics Toolbox, Sensor Kinetics…)"],
+["opt_rssi","#c-type option[value='smartphone_rssi']","","Signal réseau dBm (Network Cell Info, paramètres réseau)","Segnale reta dBm (Network Cell Info, parametri reta)"],
+["opt_wifi","#c-type option[value='smartphone_wifi']","","Signal WiFi dBm (paramètres WiFi)","Segnale WiFi dBm (parametri WiFi)"],
+["opt_autre","#c-type option[value='autre_capteur']","","Autre capteur dédié EMF","Altru sensore dedicatu EMF"],
+["opt_anfr","#c-type option[value='anfr']","","Mesure ANFR / labo accrédité","Misura ANFR / laburatoriu accreditatu"],
+["opt_observation","#c-type option[value='observation']","","Observation visuelle / terrain","Osservazione visuale / terrenu"],
+["opt_ressenti","#c-type option[value='ressenti']","","Ressenti subjectif (non instrumental)","Sensazione sugettiva (micca strumentale)"],
+["cform_val_label",".cform > label@1","tf","Valeur mesuree","Valore misuratu"],
+["cform_val_hint",".cform > label > span@0","","— laissez vide si pas de chiffre","— lasciate biotu s'ellu ùn ci hè cifra"],
+["cform_val_ph","#c-val","placeholder","ex: 44800","es: 44800"],
+["btn_native_mag","#btn-native-mag","","📱 Capturer avec le magnétomètre du téléphone","📱 Catturà cù u magnetometru di u telefonu"],
+["btn_csv_import","#c-csv-row button","","📁 Importer un CSV de mesures (Phyphox, Physics Toolbox…)","📁 Impurtà un CSV di misure (Phyphox, Physics Toolbox…)"],
+["cond_avion","#c-airplane-mode + span","","Mode avion activé pendant la mesure","Modu aviò attivatu durante a misura"],
+["cond_usb","#c-usb-off + span","","Charge USB débranchée","Carica USB staccata"],
+["cond_metal","#c-no-metal + span","","Aucun objet métallique dans un rayon de 30 cm","Nisun ogettu metallicu in un raghju di 30 cm"],
+["cond_duree","label[style*='font-weight:500']","","Durée de stabilisation avant lecture (secondes)","Durata di stabilizazione prima di a lettura (secondi)"],
+["int_ctx_title","#c-interior-ctx > div:first-child","","🏠 Contexte intérieur","🏠 Cuntestu internu"],
+["int_etage","#c-interior-ctx > label@0","","Étage","Pianu"],
+["etage_soussol","#c-etage option[value='sous_sol']","","Sous-sol / cave","Sottuterra / cantina"],
+["etage_rdc","#c-etage option[value='rdc']","","Rez-de-chaussée","Pianterrenu"],
+["etage_1","#c-etage option[value='1']","","1er étage","1u pianu"],
+["etage_2","#c-etage option[value='2']","","2ème étage et +","2u pianu è +"],
+["int_materiaux","#c-interior-ctx > label@1","tf","Matériaux des murs","Materiali di i muri"],
+["int_materiaux_hint","#c-interior-ctx > label > span@0","","(cochez tout ce qui s'applique)","(marcate tuttu ciò chì s'applica)"],
+["mat_portland","#c-mats .mat-chip@0","","🏗 Béton Portland","🏗 Betone Portland"],
+["mat_chaux","#c-mats .mat-chip@1","","🏗 Béton chaux","🏗 Betone calcina"],
+["mat_geo","#c-mats .mat-chip@2","","🏗 Géopolymère","🏗 Geopolimeru"],
+["mat_fibre","#c-mats .mat-chip@3","","🔩 Béton fibré acier","🔩 Betone fibratu acciaghju"],
+["mat_arme","#c-mats .mat-chip@4","","🏗 Béton armé dense","🏗 Betone armatu densu"],
+["mat_parpaing","#c-mats .mat-chip@5","","Parpaing","Bluchettu"],
+["mat_brique","#c-mats .mat-chip@6","","🧱 Brique","🧱 Mattone"],
+["mat_platre","#c-mats .mat-chip@7","","Plâtre","Ghjessu"],
+["mat_bois","#c-mats .mat-chip@8","","🌲 Bois/OSB","🌲 Legnu/OSB"],
+["mat_pierre","#c-mats .mat-chip@9","","🪨 Pierre/granit","🪨 Petra/granitu"],
+["mat_enduit","#c-mats .mat-chip@10","","Enduit chaux","Intonacu calcina"],
+["mat_grillage","#c-mats .mat-chip@11","","Enduit+grillage","Intonacu+rete"],
+["mat_laine","#c-mats .mat-chip@12","","Laine de roche","Lana di petra"],
+["mat_peinture","#c-mats .mat-chip@13","","🛡 Peinture anti-ondes","🛡 Pittura anti-onde"],
+["mat_cuivre","#c-mats .mat-chip@14","","🟤 Tuyauterie cuivre","🟤 Tubatura ramu"],
+["mat_plomb","#c-mats .mat-chip@15","","⚫ Tuyauterie plomb (ancien)","⚫ Tubatura piombu (anzianu)"],
+["mat_pvc","#c-mats .mat-chip@16","","⚪ Tuyauterie PVC/PER","⚪ Tubatura PVC/PER"],
+["int_appareils","#c-interior-ctx > label@2","","Appareils actifs au moment de la mesure","Apparechji attivi à u mumentu di a misura"],
+["app_wifi","#c-appareils .mat-chip@1","","📶 WiFi routeur","📶 Router WiFi"],
+["app_micro","#c-appareils .mat-chip@2","","📦 Micro-ondes","📦 Micro-onde"],
+["app_induction","#c-appareils .mat-chip@3","","🔥 Induction","🔥 Induzzione"],
+["app_frigo","#c-appareils .mat-chip@4","","🧊 Réfrigérateur","🧊 Frigò"],
+["app_tableau","#c-appareils .mat-chip@5","","⚡ Tableau électrique proche","⚡ Quadru elettricu vicinu"],
+["cform_note_label",".cform > label@2","tf","Note","Nota"],
+["cform_note_hint",".cform > label > span@1","","— conditions, observations, heure","— cundizione, osservazione, ora"],
+["cform_note_ph","#c-note","placeholder","ex: 22h, stable 3 min, fenêtre ouverte…","es: 22 ore, stabule 3 min, finestra aperta…"],
+["cform_privacy","#c-note + div","","Merci de ne pas inclure de données personnelles (nom, adresse, téléphone).","Ùn mittite micca dati persunali (nome, indirizzu, telefonu)."],
+["cform_protocole","#c-protocole + span > b","","★★★ Mesure en protocole aveugle parallèle","★★★ Misura in prutucollu cecu parallelu"],
+["btn_save","#btn-save","","Enregistrer","Arregistrà"],
+["btn_cancel",".cform .btn-cancel","","Annuler","Annullà"],
+["geo_title","#geo-panel > div:first-child > span:nth-child(2)","","Mode Prospecteur terrain","Modu Pruspettore di terrenu"],
+["geo_badge","#geo-panel > div:first-child > span:nth-child(3)","","protocole terrain","prutucollu di terrenu"],
+["geo_checklist","#geo-panel > div:nth-child(2) > div:first-child","","Checklist mesure (5 min)","Lista di cuntrollu misura (5 min)"],
+["geo_check1","#geo-panel .geo-check span@0","","1. App magnétomètre ouverte (Physics Toolbox / Sensor Kinetics)","1. App magnetometru aperta (Physics Toolbox / Sensor Kinetics)"],
+["geo_check2","#geo-panel .geo-check span@1","","2. Point Tellux cliqué — valeur IGRF et Indice notés","2. Puntu Tellux cliccatu — valore IGRF è Indice nutati"],
+["geo_check3","#geo-panel .geo-check span@2","","3. Téléphone à 1.5m du sol, bras tendu, loin de tout métal","3. Telefonu à 1,5 m da u solu, bracciu tesu, luntanu da ogni metallu"],
+["geo_check4","#geo-panel .geo-check span@3","","4. Valeur nT lue et comparée à l'estimation IGRF","4. Valore nT lettu è paragunatu à a stima IGRF"],
+["geo_check5","#geo-panel .geo-check span@4","","5. Mesure enregistrée via +Mesure (Δ calculé auto)","5. Misura arregistrata via +Misura (Δ calculatu autumaticu)"],
+["geo_check6","#geo-panel .geo-check span@5","","6. Bonus : grille 2m×2m pour cartographier gradient local","6. Bonus : griglia 2m×2m per cartugrafià u gradiente lucale"],
+["geo_guide","#geo-panel > div:nth-child(3) > div:first-child","","Guide d'interprétation rapide","Guida d'interpretazione rapida"],
+["geo_export_rapport","#btn-export-terrain","","📋 Exporter rapport du point","📋 Espurtà u raportu di u puntu"],
+["geo_export_csv","#btn-export-csv","","📊 Export CSV contributions","📊 Esportu CSV cuntribuzione"],
+["geo_hint","#geo-panel > div:nth-child(5)","","Cliquez d'abord sur un point de la carte pour générer le rapport.","Cliccate prima nant'à un puntu di a carta per generà u raportu."],
+["geo_intl","#geo-panel > div:nth-child(6) > div:first-child","","Systèmes d'estimation RF — comparaison internationale","Sistemi di stima RF — paragone internaziunale"],
+["stat_rf",".stat-lbl@0","","mesures RF (+ 2 BF)","misure RF (+ 2 BF)"],
+["stat_mediane",".stat-lbl@3","","médiane V/m","mediana V/m"],
+["stat_depassement",".stat-lbl@4","","dépassement légal","supranamentu legale"],
+["stat_10",".stat-lbl@5","","mesures ≥ 10 V/m","misure ≥ 10 V/m"],
+["stat_5",".stat-lbl@6","","mesures ≥ 5 V/m","misure ≥ 5 V/m"],
+["stat_1",".stat-lbl@7","","mesures < 1 V/m","misure < 1 V/m"],
+["interp_titre","#interp-titre","","Ce que Tellux détecte ici","Ciò chì Tellux rileva quì"],
+["interp_activite",".interp-score > div:first-child > div:first-child","","ACTIVITÉ GLOBALE","ATTIVITÀ GLUBALE"],
+["ib_naturel",".ib-title@0","","Champ naturel de la Terre","Campu naturale di a Terra"],
+["ib_humain",".ib-title@1","","Influence humaine","Influenza umana"],
+["ib_geo",".ib-title@2","","Géologie & eau souterraine","Geulugia è acqua sutterranea"],
+["interp_advice",".interp-advice-title","","Que faire avec cette information ?","Chì fà cù st'infurmazione ?"],
+["interp_close_tt",".interp-title button[title='Fermer']","title","Fermer","Chjode"],
+["footer_brand",".tx-footer-brand","","Tellux Corse","Tellux Corsica"],
+["footer_em",".tx-footer-sources em","","Révéler l'invisible","Palesà l'invisibile"],
+["footer_suffix",".tx-footer-sources","","· projet de recherche citoyen","· prugettu di ricerca citatinu"],
+["footer_app",".tx-footer-links a@0","","Application carte","Applicazione carta"],
+["footer_mairies",".tx-footer-links a@1","","Outils mairies","Strumenti merrie"],
+["footer_ressources",".tx-footer-links a@2","","Ressources","Risorse"],
+["footer_mentions",".tx-footer-links a@3","","Mentions légales & confidentialité","Menzione legale è cunfidenzialità"],
+["footer_transparence",".tx-footer-links a@4","","Transparence","Trasparenza"],
+["gloss_title","#glossary-title","","Glossaire & guides","Glussariu è guide"],
+["gloss_close_aria",".glossary-drawer-close","aria-label","Fermer","Chjode"],
+["gloss_tab_glossaire",".glossary-tab[data-tab='glossaire']","","Glossaire","Glussariu"],
+["gloss_tab_guides",".glossary-tab[data-tab='guides']","","Guides pratiques","Guide pratiche"],
+["gloss_search_ph","#glossary-search","placeholder","Rechercher un terme...","Circà un termine..."],
+["gloss_search_aria","#glossary-search","aria-label","Rechercher dans le glossaire","Circà in u glussariu"]
+]/* I18N-CO-ENTRIES-END */;
+
+  // Conformité protocole : dictionnaire I18N = { fr:{...}, co:{...} }
+  // (fr extrait verbatim de l'existant — source de vérité)
+  var I18N = { fr: {}, co: {} };
+  I18N_ENTRIES.forEach(function (e) { I18N.fr[e[0]] = e[3]; I18N.co[e[0]] = e[4]; });
+
+  function norm(s) { return String(s).replace(/\s+/g, ' ').trim(); }
+  function txtNodes(el) {
+    var out = [], n;
+    for (n = el.firstChild; n; n = n.nextSibling) {
+      if (n.nodeType === 3 && n.nodeValue.trim()) out.push(n);
+    }
+    return out;
+  }
+  function setTextNode(node, co) {
+    var lead = /^\s/.test(node.nodeValue) ? ' ' : '';
+    var trail = /\s$/.test(node.nodeValue) ? ' ' : '';
+    node.nodeValue = lead + co + trail;
+  }
+  function resolveEl(sel) {
+    var at = sel.lastIndexOf('@');
+    if (at > 0) {
+      var idx = parseInt(sel.slice(at + 1), 10);
+      if (!isNaN(idx)) return document.querySelectorAll(sel.slice(0, at))[idx] || null;
+    }
+    return document.querySelector(sel);
+  }
+
+  var applied = 0, skipped = [];
+  I18N_ENTRIES.forEach(function (e) {
+    var key = e[0], sel = e[1], attr = e[2], fr = e[3], co = e[4];
+    try {
+      if (attr === 'doc-title') {
+        if (norm(document.title) === norm(fr)) { document.title = co; applied++; }
+        else skipped.push(key);
+        return;
+      }
+      var el = resolveEl(sel);
+      if (!el) { skipped.push(key); return; }
+      if (attr === '' || attr === 'tf') {
+        var nodes = txtNodes(el);
+        if (!nodes.length && attr === '' && norm(el.textContent) === norm(fr)) {
+          el.textContent = co; applied++; return;
+        }
+        var target = null, i;
+        if (attr === 'tf') target = nodes[0] || null;
+        else {
+          for (i = 0; i < nodes.length; i++) {
+            if (norm(nodes[i].nodeValue) === norm(fr)) { target = nodes[i]; break; }
+          }
+          if (!target && nodes.length === 1) target = nodes[0];
+        }
+        if (target && norm(target.nodeValue) === norm(fr)) { setTextNode(target, co); applied++; }
+        else skipped.push(key);
+        return;
+      }
+      var cur = el.getAttribute(attr);
+      if (cur !== null && norm(cur) === norm(fr)) { el.setAttribute(attr, co); applied++; }
+      else skipped.push(key);
+    } catch (_err) { skipped.push(key); }
+  });
+
+  document.documentElement.setAttribute('lang', 'co');
+  // Hook lecture seule pour les sondes d'évaluation (même esprit que
+  // window.__telluxLayers, §8 PROTOCOLE_AUTO_ITERATION)
+  try {
+    window.__telluxI18n = { lang: 'co', applied: applied, total: I18N_ENTRIES.length, skipped: skipped.slice() };
+  } catch (_e2) {}
+  if (skipped.length) {
+    console.warn('[i18n co] ' + applied + '/' + I18N_ENTRIES.length + ' chaînes appliquées — sautées (drift FR ?) : ' + skipped.join(', '));
+  } else {
+    console.log('[i18n co] ' + applied + '/' + I18N_ENTRIES.length + ' chaînes appliquées');
+  }
+})();
+</script>
+
 </body>
 </html>
