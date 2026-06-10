@@ -8297,6 +8297,29 @@ async function saveObservation(){
   } else {
     console.log('[i18n co] ' + applied + '/' + I18N_ENTRIES.length + ' chaînes appliquées');
   }
+
+  // --- Bandeau bêta CO (passe vérification 2026-06-10) — texte FR (non vérifié en CO) ---
+  try {
+    var coBanner = document.createElement('div');
+    coBanner.id = 'co-beta-banner';
+    coBanner.setAttribute('role', 'note');
+    coBanner.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:9999;' +
+      'background:var(--tx-ardoise,#22262B);color:var(--tx-pierre,#F4EFE6);' +
+      'font:500 12px/1.45 system-ui,sans-serif;padding:8px 38px 8px 14px;text-align:center;' +
+      'box-shadow:0 -1px 6px rgba(0,0,0,.25)';
+    coBanner.appendChild(document.createTextNode(
+      'Version corse (bêta) — traduction automatique en cours de vérification, '
+      + 'non validée par un locuteur natif. La version française fait foi.'));
+    var coBannerX = document.createElement('button');
+    coBannerX.type = 'button';
+    coBannerX.setAttribute('aria-label', 'Fermer');
+    coBannerX.textContent = '✕';
+    coBannerX.style.cssText = 'position:absolute;right:8px;top:50%;transform:translateY(-50%);' +
+      'background:none;border:none;color:inherit;font-size:14px;line-height:1;cursor:pointer';
+    coBannerX.onclick = function () { coBanner.remove(); };
+    coBanner.appendChild(coBannerX);
+    (document.body || document.documentElement).appendChild(coBanner);
+  } catch (_eBanner) {}
 })();
 </script>
 
