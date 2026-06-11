@@ -67,6 +67,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "docs" / "data"
+PUBLIC_DATA_DIR = ROOT / "public" / "data"
 # Brief patch — découverte dynamique des worktrees au lieu de hardcoder
 # des slugs datés et fragiles. Si .claude/worktrees/ n'existe pas, la liste
 # reste vide (cas standard hors environnement multi-worktree Claude Code).
@@ -79,7 +80,7 @@ WORKTREES = (
 
 
 def load_json_with_fallback(filename, key=None):
-    for src in [DATA_DIR] + WORKTREES:
+    for src in [DATA_DIR, PUBLIC_DATA_DIR] + WORKTREES:
         path = src / filename
         if not path.exists():
             continue
