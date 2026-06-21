@@ -1168,6 +1168,18 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   #legende-content{max-width:calc(100vw - 24px);font-size:11.5px;padding:12px 14px;}
 }
 /* === fin Brief 46 === */
+/* === R&D rnd-001 — Accessibilité : respect de prefers-reduced-motion (WCAG 2.3.3 / RGAA 13.8) ===
+   Additif, derrière la media query : n'affecte QUE les utilisateurs ayant activé
+   « réduire les animations » au niveau OS. Comportement par défaut strictement inchangé.
+   Durée 0.01ms (pas 0) pour que les listeners transitionend continuent de se déclencher. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 </style>
 </head>
 <body>
@@ -2154,7 +2166,26 @@ async function fetchAltitudeIGN(lat, lon) {
   return null;
 }
 
-const map=L.map('map',{maxZoom:20}).setView([42.0,9.0],8);
+// === R&D rnd-003 — Accessibilité : gating des animations JS Leaflet sous prefers-reduced-motion ===
+// Complète rnd-001 (qui ne couvrait que le CSS). Lu à l'init pour les options
+// d'animation de la carte, et à chaque appel pour les pans explicites (dynamique).
+// Mode normal : !tlxReduceMotion() === true === défaut Leaflet → comportement inchangé.
+const TLX_RM_QUERY = (typeof window !== 'undefined' && window.matchMedia) ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+function tlxReduceMotion(){ return !!(TLX_RM_QUERY && TLX_RM_QUERY.matches); }
+const map=L.map('map',{maxZoom:20, zoomAnimation:!tlxReduceMotion(), fadeAnimation:!tlxReduceMotion(), markerZoomAnimation:!tlxReduceMotion()}).setView([42.0,9.0],8);
+// rnd-005 — réactivité mid-session : si la préférence OS change en cours de session, re-synchroniser
+// les options d'animation de la carte. Les pans explicites (panBy/panTo/setView) lisent déjà
+// tlxReduceMotion() à l'appel, donc déjà réactifs ; seules les options init de la carte doivent l'être.
+if (TLX_RM_QUERY && typeof TLX_RM_QUERY.addEventListener === 'function') {
+  TLX_RM_QUERY.addEventListener('change', function(){
+    var rm = tlxReduceMotion();
+    map.options.zoomAnimation = !rm;
+    map.options.fadeAnimation = !rm;
+    map.options.markerZoomAnimation = !rm;
+    // Leaflet fige _zoomAnimated à l'init → resynchroniser pour que les gestes de zoom honorent la nouvelle préférence.
+    if (typeof L !== 'undefined' && L.Browser) { map._zoomAnimated = !rm && !!L.Browser.any3d; }
+  });
+}
 // Sprint V5 13 mai 2026 — bounds nord etendus 43.5 -> 44.0 pour
 // permettre navigation Cap Corse extreme (Tour Agnello 43.005,
 // Tour Giraglia 43.027, Anneaux 43.176). Viscosity 1.0 -> 0.8 :
@@ -5081,9 +5112,9 @@ map.on('click',async e=>{
     const r = calcPopup._container.getBoundingClientRect();
     const padTop = 80, padBottom = 60;
     if(r.top < padTop){
-      map.panBy([0, r.top - padTop], {animate: true, duration: 0.3});
+      map.panBy([0, r.top - padTop], {animate: !tlxReduceMotion(), duration: 0.3});
     } else if(r.bottom > window.innerHeight - padBottom){
-      map.panBy([0, r.bottom - (window.innerHeight - padBottom)], {animate: true, duration: 0.3});
+      map.panBy([0, r.bottom - (window.innerHeight - padBottom)], {animate: !tlxReduceMotion(), duration: 0.3});
     }
   });
   document.getElementById('btn-export-model').onclick=()=>exportModel(lat,lng,igrf,human,water,nRFcalib);
@@ -6193,7 +6224,7 @@ function applyHashToMap() {
       var z   = parseInt(params.z, 10);
       if (isFinite(lat) && isFinite(lng) && isFinite(z) && z >= 1 && z <= 20) {
         if (typeof map !== 'undefined' && map) {
-          map.setView([lat, lng], z);
+          map.setView([lat, lng], z, tlxReduceMotion() ? {animate:false} : undefined);
         }
       }
     }
@@ -6990,7 +7021,7 @@ function _certOpenCross(targetId) {
   const target = _certMarkerById[targetId];
   if (target) {
     target.openPopup();
-    map.panTo(target.getLatLng());
+    map.panTo(target.getLatLng(), {animate: !tlxReduceMotion()});
   }
 }
 
