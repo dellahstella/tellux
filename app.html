@@ -2166,7 +2166,13 @@ async function fetchAltitudeIGN(lat, lon) {
   return null;
 }
 
-const map=L.map('map',{maxZoom:20}).setView([42.0,9.0],8);
+// === R&D rnd-003 — Accessibilité : gating des animations JS Leaflet sous prefers-reduced-motion ===
+// Complète rnd-001 (qui ne couvrait que le CSS). Lu à l'init pour les options
+// d'animation de la carte, et à chaque appel pour les pans explicites (dynamique).
+// Mode normal : !tlxReduceMotion() === true === défaut Leaflet → comportement inchangé.
+const TLX_RM_QUERY = (typeof window !== 'undefined' && window.matchMedia) ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+function tlxReduceMotion(){ return !!(TLX_RM_QUERY && TLX_RM_QUERY.matches); }
+const map=L.map('map',{maxZoom:20, zoomAnimation:!tlxReduceMotion(), fadeAnimation:!tlxReduceMotion(), markerZoomAnimation:!tlxReduceMotion()}).setView([42.0,9.0],8);
 // Sprint V5 13 mai 2026 — bounds nord etendus 43.5 -> 44.0 pour
 // permettre navigation Cap Corse extreme (Tour Agnello 43.005,
 // Tour Giraglia 43.027, Anneaux 43.176). Viscosity 1.0 -> 0.8 :
@@ -5093,9 +5099,9 @@ map.on('click',async e=>{
     const r = calcPopup._container.getBoundingClientRect();
     const padTop = 80, padBottom = 60;
     if(r.top < padTop){
-      map.panBy([0, r.top - padTop], {animate: true, duration: 0.3});
+      map.panBy([0, r.top - padTop], {animate: !tlxReduceMotion(), duration: 0.3});
     } else if(r.bottom > window.innerHeight - padBottom){
-      map.panBy([0, r.bottom - (window.innerHeight - padBottom)], {animate: true, duration: 0.3});
+      map.panBy([0, r.bottom - (window.innerHeight - padBottom)], {animate: !tlxReduceMotion(), duration: 0.3});
     }
   });
   document.getElementById('btn-export-model').onclick=()=>exportModel(lat,lng,igrf,human,water,nRFcalib);
@@ -6205,7 +6211,7 @@ function applyHashToMap() {
       var z   = parseInt(params.z, 10);
       if (isFinite(lat) && isFinite(lng) && isFinite(z) && z >= 1 && z <= 20) {
         if (typeof map !== 'undefined' && map) {
-          map.setView([lat, lng], z);
+          map.setView([lat, lng], z, tlxReduceMotion() ? {animate:false} : undefined);
         }
       }
     }
@@ -7002,7 +7008,7 @@ function _certOpenCross(targetId) {
   const target = _certMarkerById[targetId];
   if (target) {
     target.openPopup();
-    map.panTo(target.getLatLng());
+    map.panTo(target.getLatLng(), {animate: !tlxReduceMotion()});
   }
 }
 
