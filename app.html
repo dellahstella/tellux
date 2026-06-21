@@ -2173,6 +2173,19 @@ async function fetchAltitudeIGN(lat, lon) {
 const TLX_RM_QUERY = (typeof window !== 'undefined' && window.matchMedia) ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
 function tlxReduceMotion(){ return !!(TLX_RM_QUERY && TLX_RM_QUERY.matches); }
 const map=L.map('map',{maxZoom:20, zoomAnimation:!tlxReduceMotion(), fadeAnimation:!tlxReduceMotion(), markerZoomAnimation:!tlxReduceMotion()}).setView([42.0,9.0],8);
+// rnd-005 — réactivité mid-session : si la préférence OS change en cours de session, re-synchroniser
+// les options d'animation de la carte. Les pans explicites (panBy/panTo/setView) lisent déjà
+// tlxReduceMotion() à l'appel, donc déjà réactifs ; seules les options init de la carte doivent l'être.
+if (TLX_RM_QUERY && typeof TLX_RM_QUERY.addEventListener === 'function') {
+  TLX_RM_QUERY.addEventListener('change', function(){
+    var rm = tlxReduceMotion();
+    map.options.zoomAnimation = !rm;
+    map.options.fadeAnimation = !rm;
+    map.options.markerZoomAnimation = !rm;
+    // Leaflet fige _zoomAnimated à l'init → resynchroniser pour que les gestes de zoom honorent la nouvelle préférence.
+    if (typeof L !== 'undefined' && L.Browser) { map._zoomAnimated = !rm && !!L.Browser.any3d; }
+  });
+}
 // Sprint V5 13 mai 2026 — bounds nord etendus 43.5 -> 44.0 pour
 // permettre navigation Cap Corse extreme (Tour Agnello 43.005,
 // Tour Giraglia 43.027, Anneaux 43.176). Viscosity 1.0 -> 0.8 :
