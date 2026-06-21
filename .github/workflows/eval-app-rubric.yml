@@ -92,6 +92,11 @@ jobs:
           # intermittente. On l'observe sans bloquer (continue-on-error).
         run: |
           set -o pipefail
+          # GitHub exécute les blocs run: avec `bash -eo pipefail`. Sans ce
+          # garde, un exit 2 du harness (score < seuil) avorterait l'étape
+          # AVANT l'écriture du résumé et la logique heads_up_only. On
+          # neutralise errexit ici : EXIT est géré explicitement plus bas.
+          set +e
           node eval-app-rubric.mjs > eval-result.json
           EXIT=$?
           echo "exit_code=$EXIT" >> "$GITHUB_OUTPUT"
