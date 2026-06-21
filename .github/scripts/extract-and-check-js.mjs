@@ -8,7 +8,17 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
 
-const TARGETS = ['app.html', 'index.html', 'corpus.html', 'patrimoine.html', 'agronomie.html'];
+const TARGETS = [
+  'app.html',
+  'cadre-scientifique.html',
+  'guide-et-glossaire.html',
+  'index.html',
+  'mairies.html',
+  'mentions-legales.html',
+  'methode-et-limites.html',
+  'patrimoine.html',
+  'transparence.html',
+];
 
 // Capture inline <script> blocks (exclude those with src= attribute)
 const INLINE_SCRIPT_RE = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi;
