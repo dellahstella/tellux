@@ -1,0 +1,95 @@
+name: R2 — Re-vérification périodique des citations
+
+# Routine R2 (brief Routines débloquées, 2026-06-21). Substrat : GitHub Actions
+# cron (déterministe, ADR-010). Anti-Frankenstein CONTINU (ADR-007, raffiné
+# ADR-016) : re-passe le résolveur sur chaque entrée du registry public pour
+# détecter les régressions silencieuses (DOI cassé, métadonnée qui dérive).
+#
+# DÉTECTE et SIGNALE uniquement — ne modifie NI citation NI registry.
+#   - régression sur une citation AFFICHÉE PUBLIQUEMENT => Cran C (signale +
+#     parque ; décision Soleil) : issue étiquetée `routine:public-source` ;
+#   - régression interne => Cran B : issue étiquetée `routine`.
+#
+# Scope : registry PUBLIC uniquement (scripts/citations_registry.json). Les
+# refs espèces volet (b) ne sont pas registrées → hors champ par construction.
+#
+# Activation : ne tourne que depuis main (branche par défaut) — gate Cran C.
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'   # lundi 07:00 UTC (hebdo)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  reverify:
+    name: Re-vérif registry (lecture seule)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Re-vérifier le registry
+        id: reverify
+        run: |
+          set +e
+          python .github/scripts/reverify_registry.py > reverify-result.json
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+          PUB=$(python -c "import json;print(json.load(open('reverify-result.json')).get('public_regressions_count',0))" 2>/dev/null || echo 0)
+          REG=$(python -c "import json;print(json.load(open('reverify-result.json')).get('regressions_count',0))" 2>/dev/null || echo 0)
+          echo "public=$PUB" >> "$GITHUB_OUTPUT"
+          echo "regressions=$REG" >> "$GITHUB_OUTPUT"
+          {
+            echo "## R2 Re-vérification citations registry"
+            echo ""
+            echo "- Régressions : **$REG** (dont public-facing : **$PUB**)"
+            echo ""
+            echo '```json'
+            cat reverify-result.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - name: Ouvrir / mettre à jour une issue sur régression
+        if: steps.reverify.outputs.regressions != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          gh label create routine --color 1d76db --description "Routine de surveillance (détecte/signale, Cran B)" --force >/dev/null 2>&1 || true
+          gh label create "routine:public-source" --color b60205 --description "Régression sur source affichée publiquement — Cran C (Soleil)" --force >/dev/null 2>&1 || true
+          LABELS="routine"
+          CRAN="Cran B (régression interne)."
+          if [ "${{ steps.reverify.outputs.public }}" != "0" ]; then
+            LABELS="routine,routine:public-source"
+            CRAN="⚠️ Cran C — au moins une régression touche une citation AFFICHÉE PUBLIQUEMENT (signale + parque, décision Soleil)."
+          fi
+          BODY_FILE=$(mktemp)
+          {
+            echo "La routine R2 (re-vérification des citations) a détecté **${{ steps.reverify.outputs.regressions }}** régression(s) dans le registry public."
+            echo ""
+            echo "$CRAN"
+            echo ""
+            echo "- Run : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo ""
+            echo '```json'
+            cat reverify-result.json
+            echo '```'
+            echo ""
+            echo "> Détecté automatiquement. La routine ne modifie NI citation NI registry. Correction = Cran C."
+          } > "$BODY_FILE"
+          EXISTING=$(gh issue list --state open --label routine --search "in:title [routine:citations]" --json number --jq '.[0].number' 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body-file "$BODY_FILE"
+          else
+            gh issue create --title "[routine:citations] Régression(s) détectée(s) dans le registry" --label "$LABELS" --body-file "$BODY_FILE"
+          fi
