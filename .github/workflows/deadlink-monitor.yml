@@ -1,0 +1,83 @@
+name: R3 — Moniteur liens morts / URL obsolètes
+
+# Routine R3 (brief Routines débloquées, 2026-06-21). Substrat : GitHub Actions
+# cron (déterministe, ADR-010). Scanne les URL externes des fichiers trackés
+# (app.html, pages, corpus .md, url_canonique du registry) → 404, redirections,
+# timeouts (cas de réf : IRSN -> ASNR).
+#
+# DÉTECTE et SIGNALE uniquement (Cran B : ouvre une issue). Ne corrige ni ne
+# remplace aucun lien (Cran C). Anti-faux-positifs : UA réaliste, HEAD puis GET,
+# retries, et distinction mort (404/410/connexion) vs protégé (401/403/429) vs
+# autre (400/5xx — gabarit/transitoire, non imputé).
+#
+# Activation : ne tourne que depuis main (branche par défaut) — gate Cran C.
+
+on:
+  schedule:
+    - cron: '30 7 * * 1'   # lundi 07:30 UTC (hebdo)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  deadlinks:
+    name: Scan liens morts (lecture seule)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Scanner les liens
+        id: scan
+        run: |
+          set +e
+          python .github/scripts/deadlink_scan.py > deadlink-result.json
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+          DEAD=$(python -c "import json;print(json.load(open('deadlink-result.json')).get('dead_count',0))" 2>/dev/null || echo 0)
+          echo "dead=$DEAD" >> "$GITHUB_OUTPUT"
+          SUMMARY=$(python -c "import json;d=json.load(open('deadlink-result.json'));print(f\"- URLs testées : **{d.get('total_urls')}**\n- Morts : **{d.get('dead_count')}** · Redirections : {d.get('redirect_count')} · Protégés : {d.get('blocked_count')} · Autres : {d.get('other_count')}\")")
+          {
+            echo "## R3 Moniteur liens morts"
+            echo ""
+            echo "$SUMMARY"
+            echo ""
+            echo '```json'
+            cat deadlink-result.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - name: Ouvrir / mettre à jour une issue sur liens morts (Cran B)
+        if: steps.scan.outputs.dead != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          gh label create routine --color 1d76db --description "Routine de surveillance (détecte/signale, Cran B)" --force >/dev/null 2>&1 || true
+          BODY_FILE=$(mktemp)
+          {
+            echo "La routine R3 (moniteur liens morts) a détecté **${{ steps.scan.outputs.dead }}** lien(s) mort(s) dans les fichiers trackés."
+            echo ""
+            echo "- Run : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo ""
+            echo "Détail (liens morts seulement ; redirections/protégés/autres dans le résumé du run) :"
+            echo '```json'
+            python -c "import json;d=json.load(open('deadlink-result.json'));print(json.dumps(d.get('dead',[]),ensure_ascii=False,indent=2))"
+            echo '```'
+            echo ""
+            echo "> Détecté automatiquement (Cran B). Remplacement/correction d'un lien = Cran C — décision Soleil."
+          } > "$BODY_FILE"
+          EXISTING=$(gh issue list --state open --label routine --search "in:title [routine:deadlink]" --json number --jq '.[0].number' 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body-file "$BODY_FILE"
+          else
+            gh issue create --title "[routine:deadlink] Lien(s) mort(s) détecté(s) dans le corpus/app" --label routine --body-file "$BODY_FILE"
+          fi
