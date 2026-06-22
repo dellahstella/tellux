@@ -39,8 +39,16 @@ URL_RE = re.compile(r"https?://[^\s\"'<>)\]}\\`]+")
 # `tellux.pages.dev` (sans sous-domaine) reste scannée.
 SKIP_HOST_RE = re.compile(
     r"(^|//)(localhost|127\.0\.0\.1|example\.(com|org)|www\.w3\.org|schema\.org|"
-    r"[a-z0-9-]+\.tellux\.pages\.dev|"
-    r"\{|\$\{)", re.I)
+    r"[a-z0-9-]+\.tellux\.pages\.dev)", re.I)
+# Hôtes d'INFRASTRUCTURE (API / CDN / backend / assets) : leur racine renvoie
+# souvent 404 alors que le service est vivant (on les appelle avec un chemin ou
+# des params), ou ils sont injoignables depuis une IP datacenter (CI, cf.
+# Supabase). Ce ne sont PAS des liens éditoriaux dont la mort compte pour le
+# corpus → on ne les scanne pas. La santé de ces intégrations relève de R1.
+INFRA_SKIP_HOSTS = (
+    "supabase.co", "fonts.googleapis.com", "fonts.gstatic.com",
+    "api-adresse.data.gouv.fr", "api.crossref.org", "raw.githubusercontent.com",
+)
 TRAILING = ".,;:!?)]}>\"'`"
 
 
@@ -49,6 +57,15 @@ def _clean(u: str) -> str:
     while u and u[-1] in TRAILING:
         u = u[:-1]
     return u
+
+
+def _should_skip(u: str) -> bool:
+    if not u or SKIP_HOST_RE.search(u):
+        return True
+    if "{" in u or "}" in u:  # URL gabarit avec placeholder (ex. /works/{doi})
+        return True
+    host = re.sub(r"^https?://", "", u).split("/")[0].split("?")[0].lower()
+    return any(host == h or host.endswith("." + h) for h in INFRA_SKIP_HOSTS)
 
 
 def _collect_urls() -> list[str]:
@@ -65,7 +82,7 @@ def _collect_urls() -> list[str]:
                 continue
             for m in URL_RE.findall(txt):
                 u = _clean(m)
-                if u and not SKIP_HOST_RE.search(u):
+                if not _should_skip(u):
                     seen.add(u)
     # 2) url_canonique du registry
     reg = REPO_ROOT / "scripts" / "citations_registry.json"
@@ -74,7 +91,7 @@ def _collect_urls() -> list[str]:
             data = json.loads(reg.read_text(encoding="utf-8"))
             for entry in (data.values() if isinstance(data, dict) else []):
                 u = _clean(str((entry or {}).get("url_canonique") or ""))
-                if u.startswith("http") and not SKIP_HOST_RE.search(u):
+                if u.startswith("http") and not _should_skip(u):
                     seen.add(u)
         except Exception:
             pass
@@ -82,12 +99,13 @@ def _collect_urls() -> list[str]:
 
 
 def _probe(url: str) -> dict:
-    """Retourne {url, status, final_url, verdict}. verdict in alive/redirect/dead/blocked/other.
+    """Retourne {url, status, final_url, verdict}. verdict in alive/redirect/dead/blocked/other/unreachable.
 
-    DEAD (signalé, fait échouer) = 404/410 OU échec de connexion persistant (DNS,
-    refus, timeout après retries). BLOCKED = 401/403/405/429 (anti-bot). OTHER =
-    autre code HTTP obtenu (400, 5xx…) : rapporté mais NON imputé comme mort (ex.
-    URL gabarit avec placeholder, 5xx transitoire).
+    DEAD (signalé, fait échouer) = 404/410 SEULEMENT (signal non ambigu de lien
+    rot). BLOCKED = 401/403/405/429 (anti-bot). OTHER = autre code HTTP (400,
+    5xx… — gabarit/transitoire). UNREACHABLE = aucune réponse HTTP (DNS, refus,
+    timeout après retries) : injoignable, souvent un hiccup DNS de CI sur un site
+    VIVANT (ex. arcom.fr) — rapporté mais NON imputé comme mort.
     """
     last_http = None
     last_err = ""
@@ -117,8 +135,9 @@ def _probe(url: str) -> dict:
     if last_http is not None:
         # Un code HTTP a été obtenu mais ni 2xx/3xx, ni 404/410, ni anti-bot.
         return {"url": url, "status": last_http, "final_url": url, "verdict": "other", "error": f"HTTP {last_http}"}
-    # Aucune réponse HTTP : échec de connexion persistant => mort.
-    return {"url": url, "status": None, "final_url": url, "verdict": "dead", "error": last_err or "timeout/connexion"}
+    # Aucune réponse HTTP (DNS/refus/timeout après retries) : INJOIGNABLE, pas
+    # forcément mort. Évite les faux « morts » sur les hiccups DNS de CI.
+    return {"url": url, "status": None, "final_url": url, "verdict": "unreachable", "error": last_err or "timeout/connexion"}
 
 
 def main() -> int:
@@ -137,6 +156,7 @@ def main() -> int:
     redirects = [r for r in results if r["verdict"] == "redirect"]
     blocked = [r for r in results if r["verdict"] == "blocked"]
     other = [r for r in results if r["verdict"] == "other"]
+    unreachable = [r for r in results if r["verdict"] == "unreachable"]
     report = {
         "total_urls": len(urls),
         "capped": capped,
@@ -145,12 +165,16 @@ def main() -> int:
         "redirect_count": len(redirects),
         "blocked_count": len(blocked),
         "other_count": len(other),
+        "unreachable_count": len(unreachable),
         "dead": dead,
         "redirects": redirects,
         "blocked": blocked,
         "other": other,
-        "note": "blocked (401/403/429) = anti-bot probable ; other (400/5xx) = gabarit/transitoire — "
-                "NON imputés comme morts. Détecté uniquement ; aucun lien corrigé/remplacé (Cran C).",
+        "unreachable": unreachable,
+        "note": "DEAD = 404/410 seulement. blocked (401/403/429) = anti-bot ; other (400/5xx) = "
+                "gabarit/transitoire ; unreachable (DNS/timeout) = injoignable (souvent hiccup CI sur "
+                "site vivant) — NON imputés comme morts. Hôtes infra (API/CDN/backend) non scannés. "
+                "Détecté uniquement ; aucun lien corrigé/remplacé (Cran C).",
     }
     if capped:
         print(f"[warn] {MAX_URLS} URL max scannées (cap atteint) — couverture partielle.", file=sys.stderr)
