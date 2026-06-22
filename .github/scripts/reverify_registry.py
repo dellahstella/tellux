@@ -72,10 +72,17 @@ def main() -> int:
             continue
 
     regressions = []
+    skipped_non_doi = []
     ok = 0
     dois = sorted(reg.keys())
     for doi in dois:
         entry = reg[doi] or {}
+        # Clés non-DOI (ex. PII Elsevier "PII:S...") : non résolvables par le
+        # résolveur DOI → ce n'est pas une régression, on ne re-vérifie pas.
+        # Signalé en info (data-quality du registry, à arbitrer Soleil).
+        if not (doi.startswith("10.") and "/" in doi):
+            skipped_non_doi.append({"key": doi, "titre": entry.get("titre")})
+            continue
         fresh = None
         try:
             fresh = resolve(doi)
@@ -122,9 +129,12 @@ def main() -> int:
         "ok": ok,
         "regressions_count": len(regressions),
         "public_regressions_count": len(public_regressions),
+        "skipped_non_doi_count": len(skipped_non_doi),
         "regressions": regressions,
-        "note": "Re-vérification lecture seule. Aucune écriture registry/citation. "
-                "Régression public-facing => Cran C (signale + parque, Soleil) ; interne => Cran B.",
+        "skipped_non_doi": skipped_non_doi,
+        "note": "Re-vérification lecture seule. Aucune écriture registry/citation. Clés non-DOI "
+                "(PII…) ignorées (info, pas régression). Régression public-facing => Cran C "
+                "(signale + parque, Soleil) ; interne => Cran B.",
     }
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0 if not regressions else 2
