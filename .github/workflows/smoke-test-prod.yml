@@ -2,18 +2,16 @@ name: R1 — Smoke-test post-déploiement (prod)
 
 # Routine R1 (brief Routines débloquées, 2026-06-21). Substrat : GitHub Actions
 # (déterministe, ADR-010). DÉTECTE et SIGNALE uniquement (Cran B : ouvre une
-# issue sur échec). NE corrige rien : pas de rollback, pas de redéploiement,
+# issue sur échec DUR). NE corrige rien : pas de rollback, pas de redéploiement,
 # lecture seule sur la prod.
 #
-# Déclencheurs :
-#   - deployment_status : à chaque déploiement Cloudflare Pages réussi en
-#     PRODUCTION (les déploiements Preview sont ignorés via le `if` du job) ;
-#   - schedule : filet quotidien (au cas où un deployment_status manquerait) ;
-#   - workflow_dispatch : à la demande.
+# Échec DUR (issue + run rouge) = route ≠ 200 / Leaflet non monté / exception.
+# Les signaux plus flous (boot data, console, pageerror) sont des WARNINGS
+# rapportés, pas d'issue (Phase A — éviter les faux positifs, cf.
+# eval-app-rubric.yml). Promotion possible après observation.
 #
-# NB activation : un workflow planifié / sur événement ne tourne que depuis la
-# branche par défaut (main). Cette routine n'est donc active qu'une fois la PR
-# mergée dans main — c'est le gate Cran C (GO Soleil).
+# Déclencheurs : deployment_status (Production) + cron quotidien + dispatch.
+# Activation : ne tourne que depuis main (branche par défaut) — gate Cran C.
 
 on:
   deployment_status: {}
@@ -35,9 +33,6 @@ jobs:
     name: Smoke prod (lecture seule)
     runs-on: ubuntu-latest
     timeout-minutes: 12
-    # Sur deployment_status : ne tourner que pour un déploiement PRODUCTION
-    # réussi (ignorer Preview et les états en cours/échoués). Les autres
-    # déclencheurs (schedule, dispatch) passent toujours.
     if: >-
       github.event_name != 'deployment_status' ||
       (github.event.deployment_status.state == 'success' &&
@@ -68,38 +63,51 @@ jobs:
           SMOKE_BASE: ${{ github.event.inputs.base_url || 'https://tellux.pages.dev' }}
         run: |
           set +e
-          node smoke-prod.mjs > smoke-result.json
+          # Écrire le rapport à la RACINE du workspace (chemin absolu) pour que
+          # les étapes suivantes (résumé / issue / artifact) le retrouvent quelle
+          # que soit leur working-directory.
+          node smoke-prod.mjs > "$GITHUB_WORKSPACE/smoke-result.json"
           EXIT=$?
           echo "exit=$EXIT" >> "$GITHUB_OUTPUT"
+          echo "----- smoke-result.json -----"
+          cat "$GITHUB_WORKSPACE/smoke-result.json"
           {
             echo "## R1 Smoke-test prod — \`$SMOKE_BASE\`"
             echo ""
-            if [ "$EXIT" = "0" ]; then echo "### ✅ Toutes les routes critiques OK"; else echo "### ❌ Échec smoke — voir détail"; fi
+            if [ "$EXIT" = "0" ]; then echo "### ✅ Routes critiques OK (warnings éventuels ci-dessous)"; else echo "### ❌ Échec DUR — voir détail"; fi
             echo ""
             echo '```json'
-            cat smoke-result.json
+            cat "$GITHUB_WORKSPACE/smoke-result.json"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           exit 0
 
-      - name: Ouvrir / mettre à jour une issue sur échec (Cran B)
+      - name: Upload smoke result artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-prod-result
+          path: smoke-result.json
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Ouvrir / mettre à jour une issue sur échec DUR (Cran B)
         if: steps.smoke.outputs.exit != '0'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -e
           gh label create routine --color 1d76db --description "Routine de surveillance (détecte/signale, Cran B)" --force >/dev/null 2>&1 || true
-          TITLE="[routine:smoke] Échec smoke-test post-déploiement prod"
           BODY_FILE=$(mktemp)
           {
-            echo "La routine R1 (smoke-test post-déploiement) a détecté un problème sur la prod."
+            echo "La routine R1 (smoke-test post-déploiement) a détecté un échec DUR sur la prod."
             echo ""
             echo "- Déclencheur : \`${{ github.event_name }}\`"
             echo "- Run : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             echo ""
             echo "Rapport :"
             echo '```json'
-            cat smoke-result.json
+            cat "$GITHUB_WORKSPACE/smoke-result.json"
             echo '```'
             echo ""
             echo "> Détecté automatiquement (Cran B). Toute correction (rollback / redéploiement) est Cran C — décision Soleil."
@@ -108,9 +116,9 @@ jobs:
           if [ -n "$EXISTING" ]; then
             gh issue comment "$EXISTING" --body-file "$BODY_FILE"
           else
-            gh issue create --title "$TITLE" --label routine --body-file "$BODY_FILE"
+            gh issue create --title "[routine:smoke] Échec smoke-test post-déploiement prod" --label routine --body-file "$BODY_FILE"
           fi
 
-      - name: Marquer le run rouge si échec
+      - name: Marquer le run rouge si échec DUR
         if: steps.smoke.outputs.exit != '0'
         run: exit 1
