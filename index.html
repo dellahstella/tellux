@@ -32,7 +32,8 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 .skip-link:focus{top:0;outline:2px solid var(--ocre);outline-offset:-2px;}
 
 /* NAV */
-.lp-nav{display:flex;align-items:center;justify-content:space-between;padding:16px 40px;background:var(--ardoise);position:sticky;top:0;z-index:50;}
+.lp-nav{display:flex;align-items:center;justify-content:space-between;padding:16px 40px;background:var(--ardoise);position:sticky;top:0;z-index:50;transition:box-shadow .2s ease,padding .2s ease;}
+.lp-nav--scrolled{box-shadow:0 8px 24px -12px rgba(0,0,0,0.55);padding-top:12px;padding-bottom:12px;}
 .lp-nav-logo{display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit;cursor:pointer;transition:opacity .15s;}
 .lp-nav-logo:hover{opacity:0.85;}
 .lp-nav-img{width:28px;height:28px;border-radius:6px;display:block;flex-shrink:0;}
@@ -72,11 +73,15 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 .lp-btn-ghost{background:transparent;color:var(--pierre);border:1px solid rgba(255,255,255,0.2);padding:12px 24px;border-radius:6px;font-size:13px;font-family:var(--fu);cursor:pointer;transition:border-color .15s;text-decoration:none;display:inline-block;}
 .lp-btn-ghost:hover{border-color:rgba(255,255,255,0.5);}
 .lp-hero-map{border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);background:#2a2f37;padding:20px;}
-.lp-map-sim{background:#1a2228;border-radius:8px;height:240px;position:relative;overflow:hidden;}
-.lp-map-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(116,112,106,0.08) 1px,transparent 1px),linear-gradient(90deg,rgba(116,112,106,0.08) 1px,transparent 1px);background-size:28px 28px;}
-.lp-map-pin{position:absolute;transform:translate(-50%,-50%);width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,0.6);}
-.lp-map-pulse{position:absolute;border-radius:50%;border:1px solid rgba(142,47,31,0.4);animation:lppulse 3s ease-out infinite;}
-@keyframes lppulse{0%{transform:translate(-50%,-50%) scale(.5);opacity:.8;}100%{transform:translate(-50%,-50%) scale(2.2);opacity:0;}}
+.lp-scope-head{display:flex;justify-content:space-between;align-items:center;font-family:var(--fm);font-size:9.5px;letter-spacing:1.2px;color:var(--mica);margin-bottom:10px;text-transform:uppercase;}
+.lp-scope-live{display:flex;align-items:center;gap:6px;color:var(--ocre);}
+.lp-scope-dot{width:6px;height:6px;border-radius:50%;background:var(--ocre);}
+.lp-map-sim{background:#1a2228;border-radius:8px;height:320px;position:relative;overflow:hidden;background-image:linear-gradient(rgba(116,112,106,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(116,112,106,0.07) 1px,transparent 1px);background-size:26px 26px;}
+.lp-corse-svg{position:absolute;inset:10px;width:calc(100% - 20px);height:calc(100% - 20px);display:block;overflow:visible;opacity:0;transition:opacity .6s ease;}
+.lp-corse-svg.in{opacity:1;}
+.lp-corse-zone{fill:rgba(194,133,51,0.14);stroke:rgba(194,133,51,0.32);stroke-width:0.4;}
+.lp-corse-pt{fill:var(--ocre);stroke:#1a2228;stroke-width:0.5;}
+.lp-corse-scan{fill:var(--ocre);opacity:0.45;}
 .lp-map-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;}
 .lp-map-stat{background:#2a2f37;border-radius:6px;padding:10px 12px;border:1px solid rgba(255,255,255,0.06);}
 .lp-map-stat-val{font-family:var(--fm);font-size:18px;color:var(--ocre);white-space:nowrap;}
@@ -91,7 +96,8 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 
 /* DOMAINES EM (4) — cartes claires 2x2 (gelé) */
 .lp-model-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
-.lp-model-domain{background:white;border:1px solid var(--brume);border-radius:10px;padding:28px;display:flex;flex-direction:column;}
+.lp-model-domain{background:white;border:1px solid var(--brume);border-radius:10px;padding:28px;display:flex;flex-direction:column;transition:transform .2s ease,border-color .2s ease,box-shadow .25s ease;}
+.lp-model-domain:hover{transform:translateY(-3px);border-color:rgba(194,133,51,0.55);box-shadow:0 14px 32px -18px rgba(31,35,41,0.35);}
 .lp-model-letter{font-family:var(--ff);font-size:40px;color:var(--ocre);font-weight:600;line-height:1;margin-bottom:12px;}
 .lp-model-h3{font-family:var(--ff);font-size:17px;color:var(--ardoise);margin-bottom:12px;font-weight:600;line-height:1.3;}
 .lp-model-p{font-size:13px;color:var(--mica);line-height:1.7;margin-bottom:16px;flex:1;}
@@ -105,18 +111,21 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 .lp-section-dark .lp-section-label{color:var(--mica);}
 .lp-section-dark .lp-section-label::after{background:rgba(255,255,255,0.1);}
 .lp-section-dark .lp-section-sub{color:var(--mica);}
-.lp-method-flow{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid rgba(255,255,255,0.12);margin-bottom:36px;}
-.lp-method-step{padding:24px 28px 0 0;border-right:1px solid rgba(255,255,255,0.08);}
-.lp-method-step:last-child{border-right:none;padding-right:0;}
+.lp-method-flow{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:6px 0 36px;position:relative;}
+.lp-method-flow::before{content:'';position:absolute;top:14px;left:15px;right:calc(33.34% - 15px);height:2px;background:linear-gradient(90deg,var(--ocre),var(--ocre) 60%,rgba(194,133,51,0.25));}
+.lp-method-step{padding:0 28px 0 0;position:relative;}
+.lp-method-step:last-child{padding-right:0;}
+.lp-method-node{width:30px;height:30px;border-radius:50%;background:var(--ardoise);border:2px solid var(--ocre);display:grid;place-items:center;font-family:var(--fm);font-size:13px;color:var(--ocre);position:relative;z-index:2;margin-bottom:14px;}
+.lp-method-step--hyp .lp-method-node{border-style:dashed;opacity:0.72;}
 .lp-method-kicker{font-family:var(--fm);font-size:10px;color:var(--ocre);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
-.lp-method-num{font-family:var(--ff);font-size:30px;color:var(--ocre);font-weight:600;line-height:1;margin-bottom:10px;}
+.lp-method-step--hyp .lp-method-kicker{color:var(--mica);}
 .lp-method-h3{font-family:var(--ff);font-size:15px;color:var(--pierre);font-weight:600;margin-bottom:8px;}
 .lp-method-p{font-size:12px;color:rgba(245,240,231,0.72);line-height:1.7;}
 .lp-method-docs{display:flex;flex-wrap:wrap;gap:10px;}
 .lp-doc-pill{font-family:var(--fm);font-size:11px;color:var(--ocre);background:rgba(194,133,51,0.10);border:1px solid rgba(194,133,51,0.25);border-radius:5px;padding:7px 12px;text-decoration:none;transition:background .15s;}
 .lp-doc-pill:hover{background:rgba(194,133,51,0.20);}
 .lp-method-bridge{font-family:var(--ff);font-style:italic;font-size:16px;color:rgba(245,240,231,0.85);line-height:1.6;max-width:680px;border-left:3px solid var(--ocre);padding-left:18px;margin-top:28px;}
-@media(max-width:720px){.lp-method-flow{grid-template-columns:1fr;}.lp-method-step{border-right:none;border-bottom:1px solid rgba(255,255,255,0.08);padding:20px 0;}.lp-method-step:last-child{border-bottom:none;}}
+@media(max-width:720px){.lp-method-flow{grid-template-columns:1fr;}.lp-method-flow::before{display:none;}.lp-method-step{padding:18px 0 0;}}
 
 /* CTA carte — bande maquis, CTA primaire unique de clôture */
 .lp-cta-section{padding:var(--section-py) var(--section-px);text-align:center;background:var(--maquis);}
@@ -133,7 +142,8 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 .lp-appsec{padding:var(--section-py) var(--section-px);}
 .lp-appsec-mairies{background:var(--pierre);}
 .lp-appsec-patrimoine{background:var(--brume);}
-.lp-appsec-inner{max-width:920px;margin:0 auto;background:white;border:1px solid var(--brume);border-radius:12px;padding:36px 40px;position:relative;overflow:hidden;}
+.lp-appsec-inner{max-width:920px;margin:0 auto;background:white;border:1px solid var(--brume);border-radius:12px;padding:36px 40px;position:relative;overflow:hidden;transition:transform .2s ease,box-shadow .25s ease;}
+.lp-appsec-inner:hover{transform:translateY(-2px);box-shadow:0 18px 44px -26px rgba(31,35,41,0.4);}
 .lp-appsec-inner::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;}
 .lp-appsec-mairies .lp-appsec-inner::before{background:var(--maquis);}
 .lp-appsec-patrimoine .lp-appsec-inner::before{background:var(--ocre);}
@@ -159,9 +169,29 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 .lp-footer-link{font-size:11px;color:var(--mica);text-decoration:none;cursor:pointer;transition:color .15s;}
 .lp-footer-link:hover{color:var(--pierre);}
 
-/* REVEAL */
-.reveal{opacity:0;transform:translateY(20px);transition:opacity .35s ease,transform .35s ease;}
-.reveal.visible{opacity:1;transform:translateY(0);}
+/* REVEAL (B2 — staggered, accessibilité reduced-motion) */
+.reveal{opacity:0;transform:translateY(22px);filter:blur(4px);transition:opacity .5s ease,transform .5s ease,filter .5s ease;}
+.reveal.visible{opacity:1;transform:none;filter:none;}
+.lp-model-domain.reveal:nth-child(2){transition-delay:.07s;}
+.lp-model-domain.reveal:nth-child(3){transition-delay:.14s;}
+.lp-model-domain.reveal:nth-child(4){transition-delay:.21s;}
+.lp-method-step.reveal:nth-child(2){transition-delay:.1s;}
+.lp-method-step.reveal:nth-child(3){transition-delay:.2s;}
+
+/* MOTION — uniquement si l'utilisateur ne demande pas la réduction */
+@media(prefers-reduced-motion:no-preference){
+  .lp-corse-scan{animation:lpscan 4.5s linear infinite;}
+  @keyframes lpscan{0%{transform:translateY(0)}100%{transform:translateY(600px)}}
+  .lp-corse-pt{animation:lpping 3.2s ease-out infinite;animation-delay:calc(var(--i,0)*0.1s);transform-box:fill-box;transform-origin:center;}
+  @keyframes lpping{0%,72%{opacity:.55}82%{opacity:1}100%{opacity:.55}}
+  .lp-scope-dot{animation:lpblink 1.7s ease-in-out infinite;}
+  @keyframes lpblink{50%{opacity:.3}}
+}
+@media(prefers-reduced-motion:reduce){
+  .reveal{opacity:1!important;transform:none!important;filter:none!important;transition:none!important;}
+  .lp-corse-svg{opacity:1;transition:none;}
+  .lp-model-domain,.lp-appsec-inner,.lp-nav{transition:none;}
+}
 
 @media(max-width:768px){
   .lp-nav{padding:12px 20px;}
@@ -224,16 +254,8 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
   </div>
   <div>
     <div class="lp-hero-map">
-      <div class="lp-map-sim">
-        <div class="lp-map-grid"></div>
-        <div class="lp-map-pulse" style="width:80px;height:80px;top:45%;left:42%;animation-delay:0s"></div>
-        <div class="lp-map-pulse" style="width:56px;height:56px;top:65%;left:63%;animation-delay:1s"></div>
-        <div class="lp-map-pin" style="top:45%;left:42%;background:var(--maquis)"></div>
-        <div class="lp-map-pin" style="top:30%;left:55%;background:var(--maquis)"></div>
-        <div class="lp-map-pin" style="top:65%;left:63%;background:var(--maquis)"></div>
-        <div class="lp-map-pin" style="top:38%;left:28%;background:var(--tyrrh)"></div>
-        <div class="lp-map-pin" style="top:55%;left:48%;background:var(--ocre)"></div>
-      </div>
+      <div class="lp-scope-head"><span>Radon ASNR &middot; RF certifiées ANFR</span><span class="lp-scope-live"><span class="lp-scope-dot"></span>Données réelles</span></div>
+      <div class="lp-map-sim" id="lp-hero-map"></div>
       <div class="lp-map-stats">
         <div class="lp-map-stat"><div class="lp-map-stat-val">3 000</div><div class="lp-map-stat-label">antennes</div></div>
         <div class="lp-map-stat"><div class="lp-map-stat-val"><span data-stat="supports-total">1 026</span></div><div class="lp-map-stat-label" title="Source ANFR CartoRadio &mdash; compte dérivé du JSON pipeline">supports</div></div>
@@ -249,25 +271,25 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
   <h2 class="lp-section-h2">Quatre domaines physiques,<br> une même rigueur de sources</h2>
   <p class="lp-section-sub">Tellux cartographie l'environnement électromagnétique corse selon quatre régimes physiques distincts. Chacun s'appuie sur des données institutionnelles ouvertes et affiche son statut. La carte ne conclut pas à la place du lecteur : elle documente.</p>
   <div class="lp-model-grid">
-    <div class="lp-model-domain">
+    <div class="lp-model-domain reveal">
       <div class="lp-model-letter">M</div>
       <h3 class="lp-model-h3">Magnétique statique</h3>
       <p class="lp-model-p">Champ géomagnétique de référence (IGRF-14) et anomalies crustales (EMAG2v3, géologie BRGM). La Corse &mdash; granites, serpentinites, failles majeures &mdash; rend ces gradients particulièrement lisibles.</p>
       <div class="lp-model-meta"><span>IGRF-14 &middot; EMAG2v3</span><span>BRGM</span></div>
     </div>
-    <div class="lp-model-domain">
+    <div class="lp-model-domain reveal">
       <div class="lp-model-letter">B</div>
       <h3 class="lp-model-h3">Basse fréquence (ELF, 50 Hz)</h3>
       <p class="lp-model-p">Lignes haute et très haute tension du réseau insulaire (EDF SEI) et postes sources. Plus de 8 000 km de lignes HTA/HTB cartographiés, avec leurs ordres de grandeur de champ.</p>
       <div class="lp-model-meta"><span>EDF SEI</span><span>mesure / modèle</span></div>
     </div>
-    <div class="lp-model-domain">
+    <div class="lp-model-domain reveal">
       <div class="lp-model-letter">R</div>
       <h3 class="lp-model-h3">Radiofréquences (RF)</h3>
       <p class="lp-model-p">Antennes relais (ANFR CartoRadio) et mesures de champ certifiées. 3 000 antennes réparties sur <span data-stat="supports-total">1 026</span> supports. Un volet outille les communes pour le cadre de la Loi Abeille.</p>
       <div class="lp-model-meta"><span>ANFR CartoRadio &middot; EXEM</span><span>30 mesures certifiées</span></div>
     </div>
-    <div class="lp-model-domain">
+    <div class="lp-model-domain reveal">
       <div class="lp-model-letter">I</div>
       <h3 class="lp-model-h3">Ionisant (rayonnement naturel)</h3>
       <p class="lp-model-p">Potentiel radon et géochimie naturelle uranium/thorium, à partir des zonages et données publiques. Une couche du milieu, documentée comme les autres, sans dramatisation.</p>
@@ -293,21 +315,21 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
   <h2 class="lp-section-h2">Mesurer, modéliser, ou hypothéser &mdash; jamais confondre</h2>
   <p class="lp-section-sub">Là où la littérature scientifique reste incertaine, Tellux ne tranche pas à sa place : il rend l'incertitude visible. Chaque couche affiche ses sources, chaque valeur son statut, chaque limite est nommée.</p>
   <div class="lp-method-flow">
-    <div class="lp-method-step">
+    <div class="lp-method-step reveal">
+      <div class="lp-method-node">1</div>
       <div class="lp-method-kicker">Niveau</div>
-      <div class="lp-method-num">1</div>
       <h3 class="lp-method-h3">Mesure</h3>
       <p class="lp-method-p">Valeurs issues d'un instrument certifié (mesures RF CartoRadio/EXEM). Le fait observé, tracé à sa source.</p>
     </div>
-    <div class="lp-method-step">
+    <div class="lp-method-step reveal">
+      <div class="lp-method-node">2</div>
       <div class="lp-method-kicker">Niveau</div>
-      <div class="lp-method-num">2</div>
       <h3 class="lp-method-h3">Modèle</h3>
       <p class="lp-method-p">Calcul à partir de données institutionnelles (IGRF-14, EMAG2v3, géométrie des lignes). L'ordre de grandeur, dérivé de manière explicite.</p>
     </div>
-    <div class="lp-method-step">
+    <div class="lp-method-step lp-method-step--hyp reveal">
+      <div class="lp-method-node">3</div>
       <div class="lp-method-kicker">Niveau</div>
-      <div class="lp-method-num">3</div>
       <h3 class="lp-method-h3">Hypothèse</h3>
       <p class="lp-method-p">Ce qui reste en attente de validation méthodologique externe. Marqué comme tel, jamais présenté comme acquis.</p>
     </div>
@@ -421,8 +443,8 @@ if(document.readyState === 'loading'){
 
 /* Dynamic supports count — derived from /public/data/antennes_par_commune_corse.json (_meta.n_supports_total)
    Fallback hardcoded in HTML matches the JSON at build time (1 026 au 2026-04-24).
-   Construction : la landing ne peut pas diverger de l'app par rapport a cette stat — quand le pipeline
-   regenere le JSON, la landing recupere le nouveau compte au prochain chargement. */
+   Construction : la landing ne peut pas diverger de l'app par rapport à cette stat — quand le pipeline
+   regenere le JSON, la landing récupère le nouveau compte au prochain chargement. */
 (function initStats(){
   if(!('fetch' in window)) return;
   fetch('/public/data/antennes_par_commune_corse.json', {cache:'no-cache'})
@@ -437,6 +459,52 @@ if(document.readyState === 'loading'){
       });
     })
     .catch(() => {});
+})();
+
+/* Hero map — carte de Corse réelle (zones radon ASNR + 30 mesures RF certifiées ANFR),
+   projetée hors-ligne en SVG léger. Construite en différé (idle) pour ne pas peser sur le
+   premier rendu. Les animations (scan, pulse) sont gérées en CSS sous prefers-reduced-motion. */
+(function initHeroMap(){
+  const el = document.getElementById('lp-hero-map');
+  if(!el || !('fetch' in window)) return;
+  /* La carte hero est masquée < 769px (cf. media query) : inutile de la construire sur mobile. */
+  if(window.matchMedia && !window.matchMedia('(min-width:769px)').matches) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  function build(){
+    fetch('/public/data/corse_hero_geo.json', {cache:'force-cache'})
+      .then(r => r.ok ? r.json() : null)
+      .then(g => {
+        if(!g || !Array.isArray(g.radon)) return;
+        const svg = document.createElementNS(NS, 'svg');
+        svg.setAttribute('viewBox', g.viewBox);
+        svg.setAttribute('class', 'lp-corse-svg');
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        svg.setAttribute('role', 'img');
+        svg.setAttribute('aria-label', 'Carte de Corse — zones de potentiel radon (ASNR) et points de mesure RF certifiés (ANFR)');
+        const zones = document.createElementNS(NS, 'g');
+        g.radon.forEach(d => { const p = document.createElementNS(NS,'path'); p.setAttribute('d', d); p.setAttribute('class','lp-corse-zone'); zones.appendChild(p); });
+        svg.appendChild(zones);
+        const scan = document.createElementNS(NS, 'rect');
+        scan.setAttribute('class','lp-corse-scan'); scan.setAttribute('x',0); scan.setAttribute('y',0); scan.setAttribute('width', g.W); scan.setAttribute('height',2);
+        svg.appendChild(scan);
+        const pts = document.createElementNS(NS, 'g');
+        (g.rf || []).forEach((pt,i) => { const c = document.createElementNS(NS,'circle'); c.setAttribute('cx',pt.x); c.setAttribute('cy',pt.y); c.setAttribute('r',2.6); c.setAttribute('class','lp-corse-pt'); c.style.setProperty('--i', i); pts.appendChild(c); });
+        svg.appendChild(pts);
+        el.appendChild(svg);
+        requestAnimationFrame(() => svg.classList.add('in'));
+      })
+      .catch(() => {});
+  }
+  if('requestIdleCallback' in window){ requestIdleCallback(build, {timeout:1200}); } else { setTimeout(build, 200); }
+})();
+
+/* Nav — ombre légère au scroll (état "produit") */
+(function initNavScroll(){
+  const nav = document.querySelector('.lp-nav');
+  if(!nav) return;
+  const onScroll = () => nav.classList.toggle('lp-nav--scrolled', window.scrollY > 20);
+  onScroll();
+  window.addEventListener('scroll', onScroll, {passive:true});
 })();
 </script>
 
