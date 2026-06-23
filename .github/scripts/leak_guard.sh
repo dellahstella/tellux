@@ -18,6 +18,7 @@
 # NB zones gelées (GELÉ-001 / NCRP-001) : traitées par DIFF dans le workflow, pas par ce scanner de présence.
 
 set -uo pipefail
+trap 'exit 0' EXIT   # alert-only ABSOLU : quoi qu'il arrive (même abort set -u / erreur interne), on sort 0
 ROOT="${1:-.}"
 cd "$ROOT" 2>/dev/null || exit 0
 ALLOW=".github/scripts/leak_guard_allowlist.txt"
@@ -75,6 +76,9 @@ if [ -n "${LEAK_TERMS_REGEX:-}" ]; then
   scan_rule "FUITE" "raison_sociale" "$LEAK_TERMS_REGEX" "-i"
 else
   echo "WARN: LEAK_TERMS_REGEX absent — classe raison_sociale non scannée (dégradation propre)." >&2
+  # Anti-endormissement : émet un finding VISIBLE (stdout) pour qu'une issue s'ouvre.
+  # Évite un faux « 0 finding / run vert » alors que la classe la plus sensible n'est pas couverte.
+  printf '%s\t%s\t%s\n' "(config)" "CONFIG" "raison_sociale_NON_SCANNEE_secret_absent"
 fi
 
 exit 0
