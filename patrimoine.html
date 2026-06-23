@@ -524,7 +524,7 @@ function adaptSiteSchema(s) {
     illustre: s.illustre === true,
     axe_corpus: s.axe_corpus,
     fiche_v3_slug: s.fiche_v3_slug || null,
-    // B-ZONES (Etape 4 pre-FEDER) : zones polygonales au hover.
+    // B-ZONES (Etape 4) : zones polygonales au hover.
     // zone_geometry : inline (rétro-compat) sinon depuis ZONE_GEOMETRIES
     // (docs/data/zone_geometries.json, fusionné au boot — Brief allègement).
     is_zone: s.is_zone === true,
@@ -766,7 +766,7 @@ const markersBySlug = {};
 const orphansInvisibles = [];      // orphan + non illustré (consigné en console pour dette PATRIMOINE-ORPHANS-INVISIBLES-001)
 const dioceseSpotsExclus = [];     // 5 spots-diocèse exclus (slug commence par 'diocese_')
 
-// ===== B-ZONES — zones polygonales au hover (Etape 4 pre-FEDER) =====
+// ===== B-ZONES — zones polygonales au hover (Etape 4) =====
 // Les sites is_zone:true gardent leur marqueur. Au survol (desktop) un polygone
 // ocre apparait avec fade-in 200ms ; au mouseout fade-out 200ms. Sur mobile
 // (hover:none) le tap affiche le polygone 1500ms puis ouvre la popup ; un 2e tap
@@ -1511,7 +1511,7 @@ fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
       pieveDoyenneBySlugV2[p.slug] = pDoyenne;
       // Fix C3 — note de rattachement optionnelle (popup enrichi).
       if (p.note_rattachement) pieveNoteRattachementBySlugV2[p.slug] = p.note_rattachement;
-      // U2 (URGENT FEDER 2026-05-17) — Une pieve = un seul polygon dans
+      // U2 — Une pieve = un seul polygon dans
       // la nav. Itere uniquement sur le doyenne resolu (override ou
       // majoritaire). Annule Brief 10/12 union overrides+auto seuil 25%
       // qui creait jusqu'a 3 polygons par pieve.
@@ -2667,7 +2667,7 @@ let _pievesLoaded = false;
 // Charge depuis docs/data/pieve_aliases.json au boot. Permet de preserver
 // les hash URL publics deja partages (ex : #doyenne_ajaccio/ajaccio reste
 // valide apres rename pieve_ajaccio -> pieve_gulfo_d_aiacciu).
-// Cumulatif jusqu'a la refonte post-FEDER.
+// Cumulatif jusqu'a la refonte ultérieure.
 let PIEVE_ALIASES = {};
 
 function _stripDoyennePrefix(s) { return s ? s.replace(/^doyenne_/, '') : ''; }
@@ -2883,7 +2883,7 @@ function openFichePopup(shape, ficheType, slug, displayName, catLabel) {
         + '</div>';
     }
   }
-  // U1 (URGENT FEDER 2026-05-17) — Brief 47 finalise : les pieves n'ont
+  // U1 — Brief 47 finalise : les pieves n'ont
   // plus de fiche markdown en Phase 1 beta. Le popup pieve est sec :
   // header + note_rattachement (si presente). Pas de body charge, pas de
   // bouton 'Detail factuel' (panel pieve egalement desactive Phase 1).
@@ -3020,7 +3020,7 @@ function updateZoomLOD() {
     if (!map.hasLayer(doyenneMinisLayer)) doyenneMinisLayer.addTo(map);
   }
 
-  // U3 (URGENT FEDER 2026-05-17) — allPievesLodLayer interdite en vue
+  // U3 — allPievesLodLayer interdite en vue
   // Corse globale (N1). La couche pollue avec 45 polygons cliquables
   // qui permettent notamment d'ouvrir un popup pieve depuis N1 sans
   // drill doyenne (vecteur du bug popup-home U1). Reservee aux drill-down
