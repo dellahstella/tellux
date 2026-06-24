@@ -1295,7 +1295,7 @@ function findDoyenneForPoint(lat, lng) {
   window.addEventListener('hashchange', _redirect);
 })();
 
-fetch(resolveAssetPath('docs/data/doyennes_polygons.json'))
+const doyennesReady = fetch(resolveAssetPath('docs/data/doyennes_polygons.json'))
   .then(r => r.json())
   // Brief 28 — await sitesReady avant d'iterer markersBySlug (race fix).
   .then(async data => {
@@ -1564,6 +1564,12 @@ fetch(resolveAssetPath('docs/data/pieves_polygons.json'))
       const pv = explicit || findPieveForPoint(site.lat, site.lon);
       if (pv) { SPOT_TO_PIEVE_V2.set(slug, pv); mappedPieve++; } else { unmappedPieve++; }
     }
+    // Fix race N1/N2 : garantir que SPOT_TO_DOYENNE est rempli (fin du .then
+    // doyennes) AVANT de construire spotsLevel2ByDoyenne. Les deux fetch
+    // (doyennes/pieves) n'attendaient que sitesReady ; si pieves resolvait en
+    // premier, SPOT_TO_DOYENNE etait vide -> layer N2 vide -> 0 site au clic
+    // doyenne. await garantit l'ordre sans refondre le multi-fetch (Brief 28).
+    await doyennesReady;
     // Construire spotsLevel2ByDoyenne : tous les markers groupes par doyenne
     // (illustres + non-illustres), prets a etre attaches au map en niveau 2.
     for (const slug in markersBySlug) {
