@@ -71,10 +71,13 @@ jobs:
 
       - name: Résumé
         id: summary
+        continue-on-error: true
         run: |
           set +e
-          COUNT=$(grep -c . findings.txt 2>/dev/null || echo 0)
-          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          COUNT=0
+          if [ -s findings.txt ]; then COUNT=$(wc -l < findings.txt | tr -dc '0-9'); fi
+          [ -z "$COUNT" ] && COUNT=0
+          printf 'count=%s\n' "$COUNT" >> "$GITHUB_OUTPUT"
           {
             echo "## R5 Garde-fou doctrine anti-fuite"
             echo ""
@@ -90,6 +93,7 @@ jobs:
 
       - name: Ouvrir / mettre à jour une issue (alert-only, Cran B)
         if: steps.summary.outputs.count != '0'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
