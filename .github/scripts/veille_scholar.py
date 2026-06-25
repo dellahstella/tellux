@@ -18,7 +18,7 @@ Aucun secret en clair dans le script — tout vient de variables d'environnement
 fournies par GitHub Actions Secrets.
 
 Variables d'env requises :
-    GMAIL_REFRESH_TOKEN   — refresh_token OAuth (compte de service)
+    GMAIL_REFRESH_TOKEN   — refresh_token OAuth utilisateur (client Desktop, pas un service account)
     GMAIL_CLIENT_ID       — client_id OAuth Desktop
     GMAIL_CLIENT_SECRET   — client_secret OAuth Desktop
     ANTHROPIC_API_KEY     — clé API Anthropic
