@@ -1232,6 +1232,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <button class="hdr-btn" onclick="openAboutModal()" title="À propos du projet">À propos</button>
     <a class="hdr-btn" href="patrimoine.html" title="Cartographie patrimoniale de la Corse" style="text-decoration:none">Patrimoine (bêta)</a>
     <a class="hdr-btn" href="mairies.html" title="Outils administratifs pour les communes corses" style="text-decoration:none">Élu·e ? Outils mairie →</a>
+    <a class="hdr-btn" id="lang-toggle" href="?lang=co" hreflang="co" lang="co" title="Affichage de l'interface en langue corse (bêta)" style="text-decoration:none">Corsu</a>
     <span id="sb-status-dot" class="status-dot status-dot--pending" title="Supabase connexion en cours…" aria-label="Statut Supabase"></span>
     <span class="hdr-status" id="hdr-status">chargement…</span>
   </div>
@@ -7915,9 +7916,46 @@ async function saveObservation(){
 <div id="glossary-backdrop" class="glossary-backdrop" onclick="closeGlossaryDrawer()"></div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════
+     Toggle de langue FR ⇄ CO — branche preview claude/i18n-co-toggle-preview
+     Affordance publique (lien #lang-toggle dans le header) pour basculer la
+     langue. Purement cosmétique : il ne fait que calculer un href qui ajoute
+     ou retire le paramètre ?lang=co, en préservant les autres paramètres et
+     le hash. NE mute AUCUN contenu existant — l'inertie du moteur i18n
+     ci-dessous (early-return sans ?lang=co) est intégralement préservée.
+     Sans JS, le lien statique pointe déjà vers ?lang=co (progressive enhancement).
+     ═══════════════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+  'use strict';
+  var t = document.getElementById('lang-toggle');
+  if (!t) return;
+  var params;
+  try { params = new URLSearchParams(window.location.search); }
+  catch (_e) { return; }
+  var inCO = (params.get('lang') || 'fr').toLowerCase() === 'co';
+  if (inCO) { params.delete('lang'); } else { params.set('lang', 'co'); }
+  var qs = params.toString();
+  t.setAttribute('href', window.location.pathname + (qs ? '?' + qs : '') + (window.location.hash || ''));
+  if (inCO) {
+    t.textContent = 'Français';
+    t.setAttribute('hreflang', 'fr');
+    t.setAttribute('lang', 'fr');
+    t.setAttribute('title', "Rivene à l'interfaccia in francese");
+  } else {
+    t.textContent = 'Corsu';
+    t.setAttribute('hreflang', 'co');
+    t.setAttribute('lang', 'co');
+    t.setAttribute('title', "Affichage de l'interface en langue corse (bêta)");
+  }
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
      i18n corsu (bêta) — feat/i18n-corsu-beta (2026-06-10)
-     Bascule UNIQUEMENT via ?lang=co — aucun bouton public. Promotion en
-     toggle visible seulement APRÈS validation d'un relecteur bilingue.
+     Bascule via ?lang=co — historiquement aucun bouton public ; un toggle
+     visible (#lang-toggle, ci-dessus) est ajouté sur cette branche preview
+     pour arbitrage Soleil. Promotion en prod seulement APRÈS validation
+     d'un relecteur bilingue (89 chaînes flaggées, docs/i18n/FLAGGED_CO_NATIF.md).
      FR = source de vérité : par défaut (sans ?lang=co) ce bloc ne touche
      RIEN au DOM (early return avant toute lecture du dictionnaire).
      Chaque entrée porte le FR verbatim en garde anti-drift : si le texte
