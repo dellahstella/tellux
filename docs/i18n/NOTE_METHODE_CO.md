@@ -1,6 +1,6 @@
 # Note de méthode — version corse (bêta) de l'interface Tellux
 
-*Pour le dossier (CTC / FEDER). Rédigée 2026-06-10.*
+*Note de méthode interne. Rédigée 2026-06-10.*
 
 ## Démarche
 
@@ -52,10 +52,10 @@ Le porteur n'étant pas bilingue corse, la chaîne de production a été conçue
   n'est présentée comme vérifiée sans source.
 - **Français inchangé** (contrôle automatique : clés + texte FR identiques à la version de référence).
 
-## Suite prévue (ligne budgétaire)
+## Suite prévue
 
 Une **relecture native qualifiée** (locuteur corse, idéalement en lien avec le Cunsigliu di a
-lingua corsa / la Collectivité de Corse) constitue une **étape ultérieure budgétée**. La présente
+lingua corsa) constitue une **étape ultérieure**. La présente
 passe a pour seul objet de porter la qualité à un niveau « correct et défendable » et de fournir
 au relecteur natif une **liste de travail ciblée** (`FLAGGED_CO_NATIF.md`) plutôt qu'une relecture
 intégrale à l'aveugle. La version corse ne sera **promue en bascule publique qu'après cette
