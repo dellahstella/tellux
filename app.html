@@ -614,6 +614,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-hyd{background:#e0f0ff!important;color:#1a5c8c!important;border-color:#5ba3d4!important;font-weight:500;}
 .on-cav{background:#f0e8ff!important;color:#5c3a9b!important;border-color:#9b72d4!important;font-weight:500;}
 .on-hot{background:#fef2f2!important;color:#7f1d1d!important;border-color:#e5a0a0!important;font-weight:500;}
+.on-hot-rf{background:#e8f1f8!important;color:#1a4b8c!important;border-color:#6b9fd4!important;font-weight:500;}
 .on-res{background:#fefaf0!important;color:#78350f!important;border-color:#d4a96a!important;font-weight:500;}
 .on-bt{background:#fff8e6!important;color:#d97706!important;border-color:#f5a855!important;font-weight:500;}
 .on-failles{background:#fdf4f3!important;color:#8E2F1F!important;border-color:#c16b5a!important;font-weight:500;}
@@ -1506,7 +1507,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <span>Modèle EM</span>
     </div>
     <div class="accordion-cat-content open">
-      <button class="lbtn on-hot" id="b-hot" data-domains="tous" title="Champ composite estimé par le modèle Tellux (agrégation de 4 domaines physiques)" onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ composite</button>
+      <button class="lbtn on-hot" id="b-hot" data-domains="statique elf" title="Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. Estimation du modèle Tellux, pas une mesure." onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ magnétique composite (nT)</button>
+      <button class="lbtn" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — estimation calibrée sur les mesures ANFR/EXEM. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)</button>
       <button class="lbtn on-con" id="b-con" data-domains="tous" title="Mesures EM — contributions citoyennes + 30 fiches ANFR/EXEM certifiées (2024-2026)" onclick="tog('con','on-con',this)"><span class="dot" style="background:#5c3a9b"></span>Mesures EM</button>
     </div>
   </div>
@@ -1733,7 +1735,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <h3 class="legende-section-title">Légende EM (couches actives)</h3>
       <!-- #tellux-leg-panel : rempli dynamiquement par updateLegendPanel() — affiché seulement si une couche EM (Champ composite ou Mesures EM) est active. -->
       <div id="tellux-leg-panel" style="display:none"></div>
-      <div id="legende-em-empty" style="font-size:11px;color:var(--tx3);font-style:italic">Activez « Champ composite » ou « Mesures EM » dans la sidebar pour afficher la légende.</div>
+      <div id="legende-em-empty" style="font-size:11px;color:var(--tx3);font-style:italic">Activez « Champ magnétique composite » ou « Mesures EM » dans la sidebar pour afficher la légende.</div>
     </section>
   </div>
 </aside>
@@ -2272,22 +2274,23 @@ const lPostesSources=L.layerGroup();
 const lPointsChaudsRadio=L.layerGroup();
 // lSit/lSit2/lAlign/lEgl/lTour/lIndu/lCast/lPont : couches patrimoniales migrées vers patrimoine.html
 // lRPG/lForet/lAOC : layers agronomie migrées vers agronomie.html
-const lBT=L.layerGroup(),lAnt=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lSitesRemarq=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
+const lBT=L.layerGroup(),lAnt=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lHotRF=L.layerGroup(),lSitesRemarq=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
 const lCrustal=L.layerGroup();
 const lRadon=L.layerGroup();
 // lCert : layer interne non-clusterisé pour les 30 fiches ANFR/EXEM certifiées.
 // Activé/désactivé en parallèle de lCon via tog('con') — bouton unique côté UI.
 const lCert=L.layerGroup();
-const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,con:lCon,therm:lTherm,crustal:lCrustal,sitesRemarq:lSitesRemarq,radon:lRadon};
+const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,con:lCon,therm:lTherm,crustal:lCrustal,sitesRemarq:lSitesRemarq,radon:lRadon};
 const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag,foret:wmsForet};
-const ACTIVE={bt:false,ant:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,res:false,prod:false,con:true,therm:false,crustal:false,sitesRemarq:false,radon:false};
+const ACTIVE={bt:false,ant:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,hotrf:false,res:false,prod:false,con:true,therm:false,crustal:false,sitesRemarq:false,radon:false};
 
-const LEGEND_CORE_IDS=new Set(['hot']);
+const LEGEND_CORE_IDS=new Set(['hot','hotrf']);
 const LEGEND_MAX_CONTEXT=3;
 const LEGEND_ACTIVE_CORE=new Set();
 const LEGEND_ACTIVE_CONTEXT=[];
 const LEGEND_HTML={
-  hot:'<div class="leg-block"><b class="leg-title">Champ ELF 50 Hz (nT)</b><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#8b92a5">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · PROD_ELECTRIQUE</div></div>',
+  hot:'<div class="leg-block"><b class="leg-title">Champ magnétique composite (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (réseau) + susceptibilité du substrat</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#8b92a5">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · susceptibilité BRGM</div></div>',
+  hotrf:'<div class="leg-block"><b class="leg-title">Champ électrique RF (V/m)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofréquences — estimation calibrée ANFR/EXEM</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>2</span><span>6</span><span>20 V/m</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #2171b5;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ Repère ICNIRP public : 28–61 V/m selon fréquence<br><span style="font-size:8px;color:#8b92a5">Repère indicatif — pas de seuil d\'alerte</span></div><div class="leg-src">Friis · ANFR CartoRadio · EXEM</div></div>',
   geo:'<div class="leg-block"><b class="leg-title">Geologie</b><div class="leg-row"><span style="color:#8B4513">&#9632;</span> Granit</div><div class="leg-row"><span style="color:#DAA520">&#9632;</span> Sedimentaire</div><div class="leg-row"><span style="color:#4682B4">&#9632;</span> Metamorphique</div><div class="leg-src">BRGM Geologie</div></div>',
   failles:'<div class="leg-block"><b class="leg-title">Failles tectoniques</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#8E2F1F;vertical-align:middle;margin-right:4px"></span><b style="color:#8E2F1F">Active</b> — faille active (3 sites)</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;border-top:2px dashed #C28533;vertical-align:middle;margin-right:4px"></span><b style="color:#C28533">Quaternaire</b> — faille ancienne (5 sites)</div><div class="leg-row" style="font-size:9px;color:var(--tx3)">Tracé indicatif ~30 km · axe orienté</div><div class="leg-why">Les failles actives amplifient localement le champ magnétique naturel.</div><div class="leg-src">BRGM Corte · 8 failles principales</div></div>',
   hyd:'<div class="leg-block"><b class="leg-title">Nappes</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Eau souterraine proche de la surface — couche visuelle BRGM ; le calcul utilise un dataset distinct</div><div class="leg-row"><span style="color:#1a4b8c">&#9632;</span> Affleurante</div><div class="leg-row"><span style="color:#4a90d9">&#9632;</span> Sub-affleurante</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
@@ -2597,7 +2600,7 @@ function updateLegendPanel(){
   const corePanel=document.getElementById('tellux-leg-panel');
   const emptyMsg=document.getElementById('legende-em-empty');
   if(corePanel){
-    const coreOrder=['hot','con'];
+    const coreOrder=['hot','hotrf','con'];
     const coreActive=coreOrder.filter(id=>LEGEND_ACTIVE_CORE.has(id)&&LEGEND_HTML[id]);
     if(!coreActive.length){
       corePanel.style.display='none';
@@ -2655,6 +2658,7 @@ function tog(id,cls,btn){
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='flex';
     if(id==='emag')document.getElementById('emag-op-row').style.display='flex';
     if(id==='hot'&&lHot.getLayers().length===0)buildHot();
+    if(id==='hotrf'&&lHotRF.getLayers().length===0)buildHotRF();
     if(id==='therm'&&lTherm.getLayers().length===0)loadSitesApp().then(buildThermLayer);
     if(id==='crustal'){if(lCrustal.getLayers().length===0)buildCrustalLayer();showCrustalGauge(true);}
     if(id==='radon'&&lRadon.getLayers().length===0)buildRadonLayer();
@@ -5749,13 +5753,16 @@ function buildHot(){
   const lonMax=z>=10?Math.min(9.65,bnds.getEast()+0.1):9.65;
   for(let a=latMin;a<latMax;a+=step){
     for(let o=lonMin;o<lonMax;o+=step){
-      const {human:h,water:w,geo:g,score:sc}=calcAll(a,o);
-      // Ajouter la composante RF corrigée au score
-      const rfCorr=calcN_RF_calib(a,o);
-      const rfScore=rfCorr>5?200:rfCorr>2?150:rfCorr>0.5?100:0; // V/m → score
-      const scTotal=Math.max(sc,rfScore);
-      if(scTotal>200){
-        const {fill,opacity,label}=scoreColor(scTotal);
+      // Couche magnétique : grandeur HOMOGÈNE en nT = ELF 50 Hz (human) + susceptibilité
+      // substrat (geo). Le proxy hydrique (0.3·water, unit:'proxy' sans dimension) est EXCLU
+      // de cette heatmap nT (ADR-024 — intégrité d'unité) ; il reste dans l'Indice et le popup
+      // de clic, inchangés. La RF (V/m) a désormais sa propre couche homogène lHotRF (buildHotRF).
+      // [Refonte 2026-06-29] supprimé : ancien Math.max(score, rfScore) qui mêlait nT et V/m
+      // sur une échelle nT (rfScore plafonnait à 200, jamais > seuil → branche RF inerte de toute façon).
+      const {human:h,geo:g}=calcAll(a,o);
+      const magNT=h+g;
+      if(magNT>200){
+        const {fill,opacity,label}=scoreColor(magNT);
         const bounds=[[a,o],[a+step,o+step]];
         const rect=L.rectangle(bounds,{
           color:fill, weight:0.5, opacity:0.4,
@@ -5800,6 +5807,41 @@ function buildHot(){
       const anC=aN>=3?'#d97706':'#9ca3af';
       el.innerHTML=em+' <span style="color:'+col+';font-weight:600">P'+pH+'</span> <span style="color:'+anC+';font-weight:500">N'+aN+'</span>';
     });
+  }
+}
+
+// ═══ Couche RF — Champ électrique radiofréquence (V/m), grandeur homogène ═══
+// Séparée de la heatmap magnétique (ADR-024) : une couche = une grandeur = une unité.
+// Valeur = calcN_RF_calib (V/m réel, calibré sur mesures ANFR/EXEM). Aucune bucketisation
+// ni fusion avec des nT. OFF par défaut (opt-in) pour ne pas charger le boot.
+function rfColor(vm){
+  if(vm<2)  return{fill:'#9ecae1',opacity:0.30,label:'Faible (< 2 V/m)'};   // bleu clair
+  if(vm<6)  return{fill:'#4292c6',opacity:0.40,label:'Modéré (2–6 V/m)'};    // bleu
+  if(vm<20) return{fill:'#2171b5',opacity:0.50,label:'Élevé (6–20 V/m)'};    // bleu foncé
+  return    {fill:'#08306b',opacity:0.58,label:'Très élevé (> 20 V/m)'};     // bleu nuit
+}
+function buildHotRF(){
+  lHotRF.clearLayers();
+  const z=map.getZoom();
+  const step=z>=16?0.001:z>=14?0.003:z>=12?0.008:z>=10?0.02:0.04;
+  const bnds=map.getBounds();
+  const latMin=z>=10?Math.max(41.35,bnds.getSouth()-0.1):41.35;
+  const latMax=z>=10?Math.min(43.05,bnds.getNorth()+0.1):43.05;
+  const lonMin=z>=10?Math.max(8.55,bnds.getWest()-0.1):8.55;
+  const lonMax=z>=10?Math.min(9.65,bnds.getEast()+0.1):9.65;
+  for(let a=latMin;a<latMax;a+=step){
+    for(let o=lonMin;o<lonMax;o+=step){
+      const vm=calcN_RF_calib(a,o); // V/m réel calibré (pas de bucket)
+      if(vm>=0.5){                  // seuil d'affichage : ignore le bruit de fond < 0.5 V/m
+        const {fill,opacity}=rfColor(vm);
+        const rect=L.rectangle([[a,o],[a+step,o+step]],{
+          color:fill, weight:0.5, opacity:0.4,
+          fillColor:fill, fillOpacity:opacity,
+          interactive:false
+        });
+        rect.addTo(lHotRF);
+      }
+    }
   }
 }
 
@@ -6462,7 +6504,7 @@ showLegend('hot',true);
 showLegend('con',true); // con est activée par défaut (ACTIVE.con=true via b-con.on-con) — légende cohérente
 // Démarrage : anomalies EM (couche Champ composite + mesures terrain par défaut)
 let _hotDebounce=null;
-function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}},300);}
+function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.hotrf){lHotRF.clearLayers();buildHotRF();}},300);}
 map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
 setTimeout(()=>Promise.all([loadAnt(),loadDB(),loadRadonCommunesL3(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte
@@ -8041,8 +8083,10 @@ async function saveObservation(){
 ["subgroup_a",".subgroup-header@0","","A. Substrat magnétique","A. Sustratu magneticu"],
 ["subgroup_b",".subgroup-header@1","","B. Contexte territorial (géologie, hydro, forêts)","B. Cuntestu territuriale (geulugia, idrulugia, fureste)"],
 ["subgroup_c",".subgroup-header@2","","C. Sites documentaires","C. Siti ducumentari"],
-["lyr_hot","#b-hot","","Champ composite","Campu cumpostu"],
-["lyr_hot_tt","#b-hot","title","Champ composite estimé par le modèle Tellux (agrégation de 4 domaines physiques)","Campu cumpostu stimatu da u mudellu Tellux (agregazione di 4 duminii fisichi)"],
+["lyr_hot","#b-hot","","Champ magnétique composite (nT)","Campu magneticu cumpostu (nT)"],
+["lyr_hot_tt","#b-hot","title","Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. Estimation du modèle Tellux, pas une mesure.","Campu magneticu cumpostu — ELF 50 Hz (rete elettrica) + suscettibilità di u sustratu, espressu in nT. Stima di u mudellu Tellux, micca una misura."],
+["lyr_hotrf","#b-hot-rf","","Champ électrique RF (V/m)","Campu elettricu RF (V/m)"],
+["lyr_hotrf_tt","#b-hot-rf","title","Champ électrique radiofréquence (V/m) — estimation calibrée sur les mesures ANFR/EXEM. Repères ICNIRP indicatifs, pas de seuil d'alerte.","Campu elettricu radiufrequenza (V/m) — stima calibrata nantu à e misure ANFR/EXEM. Riferimenti ICNIRP indicativi, micca soglia d'alerta."],
 ["lyr_con","#b-con","","Mesures EM","Misure EM"],
 ["lyr_con_tt","#b-con","title","Mesures EM — contributions citoyennes + 30 fiches ANFR/EXEM certifiées (2024-2026)","Misure EM — cuntribuzione citatine + 30 schede ANFR/EXEM certificate (2024-2026)"],
 ["lyr_ant","#b-ant","","Antennes ANFR + TDF","Antenne ANFR + TDF"],
@@ -8125,7 +8169,7 @@ async function saveObservation(){
 ["legende_toggle_aria","#legende-toggle","aria-label","Légende EM (couches actives)","Legenda EM (strati attivi)"],
 ["legende_content_aria","#legende-content","aria-label","Légende EM","Legenda EM"],
 ["legende_title",".legende-section-title","","Légende EM (couches actives)","Legenda EM (strati attivi)"],
-["legende_empty","#legende-em-empty","","Activez « Champ composite » ou « Mesures EM » dans la sidebar pour afficher la légende.","Attivate « Campu cumpostu » o « Misure EM » in a colonna per affissà a legenda."],
+["legende_empty","#legende-em-empty","","Activez « Champ magnétique composite » ou « Mesures EM » dans la sidebar pour afficher la légende.","Attivate « Campu magneticu cumpostu » o « Misure EM » in a colonna per affissà a legenda."],
 ["legends_ctx_aria","#tellux-legends-context","aria-label","Légendes des couches contextuelles activées","Legende di i strati cuntestuali attivati"],
 ["ms_naturel",".ms-l@0","","N naturel IGRF+LCS1","N naturale IGRF+LCS1"],
 ["ms_composite",".ms-l@1","","N+H composite total","N+H cumpostu tutale"],
