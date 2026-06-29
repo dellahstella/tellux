@@ -1,7 +1,12 @@
 name: R5 — Garde-fou doctrine anti-fuite
 
-# Routine R5 (garde-fou doctrine, 2026-06-23). Substrat : GitHub Actions (ADR-010).
-# Scanne les surfaces .html PUBLIQUES pour 3 classes de fuite doctrine v4 :
+# Routine R5 (garde-fou doctrine, 2026-06-23 ; périmètre élargi 2026-06-29, ADR-019).
+# Substrat : GitHub Actions (ADR-010).
+# Scanne tous les fichiers TEXTE TRACKÉS (= clonables : .html/.md/.txt/.yml/.json éditoriaux),
+# pas seulement les 9 .html déployés — le scanner dérive sa surface de `git ls-files` (gitignored
+# exclu de facto), filtrée par extension + garde-fous (data/binaires exclus, cap taille, auto-exclusion
+# des fichiers du garde-fou). Motivation : un .md tracké (NOTE_METHODE_CO.md) a échappé au scan .html
+# le 2026-06-29 (fix manuel #893). 3 classes de fuite doctrine v4 :
 #   - FUITE       : raison sociale (secret LEAK_TERMS_REGEX), FEDER/ANR/OS1.2/candidature,
 #                   corpus privé, axes, SARL/SASU, SIRET espacé.
 #   - PROSCRIT    : formulations interdites (exception étroite « cité/réfuté »).
@@ -10,17 +15,35 @@ name: R5 — Garde-fou doctrine anti-fuite
 # DÉTECTE et SIGNALE uniquement (ouvre/maj une issue). ALERT-ONLY ABSOLU : ne casse jamais le build,
 # ne corrige rien. L'issue ne recopie jamais la chaîne sensible (emplacement + classe seulement).
 # La raison sociale vient du secret GH LEAK_TERMS_REGEX ; absent → classe sautée proprement.
-# Activation depuis main (défaut) pour le cron ; aussi sur push/PR touchant le HTML public.
+# Allowlist par chemin : .github/scripts/leak_guard_allowlist.txt (« chemin<TAB>label »).
+# Activation depuis main (défaut) pour le cron ; aussi sur push/PR touchant une surface texte.
 
 on:
   schedule:
     - cron: '30 8 * * 1'   # lundi 08:30 UTC (hebdo, décalé des autres routines)
   workflow_dispatch: {}
   pull_request:
-    paths: ['*.html', '.github/scripts/leak_guard*', '.github/workflows/leak-guard.yml']
+    paths:
+      - '**/*.html'
+      - '**/*.md'
+      - '**/*.txt'
+      - '**/*.yml'
+      - '**/*.yaml'
+      - '**/*.json'
+      - '**/*.jsonc'
+      - '.github/scripts/leak_guard*'
+      - '.github/workflows/leak-guard.yml'
   push:
     branches: [main, dev]
-    paths: ['*.html', '.github/scripts/leak_guard*']
+    paths:
+      - '**/*.html'
+      - '**/*.md'
+      - '**/*.txt'
+      - '**/*.yml'
+      - '**/*.yaml'
+      - '**/*.json'
+      - '**/*.jsonc'
+      - '.github/scripts/leak_guard*'
 
 permissions:
   contents: read
