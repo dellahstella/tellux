@@ -4,14 +4,22 @@
 # DÉTECTE et SIGNALE uniquement. N'écrit, ne corrige, ne supprime rien.
 # TOUJOURS exit 0 (alert-only : ne casse jamais le build ; le workflow lit la sortie, pas le code retour).
 #
-# Scanne UNIQUEMENT les surfaces .html publiques servies à la racine.
+# Périmètre (élargi 2026-06-29, ADR-019) : tous les fichiers TEXTE TRACKÉS sur le repo public
+# (= clonables), pas seulement les .html déployés. Surface dérivée de `git ls-files` (les fichiers
+# gitignored sont exclus de facto : _drafts/, recherche/, _corpus/, .claude/…), filtrée par extension
+# texte + garde-fous (répertoires de données/binaires exclus, cap taille, auto-exclusion des fichiers
+# DU garde-fou lui-même). Motivation : le 2026-06-29 un .md tracké (docs/i18n/NOTE_METHODE_CO.md) a
+# porté une mention de financement conditionnel et a échappé au scan limité aux .html (fix manuel #893).
+#
 # Sortie (stdout) : une ligne par finding « FICHIER:LIGNE<TAB>CLASSE<TAB>LABEL ».
 # NE RECOPIE JAMAIS la chaîne sensible détectée (seul l'emplacement + la classe).
 #
 # Le terme confidentiel (raison sociale) vient du secret GH Actions LEAK_TERMS_REGEX
 # (variable d'environnement). Absent → la classe raison_sociale est sautée proprement (pas d'échec).
 #
-# Allowlist : .github/scripts/leak_guard_allowlist.txt (format « fichier<TAB>label »).
+# Allowlist : .github/scripts/leak_guard_allowlist.txt (format « chemin<TAB>label »).
+# Le « chemin » est relatif à la racine du repo (ex. docs/i18n/NOTE_METHODE_CO.md), ce qui permet
+# une allowlist PAR CHEMIN (ex. mentions-legales.html allowliste raison_sociale/siret_spaced pour LCEN).
 # Exception PROSCRIT « cité/réfuté » : un passage proscrit entre guillemets ou accompagné
 # d'un marqueur de réfutation sur la même ligne n'est pas signalé (pédagogie, ex. methode-et-limites §3.2).
 #
@@ -23,7 +31,31 @@ ROOT="${1:-.}"
 cd "$ROOT" 2>/dev/null || exit 0
 ALLOW=".github/scripts/leak_guard_allowlist.txt"
 
-FILES="index.html app.html patrimoine.html cadre-scientifique.html mairies.html guide-et-glossaire.html methode-et-limites.html transparence.html mentions-legales.html"
+# Extensions texte scannées. Les binaires (webp/png/woff2/…) et le code (py/js/sql/…) sont exclus de
+# facto (hors whitelist), ce qui réduit le risque de faux positifs et le bruit.
+TEXT_EXTS=" html htm md markdown txt yml yaml json jsonc "
+SIZE_CAP=$((512 * 1024))   # 512 KiB : anti dump de données / binaire résiduel (faux positifs + perf).
+
+# Construit la liste des fichiers à scanner depuis l'index git (tracké = clonable sur le public).
+# Exclut : répertoires de données/binaires, fixtures, lockfiles/manifests npm, et les fichiers DU
+# garde-fou lui-même (ils contiennent les termes-déclencheurs → auto-fuite garantie sinon).
+list_files() {
+  git ls-files -z 2>/dev/null | while IFS= read -r -d '' f; do
+    case "$f" in
+      docs/assets/*|docs/data/*|public/data/*|_data/*|tests/fixtures/*) continue ;;
+      */node_modules/*|*/package-lock.json|*package.json)              continue ;;
+      .github/scripts/leak_guard*|.github/workflows/leak-guard.yml)    continue ;;
+    esac
+    local ext="${f##*.}"
+    case "$TEXT_EXTS" in *" $ext "*) : ;; *) continue ;; esac
+    local sz
+    sz=$(wc -c < "$f" 2>/dev/null || echo 0)
+    [ "${sz:-0}" -gt "$SIZE_CAP" ] && continue
+    printf '%s\n' "$f"
+  done
+}
+
+FILES="$(list_files)"
 
 # CLASSE <TAB> LABEL <TAB> REGEX (ERE) <TAB> FLAGS (-i ou vide)
 RULES=$(cat <<'RULESEOF'
@@ -66,6 +98,12 @@ scan_rule() { # class label regex flags
     done < <(grep -nE $flags -- "$rx" "$f" 2>/dev/null)
   done
 }
+
+# Anti-endormissement : si aucune surface n'a été énumérée (git absent / index vide), émettre un
+# finding VISIBLE pour qu'une issue s'ouvre — évite un faux « 0 finding / run vert » trompeur.
+if [ -z "${FILES//[[:space:]]/}" ]; then
+  printf '%s\t%s\t%s\n' "(config)" "CONFIG" "aucune_surface_enumeree_git_ls-files_vide"
+fi
 
 while IFS=$'\t' read -r cls label rx flags; do
   [ -z "${cls:-}" ] && continue
