@@ -68,6 +68,46 @@ def _should_skip(u: str) -> bool:
     return any(host == h or host.endswith("." + h) for h in INFRA_SKIP_HOSTS)
 
 
+def _is_concatenated(txt: str, end: int) -> bool:
+    """URL captée jusqu'à `end` (un délimiteur). Concaténation de code = la chaîne
+    se termine par un guillemet/apostrophe/backtick de fermeture **immédiatement**
+    suivi (après espaces/tabs) d'un opérateur `+` → l'URL n'est qu'un préfixe d'une
+    chaîne construite au runtime (`'base' + variable`), pas un lien testable. Cf. #895 (a).
+    Le guillemet de fermeture est **obligatoire** : `url + x` en prose Markdown
+    (ex. « INPN + DREAL ») N'EST PAS une concaténation → on ne masque pas le lien."""
+    if not (end < len(txt) and txt[end] in "\"'`"):
+        return False
+    i = end + 1
+    while i < len(txt) and txt[i] in " \t":
+        i += 1
+    return i < len(txt) and txt[i] == "+"
+
+
+def _in_comment(txt: str, start: int) -> bool:
+    """True si l'URL débutant à `start` est dans un commentaire de code. Cf. #895 (b).
+    - `//` en tête de ligne (commentaire ligne JS/C) ;
+    - bloc `/* … */` englobant ;
+    - commentaire HTML `<!-- … -->` englobant.
+    NB : `#` n'est PAS traité — dans les fichiers scannés (.html/.md) `#` est une
+    ancre/un titre, pas un commentaire ; l'y traiter masquerait des liens réels.
+    Restreint (`//` en tête de ligne, blocs fermés englobants) pour ne masquer
+    aucun lien éditorial légitime."""
+    line_start = txt.rfind("\n", 0, start) + 1
+    if txt[line_start:start].lstrip().startswith("//"):
+        return True
+    ob = txt.rfind("/*", 0, start)
+    if ob != -1:
+        cb = txt.find("*/", ob)
+        if cb != -1 and cb > start:
+            return True
+    oh = txt.rfind("<!--", 0, start)
+    if oh != -1:
+        ch = txt.find("-->", oh)
+        if ch != -1 and ch > start:
+            return True
+    return False
+
+
 def _collect_urls() -> list[str]:
     seen: set[str] = set()
     # 1) fichiers texte trackés
@@ -80,10 +120,15 @@ def _collect_urls() -> list[str]:
                 txt = p.read_text(encoding="utf-8", errors="ignore")
             except Exception:
                 continue
-            for m in URL_RE.findall(txt):
-                u = _clean(m)
-                if not _should_skip(u):
-                    seen.add(u)
+            for m in URL_RE.finditer(txt):
+                u = _clean(m.group(0))
+                if _should_skip(u):
+                    continue
+                if _is_concatenated(txt, m.end()):   # #895 (a) préfixe concaténé (…' + var)
+                    continue
+                if _in_comment(txt, m.start()):       # #895 (b) URL dans un commentaire
+                    continue
+                seen.add(u)
     # 2) url_canonique du registry
     reg = REPO_ROOT / "scripts" / "citations_registry.json"
     if reg.exists():
