@@ -1441,7 +1441,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 
 <p style="margin:10px 0 8px 0;"><strong>Score Indice Tellux — Perturbations vs Naturel (0-10) :</strong></p>
 <ul style="margin:6px 0 6px 16px;padding:0">
-  <li style="margin-bottom:4px"><strong>P (humaines)</strong> : Antennes ANFR (±50m GPS, 1 026 supports), lignes HTA/BT (courants 150-450A fix, modèle Biot-Savart), RF calibrée Friis</li>
+  <li style="margin-bottom:4px"><strong>P (humaines)</strong> : Antennes ANFR (±50m GPS, 1 026 supports), lignes HTA/BT (courants 150-450A fix, modèle Biot-Savart), RF Friis (calibration interne, relecture en cours)</li>
   <li><strong>N (naturelles)</strong> : IGRF-14 (±50-100 nT IDW interp.), anomalie crustale grille LCS-1 (dérivée EMAG2v3 + BRGM aéromag., ±20 nT), susceptibilité magnétique + failles</li>
 </ul>
 
@@ -1508,7 +1508,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     </div>
     <div class="accordion-cat-content open">
       <button class="lbtn on-hot" id="b-hot" data-domains="statique elf" title="Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. Estimation du modèle Tellux, pas une mesure." onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ magnétique composite (nT)</button>
-      <button class="lbtn" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle de propagation indicatif sur ~3000 antennes ANFR, non calibré. Magnitudes provisoires (relecture physicien en cours). Lecture qualitative, ne représente pas un champ mesuré. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)</button>
+      <button class="lbtn" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Enveloppe haute (extrapolation trafic maximal) — l'exposition chronique typique est moindre. Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)</button>
       <button class="lbtn on-con" id="b-con" data-domains="tous" title="Mesures EM — contributions citoyennes + 30 fiches ANFR/EXEM certifiées (2024-2026)" onclick="tog('con','on-con',this)"><span class="dot" style="background:#5c3a9b"></span>Mesures EM</button>
     </div>
   </div>
@@ -2290,7 +2290,7 @@ const LEGEND_ACTIVE_CORE=new Set();
 const LEGEND_ACTIVE_CONTEXT=[];
 const LEGEND_HTML={
   hot:'<div class="leg-block"><b class="leg-title">Champ magnétique composite (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (réseau) + susceptibilité du substrat</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#8b92a5">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · susceptibilité BRGM</div></div>',
-  hotrf:'<div class="leg-block"><b class="leg-title">Champ électrique RF (V/m)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofréquences — modèle de propagation indicatif</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>2</span><span>6</span><span>20 V/m</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #2171b5;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ Repère ICNIRP public : 28–61 V/m selon fréquence<br><span style="font-size:8px;color:#8b92a5">Repère indicatif — pas de seuil d\'alerte</span></div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#fdf6e3;border:1px solid #e0d4b0;border-radius:4px;font-size:8.5px;color:#7a5a1e;line-height:1.4"><b>Modèle indicatif, non calibré</b> — estimation de propagation sur ~3000 antennes ANFR. <b>Magnitudes provisoires</b>, non validées (relecture physicien en cours). Lecture qualitative ; ne représente pas un champ mesuré.</div><div class="leg-src">Friis · antennes ANFR + TDF/FH · non calibré</div></div>',
+  hotrf:'<div class="leg-block"><b class="leg-title">Champ électrique RF (V/m)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofréquences — modèle Tellux (calibration interne)</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>2</span><span>6</span><span>20 V/m</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #2171b5;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ Repère ICNIRP public : 28–61 V/m selon fréquence<br><span style="font-size:8px;color:#8b92a5">Repère indicatif — pas de seuil d\'alerte</span></div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#fdf6e3;border:1px solid #e0d4b0;border-radius:4px;font-size:8.5px;color:#7a5a1e;line-height:1.4"><b>Modèle Tellux — calibration interne.</b> Propagation depuis ~3000 antennes ANFR, calibrée sur 30 mesures certifiées ANFR/EXEM. <b>Enveloppe haute</b> (trafic max, DR 15-4) — l\'exposition chronique typique est moindre. Relecture physicien en cours ; surestime en zone boisée/rurale.</div><div class="leg-src">Friis · ~3000 antennes ANFR · 30 mesures EXEM · calibration interne</div></div>',
   geo:'<div class="leg-block"><b class="leg-title">Geologie</b><div class="leg-row"><span style="color:#8B4513">&#9632;</span> Granit</div><div class="leg-row"><span style="color:#DAA520">&#9632;</span> Sedimentaire</div><div class="leg-row"><span style="color:#4682B4">&#9632;</span> Metamorphique</div><div class="leg-src">BRGM Geologie</div></div>',
   failles:'<div class="leg-block"><b class="leg-title">Failles tectoniques</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#8E2F1F;vertical-align:middle;margin-right:4px"></span><b style="color:#8E2F1F">Active</b> — faille active (3 sites)</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;border-top:2px dashed #C28533;vertical-align:middle;margin-right:4px"></span><b style="color:#C28533">Quaternaire</b> — faille ancienne (5 sites)</div><div class="leg-row" style="font-size:9px;color:var(--tx3)">Tracé indicatif ~30 km · axe orienté</div><div class="leg-why">Les failles actives amplifient localement le champ magnétique naturel.</div><div class="leg-src">BRGM Corte · 8 failles principales</div></div>',
   hyd:'<div class="leg-block"><b class="leg-title">Nappes</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Eau souterraine proche de la surface — couche visuelle BRGM ; le calcul utilise un dataset distinct</div><div class="leg-row"><span style="color:#1a4b8c">&#9632;</span> Affleurante</div><div class="leg-row"><span style="color:#4a90d9">&#9632;</span> Sub-affleurante</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
@@ -4113,31 +4113,44 @@ function loadPointsChaudsRadio() { return loadSitesApp(); }
 // + le facteur ×25 mort par un champ unifié sur les ~3000 antennes réelles.
 // ⚠️ GELÉ-001 : les magnitudes produites ne sont PAS validées (relecture physicien tiers
 // requise). Jamais « calibré », jamais mergé en prod ; bornes/poids GELÉ-001 non refittés.
-let ANFR_GRID = null; // { "gi_gj": [ {lat,lon,generation}, ... ] } — index spatial grille 0.05°
+let ANFR_GRID = null;        // { "gi_gj": [ {lat,lon,generation}, ... ] } — index spatial grille 0.05°
+let _anfrLoadPromise = null; // partage le fetch entre appels concurrents (boot + toggle couche)
+let RF_CALIB_K = 1;          // calibration interne Tellux : facteur scalaire E_cal = k·E_raw (défaut 1 = non calibré)
+let RF_CALIB_STATS = null;   // {k_med,k_geo,disp_geo,iqr,n_used,n_excl_nonconf,n_excl_oor,n_total,bands}
 async function loadANFRForField(){
   if (ANFR_GRID) return;
-  try {
-    // Fetch PAGINÉ (pattern loadAnt) — PostgREST plafonne à 1000/appel ; antennas_corse ≈ 3000.
-    // Fetch direct + sbH() sans AbortSignal (évite l'erreur postMessage clonage, cf. loadAnt).
-    let rows=[], page=0, pageSize=500;
-    while(true){
-      const url=SB_URL+'/rest/v1/antennas_corse?select=lat,lon,generation&order=id.asc&offset='+(page*pageSize)+'&limit='+pageSize;
-      const r=await fetch(url,{headers:sbH()});
-      if(!r.ok) throw new Error('Supabase HTTP '+r.status);
-      const batch=await r.json();
-      if(!batch||!batch.length) break;
-      rows=rows.concat(batch);
-      if(batch.length<pageSize) break;
-      page++;
-    }
-    ANFR_GRID={};
-    rows.forEach(a=>{ if(a.lat==null||a.lon==null) return; const k=Math.floor(a.lat/0.05)+'_'+Math.floor(a.lon/0.05); (ANFR_GRID[k]=ANFR_GRID[k]||[]).push(a); });
-    console.log('[Tellux] RF_field : '+rows.length+' antennes ANFR indexées');
-  } catch(e){ ANFR_GRID=ANFR_GRID||{}; console.warn('[Tellux] loadANFRForField échec : '+e.message+' (RF_field = TDF+FH seuls)'); }
+  if (_anfrLoadPromise) return _anfrLoadPromise;
+  _anfrLoadPromise = (async()=>{
+    try {
+      // Fetch PAGINÉ (pattern loadAnt) — PostgREST plafonne à 1000/appel ; antennas_corse ≈ 3000.
+      // Fetch direct + sbH() sans AbortSignal (évite l'erreur postMessage clonage, cf. loadAnt).
+      let rows=[], page=0, pageSize=500;
+      while(true){
+        const url=SB_URL+'/rest/v1/antennas_corse?select=lat,lon,generation&order=id.asc&offset='+(page*pageSize)+'&limit='+pageSize;
+        const r=await fetch(url,{headers:sbH()});
+        if(!r.ok) throw new Error('Supabase HTTP '+r.status);
+        const batch=await r.json();
+        if(!batch||!batch.length) break;
+        rows=rows.concat(batch);
+        if(batch.length<pageSize) break;
+        page++;
+      }
+      ANFR_GRID={};
+      rows.forEach(a=>{ if(a.lat==null||a.lon==null) return; const k=Math.floor(a.lat/0.05)+'_'+Math.floor(a.lon/0.05); (ANFR_GRID[k]=ANFR_GRID[k]||[]).push(a); });
+      console.log('[Tellux] RF_field : '+rows.length+' antennes ANFR indexées');
+    } catch(e){ ANFR_GRID=ANFR_GRID||{}; console.warn('[Tellux] loadANFRForField échec : '+e.message+' (RF_field = TDF+FH seuls)'); }
+  })();
+  return _anfrLoadPromise;
 }
-// EIRP par génération — PLACEHOLDER À VALIDER (physicien §4-2 ; la PIRE réelle par émetteur
-// n'est pas publiée en open data). Valeur provisoire = ancien EIRP 20 W. NON CALIBRÉ.
-const EIRP_BY_GEN={'2G':20,'3G':20,'4G':20,'5G':20};
+// EIRP (PIRE) lobe principal / statistique-équivalent macro, en W, par génération.
+// Littérature : ANFR Guide DR17, ICNIRP Base Stations, rapports mesures 5G ANFR.
+// ⚠️ EIRP = P_conduite × gain_antenne. L'ancien `20 W` était la puissance CONDUITE
+// (43 dBm), PAS l'EIRP (macro ≈ +17 dBi ≈ ×50) → sous-estimation ×~50 que le `×25`
+// mort compensait par hasard. Valeurs centrales défendables (le facteur k absorbe le
+// niveau absolu ; c'est la cohérence RELATIVE entre générations qui compte). 5G = la
+// plus incertaine (EIRP crête directionnelle transitoire vs statistique — on prend la
+// statistique-équivalente). Calibration interne Tellux — relecture physicien en cours.
+const EIRP_BY_GEN={'2G':1000,'3G':1500,'4G':2000,'5G':3000};
 // Estimateur RF unifié : mobile ANFR (Friis) + TDF broadcast + FH. PLUS de fond départemental,
 // PLUS de facteur ×25. Appelé par calcRF (Indice/popup) ET calcN_RF_calib (heatmap/hover).
 function RF_field(lat, lon){
@@ -4158,6 +4171,10 @@ function RF_field(lat, lon){
   // (3) FAISCEAUX HERTZIENS — repris tel quel de l'ancien calcRF
   FH_POINTS.forEach(([a,b,name,intensity])=>{ const d=dist(lat,lon,a,b); let c=0; if(d<1.5)c=intensity*(1-d/1.5); else if(d<4)c=intensity*0.2*(1-(d-1.5)/2.5); if(c>0){ S_total+=c; contributions.push({source_type:'FH',S_uW_m2:Math.round(c*10)/10,distance_m:Math.round(d*1000),path_name:name||'FH'}); } });
   // (4) PLUS de fond départemental DENSITY[dept].fh×8 (supprimé — unification §2.1/§3.A)
+  // (5) CALIBRATION INTERNE Tellux : facteur scalaire k sur le champ E (k dérivé au boot par
+  // calibrateRF() sur 30 mesures certifiées). k porte sur E (E_cal=k·E_raw) ⇒ S ∝ E² ⇒ S_cal=k²·S_raw.
+  // On échelle S par k² : E_total (dérivé de S ci-dessous) devient automatiquement k·E_raw. Défaut k=1.
+  S_total *= RF_CALIB_K*RF_CALIB_K;
   const E_total_V_m=Math.round(Math.sqrt(S_total*1e-6*377)*1000)/1000;
   return { S_total_uW_m2:Math.round(S_total), E_total_V_m, contributions, forest_attenuation_dB:0, terrain_correction_dB:0, note_ICNIRP:'Rappel documentaire : limite ICNIRP grand public en bande GSM ≈ 4,5 W/m² soit 4 500 000 µW/m².', source:'antennes ANFR (Supabase) + émetteurs TDF + faisceaux hertziens', confidence:'low', calibrated:false };
 }
@@ -4166,6 +4183,46 @@ function RF_field(lat, lon){
 function calcRF(lat, lon){
   const f = RF_field(lat, lon);
   return { S_total_uW_m2:f.S_total_uW_m2, E_total_V_m:f.E_total_V_m, contributions:f.contributions, forest_attenuation_dB:0, terrain_correction_dB:0, note_ICNIRP:f.note_ICNIRP, source:f.source, confidence:f.confidence, calibrated:false };
+}
+// ═══ Calibration RF interne Tellux — facteur scalaire k sur 30 mesures certifiées (ADR-028) ═══
+// k = médiane(mesuré/prédit). Applique E_cal=k·E_raw (⇒ S_cal=k²·S_raw, via RF_field). Exclut
+// les mesures non conformes (conforme=false : San Quilico 29,05) et hors-portée modèle (E_pred≈0).
+// Reporte médiane, moyenne géométrique, dispersion (σ géo ×÷), IQR, n. §3 : part quadratique par
+// bande mesurée = constat de pondération pour le physicien (PAS de refit spatial ; le modèle est
+// par génération, pas par bande fine → comparaison fine = enrichissement ANFR fréquence ultérieur).
+// Label honnête : calibration INTERNE, relecture physicien en cours ; couche = MAJORANT (max DR 15-4).
+async function calibrateRF(){
+  try{
+    await loadANFRForField();
+    const r=await fetch('public/data/cartoradio_certified_corse.json',{signal:AbortSignal.timeout(5000)});
+    const d=await r.json(); const mes=d.mesures||[];
+    RF_CALIB_K=1; // IDEMPOTENCE : calibrer sur le champ BRUT (E_pred non calibré, indépendant
+                  // d'un k antérieur). Bloc synchrone jusqu'au RF_CALIB_K=k_med (aucun await → pas de fenêtre).
+    const ratios=[]; let nNC=0,nOOR=0; const bandE2={};
+    mes.forEach(m=>{
+      if(m.conforme===false){ nNC++; return; }                 // exclut l'aberrant non conforme
+      const meas=m.valeur_max_vm; if(meas==null||m.lat==null||m.lon==null) return;
+      const Epred=RF_field(m.lat,m.lon).E_total_V_m;            // k=1 forcé ci-dessus → champ brut
+      if(!(Epred>0.02)){ nOOR++; return; }                     // aucune antenne modèle proche → ratio non fiable
+      ratios.push(meas/Epred);
+      if(m.valeurs_par_bande){ for(const b in m.valeurs_par_bande){ const v=+m.valeurs_par_bande[b]; if(v>0) bandE2[b]=(bandE2[b]||0)+v*v; } }
+    });
+    if(!ratios.length){ console.warn('[Tellux] calibration RF : 0 point exploitable — k reste 1'); return; }
+    const s=ratios.slice().sort((a,b)=>a-b);
+    const med=a=>a.length%2?a[(a.length-1)/2]:(a[a.length/2-1]+a[a.length/2])/2;
+    const q=p=>{const i=(s.length-1)*p,lo=Math.floor(i),hi=Math.ceil(i);return s[lo]+(s[hi]-s[lo])*(i-lo);};
+    const k_med=med(s);
+    const logs=ratios.map(Math.log), mLog=logs.reduce((a,b)=>a+b,0)/logs.length;
+    const k_geo=Math.exp(mLog);
+    const disp_geo=Math.exp(Math.sqrt(logs.reduce((a,b)=>a+(b-mLog)**2,0)/logs.length));
+    const totE2=Object.values(bandE2).reduce((a,b)=>a+b,0)||1;
+    const bands=Object.fromEntries(Object.entries(bandE2).map(([b,v])=>[b,+(v/totE2).toFixed(3)]).sort((a,b)=>b[1]-a[1]));
+    RF_CALIB_K=k_med;                                           // méthodo : médiane (robuste)
+    RF_CALIB_STATS={k_med:+k_med.toFixed(3),k_geo:+k_geo.toFixed(3),disp_geo:+disp_geo.toFixed(2),iqr:[+q(0.25).toFixed(3),+q(0.75).toFixed(3)],n_used:ratios.length,n_excl_nonconf:nNC,n_excl_oor:nOOR,n_total:mes.length,bands};
+    console.log('[Tellux] calibration RF : k='+k_med.toFixed(3)+' (méd) / '+k_geo.toFixed(3)+' (géo) · dispersion ×÷'+disp_geo.toFixed(2)+' · IQR ['+q(0.25).toFixed(2)+'–'+q(0.75).toFixed(2)+'] · n='+ratios.length+'/'+mes.length+' (exclus : '+nNC+' non-conf, '+nOOR+' hors-portée)');
+    if(disp_geo>5) console.warn('[Tellux] calibration RF : dispersion large (×÷'+disp_geo.toFixed(1)+') — k médian = compromis central, incertitude locale élevée (constat qualité modèle, non masqué).');
+    if(typeof ACTIVE!=='undefined'&&ACTIVE.hotrf&&typeof lHotRF!=='undefined'&&typeof buildHotRF==='function'){ lHotRF.clearLayers(); buildHotRF(); }
+  }catch(e){ console.warn('[Tellux] calibration RF échec : '+e.message+' — k reste 1'); }
 }
 
 // ============================================================
@@ -4363,8 +4420,14 @@ function calcAll(lat,lng,options){
 // Ref : AUDIT_TELLUX_NIVEAU3 §5.2 + §5.3
 // ════════════════════════════════════════════════════════════════════════════
 const EXPERT_WEIGHTS_DEFAULT = { M: 0.4, RF: 0.4, I: 0.2 }; // GELÉ — GELE-001
-const EXPERT_BOUNDS_DEFAULT  = { ELF_nT: [0, 1000], RF_uW_m2: [0, 1000], GAMMA_nSv_h: [50, 250] }; // GELÉ
-const EXPERT_EPISTEMIC_NOTE  = 'Indice composite conventionnel : agr\u00e9gation lin\u00e9aire pond\u00e9r\u00e9e de trois domaines physiques (M, RF, I) normalis\u00e9s sur leurs plages de r\u00e9f\u00e9rence corses. Les pond\u00e9rations sont provisoires, en attente de validation m\u00e9thodologique par un physicien tiers qualifi\u00e9. Cet indice n\'a aucune signification physique directe ni sanitaire. Source : AUDIT_TELLUX_NIVEAU3 §5.';
+// RF_uW_m2 borne haute portée [0,1000]→[0,95000] µW/m² (≈ 6 V/m) : l'ancienne [0,1000]
+// saturait dès 0,61 V/m (calée sur le modèle ×25 mal dimensionné) ; le mesuré réel monte à
+// 29 V/m. ~95000 couvre ~85-90 % des mesures sous saturation, reste très en deçà d'ICNIRP
+// (28-61 V/m). Effet : la composante RF de l'indice composite devient GRADUÉE au lieu de
+// saturée partout → plus discriminante. Provisoire/documenté (ADR-027/028, relecture physicien).
+// ELF/GAMMA inchangés.
+const EXPERT_BOUNDS_DEFAULT  = { ELF_nT: [0, 1000], RF_uW_m2: [0, 95000], GAMMA_nSv_h: [50, 250] };
+const EXPERT_EPISTEMIC_NOTE  = 'Indice composite conventionnel, sans signification physique ni sanitaire directe. La composante RF provient du modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (majorant — enveloppe haute, extrapolation trafic maximal), relecture physicien en cours. Pondérations (w_M/w_RF/w_I) et bornes de normalisation provisoires et documentées. Usage exploratoire pour comparer la composition du paysage physique entre zones. Source : AUDIT_TELLUX_NIVEAU3 §5.';
 
 function computeExpertComposite(v2, weights, bounds) {
   weights = weights || EXPERT_WEIGHTS_DEFAULT;
@@ -5745,7 +5808,9 @@ function buildHotRF(){
   for(let a=latMin;a<latMax;a+=step){
     for(let o=lonMin;o<lonMax;o+=step){
       const vm=calcN_RF_calib(a,o); // V/m réel calibré (pas de bucket)
-      if(vm>=0.5){                  // seuil d'affichage : ignore le bruit de fond < 0.5 V/m
+      if(vm>=0.2){                  // seuil d'affichage (présentation) : 0,2 V/m — 15/30 mesures réelles
+                                    // sont < 1 V/m (méthodo §3.1) ; 0,5 masquait la moitié du signal.
+                                    // Le rural profond reste vide (absence de source, pas effet de seuil).
         const {fill,opacity}=rfColor(vm);
         const rect=L.rectangle([[a,o],[a+step,o+step]],{
           color:fill, weight:0.5, opacity:0.4,
@@ -6410,7 +6475,7 @@ let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.hotrf){lHotRF.clearLayers();buildHotRF();}},300);}
 map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
-setTimeout(()=>Promise.all([loadAnt(),loadANFRForField(),loadDB(),loadRadonCommunesL3(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte
+setTimeout(()=>Promise.all([loadAnt(),calibrateRF(),loadDB(),loadRadonCommunesL3(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k)
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET L'Aquila — correction externe réelle niveau 1
 setTimeout(loadDst,5500); // Dst Kyoto via NOAA — correction externe niveau 2 (Sprint astro 2026-05-25)
@@ -7989,7 +8054,7 @@ async function saveObservation(){
 ["lyr_hot","#b-hot","","Champ magnétique composite (nT)","Campu magneticu cumpostu (nT)"],
 ["lyr_hot_tt","#b-hot","title","Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. Estimation du modèle Tellux, pas une mesure.","Campu magneticu cumpostu — ELF 50 Hz (rete elettrica) + suscettibilità di u sustratu, espressu in nT. Stima di u mudellu Tellux, micca una misura."],
 ["lyr_hotrf","#b-hot-rf","","Champ électrique RF (V/m)","Campu elettricu RF (V/m)"],
-["lyr_hotrf_tt","#b-hot-rf","title","Champ électrique radiofréquence (V/m) — modèle de propagation indicatif sur ~3000 antennes ANFR, non calibré. Magnitudes provisoires (relecture physicien en cours). Lecture qualitative, ne représente pas un champ mesuré. Repères ICNIRP indicatifs, pas de seuil d'alerte.","Campu elettricu radiufrequenza (V/m) — mudellu di propagazione indicativu nantu à ~3000 antenne ANFR, micca calibratu. Magnitudi pruvisorie (rilettura fisicu in corsu). Lettura qualitativa, ùn rapresenta micca un campu misuratu. Riferimenti ICNIRP indicativi, micca soglia d'alerta."],
+["lyr_hotrf_tt","#b-hot-rf","title","Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Enveloppe haute (extrapolation trafic maximal) — l'exposition chronique typique est moindre. Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte.","Campu elettricu radiufrequenza (V/m) — mudellu Tellux — calibrazione interna nantu à 30 misure certificate ANFR/EXEM (propagazione da ~3000 antenne ANFR reale). Inviluppu altu (estrapolazione trafficu massimu) — l'espusizione crònica tipica hè menu. Rilettura fisicu in corsu ; ùn rimpiazza micca una misura certificata. Riferimenti ICNIRP indicativi, micca soglia d'alerta."],
 ["lyr_con","#b-con","","Mesures EM","Misure EM"],
 ["lyr_con_tt","#b-con","title","Mesures EM — contributions citoyennes + 30 fiches ANFR/EXEM certifiées (2024-2026)","Misure EM — cuntribuzione citatine + 30 schede ANFR/EXEM certificate (2024-2026)"],
 ["lyr_ant","#b-ant","","Antennes ANFR + TDF","Antenne ANFR + TDF"],
