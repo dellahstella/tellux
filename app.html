@@ -1508,7 +1508,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     </div>
     <div class="accordion-cat-content open">
       <button class="lbtn on-hot" id="b-hot" data-domains="statique elf" title="Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. Estimation du modèle Tellux, pas une mesure." onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ magnétique composite (nT)</button>
-      <button class="lbtn" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle de propagation indicatif, non calibré (nombre limité d'émetteurs). Lecture qualitative, ne représente pas un champ mesuré. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)</button>
+      <button class="lbtn" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle de propagation indicatif sur ~3000 antennes ANFR, non calibré. Magnitudes provisoires (relecture physicien en cours). Lecture qualitative, ne représente pas un champ mesuré. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)</button>
       <button class="lbtn on-con" id="b-con" data-domains="tous" title="Mesures EM — contributions citoyennes + 30 fiches ANFR/EXEM certifiées (2024-2026)" onclick="tog('con','on-con',this)"><span class="dot" style="background:#5c3a9b"></span>Mesures EM</button>
     </div>
   </div>
@@ -1934,8 +1934,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 </div>
 
 <!-- Simulateur bâtiment migré vers agronomie.html — code JS dormant purgé 2026-06-03
-     (fix/app-purge-batiment-residus). Seuls calcN_RF (modèle Friis utilisé par
-     calcN_RF_calib) et calcSimDelta (stub neutre, retourne 0) sont conservés. -->
+     (fix/app-purge-batiment-residus). calcSimDelta (stub neutre, retourne 0) conservé ;
+     calcN_RF (20 antennes hardcodées) remplacé par RF_field/ANFR (refonte RF étape 2/3). -->
 
 <!-- PANNEAU MODE PROSPECTEUR TERRAIN -->
 <div class="geo-panel" id="geo-panel" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px">
@@ -2290,7 +2290,7 @@ const LEGEND_ACTIVE_CORE=new Set();
 const LEGEND_ACTIVE_CONTEXT=[];
 const LEGEND_HTML={
   hot:'<div class="leg-block"><b class="leg-title">Champ magnétique composite (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (réseau) + susceptibilité du substrat</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#8b92a5">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · susceptibilité BRGM</div></div>',
-  hotrf:'<div class="leg-block"><b class="leg-title">Champ électrique RF (V/m)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofréquences — modèle de propagation indicatif</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>2</span><span>6</span><span>20 V/m</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #2171b5;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ Repère ICNIRP public : 28–61 V/m selon fréquence<br><span style="font-size:8px;color:#8b92a5">Repère indicatif — pas de seuil d\'alerte</span></div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#fdf6e3;border:1px solid #e0d4b0;border-radius:4px;font-size:8.5px;color:#7a5a1e;line-height:1.4"><b>Modèle indicatif, non calibré</b> — estimation de propagation depuis un nombre limité d\'émetteurs. Lecture qualitative ; ne représente pas un champ mesuré. Calibration in situ en cours.</div><div class="leg-src">Friis · émetteurs limités · non calibré</div></div>',
+  hotrf:'<div class="leg-block"><b class="leg-title">Champ électrique RF (V/m)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofréquences — modèle de propagation indicatif</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>2</span><span>6</span><span>20 V/m</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #2171b5;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ Repère ICNIRP public : 28–61 V/m selon fréquence<br><span style="font-size:8px;color:#8b92a5">Repère indicatif — pas de seuil d\'alerte</span></div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#fdf6e3;border:1px solid #e0d4b0;border-radius:4px;font-size:8.5px;color:#7a5a1e;line-height:1.4"><b>Modèle indicatif, non calibré</b> — estimation de propagation sur ~3000 antennes ANFR. <b>Magnitudes provisoires</b>, non validées (relecture physicien en cours). Lecture qualitative ; ne représente pas un champ mesuré.</div><div class="leg-src">Friis · antennes ANFR + TDF/FH · non calibré</div></div>',
   geo:'<div class="leg-block"><b class="leg-title">Geologie</b><div class="leg-row"><span style="color:#8B4513">&#9632;</span> Granit</div><div class="leg-row"><span style="color:#DAA520">&#9632;</span> Sedimentaire</div><div class="leg-row"><span style="color:#4682B4">&#9632;</span> Metamorphique</div><div class="leg-src">BRGM Geologie</div></div>',
   failles:'<div class="leg-block"><b class="leg-title">Failles tectoniques</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#8E2F1F;vertical-align:middle;margin-right:4px"></span><b style="color:#8E2F1F">Active</b> — faille active (3 sites)</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;border-top:2px dashed #C28533;vertical-align:middle;margin-right:4px"></span><b style="color:#C28533">Quaternaire</b> — faille ancienne (5 sites)</div><div class="leg-row" style="font-size:9px;color:var(--tx3)">Tracé indicatif ~30 km · axe orienté</div><div class="leg-why">Les failles actives amplifient localement le champ magnétique naturel.</div><div class="leg-src">BRGM Corte · 8 failles principales</div></div>',
   hyd:'<div class="leg-block"><b class="leg-title">Nappes</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Eau souterraine proche de la surface — couche visuelle BRGM ; le calcul utilise un dataset distinct</div><div class="leg-row"><span style="color:#1a4b8c">&#9632;</span> Affleurante</div><div class="leg-row"><span style="color:#4a90d9">&#9632;</span> Sub-affleurante</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
@@ -4002,9 +4002,9 @@ function runELFRegressionTest() {
 
 // ============================================================
 // DOMAINE RF — Densité de puissance radiofréquence (µW/m²)
-// Sources : FH_POINTS (faisceaux hertziens) + fond CartoRadio départemental
-// IMMÉDIAT — refactor pur de la partie RF de calcHuman()
-// NOTE : les facteurs de calibration RF_CALIB_EXT sont GELÉS
+// [Refonte RF étape 2/3] Sources : antennes ANFR réelles (~3000, Supabase) + émetteurs TDF
+// broadcast + faisceaux hertziens, via RF_field(). Plus de fond départemental, plus de ×25.
+// NOTE GELÉ-001 : magnitudes NON validées (relecture physicien tiers ; bornes/poids non refittés).
 //        (cf. AUDIT_TELLUX_NIVEAU2_MODELE_COMPOSITE_V2.1.md §4.2).
 // ============================================================
 // ═══ Emetteurs broadcast TDF Corse (TDF + Arcom + Cartoradio ANFR) ═══
@@ -4108,72 +4108,64 @@ function adaptSiteUthFromApp(s) {
 }
 function loadPointsChaudsRadio() { return loadSitesApp(); }
 
-function calcRF(lat, lon) {
-  let S_total = 0;
-  const contributions = [];
-
-  // === FAISCEAUX HERTZIENS ===
-  FH_POINTS.forEach(([a, b, name, intensity]) => {
-    const d = dist(lat, lon, a, b);
-    let contrib = 0;
-    if (d < 1.5) contrib = intensity * (1 - d / 1.5);
-    else if (d < 4) contrib = intensity * 0.2 * (1 - (d - 1.5) / 2.5);
-    if (contrib > 0) {
-      S_total += contrib;
-      contributions.push({ source_type: 'FH', S_uW_m2: Math.round(contrib * 10) / 10, distance_m: Math.round(d * 1000), path_name: name || 'FH' });
+// ═══ Source RF réelle : antennes ANFR (Supabase antennas_corse) — PROTOTYPE preview only ═══
+// [Étape 2/3 refonte RF] Remplace le proxy figé de 20 antennes + le fond départemental
+// + le facteur ×25 mort par un champ unifié sur les ~3000 antennes réelles.
+// ⚠️ GELÉ-001 : les magnitudes produites ne sont PAS validées (relecture physicien tiers
+// requise). Jamais « calibré », jamais mergé en prod ; bornes/poids GELÉ-001 non refittés.
+let ANFR_GRID = null; // { "gi_gj": [ {lat,lon,generation}, ... ] } — index spatial grille 0.05°
+async function loadANFRForField(){
+  if (ANFR_GRID) return;
+  try {
+    // Fetch PAGINÉ (pattern loadAnt) — PostgREST plafonne à 1000/appel ; antennas_corse ≈ 3000.
+    // Fetch direct + sbH() sans AbortSignal (évite l'erreur postMessage clonage, cf. loadAnt).
+    let rows=[], page=0, pageSize=500;
+    while(true){
+      const url=SB_URL+'/rest/v1/antennas_corse?select=lat,lon,generation&order=id.asc&offset='+(page*pageSize)+'&limit='+pageSize;
+      const r=await fetch(url,{headers:sbH()});
+      if(!r.ok) throw new Error('Supabase HTTP '+r.status);
+      const batch=await r.json();
+      if(!batch||!batch.length) break;
+      rows=rows.concat(batch);
+      if(batch.length<pageSize) break;
+      page++;
     }
-  });
-
-  // === EMETTEURS TDF BROADCAST ===
-  // Modele isotrope equivalent loin-champ : S = PAR / (4 pi d^2), borne
-  // inferieure 50 m (proche-champ non applicable). Plafond 50 000 uW/m^2
-  // par emetteur pour eviter les valeurs non physiques a tres courte
-  // distance. Emetteurs sans PAR connue (par_kw_estimee null) ignores.
-  // Source : public/data/tdf_emitters_corse.json
-  // Limite : directivite reelle non modelisee, valeurs = ordres de grandeur.
-  if (TDF_EMITTERS && TDF_EMITTERS.length) {
-    TDF_EMITTERS.forEach(em => {
-      if (!em.par_kw_estimee || em.par_kw_estimee <= 0) return;
-      const d = dist(lat, lon, em.lat, em.lon);
-      const d_m = Math.max(50, d * 1000);
-      const PAR_W = em.par_kw_estimee * 1000;
-      const S_uW_m2 = (PAR_W / (4 * Math.PI * d_m * d_m)) * 1e6;
-      const S_capped = Math.min(S_uW_m2, 50000);
-      if (S_capped > 0.1) {
-        S_total += S_capped;
-        contributions.push({
-          source_type: 'broadcast_TDF',
-          S_uW_m2: Math.round(S_capped * 10) / 10,
-          distance_m: Math.round(d_m),
-          path_name: em.nom,
-          par_kw: em.par_kw_estimee
-        });
-      }
-    });
+    ANFR_GRID={};
+    rows.forEach(a=>{ if(a.lat==null||a.lon==null) return; const k=Math.floor(a.lat/0.05)+'_'+Math.floor(a.lon/0.05); (ANFR_GRID[k]=ANFR_GRID[k]||[]).push(a); });
+    console.log('[Tellux] RF_field : '+rows.length+' antennes ANFR indexées');
+  } catch(e){ ANFR_GRID=ANFR_GRID||{}; console.warn('[Tellux] loadANFRForField échec : '+e.message+' (RF_field = TDF+FH seuls)'); }
+}
+// EIRP par génération — PLACEHOLDER À VALIDER (physicien §4-2 ; la PIRE réelle par émetteur
+// n'est pas publiée en open data). Valeur provisoire = ancien EIRP 20 W. NON CALIBRÉ.
+const EIRP_BY_GEN={'2G':20,'3G':20,'4G':20,'5G':20};
+// Estimateur RF unifié : mobile ANFR (Friis) + TDF broadcast + FH. PLUS de fond départemental,
+// PLUS de facteur ×25. Appelé par calcRF (Indice/popup) ET calcN_RF_calib (heatmap/hover).
+function RF_field(lat, lon){
+  let S_total=0; const contributions=[];
+  // (1) MOBILE — antennes ANFR réelles, Friis champ libre, superposition quadratique (E²)
+  if(ANFR_GRID){
+    const gi=Math.floor(lat/0.05), gj=Math.floor(lon/0.05); let E2=0, nb=0;
+    for(let i=gi-3;i<=gi+3;i++) for(let j=gj-3;j<=gj+3;j++){
+      const cell=ANFR_GRID[i+'_'+j]; if(!cell) continue;
+      cell.forEach(a=>{ const d=Math.max(50, dist(lat,lon,a.lat,a.lon)*1000); E2+=30*(EIRP_BY_GEN[a.generation]||20)/(d*d); nb++; });
+    }
+    if(E2>0){ const S_mob=(E2/377)*1e6; S_total+=S_mob; contributions.push({source_type:'mobile_ANFR',S_uW_m2:Math.round(S_mob*10)/10,distance_m:null,path_name:nb+' antennes ANFR (≤15 km)'}); }
   }
-
-  // Fond de bruit départemental (densité sites CartoRadio)
-  const dept = lat < 42.0 ? '2A' : '2B';
-  const densityBonus = Math.round(DENSITY[dept].fh * 8);
-  S_total += densityBonus;
-  if (densityBonus > 0) {
-    contributions.push({ source_type: 'fond_departemental', S_uW_m2: densityBonus, distance_m: null, path_name: 'CartoRadio ' + dept });
+  // (2) BROADCAST TDF — repris tel quel de l'ancien calcRF
+  if(TDF_EMITTERS && TDF_EMITTERS.length){
+    TDF_EMITTERS.forEach(em=>{ if(!em.par_kw_estimee||em.par_kw_estimee<=0) return; const d_m=Math.max(50,dist(lat,lon,em.lat,em.lon)*1000); const S=Math.min((em.par_kw_estimee*1000/(4*Math.PI*d_m*d_m))*1e6,50000); if(S>0.1){ S_total+=S; contributions.push({source_type:'broadcast_TDF',S_uW_m2:Math.round(S*10)/10,distance_m:Math.round(d_m),path_name:em.nom,par_kw:em.par_kw_estimee}); } });
   }
-
-  // S = E²/377 en espace libre → E = √(S × 377) (S en W/m², conversion depuis µW/m²)
-  const E_total_V_m = Math.round(Math.sqrt(S_total * 1e-6 * 377) * 1000) / 1000;
-
-  return {
-    S_total_uW_m2: Math.round(S_total),
-    E_total_V_m,
-    contributions,
-    forest_attenuation_dB: 0, // TODO phase 1 : polygones forestiers Vizzavona, Valdu-Niellu…
-    terrain_correction_dB: 0,
-    note_ICNIRP: 'Rappel documentaire : limite ICNIRP grand public en bande GSM est de l\'ordre de 4,5 W/m² soit 4 500 000 µW/m².',
-    source: 'FH_POINTS CartoRadio + emetteurs TDF broadcast + fond départemental ANFR',
-    confidence: 'medium',
-    calibrated: false // GELÉ — RF_CALIB_EXT en attente relecture tiers
-  };
+  // (3) FAISCEAUX HERTZIENS — repris tel quel de l'ancien calcRF
+  FH_POINTS.forEach(([a,b,name,intensity])=>{ const d=dist(lat,lon,a,b); let c=0; if(d<1.5)c=intensity*(1-d/1.5); else if(d<4)c=intensity*0.2*(1-(d-1.5)/2.5); if(c>0){ S_total+=c; contributions.push({source_type:'FH',S_uW_m2:Math.round(c*10)/10,distance_m:Math.round(d*1000),path_name:name||'FH'}); } });
+  // (4) PLUS de fond départemental DENSITY[dept].fh×8 (supprimé — unification §2.1/§3.A)
+  const E_total_V_m=Math.round(Math.sqrt(S_total*1e-6*377)*1000)/1000;
+  return { S_total_uW_m2:Math.round(S_total), E_total_V_m, contributions, forest_attenuation_dB:0, terrain_correction_dB:0, note_ICNIRP:'Rappel documentaire : limite ICNIRP grand public en bande GSM ≈ 4,5 W/m² soit 4 500 000 µW/m².', source:'antennes ANFR (Supabase) + émetteurs TDF + faisceaux hertziens', confidence:'low', calibrated:false };
+}
+// calcRF = fine enveloppe sur RF_field (consommée par calcAll_v2 → v2.domains.rf).
+// Conserve les clés consommées : S_total_uW_m2 (popup+composite GELÉ), confidence, source.
+function calcRF(lat, lon){
+  const f = RF_field(lat, lon);
+  return { S_total_uW_m2:f.S_total_uW_m2, E_total_V_m:f.E_total_V_m, contributions:f.contributions, forest_attenuation_dB:0, terrain_correction_dB:0, note_ICNIRP:f.note_ICNIRP, source:f.source, confidence:f.confidence, calibrated:false };
 }
 
 // ============================================================
@@ -5653,94 +5645,15 @@ function scoreColor(sc){
 // Segmentation : EXT_DENSE (Friis>0.05 V/m), EXT_SPARSE (Friis<0.05), INT (intérieur)
 // Exclut : Linky (9kHz, hors bande RF), non-conforme Monticello (outlier extrême)
 
-let RF_CALIB_EXT=[]; // [{lat,lon,ratio,vm,friis,ctx}]
-let RF_METRICS={n:0,rmse:0,bias:0,medianRatio:25,medianRatioDense:25,medianRatioSparse:10};
+// [Étape 2/3 refonte RF] RF_CALIB_EXT / RF_METRICS supprimés — calibration morte (cf. RF_field).
 
 // buildAOCLayer() + données zones AOP viticoles → migrées vers agronomie.html
 // (chore/move-agro-outils — réintégration au compte-goutte quand le moment viendra)
 
-function buildRFCalibration(){
-  if(!cemData.length) return;
-  RF_CALIB_EXT=[];
-  const extPts=[];
-  cemData.forEach(m=>{
-    // Exclure : intérieur (murs atténuent), Linky (hors bande), non-conforme (outlier)
-    if(m.interieur) return;
-    if(m.valeur_vm<0.05) return; // Linky / bruit
-    if(m.non_conforme) return;  // outlier extrême (29 V/m à 6m)
-    const friis=calcN_RF(m.lat,m.lon);
-    if(friis<0.001) return;
-    const ratio=m.valeur_vm/friis;
-    const ctx=friis>0.05?'dense':'sparse';
-    const pt={lat:m.lat,lon:m.lon,ratio,vm:m.valeur_vm,friis,ctx};
-    RF_CALIB_EXT.push(pt);
-    extPts.push(pt);
-  });
-  // Calculer médianes par segment
-  const denseRatios=extPts.filter(p=>p.ctx==='dense').map(p=>p.ratio).sort((a,b)=>a-b);
-  const sparseRatios=extPts.filter(p=>p.ctx==='sparse').map(p=>p.ratio).sort((a,b)=>a-b);
-  const allRatios=extPts.map(p=>p.ratio).sort((a,b)=>a-b);
-  const med=arr=>arr.length?arr[Math.floor(arr.length/2)]:25;
-  RF_METRICS.medianRatio=med(allRatios);
-  RF_METRICS.medianRatioDense=denseRatios.length?med(denseRatios):RF_METRICS.medianRatio;
-  RF_METRICS.medianRatioSparse=sparseRatios.length?med(sparseRatios):RF_METRICS.medianRatio;
-  RF_METRICS.n=extPts.length;
-  // Leave-one-out cross-validation : RMSE et biais
-  let sse=0,sumBias=0;
-  extPts.forEach((test,i)=>{
-    // Prédire ce point avec tous les autres
-    const others=extPts.filter((_,j)=>j!==i);
-    if(!others.length) return;
-    const pred=calcN_RF_loo(test.lat,test.lon,others);
-    const err=test.vm-pred;
-    sse+=err*err;
-    sumBias+=err;
-  });
-  RF_METRICS.rmse=extPts.length?Math.sqrt(sse/extPts.length):0;
-  RF_METRICS.bias=extPts.length?sumBias/extPts.length:0;
-}
-
-// Prédiction LOO : IDW sur les ratios des points "others"
-function calcN_RF_loo(lat,lon,others){
-  const friis=calcN_RF(lat,lon);
-  if(!others.length) return friis*RF_METRICS.medianRatio;
-  const pts=others.map(p=>({
-    d:Math.max(0.001,(p.lat-lat)**2+(p.lon-lon)**2),
-    ratio:p.ratio
-  })).sort((a,b)=>a.d-b.d).slice(0,6);
-  const wsum=pts.reduce((s,p)=>s+1/p.d,0);
-  const ratio=pts.reduce((s,p)=>s+p.ratio/p.d,0)/wsum;
-  return friis*Math.min(500,Math.max(1,ratio));
-}
-
-// Facteur de correction local — utilise la calibration auto
-function calcRFcorrFactor(lat,lon){
-  if(!RF_CALIB_EXT.length) return RF_METRICS.medianRatio;
-  const pts=RF_CALIB_EXT.map(p=>({
-    d:Math.max(0.001,(p.lat-lat)**2+(p.lon-lon)**2),
-    ratio:p.ratio
-  })).sort((a,b)=>a.d-b.d).slice(0,6);
-  const wsum=pts.reduce((s,p)=>s+1/p.d,0);
-  const ratio=pts.reduce((s,p)=>s+p.ratio/p.d,0)/wsum;
-  return Math.min(500,Math.max(1,ratio));
-}
-
-// N_RF corrigé = Friis × facteur local calibré
-function calcN_RF_calib(lat,lon){
-  return calcN_RF(lat,lon)*calcRFcorrFactor(lat,lon);
-}
-
-// Delta RF = V/m prédit corrigé (si mesure CartoRadio proche : utiliser la mesure)
-function calcDeltaRF(lat,lon){
-  // Chercher une mesure CartoRadio dans 2km
-  let closest=null,bestD=999;
-  cemData.forEach(m=>{
-    const d=dist(lat,lon,m.lat,m.lon);
-    if(d<2&&d<bestD){bestD=d;closest=m;}
-  });
-  if(closest) return {vm:closest.valeur_vm,source:'CartoRadio',dist:bestD};
-  return {vm:calcN_RF_calib(lat,lon),source:'modèle',dist:null};
-}
+// [Étape 2/3 refonte RF] Calibration RF supprimée (code mort : buildRFCalibration jamais
+// appelée, cemData jamais définie, RF_CALIB_EXT toujours vide → facteur ×25 plat). calcN_RF_loo,
+// calcRFcorrFactor et calcDeltaRF (jamais appelé) supprimés. calcN_RF_calib délègue à RF_field.
+function calcN_RF_calib(lat,lon){ return RF_field(lat,lon).E_total_V_m; } // V/m — plus de ×25
 
 function buildHot(){
   lHot.clearLayers();
@@ -6294,19 +6207,9 @@ document.addEventListener('DOMContentLoaded', function() {
 // Superposition quadratique (sources incohérentes) — ITU-R P.525
 // Incertitude : ±10 dB (directivité antenne, réflexions inconnues)
 // ============================================================
-function calcN_RF(lat,lon){
-  const EIRP_W=20; // ~43 dBm, EIRP moyen secteur 4G
-  let E2=0;
-  [[41.919,8.738],[42.703,9.450],[41.578,9.267],[42.154,9.193],[41.730,8.900],
-   [42.560,9.350],[41.860,9.170],[42.400,8.900],[41.685,9.170],[42.330,8.700],
-   [42.566,8.759],[42.608,8.879],[42.238,8.638],[42.607,9.368],[42.568,8.928],
-   [41.582,9.278],[41.855,8.793],[42.490,9.055],[43.010,9.352],[42.738,9.437]]
-  .forEach(([a,b])=>{
-    const d=Math.max(0.05,dist(lat,lon,a,b))*1000; // m, min 50m
-    E2+=30*EIRP_W/(d*d); // Friis : E²= 30×EIRP/d²
-  });
-  return Math.sqrt(E2); // V/m
-}
+// [Étape 2/3 refonte RF] calcN_RF supprimée — les 20 antennes hardcodées (proxy figé de ~8
+// pôles urbains, ~99 % des antennes ANFR manquantes) sont remplacées par la géométrie réelle
+// des ~3000 antennes ANFR dans RF_field(). Plus aucun appelant.
 
 // Stub neutre — simulateur bâtiment migré vers agronomie.html (2026-06-03).
 // calcSimDelta est appelée par calcAll() ; on retourne 0 pour ne perturber
@@ -6507,7 +6410,7 @@ let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.hotrf){lHotRF.clearLayers();buildHotRF();}},300);}
 map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
-setTimeout(()=>Promise.all([loadAnt(),loadDB(),loadRadonCommunesL3(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte
+setTimeout(()=>Promise.all([loadAnt(),loadANFRForField(),loadDB(),loadRadonCommunesL3(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET L'Aquila — correction externe réelle niveau 1
 setTimeout(loadDst,5500); // Dst Kyoto via NOAA — correction externe niveau 2 (Sprint astro 2026-05-25)
@@ -8086,7 +7989,7 @@ async function saveObservation(){
 ["lyr_hot","#b-hot","","Champ magnétique composite (nT)","Campu magneticu cumpostu (nT)"],
 ["lyr_hot_tt","#b-hot","title","Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. Estimation du modèle Tellux, pas une mesure.","Campu magneticu cumpostu — ELF 50 Hz (rete elettrica) + suscettibilità di u sustratu, espressu in nT. Stima di u mudellu Tellux, micca una misura."],
 ["lyr_hotrf","#b-hot-rf","","Champ électrique RF (V/m)","Campu elettricu RF (V/m)"],
-["lyr_hotrf_tt","#b-hot-rf","title","Champ électrique radiofréquence (V/m) — modèle de propagation indicatif, non calibré (nombre limité d'émetteurs). Lecture qualitative, ne représente pas un champ mesuré. Repères ICNIRP indicatifs, pas de seuil d'alerte.","Campu elettricu radiufrequenza (V/m) — mudellu di propagazione indicativu, micca calibratu (numeru limitatu d'emettitori). Lettura qualitativa, ùn rapresenta micca un campu misuratu. Riferimenti ICNIRP indicativi, micca soglia d'alerta."],
+["lyr_hotrf_tt","#b-hot-rf","title","Champ électrique radiofréquence (V/m) — modèle de propagation indicatif sur ~3000 antennes ANFR, non calibré. Magnitudes provisoires (relecture physicien en cours). Lecture qualitative, ne représente pas un champ mesuré. Repères ICNIRP indicatifs, pas de seuil d'alerte.","Campu elettricu radiufrequenza (V/m) — mudellu di propagazione indicativu nantu à ~3000 antenne ANFR, micca calibratu. Magnitudi pruvisorie (rilettura fisicu in corsu). Lettura qualitativa, ùn rapresenta micca un campu misuratu. Riferimenti ICNIRP indicativi, micca soglia d'alerta."],
 ["lyr_con","#b-con","","Mesures EM","Misure EM"],
 ["lyr_con_tt","#b-con","title","Mesures EM — contributions citoyennes + 30 fiches ANFR/EXEM certifiées (2024-2026)","Misure EM — cuntribuzione citatine + 30 schede ANFR/EXEM certificate (2024-2026)"],
 ["lyr_ant","#b-ant","","Antennes ANFR + TDF","Antenne ANFR + TDF"],
