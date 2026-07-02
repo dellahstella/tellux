@@ -4108,11 +4108,13 @@ function adaptSiteUthFromApp(s) {
 }
 function loadPointsChaudsRadio() { return loadSitesApp(); }
 
-// ═══ Source RF réelle : antennes ANFR (Supabase antennas_corse) — PROTOTYPE preview only ═══
+// ═══ Source RF réelle : antennes ANFR (Supabase antennas_corse) — PUBLIÉ EN PROD (label « estimation centrale », ADR-032) ═══
 // [Étape 2/3 refonte RF] Remplace le proxy figé de 20 antennes + le fond départemental
 // + le facteur ×25 mort par un champ unifié sur les ~3000 antennes réelles.
-// ⚠️ GELÉ-001 : les magnitudes produites ne sont PAS validées (relecture physicien tiers
-// requise). Jamais « calibré », jamais mergé en prod ; bornes/poids GELÉ-001 non refittés.
+// ⚠️ Magnitudes = calibration INTERNE (extérieurs, k≈0,361), non validées externe ;
+// relecture physicien en parallèle (ADR-027). Poids composites GELÉ-001a inchangés
+// (w=0,4/0,4/0,2) ; borne RF re-dérivée en interne (GELÉ-001b, [0,1500], arbitrage Soleil,
+// pas un refit physicien). Jamais « calibré/majorant » nu.
 let ANFR_GRID = null;        // { "gi_gj": [ {lat,lon,generation}, ... ] } — index spatial grille 0.05°
 let _anfrLoadPromise = null; // partage le fetch entre appels concurrents (boot + toggle couche)
 let RF_CALIB_K = 1;          // calibration interne Tellux : facteur scalaire E_cal = k·E_raw (défaut 1 = non calibré)
