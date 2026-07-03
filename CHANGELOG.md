@@ -7,6 +7,14 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Page culture scientifique geomagnetisme.html — 2026-07-03]
+
+### Added
+- **`geomagnetisme.html`** — nouvelle page publique de **culture scientifique** : globe géomagnétique historique interactif (−8000 → 2025), time-lapse de l'intensité du champ et de l'écart au champ dipolaire sur deux hémisphères. Données réelles embarquées : reconstruction **CALS10k.2** (Constable, Korte & Panovska 2016, GFZ Potsdam) avant 1900, **IGRF-14** (IAGA, 2024) de 1900 à 2025, fond terre/mer dérivé du jeu GLOBE (NOAA/NGDC), raccord progressif 1880-1900. Page autonome (~210 Ko, aucune dépendance externe hors Google Fonts), registre distinct de la couche EM d'`app.html` et de `patrimoine.html` ; la page rappelle qu'une **reconstruction n'est pas une mesure**. Testée contre un oracle scipy/ppigrf (60 valeurs, budget d'erreur documenté). PR [#912](https://github.com/dellahstella/tellux/pull/912) (publication après revue anti-fuite/factuelle), [#916](https://github.com/dellahstella/tellux/pull/916) (retouches accessibilité post-revue : aria-labels accentués, formulation d'écart de troncature).
+- **`index.html`** — lien « Le champ géomagnétique dans le temps » ajouté à la rangée Ressources de la section « La méthode » (PR [#912](https://github.com/dellahstella/tellux/pull/912)).
+
+---
+
 ## [Calibration RF interne en production + refonte landing + alignement docs — 2026-07-03]
 
 ### Added
