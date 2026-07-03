@@ -1,6 +1,6 @@
 # Architecture Tellux
 
-**Version :** 1.0 — création 2026-04-21, mise à jour in-place 2026-04-23 (pas de bump)
+**Version :** 1.0 — création 2026-04-21, mise à jour in-place 2026-04-23, 2026-07-03 (ajout `geomagnetisme.html` ; pas de bump)
 **Usage :** référence technique pour les sessions Claude Code. Lire avant toute modification de `app.html`.
 
 ---
@@ -15,6 +15,7 @@ tellux/
 ├── cadre-scientifique.html     # Démarche scientifique (registre éditorial public)
 ├── methode-et-limites.html     # Méthode et limites (registre éditorial public)
 ├── guide-utilisation.html      # Guide d'utilisation (registre éditorial public)
+├── geomagnetisme.html          # Culture scientifique — globe géomagnétique historique −8000→2025 (PUBLIQUE, autonome, données CALS10k.2/IGRF-14 embarquées ; registre distinct de la couche EM et du patrimoine ; lien landing = rangée Ressources)
 ├── public/
 │   └── data/                   # Jeux de données statiques JSON
 │       ├── radon_communes_level3_corse.json
