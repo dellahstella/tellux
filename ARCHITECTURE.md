@@ -14,7 +14,11 @@ tellux/
 ├── index.html                  # Landing page (hero carte EM + blocs applications : mairies, patrimoine, culture scientifique geomagnetisme — patron lp-appsec décliné par modificateur : -mairies/-patrimoine/-geomag)
 ├── cadre-scientifique.html     # Démarche scientifique (registre éditorial public)
 ├── methode-et-limites.html     # Méthode et limites (registre éditorial public)
-├── guide-utilisation.html      # Guide d'utilisation (registre éditorial public)
+├── guide-et-glossaire.html     # Guide d'utilisation + glossaire fusionnés (registre éditorial public ; anciens guide-utilisation.html et glossaire.html → 301)
+├── patrimoine.html             # Seconde application — patrimoine corse (PUBLIQUE bêta, distincte de la couche EM)
+├── transparence.html           # Transparence éditoriale + journal des retraits (ancien retractations.html → 301)
+├── mentions-legales.html       # Mentions légales & confidentialité (ancien donnees-vie-privee.html → 301)
+├── _redirects                  # Redirects 301 Cloudflare Pages (pages support fusionnées)
 ├── geomagnetisme.html          # Culture scientifique — globe géomagnétique historique −8000→2025 (PUBLIQUE, autonome, données CALS10k.2/IGRF-14 embarquées ; registre distinct de la couche EM et du patrimoine ; accès landing = bloc dédié `lp-appsec-geomag` + lien footer « Géomagnétisme » — repositionné 2026-07-03, PR #918)
 ├── public/
 │   └── data/                   # Jeux de données statiques JSON
