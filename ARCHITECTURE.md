@@ -11,11 +11,11 @@
 tellux/
 ├── app.html                    # Application principale — Cartographie EM (PUBLIQUE)
 ├── mairies.html                # Outils communaux (fiche commune, modèles de courriers)
-├── index.html                  # Landing page (dirige vers app.html uniquement)
+├── index.html                  # Landing page (hero carte EM + blocs applications : mairies, patrimoine, culture scientifique geomagnetisme — patron lp-appsec décliné par modificateur : -mairies/-patrimoine/-geomag)
 ├── cadre-scientifique.html     # Démarche scientifique (registre éditorial public)
 ├── methode-et-limites.html     # Méthode et limites (registre éditorial public)
 ├── guide-utilisation.html      # Guide d'utilisation (registre éditorial public)
-├── geomagnetisme.html          # Culture scientifique — globe géomagnétique historique −8000→2025 (PUBLIQUE, autonome, données CALS10k.2/IGRF-14 embarquées ; registre distinct de la couche EM et du patrimoine ; lien landing = rangée Ressources)
+├── geomagnetisme.html          # Culture scientifique — globe géomagnétique historique −8000→2025 (PUBLIQUE, autonome, données CALS10k.2/IGRF-14 embarquées ; registre distinct de la couche EM et du patrimoine ; accès landing = bloc dédié `lp-appsec-geomag` + lien footer « Géomagnétisme » — repositionné 2026-07-03, PR #918)
 ├── public/
 │   └── data/                   # Jeux de données statiques JSON
 │       ├── radon_communes_level3_corse.json
