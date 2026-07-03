@@ -32,7 +32,7 @@
   .globe canvas{display:block;border-radius:50%;background:#141821;
     box-shadow:0 0 0 1px var(--ligne),0 14px 40px rgba(0,0,0,.45)}
   .globe .cap{text-align:center;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;
-    font-size:11px;color:#8f8779;margin-top:8px;letter-spacing:.4px}
+    font-size:11px;color:#9a9284;margin-top:8px;letter-spacing:.4px} /* 5.1:1 sur ardoise (AA) */
   .panel{background:var(--ardoise2);border:1px solid var(--ligne);border-radius:10px;
     padding:16px 18px;margin-top:10px}
   .epoch{display:flex;align-items:baseline;gap:12px;margin-bottom:12px;flex-wrap:wrap}
@@ -53,7 +53,7 @@
     border:1px solid var(--ligne);border-radius:10px;padding:14px 16px;background:rgba(40,45,53,.5)}
   .datanote h2{font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:15px;color:var(--pierre);margin:0 0 8px}
   .datanote a{color:#c9b48a}
-  .foot{font-size:11.5px;color:#7d766a;margin-top:20px;line-height:1.6;border-top:1px solid var(--ligne);padding-top:14px}
+  .foot{font-size:11.5px;color:#9a9284;margin-top:20px;line-height:1.6;border-top:1px solid var(--ligne);padding-top:14px} /* 5.1:1 sur ardoise (AA) */
   code{font-family:"JetBrains Mono",ui-monospace,monospace;color:#b9b1a2;font-size:11px}
   @media (max-width:700px){ .epoch .yr{font-size:24px;min-width:0} }
 </style>
@@ -386,7 +386,7 @@ window.GEOMAG_DATA = {
     if (v >= 0) return v < 0.55 ? mix(MID, WARM, v/0.55) : mix(WARM, HOTedge, (v-0.55)/0.45);
     var a = -v; return a < 0.55 ? mix(MID, COOL, a/0.55) : mix(COOL, COLDedge, (a-0.55)/0.45);
   }
-  /* intensite: bornes fixes 20..78 µT ; le champ reconstruit atteint ~87 µT vers -800
+  /* intensite: bornes fixes 20..78 µT ; le champ reconstruit atteint ~96 µT vers -800
      en tres haute latitude -> saturation assumee au sommet, legende "≥ 78 µT".
      COLDedge/HOTedge : extensions de la palette DA v2 pour les extremes de la rampe divergente. */
   var ABS_LO = 20000, ABS_HI = 78000;
@@ -530,6 +530,7 @@ window.GEOMAG_DATA = {
   function sync(){
     t = +slider.value; yr.textContent = fmtYear(t); ctxEl.textContent = ctxText(t);
     slider.setAttribute("aria-valuetext", fmtYear(t));
+    updateCanvasLabels();
     render();
   }
   slider.addEventListener("input", function(){ pause(); sync(); });
@@ -569,4 +570,38 @@ window.GEOMAG_DATA = {
     var v = +slider.value + 25;
     if (v > 2025) v = -8000; /* boucle */
     slider.value = v;
-    t = v; yr.textCon
+    t = v; yr.textContent = fmtYear(t); ctxEl.textContent = ctxText(t);
+    slider.setAttribute("aria-valuetext", fmtYear(t));
+    updateCanvasLabels();
+    render();
+    timer = setTimeout(function(){ requestAnimationFrame(loop); }, 80);
+  }
+
+  /* aria-label dynamique des canvas (epoque + mode) */
+  function updateCanvasLabels(){
+    var modeTxt = (mode === "abs") ? "intensite totale" : "ecart au champ dipolaire";
+    cvs[0].setAttribute("aria-label", "Globe, hemisphere atlantique, " + modeTxt + ", " + fmtYear(t));
+    cvs[1].setAttribute("aria-label", "Globe, hemisphere pacifique, " + modeTxt + ", " + fmtYear(t));
+  }
+
+  /* barre de legende */
+  (function(){
+    var bar = document.getElementById("bar"), s = "linear-gradient(90deg,";
+    for (var i = 0; i <= 10; i++){
+      var c = divColor((i/5) - 1);
+      s += "rgb(" + (c[0]|0) + "," + (c[1]|0) + "," + (c[2]|0) + ") " + (i*10) + "%,";
+    }
+    bar.style.background = s.slice(0, -1) + ")";
+  })();
+
+  setMode("anom");
+  sync();
+  updateCanvasLabels();
+
+  /* lecture auto au chargement, sauf preference reduite */
+  var prm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!prm){ playing = true; setPlayUI(); loop(); }
+})();
+</script>
+</body>
+</html>
