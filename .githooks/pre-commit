@@ -1,0 +1,75 @@
+#!/bin/sh
+# ─────────────────────────────────────────────────────────────────────────────
+# pre-commit — garde detect-and-signal (concurrence + hygiène de staging)
+#
+# Doctrine : ce hook DÉTECTE et BLOQUE, il ne CORRIGE JAMAIS.
+#   - il ne supprime aucun .git/index.lock ;
+#   - il ne dé-stage aucun fichier ;
+#   - il signale l'anomalie et laisse l'humain/agent trancher.
+#
+# Portée : collisions multi-sessions (lock résiduel) + ajouts fantômes hors
+# arborescence. PAS la direction de sync privé↔MAIN (ça vit dans les
+# instructions projet ; un hook ne peut pas distinguer MAIN de privé).
+#
+# Limite assumée : le check LOCK est la défense principale contre les sessions
+# concurrentes ; l'allowlist ne rattrape que les fichiers hors-arborescence, pas
+# un fichier légitime stagé par une AUTRE session (un hook n'a pas la notion de
+# « quelle session a stagé quoi »). Le correctif définitif reste les worktrees
+# séparés par agent (hors périmètre, à planifier post-FEDER).
+#
+# Activation (par clone — core.hooksPath n'est pas committé) :
+#   git config core.hooksPath .githooks
+# ─────────────────────────────────────────────────────────────────────────────
+set -u
+
+# 1) LOCK — opération git concurrente. Ne PAS supprimer le lock.
+lock=$(git rev-parse --git-path index.lock)
+if [ -e "$lock" ]; then
+  echo "✖ pre-commit BLOQUÉ : $lock présent — opération git concurrente détectée." >&2
+  echo "  Une autre session est peut-être active (ou un process git a crashé)." >&2
+  echo "  Résoudre AVANT de committer. Le hook ne supprime PAS le lock" >&2
+  echo "  (detect-and-signal) : vérifier qu'aucune session n'écrit, puis retirer" >&2
+  echo "  le lock manuellement si — et seulement si — il est confirmé résiduel." >&2
+  exit 1
+fi
+
+# 2) VISIBILITÉ — liste complète des fichiers stagés, en tête, pour rendre
+#    visible tout balayage inattendu avant le commit.
+echo "── pre-commit : fichiers stagés ──────────────────────────────────────────"
+staged_status=$(git diff --cached --name-status)
+if [ -z "$staged_status" ]; then
+  echo "  (aucun fichier stagé)"
+else
+  printf '%s\n' "$staged_status" | sed 's/^/  /'
+fi
+echo "──────────────────────────────────────────────────────────────────────────"
+
+# 3) ALLOWLIST DE CHEMINS (garde secondaire, low-false-positive).
+#    Autorisé : tout fichier racine (sans « / »), ou sous un répertoire de
+#    contenu connu. Un fichier sous un répertoire de tête inconnu => abort.
+allowed_dirs=".github .githooks _data _migrations _scripts assets docs public scripts skills tests tools"
+
+bad=$(git diff --cached --name-only | while IFS= read -r f; do
+  case "$f" in
+    */*) top=${f%%/*} ;;   # a un répertoire de tête
+    *)   continue ;;       # fichier racine => autorisé
+  esac
+  case " $allowed_dirs " in
+    *" $top "*) ;;         # répertoire de tête connu => autorisé
+    *) printf '%s\n' "$f" ;;
+  esac
+done)
+
+if [ -n "$bad" ]; then
+  echo "✖ pre-commit BLOQUÉ : fichier(s) stagé(s) hors arborescence de contenu connue :" >&2
+  printf '%s\n' "$bad" | sed 's/^/    /' >&2
+  echo "  Ajout fantôme possible (autre session, chemin absolu, artefact hors-repo)." >&2
+  echo "  Répertoires de tête autorisés : $allowed_dirs (+ fichiers racine)." >&2
+  echo "  Si l'ajout est INTENTIONNEL : ajouter le répertoire à l'allowlist de ce" >&2
+  echo "  hook, ou committer explicitement avec « git commit --no-verify » après" >&2
+  echo "  vérification. Le hook ne dé-stage rien (detect-and-signal)." >&2
+  exit 1
+fi
+
+# 4) Rien d'anormal — laisser passer le commit légitime.
+exit 0
