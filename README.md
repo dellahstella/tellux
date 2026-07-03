@@ -51,11 +51,11 @@ Tellux est aujourd'hui structuré autour d'une application principale publique :
 - `mairies.html` — outils communaux (fiche commune, modèles de courriers, cadre légal)
 - `cadre-scientifique.html` — démarche scientifique (architecture du modèle, formules, pondérations, et documentation méthodologique par domaine physique : magnétique statique, magnétique basse fréquence ELF 50 Hz, radiofréquences, rayonnement ionisant)
 - `methode-et-limites.html` — méthode et limites (position épistémique, vocabulaire, pièges rhétoriques)
-- `guide-utilisation.html` — guide d'utilisation (manuel d'usage de la carte et des contributions)
-- `glossaire.html` — glossaire technique du projet (94 entrées alphabétiques couvrant physique des champs EM, méthodologie, terminologie institutionnelle et juridique, vocabulaire technique projet)
+- `guide-et-glossaire.html` — guide d'utilisation et glossaire technique fusionnés (manuel d'usage de la carte et des contributions ; glossaire alphabétique couvrant physique des champs EM, méthodologie, terminologie institutionnelle et juridique, vocabulaire technique projet — les anciennes pages `guide-utilisation.html` et `glossaire.html` redirigent en 301)
 - `geomagnetisme.html` — page de culture scientifique : globe géomagnétique historique interactif (−8000 → 2025, reconstruction CALS10k.2 / IGRF-14, données embarquées), registre distinct de la couche cartographique EM
-- `transparence.html` — page de transparence éditoriale (sources, statuts épistémiques, limites connues, cadres éthiques)
-- `retractations.html` — journal public des retraits et reformulations substantielles
+- `transparence.html` — page de transparence éditoriale (sources, statuts épistémiques, limites connues, cadres éthiques) ; héberge le journal public des retraits et reformulations substantielles (section corrections — l'ancienne page `retractations.html` redirige en 301)
+- `patrimoine.html` — seconde application : patrimoine corse cartographié et documenté (publique, bêta, distincte de la couche EM)
+- `mentions-legales.html` — mentions légales et confidentialité
 
 Des modules d'extension thématiques pourront être envisagés sous condition d'obtention d'un financement public, sans calendrier public à ce stade.
 
