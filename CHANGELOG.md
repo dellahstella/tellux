@@ -7,6 +7,27 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Calibration RF interne en production + refonte landing + alignement docs — 2026-07-03]
+
+### Added
+- **`app.html`** — couche radiofréquence reconstruite sur les émetteurs réels : ~3 000 antennes ANFR (2G/3G/4G/5G) + faisceaux hertziens + radiodiffusion TDF, propagation Friis champ libre, **calibration interne** sur les 30 mesures certifiées ANFR/EXEM extérieures. Présentée comme **« estimation centrale d'ordre de grandeur du champ extérieur »** (jamais « calibré / validé / majorant »), relecture physicien externe annoncée en cours (PR [#901](https://github.com/dellahstella/tellux/pull/901), [#898](https://github.com/dellahstella/tellux/pull/898)). Remplace le proxy 20 antennes + fond départemental + facteur ×25.
+- **`app.html`** — séparation de la heatmap composite en deux couches à grandeur/unité homogène (magnétique nT / RF V/m), une couche = une unité (PR [#897](https://github.com/dellahstella/tellux/pull/897)).
+
+### Changed
+- **`index.html`** — restauration de l'accroche **« Révéler l'invisible »** (hero eyebrow + `<title>`) et retrait des tirets de ponctuation em-dash du texte visible (PR [#908](https://github.com/dellahstella/tellux/pull/908)).
+- **`cadre-scientifique.html`** — Section 9 RF alignée sur la calibration en production : source unifiée, calibration interne, « estimation centrale », dispersion ×/÷ 3,3 (validation croisée leave-one-out) ; **directivité d'antenne prototypée puis écartée** (ne généralise pas), modèle isotrope **maintenu par décision documentée** ; cohérence Section 3 + §11.2 (PR [#909](https://github.com/dellahstella/tellux/pull/909)). Libellé RF « calée sur » (PR [#911](https://github.com/dellahstella/tellux/pull/911)) ; nit « facteur d'environ 3,3 » aligné sur la valeur affichée (PR [#913](https://github.com/dellahstella/tellux/pull/913)).
+
+### Fixed
+- **Citations / liens** — liens morts corrigés et 4 DOI remplacés par des identifiants pérennes (EMAG2v3 NCEI notamment, insensibles à la refonte NCEI du 7 juillet) (PR [#899](https://github.com/dellahstella/tellux/pull/899), [#900](https://github.com/dellahstella/tellux/pull/900)).
+
+### Tooling
+- **CI** — durcissement du scanner de liens morts (PR [#902](https://github.com/dellahstella/tellux/pull/902)) et couverture de la vérification JS inline dynamique (PR [#914](https://github.com/dellahstella/tellux/pull/914)).
+
+### Notes
+- La couche RF reste une **estimation** d'ordre de grandeur (champ extérieur) : elle sous-estime les sites les plus exposés et surestime l'intérieur des bâtiments (~12 dB) et les zones boisées ; elle ne remplace pas une mesure certifiée. Pondérations et bornes de l'indice composite restent gelées en attente de relecture méthodologique externe (inchangées).
+
+---
+
 ## [Harmonisation chiffres ANFR landing + doc scientifique + app — 2026-05-31]
 
 ### Fixed
