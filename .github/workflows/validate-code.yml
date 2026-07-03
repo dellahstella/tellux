@@ -3,8 +3,11 @@ name: validate-code
 # Validation automatique déclenchée sur chaque PR vers dev ou main,
 # ET sur chaque push direct vers dev ou main (workflow simplifié 22 avril).
 # Deux jobs parallèles :
-#   - validate-js   : extrait les blocs <script> inline des 9 pages HTML à la racine
-#                     et vérifie leur syntaxe via `node --check`.
+#   - validate-js   : extrait les blocs <script> inline de TOUTES les pages HTML
+#                     trackées (git ls-files, plus de liste en dur — incident
+#                     geomagnetisme.html tronqué non couvert, 2026-07-03) et
+#                     vérifie leur syntaxe via `node --check` + fin de fichier
+#                     </html> + détection de bloc <script> non refermé.
 #                     Les handlers inline (onclick, onload, ...) ne sont pas
 #                     validés dans cette v1 (pattern legacy accepté).
 #                     Les <script src=...> CDN ne sont pas vérifiés (hors repo).
@@ -56,5 +59,5 @@ jobs:
       - name: Install htmlhint
         run: npm install -g htmlhint@latest
 
-      - name: Lint HTML files
-        run: htmlhint --config .htmlhintrc app.html cadre-scientifique.html guide-et-glossaire.html index.html mairies.html mentions-legales.html methode-et-limites.html patrimoine.html transparence.html
+      - name: Lint HTML files (toutes les pages trackées, liste dynamique)
+        run: htmlhint --config .htmlhintrc $(git ls-files '*.html')
