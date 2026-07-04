@@ -4656,6 +4656,35 @@ async function loadRadonCommunesL3() {
   }
 }
 
+// COVERAGE-001 — indexe les communes officiellement classées niveau 3 depuis le
+// geojson COMPLET (216 communes cat.3, décret 2018-434), EN PLUS de la liste
+// partielle chargée par loadRadonCommunesL3(). Ferme le trou de couverture 2B au
+// clic (une commune classée visible en polygone était vue « estimation
+// lithologique » faute d'être dans la liste partielle). Purement ADDITIF : on
+// n'enlève rien des Sets, on ne change pas la logique de score (même sémantique
+// niveau 3 → boost class 3). Réutilise _radonGeojsonCache si la couche a déjà été
+// affichée, sinon fetch indépendant (le score au clic tourne même couche masquée).
+async function indexRadonZonesOfficial() {
+  try {
+    if (!_radonGeojsonCache) {
+      const r = await fetch('public/data/radon_zones_corse.geojson', {signal: AbortSignal.timeout(5000)});
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      _radonGeojsonCache = await r.json();
+    }
+    let added = 0;
+    (_radonGeojsonCache.features || []).forEach(f => {
+      const p = f.properties || {};
+      if (p.categorie !== 3) return; // même sémantique L3 que la liste existante (cat.2 hors périmètre de ce fix)
+      if (p.code_insee && !RADON_L3_INSEE_SET.has(p.code_insee)) { RADON_L3_INSEE_SET.add(p.code_insee); added++; }
+      if (p.nom_commune) RADON_L3_NAME_SET.add(normCommuneName(p.nom_commune));
+    });
+    console.log('[Tellux] Radon zones officielles indexees (cat.3 geojson complet) : +'
+      + added + ' INSEE, total ' + RADON_L3_INSEE_SET.size);
+  } catch (e) {
+    console.warn('[Tellux] Radon zones officielles (geojson) indisponible : ' + e.message);
+  }
+}
+
 // Retourne {matched_by, nom, code_insee} si la commune est classée L3, sinon null.
 function isCommuneRadonL3(commune) {
   if (!commune) return null;
@@ -6495,7 +6524,7 @@ let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.hotrf){lHotRF.clearLayers();buildHotRF();}},300);}
 map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
-setTimeout(()=>Promise.all([loadAnt(),calibrateRF(),loadDB(),loadRadonCommunesL3(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k)
+setTimeout(()=>Promise.all([loadAnt(),calibrateRF(),loadDB(),loadRadonCommunesL3(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k)
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET L'Aquila — correction externe réelle niveau 1
 setTimeout(loadDst,5500); // Dst Kyoto via NOAA — correction externe niveau 2 (Sprint astro 2026-05-25)
