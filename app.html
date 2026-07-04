@@ -1554,7 +1554,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <h5 class="subgroup-header">C. Sites documentaires</h5>
       <p class="subgroup-text">Catalogues documentaires et comparaisons. Données issues de la littérature ou de mesures externes — mesures in situ requises pour confirmation locale.</p>
       <button class="lbtn" id="b-points-chauds" data-domains="ionisant" title="Sites U/Th à mesurer — catalogue de sites candidats à des mesures radiométriques (doses non mesurées, sources documentaires BRGM ou analogies géologiques)" onclick="togPointsChauds(this)"><span style="display:inline-block;width:8px;height:8px;background:#8E2F1F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Sites U/Th à mesurer</button>
-      <button class="lbtn" id="b-sites-remarq" data-domains="statique ionisant" title="Anomalies de substrat à signature EM réelle — 3 sites ophiolitiques (serpentinite Albu/Nonza, magnétite Farinole) à anomalie magnétique + surveillance Th-234 naturel (Bouches de Bonifacio, IRSN). 4 sites documentaires, mesures in situ requises." onclick="togSitesRemarquables(this)"><span style="display:inline-block;width:10px;height:10px;background:#1F3A5F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Anomalies de substrat (serpentinite, magnétite) &amp; Th-234</button>
+      <button class="lbtn" id="b-sites-remarq" data-domains="statique ionisant" title="Anomalies de substrat à signature EM réelle — 3 sites ophiolitiques (serpentinite Albu/Nonza, magnétite Farinole) à anomalie magnétique + surveillance Th-234 naturel (Bouches de Bonifacio — étude IRSN 2004, désormais ASNR). 4 sites documentaires, mesures in situ requises." onclick="togSitesRemarquables(this)"><span style="display:inline-block;width:10px;height:10px;background:#1F3A5F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Anomalies de substrat (serpentinite, magnétite) &amp; Th-234</button>
       <button class="lbtn" id="b-crustal" data-domains="statique" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF) — opt-in, comparaison locale/mondiale" onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales)</button>
       <!-- TODO backlog couches : Communes radon niveau 3 overlay (GeoJSON geometries à fournir), MNT altitude overlay -->
     </div>
@@ -2120,7 +2120,7 @@ async function fetchEnv(url,timeout=8000){
 
 // ═══ Reverse geocoding commune (api-adresse.data.gouv.fr, sans cle) ═══
 // Resout un point lat/lon vers {code_insee, nom} pour detecter les communes
-// classees radon niveau 3 (decret 2018-434). Cache client par cle 4 decimales.
+// classées radon niveau 3 (décret 2018-434). Cache client par clé 4 décimales.
 const COMMUNE_CACHE = {};
 async function reverseGeocodeCommune(lat, lon) {
   const key = lat.toFixed(4) + ',' + lon.toFixed(4);
@@ -2319,7 +2319,7 @@ const LEGEND_HTML={
     '<div class="leg-row"><svg width="12" height="12" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px"><polygon points="7,1 8.5,5.5 13,5.5 9.25,8.25 10.75,13 7,10.25 3.25,13 4.75,8.25 1,5.5 5.5,5.5" fill="#3F5B3A" stroke="#F5F0E7" stroke-width="1"/></svg> Surveillance Th-234 naturel (Bonifacio)</div>'+
     '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">4 sites · données documentaires · mesures terrain requises</div>'+
     '<div class="leg-why">Points de référence pour calibrer les anomalies locales mesurées.</div>'+
-    '<div class="leg-src">BRGM · IRSN · EMAG2v3</div>'+
+    '<div class="leg-src">BRGM · ASNR · EMAG2v3</div>'+
     '</div>',
   pointsChauds:'<div class="leg-block">'+
     '<b class="leg-title">Sites U/Th à mesurer</b>'+
@@ -2331,8 +2331,8 @@ const LEGEND_HTML={
     '</div>',
   radon:'<div class="leg-block"><b class="leg-title">Potentiel radon</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Exhalation du sous-sol, géologie granitique</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#C28533;opacity:0.4;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Catégorie 3 — potentiel élevé</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#EDD59A;opacity:0.6;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Catégorie 2 — potentiel modéré</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#C28533;opacity:0.4;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Niveau 3 — potentiel radon significatif</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#EDD59A;opacity:0.6;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Niveau 2 — potentiel faible, facteurs géologiques particuliers</div>'+
     '<div class="leg-src">ASNR · Décret 2018-434 · 216 cat.3 + 37 cat.2</div>'+
     '</div>',
   postesSources:'<div class="leg-block"><b class="leg-title">Postes sources EDF SEI</b>'+
@@ -4357,7 +4357,7 @@ function calcAll_v2(lat, lon, options) {
       rf: rfResult,
       ionizing: {
         gamma: gammaResult,   // cosmique IMMÉDIAT · terrestre GELÉ · Téléray in_construction
-        radon: radonResult    // classe IRSN 2018 + plages Bq/m³ estimées
+        radon: radonResult    // classe ASNR (ex-IRSN) 2018 + plages Bq/m³ estimées
       }
     },
     context: {
@@ -4392,7 +4392,7 @@ function calcAll_v2(lat, lon, options) {
         IGRF: 'IGRF-14 (Alken et al. 2021)',
         EMAG: 'EMAG2v3 (Meyer et al. 2017)',
         BRGM: 'carte géologique 1/50000',
-        radon: 'IRSN 2018',
+        radon: 'ASNR (anciennement IRSN) — cartographie radon 2018',
         ASNR_teleray: 'in_construction'
       }
     }
@@ -4512,7 +4512,7 @@ function calcSubstrateContext(lat, lon) {
   const lithology = getGeoType(lat, lon);
   const susceptibility_nT = calcGeoSusc(lat, lon);
 
-  // Classe de potentiel radon par lithologie (IRSN 2018 + BRGM RP-50200-FR 2000)
+  // Classe de potentiel radon par lithologie (ASNR (anciennement IRSN) 2018 + BRGM RP-50200-FR 2000)
   // Classe 1 = faible, 2 = modéré, 3 = élevé
   const RADON_CLASS_BY_LITHOLOGY = {
     granit: 3, granit_biotite: 3, granit_rose: 3,
@@ -4545,7 +4545,7 @@ function calcSubstrateContext(lat, lon) {
     gamma_estimated_nSv_h: null, // GELÉ — formule NCRP 94 + plages U/Th/K en attente relecture tiers
     distance_fault_m: Math.round(minFaultDist),
     distance_water_m: Math.round(minWaterDist),
-    source: 'BRGM + IRSN + IGN BD TOPO',
+    source: 'BRGM + ASNR + IGN BD TOPO',
     confidence: 'medium'
   };
 }
@@ -4559,16 +4559,16 @@ function getGeoType(lat,lon){
 // ════════════════════════════════════════════════════════════════════════════
 // DOMAINE I — Potentiel radon
 // Tâche 5.3 — IMMÉDIAT — refactoring de calcSubstrateContext.radon_potential_class
-// en fonction dédiée avec plages d'activité Bq/m³ (IRSN 2018).
-// Sources : IRSN cartographie radon 2018 · BRGM RP-50200-FR 2000
+// en fonction dédiée avec plages d'activité Bq/m³ (ASNR (anciennement IRSN) 2018).
+// Sources : ASNR (anciennement IRSN) cartographie radon 2018 · BRGM RP-50200-FR 2000
 //           Géologie corse : granit hercynien biotite = potentiel fort documenté
-// Seuil action IRSN : 300 Bq/m³ (locaux habitables depuis décret 2018-434)
+// Niveau de référence radon : 300 Bq/m³ (art. R. 1333-28 CSP, introduit par décret 2018-434)
 // ════════════════════════════════════════════════════════════════════════════
 
 // ═══ RADON ZONES CORSE — polygones communaux officiels ASNR/IRSN ═══
 // Source : ASNR/IRSN, Arrêté du 27 juin 2018 (JORFTEXT000037131346).
 // Géométries : IGN AdminExpress via gregoiredavid/france-geojson (Etalab 2.0).
-// 253 communes classées : 216 cat. 3 (potentiel élevé) + 37 cat. 2 (potentiel modéré).
+// 253 communes classées : 216 niveau 3 (potentiel significatif) + 37 niveau 2 (potentiel faible, facteurs géologiques particuliers).
 // Chargement paresseux au premier toggle — le fichier fait ~2 Mo, cache navigateur
 // ensuite. Remplace 8 circleMarkers approximatifs (PR radon-polygons-integration).
 let _radonGeojsonCache = null;
@@ -4588,9 +4588,9 @@ function radonStyle(feature){
 function radonOnEachFeature(feature, layer){
   var p = feature.properties || {};
   var cat = p.categorie;
-  var catText = cat === 3 ? 'Catégorie 3 (potentiel élevé)'
-              : cat === 2 ? 'Catégorie 2 (potentiel modéré)'
-              : 'Catégorie non classée';
+  var catText = cat === 3 ? 'Zone à potentiel radon de niveau 3 (significatif)'
+              : cat === 2 ? 'Zone à potentiel radon de niveau 2 (faible, facteurs géologiques particuliers)'
+              : 'Zone à potentiel radon non classée';
   var src = p.source || 'ASNR';
   layer.bindPopup(
     '<b>' + (p.nom_commune || 'Commune') + '</b><br>'
@@ -4621,7 +4621,7 @@ async function buildRadonLayer(){
   }
 }
 
-// ═══ Communes classees radon niveau 3 (decret 2018-434, annexe IV) ═══
+// ═══ Communes classées radon niveau 3 (décret 2018-434, annexe IV) ═══
 // Chargement asynchrone via loadRadonCommunesL3() puis resolution par reverse
 // geocoding dans le handler de clic. Regle 2A : TOUT le departement 2A
 // (Corse-du-Sud, 124 communes) est classe zone 3 par arrete 27 juin 2018.
@@ -4656,7 +4656,7 @@ async function loadRadonCommunesL3() {
   }
 }
 
-// Retourne {matched_by, nom, code_insee} si la commune est classee L3, sinon null.
+// Retourne {matched_by, nom, code_insee} si la commune est classée L3, sinon null.
 function isCommuneRadonL3(commune) {
   if (!commune) return null;
   const insee = commune.code_insee || '';
@@ -4676,7 +4676,7 @@ function calcRadonPotential(lat, lon, options) {
   options = options || {};
   const lithology = getGeoType(lat, lon);
 
-  // Classes IRSN 2018 + BRGM RP-50200-FR 2000 — typologies lithologiques corses
+  // Classes ASNR (anciennement IRSN) 2018 + BRGM RP-50200-FR 2000 — typologies lithologiques corses
   const RADON_CLASS_BY_LITHOLOGY = {
     granit: 3, granit_biotite: 3, granit_rose: 3,
     granodiorite: 2, gneiss: 2, serpentinite: 2,
@@ -4685,17 +4685,17 @@ function calcRadonPotential(lat, lon, options) {
   };
   const lithology_class = RADON_CLASS_BY_LITHOLOGY[lithology] || 1;
 
-  // Boost commune officiellement classee (decret 2018-434)
+  // Boost commune officiellement classée (décret 2018-434)
   const officialMatch = isCommuneRadonL3(options.commune_info);
   const final_class = officialMatch ? Math.max(lithology_class, 3) : lithology_class;
 
-  // Plages d'activité volumique estimées indoor (Bq/m³) — IRSN note technique 2018
+  // Plages d'activité volumique estimées indoor (Bq/m³) — note technique 2018, IRSN (aujourd'hui ASNR)
   // Ces plages intègrent la variabilité naturelle et la perméabilité du sol.
   // Elles sont des ordres de grandeur géologiques, PAS des mesures in situ.
   const ACTIVITY_RANGES = {
     1: [10,  50],   // Calcaire, alluvions — faible émanation (radon peu soluble dans calcaire)
     2: [50,  200],  // Gneiss, granodiorite, schistes, serpentinite, ophiolite
-    3: [100, 600]   // Granit hercynien corse (biotite) — émanation élevée documentée (IRSN 2018)
+    3: [100, 600]   // Granit hercynien corse (biotite) — émanation élevée documentée (cartographie 2018, IRSN/ASNR)
   };
 
   return {
@@ -4707,8 +4707,8 @@ function calcRadonPotential(lat, lon, options) {
     lithology_class,
     is_measurement_available: false,
     source: officialMatch
-      ? (RADON_L3_SOURCE + ' + IRSN cartographie radon 2018 + BRGM RP-50200-FR 2000')
-      : 'IRSN cartographie radon 2018 + BRGM RP-50200-FR 2000',
+      ? (RADON_L3_SOURCE + ' + cartographie radon 2018 — IRSN (désormais ASNR) + BRGM RP-50200-FR 2000')
+      : 'cartographie radon 2018 — IRSN (désormais ASNR) + BRGM RP-50200-FR 2000',
     confidence: 'high',
     epistemic_note: 'IARC classe 1 (cancérogène pulmonaire confirmé) à partir de seuils d\'exposition chronique. Classement officiel décret 2018-434 lorsque disponible, sinon estimation par lithologie. La mesure individuelle indoor (dosimètre 2–3 mois) est la seule base d\'évaluation sanitaire.'
   };
@@ -4990,7 +4990,7 @@ map.on('click',async e=>{
   const calcPopup=L.popup({closeButton:true,className:'delta-popup',autoPan:true,keepInView:true,autoPanPaddingTopLeft:L.point(20,80),autoPanPaddingBottomRight:L.point(20,100),offset:popupOffset})
     .setLatLng(e.latlng).setContent('<span style="font-size:12px">\u23f3 calcul\u2026</span>').openOn(map);
   const igrf=fetchIGRF(lat,lng);
-  // Resolution commune officielle (decret radon 2018-434) + altitude IGN RGE Alti
+  // Résolution commune officielle (décret radon 2018-434) + altitude IGN RGE Alti
   // en parallele pour minimiser la latence. Les deux sont non bloquants (fallbacks prevus).
   const [commune_info, altitude_m] = await Promise.all([
     reverseGeocodeCommune(lat,lng),
@@ -5139,15 +5139,15 @@ map.on('click',async e=>{
             '<div style="font-size:8px;color:#6b7280;margin-bottom:1px">Radon (potentiel)</div>'+
             '<div style="display:flex;align-items:center;gap:3px">'+
               '<span style="font-size:11px;font-weight:700;color:'+radonColor+'">Classe '+radon_class+'/3</span>'+
-              '<span style="font-size:9px;color:#8b92a5" title="Confiance : haut — classement officiel decret 2018-434 ou estimation lithologique IRSN 2018">●●●</span>'+
+              '<span style="font-size:9px;color:#8b92a5" title="Confiance : haut — classement officiel décret 2018-434 ou estimation lithologique (cartographie radon 2018 — IRSN, désormais ASNR)">●●●</span>'+
             '</div>'+
             '<div style="font-size:8px;color:'+radonColor+'">'+radonLabel+' · '+radon_range[0]+'–'+radon_range[1]+' Bq/m³</div>'+
             (radon_source_is_official
-              ? '<div style="font-size:8px;color:'+radonColor+';margin-top:1px;font-style:italic">Commune classee zone 3 (decret 2018-434)'+(radon_official&&radon_official.nom?' : '+radon_official.nom:'')+'</div>'
+              ? '<div style="font-size:8px;color:'+radonColor+';margin-top:1px;font-style:italic">Commune classée zone 3 (décret 2018-434)'+(radon_official&&radon_official.nom?' : '+radon_official.nom:'')+'</div>'
               : '')+
           '</div>'+
         '</div>'+
-        '<div style="font-size:7.5px;color:#9ca3af;font-style:italic">Fond naturel Corse : 75–150 nSv/h · Seuil action radon : 300 Bq/m³ (IRSN 2018)</div>'+
+        '<div style="font-size:7.5px;color:#9ca3af;font-style:italic">Fond naturel Corse : 75–150 nSv/h · Niveau de référence radon : 300 Bq/m³ (art. R. 1333-28 CSP)</div>'+
       '</div>'+
     '</div>';
   calcPopup.setContent(
@@ -6191,7 +6191,7 @@ function exportExpertCSV() {
     ['magnetic_static_B_total_nT', st.B_total_nT != null ? st.B_total_nT : '', 'nT', st.confidence || '', '0', (st.source || '').replace(/;/g, ','), ts],
     ['rf_S_total_uW_m2', rf.S_total_uW_m2 != null ? rf.S_total_uW_m2 : '', 'uW/m2', rf.confidence || '', '0', (rf.source || '').replace(/;/g, ','), ts],
     ['gamma_dose_rate_nSv_h', gam.dose_rate_nSv_h != null ? gam.dose_rate_nSv_h : '', 'nSv/h', gam.confidence || '', gam.under_review ? '1' : '0', (gam.source || '').replace(/;/g, ','), ts],
-    ['radon_class_IRSN', rad.class != null ? rad.class : '', 'classe_1_3', rad.confidence || '', '0', (rad.source || '').replace(/;/g, ','), ts],
+    ['radon_class', rad.class != null ? rad.class : '', 'classe_1_3', rad.confidence || '', '0', (rad.source || '').replace(/;/g, ','), ts],
     ['radon_activity_min_Bq_m3', rad.activity_estimate_Bq_m3 ? rad.activity_estimate_Bq_m3[0] : '', 'Bq/m3', rad.confidence || '', '0', '', ts],
     ['radon_activity_max_Bq_m3', rad.activity_estimate_Bq_m3 ? rad.activity_estimate_Bq_m3[1] : '', 'Bq/m3', rad.confidence || '', '0', '', ts],
     ['substrate_susceptibility_nT', sub.susceptibility_nT != null ? sub.susceptibility_nT : '', 'nT', sub.confidence || '', '0', 'BRGM + Ghilardi 2017', ts],
@@ -8105,7 +8105,7 @@ async function saveObservation(){
 ["lyr_uth","#b-points-chauds","","Sites U/Th à mesurer","Siti U/Th da misurà"],
 ["lyr_uth_tt","#b-points-chauds","title","Sites U/Th à mesurer — catalogue de sites candidats à des mesures radiométriques (doses non mesurées, sources documentaires BRGM ou analogies géologiques)","Siti U/Th da misurà — catalogu di siti candidati à misure radiometriche (dose micca misurate, fonti ducumentarie BRGM o analugie geulogiche)"],
 ["lyr_remarq","#b-sites-remarq","","Anomalies de substrat (serpentinite, magnétite) & Th-234","Anumalie di sustratu (serpentinite, magnetite) & Th-234"],
-["lyr_remarq_tt","#b-sites-remarq","title","Anomalies de substrat à signature EM réelle — 3 sites ophiolitiques (serpentinite Albu/Nonza, magnétite Farinole) à anomalie magnétique + surveillance Th-234 naturel (Bouches de Bonifacio, IRSN). 4 sites documentaires, mesures in situ requises.","Anumalie di sustratu à signatura EM reale — 3 siti ofiolitichi (serpentinite Albu/Nonza, magnetite Farinole) à anumalia magnetica + surviglianza Th-234 naturale (Bocche di Bunifaziu, IRSN). 4 siti ducumentari, misure in situ richieste."],
+["lyr_remarq_tt","#b-sites-remarq","title","Anomalies de substrat à signature EM réelle — 3 sites ophiolitiques (serpentinite Albu/Nonza, magnétite Farinole) à anomalie magnétique + surveillance Th-234 naturel (Bouches de Bonifacio — étude IRSN 2004, désormais ASNR). 4 sites documentaires, mesures in situ requises.","Anumalie di sustratu à signatura EM reale — 3 siti ofiolitichi (serpentinite Albu/Nonza, magnetite Farinole) à anumalia magnetica + surviglianza Th-234 naturale (Bocche di Bunifaziu — studiu IRSN 2004, oghje ASNR). 4 siti ducumentari, misure in situ richieste."],
 ["lyr_crustal","#b-crustal","","Anomalies de référence (mondiales)","Anumalie di riferenza (mundiale)"],
 ["lyr_crustal_tt","#b-crustal","title","5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF) — opt-in, comparaison locale/mondiale","5 anumalie magnetiche crustale mundiale di riferenza (crateri d'impattu + BIF) — opt-in, paragone lucale/mundiale"],
 ["btn_expert_aria","#btn-expert","aria-label","Outils experts","Strumenti esperti"],
