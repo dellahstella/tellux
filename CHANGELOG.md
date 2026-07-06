@@ -7,11 +7,29 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [App EM — légendes chiffrées 4 axes + terminologie et couverture radon — 2026-07-05]
+
+### Added
+- **`app.html`** — légendes chiffrées pour les axes physiques de la carte (« vague 1 ») : valeurs de seuils explicites plutôt que des paliers non quantifiés (PR [#924](https://github.com/dellahstella/tellux/pull/924)).
+- **`app.html`** — palier de **débordement RF explicite** (au-delà de la borne haute de légende, > 1,5 V/m) et protocole de mesure **UIT-T K.113** cité (« vague 2 », PR [#925](https://github.com/dellahstella/tellux/pull/925)).
+
+### Changed
+- **`app.html`** / **`transparence.html`** — axes magnétiques **F/D/I** (intensité / déclinaison / inclinaison) **re-dérivés sur IGRF-14** (la déclinaison affichée avait dérivé d'environ 2°), dérive annuelle de déclinaison (~0,1°/an) prise en compte, note UNSCEAR sur le passage activité → dose ajoutée en transparence (PR [#925](https://github.com/dellahstella/tellux/pull/925), correctifs de revue [#924](https://github.com/dellahstella/tellux/pull/924) : champ mobile 36–61 V/m sur les bandes 700/800 MHz, intensité IGRF 46,7 µT).
+- **`app.html`** — couche **radon** : le boost de classe officielle est réapparié sur le **GeoJSON complet (253 communes ASNR)** au lieu de la liste partielle, ce qui complète la couverture de la Haute-Corse (clôt la dette de couverture 2B) ; chargement de la source déplacé au boot (PR [#923](https://github.com/dellahstella/tellux/pull/923)).
+
+### Fixed
+- **`app.html`** — couche **radon** : terminologie **IRSN → ASNR** (organismes fusionnés en 2025) et vocabulaire réglementaire aligné sur l'arrêté du 27 juin 2018 (« niveau de référence », communes « niveau 2 / niveau 3 »), provenance officielle affichée (PR [#922](https://github.com/dellahstella/tellux/pull/922)).
+
+---
+
 ## [Page culture scientifique geomagnetisme.html — 2026-07-03]
 
 ### Added
 - **`geomagnetisme.html`** — nouvelle page publique de **culture scientifique** : globe géomagnétique historique interactif (−8000 → 2025), time-lapse de l'intensité du champ et de l'écart au champ dipolaire sur deux hémisphères. Données réelles embarquées : reconstruction **CALS10k.2** (Constable, Korte & Panovska 2016, GFZ Potsdam) avant 1900, **IGRF-14** (IAGA, 2024) de 1900 à 2025, fond terre/mer dérivé du jeu GLOBE (NOAA/NGDC), raccord progressif 1880-1900. Page autonome (~210 Ko, aucune dépendance externe hors Google Fonts), registre distinct de la couche EM d'`app.html` et de `patrimoine.html` ; la page rappelle qu'une **reconstruction n'est pas une mesure**. Testée contre un oracle scipy/ppigrf (60 valeurs, budget d'erreur documenté). PR [#912](https://github.com/dellahstella/tellux/pull/912) (publication après revue anti-fuite/factuelle), [#916](https://github.com/dellahstella/tellux/pull/916) (retouches accessibilité post-revue : aria-labels accentués, formulation d'écart de troncature).
 - **`index.html`** — lien « Le champ géomagnétique dans le temps » ajouté à la rangée Ressources de la section « La méthode » (PR [#912](https://github.com/dellahstella/tellux/pull/912)).
+
+### Changed
+- **`index.html`** — le renvoi vers `geomagnetisme.html` est promu en **bloc dédié « culture scientifique »** avec lien footer, la pastille initiale de la rangée Ressources étant retirée (PR [#918](https://github.com/dellahstella/tellux/pull/918)) ; attribution de la couche magnétique corrigée sur la landing — **EMAG2v3 (NOAA) pour l'anomalie crustale** vs **géologie BRGM** (PR [#919](https://github.com/dellahstella/tellux/pull/919)).
 
 ---
 
