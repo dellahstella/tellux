@@ -1544,7 +1544,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <p class="subgroup-text">Couches qui modulent directement le calcul Tellux : susceptibilité magnétique du substrat, potentiel radon, fond magnétique régional. La proximité de failles est un indicateur de contexte (affiché en popup), non intégré au calcul.</p>
       <button class="lbtn" id="b-geo" data-domains="statique" title="Carte géologique BRGM — granite, schiste, calcaire" onclick="tog('geo','on-geo',this)"><span class="sq" style="background:#1a6b5c"></span>Géologie BRGM</button>
       <button class="lbtn" id="b-failles" data-domains="statique" title="Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)" onclick="togFailles(this)"><span class="ln" style="background:#8E2F1F"></span>Failles tectoniques</button>
-      <button class="lbtn" id="b-radon" data-domains="ionisant" title="Potentiel radon géologique — zones ASNR cat. 2/3" onclick="tog('radon','on-radon',this)"><span class="sq" style="background:#C28533"></span>Radon</button>
+      <button class="lbtn" id="b-radon" data-domains="ionisant" title="Potentiel radon géologique — zones ASNR 2/3" onclick="tog('radon','on-radon',this)"><span class="sq" style="background:#C28533"></span>Radon</button>
       <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Fond magnétique régional</button>
 
       <h5 class="subgroup-header">B. Contexte territorial (géologie, hydro, forêts)</h5>
@@ -2335,9 +2335,9 @@ const LEGEND_HTML={
     '</div>',
   radon:'<div class="leg-block"><b class="leg-title">Potentiel radon</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Exhalation du sous-sol, géologie granitique</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#C28533;opacity:0.4;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Niveau 3 — potentiel radon significatif</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#EDD59A;opacity:0.6;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Niveau 2 — potentiel faible, facteurs géologiques particuliers</div>'+
-    '<div class="leg-src">ASNR · Décret 2018-434 · 216 cat.3 + 37 cat.2</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#C28533;opacity:0.4;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Zone 3 — potentiel radon significatif</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#EDD59A;opacity:0.6;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Zone 2 — potentiel faible, facteurs géologiques particuliers</div>'+
+    '<div class="leg-src">ASNR · arrêté du 27 juin 2018 · 216 en zone 3 + 37 en zone 2</div>'+
     '</div>',
   postesSources:'<div class="leg-block"><b class="leg-title">Postes sources EDF SEI</b>'+
     '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Poste source &#x2264; 63 kV</div>'+
@@ -4599,15 +4599,15 @@ function radonStyle(feature){
 function radonOnEachFeature(feature, layer){
   var p = feature.properties || {};
   var cat = p.categorie;
-  var catText = cat === 3 ? 'Zone à potentiel radon de niveau 3 (significatif)'
-              : cat === 2 ? 'Zone à potentiel radon de niveau 2 (faible, facteurs géologiques particuliers)'
+  var catText = cat === 3 ? 'Zone 3 — potentiel radon significatif'
+              : cat === 2 ? 'Zone 2 — potentiel radon faible (facteurs géologiques particuliers)'
               : 'Zone à potentiel radon non classée';
   var src = p.source || 'ASNR';
   layer.bindPopup(
     '<b>' + (p.nom_commune || 'Commune') + '</b><br>'
     + '<span style="font-size:11px;color:var(--tx-mica)">INSEE ' + (p.code_insee || '—') + (p.departement ? ' · ' + p.departement : '') + '</span><br>'
     + catText + '<br>'
-    + '<span style="font-size:10px;color:var(--tx-mica);font-style:italic">Source : ' + src + ' · Décret 2018-434</span>'
+    + '<span style="font-size:10px;color:var(--tx-mica);font-style:italic">Source : ' + src + ' · arrêté du 27 juin 2018</span>'
   );
 }
 
@@ -4632,10 +4632,12 @@ async function buildRadonLayer(){
   }
 }
 
-// ═══ Communes classées radon niveau 3 (décret 2018-434, annexe IV) ═══
-// Chargement asynchrone via loadRadonCommunesL3() puis resolution par reverse
-// geocoding dans le handler de clic. Regle 2A : TOUT le departement 2A
-// (Corse-du-Sud, 124 communes) est classe zone 3 par arrete 27 juin 2018.
+// ═══ Communes classées radon zone 3 (arrêté du 27 juin 2018, annexe IV) ═══
+// RADON_L3_INSEE_SET / RADON_L3_NAME_SET sont peuplés au boot par
+// indexRadonZonesOfficial() depuis le geojson officiel complet (216 communes
+// cat.3, dont tout le département 2A = 124 communes classées), puis résolus par
+// reverse geocoding au clic (isCommuneRadonL3). RADON_2A_APPLIES_ALL : drapeau
+// hérité désormais inerte (couverture 2A assurée par les 124 cat.3 du geojson).
 let RADON_2A_APPLIES_ALL = false;
 const RADON_L3_INSEE_SET = new Set();
 const RADON_L3_NAME_SET  = new Set();
@@ -4647,34 +4649,17 @@ function normCommuneName(s) {
     .replace(/[^a-z0-9]+/g, '');
 }
 
-async function loadRadonCommunesL3() {
-  try {
-    const r = await fetch('public/data/radon_communes_level3_corse.json', {signal: AbortSignal.timeout(5000)});
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
-    RADON_2A_APPLIES_ALL = !!(d.rule_2A && d.rule_2A.applies_to_all_communes);
-    if (d.source) RADON_L3_SOURCE = d.source;
-    (d.communes || []).forEach(c => {
-      if (c.code_insee) RADON_L3_INSEE_SET.add(c.code_insee);
-      if (c.nom) RADON_L3_NAME_SET.add(normCommuneName(c.nom));
-    });
-    console.log('[Tellux] Radon communes L3 charge : '
-      + (RADON_2A_APPLIES_ALL ? 'tout 2A + ' : '')
-      + RADON_L3_INSEE_SET.size + ' INSEE explicites, '
-      + RADON_L3_NAME_SET.size + ' noms indexes');
-  } catch (e) {
-    console.warn('[Tellux] Radon communes L3 indisponible : ' + e.message);
-  }
-}
-
-// COVERAGE-001 — indexe les communes officiellement classées niveau 3 depuis le
-// geojson COMPLET (216 communes cat.3, décret 2018-434), EN PLUS de la liste
-// partielle chargée par loadRadonCommunesL3(). Ferme le trou de couverture 2B au
-// clic (une commune classée visible en polygone était vue « estimation
-// lithologique » faute d'être dans la liste partielle). Purement ADDITIF : on
-// n'enlève rien des Sets, on ne change pas la logique de score (même sémantique
-// niveau 3 → boost class 3). Réutilise _radonGeojsonCache si la couche a déjà été
-// affichée, sinon fetch indépendant (le score au clic tourne même couche masquée).
+// COVERAGE-001 / RADON-L3-UNIFICATION — indexe les communes officiellement
+// classées zone 3 depuis le geojson officiel COMPLET (216 communes cat.3,
+// arrêté du 27 juin 2018). SOURCE UNIQUE désormais : l'ancienne liste partielle
+// loadRadonCommunesL3() + son fichier radon_communes_level3_corse.json ont été
+// retirés (couverture strictement incluse dans ce geojson — 3 INSEE + 28 noms
+// périmés ⊆ 216 cat.3, 124/124 communes 2A présentes, vérifié 2026-07-08). Ferme
+// le trou de couverture 2B au clic (une commune classée visible en polygone était
+// vue « estimation lithologique » faute d'être dans la liste partielle). On ne
+// change pas la logique de score (même sémantique zone 3 → boost class 3).
+// Réutilise _radonGeojsonCache si la couche a déjà été affichée, sinon fetch
+// indépendant (le score au clic tourne même couche masquée).
 async function indexRadonZonesOfficial() {
   try {
     if (!_radonGeojsonCache) {
@@ -4750,7 +4735,7 @@ function calcRadonPotential(lat, lon, options) {
       ? (RADON_L3_SOURCE + ' + cartographie radon 2018 — IRSN (désormais ASNR) + BRGM RP-50200-FR 2000')
       : 'cartographie radon 2018 — IRSN (désormais ASNR) + BRGM RP-50200-FR 2000',
     confidence: 'high',
-    epistemic_note: 'IARC classe 1 (cancérogène pulmonaire confirmé) à partir de seuils d\'exposition chronique. Classement officiel décret 2018-434 lorsque disponible, sinon estimation par lithologie. La mesure individuelle indoor (dosimètre 2–3 mois) est la seule base d\'évaluation sanitaire.'
+    epistemic_note: 'IARC classe 1 (cancérogène pulmonaire confirmé) à partir de seuils d\'exposition chronique. Classement officiel (arrêté du 27 juin 2018) lorsque disponible, sinon estimation par lithologie. La mesure individuelle indoor (dosimètre 2–3 mois) est la seule base d\'évaluation sanitaire.'
   };
 }
 
@@ -5180,11 +5165,11 @@ map.on('click',async e=>{
             '<div style="font-size:8px;color:#6b7280;margin-bottom:1px">Radon (potentiel)</div>'+
             '<div style="display:flex;align-items:center;gap:3px">'+
               '<span style="font-size:11px;font-weight:700;color:'+radonColor+'">Classe '+radon_class+'/3</span>'+
-              '<span style="font-size:9px;color:#8b92a5" title="Confiance : haut — classement officiel décret 2018-434 ou estimation lithologique (cartographie radon 2018 — IRSN, désormais ASNR)">●●●</span>'+
+              '<span style="font-size:9px;color:#8b92a5" title="Confiance : haut — classement officiel (arrêté du 27 juin 2018) ou estimation lithologique (cartographie radon 2018 — IRSN, désormais ASNR)">●●●</span>'+
             '</div>'+
             '<div style="font-size:8px;color:'+radonColor+'">'+radonLabel+' · '+radon_range[0]+'–'+radon_range[1]+' Bq/m³</div>'+
             (radon_source_is_official
-              ? '<div style="font-size:8px;color:'+radonColor+';margin-top:1px;font-style:italic">Commune classée zone 3 (décret 2018-434)'+(radon_official&&radon_official.nom?' : '+radon_official.nom:'')+'</div>'
+              ? '<div style="font-size:8px;color:'+radonColor+';margin-top:1px;font-style:italic">Commune classée zone 3 (arrêté du 27 juin 2018)'+(radon_official&&radon_official.nom?' : '+radon_official.nom:'')+'</div>'
               : '')+
           '</div>'+
         '</div>'+
@@ -6541,7 +6526,7 @@ let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.hotrf){lHotRF.clearLayers();buildHotRF();}},300);}
 map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
-setTimeout(()=>Promise.all([loadAnt(),calibrateRF(),loadDB(),loadRadonCommunesL3(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k)
+setTimeout(()=>Promise.all([loadAnt(),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k)
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET L'Aquila — correction externe réelle niveau 1
 setTimeout(loadDst,5500); // Dst Kyoto via NOAA — correction externe niveau 2 (Sprint astro 2026-05-25)
@@ -8137,7 +8122,7 @@ async function saveObservation(){
 ["lyr_geo_tt","#b-geo","title","Carte géologique BRGM — granite, schiste, calcaire","Carta geulogica BRGM — granitu, schistu, calcariu"],
 ["lyr_failles","#b-failles","","Failles tectoniques","Faglie tettoniche"],
 ["lyr_failles_tt","#b-failles","title","Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)","Faglie tettoniche BRGM — 8 faglie principale (attive + quaternarie)"],
-["lyr_radon_tt","#b-radon","title","Potentiel radon géologique — zones ASNR cat. 2/3","Putenziale radon geulogicu — zone ASNR cat. 2/3"],
+["lyr_radon_tt","#b-radon","title","Potentiel radon géologique — zones ASNR 2/3","Putenziale radon geulogicu — zone ASNR 2/3"],
 ["lyr_emag","#b-emag","","Fond magnétique régional","Fondu magneticu regiunale"],
 ["lyr_emag_tt","#b-emag","title","Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse","Fondu magneticu regiunale NOAA EMAG2v3 — anumalie di u zoccalu prufondu corsu"],
 ["lyr_cav","#b-cav","","Cavités","Cavità"],
