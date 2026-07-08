@@ -4,7 +4,10 @@ name: refresh-antennes
 # Lit la table Supabase antennas_corse (colonne code_insee_commune, source
 # de verite depuis la resolution du ticket SUPABASE-COMMUNE-FIELD-001),
 # agrege par commune et operateur, ecrit le JSON. Si le JSON a change,
-# commit et push sur dev. Aucune action sur main.
+# pousse une branche data/refresh-antennes et ouvre une PR vers main
+# (auto-merge sur CI vert). Pas de push direct sur main (branche protegee :
+# required check Cloudflare Pages). Retarget depuis dev, branche abandonnee
+# (ADR-021, origin/dev supprimee) qui cassait ce cron.
 #
 # Cadence : 1er de chaque mois a 04h UTC (cron '0 4 1 * *').
 # Declenchement manuel : Actions > refresh-antennes > Run workflow.
@@ -26,12 +29,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     steps:
-      - name: Checkout dev
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
-          ref: dev
-          # Necessaire pour que le push du bot puisse ecrire sur dev.
+          ref: main
+          # Le bot pousse une branche data/ (jamais main directement) puis ouvre une PR.
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Python 3.11
@@ -57,11 +61,16 @@ jobs:
             git diff --stat -- public/data/antennes_par_commune_corse.json
           fi
 
-      - name: Commit and push if changed
+      - name: Commit sur branche data/ + PR auto-merge si change
         if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          BRANCH="data/refresh-antennes"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Branche data/ recreee a chaque run (idempotent) ; jamais de push direct sur main.
+          git checkout -B "$BRANCH"
           git add public/data/antennes_par_commune_corse.json
           # Recupere les comptes depuis le JSON pour le message de commit
           COUNT_ANT=$(python -c "import json; d=json.load(open('public/data/antennes_par_commune_corse.json')); print(d['_meta']['n_antennes_placees'])")
@@ -71,4 +80,13 @@ jobs:
           Regeneration automatique via workflow refresh-antennes.
           Source : table Supabase antennas_corse.code_insee_commune.
           Ticket : ANTENNES-REFRESH-001."
-          git push origin dev
+          git push --force-with-lease origin "$BRANCH"
+          # Ouvre la PR si aucune n'est deja ouverte pour cette branche.
+          if [ "$(gh pr view "$BRANCH" --json state --jq .state 2>/dev/null)" != "OPEN" ]; then
+            gh pr create --base main --head "$BRANCH" \
+              --title "data: refresh mensuel antennes Corse ($COUNT_ANT antennes, $COUNT_COMM communes)" \
+              --body "Refresh mensuel automatique (workflow refresh-antennes, ticket ANTENNES-REFRESH-001). Source : table Supabase antennas_corse.code_insee_commune. Auto-merge active : la PR fusionne seule sur CI vert (required check Cloudflare Pages)."
+          fi
+          # Auto-merge : fusionne des que la protection main est verte. Si l'auto-merge
+          # n'est pas active sur le repo, la PR reste ouverte pour merge manuel (non bloquant).
+          gh pr merge "$BRANCH" --auto --squash || echo "::warning::auto-merge indisponible — merge manuel de la PR requis"
