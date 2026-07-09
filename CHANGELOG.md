@@ -7,6 +7,13 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Nettoyage — retrait du fichier radon périmé — 2026-07-09]
+
+### Removed
+- `public/data/radon_communes_level3_corse.json` (liste partielle de communes L3 : 3 INSEE explicites + règle « tout 2A ») et la fonction `loadRadonCommunesL3()` associée. La source radon est désormais **unique** : `indexRadonZonesOfficial()` indexe le zonage officiel complet `radon_zones_corse.geojson` (216 communes zone 3), dont la couverture englobe intégralement l'ancienne liste (appariement prouvé équivalent). Retrait du fetch en #933, retrait du fichier orphelin + mise en cohérence doc (`ARCHITECTURE.md`, `sites_app.json`) ici. Notes compagnon `radon_communes_level3_corse_notes.md` marquées SUPERSEDED (corps conservé).
+
+---
+
 ## [App EM — légendes chiffrées 4 axes + terminologie et couverture radon — 2026-07-05]
 
 ### Added
