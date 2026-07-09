@@ -119,4 +119,16 @@ else
   printf '%s\t%s\t%s\n' "(config)" "CONFIG" "raison_sociale_NON_SCANNEE_secret_absent"
 fi
 
+# Marqueurs de MODULES CONFIDENTIELS (portée pré-compétitive : agronomie/bâtiment —
+# électroculture, géobiologie, courants parasites, AOC/AOP viticole, simulateur bâtiment,
+# reco matériaux…). Comme la raison sociale, ces marqueurs NE SONT PAS en clair dans ce
+# fichier public : ils viennent du secret GH Actions LEAK_CONFIDENTIAL_REGEX (mécanisme non
+# exposant). Absent → classe sautée proprement + finding CONFIG (anti-endormissement).
+if [ -n "${LEAK_CONFIDENTIAL_REGEX:-}" ]; then
+  scan_rule "FUITE" "module_confidentiel" "$LEAK_CONFIDENTIAL_REGEX" "-i"
+else
+  echo "WARN: LEAK_CONFIDENTIAL_REGEX absent — classe module_confidentiel non scannée (dégradation propre)." >&2
+  printf '%s\t%s\t%s\n' "(config)" "CONFIG" "module_confidentiel_NON_SCANNEE_secret_absent"
+fi
+
 exit 0
