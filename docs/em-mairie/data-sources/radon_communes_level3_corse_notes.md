@@ -1,5 +1,7 @@
 # Notes compagnon — radon_communes_level3_corse.json
 
+> ⚠️ **SUPERSEDED (2026-07-09).** Le jeu de données `radon_communes_level3_corse.json` décrit ici a été **retiré** du dépôt : sa liste partielle (3 INSEE explicites + règle « tout 2A ») est intégralement couverte par le zonage officiel complet `public/data/radon_zones_corse.geojson` (216 communes zone 3, appariement prouvé équivalent — cf. #933). Source radon unique désormais = `indexRadonZonesOfficial()`. Ces notes méthodologiques sont **conservées pour trace historique** (A.5 bis) ; la source vivante de référence est `radon_zones_corse_notes.md`.
+
 **Date de production** : 2026-04-20
 **Producteur** : Cowork session datasets (Soleil / Tellux Corse)
 **Statut** : partiel vérifié, **à compléter impérativement en phase 2**

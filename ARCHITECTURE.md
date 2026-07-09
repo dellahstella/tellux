@@ -22,7 +22,6 @@ tellux/
 ├── geomagnetisme.html          # Culture scientifique — globe géomagnétique historique −8000→2025 (PUBLIQUE, autonome, données CALS10k.2/IGRF-14 embarquées ; registre distinct de la couche EM et du patrimoine ; accès landing = bloc dédié `lp-appsec-geomag` + lien footer « Géomagnétisme » — repositionné 2026-07-03, PR #918)
 ├── public/
 │   └── data/                   # Jeux de données statiques JSON
-│       ├── radon_communes_level3_corse.json
 │       ├── tdf_emitters_corse.json
 │       ├── wmm_2025_grid_corse.json
 │       ├── postes_sources_corse.json
@@ -110,7 +109,7 @@ Toutes les fonctions `calc*` retournent un objet standardisé :
 | `reverseGeocodeCommune(lat, lon)` | api-adresse.data.gouv.fr | `COMMUNE_CACHE` (clé `lat4,lon4`) | fetch + AbortSignal.timeout(5000) |
 | `fetchAltitudeIGN(lat, lon)` | data.geopf.fr RGE Alti | `ALTITUDE_CACHE` (clé `lat4,lon4`) | fetch + AbortSignal.timeout(5000) |
 | `loadTDFEmitters()` | `public/data/tdf_emitters_corse.json` | `_tdfLoadPromise` (singleton) | fetch une seule fois |
-| `loadRadonCommunesL3()` | `public/data/radon_communes_level3_corse.json` | `_radonLoadPromise` (singleton) | fetch une seule fois |
+| `indexRadonZonesOfficial()` | `public/data/radon_zones_corse.geojson` | `_radonGeojsonCache` (singleton) | fetch une seule fois (source radon unique) |
 
 Toutes les fonctions réseau utilisent `try/catch` avec `console.warn` en cas d'échec. Elles retournent `null` sans lever d'exception — les appelants doivent traiter le cas `null`.
 
@@ -170,7 +169,7 @@ Sparkline : SVG 180×40 px, `PROFIL_HORAIRE_CORSE` (24 valeurs MW), marqueur rou
 
 | Fichier | Contenu | Source | Chargement |
 |---------|---------|--------|-----------|
-| `radon_communes_level3_corse.json` | Communes niveau 3 radon (décret 2018-434) | IRSN / documentation BRGM | `loadRadonCommunesL3()` au démarrage |
+| `radon_zones_corse.geojson` | Zonage radon officiel communes (zones 2/3, arrêté du 27 juin 2018) | ASNR / BRGM RP-50200-FR | `buildRadonLayer()` + `indexRadonZonesOfficial()` |
 | `tdf_emitters_corse.json` | 10 émetteurs radiodiffusion (PAR kW estimées) | ANFR observatoire + CSA | `loadTDFEmitters()` premier click |
 | `wmm_2025_grid_corse.json` | Grille précalculée WMM 2025 pour cross-check magnétique | NOAA WMM 2025 | Chargement asynchrone |
 | `postes_sources_corse.json` | Postes sources HTA/HTB | EDF SEI (enrichissement manuel) | `calcMagneticELF_v2` |
