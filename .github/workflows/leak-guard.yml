@@ -29,16 +29,11 @@ on:
     - cron: '30 8 * * 1'   # lundi 08:30 UTC (hebdo, décalé des autres routines)
   workflow_dispatch: {}
   pull_request:
-    paths:
-      - '**/*.html'
-      - '**/*.md'
-      - '**/*.txt'
-      - '**/*.yml'
-      - '**/*.yaml'
-      - '**/*.json'
-      - '**/*.jsonc'
-      - '.github/scripts/leak_guard*'
-      - '.github/workflows/leak-guard.yml'
+    # PAS de filtre `paths` : ce workflow est un REQUIRED status check sur main (2026-07-09).
+    # Un required check filtré par chemins ne s'exécute pas sur les PR ne touchant que des fichiers
+    # hors périmètre (.js/.css/.sql/.png…) → le check resterait « pending » et GÈLERAIT ces PR.
+    # Il doit donc tourner sur TOUTE PR (le scanner dérive sa surface de git ls-files de toute façon,
+    # ~15-20 s). Le filtre `paths` reste sur `push` (post-merge, non bloquant).
   push:
     branches: [main, dev]
     paths:
