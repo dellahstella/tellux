@@ -12,9 +12,15 @@ name: R5 — Garde-fou doctrine anti-fuite
 #   - PROSCRIT    : formulations interdites (exception étroite « cité/réfuté »).
 #   - GELÉ (DIFF) : modification des blocs EXPERT_*_DEFAULT / calcGammaAmbient / NCRP 94 dans app.html.
 #
-# DÉTECTE et SIGNALE uniquement (ouvre/maj une issue). ALERT-ONLY ABSOLU : ne casse jamais le build,
-# ne corrige rien. L'issue ne recopie jamais la chaîne sensible (emplacement + classe seulement).
-# La raison sociale vient du secret GH LEAK_TERMS_REGEX ; absent → classe sautée proprement.
+# DÉTECTE et SIGNALE (ouvre/maj une issue). Sur cron/push = ALERT-ONLY (ne casse pas le build).
+# Sur PULL_REQUEST = GATE BLOQUANT (step « Gate bloquant ») : un finding de classe FUITE (fuite réelle)
+# ou CONFIG (scanner non opérationnel — secret absent / surface vide) fait ÉCHOUER le check → merge
+# bloqué (fail-closed : un scan requis n'est jamais silencieusement aveugle). PROSCRIT / GELÉ restent
+# NON bloquants (signalés) même sur PR : éviter de geler main sur de la pédagogie (exception cité/réfuté)
+# ou un edit de zone gelée légitime (process physicien). Le scanner reste exit 0 (détecteur) ; le blocage
+# est un step de gate lisant sa sortie. Ni l'issue ni le gate ne recopient la chaîne sensible (emplacement
+# + classe seulement). Marqueurs sensibles NON en clair ici : raison sociale = secret LEAK_TERMS_REGEX,
+# modules confidentiels = secret LEAK_CONFIDENTIAL_REGEX ; absent → classe sautée + finding CONFIG.
 # Allowlist par chemin : .github/scripts/leak_guard_allowlist.txt (« chemin<TAB>label »).
 # Activation depuis main (défaut) pour le cron ; aussi sur push/PR touchant une surface texte.
 
@@ -64,6 +70,7 @@ jobs:
         id: scan
         env:
           LEAK_TERMS_REGEX: ${{ secrets.LEAK_TERMS_REGEX }}
+          LEAK_CONFIDENTIAL_REGEX: ${{ secrets.LEAK_CONFIDENTIAL_REGEX }}
         run: |
           set +e
           bash .github/scripts/leak_guard.sh . > findings.txt 2> warn.txt
@@ -145,3 +152,27 @@ jobs:
           else
             gh issue create --title "[routine:leak-guard] Fuite doctrine potentielle sur surface publique" --label routine --body-file "$BODY"
           fi
+
+      - name: Gate bloquant (PR uniquement — FUITE / CONFIG)
+        # Rend le check MORDANT sur pull_request : échoue (merge bloqué) si findings.txt porte au
+        # moins un finding de classe FUITE (fuite réelle : identité, modules confidentiels, corpus,
+        # financement, SIRET…) ou CONFIG (scanner non opérationnel : secret absent / surface vide →
+        # fail-closed, un scan requis n'est jamais silencieusement aveugle).
+        # PROSCRIT / GELÉ NON bloquants (déjà signalés en issue) : évite de geler main sur de la
+        # pédagogie (exception cité/réfuté) ou un edit de zone gelée légitime (process physicien).
+        # Ne recopie JAMAIS la chaîne sensible : fichier:ligne + classe/label seulement.
+        # Faux positif légitime → allowlister « chemin<TAB>label » dans leak_guard_allowlist.txt.
+        if: github.event_name == 'pull_request'
+        run: |
+          set -e
+          if [ -f findings.txt ] && awk -F'\t' '$2=="FUITE"||$2=="CONFIG"{c++} END{exit (c>0)?0:1}' findings.txt; then
+            echo "::error::Garde-fou anti-fuite : marqueur BLOQUANT détecté (classe FUITE/CONFIG). Merge bloqué."
+            echo "Emplacements bloquants (la chaîne sensible n'est jamais recopiée) :"
+            awk -F'\t' '$2=="FUITE"||$2=="CONFIG"{print "  "$1"  ["$2"/"$3"]"}' findings.txt
+            echo ""
+            echo "→ Fuite réelle : retirer la mention (contenu public = Cran C, décision Soleil)."
+            echo "→ Faux positif légitime : allowlister « chemin<TAB>label » dans .github/scripts/leak_guard_allowlist.txt."
+            echo "→ CONFIG : configurer le secret manquant (LEAK_TERMS_REGEX / LEAK_CONFIDENTIAL_REGEX)."
+            exit 1
+          fi
+          echo "Gate anti-fuite : aucun marqueur bloquant (FUITE/CONFIG). OK."
