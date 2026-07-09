@@ -620,6 +620,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-failles{background:#fdf4f3!important;color:#8E2F1F!important;border-color:#c16b5a!important;font-weight:500;}
 .on-radon{background:#F5E8D0!important;color:#8a5a1e!important;border-color:#C28533!important;font-weight:500;}
 .on-air{background:#E3ECF3!important;color:#2f5b7a!important;border-color:#6b8fb5!important;font-weight:500;}
+.on-openrad{background:#e7f0ee!important;color:#2f5f54!important;border-color:#4a8a7a!important;font-weight:500;}
 .on-foret{background:#eef3e9!important;color:#3F5B3A!important;border-color:#6b8a5c!important;font-weight:500;}
 .on-postes{background:#faf2e3!important;color:#8A5E22!important;border-color:#C28533!important;font-weight:500;}
 .on-points-chauds{background:#fdf4f3!important;color:#8E2F1F!important;border-color:#c16b5a!important;font-weight:500;}
@@ -1564,6 +1565,10 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <h5 class="subgroup-header">D. Co-exposition — qualité de l'air</h5>
       <p class="subgroup-text">Couche externe (Qualitair Corse) présentée <b>en regard</b> du potentiel radon. Aucune relation de cause à effet n'est établie ni suggérée entre qualité de l'air et radon : les couches sont montrées côte à côte, rien n'est inféré. Mise en visualisation, pas un calcul Tellux.</p>
       <button class="lbtn" id="b-air" data-domains="tous" title="Particules fines PM2,5 — moyenne annuelle modélisée 2024 (Qualitair Corse, résolution 200 m). Rendu couleur officiel Qualitair Corse. Mise en visualisation en regard du radon, pas un calcul Tellux ni un croisement." onclick="tog('air','on-air',this)"><span class="sq" style="background:#6b8fb5"></span>Particules fines PM2,5 (air, annuel)</button>
+
+      <h5 class="subgroup-header">E. Mesures citoyennes — rayonnement gamma</h5>
+      <p class="subgroup-text">Débit de dose gamma/X ambiant mesuré par des citoyens (OpenRadiation, tubes Geiger). <b>Gamma/X, pas radon.</b> Couche d'affichage indépendante — non injectée dans l'indice ni dans le calcul gamma. Mesures indicatives, capteurs hétérogènes, non certifiées ; le jeu inclut des traces continues (une marche ≈ plusieurs centaines de points) → densité affichée ≠ nombre de sites de mesure.</p>
+      <button class="lbtn" id="b-openrad" data-domains="ionisant" title="Mesures citoyennes de débit de dose gamma/X ambiant (OpenRadiation, tubes Geiger, µSv/h). Gamma/X, PAS radon. Couche d'affichage indépendante — non injectée dans l'indice ni le calcul gamma. Indicatives, capteurs hétérogènes, non certifiées ; inclut des traces (densité ≠ nombre de sites)." onclick="tog('openrad','on-openrad',this)"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Gamma citoyen (OpenRadiation)</button>
       <!-- TODO backlog couches : Communes radon niveau 3 overlay (GeoJSON geometries à fournir), MNT altitude overlay -->
     </div>
   </div>
@@ -2295,9 +2300,15 @@ const lAir=L.tileLayer('https://tiles.arcgis.com/tiles/VQopoXNvUqHYZHjY/arcgis/r
 // lCert : layer interne non-clusterisé pour les 30 fiches ANFR/EXEM certifiées.
 // Activé/désactivé en parallèle de lCon via tog('con') — bouton unique côté UI.
 const lCert=L.layerGroup();
-const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,con:lCon,therm:lTherm,crustal:lCrustal,sitesRemarq:lSitesRemarq,radon:lRadon,air:lAir};
+// OpenRadiation — mesures citoyennes gamma/X (debit de dose, uSv/h), ODbL. Couche d'AFFICHAGE
+// INDEPENDANTE : non injectee dans l'indice composite, ne recale NI le modele NI les bornes gamma
+// (NCRP-001 / GELE-001b intacts). GAMMA/X seulement, JAMAIS radon. Points bruts, opacite + rayon
+// reduits (montre les traces / la couverture citoyenne). Chargee au 1er toggle (loadOpenRad).
+const _openRadCanvas=L.canvas({padding:0.5});
+const lOpenRad=L.layerGroup();
+const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,con:lCon,therm:lTherm,crustal:lCrustal,sitesRemarq:lSitesRemarq,radon:lRadon,air:lAir,openrad:lOpenRad};
 const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag,foret:wmsForet};
-const ACTIVE={bt:false,ant:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,hotrf:false,res:false,prod:false,con:true,therm:false,crustal:false,sitesRemarq:false,radon:false,air:false};
+const ACTIVE={bt:false,ant:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,hotrf:false,res:false,prod:false,con:true,therm:false,crustal:false,sitesRemarq:false,radon:false,air:false,openrad:false};
 
 const LEGEND_CORE_IDS=new Set(['hot','hotrf']);
 const LEGEND_MAX_CONTEXT=3;
@@ -2356,6 +2367,13 @@ const LEGEND_HTML={
     '<div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #6b8fb5;margin-top:3px;font-size:9px;color:#4a4f5e;font-style:italic">▸ Repères annuels : OMS 5 µg/m³ · valeur limite UE 25 µg/m³<br><span style="font-size:8px;color:#8b92a5">Repères réglementaires — pas un seuil d\'alerte Tellux</span></div>'+
     '<div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#eef3f7;border:1px solid #cddbe6;border-radius:4px;font-size:8.5px;color:#3f5b7a;line-height:1.4"><b>Mise en visualisation.</b> Qualité de l\'air présentée <b>en regard</b> du potentiel radon. Aucun lien de cause à effet n\'est établi ni suggéré entre air et radon — couches montrées côte à côte, rien n\'est inféré.</div>'+
     '<div class="leg-src">Qualitair Corse · modélisation 200 m · ODbL 1.0 / CC BY-SA 2.0 FR</div>'+
+    '</div>',
+  openrad:'<div class="leg-block"><b class="leg-title">Gamma citoyen (OpenRadiation)</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Débit de dose gamma/X ambiant · mesures citoyennes · tubes Geiger</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;opacity:0.55;vertical-align:middle;margin-right:4px"></span>Point de mesure citoyen (µSv/h)</div>'+
+    '<div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4"><b>Gamma/X, pas radon.</b> Couche d\'affichage indépendante — non injectée dans l\'indice ni le calcul gamma.</div>'+
+    '<div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#eef3f0;border:1px solid #cfe0da;border-radius:4px;font-size:8.5px;color:#2f5f54;line-height:1.4"><b>Mesures indicatives, non certifiées.</b> Capteurs hétérogènes. Le jeu inclut des <b>traces continues</b> (une session de marche vaut plusieurs centaines de points) → densité affichée <b>≠ nombre de sites de mesure</b>.</div>'+
+    '<div class="leg-src">OpenRadiation contributors — ODbL</div>'+
     '</div>',
   postesSources:'<div class="leg-block"><b class="leg-title">Postes sources EDF SEI</b>'+
     '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Poste source &#x2264; 63 kV</div>'+
@@ -2684,6 +2702,7 @@ function tog(id,cls,btn){
     if(id==='therm'&&lTherm.getLayers().length===0)loadSitesApp().then(buildThermLayer);
     if(id==='crustal'){if(lCrustal.getLayers().length===0)buildCrustalLayer();showCrustalGauge(true);}
     if(id==='radon'&&lRadon.getLayers().length===0)buildRadonLayer();
+    if(id==='openrad'&&lOpenRad.getLayers().length===0)loadOpenRad();
     // tour/indu/cast/pont : couches patrimoniales migrées vers patrimoine.html
     if(id==='res'&&lRes.getLayers().length===0)loadReseau();
     if(id==='prod'&&lProd.getLayers().length===0)loadProd();
@@ -4647,6 +4666,37 @@ async function buildRadonLayer(){
     console.log('[Tellux] Radon polygones chargés : ' + (meta.features_total || (_radonGeojsonCache.features||[]).length) + ' communes (cat.2+cat.3)');
   } catch(e){
     console.warn('[Tellux] Radon GeoJSON indisponible : ' + e.message);
+  }
+}
+
+// ═══ OpenRadiation — mesures citoyennes gamma/X (couche d'affichage indépendante, ODbL) ═══
+// Points bruts, rayon + opacité réduits (couverture / traces), rendu canvas (2000+ points).
+// AUCUNE injection dans un calcul ; ne recale ni le modèle ni les bornes gamma. Gamma/X, pas radon.
+async function loadOpenRad(){
+  if(lOpenRad.getLayers().length > 0) return;
+  try {
+    var r = await fetch('public/data/openradiation_gamma_corse.geojson', {signal: AbortSignal.timeout(8000)});
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    var gj = await r.json();
+    var gl = L.geoJSON(gj, {
+      pointToLayer: function(f, latlng){
+        return L.circleMarker(latlng, {renderer:_openRadCanvas, radius:2.3, weight:0, fillColor:'#4a8a7a', fillOpacity:0.45});
+      },
+      onEachFeature: function(f, layer){
+        var p = f.properties || {};
+        var v = (p.v!=null) ? Number(p.v).toFixed(3)+' µSv/h' : 'valeur n/d';
+        layer.bindPopup('<b>Gamma/X citoyen — OpenRadiation</b><br>'
+          + 'Débit de dose : ' + v + '<br>'
+          + (p.d ? 'Date : ' + p.d + '<br>' : '')
+          + (p.s ? 'Capteur : ' + p.s + '<br>' : '')
+          + '<span style="font-size:10px;color:#7a7a7a">Mesure citoyenne indicative, capteur hétérogène, <b>non certifiée</b>. Gamma/X, pas radon. Source : OpenRadiation (ODbL).</span>');
+      }
+    });
+    lOpenRad.addLayer(gl);
+    var meta = gj.metadata || {};
+    console.log('[Tellux] OpenRadiation gamma citoyen : ' + (meta.n || (gj.features||[]).length) + ' points (' + (meta.built||'') + ')');
+  } catch(e){
+    console.warn('[Tellux] OpenRadiation GeoJSON indisponible : ' + e.message);
   }
 }
 
