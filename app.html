@@ -619,6 +619,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-bt{background:#fff8e6!important;color:#d97706!important;border-color:#f5a855!important;font-weight:500;}
 .on-failles{background:#fdf4f3!important;color:#8E2F1F!important;border-color:#c16b5a!important;font-weight:500;}
 .on-radon{background:#F5E8D0!important;color:#8a5a1e!important;border-color:#C28533!important;font-weight:500;}
+.on-air{background:#E3ECF3!important;color:#2f5b7a!important;border-color:#6b8fb5!important;font-weight:500;}
 .on-foret{background:#eef3e9!important;color:#3F5B3A!important;border-color:#6b8a5c!important;font-weight:500;}
 .on-postes{background:#faf2e3!important;color:#8A5E22!important;border-color:#C28533!important;font-weight:500;}
 .on-points-chauds{background:#fdf4f3!important;color:#8E2F1F!important;border-color:#c16b5a!important;font-weight:500;}
@@ -1559,6 +1560,10 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <button class="lbtn" id="b-points-chauds" data-domains="ionisant" title="Sites U/Th à mesurer — catalogue de sites candidats à des mesures radiométriques (doses non mesurées, sources documentaires BRGM ou analogies géologiques)" onclick="togPointsChauds(this)"><span style="display:inline-block;width:8px;height:8px;background:#8E2F1F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Sites U/Th à mesurer</button>
       <button class="lbtn" id="b-sites-remarq" data-domains="statique ionisant" title="Anomalies de substrat à signature EM réelle — 3 sites ophiolitiques (serpentinite Albu/Nonza, magnétite Farinole) à anomalie magnétique + surveillance Th-234 naturel (Bouches de Bonifacio — étude IRSN 2004, désormais ASNR). 4 sites documentaires, mesures in situ requises." onclick="togSitesRemarquables(this)"><span style="display:inline-block;width:10px;height:10px;background:#1F3A5F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Anomalies de substrat (serpentinite, magnétite) &amp; Th-234</button>
       <button class="lbtn" id="b-crustal" data-domains="statique" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF) — opt-in, comparaison locale/mondiale" onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales)</button>
+
+      <h5 class="subgroup-header">D. Co-exposition — qualité de l'air</h5>
+      <p class="subgroup-text">Couche externe (Qualitair Corse) présentée <b>en regard</b> du potentiel radon. Aucune relation de cause à effet n'est établie ni suggérée entre qualité de l'air et radon : les couches sont montrées côte à côte, rien n'est inféré. Mise en visualisation, pas un calcul Tellux.</p>
+      <button class="lbtn" id="b-air" data-domains="tous" title="Particules fines PM2,5 — moyenne annuelle modélisée 2024 (Qualitair Corse, résolution 200 m). Rendu couleur officiel Qualitair Corse. Mise en visualisation en regard du radon, pas un calcul Tellux ni un croisement." onclick="tog('air','on-air',this)"><span class="sq" style="background:#6b8fb5"></span>Particules fines PM2,5 (air, annuel)</button>
       <!-- TODO backlog couches : Communes radon niveau 3 overlay (GeoJSON geometries à fournir), MNT altitude overlay -->
     </div>
   </div>
@@ -2281,12 +2286,18 @@ const lPointsChaudsRadio=L.layerGroup();
 const lBT=L.layerGroup(),lAnt=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lHotRF=L.layerGroup(),lSitesRemarq=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
 const lCrustal=L.layerGroup();
 const lRadon=L.layerGroup();
+// Qualitair Corse — PM2.5 moyenne annuelle modelisee 2024 (tuiles ArcGIS publiques, HTTP 200 sans
+// token verifie 2026-07-08 ; ODbL 1.0 / CC BY-SA 2.0 FR). Couche de CO-EXPOSITION affichee EN REGARD du
+// radon : mise en visualisation cote a cote, AUCUN croisement ni calcul Tellux. Raster pre-rendu
+// (couleurs officielles Qualitair), opacite reduite (DA sobre, anti-nocebo). tilePane => rendu SOUS
+// les polygones radon (overlayPane) : ne masque jamais le radon. bounds = Corse (evite tuiles vides).
+const lAir=L.tileLayer('https://tiles.arcgis.com/tiles/VQopoXNvUqHYZHjY/arcgis/rest/services/2024_PM25_MA_200M_AIRES_tif/MapServer/tile/{z}/{y}/{x}',{opacity:0.6,minNativeZoom:9,maxNativeZoom:14,zIndex:5,bounds:[[41.2,8.4],[43.1,9.7]],attribution:'PM2,5 &copy; Qualitair Corse — ODbL 1.0 / CC BY-SA 2.0 FR'});
 // lCert : layer interne non-clusterisé pour les 30 fiches ANFR/EXEM certifiées.
 // Activé/désactivé en parallèle de lCon via tog('con') — bouton unique côté UI.
 const lCert=L.layerGroup();
-const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,con:lCon,therm:lTherm,crustal:lCrustal,sitesRemarq:lSitesRemarq,radon:lRadon};
+const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,con:lCon,therm:lTherm,crustal:lCrustal,sitesRemarq:lSitesRemarq,radon:lRadon,air:lAir};
 const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag,foret:wmsForet};
-const ACTIVE={bt:false,ant:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,hotrf:false,res:false,prod:false,con:true,therm:false,crustal:false,sitesRemarq:false,radon:false};
+const ACTIVE={bt:false,ant:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,hotrf:false,res:false,prod:false,con:true,therm:false,crustal:false,sitesRemarq:false,radon:false,air:false};
 
 const LEGEND_CORE_IDS=new Set(['hot','hotrf']);
 const LEGEND_MAX_CONTEXT=3;
@@ -2338,6 +2349,13 @@ const LEGEND_HTML={
     '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#C28533;opacity:0.4;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Zone 3 — potentiel radon significatif</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#EDD59A;opacity:0.6;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Zone 2 — potentiel faible, facteurs géologiques particuliers</div>'+
     '<div class="leg-src">ASNR · arrêté du 27 juin 2018 · 216 en zone 3 + 37 en zone 2</div>'+
+    '</div>',
+  air:'<div class="leg-block"><b class="leg-title">Particules fines PM2,5 (air)</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Moyenne annuelle modélisée 2024 · Qualitair Corse · 200 m</div>'+
+    '<div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Rendu couleur = échelle officielle Qualitair Corse (teinte plus soutenue = concentration plus élevée). Affichée à opacité réduite.</div>'+
+    '<div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #6b8fb5;margin-top:3px;font-size:9px;color:#4a4f5e;font-style:italic">▸ Repères annuels : OMS 5 µg/m³ · valeur limite UE 25 µg/m³<br><span style="font-size:8px;color:#8b92a5">Repères réglementaires — pas un seuil d\'alerte Tellux</span></div>'+
+    '<div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#eef3f7;border:1px solid #cddbe6;border-radius:4px;font-size:8.5px;color:#3f5b7a;line-height:1.4"><b>Mise en visualisation.</b> Qualité de l\'air présentée <b>en regard</b> du potentiel radon. Aucun lien de cause à effet n\'est établi ni suggéré entre air et radon — couches montrées côte à côte, rien n\'est inféré.</div>'+
+    '<div class="leg-src">Qualitair Corse · modélisation 200 m · ODbL 1.0 / CC BY-SA 2.0 FR</div>'+
     '</div>',
   postesSources:'<div class="leg-block"><b class="leg-title">Postes sources EDF SEI</b>'+
     '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Poste source &#x2264; 63 kV</div>'+
