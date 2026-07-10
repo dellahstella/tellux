@@ -7,6 +7,20 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [Couches gamma citoyen + dose cosmique, corrections radon — 2026-07-09/10]
+
+### Added
+- **`app.html`** — overlay **OpenRadiation gamma citoyen** : 2 077 points de mesures participatives gamma/X en Corse (licence ODbL), en **couche d'affichage indépendante** — les points n'alimentent aucun calcul (ni l'indice composite, ni le radon : mesures gamma/X, jamais radon), provenance et licence affichées (PR [#942](https://github.com/dellahstella/tellux/pull/942)).
+
+### Changed
+- **`app.html`** — composante **dose cosmique** re-dérivée sur le modèle **PARMA/EXPACS** (grille Corse, équivalent de dose ambiant **H\*(10)** en nSv/h, moyenne de cycle solaire) : la formule empirique `35·exp(alt/1500)` est remplacée par un ajustement **exp+lin** contre la grille (erreur ≤ 1,1 % sur 0–2 706 m), libellé UI « dose cosmique au sol » et source citée. Effet déclaré sur l'indice composite : **nul sous ~400 m**, jusqu'à −0,047 à Monte Cinto (les bornes et poids gelés du composite sont inchangés, seule l'entrée bouge). PR [#945](https://github.com/dellahstella/tellux/pull/945), après revue anti-fuite/factuelle et contrôle visuel du libellé.
+- **`mairies.html`** — terminologie radon alignée sur le vocabulaire réglementaire : « Catégorie » → « **zone à potentiel radon** » (PR [#943](https://github.com/dellahstella/tellux/pull/943)).
+
+### Fixed
+- **`app.html`** — popup radon : **source unique « ASNR — arrêté du 27 juin 2018 »** ; le code n'assemble plus la mention de provenance à partir de champs hétérogènes, le point de vérité est la donnée elle-même (audit prod F1, PR [#944](https://github.com/dellahstella/tellux/pull/944)).
+
+---
+
 ## [Nettoyage — retrait du fichier radon périmé — 2026-07-09]
 
 ### Removed
