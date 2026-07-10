@@ -4639,12 +4639,16 @@ function radonOnEachFeature(feature, layer){
   var catText = cat === 3 ? 'Zone 3 — potentiel radon significatif'
               : cat === 2 ? 'Zone 2 — potentiel radon faible (facteurs géologiques particuliers)'
               : 'Zone à potentiel radon non classée';
+  // Point de vérité unique = la DONNÉE : properties.source du geojson porte l'attribution
+  // complète (« ASNR — arrêté du 27 juin 2018 »). Le code ne compose plus rien (il ré-apposait
+  // l'arrêté → doublon + « IRSN » résiduel, audit prod F1 2026-07-10). Un futur changement de
+  // texte réglementaire = mise à jour du geojson, sans toucher ce code.
   var src = p.source || 'ASNR';
   layer.bindPopup(
     '<b>' + (p.nom_commune || 'Commune') + '</b><br>'
     + '<span style="font-size:11px;color:var(--tx-mica)">INSEE ' + (p.code_insee || '—') + (p.departement ? ' · ' + p.departement : '') + '</span><br>'
     + catText + '<br>'
-    + '<span style="font-size:10px;color:var(--tx-mica);font-style:italic">Source : ' + src + ' · arrêté du 27 juin 2018</span>'
+    + '<span style="font-size:10px;color:var(--tx-mica);font-style:italic">Source : ' + src + '</span>'
   );
 }
 
