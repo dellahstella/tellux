@@ -14,8 +14,9 @@ name: R5 — Garde-fou doctrine anti-fuite
 #
 # DÉTECTE et SIGNALE (ouvre/maj une issue). Sur cron/push = ALERT-ONLY (ne casse pas le build).
 # Sur PULL_REQUEST = GATE BLOQUANT (step « Gate bloquant ») : un finding de classe FUITE (fuite réelle)
-# ou CONFIG (scanner non opérationnel — secret absent / surface vide) fait ÉCHOUER le check → merge
-# bloqué (fail-closed : un scan requis n'est jamais silencieusement aveugle). PROSCRIT / GELÉ restent
+# ou CONFIG (scanner dégradé — secret absent, fichier sauté par le cap de taille, régex invalide,
+# grep en échec, scan interrompu, surface vide) fait ÉCHOUER le check → merge bloqué
+# (fail-closed : un scan requis n'est jamais silencieusement aveugle NI partiel — durci 2026-07-10). PROSCRIT / GELÉ restent
 # NON bloquants (signalés) même sur PR : éviter de geler main sur de la pédagogie (exception cité/réfuté)
 # ou un edit de zone gelée légitime (process physicien). Le scanner reste exit 0 (détecteur) ; le blocage
 # est un step de gate lisant sa sortie. Ni l'issue ni le gate ne recopient la chaîne sensible (emplacement
@@ -151,8 +152,9 @@ jobs:
       - name: Gate bloquant (PR uniquement — FUITE / CONFIG)
         # Rend le check MORDANT sur pull_request : échoue (merge bloqué) si findings.txt porte au
         # moins un finding de classe FUITE (fuite réelle : identité, modules confidentiels, corpus,
-        # financement, SIRET…) ou CONFIG (scanner non opérationnel : secret absent / surface vide →
-        # fail-closed, un scan requis n'est jamais silencieusement aveugle).
+        # financement, SIRET…) ou CONFIG (scanner dégradé : secret absent, fichier sauté par le cap
+        # de taille, régex invalide, grep en échec, scan interrompu, surface vide, findings.txt
+        # absent → fail-closed, un scan requis n'est jamais silencieusement aveugle ni partiel).
         # PROSCRIT / GELÉ NON bloquants (déjà signalés en issue) : évite de geler main sur de la
         # pédagogie (exception cité/réfuté) ou un edit de zone gelée légitime (process physicien).
         # Ne recopie JAMAIS la chaîne sensible : fichier:ligne + classe/label seulement.
@@ -160,7 +162,11 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           set -e
-          if [ -f findings.txt ] && awk -F'\t' '$2=="FUITE"||$2=="CONFIG"{c++} END{exit (c>0)?0:1}' findings.txt; then
+          if [ ! -f findings.txt ]; then
+            echo "::error::Garde-fou anti-fuite : findings.txt ABSENT (le scanner n'a produit aucune sortie). Fail-closed."
+            exit 1
+          fi
+          if awk -F'\t' '$2=="FUITE"||$2=="CONFIG"{c++} END{exit (c>0)?0:1}' findings.txt; then
             echo "::error::Garde-fou anti-fuite : marqueur BLOQUANT détecté (classe FUITE/CONFIG). Merge bloqué."
             echo "Emplacements bloquants (la chaîne sensible n'est jamais recopiée) :"
             awk -F'\t' '$2=="FUITE"||$2=="CONFIG"{print "  "$1"  ["$2"/"$3"]"}' findings.txt
