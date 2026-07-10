@@ -38,6 +38,11 @@ finish() {
   if [ "${SCAN_COMPLET:-0}" != "1" ]; then
     printf '%s\t%s\t%s\n' "(config)" "CONFIG" "scanner_interrompu_scan_partiel"
   fi
+  # Sentinelle POSITIVE (revue évaluateur PR #947) : le gate PR EXIGE cette ligne META.
+  # Sans elle (script qui ne se lance même pas — erreur de syntaxe → findings.txt vide mais
+  # existant — ou tué avant son trap), le gate échoue. Fail-closed jusqu'au lancement.
+  # Classe META = plomberie : exclue du compte de findings et de l'issue (filtre workflow).
+  printf '%s\t%s\t%s\n' "(meta)" "META" "sentinelle_fin_de_scan"
   exit 0
 }
 trap finish EXIT

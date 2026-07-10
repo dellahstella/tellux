@@ -100,8 +100,10 @@ jobs:
         continue-on-error: true
         run: |
           set +e
+          # La ligne META (sentinelle de fin de scan) est de la plomberie : exclue du compte
+          # et de l'affichage (elle est exigée par le gate PR, pas signalée en issue).
           COUNT=0
-          if [ -s findings.txt ]; then COUNT=$(wc -l < findings.txt | tr -dc '0-9'); fi
+          if [ -s findings.txt ]; then COUNT=$(awk -F'\t' '$2!="META"{c++} END{print c+0}' findings.txt); fi
           [ -z "$COUNT" ] && COUNT=0
           printf 'count=%s\n' "$COUNT" >> "$GITHUB_OUTPUT"
           {
@@ -111,7 +113,7 @@ jobs:
             if [ "$COUNT" -gt 0 ]; then
               echo ""
               echo '```'
-              cat findings.txt
+              awk -F'\t' '$2!="META"' findings.txt
               echo '```'
             fi
           } >> "$GITHUB_STEP_SUMMARY"
@@ -134,7 +136,7 @@ jobs:
             echo ""
             echo "Emplacements (la chaîne sensible n'est jamais recopiée — fichier:ligne / classe / label) :"
             echo '```'
-            cat findings.txt
+            awk -F'\t' '$2!="META"' findings.txt
             echo '```'
             echo ""
             echo "Classes : **FUITE** (financement/identité/corpus) · **PROSCRIT** (formulation interdite) · **GELE** (bloc gelé modifié → relecture physicien)."
@@ -164,6 +166,13 @@ jobs:
           set -e
           if [ ! -f findings.txt ]; then
             echo "::error::Garde-fou anti-fuite : findings.txt ABSENT (le scanner n'a produit aucune sortie). Fail-closed."
+            exit 1
+          fi
+          # Sentinelle positive : le scanner émet TOUJOURS une ligne META en fin de vie (trap).
+          # Son absence = le scanner ne s'est jamais exécuté (erreur de syntaxe → findings.txt
+          # vide mais existant) ou a été tué avant son trap → fail-closed, pas de faux vert.
+          if ! awk -F'\t' '$2=="META"{ok=1} END{exit ok?0:1}' findings.txt; then
+            echo "::error::Garde-fou anti-fuite : sentinelle de fin de scan ABSENTE (scanner jamais exécuté ou tué avant son trap). Fail-closed."
             exit 1
           fi
           if awk -F'\t' '$2=="FUITE"||$2=="CONFIG"{c++} END{exit (c>0)?0:1}' findings.txt; then
