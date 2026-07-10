@@ -4818,7 +4818,8 @@ function calcRadonPotential(lat, lon, options) {
 // GELÉ : composante terrestre NCRP 94 (13·U + 5.4·Th + 42·K),
 //         plages U/Th/K assignées aux lithologies corses — en attente relecture tiers
 // Sources IMMÉDIAT :
-//   Cosmique : Bouville & Lowder (1988), adapté latitude 42°N
+//   Cosmique : approximation calée sur grille PARMA 4.10 / EXPACS (Sato 2015,
+//              PLOS ONE 10(12):e0144679), Corse lat 42,2°N, H*(10), moyenne de cycle solaire
 //   Téléray ASNR : réseau public (in_construction — API à vérifier)
 //   Ordres de grandeur Corse : 75–150 nSv/h (mesures Téléray 2A/2B)
 // ════════════════════════════════════════════════════════════════════════════
@@ -4826,10 +4827,14 @@ function calcGammaAmbient(lat, lon, altitude_m) {
   // Altitude par défaut : 200 m = altitude médiane côtière corse
   const alt = (typeof altitude_m === 'number' && isFinite(altitude_m)) ? altitude_m : 200;
 
-  // Composante cosmique — IMMÉDIAT (paramètres à valider en relecture tiers)
-  // Formule : 35 × exp(alt/1500) nSv/h — §5.4 AUDIT_NIVEAU2_V2.1
-  // À sea level : ~35 nSv/h · Vizzavona (1163m) : ~75 nSv/h · Monte Cinto (2710m) : ~213 nSv/h
-  const cosmic_nSv_h = Math.round(35 * Math.exp(alt / 1500) * 10) / 10;
+  // Composante cosmique — approximation légère calée sur une grille PARMA/EXPACS.
+  // CE N'EST PAS PARMA : fit exp+lin à 3 paramètres sur des points PARMA 4.10 (JAEA).
+  // Grandeur : H*(10), équivalent de dose ambiant (nSv/h) — décision 6a du 2026-07-10.
+  // Grille : Corse lat 42,2°N, moyenne de cycle solaire (échantillonnage 15 juin 2009-2019).
+  // Fidélité du fit : écart relatif max 1,08 % sur 0-2710 m.
+  // Incertitude non modélisée : variation solaire ±15 % sur le cycle.
+  // Sea level : ~41,9 nSv/h · Vizzavona (1163 m) : ~72,5 · Monte Cinto (2710 m) : ~166,3
+  const cosmic_nSv_h = Math.round((41.945261 * Math.exp(alt / 1862.095) - 0.004973 * alt) * 10) / 10;
 
   // Composante terrestre — GELÉ (formule NCRP 94, plages U/Th/K corses non validées)
   // const terrestrial_nSv_h = 13 * U_ppm + 5.4 * Th_ppm + 42 * K_pct; // GELE
@@ -4879,11 +4884,11 @@ function calcGammaAmbient(lat, lon, altitude_m) {
     boost_sources_count,
     nearest_teleray_balise,      // null — in_construction
     altitude_used_m: alt,
-    source: 'Approximation cosmique Bouville & Lowder 1988 · boost points chauds documentaires · Téléray ASNR (in_construction)',
+    source: 'Approximation cosmique calée sur grille modélisée PARMA/EXPACS (Sato 2015) — H*(10), moyenne de cycle solaire · boost points chauds documentaires · Téléray ASNR (in_construction)',
     confidence: 'low',
     under_review: true,          // terrestre GELÉ + Téléray manquant
     in_construction: true,
-    epistemic_note: 'Estimation cosmique + boost points chauds documentés. Composante terrestre (NCRP 94) en attente de relecture tiers. Fond naturel Corse : 75–150 nSv/h (Téléray ASNR). Doses des points chauds sont documentaires, non mesurées par Tellux. Aucune implication sanitaire à ces niveaux de fond naturel.'
+    epistemic_note: 'Estimation issue d\'une grille modélisée (PARMA/EXPACS, Sato 2015), jamais d\'une mesure Tellux : dose cosmique au sol en H*(10) (équivalent de dose ambiant), toutes composantes ionisantes cosmiques (muons, composante électromagnétique, neutrons, protons) — distincte du gamma terrestre. Moyenne de cycle solaire ; la variation solaire (±15 %) n\'est pas modélisée. Composante terrestre (NCRP 94) en attente de relecture tiers. Fond naturel Corse : 75–150 nSv/h (Téléray ASNR, gamma total — non directement comparable au cosmique seul). Doses des points chauds documentaires, non mesurées par Tellux. Aucune implication sanitaire à ces niveaux de fond naturel.'
   };
 }
 
@@ -5224,7 +5229,7 @@ map.on('click',async e=>{
         '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+
           // Gamma
           '<div>'+
-            '<div style="font-size:8px;color:#6b7280;margin-bottom:1px">γ cosmique</div>'+
+            '<div style="font-size:8px;color:#6b7280;margin-bottom:1px">dose cosmique au sol</div>'+
             '<div style="display:flex;align-items:center;gap:3px">'+
               '<span style="font-size:11px;font-weight:700;color:#4a4f5e">'+gamma_nSvh+' nSv/h</span>'+
               '<span style="font-size:9px;color:#C28533" title="En cours — cosmique seule, composante terrestre en attente relecture (NCRP 94)">◆</span>'+
