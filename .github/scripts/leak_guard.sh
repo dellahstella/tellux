@@ -3,6 +3,9 @@
 #
 # DÉTECTE et SIGNALE uniquement. N'écrit, ne corrige, ne supprime rien.
 # TOUJOURS exit 0 (alert-only : ne casse jamais le build ; le workflow lit la sortie, pas le code retour).
+# FAIL-LOUD (durci 2026-07-10, audit) : toute dégradation du scan lui-même (fichier sauté par le
+# cap de taille, régex invalide, grep en échec, scan interrompu avant la fin, secret absent) émet
+# un finding CONFIG — bloquant au gate PR. Un scan requis n'est jamais silencieusement partiel.
 #
 # Périmètre (élargi 2026-06-29, ADR-019) : tous les fichiers TEXTE TRACKÉS sur le repo public
 # (= clonables), pas seulement les .html déployés. Surface dérivée de `git ls-files` (les fichiers
@@ -26,7 +29,23 @@
 # NB zones gelées (GELÉ-001 / NCRP-001) : traitées par DIFF dans le workflow, pas par ce scanner de présence.
 
 set -uo pipefail
-trap 'exit 0' EXIT   # alert-only ABSOLU : quoi qu'il arrive (même abort set -u / erreur interne), on sort 0
+# Alert-only par CODE RETOUR (le workflow lit la sortie, pas le code) — mais plus jamais de
+# faux pass sur crash (audit 2026-07-10) : si le script n'atteint pas sa dernière ligne
+# (abort set -u, erreur interne), le trap émet un finding CONFIG (bloquant au gate PR,
+# fail-closed) au lieu de laisser des findings partiels passer pour un scan complet.
+SCAN_COMPLET=0
+finish() {
+  if [ "${SCAN_COMPLET:-0}" != "1" ]; then
+    printf '%s\t%s\t%s\n' "(config)" "CONFIG" "scanner_interrompu_scan_partiel"
+  fi
+  # Sentinelle POSITIVE (revue évaluateur PR #947) : le gate PR EXIGE cette ligne META.
+  # Sans elle (script qui ne se lance même pas — erreur de syntaxe → findings.txt vide mais
+  # existant — ou tué avant son trap), le gate échoue. Fail-closed jusqu'au lancement.
+  # Classe META = plomberie : exclue du compte de findings et de l'issue (filtre workflow).
+  printf '%s\t%s\t%s\n' "(meta)" "META" "sentinelle_fin_de_scan"
+  exit 0
+}
+trap finish EXIT
 ROOT="${1:-.}"
 cd "$ROOT" 2>/dev/null || exit 0
 ALLOW=".github/scripts/leak_guard_allowlist.txt"
@@ -34,11 +53,18 @@ ALLOW=".github/scripts/leak_guard_allowlist.txt"
 # Extensions texte scannées. Les binaires (webp/png/woff2/…) et le code (py/js/sql/…) sont exclus de
 # facto (hors whitelist), ce qui réduit le risque de faux positifs et le bruit.
 TEXT_EXTS=" html htm md markdown txt yml yaml json jsonc "
-SIZE_CAP=$((512 * 1024))   # 512 KiB : anti dump de données / binaire résiduel (faux positifs + perf).
+# 2 MiB : anti dump de données / binaire résiduel (faux positifs + perf). Relevé de 512 KiB le
+# 2026-07-10 (audit) : app.html (~538 Ko, surface publique n°1) dépassait l'ancien cap depuis sa
+# création et était SILENCIEUSEMENT exclu de tout le scan de présence. Tout skip-par-cap est
+# désormais fail-loud (finding CONFIG, cf. plus bas) — ne jamais re-rendre ce skip silencieux.
+SIZE_CAP=$((2 * 1024 * 1024))
 
 # Construit la liste des fichiers à scanner depuis l'index git (tracké = clonable sur le public).
 # Exclut : répertoires de données/binaires, fixtures, lockfiles/manifests npm, et les fichiers DU
 # garde-fou lui-même (ils contiennent les termes-déclencheurs → auto-fuite garantie sinon).
+# Émet des enregistrements typés : « F<TAB>chemin » (à scanner) ou « CAP<TAB>chemin<TAB>taille »
+# (au-dessus du cap). Les fichiers sautés par le cap sont ENREGISTRÉS (fail-loud plus bas,
+# finding CONFIG), jamais oubliés en silence.
 list_files() {
   git ls-files -z 2>/dev/null | while IFS= read -r -d '' f; do
     case "$f" in
@@ -50,12 +76,16 @@ list_files() {
     case "$TEXT_EXTS" in *" $ext "*) : ;; *) continue ;; esac
     local sz
     sz=$(wc -c < "$f" 2>/dev/null || echo 0)
-    [ "${sz:-0}" -gt "$SIZE_CAP" ] && continue
-    printf '%s\n' "$f"
+    if [ "${sz:-0}" -gt "$SIZE_CAP" ]; then
+      printf 'CAP\t%s\t%s\n' "$f" "$sz"
+      continue
+    fi
+    printf 'F\t%s\n' "$f"
   done
 }
 
-FILES="$(list_files)"
+RAW_LIST="$(list_files)"
+FILES="$(printf '%s\n' "$RAW_LIST" | awk -F'\t' '$1=="F"{print $2}')"
 
 # CLASSE <TAB> LABEL <TAB> REGEX (ERE) <TAB> FLAGS (-i ou vide)
 RULES=$(cat <<'RULESEOF'
@@ -86,16 +116,33 @@ is_cited_refuted() { # line — vrai si le passage est cité (guillemets) ou exp
 }
 
 scan_rule() { # class label regex flags
-  local cls="$1" label="$2" rx="$3" flags="$4" f m n line
+  local cls="$1" label="$2" rx="$3" flags="$4" f m n line out rc
+  # Fail-loud régex (audit 2026-07-10) : une ERE invalide faisait échouer grep en silence
+  # (2>/dev/null, code retour perdu) → classe entière non scannée SANS signal. Pré-validation
+  # sur /dev/null : 1 = régex valide sans match, ≥ 2 = régex invalide → finding CONFIG
+  # (bloquant au gate PR). Le contenu de la régex n'est JAMAIS recopié (label seulement).
+  grep -qE $flags -- "$rx" /dev/null 2>/dev/null
+  if [ $? -ge 2 ]; then
+    printf '%s\t%s\t%s\n' "(config)" "CONFIG" "regex_invalide_${label}"
+    return 0
+  fi
   for f in $FILES; do
     [ -f "$f" ] || continue
     is_allowed "$f" "$label" && continue
+    out=$(grep -nE $flags -- "$rx" "$f" 2>/dev/null); rc=$?
+    if [ "$rc" -ge 2 ]; then
+      # grep a planté sur CE fichier (illisible, etc.) : fichier non scanné pour cette classe
+      # → fail-loud, pas de trou silencieux.
+      printf '%s\t%s\t%s\n' "$f" "CONFIG" "grep_echec_${label}"
+      continue
+    fi
+    [ "$rc" -ne 0 ] && continue
     while IFS= read -r m; do
       [ -z "$m" ] && continue
       n="${m%%:*}"; line="${m#*:}"
       if [ "$cls" = "PROSCRIT" ] && is_cited_refuted "$line"; then continue; fi
       printf '%s:%s\t%s\t%s\n' "$f" "$n" "$cls" "$label"
-    done < <(grep -nE $flags -- "$rx" "$f" 2>/dev/null)
+    done <<< "$out"
   done
 }
 
@@ -104,6 +151,15 @@ scan_rule() { # class label regex flags
 if [ -z "${FILES//[[:space:]]/}" ]; then
   printf '%s\t%s\t%s\n' "(config)" "CONFIG" "aucune_surface_enumeree_git_ls-files_vide"
 fi
+
+# Fail-loud skip-par-cap (audit 2026-07-10) : tout fichier texte tracké au-dessus du cap émet
+# un finding CONFIG (bloquant au gate PR) — un skip DÉLIBÉRÉ se déclare dans l'allowlist
+# (« chemin<TAB>cap_taille »), jamais en silence. Précédent : app.html sauté depuis avril 2026.
+printf '%s\n' "$RAW_LIST" | awk -F'\t' '$1=="CAP"{print $2 "\t" $3}' | while IFS=$'\t' read -r f sz; do
+  [ -z "$f" ] && continue
+  is_allowed "$f" "cap_taille" && continue
+  printf '%s\t%s\t%s\n' "$f" "CONFIG" "saute_cap_taille_${sz}o_NON_SCANNE"
+done
 
 while IFS=$'\t' read -r cls label rx flags; do
   [ -z "${cls:-}" ] && continue
@@ -130,4 +186,5 @@ else
   printf '%s\t%s\t%s\n' "(config)" "CONFIG" "module_confidentiel_NON_SCANNEE_secret_absent"
 fi
 
+SCAN_COMPLET=1
 exit 0
