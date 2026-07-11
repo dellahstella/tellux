@@ -1,0 +1,130 @@
+name: Test couverture anti-fuite (manuel)
+
+# Déclenchement MANUEL uniquement (Actions -> Run workflow). Vérifie que les secrets du
+# garde-fou (LEAK_TERMS_REGEX / LEAK_CONFIDENTIAL_REGEX) ATTRAPENT bien les marqueurs
+# confidentiels du projet — SANS que ces marqueurs ni les secrets ne quittent GitHub.
+#
+# Principe : les marqueurs à tester sont fournis dans un SECRET dédié `COVERAGE_MARKERS`
+# (un marqueur par ligne), posé par le mainteneur dans l'UI. Ils NE sont PAS un input
+# workflow_dispatch (un input est enregistré EN CLAIR dans les métadonnées du run ; un
+# secret est masqué automatiquement dans les logs). Le job crée des fichiers de test
+# éphémères sur le runner, lance le scanner avec les vrais secrets injectés par la
+# plateforme, et rapporte ATTRAPÉ / NON PAR RÉFÉRENCE (index de ligne) — il n'affiche
+# JAMAIS la valeur d'un marqueur ni d'un secret (pas de `set -x`, aucun echo de contenu).
+# Rien n'est committé : les fichiers vivent dans un dépôt git temporaire, détruit avec le runner.
+#
+# PRÉ-REQUIS (mainteneur, une fois) : définir le secret `COVERAGE_MARKERS` dans
+#   Settings > Secrets and variables > Actions, valeur = un marqueur par ligne.
+#   Le supprimer après usage si souhaité.
+
+on:
+  workflow_dispatch:
+    inputs:
+      variants:
+        description: "Tester aussi les variantes (casse / ponctuation / espacement)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    name: Couverture des marqueurs (secret COVERAGE_MARKERS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Test de couverture (par référence, aucune valeur affichée)
+        env:
+          LEAK_TERMS_REGEX: ${{ secrets.LEAK_TERMS_REGEX }}
+          LEAK_CONFIDENTIAL_REGEX: ${{ secrets.LEAK_CONFIDENTIAL_REGEX }}
+          COVERAGE_MARKERS: ${{ secrets.COVERAGE_MARKERS }}
+          WITH_VARIANTS: ${{ inputs.variants }}
+        run: |
+          set -u   # PAS de -x : ne jamais tracer les valeurs
+          SCANNER="$GITHUB_WORKSPACE/.github/scripts/leak_guard.sh"
+          [ -f "$SCANNER" ] || { echo "::error::scanner introuvable"; exit 1; }
+          if [ -z "${COVERAGE_MARKERS//[[:space:]]/}" ]; then
+            echo "::error::Secret COVERAGE_MARKERS absent ou vide. Pose-le (un marqueur par ligne) puis relance."
+            exit 1
+          fi
+          if [ -z "${LEAK_TERMS_REGEX:-}" ] && [ -z "${LEAK_CONFIDENTIAL_REGEX:-}" ]; then
+            echo "::error::Aucun secret LEAK_* injecté — rien à tester."
+            exit 1
+          fi
+
+          WORK="$(mktemp -d)"; R="$WORK/repo"; mkdir -p "$R"
+          cd "$R"; git init -q .; git config user.email t@t; git config user.name t
+
+          # Génère un dossier mNNN par marqueur, une variante par fichier. Aucune valeur n'est
+          # imprimée : les printf écrivent dans des fichiers, jamais sur stdout.
+          idx=0
+          while IFS= read -r M || [ -n "$M" ]; do
+            [ -z "${M//[[:space:]]/}" ] && continue
+            case "$M" in \#*) continue ;; esac
+            idx=$((idx+1)); d=$(printf 'm%03d' "$idx"); mkdir -p "$R/$d"
+            printf 'contexte neutre %s suite de phrase.\n' "$M" > "$R/$d/raw.md"
+            if [ "${WITH_VARIANTS}" = "true" ]; then
+              up=$(printf '%s' "$M" | tr '[:lower:]' '[:upper:]')
+              lo=$(printf '%s' "$M" | tr '[:upper:]' '[:lower:]')
+              sp=$(printf '%s' "$M" | sed 's/./& /g')
+              ds=$(printf '%s' "$M" | tr ' _' '--')
+              printf 'contexte %s suite.\n' "$up" > "$R/$d/upper.md"
+              printf 'contexte %s suite.\n' "$lo" > "$R/$d/lower.md"
+              printf 'fin (%s), puis %s. et %s;\n' "$M" "$M" "$M" > "$R/$d/punct.md"
+              printf 'contexte %s suite.\n' "$sp" > "$R/$d/spaced.md"
+              printf 'contexte %s suite.\n' "$ds" > "$R/$d/dashswap.md"
+            fi
+          done <<< "$COVERAGE_MARKERS"
+          TOTAL=$idx
+          [ "$TOTAL" -eq 0 ] && { echo "::error::aucun marqueur exploitable"; rm -rf "$WORK"; exit 1; }
+
+          git add -A >/dev/null 2>&1; git commit -qm t >/dev/null 2>&1
+
+          OUT="$WORK/findings.txt"
+          bash "$SCANNER" "$R" > "$OUT" 2>/dev/null
+
+          # Un fichier est "attrapé" ssi une ligne FUITE de classe secret existe pour lui.
+          caught(){ grep -qE "^$1/$2\.md:[0-9]+"$'\t'"FUITE"$'\t'"(raison_sociale|module_confidentiel)$" "$OUT"; }
+
+          echo "=================================================================="
+          echo " COUVERTURE — $TOTAL marqueur(s) — rapport PAR RÉFÉRENCE (index seul)"
+          echo "=================================================================="
+          holes=0
+          for i in $(seq 1 "$TOTAL"); do
+            d=$(printf 'm%03d' "$i")
+            if caught "$d" raw; then
+              esc=""
+              if [ "${WITH_VARIANTS}" = "true" ]; then
+                for v in upper lower punct spaced dashswap; do
+                  caught "$d" "$v" || esc="$esc $v"
+                done
+              fi
+              if [ -n "$esc" ]; then
+                printf ' marqueur #%-3s : ATTRAPÉ (brut) — ÉCHAPPE en :%s\n' "$i" "$esc"
+                # 'spaced'/'dashswap' seuls = généralement bénin ; casse/ponctuation = vrai trou
+                case "$esc" in *upper*|*lower*|*punct*) holes=$((holes+1)) ;; esac
+              else
+                printf ' marqueur #%-3s : ATTRAPÉ — toutes variantes couvertes\n' "$i"
+              fi
+            else
+              printf ' marqueur #%-3s : *** NON ATTRAPÉ (même brut) ***\n' "$i"
+              holes=$((holes+1))
+            fi
+          done
+          echo "------------------------------------------------------------------"
+          echo " Marqueurs avec un trou significatif (brut, ou variante casse/ponctuation) : $holes / $TOTAL"
+          echo " (variante 'spaced'/'dashswap' seule qui échappe = éclatement non réaliste, bénin)"
+          echo "=================================================================="
+
+          rm -rf "$WORK"
+          if [ "$holes" -gt 0 ]; then
+            echo "::error::$holes marqueur(s) non couvert(s) de façon significative — voir le tableau."
+            exit 1
+          fi
+          echo "Tous les marqueurs sont couverts (brut + variantes casse/ponctuation)."
