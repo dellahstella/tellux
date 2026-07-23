@@ -335,6 +335,7 @@ a{color:inherit;}
 .mr-legal-content p:last-child{margin-bottom:0;}
 .mr-legal-content a{color:var(--tyrrh);text-decoration:none;border-bottom:1px dotted rgba(31,58,95,0.4);transition:border-color .15s;}
 .mr-legal-content a:hover{border-bottom-color:var(--tyrrh);}
+.mr-radon-oblig-disclaimer{font-size:11px;color:var(--mica);line-height:1.6;margin-top:4px;}
 
 /* Checklist enrichie */
 .mr-step-desc{font-style:normal;}
@@ -509,6 +510,15 @@ a{color:inherit;}
         <div id="mr-atyp-body"></div>
       </section>
     </div>
+
+    <!-- Bloc Radon — obligations & ressources (plein-largeur, actif quand commune selectionnee, contenu genere selon la zone) -->
+    <section class="mr-etab-section" id="mr-radon-oblig-section" aria-labelledby="mr-radon-oblig-title" hidden>
+      <div class="mr-etab-header">
+        <h3 class="mr-etab-title" id="mr-radon-oblig-title">Radon — obligations &amp; ressources</h3>
+      </div>
+      <p class="mr-etab-lead">Ce que prévoient les textes pour votre commune, selon sa zone à potentiel radon (ASNR). Relais du droit en vigueur ; ne constitue pas un conseil juridique.</p>
+      <div id="mr-radon-oblig-body"></div>
+    </section>
 
   </section>
 
@@ -2001,19 +2011,24 @@ a{color:inherit;}
 
   function renderGeoAtypForCommune(commune){
     var wrap = document.getElementById('mr-geo-atyp-wrap');
+    var radonObligSection = document.getElementById('mr-radon-oblig-section');
     if (!wrap) return;
     if (!commune){
       wrap.hidden = true;
+      if (radonObligSection) radonObligSection.hidden = true;
       return;
     }
     wrap.hidden = false;
+    if (radonObligSection) radonObligSection.hidden = false;
 
     var geoBody = document.getElementById('mr-geophys-body');
     var atypBody = document.getElementById('mr-atyp-body');
+    var radonObligBody = document.getElementById('mr-radon-oblig-body');
     if (!geoBody || !atypBody) return;
 
     geoBody.innerHTML = '<div class="mr-geophys-loading">Chargement...</div>';
     atypBody.innerHTML = '';  // le bloc atypiques n'a besoin d'aucun chargement
+    if (radonObligBody) radonObligBody.innerHTML = '<div class="mr-geophys-loading">Chargement...</div>';
 
     // Lancer les chargements si necessaire
     Promise.all([
@@ -2024,6 +2039,7 @@ a{color:inherit;}
       if (selectedCommune && selectedCommune.code_insee === commune.code_insee){
         renderGeophys(commune);
         renderAtypiques(commune);
+        renderRadonObligations(commune);
       }
     });
   }
@@ -2126,6 +2142,48 @@ a{color:inherit;}
     linksHtml += '</div>';
 
     body.innerHTML = '<div class="mr-geophys-items">' + items.join('') + '</div>' + linksHtml;
+  }
+
+  // Resolution de la zone radon d'une commune (meme regle que renderGeophys :
+  // categorie du geojson si listee, sinon zone 1 par defaut).
+  function getRadonZone(code_insee){
+    var info = radonData ? radonData[code_insee] : null;
+    return info ? info.categorie : 1;
+  }
+
+  var RADON_OBLIG_DISCLAIMER = '<p class="mr-radon-oblig-disclaimer"><em>Ce contenu relaie le droit en vigueur ; il ne s\'y substitue pas et ne constitue pas un conseil juridique. Sources à vérifier à la date de consultation.</em></p>';
+
+  var RADON_OBLIG_RESSOURCES = '<p><strong>Ressources et kits de mesure.</strong> Le Plan régional santé environnement de Corse identifie les mairies comme relais privilégié de distribution des kits de dépistage gratuits (campagne <a href="https://qualitair.corsica/radon-des-kits-de-mesure-gratuits-pour-proteger-votre-sante/" target="_blank" rel="noopener noreferrer">PRIMAIR / Qualitair Corse</a>, ADEME). Des référentiels complets sont disponibles auprès de l\'<a href="https://reglementation-controle.asnr.fr/information/dossiers-pedagogiques/le-radon-et-les-professionnels" target="_blank" rel="noopener noreferrer">ASNR</a> (mesurage, FAQ ERP) et de l\'<a href="https://www.corse.ars.sante.fr/le-risque-radon" target="_blank" rel="noopener noreferrer">ARS Corse</a>.</p>';
+
+  function renderRadonObligations(commune){
+    var body = document.getElementById('mr-radon-oblig-body');
+    if (!body) return;
+    var zone = getRadonZone(commune.code_insee);
+    var html;
+
+    if (zone === 3){
+      html = '<div class="mr-legal-content">' +
+        '<p><strong>Mesurage dans les établissements recevant du public.</strong> Pour les établissements recevant du public listés à l\'article D.1333-32 du code de la santé publique (établissements d\'enseignement, accueil collectif d\'enfants de moins de six ans, établissements sanitaires ou sociaux avec hébergement, établissements thermaux, établissements pénitentiaires), l\'article <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915" target="_blank" rel="noopener noreferrer">R.1333-33 du code de la santé publique</a> prévoit un mesurage de l\'activité volumique du radon à la charge du propriétaire (ou de l\'exploitant si une convention le prévoit), renouvelé tous les dix ans et après toute intervention modifiant la ventilation ou l\'étanchéité du bâtiment. Une commune est typiquement propriétaire de ses écoles et de ses crèches.</p>' +
+        '<p><strong>En cas de dépassement du niveau de référence.</strong> Si le résultat dépasse 300 Bq/m³, l\'<a href="https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000038219644" target="_blank" rel="noopener noreferrer">arrêté du 26 février 2019</a> prévoit des actions correctives (ventilation, étanchéité), puis une expertise du bâtiment si le dépassement persiste ou dépasse 1 000 Bq/m³. Le texte prévoit aussi l\'affichage du résultat du mesurage près de l\'entrée principale de l\'établissement.</p>' +
+        '<p><strong>Information des acquéreurs et locataires.</strong> Cette commune est classée en zone 3 — la « zone à potentiel radon de niveau 3 » au sens du code de l\'environnement. L\'état des risques annexé à toute vente ou location d\'un bien (y compris saisonnière) doit alors mentionner ce classement, en application des articles <a href="https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074220/LEGISCTA000006176683/" target="_blank" rel="noopener noreferrer">L.125-5 et R.125-23 du code de l\'environnement</a>. Cette obligation concerne le vendeur ou le bailleur, pas la commune — mais la mairie est souvent le premier guichet questionné par les administrés. La fiche officielle du bien est disponible sur <a href="https://www.georisques.gouv.fr/" target="_blank" rel="noopener noreferrer">georisques.gouv.fr</a>.</p>' +
+        RADON_OBLIG_RESSOURCES +
+        RADON_OBLIG_DISCLAIMER +
+        '</div>';
+    } else if (zone === 2){
+      html = '<div class="mr-legal-content">' +
+        '<p><strong>Mesurage dans les établissements recevant du public.</strong> L\'article <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915" target="_blank" rel="noopener noreferrer">R.1333-33 du code de la santé publique</a> prévoit un mesurage obligatoire du radon dans les établissements recevant du public listés à l\'article D.1333-32 (écoles, crèches, établissements sanitaires ou sociaux avec hébergement…) en zone 3. En zone 2, comme celle-ci, cette obligation ne s\'applique que si des mesures déjà réalisées dans l\'établissement ont dépassé le niveau de référence de 300 Bq/m³ — elle n\'est pas systématique ici.</p>' +
+        '<p><strong>Information des acquéreurs et locataires.</strong> L\'obligation d\'information sur le radon dans l\'état des risques (<a href="https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074220/LEGISCTA000006176683/" target="_blank" rel="noopener noreferrer">L.125-5 et R.125-23 du code de l\'environnement</a>) vise spécifiquement les communes classées en « zone à potentiel radon de niveau 3 », c\'est-à-dire la zone 3 au sens de l\'arrêté du 27 juin 2018. Cette commune, classée zone 2, n\'entre pas dans ce périmètre : cette mention ne s\'applique pas ici.</p>' +
+        RADON_OBLIG_RESSOURCES +
+        RADON_OBLIG_DISCLAIMER +
+        '</div>';
+    } else {
+      html = '<div class="mr-legal-content">' +
+        '<p>Cette commune est classée en zone 1 (potentiel radon faible). Aucune obligation réglementaire spécifique au radon ne s\'applique de façon systématique à ce niveau de zonage. L\'article <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915" target="_blank" rel="noopener noreferrer">R.1333-33 du code de la santé publique</a> prévoit, à titre exceptionnel et quelle que soit la zone, un mesurage dans les établissements recevant du public si des mesures déjà réalisées ont dépassé le niveau de référence de 300 Bq/m³.</p>' +
+        RADON_OBLIG_RESSOURCES +
+        RADON_OBLIG_DISCLAIMER +
+        '</div>';
+    }
+    body.innerHTML = html;
   }
 
   function renderAtypiques(commune){
