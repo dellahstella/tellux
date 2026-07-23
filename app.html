@@ -1033,10 +1033,16 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 }
 @keyframes badgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
 
-/* === Phase 2 — Layout desktop sidebar fixe (≥ 1200px) === */
+/* === Phase 2 — Layout desktop sidebar fixe (≥ 1024px) === */
+/* Seuil abaisse de 1200 a 1024px (diagnostic 22/07) : en dessous de 1200px,
+   #map retombait sur l'ancien layout empile + hauteur fixe 520px, non
+   conscient de la hauteur de viewport — deborde sur fenetre courte
+   (~1024x640 type partage d'ecran Teams). Le mecanisme desktop existant
+   (setDesktopMapHeight, JS) est deja correctement height-aware ; on
+   etend simplement son seuil d'activation. */
 /* Bouton réduire sidebar — caché par défaut (mobile) */
 .sidebar-toggle{display:none;}
-@media (min-width:1200px){
+@media (min-width:1024px){
   body{max-width:none;padding:16px 24px;}
   .map-wrap{
     display:flex;
@@ -1636,7 +1642,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <span style="color:rgba(245,240,231,.65);font-style:italic">Usage exploratoire, aucune signification physique ni sanitaire. Pond&#233;rations provisoires.</span>
   <button onclick="closeExpertMode()" style="margin-left:auto;background:none;border:none;color:rgba(245,240,231,.7);cursor:pointer;font-size:12px;flex-shrink:0" aria-label="D&#233;sactiver le mode Expertise">&#10005;</button>
 </div>
-<div class="op-row" id="geo-op-row"><span>Géologie</span><input type="range" min="0.1" max="1" step="0.05" value="0.6" oninput="wmsGeo.setOpacity(+this.value)"><span id="geo-op-v">60%</span></div>
+<div class="op-row" id="geo-op-row"><span>Géologie</span><input type="range" min="0.1" max="1" step="0.05" value="0.6" oninput="_geoOpacityUserSet=true;wmsGeo.setOpacity(+this.value);document.getElementById('geo-op-v').textContent=Math.round(this.value*100)+'%'"><span id="geo-op-v">60%</span></div>
 <div class="op-row" id="hyd-op-row"><span>Nappes</span><input type="range" min="0.1" max="1" step="0.05" value="0.55" oninput="wmsHyd.setOpacity(+this.value)"><span id="hyd-op-v">55%</span></div>
 <div class="op-row" id="emag-op-row"><span>Fond magnétique régional</span><input type="range" min="0.1" max="0.8" step="0.05" value="0.5" oninput="wmsEmag.setOpacity(+this.value)"><span id="emag-op-v">50%</span></div>
 <div id="map"></div>
@@ -2256,11 +2262,31 @@ L.control.layers(_baseLayers,null,{position:'topright',collapsed:true}).addTo(ma
 
 // Labels CartoDB : actifs uniquement avec le fond Carte claire.
 // IGN Plan / Ortho ont leur propre toponymie intégrée.
+let _geoOpacityUserSet=false; // passe a true des que l'utilisateur touche le slider #geo-op-row — plus jamais ecrase ensuite
+const GEO_OPACITY_DEFAULT=0.6, GEO_OPACITY_ORTHO=0.85;
+function _setGeoOpacitySlider(v){
+  const inp=document.querySelector('#geo-op-row input[type=range]');
+  const lbl=document.getElementById('geo-op-v');
+  if(inp)inp.value=v;
+  if(lbl)lbl.textContent=Math.round(v*100)+'%';
+}
 map.on('baselayerchange',function(e){
   if(e.layer===_tileBase){
     if(_tileLabels&&!map.hasLayer(_tileLabels))map.addLayer(_tileLabels);
   }else{
     if(_tileLabels&&map.hasLayer(_tileLabels))map.removeLayer(_tileLabels);
+  }
+  // Bump auto de l'opacite geologie sur fond IGN Ortho : a 60%, les teintes
+  // pastel de la couche geologie se distinguent mal sur l'orthophoto dense
+  // (diagnostic 22/07). N'ecrase jamais un reglage manuel de l'utilisateur.
+  if(!_geoOpacityUserSet&&typeof wmsGeo!=='undefined'){
+    if(e.layer===_tileIGNOrtho){
+      wmsGeo.setOpacity(GEO_OPACITY_ORTHO);
+      _setGeoOpacitySlider(GEO_OPACITY_ORTHO);
+    }else{
+      wmsGeo.setOpacity(GEO_OPACITY_DEFAULT);
+      _setGeoOpacitySlider(GEO_OPACITY_DEFAULT);
+    }
   }
 });
 const wmsGeo=L.tileLayer.wms('https://geoservices.brgm.fr/geologie',{layers:'GEOLOGIE',format:'image/png',transparent:true,opacity:0.6,zIndex:2});
@@ -7831,9 +7857,9 @@ async function saveObservation(){
   }
 }
 
-/* === Phase 2 — Layout desktop sidebar fixe (≥ 1200px) === */
+/* === Phase 2 — Layout desktop sidebar fixe (≥ 1024px) === */
 (function(){
-  var DESKTOP_MQ = window.matchMedia('(min-width:1200px)');
+  var DESKTOP_MQ = window.matchMedia('(min-width:1024px)');
   var BOTTOM_MARGIN_PX = 24;
 
   function setDesktopMapHeight(){
