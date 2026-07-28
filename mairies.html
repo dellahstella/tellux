@@ -92,6 +92,11 @@ a{color:inherit;}
 .mr-commune-selected{margin-top:12px;font-family:var(--fm);font-size:11px;color:var(--ocre);}
 .mr-commune-selected.empty{display:none;}
 
+/* ACCUEIL MODULE — visible uniquement quand aucune commune n'est sélectionnée */
+.mr-corse-overview{background:var(--pierre);border:1px solid var(--brume);border-radius:10px;padding:20px 24px;max-width:640px;margin-top:16px;}
+.mr-corse-overview-lead{font-size:13px;color:var(--ardoise);line-height:1.6;margin:0 0 16px;}
+.mr-corse-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+
 /* CORPS PRINCIPAL */
 .mr-main{max-width:1040px;margin:0 auto;padding:48px 40px 24px;}
 
@@ -380,7 +385,7 @@ a{color:inherit;}
   .mr-modal-body{grid-template-columns:1fr;}
   .mr-modal-form{border-right:none;border-bottom:1px solid var(--border);max-height:45vh;}
   .mr-modal-preview{max-height:45vh;}
-  .mr-antennes-kpis, .mr-etab-kpis{grid-template-columns:repeat(2,1fr);}
+  .mr-antennes-kpis, .mr-etab-kpis, .mr-corse-kpis{grid-template-columns:repeat(2,1fr);}
 }
 @media (max-width:768px){
   .mr-nav{padding:12px 20px;}
@@ -476,6 +481,16 @@ a{color:inherit;}
       <div id="mr-commune-hint" class="mr-commune-hint">Sélection parmi les 360 communes de Corse.</div>
       <div id="mr-commune-selected" class="mr-commune-selected empty"></div>
     </div>
+
+    <!-- État vide (aucune commune sélectionnée) : accueil du module + aperçu Corse entière -->
+    <section class="mr-corse-overview" id="mr-corse-overview">
+      <p class="mr-corse-overview-lead">Tellux Mairies est l'outillage administratif et réglementaire de Tellux pour les communes de Corse : fiche de synthèse par commune sur l'exposition électromagnétique, modèles de courriers prêts à l'emploi et rappel du cadre légal applicable. <strong>Choisissez votre commune</strong> dans le champ ci-dessus pour afficher sa fiche — en attendant, un aperçu à l'échelle de la Corse :</p>
+      <div class="mr-corse-kpis" id="mr-corse-kpis">
+        <div class="mr-kpi"><div class="mr-kpi-value" id="mr-corse-kpi-communes">—</div><div class="mr-kpi-label">Communes couvertes</div></div>
+        <div class="mr-kpi"><div class="mr-kpi-value" id="mr-corse-kpi-antennes">—</div><div class="mr-kpi-label">Supports ANFR recensés</div><div class="mr-kpi-small" id="mr-corse-kpi-antennes-sub"></div></div>
+        <div class="mr-kpi"><div class="mr-kpi-value" id="mr-corse-kpi-radon">—</div><div class="mr-kpi-label">Communes en zone à potentiel radon (ASNR)</div><div class="mr-kpi-small" id="mr-corse-kpi-radon-sub"></div></div>
+      </div>
+    </section>
 
     <!-- Bloc Antennes (plein-largeur, actif quand commune selectionnee) -->
     <section class="mr-antennes-section" id="mr-antennes-section" aria-labelledby="mr-antennes-title" hidden>
@@ -856,6 +871,8 @@ a{color:inherit;}
 
   function setSelectedCommune(commune, updateUrl){
     selectedCommune = commune;
+    var overview = document.getElementById('mr-corse-overview');
+    if (overview) overview.hidden = !!commune;
     var info = document.getElementById('mr-commune-selected');
     var ficheTitle = document.getElementById('mr-fiche-title');
     if (commune){
@@ -1991,6 +2008,33 @@ a{color:inherit;}
     return radonLoadPromise;
   }
 
+  // Aperçu Corse entière (état vide, aucune commune sélectionnée) : lit les
+  // compteurs déjà présents dans les datasets chargés, aucun calcul lourd.
+  function updateCorseOverviewStats(){
+    var elCommunes = document.getElementById('mr-corse-kpi-communes');
+    if (elCommunes && communesData) elCommunes.textContent = String(communesData.length);
+
+    var elAnt = document.getElementById('mr-corse-kpi-antennes');
+    var elAntSub = document.getElementById('mr-corse-kpi-antennes-sub');
+    if (elAnt && antennesData && antennesData._meta){
+      elAnt.textContent = String(antennesData._meta.n_supports_total);
+      if (elAntSub) elAntSub.textContent = 'sur ' + antennesData._meta.n_communes_avec_antenne + ' communes';
+    }
+
+    var elRadon = document.getElementById('mr-corse-kpi-radon');
+    var elRadonSub = document.getElementById('mr-corse-kpi-radon-sub');
+    if (elRadon && radonData){
+      var zone3 = 0, zone2 = 0;
+      Object.keys(radonData).forEach(function(k){
+        var cat = radonData[k].categorie;
+        if (cat === 3) zone3++;
+        else if (cat === 2) zone2++;
+      });
+      elRadon.textContent = String(zone3 + zone2);
+      if (elRadonSub) elRadonSub.textContent = 'zone 3 : ' + zone3 + ' · zone 2 : ' + zone2;
+    }
+  }
+
   // Chargement failles : 8 failles principales Corse via Supabase.
   var faillesData = null;
   var faillesLoadPromise = null;
@@ -2281,24 +2325,12 @@ a{color:inherit;}
     initModalDismiss();
     Promise.all([loadCommunes(), loadTemplates()]).then(function(){
       applyUrlCommune();
-      if (!selectedCommune && communesData) {
-        var bastia = communesData.find(function(c){
-          return c.code_insee === '2B033';
-        });
-        if (bastia) {
-          var input = document.getElementById('mr-commune-input');
-          if (input) input.value = bastia.nom + ' (2B)';
-          setSelectedCommune(bastia, false);
-          renderAntennesForCommune(bastia);
-          renderEtabForCommune(bastia);
-          renderGeoAtypForCommune(bastia);
-        }
-      }
+      updateCorseOverviewStats();
     });
     // Chargement anticipe (non bloquant) des datasets Fiche commune
-    loadAntennes().catch(function(){ /* silencieux, retry possible depuis UI */ });
+    loadAntennes().then(updateCorseOverviewStats).catch(function(){ /* silencieux, retry possible depuis UI */ });
     loadEtablissements().catch(function(){ /* silencieux, retry possible depuis UI */ });
-    loadRadon().catch(function(){ /* silencieux */ });
+    loadRadon().then(updateCorseOverviewStats).catch(function(){ /* silencieux */ });
     loadFailles().catch(function(){ /* silencieux */ });
   });
 
