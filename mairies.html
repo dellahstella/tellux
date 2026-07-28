@@ -662,7 +662,6 @@ a{color:inherit;}
       <a href="/app.html">Application carte</a>
       <a href="/mairies.html">Outils mairies</a>
       <a href="/#ressources">Ressources</a>
-      <span aria-hidden="true">|</span>
       <a href="/mentions-legales.html">Mentions légales &amp; confidentialité</a>
       <a href="/transparence.html">Transparence</a>
     </div>
@@ -889,6 +888,22 @@ a{color:inherit;}
     input.addEventListener('change', function(){
       var commune = findCommuneByInput(input.value);
       setSelectedCommune(commune, true);
+    });
+    // Chrome/Firefox n'ouvrent plus le <datalist> au clic quand la valeur du
+    // champ correspond déjà exactement à une option (comportement natif du
+    // <input list>). On vide temporairement au focus pour forcer la réouverture,
+    // et on restaure si l'utilisateur ressort sans rien taper.
+    input.addEventListener('focus', function(){
+      if (input.value && findCommuneByInput(input.value)){
+        input.dataset.mrPrevValue = input.value;
+        input.value = '';
+      }
+    });
+    input.addEventListener('blur', function(){
+      if (!input.value && input.dataset.mrPrevValue){
+        input.value = input.dataset.mrPrevValue;
+        delete input.dataset.mrPrevValue;
+      }
     });
   }
 
