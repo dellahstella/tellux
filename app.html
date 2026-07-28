@@ -1955,7 +1955,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 </div>
 
 <!-- Module déplacé hors de ce fichier — code JS dormant purgé 2026-06-03.
-     calcSimDelta (stub neutre, retourne 0) conservé ;
+     calcSimDelta (stub neutre, retournait 0) supprimé sans effet (audit R-M-I-C-C 2026-07-26) ;
      calcN_RF (20 antennes hardcodées) remplacé par RF_field/ANFR (refonte RF étape 2/3). -->
 
 <!-- PANNEAU MODE PROSPECTEUR TERRAIN -->
@@ -4312,68 +4312,6 @@ async function calibrateRF(){
   }catch(e){ console.warn('[Tellux] calibration RF échec : '+e.message+' — k reste 1'); }
 }
 
-// ============================================================
-// DEPRECATED v2 phase 1 — 2026-04-19
-// calcHuman() mêlait ELF 50 Hz et RF sans séparation physique.
-// Remplacé par calcMagneticELF() + calcRF() (refactor pur, mêmes formules).
-// Le tableau des 20 points antennes/postes HT codés en dur a été supprimé :
-//   il prédate l'intégration ANFR complète et introduisait un double-comptage.
-// Conservation nécessaire jusqu'à la migration calcAll() (Tâche 4.5).
-// ============================================================
-function calcHuman(lat,lon){
-  let p=0;
-  // [SUPPRIMÉ v2] tableau 20 points antennes/postes HT codés en dur
-  // Ces points dataient d'avant l'intégration ANFR et doublonnaient HTA_SEGS.
-  // Voir calcMagneticELF() pour la version refactorée.
-
-  // === LIGNES HTA/HTB RÉELLES — Réseau EDF SEI Corse ===
-  const htFactor=(typeof chargeFacteur!=='undefined'?chargeFacteur:1.0);
-  const MU0_OVER_2PI=2e-7;
-  const HTA_SEGS=[[[41.919,8.738],[42.05,8.82],[42.154,9.193],[42.4,9.35],[42.562,9.431]],[[41.919,8.738],[41.86,9.0],[41.73,9.2],[41.578,9.267]],[[42.562,9.431],[42.65,9.45],[42.703,9.45]],[[41.919,8.738],[42.1,8.75],[42.33,8.7],[42.567,8.758]],[[42.154,9.193],[42.3,9.25],[42.45,9.38],[42.562,9.431]],[[42.562,9.431],[42.3,9.4],[42.1,9.5],[41.86,9.44]],[[41.387,9.159],[41.5,9.2],[41.578,9.267]],[[42.562,9.431],[42.62,9.45]]];
-  const HTA_I=[300,200,150,150,80,60,450,250];
-  HTA_SEGS.forEach((seg,si)=>{
-    const I=HTA_I[si]*htFactor;
-    for(let i=0;i<seg.length-1;i++){
-      const a=seg[i],b=seg[i+1];
-      const A=lat-a[0],B=lon-a[1],C=b[0]-a[0],D=b[1]-a[1];
-      const t=Math.max(0,Math.min(1,(A*C+B*D)/(C*C+D*D)));
-      const d=dist(lat,lon,a[0]+t*C,a[1]+t*D);
-      const d_m=Math.max(50,d*1000);
-      const B_nT=MU0_OVER_2PI*I/d_m*1e9;
-      if(B_nT>0.5)p+=Math.min(B_nT,600);
-    }
-  });
-
-  // === SITES DE PRODUCTION ÉLECTRIQUE ===
-  PROD_ELECTRIQUE.forEach(s=>{
-    if(s.puissance<0.5)return;
-    const d=dist(lat,lon,s.lat,s.lon);
-    const d_m=Math.max(100,d*1000);
-    const I_equiv=Math.sqrt(s.puissance)*50;
-    const B_nT=MU0_OVER_2PI*I_equiv/d_m*1e9;
-    if(B_nT>0.5)p+=Math.min(B_nT,400);
-  });
-
-  // === RÉSEAU BT URBAIN ===
-  const BT_ZONES=[[41.919,8.738,80],[42.703,9.45,70],[41.578,9.267,50],[42.567,8.758,45],[42.154,9.193,40],[42.631,8.937,35],[41.387,9.159,35],[42.562,9.431,60],[41.678,8.905,30]];
-  BT_ZONES.forEach(([a,b,intensity])=>{
-    const d=dist(lat,lon,a,b);
-    if(d<0.2)p+=intensity*(1-d/0.2);
-    else if(d<0.5)p+=intensity*0.3*(1-(d-0.2)/0.3);
-  });
-
-  // === FAISCEAUX HERTZIENS ===
-  FH_POINTS.forEach(([a,b,name,intensity])=>{
-    const d=dist(lat,lon,a,b);
-    if(d<1.5)p+=intensity*(1-d/1.5);else if(d<4)p+=intensity*0.2*(1-(d-1.5)/2.5);
-  });
-
-  // Fond de bruit départemental (densité sites CartoRadio)
-  const dept=lat<42.0?'2A':'2B';
-  const densityBonus=Math.round(DENSITY[dept].fh*8);
-  p+=densityBonus;
-  return Math.round(p);
-}
 // ─── calcWater — Contexte hydrologique ──────────────────────────────────────
 // Retourne un proxy de la conductivité hydrique locale (unité arbitraire, 0-∞).
 // Utilisé comme modulateur de contexte substrat — PAS un indicateur sanitaire.
@@ -4480,7 +4418,8 @@ function calcAll_v2(lat, lon, options) {
 //
 // CHANGEMENT DE SÉMANTIQUE (migration phase 2) :
 //   .human était = calcHuman (ELF + RF mélangés) + calcSimDelta
-//   .human est maintenant = v2.domains.magnetic.elf.B_total_nT + calcSimDelta
+//   .human est maintenant = v2.domains.magnetic.elf.B_total_nT
+//   (calcSimDelta était un stub retournant toujours 0 ; supprimé sans effet, cf. audit R-M-I-C-C 2026-07-26)
 //   → La contribution RF (FH_POINTS) n'est plus incluse dans .human,
 //     elle est disponible dans .v2.domains.rf.S_total_uW_m2
 //   → Delta maximal ≈ 50–200 nT sur cols/crêtes (contribution FH proche)
@@ -4490,7 +4429,7 @@ function calcAll_v2(lat, lon, options) {
 function calcAll(lat,lng,options){
   const v2 = calcAll_v2(lat,lng,options);
   // Legacy fields dérivés de v2 (une seule computation)
-  const human    = v2.domains.magnetic.elf.B_total_nT + calcSimDelta(lat,lng);
+  const human    = v2.domains.magnetic.elf.B_total_nT;
   const water    = v2.context.water.value;
   const geo      = v2.context.substrate.susceptibility_nT;
   // v8 : contexte patrimoine extrait vers patrimoine.html — legacy heritage = 0
@@ -4940,7 +4879,7 @@ const SIGMA_ROCK={
 //   Ce n'est PAS une mesure terrain — la conductivité σ est estimée depuis
 //   le type de roche (SIGMA_ROCK), lui-même interpolé sur grille grossière.
 //   Confiance : MEDIUM pour l'ordre de grandeur ; LOW pour la valeur exacte.
-//   Statut : conservé (utilisé par calcDecomposition, hypothèses, popup terrain).
+//   Statut : conservé (utilisé par le popup terrain, hypothèses).
 // ────────────────────────────────────────────────────────────────────────────
 function calcSkinDepth(lat,lon){
   const t=getGeoType(lat,lon);
@@ -5048,23 +4987,6 @@ function calcFaultProximity(lat, lon) {
     }
   }
   return bonus;
-}
-
-// ═══ Décomposition multi-échelle : Crustal (régional) vs Local ═══
-// Crustal = EMAG2v3 ou LCS1 (longueurs d'onde >50km, profondeur crustale)
-// Local = GEO_SUSC + ELF anthropique + Hydro (longueurs d'onde <5km, surface)
-function calcDecomposition(lat,lon){
-  const crustal=calcLCS1(lat,lon); // EMAG2v3 si dispo, sinon LCS1 estimé
-  const localGeo=calcGeoSusc(lat,lon);
-  // Migré v2 : human = B_total_nT ELF 50Hz ; water = proxy conductivité hydrique
-  const v2=calcAll_v2(lat,lon);
-  const human=v2.domains.magnetic.elf.B_total_nT; // nT, champ ELF anthropique
-  const water=v2.context.water.value;             // proxy hydrique
-  const susc_nT=v2.context.substrate.susceptibility_nT; // nT, susceptibilité locale BRGM
-  const skinD=calcSkinDepth(lat,lon);
-  const tellPct=v2.context.telluric.value; // % champ secondaire tellurique
-  return {crustal,localGeo,human,water,susc_nT,skinD,tellPct,
-    total:crustal+localGeo+human+Math.round(water*0.3)};
 }
 
 function showInterp(lat,lng,igrf,human,water,score,delta){
@@ -6430,10 +6352,6 @@ document.addEventListener('DOMContentLoaded', function() {
 // pôles urbains, ~99 % des antennes ANFR manquantes) sont remplacées par la géométrie réelle
 // des ~3000 antennes ANFR dans RF_field(). Plus aucun appelant.
 
-// Stub neutre — module déplacé hors de ce fichier (2026-06-03).
-// calcSimDelta est appelée par calcAll() ; on retourne 0 pour ne perturber
-// aucun calcul nT côté app.html (aucun objet simulé n'est plus posable ici).
-function calcSimDelta(lat,lon){return 0;}
 
 // Météo locale — pression et humidité influencent la propagation RF
 // Source : ITU-R P.453 (réfractivité troposphérique)
