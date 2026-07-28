@@ -289,6 +289,12 @@ a{color:inherit;}
 .mr-citoyen-sub{font-size:14px;color:var(--mica);max-width:640px;line-height:1.7;margin-bottom:28px;}
 .mr-citoyen-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
 
+/* SECTION RADON — regroupée par public, amorce D2 (D4) */
+.mr-courrier-radon{margin-top:48px;padding-top:32px;border-top:1px solid var(--brume);}
+.mr-courrier-radon-eyebrow{font-family:var(--fm);font-size:11px;color:var(--porphyre);letter-spacing:2px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.mr-courrier-radon-eyebrow-line{width:24px;height:1px;background:var(--porphyre);}
+.mr-courrier-radon-group-title{font-family:var(--ff);font-size:15px;font-weight:600;margin:24px 0 12px;}
+
 /* MODALE COURRIER */
 .mr-modal-backdrop{display:none;position:fixed;inset:0;background:rgba(31,35,41,0.5);z-index:100;align-items:center;justify-content:center;padding:20px;}
 .mr-modal-backdrop.open{display:flex;}
@@ -558,6 +564,30 @@ a{color:inherit;}
         </div>
       </div>
     </section>
+
+    <!-- Section radon (D4) : regroupée par public (Citoyen / Mairie / Entrepreneur), amorce D2 sans le forcer partout -->
+    <section class="mr-courrier-radon" id="courrier-radon">
+      <div class="mr-courrier-radon-eyebrow">
+        <div class="mr-courrier-radon-eyebrow-line"></div>Radon
+      </div>
+      <h2 class="mr-section-h2">Courriers radon</h2>
+      <p class="mr-section-sub">Quatre modèles pour le dépistage et le mesurage du radon. À bien distinguer : le kit de dépistage gratuit (programme PRIMAIR, Qualitair Corse, ADEME) donne une mesure indicative ; seul un mesurage réglementaire par organisme agréé ASNR fait foi pour les obligations légales. Regroupés ci-dessous par public concerné.</p>
+
+      <h3 class="mr-courrier-radon-group-title">Citoyen</h3>
+      <div class="mr-cards" id="mr-radon-citoyen-list">
+        <!-- Cards injectées en JS -->
+      </div>
+
+      <h3 class="mr-courrier-radon-group-title">Mairie</h3>
+      <div class="mr-cards" id="mr-radon-mairie-list">
+        <!-- Cards injectées en JS -->
+      </div>
+
+      <h3 class="mr-courrier-radon-group-title">Entrepreneur / employeur</h3>
+      <div class="mr-cards" id="mr-radon-entrepreneur-list">
+        <!-- Cards injectées en JS -->
+      </div>
+    </section>
   </section>
 
   <!-- ONGLET 3 : CADRE LÉGAL -->
@@ -671,7 +701,7 @@ a{color:inherit;}
 <footer class="mr-footer">
   <div class="mr-footer-inner">
     <div class="mr-footer-disclaimer">
-      <strong>Tellux est un outil d'information et de démarche administrative.</strong> Tellux ne fait pas de diagnostic sanitaire, ne se substitue pas aux mesures ANFR, ne donne pas d'avis juridique personnalisé. Les courriers générés sont des modèles que vous validez et envoyez sous votre propre responsabilité.
+      <strong>Tellux est un outil d'information et de démarche administrative.</strong> Tellux ne fait pas de diagnostic sanitaire, ne se substitue pas aux mesures officielles (champs électromagnétiques, radon), ne donne pas d'avis juridique personnalisé. Les courriers générés sont des modèles que vous validez et envoyez sous votre propre responsabilité.
     </div>
     <div class="mr-footer-links">
       <a href="/app.html">Application carte</a>
@@ -727,6 +757,20 @@ a{color:inherit;}
     { key: 'DATE', label: 'Date du courrier', placeholder: 'Ex. 24 avril 2026', type: 'text', autofill: 'today_fr' },
     { key: 'NOM DE LA COMMUNE', label: 'Nom de votre commune (destinataire)', placeholder: 'Ex. Ajaccio', type: 'text', autofill: 'commune_nom' }
   ];
+
+  var COMMON_SLOTS_ENTREPRENEUR = [
+    { key: 'RAISON SOCIALE', label: 'Raison sociale', placeholder: 'Ex. SARL Exemple', type: 'text' },
+    { key: 'ADRESSE ÉTABLISSEMENT', label: 'Adresse de l\'établissement', placeholder: 'Ex. 12 rue Fesch', type: 'text' },
+    { key: 'CODE POSTAL', label: 'Code postal', placeholder: 'Ex. 20000', type: 'text' },
+    { key: 'VILLE', label: 'Ville', placeholder: 'Ex. Ajaccio', type: 'text', autofill: 'commune_nom' },
+    { key: 'TÉLÉPHONE', label: 'Téléphone', placeholder: 'Ex. 04 95 00 00 00', type: 'text' },
+    { key: 'EMAIL', label: 'Email', placeholder: 'Ex. contact@exemple.fr', type: 'text' },
+    { key: 'DATE', label: 'Date du courrier', placeholder: 'Ex. 24 avril 2026', type: 'text', autofill: 'today_fr' }
+  ];
+
+  // Slot partagé (D4) : ajouté aux 3 slots communs ci-dessus uniquement pour
+  // les modèles domaine=radon, jamais pour les modèles EM historiques.
+  var RADON_ZONE_SLOT = { key: 'ZONE RADON', label: 'Zone à potentiel radon (ASNR)', placeholder: 'Ex. 3', type: 'text', autofill: 'radon_zone' };
 
   // ═══════════════════════════════════════════════════════════════
   // Helpers
@@ -955,10 +999,19 @@ a{color:inherit;}
 
   function renderCards(){
     if (!templatesData) return;
-    var mairieList = templatesData.templates.filter(function(t){ return t.categorie === 'mairie'; });
-    var citoyenList = templatesData.templates.filter(function(t){ return t.categorie === 'citoyen'; });
+    // Domaine EM historique (domaine absent ou != 'radon') — inchangé par D4.
+    var mairieList = templatesData.templates.filter(function(t){ return t.categorie === 'mairie' && t.domaine !== 'radon'; });
+    var citoyenList = templatesData.templates.filter(function(t){ return t.categorie === 'citoyen' && t.domaine !== 'radon'; });
     renderCategoryCards('mr-courriers-list', mairieList, 'Mairie');
     renderCategoryCards('mr-citoyens-list', citoyenList, 'Citoyen');
+
+    // Domaine radon (D4) — regroupé par public dans sa propre section.
+    var radonCitoyenList = templatesData.templates.filter(function(t){ return t.domaine === 'radon' && t.categorie === 'citoyen'; });
+    var radonMairieList = templatesData.templates.filter(function(t){ return t.domaine === 'radon' && t.categorie === 'mairie'; });
+    var radonEntrepreneurList = templatesData.templates.filter(function(t){ return t.domaine === 'radon' && t.categorie === 'entrepreneur'; });
+    renderCategoryCards('mr-radon-citoyen-list', radonCitoyenList, 'Citoyen');
+    renderCategoryCards('mr-radon-mairie-list', radonMairieList, 'Mairie');
+    renderCategoryCards('mr-radon-entrepreneur-list', radonEntrepreneurList, 'Entrepreneur');
   }
 
   function renderCategoryCards(containerId, list, kind){
@@ -985,7 +1038,10 @@ a{color:inherit;}
   // ═══════════════════════════════════════════════════════════════
 
   function commonSlotsFor(tpl){
-    return tpl.categorie === 'mairie' ? COMMON_SLOTS_MAIRIE : COMMON_SLOTS_CITOYEN;
+    var base = tpl.categorie === 'mairie' ? COMMON_SLOTS_MAIRIE
+      : tpl.categorie === 'entrepreneur' ? COMMON_SLOTS_ENTREPRENEUR
+      : COMMON_SLOTS_CITOYEN;
+    return tpl.domaine === 'radon' ? base.concat([RADON_ZONE_SLOT]) : base;
   }
 
   function openModal(tpl){
@@ -999,7 +1055,9 @@ a{color:inherit;}
     var form = document.getElementById('mr-modal-form');
     if (!modal || !title || !intro || !form) return;
 
-    eyebrow.textContent = tpl.categorie === 'mairie' ? 'Courrier mairie · ' + tpl.destinataire_label : 'Courrier citoyen · ' + tpl.destinataire_label;
+    eyebrow.textContent = tpl.categorie === 'mairie' ? 'Courrier mairie · ' + tpl.destinataire_label
+      : tpl.categorie === 'entrepreneur' ? 'Courrier entrepreneur · ' + tpl.destinataire_label
+      : 'Courrier citoyen · ' + tpl.destinataire_label;
     title.textContent = tpl.titre;
     intro.textContent = tpl.intro_card;
 
@@ -1009,7 +1067,9 @@ a{color:inherit;}
     var commonSlots = commonSlotsFor(tpl);
     var commonTitle = document.createElement('div');
     commonTitle.className = 'mr-modal-form-title';
-    commonTitle.textContent = tpl.categorie === 'mairie' ? 'Informations mairie' : 'Vos coordonnées';
+    commonTitle.textContent = tpl.categorie === 'mairie' ? 'Informations mairie'
+      : tpl.categorie === 'entrepreneur' ? 'Informations établissement'
+      : 'Vos coordonnées';
     form.appendChild(commonTitle);
 
     commonSlots.forEach(function(slot){
@@ -1019,6 +1079,10 @@ a{color:inherit;}
       var prefill = '';
       if (slot.autofill === 'today_fr') prefill = todayFr();
       else if (slot.autofill === 'commune_nom' && selectedCommune) prefill = selectedCommune.nom;
+      else if (slot.autofill === 'radon_zone' && selectedCommune && typeof radonData !== 'undefined' && radonData){
+        if (radonData[selectedCommune.code_insee]) prefill = String(radonData[selectedCommune.code_insee].categorie);
+        else prefill = '1';
+      }
       if (prefill){
         input.value = prefill;
         fieldValues[slot.key] = prefill;
