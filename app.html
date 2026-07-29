@@ -619,6 +619,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-bt{background:#fff8e6!important;color:#d97706!important;border-color:#f5a855!important;font-weight:500;}
 .on-failles{background:#fdf4f3!important;color:#8E2F1F!important;border-color:#c16b5a!important;font-weight:500;}
 .on-radon{background:#F5E8D0!important;color:#8a5a1e!important;border-color:#C28533!important;font-weight:500;}
+.on-radon-depots{background:#e3f2ed!important;color:#0f5a4d!important;border-color:#0f766e!important;font-weight:500;}
 .on-air{background:#E3ECF3!important;color:#2f5b7a!important;border-color:#6b8fb5!important;font-weight:500;}
 .on-openrad{background:#e7f0ee!important;color:#2f5f54!important;border-color:#4a8a7a!important;font-weight:500;}
 .on-foret{background:#eef3e9!important;color:#3F5B3A!important;border-color:#6b8a5c!important;font-weight:500;}
@@ -1555,6 +1556,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <button class="lbtn" id="b-geo" data-domains="statique" title="Carte géologique BRGM — granite, schiste, calcaire" onclick="tog('geo','on-geo',this)"><span class="sq" style="background:#1a6b5c"></span>Géologie BRGM</button>
       <button class="lbtn" id="b-failles" data-domains="statique" title="Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)" onclick="togFailles(this)"><span class="ln" style="background:#8E2F1F"></span>Failles tectoniques</button>
       <button class="lbtn" id="b-radon" data-domains="ionisant" title="Potentiel radon géologique — zones ASNR 2/3" onclick="tog('radon','on-radon',this)"><span class="sq" style="background:#C28533"></span>Radon</button>
+      <button class="lbtn" id="b-radon-depots" data-domains="ionisant" title="Dépôts radon ERP certifiés — résultats de mesurage déposés par les communes, vérifiés par Tellux avant publication. Points précis par établissement, jamais fusionnés avec le zonage 2/3." onclick="togRadonDepots(this)"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle"></span>Dépôts radon ERP (certifié)</button>
       <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Fond magnétique régional</button>
 
       <h5 class="subgroup-header">B. Contexte territorial (géologie, hydro, forêts)</h5>
@@ -2315,6 +2317,10 @@ const lPointsChaudsRadio=L.layerGroup();
 const lBT=L.layerGroup(),lAnt=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lHotRF=L.layerGroup(),lSitesRemarq=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
 const lCrustal=L.layerGroup();
 const lRadon=L.layerGroup();
+// lRadonDepots (D5) : dépôts radon ERP certifiés déposés par les communes,
+// jamais fusionné visuellement avec le zonage 2/3 (lRadon) — points précis
+// par établissement, patron visuel des mesures certifiées RF/EXEM (lCert).
+const lRadonDepots=L.layerGroup();
 // Qualitair Corse — PM2.5 moyenne annuelle modelisee 2024 (tuiles ArcGIS publiques, HTTP 200 sans
 // token verifie 2026-07-08 ; ODbL 1.0 / CC BY-SA 2.0 FR). Couche de CO-EXPOSITION affichee EN REGARD du
 // radon : mise en visualisation cote a cote, AUCUN croisement ni calcul Tellux. Raster pre-rendu
@@ -2384,6 +2390,13 @@ const LEGEND_HTML={
     '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#C28533;opacity:0.4;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Zone 3 — potentiel radon significatif</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#EDD59A;opacity:0.6;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Zone 2 — potentiel faible, facteurs géologiques particuliers</div>'+
     '<div class="leg-src">ASNR · arrêté du 27 juin 2018 · 216 en zone 3 + 37 en zone 2</div>'+
+    '</div>',
+  radonDepots:'<div class="leg-block"><b class="leg-title">Dépôts radon ERP (certifié)</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Résultats de mesurage déposés par les communes, vérifiés par Tellux</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;transform:rotate(45deg);vertical-align:middle;margin-right:4px"></span>En dessous du repère de 300 Bq/m³</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#b85c00;transform:rotate(45deg);vertical-align:middle;margin-right:4px"></span>Au-dessus du repère de 300 Bq/m³ — un repère, pas un seuil d\'alerte</div>'+
+    '<div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Point précis par établissement, jamais fusionné avec le zonage 2/3. Mesure ponctuelle certifiée, non extrapolable.</div>'+
+    '<div class="leg-src">Dépôt communal · organisme agréé ASNR · NF EN ISO 11665-4 · revue manuelle Tellux avant publication</div>'+
     '</div>',
   air:'<div class="leg-block"><b class="leg-title">Particules fines PM2,5 (air)</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Moyenne annuelle modélisée 2024 · Qualitair Corse · 200 m</div>'+
@@ -7133,6 +7146,95 @@ function _renderMesuresCertifiees() {
       });
     });
   });
+}
+
+// ═══ Dépôts radon ERP certifiés (D5) — mêmes patron visuel que lCert ═══
+// Source : table Supabase radon_depots_erp, RLS filtrant déjà côté serveur
+// (anon ne voit que statut_verification_tellux = 'publie'). Jamais fusionné
+// avec le zonage 2/3 (lRadon) : point précis par établissement, popup avec
+// provenance complète, warning permanent, repère 300 Bq/m³ (pas un verdict).
+let RADON_DEPOTS_ERP = [];
+let _radonDepotsLoadPromise = null;
+let _radonDepotsRendered = false;
+
+function loadRadonDepotsErp() {
+  if (_radonDepotsLoadPromise) return _radonDepotsLoadPromise;
+  _radonDepotsLoadPromise = (async () => {
+    try {
+      RADON_DEPOTS_ERP = await sbGet('radon_depots_erp?select=nom_etablissement,categorie_erp,commune_insee,lat,lon,valeur_moyenne_bq_m3,date_mesurage,organisme_agree_nom,organisme_agree_numero,statut_action&statut_verification_tellux=eq.publie&lat=not.is.null&lon=not.is.null');
+    } catch (e) {
+      console.warn('[Tellux] Dépôts radon ERP indisponibles : ' + e.message);
+      RADON_DEPOTS_ERP = [];
+    }
+    return RADON_DEPOTS_ERP;
+  })();
+  return _radonDepotsLoadPromise;
+}
+
+const RADON_DEPOT_CATEGORIE_LABELS = {
+  enseignement: "Établissement d'enseignement", petite_enfance: 'Accueil petite enfance (crèche)',
+  sanitaire_social_hebergement: 'Établissement sanitaire ou social avec hébergement', thermal: 'Établissement thermal',
+  penitentiaire: 'Établissement pénitentiaire', mairie: 'Bâtiment mairie', autre: 'Établissement recevant du public'
+};
+const RADON_DEPOT_STATUT_ACTION_LABELS = {
+  aucune_action_requise: 'Aucune action requise', ventilation_etancheite_engagee: 'Ventilation / étanchéité engagée',
+  expertise_complementaire_en_cours: 'Expertise complémentaire en cours'
+};
+
+function _radonDepotColor(d) {
+  return d.valeur_moyenne_bq_m3 > 300 ? '#b85c00' : '#0f766e';
+}
+
+function _radonDepotFormatPopup(d) {
+  const color = _radonDepotColor(d);
+  const repereHtml = d.valeur_moyenne_bq_m3 > 300
+    ? '<div style="font-size:11px;color:#b85c00;font-weight:600">Au-dessus du repère de 300 Bq/m³ — un repère, pas un seuil d\'alerte</div>'
+    : '<div style="font-size:11px;color:#0f766e">En dessous du repère de 300 Bq/m³</div>';
+  const actionHtml = d.statut_action
+    ? '<div style="font-size:11px;color:#0f5a4d;font-style:italic;margin-top:2px">' + (RADON_DEPOT_STATUT_ACTION_LABELS[d.statut_action] || d.statut_action) + '</div>'
+    : '';
+  return '<div class="cert-popup-header">' + d.nom_etablissement + '</div>'
+    + '<div style="font-size:11px;color:var(--tx-mica,#7B7770);margin-bottom:4px">' + (RADON_DEPOT_CATEGORIE_LABELS[d.categorie_erp] || d.categorie_erp) + '</div>'
+    + '<div class="cert-popup-badge-conforme">certifié — organisme agréé ASNR</div>'
+    + '<div class="cert-popup-value" style="color:' + color + '">' + d.valeur_moyenne_bq_m3 + ' Bq/m³</div>'
+    + repereHtml
+    + actionHtml
+    + '<div style="font-size:11px;margin-top:4px"><b>Date :</b> ' + d.date_mesurage + ' · <b>Organisme :</b> ' + d.organisme_agree_nom + '</div>'
+    + '<div style="font-size:11px"><b>Agrément :</b> ' + d.organisme_agree_numero + ' · <b>Norme :</b> NF EN ISO 11665-4</div>'
+    + '<div class="cert-popup-precision">⚠ Mesure ponctuelle certifiée, non extrapolable dans le temps ni dans l\'espace ; ne vaut pas diagnostic territorial.</div>';
+}
+
+function _renderRadonDepotsErp() {
+  if (_radonDepotsRendered) return;
+  _radonDepotsRendered = true;
+  (RADON_DEPOTS_ERP || []).forEach(d => {
+    const color = _radonDepotColor(d);
+    const icon = L.divIcon({
+      className: 'cert-icon',
+      html: '<div style="width:12px;height:12px;background:' + color + ';transform:rotate(45deg);border:2px solid #F5F0E7;box-shadow:0 1px 3px rgba(0,0,0,.35);"></div>',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    });
+    L.marker([d.lat, d.lon], { icon })
+      .bindPopup(_radonDepotFormatPopup(d), { className: 'tellux-cert-popup', maxWidth: 340, autoPan: true })
+      .addTo(lRadonDepots);
+  });
+}
+
+async function togRadonDepots(btn) {
+  if (map.hasLayer(lRadonDepots)) {
+    map.removeLayer(lRadonDepots); btn.className = 'lbtn'; showLegend('radonDepots', false); return;
+  }
+  try {
+    await loadRadonDepotsErp();
+    _renderRadonDepotsErp();
+    lRadonDepots.addTo(map);
+    btn.className = 'lbtn on-radon-depots';
+    showLegend('radonDepots', true);
+    info('Dépôts radon ERP certifiés — ' + (RADON_DEPOTS_ERP || []).length + ' établissement(s), vérifiés par Tellux avant publication', null, 5000);
+  } catch (e) {
+    info('<span style="color:var(--danger)">Dépôts radon ERP : erreur de chargement</span>', null, 5000);
+  }
 }
 
 // CHAOS-7 model reference (DTU Space, Denmark)
