@@ -73,6 +73,10 @@ Tellux pourra être étendu, à mesure que les conditions de conduite scientifiq
 
 Dépôt contributif des dossiers d'information aux maires (DIM) : les communes qui utilisent Tellux uploadent leurs DIM reçus des opérateurs. Tellux devient le premier agrégateur de DIM corses, complémentaire à CartoRadio. Documents légalement publics (obligation de mise à disposition, L.34-9-1 II D). Prérequis : espace upload authentifié mairies, stockage Supabase fichiers, interface de contribution et modération. Pipeline : courrier MAIRIE_05 → upload DIM → couche Tellux.
 
+### Dépôt ouvert des résultats de mesurage radon communaux
+
+Permettre à une commune commanditaire de déposer les résultats de ses mesurages réglementaires du radon dans les établissements recevant du public dont elle est propriétaire, agrégés ensuite par Tellux à l'échelle territoriale, en complément de la classification radon officielle déjà publiée sur `app.html` et `mairies.html`. Prérequis : espace de dépôt authentifié mairies, stockage des résultats, interface de contribution et modération. Chantier de plus grande ampleur, non engagé, à envisager après stabilisation de la phase 1.
+
 ---
 
 ## 4. Jalons
@@ -135,7 +139,29 @@ Les chantiers suivants sont suspendus en attente de la validation méthodologiqu
 
 ---
 
-## 7. Limites techniques
+## 7. Chantiers différés — module mairies (`mairies.html`)
+
+Les chantiers suivants concernent l'évolution de l'outillage communal. Ils sont tracés mais non engagés : chacun suppose un arbitrage éditorial préalable, sans calendrier public à ce stade.
+
+### Chantier 3 — Restructuration de l'onglet courrier par public
+
+- **Statut :** différé, non engagé
+- **Type :** refonte structurelle de `mairies.html`
+- **Objet :** réorganiser l'ensemble de l'onglet « Générer un courrier » par public destinataire (citoyen / mairie / entrepreneur) plutôt que par fonction, en généralisant à tout le module — y compris les courriers électromagnétiques — le regroupement par public déjà amorcé pour le seul domaine radon (PR [#959](https://github.com/dellahstella/tellux/pull/959)).
+- **État actuel :** non engagé. Le domaine radon sert de première application concrète du principe, scopée volontairement pour ne pas re-toucher tout le module en une fois.
+- **Dépendance :** arbitrage éditorial préalable sur la structure cible du module.
+
+### Chantier 4 — Ligne de présentation explicite en tête du module
+
+- **Statut :** différé, non engagé
+- **Type :** ajustement éditorial de `mairies.html`
+- **Objet :** ajouter en tête du module une ligne présentant explicitement sa fonction, en conservant l'ossature actuelle centrée sur la relation commune/mairie (pas de bascule vers un positionnement de coordination citoyenne grand public, écarté à ce stade pour des raisons de sobriété éditoriale de la phase 1).
+- **État actuel :** non engagé.
+- **Dépendance :** arbitrage éditorial préalable sur la formulation.
+
+---
+
+## 8. Limites techniques
 
 Le suivi détaillé des limites techniques ouvertes et fermées est tenu en interne.
 
