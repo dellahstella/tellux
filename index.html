@@ -489,7 +489,12 @@ if(document.readyState === 'loading'){
   if(window.matchMedia && !window.matchMedia('(min-width:769px)').matches) return;
   const NS = 'http://www.w3.org/2000/svg';
   function build(){
-    fetch('/public/data/corse_hero_geo.json', {cache:'force-cache'})
+    /* cache:'no-cache' (pas 'force-cache') — force la revalidation à chaque chargement.
+       'force-cache' réutilise indéfiniment une réponse déjà en cache navigateur SANS
+       revalider, même si le serveur envoie must-revalidate : un visiteur ayant chargé
+       la page avant une regénération du JSON restait bloqué sur l'ancienne version
+       (bug constaté 2026-08-05 — carte figée avec des trous après un fix déployé). */
+    fetch('/public/data/corse_hero_geo.json', {cache:'no-cache'})
       .then(r => r.ok ? r.json() : null)
       .then(g => {
         const communes = Array.isArray(g && g.communes) ? g.communes : (g && Array.isArray(g.radon) ? g.radon : null);
