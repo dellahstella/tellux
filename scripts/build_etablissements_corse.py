@@ -47,12 +47,17 @@ Version : 1.0
 Date    : 24 avril 2026
 Auteur  : session Cowork Tellux
 
-ALERTE VEILLE FINESS ETE 2026
------------------------------
-La DREES a annonce une nouvelle version de FINESS a l'ete 2026, avec arret
-du flux actuel. Si ce script cesse de fonctionner apres juillet 2026, reevaluer
-la section download_finess() et le mapping MAPPING_FINESS. Ouvrir un ticket
-de suivi entre juin et septembre 2026.
+CONSTAT VEILLE FINESS (2026-08-05) — bascule confirmee, pas encore appliquee
+-----------------------------------------------------------------------------
+La veille programmee ci-dessus a abouti : FINESS+ deploye le 20/07/2026,
+flux legacy (etalab-cs1100507, consomme ci-dessous par download_finess())
+fige depuis le 04/05/2026 — ce script continue de tourner SANS erreur mais
+sur des donnees qui ne seront plus jamais mises a jour. Remplacement
+officiel = finess-structures-1 + finess-activites-1 (data.gouv.fr), format
+JSON (pas CSV), geoloc restructuree, equivalent categetab/libcategetab non
+identifie cote structure (probablement activite, a verifier a la bascule).
+Detail complet + travail estime : ticket FINESS-BASCULE-001
+(tellux-corpus-internal/docs/internal/DETTES_TECHNIQUES.md, prive).
 
 NOTE IMPORTANTE POUR L'UTILISATEUR
 ----------------------------------
