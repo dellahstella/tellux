@@ -79,7 +79,6 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 .lp-map-sim{background:#1a2228;border-radius:8px;height:320px;position:relative;overflow:hidden;background-image:linear-gradient(rgba(116,112,106,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(116,112,106,0.07) 1px,transparent 1px);background-size:26px 26px;}
 .lp-corse-svg{position:absolute;inset:10px;width:calc(100% - 20px);height:calc(100% - 20px);display:block;overflow:visible;opacity:0;transition:opacity .6s ease;}
 .lp-corse-svg.in{opacity:1;}
-.lp-corse-base{fill:rgba(255,255,255,0.055);stroke:rgba(255,255,255,0.22);stroke-width:0.4;}
 .lp-corse-zone{fill:rgba(199,140,60,0.30);stroke:rgba(214,160,80,0.7);stroke-width:0.55;}
 .lp-corse-pt{fill:#f2bf72;stroke:#1a2228;stroke-width:0.5;filter:drop-shadow(0 0 1.4px rgba(242,191,114,0.9));}
 .lp-corse-scan{fill:var(--ocre);opacity:0.45;}
@@ -478,11 +477,11 @@ if(document.readyState === 'loading'){
     .catch(() => {});
 })();
 
-/* Hero map — carte de Corse réelle : maillage des 360 communes (geo.api.gouv.fr) en fond,
-   zones radon ASNR (2/3 uniquement — zone 1 non publiée par l'ASNR) en surimpression,
-   + 30 mesures RF certifiées ANFR. Projetée hors-ligne en SVG léger. Construite en différé
-   (idle) pour ne pas peser sur le premier rendu. Animations (scan, pulse) gérées en CSS
-   sous prefers-reduced-motion. */
+/* Hero map — carte de Corse réelle : maillage des 360 communes (geo.api.gouv.fr), rendu
+   uniforme (pas de différenciation visuelle par zone radon — décoratif, cf. arbitrage
+   Soleil), + 30 mesures RF certifiées ANFR. Projetée hors-ligne en SVG léger. Construite
+   en différé (idle) pour ne pas peser sur le premier rendu. Animations (scan, pulse)
+   gérées en CSS sous prefers-reduced-motion. */
 (function initHeroMap(){
   const el = document.getElementById('lp-hero-map');
   if(!el || !('fetch' in window)) return;
@@ -493,20 +492,16 @@ if(document.readyState === 'loading'){
     fetch('/public/data/corse_hero_geo.json', {cache:'force-cache'})
       .then(r => r.ok ? r.json() : null)
       .then(g => {
-        if(!g || !Array.isArray(g.radon)) return;
+        const communes = Array.isArray(g && g.communes) ? g.communes : (g && Array.isArray(g.radon) ? g.radon : null);
+        if(!g || !communes) return;
         const svg = document.createElementNS(NS, 'svg');
         svg.setAttribute('viewBox', g.viewBox);
         svg.setAttribute('class', 'lp-corse-svg');
         svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
         svg.setAttribute('role', 'img');
-        svg.setAttribute('aria-label', 'Carte de Corse : 360 communes, zones de potentiel radon (ASNR) et points de mesure RF certifiés (ANFR)');
-        if(Array.isArray(g.communes)){
-          const base = document.createElementNS(NS, 'g');
-          g.communes.forEach(d => { const p = document.createElementNS(NS,'path'); p.setAttribute('d', d); p.setAttribute('class','lp-corse-base'); base.appendChild(p); });
-          svg.appendChild(base);
-        }
+        svg.setAttribute('aria-label', 'Carte de Corse : 360 communes et points de mesure RF certifiés (ANFR)');
         const zones = document.createElementNS(NS, 'g');
-        g.radon.forEach(d => { const p = document.createElementNS(NS,'path'); p.setAttribute('d', d); p.setAttribute('class','lp-corse-zone'); zones.appendChild(p); });
+        communes.forEach(d => { const p = document.createElementNS(NS,'path'); p.setAttribute('d', d); p.setAttribute('class','lp-corse-zone'); zones.appendChild(p); });
         svg.appendChild(zones);
         const scan = document.createElementNS(NS, 'rect');
         scan.setAttribute('class','lp-corse-scan'); scan.setAttribute('x',0); scan.setAttribute('y',0); scan.setAttribute('width', g.W); scan.setAttribute('height',2);
