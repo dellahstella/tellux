@@ -477,9 +477,11 @@ if(document.readyState === 'loading'){
     .catch(() => {});
 })();
 
-/* Hero map — carte de Corse réelle (zones radon ASNR + 30 mesures RF certifiées ANFR),
-   projetée hors-ligne en SVG léger. Construite en différé (idle) pour ne pas peser sur le
-   premier rendu. Les animations (scan, pulse) sont gérées en CSS sous prefers-reduced-motion. */
+/* Hero map — carte de Corse réelle : maillage des 360 communes (geo.api.gouv.fr), rendu
+   uniforme (pas de différenciation visuelle par zone radon — décoratif, cf. arbitrage
+   Soleil), + 30 mesures RF certifiées ANFR. Projetée hors-ligne en SVG léger. Construite
+   en différé (idle) pour ne pas peser sur le premier rendu. Animations (scan, pulse)
+   gérées en CSS sous prefers-reduced-motion. */
 (function initHeroMap(){
   const el = document.getElementById('lp-hero-map');
   if(!el || !('fetch' in window)) return;
@@ -490,15 +492,16 @@ if(document.readyState === 'loading'){
     fetch('/public/data/corse_hero_geo.json', {cache:'force-cache'})
       .then(r => r.ok ? r.json() : null)
       .then(g => {
-        if(!g || !Array.isArray(g.radon)) return;
+        const communes = Array.isArray(g && g.communes) ? g.communes : (g && Array.isArray(g.radon) ? g.radon : null);
+        if(!g || !communes) return;
         const svg = document.createElementNS(NS, 'svg');
         svg.setAttribute('viewBox', g.viewBox);
         svg.setAttribute('class', 'lp-corse-svg');
         svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
         svg.setAttribute('role', 'img');
-        svg.setAttribute('aria-label', 'Carte de Corse : zones de potentiel radon (ASNR) et points de mesure RF certifiés (ANFR)');
+        svg.setAttribute('aria-label', 'Carte de Corse : 360 communes et points de mesure RF certifiés (ANFR)');
         const zones = document.createElementNS(NS, 'g');
-        g.radon.forEach(d => { const p = document.createElementNS(NS,'path'); p.setAttribute('d', d); p.setAttribute('class','lp-corse-zone'); zones.appendChild(p); });
+        communes.forEach(d => { const p = document.createElementNS(NS,'path'); p.setAttribute('d', d); p.setAttribute('class','lp-corse-zone'); zones.appendChild(p); });
         svg.appendChild(zones);
         const scan = document.createElementNS(NS, 'rect');
         scan.setAttribute('class','lp-corse-scan'); scan.setAttribute('x',0); scan.setAttribute('y',0); scan.setAttribute('width', g.W); scan.setAttribute('height',2);
