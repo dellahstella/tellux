@@ -4580,6 +4580,66 @@ function getGeoType(lat,lon){
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// GAMMA TERRESTRE PAR LITHOTYPE — verrou NCRP-001 (formule) intact, ancrage
+// des ENTRÉES par lithotype conformément au critère « défendable + étiqueté »
+// (instructions v4.10, ADR-047). Dossier source : _drafts/radon/
+// ETAT_LIEUX_SOURCES_TERRAIN_GAMMA_DOSSIER_PROPOSITION_2026-08-05.md (v2),
+// recontrôlé indépendamment et programmatiquement (arithmétique 9/9 confirmée,
+// confrontation Puccini 2014 confirmée) avant implémentation.
+//
+// Coefficients (cœur formule NCRP 94) : K=12,0 nGy/h/% · U=4,8 nGy/h/ppm ·
+//   Th=2,2 nGy/h/ppm — Verdoya et al. 2009 (Appl. Rad. Isot. 67(5):964-968),
+//   relation Beck et al. 1972 / Tzortzis et al. 2003. Recommandés PAR ÉCRIT
+//   par Massimo Verdoya (physicien tiers, Università di Genova, courriel
+//   2026-07-29) — « relu et recommandé » ≠ « validé » : il recommande un
+//   jeu de coefficients standard publié, il ne certifie pas la carte Tellux.
+//
+// status:
+//   'ancre'     = concentrations U/Th/K MESURÉES sur roches corses (Verdoya
+//                 et al. 1998, Tectonophysics 291:63-75, Table 1, batholite
+//                 varisque). Confrontation indépendante : les doses
+//                 granitiques calculées (86,8–176,1 nGy/h) encadrent la
+//                 mesure in-situ de Puccini et al. 2014 (124 nGy/h).
+//   'extrapole' = PAS de mesure corse — valeur portée par analogue Verdoya
+//                 et al. 2009 (Ligurie alpine, même auteur/méthode), couverture
+//                 géologique partielle, incertitude nettement plus large.
+//   (absent)    = aucune source quantifiée disponible pour ce lithotype —
+//                 reste NON MODÉLISÉ (comportement identique à avant ce
+//                 chantier). Notamment : serpentinite/ophiolite qualifiées
+//                 « quasi bruit de fond » par le dossier source MAIS sans
+//                 aucune valeur numérique fournie — pas de chiffre inventé.
+//
+// Note sur les 3 labels granit* de GEO_SUSC_GRID (granit, granit_biotite,
+// granit_rose) : l'app ne les distingue pas pétrologiquement (labels
+// heuristiques d'origine, pas de correspondance sourcée avec les lithotypes
+// Verdoya). Plutôt que d'inventer une correspondance 1:1 non sourcée entre
+// ces 3 labels et des sites Verdoya spécifiques, les trois partagent la
+// MÊME estimation : moyenne des 7 lignes granite/leucogranite de la Table 1
+// (137,1 nGy/h), avec la plage réelle observée (86,8–176,1) affichée comme
+// incertitude — plus honnête qu'une fausse précision par sous-type inventé.
+// `granodiorite` a une correspondance directe et non ambiguë (site 4, n=1).
+const GAMMA_TERRESTRE_PAR_LITHOTYPE = {
+  granit:         { status:'ancre', dose_nGy_h:137.1, range_nGy_h:[86.8,176.1],
+                     label:'Granite/leucogranite (Verdoya 1998, moyenne 7 lithotypes du batholite varisque)' },
+  granit_biotite: { status:'ancre', dose_nGy_h:137.1, range_nGy_h:[86.8,176.1],
+                     label:'Granite/leucogranite (Verdoya 1998, moyenne 7 lithotypes du batholite varisque)' },
+  granit_rose:    { status:'ancre', dose_nGy_h:137.1, range_nGy_h:[86.8,176.1],
+                     label:'Granite/leucogranite (Verdoya 1998, moyenne 7 lithotypes du batholite varisque)' },
+  granodiorite:   { status:'ancre', dose_nGy_h:106.6, range_nGy_h:null,
+                     label:'Granodiorite (Verdoya 1998, site 4, n=1 échantillon)' },
+  schistes:       { status:'extrapole', dose_nGy_h:105.0, range_nGy_h:[102,108],
+                     label:'Phyllites/micaschistes — analogue Verdoya 2009 (Ligurie alpine), NON mesuré en Corse' }
+  // ophiolite, serpentinite, calcaire, alluvions, gneiss, inconnu : pas d'entrée
+  // → GAMMA_TERRESTRE_PAR_LITHOTYPE[x] === undefined → reste non modélisé.
+};
+
+function calcTerrestrialGamma(lithology){
+  const entry = GAMMA_TERRESTRE_PAR_LITHOTYPE[lithology];
+  if(!entry) return { status:null, dose_nGy_h:null, range_nGy_h:null, label:null };
+  return entry;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // DOMAINE I — Potentiel radon
 // Tâche 5.3 — IMMÉDIAT — refactoring de calcSubstrateContext.radon_potential_class
 // en fonction dédiée avec plages d'activité Bq/m³ (ASNR (anciennement IRSN) 2018).
@@ -4790,14 +4850,23 @@ function calcRadonPotential(lat, lon, options) {
 // ════════════════════════════════════════════════════════════════════════════
 // DOMAINE I — Rayonnement gamma ambiant
 // Tâche 5.2 — Partition mixte (§5 AUDIT_NIVEAU2_V2.1)
-// IMMÉDIAT : signature + cosmique paramétrique + Téléray placeholder
-// GELÉ : composante terrestre NCRP 94 (13·U + 5.4·Th + 42·K),
-//         plages U/Th/K assignées aux lithologies corses — en attente relecture tiers
-// Sources IMMÉDIAT :
+// Cosmique : IMMÉDIAT (grille PARMA/EXPACS, PR #945).
+// Terrestre : ACTIVÉ PAR LITHOTYPE (ancrage batholite varisque + extrapolation
+//   Corse alpine étiquetée) — voir GAMMA_TERRESTRE_PAR_LITHOTYPE ci-dessus.
+//   Formule NCRP 94 elle-même INCHANGÉE (verrou NCRP-001 intact) ; seules les
+//   ENTRÉES (coefficients + concentrations U/Th/K) sont désormais ancrées.
+//   ⚠ CRAN C — dégel d'une composante déjà publique sous double zone gelée
+//   (GELÉ-001b bornes composite + GELÉ-001a poids). PR non auto-mergée,
+//   attend revue anti-fuite/factuelle Claude web + GO Soleil explicite.
+// Sources :
 //   Cosmique : approximation calée sur grille PARMA 4.10 / EXPACS (Sato 2015,
 //              PLOS ONE 10(12):e0144679), Corse lat 42,2°N, H*(10), moyenne de cycle solaire
+//   Terrestre : Verdoya et al. 2009 (coefficients) + Verdoya et al. 1998 (concentrations
+//              corses, batholite) — voir GAMMA_TERRESTRE_PAR_LITHOTYPE
 //   Téléray ASNR : réseau public (in_construction — API à vérifier)
 //   Ordres de grandeur Corse : 75–150 nSv/h (mesures Téléray 2A/2B)
+// Limite haute altitude (guidance Massimo Verdoya, courriel 2026-07-29, point D1) :
+//   la variation dose/altitude n'est pas de sa compétence — signalée, non résolue.
 // ════════════════════════════════════════════════════════════════════════════
 function calcGammaAmbient(lat, lon, altitude_m) {
   // Altitude par défaut : 200 m = altitude médiane côtière corse
@@ -4810,11 +4879,20 @@ function calcGammaAmbient(lat, lon, altitude_m) {
   // Fidélité du fit : écart relatif max 1,08 % sur 0-2710 m.
   // Incertitude non modélisée : variation solaire ±15 % sur le cycle.
   // Sea level : ~41,9 nSv/h · Vizzavona (1163 m) : ~72,5 · Monte Cinto (2710 m) : ~166,3
+  // LIMITE (guidance Massimo D1) : variation dose/altitude non expertisée par le physicien
+  // tiers consulté ; approche à considérer prudemment en haute altitude.
   const cosmic_nSv_h = Math.round((41.945261 * Math.exp(alt / 1862.095) - 0.004973 * alt) * 10) / 10;
 
-  // Composante terrestre — GELÉ (formule NCRP 94, plages U/Th/K corses non validées)
-  // const terrestrial_nSv_h = 13 * U_ppm + 5.4 * Th_ppm + 42 * K_pct; // GELE
-  const terrestrial_nSv_h = null; // placeholder — intégration post-relecture tiers
+  // Composante terrestre — ACTIVÉE PAR LITHOTYPE (formule NCRP 94, verrou NCRP-001
+  // intact ; coefficients Verdoya 2009 + concentrations Verdoya 1998 par lithotype,
+  // voir GAMMA_TERRESTRE_PAR_LITHOTYPE). Sortie en nGy/h (dose absorbée air) —
+  // PAS nSv/h : conversion ×1,2 explicite ci-dessous avant agrégation avec le
+  // cosmique (H*(10), nSv/h). Ne jamais additionner Gy et Sv sans cette conversion.
+  const lithology_gamma = getGeoType(lat, lon);
+  const terrestrialInfo = calcTerrestrialGamma(lithology_gamma);
+  const terrestrial_nGy_h = terrestrialInfo.dose_nGy_h; // null si lithotype non couvert
+  const CONVERSION_NGY_TO_NSV = 1.2; // H*(10) nSv/h ≈ dose absorbée air nGy/h × 1,2 (dépend du spectre)
+  const terrestrial_nSv_h = terrestrial_nGy_h != null ? Math.round(terrestrial_nGy_h * CONVERSION_NGY_TO_NSV * 10) / 10 : null;
 
   // Téléray ASNR — in_construction
   // API candidate : https://teleray.irsn.fr/api/
@@ -4846,13 +4924,23 @@ function calcGammaAmbient(lat, lon, altitude_m) {
       }
     });
   }
-  const total_nSv_h = cosmic_nSv_h + Math.round(boost_ponctuel_nSv_h * 10) / 10;
+  const total_nSv_h = Math.round((cosmic_nSv_h + (terrestrial_nSv_h || 0) + boost_ponctuel_nSv_h) * 10) / 10;
+
+  const epistemicTerrestre = terrestrialInfo.status === 'ancre'
+    ? 'Composante terrestre (NCRP 94) activée pour ce lithotype : « Estimation modélisée de la composante gamma terrestre (dose absorbée dans l\'air, nGy/h), calculée par la formule standard NCRP 94 avec les coefficients de Verdoya et al. (2009), à partir de concentrations U/Th/K mesurées sur les lithotypes du batholite varisque corse (Verdoya et al. 1998) ; jeu de coefficients relu et recommandé par un physicien externe (M. Verdoya, Università di Genova). Estimation par lithotype. Ne constitue pas une mesure certifiée. »'
+    : terrestrialInfo.status === 'extrapole'
+      ? 'Composante terrestre (NCRP 94) activée pour ce lithotype, en EXTRAPOLATION : couverture géologique partielle — la Corse alpine (schistes, ophiolites) n\'a pas de mesure U/Th/K directe ; valeur portée par analogue (Verdoya et al. 2009, Ligurie alpine, même auteur/méthode), incertitude nettement plus large que sur le batholite mesuré. Ne constitue pas une mesure certifiée.'
+      : 'Composante terrestre (NCRP 94) non déployée pour ce lithotype : aucune source quantifiée disponible (concentrations U/Th/K non ancrées ni extrapolables de façon défendable pour cette lithologie).';
 
   return {
-    dose_rate_nSv_h: total_nSv_h, // cosmique + boost ponctuel (terrestrial GELÉ)
+    dose_rate_nSv_h: total_nSv_h, // cosmique + terrestre (si couvert) + boost ponctuel
     components: {
       cosmic_nSv_h,
-      terrestrial_nSv_h,       // null — GELÉ (NCRP 94)
+      terrestrial_nGy_h,        // dose absorbée air — null si lithotype non couvert
+      terrestrial_nSv_h,        // converti ×1,2 pour agrégation — null si non couvert
+      terrestrial_status: terrestrialInfo.status,       // 'ancre' | 'extrapole' | null
+      terrestrial_range_nGy_h: terrestrialInfo.range_nGy_h, // plage réelle par lithotype, si connue
+      terrestrial_label: terrestrialInfo.label,
       anthropogenic_nSv_h: 0,  // hors périmètre v2 (installations nucléaires hors Corse)
       boost_ponctuel_nSv_h: Math.round(boost_ponctuel_nSv_h * 10) / 10
     },
@@ -4860,11 +4948,11 @@ function calcGammaAmbient(lat, lon, altitude_m) {
     boost_sources_count,
     nearest_teleray_balise,      // null — in_construction
     altitude_used_m: alt,
-    source: 'Approximation cosmique calée sur grille modélisée PARMA/EXPACS (Sato 2015) — H*(10), moyenne de cycle solaire · boost points chauds documentaires · Téléray ASNR (in_construction)',
-    confidence: 'low',
-    under_review: true,          // terrestre GELÉ + Téléray manquant
+    source: 'Approximation cosmique calée sur grille modélisée PARMA/EXPACS (Sato 2015) — H*(10), moyenne de cycle solaire · terrestre NCRP 94, coefficients Verdoya 2009 + concentrations Verdoya 1998 par lithotype · boost points chauds documentaires · Téléray ASNR (in_construction)',
+    confidence: terrestrialInfo.status === 'ancre' ? 'medium' : 'low',
+    under_review: true,          // Téléray manquant ; terrestre extrapolé pour partie du territoire
     in_construction: true,
-    epistemic_note: 'Estimation issue d\'une grille modélisée (PARMA/EXPACS, Sato 2015), jamais d\'une mesure Tellux : dose cosmique au sol en H*(10) (équivalent de dose ambiant), toutes composantes ionisantes cosmiques (muons, composante électromagnétique, neutrons, protons) — distincte du gamma terrestre. Moyenne de cycle solaire ; la variation solaire (±15 %) n\'est pas modélisée. Composante terrestre (NCRP 94) non déployée : ses plages d\'entrée U/Th/K locales ne sont pas encore ancrées pour la Corse. Fond naturel Corse : 75–150 nSv/h (Téléray ASNR, gamma total — non directement comparable au cosmique seul). Doses des points chauds documentaires, non mesurées par Tellux. Aucune implication sanitaire à ces niveaux de fond naturel.'
+    epistemic_note: 'Estimation issue d\'une grille modélisée (PARMA/EXPACS, Sato 2015), jamais d\'une mesure Tellux : dose cosmique au sol en H*(10) (équivalent de dose ambiant), toutes composantes ionisantes cosmiques (muons, composante électromagnétique, neutrons, protons) — distincte du gamma terrestre. Moyenne de cycle solaire ; la variation solaire (±15 %) n\'est pas modélisée. LIMITE HAUTE ALTITUDE : l\'approche cosmique n\'a pas été expertisée en altitude par le physicien tiers consulté sur le volet terrestre — à considérer prudemment. ' + epistemicTerrestre + ' Fond naturel Corse : 75–150 nSv/h (Téléray ASNR, gamma total — non directement comparable aux composantes modélisées séparément). Doses des points chauds documentaires, non mesurées par Tellux. Aucune implication sanitaire à ces niveaux de fond naturel.'
   };
 }
 
@@ -5068,6 +5156,29 @@ map.on('click',async e=>{
   const static_nT = v2.domains.magnetic.static.B_total_nT;
   const rf_uWm2   = v2.domains.rf.S_total_uW_m2;
   const gamma_nSvh    = v2.domains.ionizing.gamma.dose_rate_nSv_h;
+  const gammaTerrestre = v2.domains.ionizing.gamma.components; // { terrestrial_nGy_h, terrestrial_status, terrestrial_range_nGy_h, terrestrial_label, ... }
+  // Libellé/badge popup gamma — dépend du statut terrestre du lithotype au point cliqué
+  // (ancré = batholite varisque mesuré ; extrapolé = analogue Ligurie alpine ; sinon
+  // cosmique seule, comportement inchangé). Cf. GAMMA_TERRESTRE_PAR_LITHOTYPE.
+  const gammaLabel = gammaTerrestre.terrestrial_status ? 'dose gamma ambiante (cosmique + terrestre)' : 'dose cosmique au sol';
+  const gammaBadgeTitle = gammaTerrestre.terrestrial_status === 'ancre'
+    ? 'Ancré — terrestre mesuré sur le batholite varisque corse (Verdoya 1998), coefficients Verdoya 2009 relus par physicien tiers'
+    : gammaTerrestre.terrestrial_status === 'extrapole'
+      ? 'Extrapolé — Corse alpine non mesurée, valeur portée par analogue Ligurie (Verdoya 2009), incertitude large'
+      : 'En cours — cosmique seule ; composante terrestre non déployée pour ce lithotype (aucune source quantifiée)';
+  const gammaBadgeIcon = gammaTerrestre.terrestrial_status === 'ancre' ? '●' : gammaTerrestre.terrestrial_status === 'extrapole' ? '◐' : '◆';
+  const gammaBadgeColor = gammaTerrestre.terrestrial_status === 'ancre' ? '#5b7c4f' : '#C28533';
+  const gammaConfDots = gammaTerrestre.terrestrial_status === 'ancre' ? '●●○' : '●○○';
+  const gammaConfText = gammaTerrestre.terrestrial_status === 'ancre'
+    ? 'moyenne — terrestre ancré + cosmique paramétrique'
+    : gammaTerrestre.terrestrial_status === 'extrapole'
+      ? 'faible — cosmique paramétrique + terrestre extrapolé'
+      : 'faible — cosmique paramétrique, composante terrestre non disponible pour ce lithotype';
+  const gammaDetailLine = gammaTerrestre.terrestrial_status
+    ? '<div style="font-size:7.5px;color:#8b92a5;margin-top:1px">'+gammaTerrestre.terrestrial_nGy_h+' nGy/h terrestre'+
+      (gammaTerrestre.terrestrial_range_nGy_h ? ' (plage lithotype '+gammaTerrestre.terrestrial_range_nGy_h[0]+'–'+gammaTerrestre.terrestrial_range_nGy_h[1]+' nGy/h)' : '')+
+      ' + '+v2.domains.ionizing.gamma.components.cosmic_nSv_h+' nSv/h cosmique</div>'
+    : '';
   const radon_class   = v2.domains.ionizing.radon.class;
   const radon_range   = v2.domains.ionizing.radon.activity_estimate_Bq_m3;
   const radon_official = v2.domains.ionizing.radon.official_classification; // {matched_by, nom, code_insee} ou null
@@ -5188,13 +5299,14 @@ map.on('click',async e=>{
         '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+
           // Gamma
           '<div>'+
-            '<div style="font-size:8px;color:#6b7280;margin-bottom:1px">dose cosmique au sol</div>'+
+            '<div style="font-size:8px;color:#6b7280;margin-bottom:1px">'+gammaLabel+'</div>'+
             '<div style="display:flex;align-items:center;gap:3px">'+
               '<span style="font-size:11px;font-weight:700;color:#4a4f5e">'+gamma_nSvh+' nSv/h</span>'+
-              '<span style="font-size:9px;color:#C28533" title="En cours — cosmique seule ; composante terrestre non déployée : entrées U/Th/K locales pas encore ancrées (NCRP 94)">◆</span>'+
-              '<span style="font-size:9px;color:#8b92a5" title="Confiance : faible — estimation cosmique paramétrique, composante terrestre manquante">●○○</span>'+
+              '<span style="font-size:9px;color:'+gammaBadgeColor+'" title="'+gammaBadgeTitle+'">'+gammaBadgeIcon+'</span>'+
+              '<span style="font-size:9px;color:#8b92a5" title="Confiance : '+gammaConfText+'">'+gammaConfDots+'</span>'+
               '<span style="font-size:9px;color:#8b92a5;cursor:help" title="Repères (hors modèle Tellux) : moyenne mondiale ~59 nGy/h de dose absorbée dans l\'air, rayonnement gamma terrestre extérieur (UNSCEAR 2000) ; granites typiquement ~70–200 nGy/h. Unités distinctes : nGy/h = dose absorbée dans l\'air (grandeur physique des modèles) ; nSv/h = équivalent de dose ambiant (grandeur affichée par les balises Téléray ASNR) — conversion ≈ ×1,2 pour le gamma, ne pas comparer directement.">ⓘ</span>'+
             '</div>'+
+            gammaDetailLine+
           '</div>'+
           // Radon
           '<div style="border-left:1px solid #e5e7eb;padding-left:6px">'+
