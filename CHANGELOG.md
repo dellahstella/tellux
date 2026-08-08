@@ -7,6 +7,28 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [BT-CALIBRATION-001 résolue — densité de zone (approche 3.3) — 2026-08-07]
+
+### Changed
+- **`app.html`** (`calcMagneticELF_v2`, v2.6 → v2.7) — la composante BT réactivée : `USE_BT_SEGMENTS = true`. Remplace le proxy `BT_ZONES` (9 valeurs sans source, posées au commit fondateur du projet 2026-04-03 `51fd6d0`, jamais retouchées) par un **schéma à 3 paliers** calé sur la densité réelle de segments BT dans la zone (`getBTSegmentsNear(lat, lon).length`, comptage « padded » ~2 km, terciles réels de la distribution corse : 0 = hors périmètre, 1-152 = 70 nT, 153-517 = 115 nT, 518+ = 180 nT plafond). Choix éditorial à l'intérieur de la fourchette instruite 50-200 nT (ambiant de zone), jamais au-delà.
+- **`app.html`** — le calcul Biot-Savart vectoriel par segment BT (actif un jour le 22/04/2026 avant hotfix, dette `BT-ELF-001`) est **abandonné**, pas réactivé : sa correction triphasée `k=0.5` au-delà de 20 m est calibrée sur géométrie pylône HTA, inadaptée au câble BT torsadé — cause du bug PR #71 (ratios ×57 à ×210). Chaîne de recalibration complète : approche 3.2 (modèle analytique torsadé) écartée faute de pas de torsade sourcé ; approche 3.1-renforcée (seuil recalibré par similarité géométrique) écartée par recontrôle indépendant (exposant non dérivable, incertitude 2-4 ordres de grandeur) ; approche 3.3 retenue.
+- **`app.html`** — `epistemic_note` ajouté au retour de `calcMagneticELF_v2` : « Composante BT : estimation par densité de zone, structure de calage définie (terciles réels), fonction segments→intensité non calibrée statistiquement — choix éditorial à l'intérieur d'une fourchette instruite (50-200 nT, ambiant de zone). Ne constitue pas une mesure certifiée. Relecture externe non encore sollicitée. »
+
+### Validation runELFRegressionTest — 4 villes de l'audit PR #71
+Ordres de grandeur désormais plausibles (vs. ×57-210 avant le hotfix v2.6.1) :
+- Bastia centre : 237 nT (référence indicative ~160 nT, ratio ×1,48)
+- Calvi : 222 nT (référence ~208 nT, ratio ×1,07)
+- Porto-Vecchio : 276 nT (référence ~367 nT, ratio ×0,75)
+- Ajaccio centre : 370 nT (référence ~219 nT, ratio ×1,69)
+
+Aucune prétention de précision statistique — écarts de 0,75× à 1,69× la référence indicative, cohérent avec un choix éditorial dans une fourchette instruite, pas une calibration.
+
+### Notes
+- Dossiers et recontrôles indépendants complets (méthode, distribution réelle des segments BT sur la Corse, historique git `BT_ZONES`) : `_drafts/CADRAGE_CALIBRATION_BT_2026-08.md`, `_drafts/DONNEES_GEOMETRIE_CABLE_BT_2026-08.md`, `_drafts/DOSSIER_CALIBRATION_BT_2026-08.md` + `_drafts/RECONTROLE_CALIBRATION_BT_2026-08.md` (3.1-renforcée), `_drafts/DOSSIER_CALIBRATION_BT_3.3_2026-08.md` + `_drafts/RECONTROLE_CALIBRATION_BT_3.3_2026-08.md` (3.3 retenue).
+- Contenu public neuf (comportement visible réactivé) — revue anti-fuite/factuelle requise avant merge, PR ouverte en attente.
+
+---
+
 ## [Couches gamma citoyen + dose cosmique, corrections radon — 2026-07-09/10]
 
 ### Added
