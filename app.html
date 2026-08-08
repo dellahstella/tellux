@@ -3862,13 +3862,16 @@ function calcMagneticELF_v1(lat, lon, chargeFactor) {
 // ============================================================
 // DOMAINE M — Champ magnétique ELF 50 Hz (anthropique) — v2
 // Sources : Biot-Savart segment fini sur 8386 polylines hta_lines Supabase
-//           (~15-25k segments élémentaires) + segments BT (async)
-//           + PROD_ELECTRIQUE + BT_ZONES proxy + postes sources + éoliennes
+//           (~15-25k segments élémentaires, vectoriel) + BT densité de zone
+//           (scalaire, BT-CALIBRATION-001 approche 3.3, schéma à paliers)
+//           + PROD_ELECTRIQUE + postes sources + éoliennes
 // Retour identique à v1 (contrat calcAll_v2 préservé) : {B_total_nT, ...}
 // Courant HTA : HTA_BASE_CURRENT_A = 225 A (Option B, sans voltage Supabase)
-// Courant BT  : BT_BASE_CURRENT_A  = 60 A
-// Correction triphasée k=0.5 au-delà de 20 m · RMS explicite · pruning 2 km
-// Sommation vectorielle 2D (Bx, By) — ferme la dette ELF-VECTOR-001.
+// BT_BASE_CURRENT_A (60 A) orpheline depuis l'abandon du Biot-Savart BT
+// vectoriel (approche 3.3 = comptage de densité, pas de courant) — conservée
+// non supprimée en cas de retour à un modèle physique BT après relecture.
+// Correction triphasée k=0.5 au-delà de 20 m (HTA uniquement) · RMS explicite
+// · pruning 2 km · Sommation vectorielle 2D (Bx, By) HTA — ferme ELF-VECTOR-001.
 // Fallback : si grille non prête, délègue à v1.
 // ============================================================
 function calcMagneticELF_v2(lat, lon, chargeFactor) {
@@ -3895,37 +3898,25 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
     contributions.push({ source_type: 'HTA', B_nT: Math.round(B_hta*10)/10, distance_m: null, identifier: nHtaContrib + ' segments réels (vectoriel)' });
   }
 
-  // === LIGNES BT réelles — sommation vectorielle (dette BT-ELF-001) ===
-  // Désactivée par défaut depuis hotfix v2.6.1 (BT-CALIBRATION-001).
-  // BT_ZONES proxy (legacy v2.5) reprennent le relais plus bas.
+  // === LIGNES BT — calcul vectoriel Biot-Savart par segment ABANDONNÉ (BT-ELF-001) ===
+  // Actif un jour (22/04/2026) avant hotfix : la correction triphasée k=0.5
+  // au-delà de 20 m est calibrée sur géométrie pylône HTA (phases 1-3 m), pas
+  // sur câble BT torsadé (phases ~1 cm) — bug PR #71, ratios ×57 à ×210.
+  // Approche 3.1-renforcée (seuil recalibré par similarité géométrique)
+  // explorée puis écartée par recontrôle indépendant (exposant non
+  // dérivable, incertitude 2-4 ordres de grandeur sur les 4 villes de
+  // l'audit — _drafts/RECONTROLE_CALIBRATION_BT_2026-08.md). Remplacée par
+  // un schéma à paliers sur la densité de segments BT réels dans la zone
+  // (approche 3.3, cf. bloc « RÉSEAU BT URBAIN » plus bas) — pas de calcul
+  // vectoriel par segment ici, `nBtContrib` renseigné plus bas.
   if (!USE_BT_SEGMENTS && !window._btDisabledWarned) {
-    console.warn('[Tellux] BT-CALIBRATION-001 : calcul BT segments désactivé (hotfix). '
-      + 'Contribution ELF limitée à HTA vectoriel + BT_ZONES proxy + postes sources + éoliennes.');
+    console.warn('[Tellux] USE_BT_SEGMENTS désactivé manuellement : contribution BT nulle '
+      + '(proxy BT_ZONES retiré, cf. BT-CALIBRATION-001 approche 3.3).');
     window._btDisabledWarned = true;
   }
   let nBtContrib = 0;
-  if (USE_BT_SEGMENTS && BT_SEGMENTS_DATA && BT_SEGMENT_GRID) {
-    const I_bt = BT_BASE_CURRENT_A * htFactor;
-    const btNearby = getBTSegmentsNear(lat, lon);
-    let btBx = 0, btBy = 0;
-    for (const idx of btNearby) {
-      const s = BT_SEGMENTS_DATA[idx];
-      if (!s) continue;
-      const v = calcBiotSavartSegmentVec(s.lat1, s.lon1, s.lat2, s.lon2, lat, lon, I_bt);
-      if (v.bx !== 0 || v.by !== 0) { btBx += v.bx; btBy += v.by; nBtContrib++; }
-    }
-    const B_bt = Math.sqrt(btBx * btBx + btBy * btBy);
-    // Accumulation scalaire honnête : BT est orthogonal en moyenne aux lignes HTA
-    // La superposition stricte serait vectorielle mais nécessiterait un repère commun ;
-    // l'addition scalaire des normes est la même approximation que les contributions ponctuelles.
-    if (B_bt > 0.5) {
-      totalBx += btBx; totalBy += btBy; // on continue la somme vectorielle globale
-      nBtContrib = nBtContrib; // compte pour le log
-      contributions.push({ source_type: 'BT_reel', B_nT: Math.round(B_bt*10)/10, distance_m: null, identifier: nBtContrib + ' segments BT réels' });
-    }
-  }
 
-  // Norme du champ vectoriel résultant lignes (HTA + BT réel)
+  // Norme du champ vectoriel résultant lignes HTA (BT désormais scalaire, cf. plus bas)
   const B_lines = Math.sqrt(totalBx * totalBx + totalBy * totalBy);
   let B_total_nT = B_lines;
 
@@ -3944,20 +3935,42 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
     }
   });
 
-  // === RÉSEAU BT URBAIN proxy === (zones hardcodées legacy v2.5)
-  // Actif si USE_BT_SEGMENTS est false (hotfix) OU si la grille BT n'est pas chargée.
-  if (!USE_BT_SEGMENTS || !BT_SEGMENT_GRID) {
-    const BT_ZONES = [[41.919,8.738,80],[42.703,9.45,70],[41.578,9.267,50],[42.567,8.758,45],[42.154,9.193,40],[42.631,8.937,35],[41.387,9.159,35],[42.562,9.431,60],[41.678,8.905,30]];
-    BT_ZONES.forEach(([a, b, intensity]) => {
-      const d = dist(lat, lon, a, b);
-      let contrib = 0;
-      if (d < 0.2) contrib = intensity * (1 - d / 0.2);
-      else if (d < 0.5) contrib = intensity * 0.3 * (1 - (d - 0.2) / 0.3);
-      if (contrib > 0) {
-        B_total_nT += contrib;
-        contributions.push({ source_type: 'BT_proxy', B_nT: Math.round(contrib*10)/10, distance_m: Math.round(d*1000) });
-      }
-    });
+  // === RÉSEAU BT URBAIN — densité de zone (BT-CALIBRATION-001, approche 3.3) ===
+  // Remplace le proxy BT_ZONES (9 valeurs sans source connue, posées au
+  // commit fondateur du projet 2026-04-03 `51fd6d0`, jamais retouchées
+  // depuis — historique git complet dans
+  // _drafts/RECONTROLE_CALIBRATION_BT_3.3_2026-08.md §3). Legacy conservé
+  // ci-dessous en commentaire pour traçabilité, pas dans le code actif :
+  //
+  //   const BT_ZONES = [[41.919,8.738,80],[42.703,9.45,70],[41.578,9.267,50],
+  //     [42.567,8.758,45],[42.154,9.193,40],[42.631,8.937,35],[41.387,9.159,35],
+  //     [42.562,9.431,60],[41.678,8.905,30]];
+  //   // décroissance radiale : intensité pleine dégressive jusqu'à 200m,
+  //   // 30% dégressif de 200 à 500m, zéro au-delà.
+  //
+  // Schéma à 3 paliers calé sur les terciles réels de la densité de segments
+  // BT (Option A : réutilise `getBTSegmentsNear` tel quel — comptage
+  // « padded », halo de recherche spatiale ~2km, aucune nouvelle indexation
+  // — cf. _drafts/RECONTROLE_CALIBRATION_BT_3.3_2026-08.md §2 et §4) :
+  //   0 segment        → hors périmètre BT, 0 nT
+  //   1-152 segments   → palier bas,   70 nT plafond
+  //   153-517 segments → palier moyen, 115 nT plafond
+  //   518+ segments    → palier haut,  180 nT plafond
+  // Choix éditorial à l'intérieur de la fourchette instruite 50-200 nT
+  // (ambiant de zone, distincte du champ proche 500-5000 nT) — PAS une
+  // calibration statistique. Ne dépasse jamais 200 nT (borne haute de la
+  // fourchette instruite), quelle que soit la densité de segments observée.
+  if (USE_BT_SEGMENTS && BT_SEGMENT_GRID) {
+    const nBtZone = getBTSegmentsNear(lat, lon).length;
+    let btZoneIntensity = 0;
+    if (nBtZone >= 518) btZoneIntensity = 180;
+    else if (nBtZone >= 153) btZoneIntensity = 115;
+    else if (nBtZone >= 1) btZoneIntensity = 70;
+    if (btZoneIntensity > 0) {
+      B_total_nT += btZoneIntensity;
+      nBtContrib = nBtZone;
+      contributions.push({ source_type: 'BT_zone_densite', B_nT: btZoneIntensity, distance_m: null, identifier: nBtZone + ' segments BT dans la zone (~2km)' });
+    }
   }
 
   // === POSTES SOURCES EDF (réintégrés — absents de v2 avant ce commit) ===
@@ -3991,16 +4004,17 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
     });
   }
 
-  const btSrc = BT_SEGMENT_GRID ? (nBtContrib + ' segments BT réels') : 'BT_ZONES proxy';
+  const btSrc = BT_SEGMENT_GRID ? (nBtContrib + ' segments BT dans la zone (densité, ~2km)') : 'grille BT non chargée';
   return {
     B_total_nT: Math.round(B_total_nT),
     contributions,
     note_ICNIRP: 'Rappel documentaire : limite ICNIRP grand public pour ELF 50 Hz est de 200 µT (200 000 nT).',
     note_IARC: 'Rappel documentaire : IARC classe 2B pour ELF >= 0,3-0,4 µT (300-400 nT) chronique résidentiel, association statistique leucémies infantiles.',
-    source: 'Biot-Savart vectoriel 2D — ' + HTA_SEGMENTS_DATA.length + ' seg HTA + ' + btSrc + ' + PROD_ELECTRIQUE + postes + éoliennes',
+    epistemic_note: 'Composante BT : estimation par densité de zone, structure de calage définie (terciles réels), fonction segments→intensité non calibrée statistiquement — choix éditorial à l\'intérieur d\'une fourchette instruite (50-200 nT, ambiant de zone). Ne constitue pas une mesure certifiée. Relecture externe non encore sollicitée.',
+    source: 'Biot-Savart vectoriel 2D — ' + HTA_SEGMENTS_DATA.length + ' seg HTA + BT densité de zone (' + btSrc + ') + PROD_ELECTRIQUE + postes + éoliennes',
     confidence: 'medium',
     chargeFactorApplied: htFactor,
-    version: 'v2.6',
+    version: 'v2.7',
     n_hta_contributing: nHtaContrib,
     n_bt_contributing: nBtContrib
   };
@@ -4009,24 +4023,34 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
 // Flag de bascule v1/v2 — rollback d'urgence en cas de régression
 const USE_ELF_V2 = true;
 
-// ═══ Flag de désactivation BT suite bug calibration (BT-CALIBRATION-001) ═══
+// ═══ Flag BT — densité de zone activée (BT-CALIBRATION-001, approche 3.3) ═══
 //
-// Le modèle Biot-Savart + correction triphasée k=0.5 actuel est calibré sur
-// géométrie pylône HTA (phases espacées 1–3 m). Il est inadapté au câble BT
-// torsadé (phases espacées ~1 cm) où la cancellation vectorielle est bien
-// plus forte et la décroissance en 1/d² voire 1/d³.
+// Historique : le modèle Biot-Savart + correction triphasée k=0.5 (calibré
+// géométrie pylône HTA, phases espacées 1-3 m) est inadapté au câble BT
+// torsadé (phases espacées ~1 cm) — bug détecté sur PR #71, ratios v2.5→v2.6
+// atteignant ×210 en zone urbaine dense (Bastia 33 592 nT au lieu de ~160 nT
+// attendus). Désactivé par hotfix v2.6.1 (2026-04-22), remplacé
+// temporairement par le proxy `BT_ZONES` (9 valeurs sans source connue,
+// jamais retouchées depuis le commit fondateur du projet 2026-04-03).
 //
-// Bug détecté sur PR #71 : ratios v2.5 → v2.6 atteignent ×210 en zone urbaine
-// dense (Bastia 33 592 nT au lieu de ~160 nT). Hotfix par désactivation du
-// calcul BT segments. Le chargement asynchrone, la grille BT et les fonctions
-// restent en place pour réactivation future après recalibrage validé.
-// BT_ZONES proxy (legacy v2.5) reprennent le relais comme avant PR #71.
+// Chaîne de recalibration (session du 2026-08-07, voir _drafts/ pour le
+// détail complet — dossiers + recontrôles indépendants à chaque étape) :
+//   - approche 3.2 (modèle analytique câble torsadé, Pettersson & Schönborg
+//     1997) écartée faute de pas de torsade sourcé (donnée introuvable,
+//     fiches fabricant + norme NF C33-209 insuffisantes) ;
+//   - approche 3.1-renforcée (seuil BT recalibré par similarité géométrique
+//     avec l'HTA) écartée par recontrôle indépendant : l'exposant de
+//     décroissance n'est pas dérivable des données disponibles, incertitude
+//     de 2 à 4 ordres de grandeur sur les 4 villes de l'audit PR #71 ;
+//   - approche 3.3 (densité de segments BT réels par zone, schéma à 3
+//     paliers sur les terciles réels de la distribution corse observée)
+//     retenue et implémentée ci-dessus, cf. bloc « RÉSEAU BT URBAIN ».
 //
-// Remise à true uniquement après session dédiée de recalibrage BT :
-//   - validation physique (littérature câbles torsadés BT ou mesures terrain)
-//   - choix du modèle adapté (Biot-Savart adapté BT, ou statistique densité)
-//   - re-exécution runELFRegressionTest pour validation seuils IARC
-const USE_BT_SEGMENTS = false;
+// USE_BT_SEGMENTS = true active ce schéma à paliers — PAS un retour au
+// calcul Biot-Savart vectoriel par segment (abandonné, sa physique ne
+// convient pas à la géométrie BT). false désactive toute contribution BT
+// sans fallback (le proxy BT_ZONES est retiré, pas remis en jeu).
+const USE_BT_SEGMENTS = true;
 
 // ============================================================
 // Test de non-régression ELF v1 vs v2 sur 20 points témoins
