@@ -207,6 +207,7 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
     <a class="lp-nav-link" href="#methode">La méthode</a>
     <a class="lp-nav-link" href="mairies.html">Communes</a>
     <a class="lp-nav-link" href="patrimoine.html">Patrimoine (bêta)</a>
+    <a class="lp-nav-link" id="lang-toggle-en" href="?lang=en" hreflang="en" lang="en" title="View in English (infrastructure preview — no translated content yet)">EN</a>
   </div>
   <button class="lp-nav-burger" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="lp-mobile-menu">
     <span class="lp-burger-line"></span>
@@ -220,6 +221,7 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
   <a class="lp-mobile-link" href="#methode">La méthode</a>
   <a class="lp-mobile-link" href="mairies.html">Communes</a>
   <a class="lp-mobile-link" href="patrimoine.html">Patrimoine (bêta)</a>
+  <a class="lp-mobile-link" id="lang-toggle-en-mobile" href="?lang=en" hreflang="en" lang="en" title="View in English (infrastructure preview — no translated content yet)">EN</a>
   <a class="lp-mobile-cta" href="app.html">Explorer la cartographie EM &rarr;</a>
 </div>
 </header>
@@ -470,6 +472,62 @@ if(document.readyState === 'loading'){
   const onScroll = () => nav.classList.toggle('lp-nav--scrolled', window.scrollY > 20);
   onScroll();
   window.addEventListener('scroll', onScroll, {passive:true});
+})();
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Toggle de langue FR ⇄ EN — infrastructure seule (dette I18N-ANGLAIS-001)
+   Même patron non destructif que le toggle CO d'app.html (#lang-toggle) :
+   calcule un href qui ajoute/retire ?lang=en, préserve les autres
+   paramètres et le hash. AUCUNE traduction ici — EN_STRINGS est un
+   dictionnaire vide, donc même avec ?lang=en le DOM n'est PAS modifié.
+   Chantier de traduction = étape séparée, cible index.html +
+   cadre-scientifique.html en priorité (relecteurs scientifiques
+   internationaux + dossier FEDER), pas app.html/patrimoine.html.
+   ═══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var toggles = [document.getElementById('lang-toggle-en'), document.getElementById('lang-toggle-en-mobile')].filter(Boolean);
+  if (!toggles.length) return;
+  var params;
+  try { params = new URLSearchParams(window.location.search); }
+  catch (_e) { return; }
+  var inEN = (params.get('lang') || 'fr').toLowerCase() === 'en';
+  if (inEN) { params.delete('lang'); } else { params.set('lang', 'en'); }
+  var qs = params.toString();
+  var href = window.location.pathname + (qs ? '?' + qs : '') + (window.location.hash || '');
+  toggles.forEach(function(t){
+    t.setAttribute('href', href);
+    if (inEN) {
+      t.textContent = 'FR';
+      t.setAttribute('hreflang', 'fr');
+      t.setAttribute('lang', 'fr');
+      t.setAttribute('title', 'Retour au français');
+    } else {
+      t.textContent = 'EN';
+      t.setAttribute('hreflang', 'en');
+      t.setAttribute('lang', 'en');
+      t.setAttribute('title', 'View in English (infrastructure preview — no translated content yet)');
+    }
+  });
+})();
+
+/* i18n EN (infrastructure seule) — early-return sans ?lang=en, dictionnaire
+   vide : zéro mutation DOM dans les deux cas. Point d'insertion futur pour
+   les chaînes traduites (chantier séparé, cf. I18N-ANGLAIS-001). */
+(function(){
+  'use strict';
+  var params;
+  try { params = new URLSearchParams(window.location.search); }
+  catch (_e) { return; }
+  if ((params.get('lang') || 'fr').toLowerCase() !== 'en') return; // FR = source de vérité, early-return
+  var EN_STRINGS = {
+    // Point d'insertion futur : clé data-i18n-key → chaîne EN.
+    // Volontairement vide dans ce brief — infrastructure seule, pas de traduction.
+  };
+  document.querySelectorAll('[data-i18n-key]').forEach(function(el){
+    var key = el.getAttribute('data-i18n-key');
+    if (Object.prototype.hasOwnProperty.call(EN_STRINGS, key)) { el.textContent = EN_STRINGS[key]; }
+  });
 })();
 </script>
 

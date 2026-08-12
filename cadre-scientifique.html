@@ -345,6 +345,7 @@ footer.page-footer a {
 
 <header class="page-header">
   <a href="/" class="back-link">← Retour à l'accueil</a>
+  <a href="?lang=en" hreflang="en" lang="en" id="lang-toggle-en" class="back-link" style="margin-left:14px" title="View in English (infrastructure preview — no translated content yet)">EN</a>
   <h1>Démarche scientifique</h1>
   <p class="subtitle">Document de spécification méthodologique — version v1 — 2026</p>
 </header>
@@ -793,5 +794,60 @@ w_I  = 0,2   (gamma ambiant)
 </footer>
 
 </div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     Toggle de langue FR ⇄ EN — infrastructure seule (dette I18N-ANGLAIS-001)
+     Même patron non destructif que le toggle CO d'app.html : calcule un
+     href qui ajoute/retire ?lang=en, préserve les autres paramètres et le
+     hash. AUCUNE traduction ici — EN_STRINGS est un dictionnaire vide,
+     donc même avec ?lang=en le DOM n'est PAS modifié. Chantier de
+     traduction = étape séparée, cette page est prioritaire pour l'EN
+     (relecteurs scientifiques internationaux + dossier FEDER).
+     ═══════════════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+  'use strict';
+  var t = document.getElementById('lang-toggle-en');
+  if (!t) return;
+  var params;
+  try { params = new URLSearchParams(window.location.search); }
+  catch (_e) { return; }
+  var inEN = (params.get('lang') || 'fr').toLowerCase() === 'en';
+  if (inEN) { params.delete('lang'); } else { params.set('lang', 'en'); }
+  var qs = params.toString();
+  t.setAttribute('href', window.location.pathname + (qs ? '?' + qs : '') + (window.location.hash || ''));
+  if (inEN) {
+    t.textContent = 'FR';
+    t.setAttribute('hreflang', 'fr');
+    t.setAttribute('lang', 'fr');
+    t.setAttribute('title', 'Retour au français');
+  } else {
+    t.textContent = 'EN';
+    t.setAttribute('hreflang', 'en');
+    t.setAttribute('lang', 'en');
+    t.setAttribute('title', 'View in English (infrastructure preview — no translated content yet)');
+  }
+})();
+
+/* i18n EN (infrastructure seule) — early-return sans ?lang=en, dictionnaire
+   vide : zéro mutation DOM dans les deux cas. Point d'insertion futur pour
+   les chaînes traduites (chantier séparé, cf. I18N-ANGLAIS-001). */
+(function(){
+  'use strict';
+  var params;
+  try { params = new URLSearchParams(window.location.search); }
+  catch (_e) { return; }
+  if ((params.get('lang') || 'fr').toLowerCase() !== 'en') return; // FR = source de vérité, early-return
+  var EN_STRINGS = {
+    // Point d'insertion futur : clé data-i18n-key → chaîne EN.
+    // Volontairement vide dans ce brief — infrastructure seule, pas de traduction.
+  };
+  document.querySelectorAll('[data-i18n-key]').forEach(function(el){
+    var key = el.getAttribute('data-i18n-key');
+    if (Object.prototype.hasOwnProperty.call(EN_STRINGS, key)) { el.textContent = EN_STRINGS[key]; }
+  });
+})();
+</script>
+
 </body>
 </html>
