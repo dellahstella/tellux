@@ -1314,29 +1314,12 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <button onclick="closeContribLevelModal()" aria-label="Fermer" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--tx3);line-height:1;padding:2px 6px">&#x2715;</button>
     </header>
     <nav class="contrib-tabs" role="tablist" style="display:flex;gap:0;padding:0 22px;border-bottom:1px solid var(--border);flex-shrink:0">
-      <button class="ctab-btn active" role="tab" aria-selected="true" data-tab="obs" onclick="switchContribTab('obs')">Observation</button>
-      <button class="ctab-btn" role="tab" aria-selected="false" data-tab="mes" onclick="switchContribTab('mes')">Mesure technique</button>
-      <button class="ctab-btn" role="tab" aria-selected="false" data-tab="cap" onclick="switchContribTab('cap')">Capteurs appareil</button>
+      <button class="ctab-btn active" role="tab" aria-selected="true" data-tab="mes" onclick="switchContribTab('mes')">Mesure technique</button>
+      <button class="ctab-btn disabled" role="tab" aria-selected="false" aria-disabled="true" data-tab="cap" onclick="handleDisabledCapTab()">Capteurs appareil (bientôt)</button>
     </nav>
 
-    <!-- Onglet 1 : Observation simple -->
-    <div class="ctab-content" id="ctab-obs" style="padding:18px 22px;overflow-y:auto">
-      <p style="font-size:12px;color:var(--ardoise-clair);margin:0 0 12px;line-height:1.5">Partagez une observation libre associée à un point sur la carte. Votre observation sera vérifiée avant publication.</p>
-      <div id="obs-position-info" style="font-size:11px;color:var(--tx3);margin-bottom:10px;font-family:var(--mono);padding:8px 10px;background:var(--pierre-ombre);border-radius:var(--r);border:1px dashed var(--border)">Cliquez d'abord sur la carte pour placer le point, puis rouvrez ce formulaire. Ou saisissez manuellement ci-dessous.</div>
-      <div style="display:flex;gap:6px;margin-bottom:10px">
-        <input type="number" step="0.00001" id="obs-lat" placeholder="Latitude (ex: 42.308)" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--mono);font-size:12px">
-        <input type="number" step="0.00001" id="obs-lon" placeholder="Longitude (ex: 9.150)" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--mono);font-size:12px">
-      </div>
-      <label for="obs-note" style="display:block;font-size:11px;color:var(--ardoise-clair);margin-bottom:4px">Que souhaitez-vous partager ?</label>
-      <textarea id="obs-note" rows="4" maxlength="300" placeholder="Ressenti, observation visuelle, contexte particulier… (300 caractères max)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--font);font-size:12px;resize:vertical;box-sizing:border-box"></textarea>
-      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
-        <button onclick="closeContribLevelModal()" style="padding:8px 16px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--ardoise-clair);font-family:var(--font);font-size:12px;cursor:pointer">Annuler</button>
-        <button onclick="saveObservation()" id="btn-obs-send" style="padding:8px 18px;border:none;border-radius:var(--r);background:var(--acc);color:#fff;font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer">Envoyer</button>
-      </div>
-    </div>
-
-    <!-- Onglet 2 : Mesure technique (delegue au flux #cform existant) -->
-    <div class="ctab-content" id="ctab-mes" hidden style="padding:18px 22px;overflow-y:auto">
+    <!-- Onglet unique : Mesure technique (delegue au flux #cform existant) -->
+    <div class="ctab-content" id="ctab-mes" style="padding:18px 22px;overflow-y:auto">
       <div style="background:var(--pierre-ombre);border:1px solid rgba(194,133,51,0.30);border-radius:var(--r);padding:11px 14px;margin-bottom:14px">
         <p style="font:600 13px var(--ff);color:var(--ardoise);margin:0 0 6px">Avant de mesurer</p>
         <p style="font-size:11px;color:var(--ardoise-clair);line-height:1.55;margin:0 0 7px">Pour une lecture exploitable : activez le mode avion, posez le téléphone à plat pendant 30 secondes minimum, débranchez la charge USB, et écartez les objets métalliques (clés, montre, étui aimanté) à plus de 30 cm du capteur.</p>
@@ -1799,157 +1782,177 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <span style="color:var(--warn);font-weight:600">&#8505;</span> Contribution terrain &mdash; donn&#xe9;es &#xe0; valeur indicative, non certifi&#xe9;es.
   </div>
 
-  <!-- Position -->
-  <div id="c-position-info" style="font-size:12px;color:var(--tx3);margin-bottom:8px;font-family:var(--mono)">Cliquez sur la carte pour placer le point</div>
-  <button class="btn-reposition" id="btn-reposition" onclick="repositionMarker()" style="display:none">Repositionner le point</button>
+  <!-- Indicateur d'etape — discret, pas de gros stepper graphique -->
+  <div id="cform-step-indicator" style="font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Étape 1/6</div>
 
-  <!-- ÉTAPE 1 : Contexte lieu -->
-  <div class="cform-step">Etape 1 — Contexte</div>
-  <div style="display:flex;gap:6px;margin-bottom:8px">
-    <button class="ctx-btn" id="ctx-ext" onclick="setCtx('exterieur',this)" style="flex:1;padding:8px;border-radius:var(--r);border:1px solid var(--border);background:var(--pierre-ombre);cursor:pointer;font-size:12px;transition:all .15s;font-family:var(--font)">Exterieur</button>
-    <button class="ctx-btn" id="ctx-int" onclick="setCtx('interieur',this)" style="flex:1;padding:8px;border-radius:var(--r);border:1px solid var(--border);background:var(--pierre-ombre);cursor:pointer;font-size:12px;transition:all .15s;font-family:var(--font)">Interieur</button>
+  <!-- ÉTAPE 1 : Position -->
+  <div class="cform-step-panel" data-step="1">
+    <div class="cform-step">Etape 1 — Position</div>
+    <div id="c-position-info" style="font-size:12px;color:var(--tx3);margin-bottom:8px;font-family:var(--mono)">Cliquez sur la carte pour placer le point</div>
+    <button class="btn-reposition" id="btn-reposition" onclick="repositionMarker()" style="display:none">Repositionner le point</button>
+    <div style="display:flex;gap:6px;margin-top:8px;margin-bottom:8px">
+      <button class="ctx-btn active" id="ctx-ext" onclick="setCtx('exterieur',this)" style="flex:1;padding:8px;border-radius:var(--r);border:1px solid var(--border);background:var(--pierre-ombre);cursor:pointer;font-size:12px;transition:all .15s;font-family:var(--font)">Exterieur</button>
+      <button class="ctx-btn" id="ctx-int" onclick="setCtx('interieur',this)" style="flex:1;padding:8px;border-radius:var(--r);border:1px solid var(--border);background:var(--pierre-ombre);cursor:pointer;font-size:12px;transition:all .15s;font-family:var(--font)">Interieur</button>
+    </div>
   </div>
 
   <!-- ÉTAPE 2 : Instrument -->
-  <div class="cform-step">Etape 2 — Instrument</div>
-  <label>Instrument de mesure</label>
-  <select id="c-type" onchange="onInstrumentChange()">
-    <optgroup label="📱 Smartphone (intégré)">
-      <option value="smartphone_mag">Magnétomètre téléphone (Physics Toolbox, Sensor Kinetics…)</option>
-      <option value="smartphone_rssi">Signal réseau dBm (Network Cell Info, paramètres réseau)</option>
-      <option value="smartphone_wifi">Signal WiFi dBm (paramètres WiFi)</option>
-    </optgroup>
-    <optgroup label="🔧 Capteur externe (~50-200€)">
-      <option value="trifield">TriField TF2 (ELF 50Hz + RF + magnétique)</option>
-      <option value="cornet">Cornet ED88T / ED85EXS (RF + BF)</option>
-      <option value="rtlsdr">RTL-SDR (spectre RF 100kHz–1.7GHz)</option>
-      <option value="autre_capteur">Autre capteur dédié EMF</option>
-    </optgroup>
-    <optgroup label="✅ Mesure certifiée">
-      <option value="anfr">Mesure ANFR / labo accrédité</option>
-    </optgroup>
-    <optgroup label="👁 Observation">
-      <option value="observation">Observation visuelle / terrain</option>
-      <option value="ressenti">Ressenti subjectif (non instrumental)</option>
-    </optgroup>
-  </select>
+  <div class="cform-step-panel" data-step="2" style="display:none">
+    <div class="cform-step">Etape 2 — Instrument</div>
+    <label id="c-type-label">Instrument de mesure</label>
+    <select id="c-type" onchange="onInstrumentChange()">
+      <optgroup label="📱 Smartphone (intégré)">
+        <option value="smartphone_mag">Magnétomètre téléphone (Physics Toolbox, Sensor Kinetics…)</option>
+        <option value="smartphone_rssi">Signal réseau dBm (Network Cell Info, paramètres réseau)</option>
+        <option value="smartphone_wifi">Signal WiFi dBm (paramètres WiFi)</option>
+      </optgroup>
+      <optgroup label="🔧 Capteur externe (~50-200€)">
+        <option value="trifield">TriField TF2 (ELF 50Hz + RF + magnétique)</option>
+        <option value="cornet">Cornet ED88T / ED85EXS (RF + BF)</option>
+        <option value="rtlsdr">RTL-SDR (spectre RF 100kHz–1.7GHz)</option>
+        <option value="autre_capteur">Autre capteur dédié EMF</option>
+      </optgroup>
+      <optgroup label="✅ Mesure certifiée">
+        <option value="anfr">Mesure ANFR / labo accrédité</option>
+      </optgroup>
+      <optgroup label="👁 Observation">
+        <option value="observation">Observation visuelle / terrain</option>
+      </optgroup>
+    </select>
+  </div>
 
   <!-- ÉTAPE 3 : Valeur mesurée -->
-  <div class="cform-step">Etape 3 — Mesure</div>
-  <label>Valeur mesuree <span style="color:var(--tx3);font-weight:400;font-size:10px">— laissez vide si pas de chiffre</span></label>
-  <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
-    <input type="number" id="c-val" placeholder="ex: 44800" style="flex:1;margin-bottom:0" oninput="refreshIGRFDelta()">
-    <select id="c-unit" style="width:90px;margin-bottom:0">
-      <option value="nT">nT (magnéto)</option>
-      <option value="µT">µT (magnéto)</option>
-      <option value="mG">mG (magnéto)</option>
-      <option value="V/m">V/m (RF)</option>
-      <option value="dBm">dBm (signal)</option>
-      <option value="µT_50Hz">µT à 50Hz (ELF)</option>
-      <option value="description">description</option>
-    </select>
-  </div>
-  <div id="c-hint-val" style="font-size:11px;color:var(--tx3);margin-bottom:8px;padding:4px 8px;background:var(--pierre-ombre);border-radius:var(--r);display:none"></div>
-
-  <div id="c-native-row" style="margin-bottom:8px;display:none">
-    <button type="button" id="btn-native-mag" onclick="startNativeMagCapture()" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--pierre-ombre);color:var(--ardoise-clair);cursor:pointer;width:100%">&#x1F4F1; Capturer avec le magn&#x00E9;tom&#x00E8;tre du t&#x00E9;l&#x00E9;phone</button>
-    <div id="native-mag-status" style="display:none;font-size:11px;color:var(--ardoise-clair);margin-top:4px;padding:6px 8px;background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r)"></div>
-  </div>
-
-  <div id="c-csv-row" style="margin-bottom:8px">
-    <input type="file" id="csv-phyphox-input" accept=".csv" style="display:none" onchange="handlePhyphoxCSV(this)">
-    <button type="button" onclick="document.getElementById('csv-phyphox-input').click()" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--pierre-ombre);color:var(--ardoise-clair);cursor:pointer;width:100%">&#x1F4C1; Importer un CSV de mesures (Phyphox, Physics Toolbox…)</button>
-    <div id="csv-summary" style="display:none;font-size:11px;color:var(--ardoise-clair);margin-top:4px;padding:6px 8px;background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r)"></div>
-  </div>
-
-  <!-- Zone IGRF — apparait apres placement du point de mesure -->
-  <div id="c-igrf-box" style="display:none;background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;margin-bottom:8px;font-size:11px;color:var(--ardoise-clair);line-height:1.5">
-    <span id="c-igrf-text"></span>
-    <span id="c-igrf-warn" style="display:none;color:var(--warn);font-weight:500;margin-top:3px"></span>
-  </div>
-
-  <!-- Conditions de mesure -->
-  <div class="cform-step">Conditions de mesure</div>
-  <div style="border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px;background:var(--pierre-ombre)">
-    <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ardoise-clair);margin-bottom:6px;cursor:pointer"><input type="checkbox" id="c-airplane-mode" style="flex-shrink:0;accent-color:var(--acc)"><span>Mode avion activ&eacute; pendant la mesure</span></label>
-    <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ardoise-clair);margin-bottom:6px;cursor:pointer"><input type="checkbox" id="c-usb-off" style="flex-shrink:0;accent-color:var(--acc)"><span>Charge USB d&eacute;branch&eacute;e</span></label>
-    <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ardoise-clair);margin-bottom:10px;cursor:pointer"><input type="checkbox" id="c-no-metal" style="flex-shrink:0;accent-color:var(--acc)"><span>Aucun objet m&eacute;tallique dans un rayon de 30&nbsp;cm</span></label>
-    <label style="display:block;font-size:11px;color:var(--ardoise-clair);margin-bottom:4px;font-weight:500">Dur&eacute;e de stabilisation avant lecture (secondes)</label>
-    <input type="number" id="c-duration-s" min="0" placeholder="30" style="width:120px;margin-bottom:0">
-  </div>
-
-  <!-- ÉTAPE 4 : Contexte intérieur (visible si intérieur sélectionné) -->
-  <div class="cform-step" id="c-step4-label" style="display:none">Etape 4 — Details interieur</div>
-  <div id="c-interior-ctx" style="display:none;border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px;background:var(--pierre-ombre)">
-    <div style="font-size:11px;font-weight:500;color:var(--ardoise-clair);margin-bottom:8px">🏠 Contexte intérieur</div>
-    <label style="font-size:11px">Étage</label>
-    <select id="c-etage" style="margin-bottom:6px;font-size:12px">
-      <option value="">—</option>
-      <option value="sous_sol">Sous-sol / cave</option>
-      <option value="rdc">Rez-de-chaussée</option>
-      <option value="1">1er étage</option>
-      <option value="2">2ème étage et +</option>
-    </select>
-    <label style="font-size:11px">Matériaux des murs <span style="color:var(--tx3);font-weight:400">(cochez tout ce qui s'applique)</span></label>
-    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px" id="c-mats">
-      <div style="width:100%;font-size:10px;color:var(--tx3);font-family:var(--mono);margin-bottom:2px">— Bétons (µr=1 tous, effet RF uniquement) —</div>
-      <label class="mat-chip" title="Portland CEM I · σ=0.01-0.1 S/m · 14-20 dB RF sec"><input type="checkbox" value="beton_portland"> 🏗 Béton Portland</label>
-      <label class="mat-chip" title="Chaux hydraulique NHL · σ=0.002-0.02 S/m · 8-14 dB RF · moins conducteur"><input type="checkbox" value="beton_chaux"> 🏗 Béton chaux</label>
-      <label class="mat-chip" title="Géopolymère · σ variable · 12-25 dB RF selon formulation"><input type="checkbox" value="beton_geo"> 🏗 Géopolymère</label>
-      <label class="mat-chip" title="Fibres acier · µr=1.5-3 · 25-45 dB RF + léger effet ELF"><input type="checkbox" value="beton_fibre"> 🔩 Béton fibré acier</label>
-      <label class="mat-chip" title="Armatures ferraillage dense <10cm · effet d'écran électrique partiel"><input type="checkbox" value="beton_arme_dense"> 🏗 Béton armé dense</label>
-      <label class="mat-chip" title="Parpaing creux · σ faible · 6-10 dB RF"><input type="checkbox" value="parpaing"> Parpaing</label>
-      <label class="mat-chip" title="Brique terre cuite · 7-10 dB RF"><input type="checkbox" value="brique"> 🧱 Brique</label>
-      <div style="width:100%;font-size:10px;color:var(--tx3);font-family:var(--mono);margin-top:4px;margin-bottom:2px">— Parois légères —</div>
-      <label class="mat-chip" title="Plâtre 1.5cm · µr=1 · 2-3 dB RF · aucun effet nT"><input type="checkbox" value="platre"> Plâtre</label>
-      <label class="mat-chip" title="Bois/OSB · µr=1 · 4-6 dB RF · transparent champ statique"><input type="checkbox" value="bois"> 🌲 Bois/OSB</label>
-      <label class="mat-chip" title="Pierre/granit · µr≈1.001 · 2-4 dB RF · aucun effet nT mesurable"><input type="checkbox" value="pierre"> 🪨 Pierre/granit</label>
-      <label class="mat-chip" title="Enduit chaux extérieur · µr=1 · 2-3 dB RF"><input type="checkbox" value="enduit_chaux"> Enduit chaux</label>
-      <label class="mat-chip" title="Enduit ciment + grillage · 10-20 dB selon densité grillage"><input type="checkbox" value="enduit_ciment_grillage"> Enduit+grillage</label>
-      <label class="mat-chip" title="Laine de roche/verre · isolant thermique · transparent EM"><input type="checkbox" value="laine_roche"> Laine de roche</label>
-      <label class="mat-chip" title="Peinture EMF Shield/YShield · σ élevé · 10-35 dB selon formulation"><input type="checkbox" value="peinture_emf"> 🛡 Peinture anti-ondes</label>
-      <div style="width:100%;font-size:10px;color:var(--tx3);font-family:var(--mono);margin-top:4px;margin-bottom:2px">— Tuyauterie (effet ELF local uniquement) —</div>
-      <label class="mat-chip" title="Cuivre · σ=5.96×10⁷ S/m · µr≈1 (diamagnétique) · blindage RF >40dB · courants Lenz réduisent champ ELF local"><input type="checkbox" value="tuyau_cuivre"> 🟤 Tuyauterie cuivre</label>
-      <label class="mat-chip" title="Plomb · σ=4.8×10⁶ S/m · µr=1 · fort écran ELF si réseau étendu mis à la terre"><input type="checkbox" value="tuyau_plomb"> ⚫ Tuyauterie plomb (ancien)</label>
-      <label class="mat-chip" title="PVC/PER · σ≈0 · µr=1 · transparent EM total"><input type="checkbox" value="tuyau_pvc"> ⚪ Tuyauterie PVC/PER</label>
+  <div class="cform-step-panel" data-step="3" style="display:none">
+    <div class="cform-step">Etape 3 — Valeur mesuree</div>
+    <label id="c-val-label">Valeur mesuree <span id="c-val-hint-span" style="color:var(--tx3);font-weight:400;font-size:10px">— laissez vide si pas de chiffre</span></label>
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
+      <input type="number" id="c-val" placeholder="ex: 44800" style="flex:1;margin-bottom:0" oninput="refreshIGRFDelta()">
+      <select id="c-unit" style="width:90px;margin-bottom:0">
+        <option value="nT">nT (magnéto)</option>
+        <option value="µT">µT (magnéto)</option>
+        <option value="mG">mG (magnéto)</option>
+        <option value="V/m">V/m (RF)</option>
+        <option value="dBm">dBm (signal)</option>
+        <option value="µT_50Hz">µT à 50Hz (ELF)</option>
+        <option value="description">description</option>
+      </select>
     </div>
-    <label style="font-size:11px">Appareils actifs au moment de la mesure</label>
-    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:0" id="c-appareils">
-      <label class="mat-chip"><input type="checkbox" value="linky"> 📟 Linky</label>
-      <label class="mat-chip"><input type="checkbox" value="wifi"> 📶 WiFi routeur</label>
-      <label class="mat-chip"><input type="checkbox" value="micro_ondes"> 📦 Micro-ondes</label>
-      <label class="mat-chip"><input type="checkbox" value="plaque_induction"> 🔥 Induction</label>
-      <label class="mat-chip"><input type="checkbox" value="frigo"> 🧊 Réfrigérateur</label>
-      <label class="mat-chip"><input type="checkbox" value="tableau_elec"> ⚡ Tableau électrique proche</label>
+    <div id="c-hint-val" style="font-size:11px;color:var(--tx3);margin-bottom:8px;padding:4px 8px;background:var(--pierre-ombre);border-radius:var(--r);display:none"></div>
+
+    <div id="c-native-row" style="margin-bottom:8px;display:none">
+      <button type="button" id="btn-native-mag" onclick="startNativeMagCapture()" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--pierre-ombre);color:var(--ardoise-clair);cursor:pointer;width:100%">&#x1F4F1; Capturer avec le magn&#x00E9;tom&#x00E8;tre du t&#x00E9;l&#x00E9;phone</button>
+      <div id="native-mag-status" style="display:none;font-size:11px;color:var(--ardoise-clair);margin-top:4px;padding:6px 8px;background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r)"></div>
+    </div>
+
+    <div id="c-csv-row" style="margin-bottom:8px">
+      <input type="file" id="csv-phyphox-input" accept=".csv" style="display:none" onchange="handlePhyphoxCSV(this)">
+      <button type="button" onclick="document.getElementById('csv-phyphox-input').click()" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--pierre-ombre);color:var(--ardoise-clair);cursor:pointer;width:100%">&#x1F4C1; Importer un CSV de mesures (Phyphox, Physics Toolbox…)</button>
+      <div id="csv-summary" style="display:none;font-size:11px;color:var(--ardoise-clair);margin-top:4px;padding:6px 8px;background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r)"></div>
+    </div>
+
+    <!-- Zone IGRF — apparait apres placement du point de mesure -->
+    <div id="c-igrf-box" style="display:none;background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;margin-bottom:8px;font-size:11px;color:var(--ardoise-clair);line-height:1.5">
+      <span id="c-igrf-text"></span>
+      <span id="c-igrf-warn" style="display:none;color:var(--warn);font-weight:500;margin-top:3px"></span>
     </div>
   </div>
 
-  <!-- ÉTAPE 5 : Note libre -->
-  <div class="cform-step">Etape 5 — Observations</div>
-  <label>Note <span style="color:var(--tx3);font-weight:400;font-size:10px">— conditions, observations, heure</span></label>
-  <textarea id="c-note" rows="2" maxlength="500" placeholder="ex: 22h, stable 3 min, fenêtre ouverte…"></textarea>
-  <div style="font-size:10px;color:var(--tx3);margin-top:2px">Merci de ne pas inclure de données personnelles (nom, adresse, téléphone).</div>
+  <!-- ÉTAPE 4 : Conditions de mesure (+ contexte interieur si Interieur choisi a l'etape 1) -->
+  <div class="cform-step-panel" data-step="4" style="display:none">
+    <div class="cform-step">Etape 4 — Conditions de mesure</div>
+    <div style="border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px;background:var(--pierre-ombre)">
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ardoise-clair);margin-bottom:6px;cursor:pointer"><input type="checkbox" id="c-airplane-mode" style="flex-shrink:0;accent-color:var(--acc)"><span style="min-width:0">Mode avion activ&eacute; pendant la mesure</span></label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ardoise-clair);margin-bottom:6px;cursor:pointer"><input type="checkbox" id="c-usb-off" style="flex-shrink:0;accent-color:var(--acc)"><span style="min-width:0">Charge USB d&eacute;branch&eacute;e</span></label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ardoise-clair);margin-bottom:10px;cursor:pointer"><input type="checkbox" id="c-no-metal" style="flex-shrink:0;accent-color:var(--acc)"><span style="min-width:0">Aucun objet m&eacute;tallique dans un rayon de 30&nbsp;cm</span></label>
+      <label style="display:block;font-size:11px;color:var(--ardoise-clair);margin-bottom:4px;font-weight:500">Dur&eacute;e de stabilisation avant lecture (secondes)</label>
+      <input type="number" id="c-duration-s" min="0" placeholder="30" style="width:120px;margin-bottom:0">
+    </div>
 
-  <div style="margin-bottom:10px;padding:8px 10px;background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r)">
-    <label style="display:flex;align-items:flex-start;gap:6px;font-size:11px;color:var(--ardoise-clair);cursor:pointer">
-      <input type="checkbox" id="c-protocole" style="margin-top:2px;accent-color:var(--acc)">
-      <span>
-        <b>&#9733;&#9733;&#9733; Mesure en protocole aveugle parall&#232;le</b>
-        <span style="display:block;font-size:10px;color:var(--tx3);margin-top:2px;line-height:1.3">
-          Ne cocher que si la mesure a &#233;t&#233; prise simultan&#233;ment par 3 op&#233;rateurs ind&#233;pendants sans communication entre eux pendant la prise. Les mesures hors protocole sont trait&#233;es comme indicatives.
+    <a href="#" id="link-comment-mesurer" onclick="event.preventDefault();openPrescription();" style="display:inline-block;font-size:11px;color:var(--ocre);text-decoration:underline;margin-bottom:8px">? Comment mesurer ?</a>
+
+    <!-- Contexte intérieur (visible seulement si Interieur choisi a l'etape 1 — cf. setCtx()) -->
+    <div id="c-interior-ctx" style="display:none;border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px;background:var(--pierre-ombre)">
+      <div style="font-size:11px;font-weight:500;color:var(--ardoise-clair);margin-bottom:8px">🏠 Contexte intérieur</div>
+      <label style="font-size:11px">Étage</label>
+      <select id="c-etage" style="margin-bottom:6px;font-size:12px">
+        <option value="">—</option>
+        <option value="sous_sol">Sous-sol / cave</option>
+        <option value="rdc">Rez-de-chaussée</option>
+        <option value="1">1er étage</option>
+        <option value="2">2ème étage et +</option>
+      </select>
+      <label style="font-size:11px">Matériaux des murs <span style="color:var(--tx3);font-weight:400">(cochez tout ce qui s'applique)</span></label>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px" id="c-mats">
+        <div style="width:100%;font-size:10px;color:var(--tx3);font-family:var(--mono);margin-bottom:2px">— Bétons (µr=1 tous, effet RF uniquement) —</div>
+        <label class="mat-chip" title="Portland CEM I · σ=0.01-0.1 S/m · 14-20 dB RF sec"><input type="checkbox" value="beton_portland"> 🏗 Béton Portland</label>
+        <label class="mat-chip" title="Chaux hydraulique NHL · σ=0.002-0.02 S/m · 8-14 dB RF · moins conducteur"><input type="checkbox" value="beton_chaux"> 🏗 Béton chaux</label>
+        <label class="mat-chip" title="Géopolymère · σ variable · 12-25 dB RF selon formulation"><input type="checkbox" value="beton_geo"> 🏗 Géopolymère</label>
+        <label class="mat-chip" title="Fibres acier · µr=1.5-3 · 25-45 dB RF + léger effet ELF"><input type="checkbox" value="beton_fibre"> 🔩 Béton fibré acier</label>
+        <label class="mat-chip" title="Armatures ferraillage dense <10cm · effet d'écran électrique partiel"><input type="checkbox" value="beton_arme_dense"> 🏗 Béton armé dense</label>
+        <label class="mat-chip" title="Parpaing creux · σ faible · 6-10 dB RF"><input type="checkbox" value="parpaing"> Parpaing</label>
+        <label class="mat-chip" title="Brique terre cuite · 7-10 dB RF"><input type="checkbox" value="brique"> 🧱 Brique</label>
+        <div style="width:100%;font-size:10px;color:var(--tx3);font-family:var(--mono);margin-top:4px;margin-bottom:2px">— Parois légères —</div>
+        <label class="mat-chip" title="Plâtre 1.5cm · µr=1 · 2-3 dB RF · aucun effet nT"><input type="checkbox" value="platre"> Plâtre</label>
+        <label class="mat-chip" title="Bois/OSB · µr=1 · 4-6 dB RF · transparent champ statique"><input type="checkbox" value="bois"> 🌲 Bois/OSB</label>
+        <label class="mat-chip" title="Pierre/granit · µr≈1.001 · 2-4 dB RF · aucun effet nT mesurable"><input type="checkbox" value="pierre"> 🪨 Pierre/granit</label>
+        <label class="mat-chip" title="Enduit chaux extérieur · µr=1 · 2-3 dB RF"><input type="checkbox" value="enduit_chaux"> Enduit chaux</label>
+        <label class="mat-chip" title="Enduit ciment + grillage · 10-20 dB selon densité grillage"><input type="checkbox" value="enduit_ciment_grillage"> Enduit+grillage</label>
+        <label class="mat-chip" title="Laine de roche/verre · isolant thermique · transparent EM"><input type="checkbox" value="laine_roche"> Laine de roche</label>
+        <label class="mat-chip" title="Peinture EMF Shield/YShield · σ élevé · 10-35 dB selon formulation"><input type="checkbox" value="peinture_emf"> 🛡 Peinture anti-ondes</label>
+        <div style="width:100%;font-size:10px;color:var(--tx3);font-family:var(--mono);margin-top:4px;margin-bottom:2px">— Tuyauterie (effet ELF local uniquement) —</div>
+        <label class="mat-chip" title="Cuivre · σ=5.96×10⁷ S/m · µr≈1 (diamagnétique) · blindage RF >40dB · courants Lenz réduisent champ ELF local"><input type="checkbox" value="tuyau_cuivre"> 🟤 Tuyauterie cuivre</label>
+        <label class="mat-chip" title="Plomb · σ=4.8×10⁶ S/m · µr=1 · fort écran ELF si réseau étendu mis à la terre"><input type="checkbox" value="tuyau_plomb"> ⚫ Tuyauterie plomb (ancien)</label>
+        <label class="mat-chip" title="PVC/PER · σ≈0 · µr=1 · transparent EM total"><input type="checkbox" value="tuyau_pvc"> ⚪ Tuyauterie PVC/PER</label>
+      </div>
+      <label style="font-size:11px">Appareils actifs au moment de la mesure</label>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:0" id="c-appareils">
+        <label class="mat-chip"><input type="checkbox" value="linky"> 📟 Linky</label>
+        <label class="mat-chip"><input type="checkbox" value="wifi"> 📶 WiFi routeur</label>
+        <label class="mat-chip"><input type="checkbox" value="micro_ondes"> 📦 Micro-ondes</label>
+        <label class="mat-chip"><input type="checkbox" value="plaque_induction"> 🔥 Induction</label>
+        <label class="mat-chip"><input type="checkbox" value="frigo"> 🧊 Réfrigérateur</label>
+        <label class="mat-chip"><input type="checkbox" value="tableau_elec"> ⚡ Tableau électrique proche</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ÉTAPE 5 : Contexte (optionnel) — fusion de l'ancien onglet Observation + de la Note libre -->
+  <div class="cform-step-panel" data-step="5" style="display:none">
+    <div class="cform-step">Etape 5 — Contexte (optionnel)</div>
+    <label id="c-note-label">Contexte <span id="c-note-hint-span" style="color:var(--tx3);font-weight:400;font-size:10px">(optionnel)</span></label>
+    <textarea id="c-note" rows="3" maxlength="500" placeholder="Éléments visibles à proximité : lignes électriques, antennes, structures métalliques…"></textarea>
+    <div style="font-size:10px;color:var(--tx3);margin-top:2px">Merci de ne pas inclure de données personnelles (nom, adresse, téléphone).</div>
+  </div>
+
+  <!-- ÉTAPE 6 : Validation et envoi -->
+  <div class="cform-step-panel" data-step="6" style="display:none">
+    <div class="cform-step">Etape 6 — Validation et envoi</div>
+    <div id="cform-recap" style="font-size:11px;color:var(--ardoise-clair);background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:10px;line-height:1.6"></div>
+
+    <div style="margin-bottom:10px;padding:8px 10px;background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r)">
+      <label style="display:flex;align-items:flex-start;gap:6px;font-size:11px;color:var(--ardoise-clair);cursor:pointer">
+        <input type="checkbox" id="c-protocole" style="margin-top:2px;accent-color:var(--acc)">
+        <span>
+          <b>&#9733;&#9733;&#9733; Mesure en protocole aveugle parall&#232;le</b>
+          <span style="display:block;font-size:10px;color:var(--tx3);margin-top:2px;line-height:1.3">
+            Ne cocher que si la mesure a &#233;t&#233; prise simultan&#233;ment par 3 op&#233;rateurs ind&#233;pendants sans communication entre eux pendant la prise. Les mesures hors protocole sont trait&#233;es comme indicatives.
+          </span>
         </span>
-      </span>
-    </label>
+      </label>
+    </div>
+
+    <div class="rgpd-row">
+      <input type="checkbox" id="c-rgpd">
+      <label for="c-rgpd">J'accepte que ma contribution (position GPS, valeur mesurée, contexte bâtiment, commentaire libre) soit publiée sur la base Tellux et consultable par tous les utilisateurs. Je comprends qu'aucune donnée nominative ne m'est demandée, mais qu'un identifiant technique de mon navigateur est enregistré. <a href="#" onclick="event.preventDefault();document.getElementById('disclaimer-overlay').style.display='flex'" style="color:var(--acc);text-decoration:underline">En savoir plus</a></label>
+    </div>
   </div>
 
-  <div class="rgpd-row">
-    <input type="checkbox" id="c-rgpd">
-    <label for="c-rgpd">J'accepte que ma contribution (position GPS, valeur mesurée, contexte bâtiment, commentaire libre) soit publiée sur la base Tellux et consultable par tous les utilisateurs. Je comprends qu'aucune donnée nominative ne m'est demandée, mais qu'un identifiant technique de mon navigateur est enregistré. <a href="#" onclick="event.preventDefault();document.getElementById('disclaimer-overlay').style.display='flex'" style="color:var(--acc);text-decoration:underline">En savoir plus</a></label>
-  </div>
-
-  <div class="cform-btns">
-    <button class="btn-save" id="btn-save" onclick="saveContrib()">Enregistrer</button>
+  <!-- Navigation stepper + boutons finaux -->
+  <div class="cform-btns" id="cform-nav-btns" style="display:flex;gap:8px">
     <button class="btn-cancel" onclick="cancelContrib()">Annuler</button>
+    <button class="btn-cancel" id="cform-btn-prev" onclick="cformPrevStep()" style="display:none">← Précédent</button>
+    <button class="btn-save" id="cform-btn-next" onclick="cformNextStep()" disabled>Suivant →</button>
+    <button class="btn-save" id="btn-save" onclick="saveContrib()" style="display:none">Enregistrer</button>
   </div>
 </div>
 
@@ -2084,6 +2087,15 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 let DARK=(function(){try{const s=localStorage.getItem('tellux_theme');if(s)return s==='dark';return matchMedia('(prefers-color-scheme:dark)').matches;}catch(e){return matchMedia('(prefers-color-scheme:dark)').matches;}})();
 if(DARK)document.documentElement.setAttribute('data-theme','dark');
 let contribsDB=[],pending=null,cachedIGRF={},_contribClickHandler=null;
+// ctxContrib : contexte Exterieur/Interieur du formulaire #cform, fixe par setCtx()
+// (etape 1 du stepper). Defaut 'exterieur' (cas d'usage terrain le plus courant) —
+// avant le 2026-08-13, setCtx() n'existait pas et cette variable n'etait jamais
+// declaree : le toggle ne faisait rien au clic et saveContrib() plantait sur une
+// ReferenceError des que le payload etait construit (contexte:ctxContrib). Corrige
+// ici — cf. CFORM-STEPPER-2026-08 dans DETTES_TECHNIQUES.md.
+let ctxContrib='exterieur';
+const CFORM_TOTAL_STEPS=6;
+let cformCurrentStep=1;
 let _expertActive=false,_expertConsented=false,_expertLastResult=null,_expertLastLatLon=null,_expertThrottle=null;
 function updateIgrfWmmDiff(lat, lon) {
   const el = document.getElementById('igrf-wmm-diff');
@@ -2432,7 +2444,11 @@ const INSTRUMENT_CONSTRAINTS = {
   autre_capteur:   {unit:null,    min:null,  max:null,   hint:'Précisez l\'unité et la méthode dans la note'},
   anfr:            {unit:'V/m',   min:0,     max:100,    hint:'Mesure ANFR certifiée — limite légale : 28 V/m en zone habitée'},
   observation:     {unit:'description', min:null, max:null, hint:'Décrivez ce que vous observez (interférences, effets...)'},
-  ressenti:        {unit:'description', min:null, max:null, hint:'Ressenti subjectif — décrivez dans la note'},
+  // 'ressenti' retire du dropdown Instrument (2026-08-13, meme tension A.4 que
+  // l'ancien onglet Observation autonome) — entree supprimee ici aussi, plus
+  // aucun chemin de saisie ne peut produire ce type. INSTRUMENT_LABELS.ressenti
+  // (plus bas) reste en revanche CONSERVE : il sert a l'affichage des
+  // contributions deja enregistrees en base avant ce changement, pas a la saisie.
 };
 
 // Formatage utilitaire d'une valeur de champ magnetique avec affichage
@@ -2643,8 +2659,8 @@ function onInstrumentChange(){
   } else {
     unitSel.disabled = false;
   }
-  // Bouton CSV : visible pour instruments magnéto, masqué pour signaux/observation/ressenti
-  const NO_CSV=['smartphone_rssi','smartphone_wifi','cornet','rtlsdr','observation','ressenti'];
+  // Bouton CSV : visible pour instruments magnéto, masqué pour signaux/observation
+  const NO_CSV=['smartphone_rssi','smartphone_wifi','cornet','rtlsdr','observation'];
   if(csvRow) csvRow.style.display=NO_CSV.includes(type)?'none':'block';
   updateNativeMagRowVisibility();
 }
@@ -5645,6 +5661,7 @@ function _placeContribMarker(lat,lng){
   if(reposBtn)reposBtn.style.display='inline-block';
   updateIGRFDisplay(lat, lng);
   info('Position placee — remplissez le formulaire.','success',5000);
+  cformUpdateStep1NextState();
 }
 function repositionMarker(){
   if(pending){map.removeLayer(pending);pending=null;}
@@ -5655,6 +5672,81 @@ function repositionMarker(){
   var igrfBox=document.getElementById('c-igrf-box');if(igrfBox)igrfBox.style.display='none';
   info('Cliquez sur la carte pour repositionner votre mesure.','warn');
   _armContribClick();
+  cformUpdateStep1NextState();
+}
+
+// ═══ STEPPER #cform — une etape visible a la fois (2026-08-13) ═══
+// Remplace l'ancien affichage a defilement unique (toutes les etapes empilees
+// sur un seul ecran, cause de debordement sur mobile etroit). Les champs eux-
+// memes (id, logique de saisie/validation) sont inchanges — seule la structure
+// d'affichage est decoupee en 6 panneaux navigables.
+function cformUpdateStep1NextState(){
+  var btn=document.getElementById('cform-btn-next');
+  if(btn && cformCurrentStep===1) btn.disabled = !pending;
+}
+function cformShowStep(n){
+  n=Math.max(1,Math.min(CFORM_TOTAL_STEPS,n));
+  cformCurrentStep=n;
+  document.querySelectorAll('.cform-step-panel').forEach(function(panel){
+    panel.style.display = (parseInt(panel.getAttribute('data-step'),10)===n) ? 'block' : 'none';
+  });
+  var indicator=document.getElementById('cform-step-indicator');
+  if(indicator) indicator.textContent='Étape '+n+'/'+CFORM_TOTAL_STEPS;
+  var prevBtn=document.getElementById('cform-btn-prev');
+  var nextBtn=document.getElementById('cform-btn-next');
+  var saveBtn=document.getElementById('btn-save');
+  if(prevBtn) prevBtn.style.display = (n>1) ? 'inline-block' : 'none';
+  if(nextBtn) nextBtn.style.display = (n<CFORM_TOTAL_STEPS) ? 'inline-block' : 'none';
+  if(saveBtn) saveBtn.style.display = (n===CFORM_TOTAL_STEPS) ? 'inline-block' : 'none';
+  if(n===1) cformUpdateStep1NextState();
+  if(nextBtn && n>1) nextBtn.disabled=false; // seule l'etape 1 bloque sur position manquante
+  if(n===CFORM_TOTAL_STEPS) cformRenderRecap();
+}
+function cformNextStep(){
+  if(cformCurrentStep===1 && !pending){
+    info('Cliquez d\'abord sur la carte pour placer votre point de mesure.','warn');
+    return;
+  }
+  cformShowStep(cformCurrentStep+1);
+}
+function cformPrevStep(){
+  cformShowStep(cformCurrentStep-1);
+}
+function cformGoToStep(n){
+  cformShowStep(n);
+}
+function cformRenderRecap(){
+  var el=document.getElementById('cform-recap');
+  if(!el) return;
+  var posTxt='—';
+  if(pending){ var ll=pending.getLatLng(); posTxt=ll.lat.toFixed(5)+', '+ll.lng.toFixed(5); }
+  var typeSel=document.getElementById('c-type');
+  var instrTxt=typeSel && typeSel.selectedOptions && typeSel.selectedOptions[0] ? typeSel.selectedOptions[0].textContent : '—';
+  var valEl=document.getElementById('c-val'), unitEl=document.getElementById('c-unit');
+  var valTxt=(valEl && valEl.value) ? (valEl.value+' '+(unitEl?unitEl.value:'')) : '—';
+  var conds=[];
+  if(document.getElementById('c-airplane-mode')?.checked) conds.push('Mode avion');
+  if(document.getElementById('c-usb-off')?.checked) conds.push('USB débranchée');
+  if(document.getElementById('c-no-metal')?.checked) conds.push('Aucun métal à proximité');
+  var condsTxt = conds.length ? conds.join(', ') : 'aucune cochée';
+  el.innerHTML =
+    '<div><b>Position</b> — '+posTxt+' ('+(ctxContrib==='interieur'?'Intérieur':'Extérieur')+')</div>'+
+    '<div><b>Instrument</b> — '+instrTxt+'</div>'+
+    '<div><b>Valeur</b> — '+valTxt+'</div>'+
+    '<div><b>Conditions</b> — '+condsTxt+'</div>';
+}
+// setCtx() n'existait pas avant le 2026-08-13 : le toggle Exterieur/Interieur
+// (boutons #ctx-ext/#ctx-int) etait cablé en HTML mais sans handler — clic sans
+// effet, ctxContrib jamais definie (ReferenceError dans saveContrib()). Corrige :
+// bascule visuelle + affichage du contexte interieur + valeur portee jusqu'a l'envoi.
+function setCtx(value,btnEl){
+  ctxContrib=value;
+  var extBtn=document.getElementById('ctx-ext');
+  var intBtn=document.getElementById('ctx-int');
+  if(extBtn) extBtn.classList.toggle('active', value==='exterieur');
+  if(intBtn) intBtn.classList.toggle('active', value==='interieur');
+  var interiorCtx=document.getElementById('c-interior-ctx');
+  if(interiorCtx) interiorCtx.style.display = (value==='interieur') ? 'block' : 'none';
 }
 
 function cancelContrib(){
@@ -5687,6 +5779,12 @@ function cancelContrib(){
   // Désarmer le handler de clic s'il est encore en attente (pas de map.off('click')
   // global qui casserait les autres handlers)
   if(_contribClickHandler){map.off('click',_contribClickHandler);_contribClickHandler=null;}
+  // Reset contexte Exterieur/Interieur + champs intérieur (setCtx, cf. stepper 2026-08-13)
+  document.querySelectorAll('#c-mats input:checked,#c-appareils input:checked').forEach(function(cb){cb.checked=false;});
+  var etageSel=document.getElementById('c-etage');if(etageSel)etageSel.value='';
+  setCtx('exterieur',document.getElementById('ctx-ext'));
+  // Reset stepper a l'etape 1
+  cformShowStep(1);
   info('Mesure annulée.','warn',5000);
 }
 
@@ -5789,6 +5887,10 @@ async function saveContrib(){
     window._nativeCaptureUsed = false;
     var csvSum=document.getElementById('csv-summary');if(csvSum)csvSum.style.display='none';
     var csvInp=document.getElementById('csv-phyphox-input');if(csvInp)csvInp.value='';
+    document.querySelectorAll('#c-mats input:checked,#c-appareils input:checked').forEach(function(cb){cb.checked=false;});
+    var etageSel2=document.getElementById('c-etage');if(etageSel2)etageSel2.value='';
+    setCtx('exterieur',document.getElementById('ctx-ext'));
+    cformShowStep(1);
     const n=contribsDB.length;
     updateSupabaseStatusDot('ok',n);
     const eTot2=document.getElementById('db-total');if(eTot2)eTot2.textContent=n+' contribution'+(n>1?'s':'')+' en base';
@@ -6724,10 +6826,11 @@ function runAutoTests(){ return Promise.resolve(); }
     <span class="fab-mini-label">Contribution terrain</span>
     <button class="fab-mini" style="background:var(--acc)" aria-label="Contribution terrain" onclick="event.stopPropagation();openContribLevelModal();closeFabMenu();">+</button>
   </div>
-  <div class="fab-menu-item" onclick="openPrescription();closeFabMenu();">
-    <span class="fab-mini-label">Prescription de mesure</span>
-    <button class="fab-mini" style="background:var(--warn)" aria-label="Prescription de mesure" onclick="event.stopPropagation();openPrescription();closeFabMenu();">Rx</button>
-  </div>
+  <!-- Bouton FAB "Prescription de mesure" (Rx) retire (2026-08-13) : il apparaissait
+       en concurrence directe avec "Contribution terrain" avant meme d'entrer dans le
+       flux. Le panneau openPrescription() n'a pas disparu — il est desormais accessible
+       via le lien contextuel "Comment mesurer ?" a l'etape 4 (Conditions de mesure) du
+       stepper #cform, la ou la question se pose reellement. -->
 </div>
 <button class="fab-mesure" id="fab-mesure" onclick="toggleFabMenu()" title="Actions terrain">+</button>
 
@@ -6761,6 +6864,9 @@ function startContribFromFAB(){
   // Attendre le prochain tick pour que la carte ait fini de traiter le toggle
   setTimeout(function(){_armContribClick();},0);
   if(fab)fab.classList.add('fab-active');
+  // Ouverture fraiche du stepper — toujours a l'etape 1 (sauf appel depuis
+  // startFromPrescription(), qui navigue explicitement vers l'etape 2 ensuite).
+  if(typeof cformShowStep==='function') cformShowStep(1);
 }
 
 // ═══ MODAL CHOIX NIVEAU CONTRIBUTION TERRAIN ═══
@@ -6773,8 +6879,9 @@ function openContribLevelModal(){
   if(modal){
     modal.style.display='flex';
     modal.setAttribute('aria-hidden','false');
-    // Reset sur l'onglet Observation par defaut
-    if(typeof switchContribTab === 'function') switchContribTab('obs');
+    // Reset sur l'onglet Mesure technique par defaut (onglet Observation retire,
+    // Capteurs appareil desactive — un seul onglet fonctionnel aujourd'hui).
+    if(typeof switchContribTab === 'function') switchContribTab('mes');
   }
 }
 function closeContribLevelModal(){
@@ -6867,8 +6974,14 @@ function startFromPrescription(instrument,unit){
   // Fermer le panel prescription
   var panel=document.getElementById('prescription-panel');
   if(panel)panel.style.display='none';
-  // Ouvrir le formulaire de mesure
-  startContribFromFAB();
+  // Le lien "Comment mesurer ?" (2026-08-13) ne vit desormais que dans le stepper
+  // deja ouvert (etape 4, Conditions de mesure) — ne PAS appeler startContribFromFAB()
+  // dans ce cas : c'est une fonction toggle, et le formulaire etant deja visible,
+  // ca le fermerait au lieu d'y naviguer. On ne l'ouvre que s'il ne l'est pas deja
+  // (appel direct depuis le FAB "Prescription", cas residuel defensif).
+  var form=document.getElementById('cform');
+  if(!form || form.style.display!=='block'){ startContribFromFAB(); }
+  cformGoToStep(2);
   // Pre-selectionner l'instrument et l'unite
   setTimeout(function(){
     var typeSel=document.getElementById('c-type');
@@ -7623,9 +7736,9 @@ setInterval(() => { renderChargeSparkline(); updateCondSummaries(); syncBadges()
 setInterval(function(){ updateCondSummaries(); syncBadges(); }, 30*1000);
 
 // ═══ Modale contribution a onglets ═══
-// Onglet 1 : Observation simple (textarea libre, saveObservation)
-// Onglet 2 : Mesure technique (delegue au #cform existant via chooseContribLevelN0)
-// Onglet 3 : Capteurs appareil (desactive, placeholder pour session future)
+// Onglet 1 : Mesure technique (seul onglet actif — delegue au #cform existant via chooseContribLevelN0)
+// Onglet 2 : Capteurs appareil (desactive — cf. handleDisabledCapTab, jamais atteint via switchContribTab)
+// Onglet "Observation" retire (2026-08-13) : fondu dans le champ Contexte (optionnel) du stepper #cform.
 function switchContribTab(id){
   const modal = document.getElementById('contrib-level-modal');
   if(!modal) return;
@@ -7636,24 +7749,12 @@ function switchContribTab(id){
     b.classList.toggle('active', isActive);
     b.setAttribute('aria-selected', isActive ? 'true' : 'false');
   });
-  ['obs','mes','cap'].forEach(t => {
+  ['mes','cap'].forEach(t => {
     const el = document.getElementById('ctab-' + t);
     if(!el) return;
     if(t === id){ el.removeAttribute('hidden'); }
     else { el.setAttribute('hidden',''); }
   });
-  // Pre-remplir lat/lon si un marker pending est place
-  if(id === 'obs' && typeof pending !== 'undefined' && pending){
-    try{
-      const ll = pending.getLatLng();
-      const latI = document.getElementById('obs-lat');
-      const lonI = document.getElementById('obs-lon');
-      if(latI && !latI.value) latI.value = ll.lat.toFixed(5);
-      if(lonI && !lonI.value) lonI.value = ll.lng.toFixed(5);
-      const info = document.getElementById('obs-position-info');
-      if(info) info.textContent = 'Position : ' + ll.lat.toFixed(5) + ', ' + ll.lng.toFixed(5) + ' (placee via la carte)';
-    }catch(e){}
-  }
   if(id === 'cap'){
     const ok = capCheckSupport();
     // Pre-fill position from pending marker if available
@@ -7678,6 +7779,15 @@ function switchContribTab(id){
     // capteurs pour economiser la batterie.
     capCleanup();
   }
+}
+
+// Onglet "Capteurs appareil" desactive (2026-08-13) : l'API Web Sensor magnetometre
+// n'est pas accessible en navigateur (restriction Chrome Android depuis 2023) — cf.
+// CAPTEURS-WEB-API-001. Le contenu explicatif du panneau ctab-cap est conserve en
+// reserve pour la future app native, mais le clic sur l'onglet n'ouvre plus rien —
+// juste un toast bref, pas de panneau trompeur presente comme actif aujourd'hui.
+function handleDisabledCapTab(){
+  if(typeof info === 'function') info('Disponible avec l\'application Tellux (à venir).','warn',3500);
 }
 
 // ═══ CAPTEURS APPAREIL — Web Sensors API ═══
@@ -7973,44 +8083,9 @@ function capCleanup(){
   capApiUsed=null;capAccApiUsed=null;capSamples=[];
 }
 
-async function saveObservation(){
-  const noteEl = document.getElementById('obs-note');
-  const latEl  = document.getElementById('obs-lat');
-  const lonEl  = document.getElementById('obs-lon');
-  const btn    = document.getElementById('btn-obs-send');
-  const note = (noteEl && noteEl.value || '').trim();
-  if(!note){ alert('Veuillez saisir votre observation.'); return; }
-  const lat = parseFloat(latEl && latEl.value);
-  const lon = parseFloat(lonEl && lonEl.value);
-  if(!isFinite(lat) || !isFinite(lon)){
-    alert('Position invalide. Cliquez d\'abord sur la carte ou saisissez lat/lon manuellement.');
-    return;
-  }
-  if(lat < 41.3 || lat > 43.1 || lon < 8.5 || lon > 9.7){
-    alert('Position hors Corse. Tellux est calibre pour la Corse uniquement.');
-    return;
-  }
-  if(btn){ btn.disabled = true; btn.textContent = 'Envoi…'; }
-  const row = {
-    lat: lat, lon: lon,
-    type: 'observation',
-    note: note,
-    contexte: 'observation',
-    session_id: (typeof sessionId !== 'undefined' ? sessionId : null),
-    version_app: '2.4'
-  };
-  Object.keys(row).forEach(k => { if(row[k] === null || row[k] === undefined) delete row[k]; });
-  try {
-    await sbPost('/rest/v1/contributions', [row]);
-    if(typeof info === 'function') info('Merci, votre observation sera vérifiée avant publication.','success', 5000);
-    closeContribLevelModal();
-    noteEl.value = ''; latEl.value = ''; lonEl.value = '';
-  } catch(e){
-    alert('Envoi échoué : ' + (e.message || 'erreur réseau'));
-  } finally {
-    if(btn){ btn.disabled = false; btn.textContent = 'Envoyer'; }
-  }
-}
+// saveObservation() retiree (2026-08-13) : l'onglet Observation autonome qui
+// l'appelait a ete supprime — fondu dans le champ Contexte (optionnel) du
+// stepper #cform, qui passe par saveContrib() comme toute mesure technique.
 
 /* === Phase 2 — Layout desktop sidebar fixe (≥ 1024px) === */
 (function(){
@@ -8305,17 +8380,8 @@ async function saveObservation(){
 ["expert_modal_ok","#expert-modal button@1","","Compris","Capitu"],
 ["contrib_title","#contrib-title","","Contribuer à Tellux","Cuntribuisce à Tellux"],
 ["contrib_close_aria","#contrib-level-modal header button","aria-label","Fermer","Chjode"],
-["ctab_obs",".ctab-btn[data-tab='obs']","","Observation","Osservazione"],
 ["ctab_mes",".ctab-btn[data-tab='mes']","","Mesure technique","Misura tecnica"],
-["ctab_cap",".ctab-btn[data-tab='cap']","","Capteurs appareil","Sensori di l'apparechju"],
-["obs_intro","#ctab-obs > p","","Partagez une observation libre associée à un point sur la carte. Votre observation sera vérifiée avant publication.","Spartite un'osservazione libera ligata à un puntu nant'à a carta. A vostra osservazione sarà verificata prima d'esse publicata."],
-["obs_position","#obs-position-info","","Cliquez d'abord sur la carte pour placer le point, puis rouvrez ce formulaire. Ou saisissez manuellement ci-dessous.","Cliccate prima nant'à a carta per piazzà u puntu, po riaprite stu formulariu. O entrite à manu quì sottu."],
-["obs_lat_ph","#obs-lat","placeholder","Latitude (ex: 42.308)","Latitudine (es: 42.308)"],
-["obs_lon_ph","#obs-lon","placeholder","Longitude (ex: 9.150)","Longitudine (es: 9.150)"],
-["obs_note_label","label[for='obs-note']","","Que souhaitez-vous partager ?","Chì vulete sparte ?"],
-["obs_note_ph","#obs-note","placeholder","Ressenti, observation visuelle, contexte particulier… (300 caractères max)","Sensazione, osservazione visuale, cuntestu particulare… (300 caratteri max)"],
-["obs_cancel","#ctab-obs button[onclick='closeContribLevelModal()']","","Annuler","Annullà"],
-["obs_send","#btn-obs-send","","Envoyer","Mandà"],
+["ctab_cap",".ctab-btn[data-tab='cap']","","Capteurs appareil (bientôt)","Sensori di l'apparechju (prestu)"],
 ["mes_avant","#ctab-mes p@0","","Avant de mesurer","Prima di misurà"],
 ["mes_precautions","#ctab-mes p@1","","Pour une lecture exploitable : activez le mode avion, posez le téléphone à plat pendant 30 secondes minimum, débranchez la charge USB, et écartez les objets métalliques (clés, montre, étui aimanté) à plus de 30 cm du capteur.","Per una lettura sfruttevule : attivate u modu aviò, pusate u telefonu à pianu durante 30 secondi à u minimu, staccate a carica USB, è alluntanate l'ogetti metallichi (chjave, mostra, astucciu magneticu) à più di 30 cm da u sensore."],
 ["mes_pourquoi","#ctab-mes a[href='/guide-et-glossaire.html#mesure-smartphone']","","Pourquoi ces précautions ?","Perchè ste precauzione ?"],
@@ -8464,15 +8530,15 @@ async function saveObservation(){
 ["cform_epistemic","#contrib-epistemic-note","","Contribution terrain — données à valeur indicative, non certifiées.","Cuntribuzione di terrenu — dati à valore indicativu, micca certificati."],
 ["cform_position","#c-position-info","","Cliquez sur la carte pour placer le point","Cliccate nant'à a carta per piazzà u puntu"],
 ["cform_reposition","#btn-reposition","","Repositionner le point","Ripusiziunà u puntu"],
-["cform_step1",".cform-step@0","","Etape 1 — Contexte","Tappa 1 — Cuntestu"],
+["cform_step1",".cform-step@0","","Etape 1 — Position","Tappa 1 — Pusizione"],
 ["cform_step2",".cform-step@1","","Etape 2 — Instrument","Tappa 2 — Strumentu"],
-["cform_step3",".cform-step@2","","Etape 3 — Mesure","Tappa 3 — Misura"],
-["cform_step_cond",".cform-step@3","","Conditions de mesure","Cundizione di misura"],
-["cform_step4",".cform-step@4","","Etape 4 — Details interieur","Tappa 4 — Ditagli internu"],
-["cform_step5",".cform-step@5","","Etape 5 — Observations","Tappa 5 — Osservazione"],
+["cform_step3",".cform-step@2","","Etape 3 — Valeur mesuree","Tappa 3 — Valore misuratu"],
+["cform_step_cond",".cform-step@3","","Etape 4 — Conditions de mesure","Tappa 4 — Cundizione di misura"],
+["cform_step4",".cform-step@4","","Etape 5 — Contexte (optionnel)","Tappa 5 — Cuntestu (ozzionale)"],
+["cform_step5",".cform-step@5","","Etape 6 — Validation et envoi","Tappa 6 — Validazione è mandatura"],
 ["ctx_ext","#ctx-ext","","Exterieur","Esternu"],
 ["ctx_int","#ctx-int","","Interieur","Internu"],
-["cform_instr_label",".cform > label@0","","Instrument de mesure","Strumentu di misura"],
+["cform_instr_label","#c-type-label","","Instrument de mesure","Strumentu di misura"],
 ["optgroup_phone","#c-type optgroup@0","label","📱 Smartphone (intégré)","📱 Smartphone (integratu)"],
 ["optgroup_ext","#c-type optgroup@1","label","🔧 Capteur externe (~50-200€)","🔧 Sensore esternu (~50-200€)"],
 ["optgroup_cert","#c-type optgroup@2","label","✅ Mesure certifiée","✅ Misura certificata"],
@@ -8483,9 +8549,8 @@ async function saveObservation(){
 ["opt_autre","#c-type option[value='autre_capteur']","","Autre capteur dédié EMF","Altru sensore dedicatu EMF"],
 ["opt_anfr","#c-type option[value='anfr']","","Mesure ANFR / labo accrédité","Misura ANFR / laburatoriu accreditatu"],
 ["opt_observation","#c-type option[value='observation']","","Observation visuelle / terrain","Osservazione visuale / terrenu"],
-["opt_ressenti","#c-type option[value='ressenti']","","Ressenti subjectif (non instrumental)","Sensazione sugettiva (micca strumentale)"],
-["cform_val_label",".cform > label@1","tf","Valeur mesuree","Valore misuratu"],
-["cform_val_hint",".cform > label > span@0","","— laissez vide si pas de chiffre","— lasciate biotu s'ellu ùn ci hè cifra"],
+["cform_val_label","#c-val-label","tf","Valeur mesuree","Valore misuratu"],
+["cform_val_hint","#c-val-hint-span","","— laissez vide si pas de chiffre","— lasciate biotu s'ellu ùn ci hè cifra"],
 ["cform_val_ph","#c-val","placeholder","ex: 44800","es: 44800"],
 ["btn_native_mag","#btn-native-mag","","📱 Capturer avec le magnétomètre du téléphone","📱 Catturà cù u magnetometru di u telefonu"],
 ["btn_csv_import","#c-csv-row button","","📁 Importer un CSV de mesures (Phyphox, Physics Toolbox…)","📁 Impurtà un CSV di misure (Phyphox, Physics Toolbox…)"],
@@ -8524,13 +8589,16 @@ async function saveObservation(){
 ["app_induction","#c-appareils .mat-chip@3","","🔥 Induction","🔥 Induzzione"],
 ["app_frigo","#c-appareils .mat-chip@4","","🧊 Réfrigérateur","🧊 Frigò"],
 ["app_tableau","#c-appareils .mat-chip@5","","⚡ Tableau électrique proche","⚡ Quadru elettricu vicinu"],
-["cform_note_label",".cform > label@2","tf","Note","Nota"],
-["cform_note_hint",".cform > label > span@1","","— conditions, observations, heure","— cundizione, osservazione, ora"],
-["cform_note_ph","#c-note","placeholder","ex: 22h, stable 3 min, fenêtre ouverte…","es: 22 ore, stabule 3 min, finestra aperta…"],
+["cform_note_label","#c-note-label","tf","Contexte","Cuntestu"],
+["cform_note_hint","#c-note-hint-span","","(optionnel)","(ozzionale)"],
+["cform_note_ph","#c-note","placeholder","Éléments visibles à proximité : lignes électriques, antennes, structures métalliques…","Elementi visibili vicinu : linee elettriche, antenne, strutture metalliche…"],
 ["cform_privacy","#c-note + div","","Merci de ne pas inclure de données personnelles (nom, adresse, téléphone).","Ùn mittite micca dati persunali (nome, indirizzu, telefonu)."],
 ["cform_protocole","#c-protocole + span > b","","★★★ Mesure en protocole aveugle parallèle","★★★ Misura in prutucollu cecu parallelu"],
 ["btn_save","#btn-save","","Enregistrer","Arregistrà"],
 ["btn_cancel",".cform .btn-cancel","","Annuler","Annullà"],
+["cform_btn_prev","#cform-btn-prev","","← Précédent","← Precedente"],
+["cform_btn_next","#cform-btn-next","","Suivant →","Seguente →"],
+["cform_comment_mesurer","#link-comment-mesurer","","? Comment mesurer ?","? Cumu misurà ?"],
 ["geo_title","#geo-panel > div:first-child > span:nth-child(2)","","Mode Prospecteur terrain","Modu Pruspettore di terrenu"],
 ["geo_badge","#geo-panel > div:first-child > span:nth-child(3)","","protocole terrain","prutucollu di terrenu"],
 ["geo_checklist","#geo-panel > div:nth-child(2) > div:first-child","","Checklist mesure (5 min)","Lista di cuntrollu misura (5 min)"],
