@@ -911,41 +911,50 @@ a{color:inherit;}
   // Slots communs, pré-remplissables. Le reste des variables devient
   // un champ spécifique au template (textarea).
 
+  // NB : les slots sont des objets statiques construits une seule fois au
+  // chargement du script, avant que document.documentElement.lang ne soit
+  // posé par le script i18n (second <script>, plus bas dans le document).
+  // jt() lit document.documentElement.lang à l'APPEL, pas à la définition —
+  // mais ces tableaux sont évalués immédiatement (var au niveau module), donc
+  // jt() y renverrait toujours le FR (lang pas encore posé à ce stade). Les
+  // labels/placeholders sont donc résolus paresseusement via des fonctions
+  // plutôt que des littéraux, appelées au moment de l'affichage (openModal,
+  // bien après DOMContentLoaded) — cf. commonSlotsFor() plus bas.
   var COMMON_SLOTS_MAIRIE = [
-    { key: 'NOM DE LA COMMUNE', label: 'Nom de la commune', placeholder: 'Ex. Ajaccio', type: 'text', autofill: 'commune_nom' },
-    { key: 'ADRESSE MAIRIE', label: 'Adresse de la mairie', placeholder: 'Ex. Hôtel de ville, place Foch', type: 'text' },
-    { key: 'CODE POSTAL', label: 'Code postal', placeholder: 'Ex. 20000', type: 'text' },
-    { key: 'COMMUNE', label: 'Ville (reprise dans l\'adresse)', placeholder: 'Ex. Ajaccio', type: 'text', autofill: 'commune_nom' },
-    { key: 'TÉLÉPHONE', label: 'Téléphone de la mairie', placeholder: 'Ex. 04 95 00 00 00', type: 'text' },
-    { key: 'EMAIL MAIRIE', label: 'Email de la mairie', placeholder: 'Ex. contact@mairie.fr', type: 'text' },
-    { key: 'DATE', label: 'Date du courrier', placeholder: 'Ex. 24 avril 2026', type: 'text', autofill: 'today_fr' },
-    { key: 'NOM DU MAIRE', label: 'Nom du maire', placeholder: 'Ex. Marie Dupont', type: 'text' }
+    { key: 'NOM DE LA COMMUNE', label: function(){ return jt('lbl_nom_commune', 'Nom de la commune'); }, placeholder: function(){ return jt('ph_ex_ajaccio', 'Ex. Ajaccio'); }, type: 'text', autofill: 'commune_nom' },
+    { key: 'ADRESSE MAIRIE', label: function(){ return jt('lbl_adresse_mairie', 'Adresse de la mairie'); }, placeholder: function(){ return jt('ph_hotel_ville', 'Ex. Hôtel de ville, place Foch'); }, type: 'text' },
+    { key: 'CODE POSTAL', label: function(){ return jt('lbl_code_postal', 'Code postal'); }, placeholder: function(){ return jt('ph_ex_20000', 'Ex. 20000'); }, type: 'text' },
+    { key: 'COMMUNE', label: function(){ return jt('lbl_ville_adresse', 'Ville (reprise dans l\'adresse)'); }, placeholder: function(){ return jt('ph_ex_ajaccio', 'Ex. Ajaccio'); }, type: 'text', autofill: 'commune_nom' },
+    { key: 'TÉLÉPHONE', label: function(){ return jt('lbl_tel_mairie', 'Téléphone de la mairie'); }, placeholder: function(){ return jt('ph_ex_tel_mairie', 'Ex. 04 95 00 00 00'); }, type: 'text' },
+    { key: 'EMAIL MAIRIE', label: function(){ return jt('lbl_email_mairie', 'Email de la mairie'); }, placeholder: function(){ return jt('ph_ex_email_mairie', 'Ex. contact@mairie.fr'); }, type: 'text' },
+    { key: 'DATE', label: function(){ return jt('lbl_date_courrier', 'Date du courrier'); }, placeholder: function(){ return jt('ph_ex_date', 'Ex. 24 avril 2026'); }, type: 'text', autofill: 'today_fr' },
+    { key: 'NOM DU MAIRE', label: function(){ return jt('lbl_nom_maire', 'Nom du maire'); }, placeholder: function(){ return jt('ph_ex_marie_dupont', 'Ex. Marie Dupont'); }, type: 'text' }
   ];
 
   var COMMON_SLOTS_CITOYEN = [
-    { key: 'PRÉNOM NOM', label: 'Votre prénom et nom', placeholder: 'Ex. Marie Dupont', type: 'text' },
-    { key: 'ADRESSE HABITANT', label: 'Votre adresse', placeholder: 'Ex. 12 rue Fesch', type: 'text' },
-    { key: 'CODE POSTAL', label: 'Votre code postal', placeholder: 'Ex. 20000', type: 'text' },
-    { key: 'COMMUNE', label: 'Votre commune', placeholder: 'Ex. Ajaccio', type: 'text', autofill: 'commune_nom' },
-    { key: 'TÉLÉPHONE', label: 'Votre téléphone', placeholder: 'Ex. 06 12 34 56 78', type: 'text' },
-    { key: 'EMAIL', label: 'Votre email', placeholder: 'Ex. vous@exemple.fr', type: 'text' },
-    { key: 'DATE', label: 'Date du courrier', placeholder: 'Ex. 24 avril 2026', type: 'text', autofill: 'today_fr' },
-    { key: 'NOM DE LA COMMUNE', label: 'Nom de votre commune (destinataire)', placeholder: 'Ex. Ajaccio', type: 'text', autofill: 'commune_nom' }
+    { key: 'PRÉNOM NOM', label: function(){ return jt('lbl_votre_nom', 'Votre prénom et nom'); }, placeholder: function(){ return jt('ph_ex_marie_dupont', 'Ex. Marie Dupont'); }, type: 'text' },
+    { key: 'ADRESSE HABITANT', label: function(){ return jt('lbl_votre_adresse', 'Votre adresse'); }, placeholder: function(){ return jt('ph_ex_rue_fesch', 'Ex. 12 rue Fesch'); }, type: 'text' },
+    { key: 'CODE POSTAL', label: function(){ return jt('lbl_votre_cp', 'Votre code postal'); }, placeholder: function(){ return jt('ph_ex_20000', 'Ex. 20000'); }, type: 'text' },
+    { key: 'COMMUNE', label: function(){ return jt('lbl_votre_commune', 'Votre commune'); }, placeholder: function(){ return jt('ph_ex_ajaccio', 'Ex. Ajaccio'); }, type: 'text', autofill: 'commune_nom' },
+    { key: 'TÉLÉPHONE', label: function(){ return jt('lbl_votre_tel', 'Votre téléphone'); }, placeholder: function(){ return jt('ph_ex_tel_citoyen', 'Ex. 06 12 34 56 78'); }, type: 'text' },
+    { key: 'EMAIL', label: function(){ return jt('lbl_votre_email', 'Votre email'); }, placeholder: function(){ return jt('ph_ex_email_citoyen', 'Ex. vous@exemple.fr'); }, type: 'text' },
+    { key: 'DATE', label: function(){ return jt('lbl_date_courrier', 'Date du courrier'); }, placeholder: function(){ return jt('ph_ex_date', 'Ex. 24 avril 2026'); }, type: 'text', autofill: 'today_fr' },
+    { key: 'NOM DE LA COMMUNE', label: function(){ return jt('lbl_nom_commune_dest', 'Nom de votre commune (destinataire)'); }, placeholder: function(){ return jt('ph_ex_ajaccio', 'Ex. Ajaccio'); }, type: 'text', autofill: 'commune_nom' }
   ];
 
   var COMMON_SLOTS_ENTREPRENEUR = [
-    { key: 'RAISON SOCIALE', label: 'Raison sociale', placeholder: 'Ex. Établissement Exemple', type: 'text' },
-    { key: 'ADRESSE ÉTABLISSEMENT', label: 'Adresse de l\'établissement', placeholder: 'Ex. 12 rue Fesch', type: 'text' },
-    { key: 'CODE POSTAL', label: 'Code postal', placeholder: 'Ex. 20000', type: 'text' },
-    { key: 'VILLE', label: 'Ville', placeholder: 'Ex. Ajaccio', type: 'text', autofill: 'commune_nom' },
-    { key: 'TÉLÉPHONE', label: 'Téléphone', placeholder: 'Ex. 04 95 00 00 00', type: 'text' },
-    { key: 'EMAIL', label: 'Email', placeholder: 'Ex. contact@exemple.fr', type: 'text' },
-    { key: 'DATE', label: 'Date du courrier', placeholder: 'Ex. 24 avril 2026', type: 'text', autofill: 'today_fr' }
+    { key: 'RAISON SOCIALE', label: function(){ return jt('lbl_raison_sociale', 'Raison sociale'); }, placeholder: function(){ return jt('ph_ex_etablissement', 'Ex. Établissement Exemple'); }, type: 'text' },
+    { key: 'ADRESSE ÉTABLISSEMENT', label: function(){ return jt('lbl_adresse_etab', 'Adresse de l\'établissement'); }, placeholder: function(){ return jt('ph_ex_rue_fesch', 'Ex. 12 rue Fesch'); }, type: 'text' },
+    { key: 'CODE POSTAL', label: function(){ return jt('lbl_code_postal', 'Code postal'); }, placeholder: function(){ return jt('ph_ex_20000', 'Ex. 20000'); }, type: 'text' },
+    { key: 'VILLE', label: function(){ return jt('lbl_ville', 'Ville'); }, placeholder: function(){ return jt('ph_ex_ajaccio', 'Ex. Ajaccio'); }, type: 'text', autofill: 'commune_nom' },
+    { key: 'TÉLÉPHONE', label: function(){ return jt('lbl_telephone', 'Téléphone'); }, placeholder: function(){ return jt('ph_ex_tel_mairie', 'Ex. 04 95 00 00 00'); }, type: 'text' },
+    { key: 'EMAIL', label: function(){ return jt('lbl_email', 'Email'); }, placeholder: function(){ return jt('ph_ex_email_entrepreneur', 'Ex. contact@exemple.fr'); }, type: 'text' },
+    { key: 'DATE', label: function(){ return jt('lbl_date_courrier', 'Date du courrier'); }, placeholder: function(){ return jt('ph_ex_date', 'Ex. 24 avril 2026'); }, type: 'text', autofill: 'today_fr' }
   ];
 
   // Slot partagé (D4) : ajouté aux 3 slots communs ci-dessus uniquement pour
   // les modèles domaine=radon, jamais pour les modèles EM historiques.
-  var RADON_ZONE_SLOT = { key: 'ZONE RADON', label: 'Zone à potentiel radon (ASNR)', placeholder: 'Ex. 3', type: 'text', autofill: 'radon_zone' };
+  var RADON_ZONE_SLOT = { key: 'ZONE RADON', label: function(){ return jt('lbl_zone_radon', 'Zone à potentiel radon (ASNR)'); }, placeholder: function(){ return jt('ph_ex_zone3', 'Ex. 3'); }, type: 'text', autofill: 'radon_zone' };
 
   // ═══════════════════════════════════════════════════════════════
   // Helpers
@@ -965,6 +974,80 @@ a{color:inherit;}
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // i18n des chaînes JS-rendues (I18N-ANGLAIS-001, volet A — 2026-08-14)
+  // ═══════════════════════════════════════════════════════════════
+  // Dictionnaire distinct de EN_STRINGS (HTML statique, second <script>,
+  // scope non partagé entre les deux balises — même cause que le bug
+  // d'aria-label du burger mobile corrigé le 2026-08-14). jt(key, fr)
+  // renvoie la traduction si document.documentElement.lang === 'en' ET
+  // que la clé existe dans JS_STRINGS_EN, sinon le FR fourni en repli —
+  // permet une intégration lot par lot sans jamais rien casser pour les
+  // chaînes pas encore traduites (même logique que l'early-return du
+  // script i18n HTML).
+  var JS_STRINGS_EN = {
+    // Lot 1/? — slots formulaire courrier (mairie/citoyen/entrepreneur),
+    // communes (chargement/sélection/fiche), chrome modale courrier,
+    // génération PDF.
+    lbl_nom_commune: "Name of the municipality",
+    ph_ex_ajaccio: "E.g. Ajaccio",
+    lbl_adresse_mairie: "Town hall address",
+    ph_hotel_ville: "E.g. Town hall, Place Foch",
+    lbl_code_postal: "Postal code",
+    ph_ex_20000: "E.g. 20000",
+    lbl_ville_adresse: "City (used in the address)",
+    lbl_tel_mairie: "Town hall phone number",
+    ph_ex_tel_mairie: "E.g. 04 95 00 00 00",
+    lbl_email_mairie: "Town hall email",
+    ph_ex_email_mairie: "E.g. contact@townhall.fr",
+    lbl_date_courrier: "Date of the letter",
+    ph_ex_date: "E.g. April 24, 2026",
+    lbl_nom_maire: "Mayor's name",
+    ph_ex_marie_dupont: "E.g. Marie Dupont",
+    lbl_votre_nom: "Your first and last name",
+    lbl_votre_adresse: "Your address",
+    ph_ex_rue_fesch: "E.g. 12 Rue Fesch",
+    lbl_votre_cp: "Your postal code",
+    lbl_votre_commune: "Your municipality",
+    lbl_votre_tel: "Your phone number",
+    ph_ex_tel_citoyen: "E.g. 06 12 34 56 78",
+    lbl_votre_email: "Your email",
+    ph_ex_email_citoyen: "E.g. you@example.fr",
+    lbl_nom_commune_dest: "Name of your municipality (recipient)",
+    lbl_raison_sociale: "Company name",
+    ph_ex_etablissement: "E.g. Example Company",
+    lbl_adresse_etab: "Facility address",
+    lbl_ville: "City",
+    lbl_telephone: "Phone number",
+    lbl_email: "Email",
+    ph_ex_email_entrepreneur: "E.g. contact@example.fr",
+    lbl_zone_radon: "Radon-potential zone (ASNR)",
+    ph_ex_zone3: "E.g. 3",
+    err_communes_indispo: "List of municipalities unavailable. Check your connection.",
+    commune_selectionnee_prefix: "Selected municipality: ",
+    commune_select_placeholder: "Select a municipality to view its profile",
+    fiche_commune_prefix: "Municipality profile — ",
+    eyebrow_mairie_prefix: "Municipality letter · ",
+    eyebrow_entrepreneur_prefix: "Business letter · ",
+    eyebrow_citoyen_prefix: "Citizen letter · ",
+    title_informations_mairie: "Municipality information",
+    title_informations_etablissement: "Facility information",
+    title_vos_coordonnees: "Your contact details",
+    title_contenu_specifique: "Content specific to this letter",
+    hint_options_prefix: "Options: ",
+    placeholder_a_completer: "To be completed",
+    kind_mairie: "Municipality",
+    kind_citoyen: "Citizen",
+    kind_entrepreneur: "Business",
+    pdf_preparation: "Preparing the PDF…",
+    pdf_error_generate_prefix: "Unable to generate the PDF. Error: ",
+    pdf_error_load_lib: "Unable to load the PDF library. Check your connection and try again.",
+    references_legales: "Legal references"
+  };
+  function jt(key, fr){
+    return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
   }
 
   // Extrait toutes les variables [CHAMP] uniques d'un template
@@ -1058,7 +1141,7 @@ a{color:inherit;}
       .catch(function(err){
         console.warn('[mairies] chargement communes échoué :', err);
         var hint = document.getElementById('mr-commune-hint');
-        if (hint) hint.textContent = 'Liste des communes indisponible. Vérifiez votre connexion.';
+        if (hint) hint.textContent = jt('err_communes_indispo', 'Liste des communes indisponible. Vérifiez votre connexion.');
       });
   }
 
@@ -1096,10 +1179,10 @@ a{color:inherit;}
     var ficheTitle = document.getElementById('mr-fiche-title');
     if (commune){
       if (info){
-        info.textContent = 'Commune sélectionnée : ' + commune.nom + ' — INSEE ' + commune.code_insee;
+        info.textContent = jt('commune_selectionnee_prefix', 'Commune sélectionnée : ') + commune.nom + ' — INSEE ' + commune.code_insee;
         info.classList.remove('empty');
       }
-      if (ficheTitle) ficheTitle.textContent = 'Fiche commune — ' + commune.nom;
+      if (ficheTitle) ficheTitle.textContent = jt('fiche_commune_prefix', 'Fiche commune — ') + commune.nom;
       if (updateUrl){
         var url = new URL(window.location.href);
         url.searchParams.set('commune', commune.code_insee);
@@ -1107,7 +1190,7 @@ a{color:inherit;}
       }
     } else {
       if (info){ info.textContent = ''; info.classList.add('empty'); }
-      if (ficheTitle) ficheTitle.textContent = 'Sélectionnez une commune pour afficher sa fiche';
+      if (ficheTitle) ficheTitle.textContent = jt('commune_select_placeholder', 'Sélectionnez une commune pour afficher sa fiche');
     }
     renderAntennesForCommune(commune);
     renderEtabForCommune(commune);
@@ -1177,16 +1260,16 @@ a{color:inherit;}
     // Domaine EM historique (domaine absent ou != 'radon') — inchangé par D4.
     var mairieList = templatesData.templates.filter(function(t){ return t.categorie === 'mairie' && t.domaine !== 'radon'; });
     var citoyenList = templatesData.templates.filter(function(t){ return t.categorie === 'citoyen' && t.domaine !== 'radon'; });
-    renderCategoryCards('mr-courriers-list', mairieList, 'Mairie');
-    renderCategoryCards('mr-citoyens-list', citoyenList, 'Citoyen');
+    renderCategoryCards('mr-courriers-list', mairieList, jt('kind_mairie', 'Mairie'));
+    renderCategoryCards('mr-citoyens-list', citoyenList, jt('kind_citoyen', 'Citoyen'));
 
     // Domaine radon (D4) — regroupé par public dans sa propre section.
     var radonCitoyenList = templatesData.templates.filter(function(t){ return t.domaine === 'radon' && t.categorie === 'citoyen'; });
     var radonMairieList = templatesData.templates.filter(function(t){ return t.domaine === 'radon' && t.categorie === 'mairie'; });
     var radonEntrepreneurList = templatesData.templates.filter(function(t){ return t.domaine === 'radon' && t.categorie === 'entrepreneur'; });
-    renderCategoryCards('mr-radon-citoyen-list', radonCitoyenList, 'Citoyen');
-    renderCategoryCards('mr-radon-mairie-list', radonMairieList, 'Mairie');
-    renderCategoryCards('mr-radon-entrepreneur-list', radonEntrepreneurList, 'Entrepreneur');
+    renderCategoryCards('mr-radon-citoyen-list', radonCitoyenList, jt('kind_citoyen', 'Citoyen'));
+    renderCategoryCards('mr-radon-mairie-list', radonMairieList, jt('kind_mairie', 'Mairie'));
+    renderCategoryCards('mr-radon-entrepreneur-list', radonEntrepreneurList, jt('kind_entrepreneur', 'Entrepreneur'));
   }
 
   function renderCategoryCards(containerId, list, kind){
@@ -1230,9 +1313,9 @@ a{color:inherit;}
     var form = document.getElementById('mr-modal-form');
     if (!modal || !title || !intro || !form) return;
 
-    eyebrow.textContent = tpl.categorie === 'mairie' ? 'Courrier mairie · ' + tpl.destinataire_label
-      : tpl.categorie === 'entrepreneur' ? 'Courrier entrepreneur · ' + tpl.destinataire_label
-      : 'Courrier citoyen · ' + tpl.destinataire_label;
+    eyebrow.textContent = tpl.categorie === 'mairie' ? jt('eyebrow_mairie_prefix', 'Courrier mairie · ') + tpl.destinataire_label
+      : tpl.categorie === 'entrepreneur' ? jt('eyebrow_entrepreneur_prefix', 'Courrier entrepreneur · ') + tpl.destinataire_label
+      : jt('eyebrow_citoyen_prefix', 'Courrier citoyen · ') + tpl.destinataire_label;
     title.textContent = tpl.titre;
     intro.textContent = tpl.intro_card;
 
@@ -1242,13 +1325,13 @@ a{color:inherit;}
     var commonSlots = commonSlotsFor(tpl);
     var commonTitle = document.createElement('div');
     commonTitle.className = 'mr-modal-form-title';
-    commonTitle.textContent = tpl.categorie === 'mairie' ? 'Informations mairie'
-      : tpl.categorie === 'entrepreneur' ? 'Informations établissement'
-      : 'Vos coordonnées';
+    commonTitle.textContent = tpl.categorie === 'mairie' ? jt('title_informations_mairie', 'Informations mairie')
+      : tpl.categorie === 'entrepreneur' ? jt('title_informations_etablissement', 'Informations établissement')
+      : jt('title_vos_coordonnees', 'Vos coordonnées');
     form.appendChild(commonTitle);
 
     commonSlots.forEach(function(slot){
-      var wrap = createFieldWrap(slot.key, slot.label, slot.placeholder, 'text');
+      var wrap = createFieldWrap(slot.key, slot.label(), slot.placeholder(), 'text');
       var input = wrap.querySelector('input, textarea');
       // Pré-remplissage automatique
       var prefill = '';
@@ -1275,7 +1358,7 @@ a{color:inherit;}
     if (specifics.length > 0){
       var specTitle = document.createElement('div');
       specTitle.className = 'mr-modal-form-title';
-      specTitle.textContent = 'Contenu spécifique à ce courrier';
+      specTitle.textContent = jt('title_contenu_specifique', 'Contenu spécifique à ce courrier');
       form.appendChild(specTitle);
 
       specifics.forEach(function(rawKey){
@@ -1290,7 +1373,7 @@ a{color:inherit;}
           // Cas "A / B / C" : options multiples, utiliser la version en majuscules courtes comme label
           var parts = rawKey.split(' / ');
           label = parts[0].trim();
-          hint = 'Options : ' + parts.slice(1).join(' / ');
+          hint = jt('hint_options_prefix', 'Options : ') + parts.slice(1).join(' / ');
         } else if (rawKey.indexOf(',') > 0 && rawKey.length > 40){
           // Long libellé avec virgule : extraire une label courte si possible
           label = rawKey.split(',')[0].trim();
@@ -1298,7 +1381,7 @@ a{color:inherit;}
         }
         // Afficher label en "Sentence case"
         var labelPretty = label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
-        var wrap = createFieldWrap(rawKey, labelPretty, hint || 'À compléter', 'textarea');
+        var wrap = createFieldWrap(rawKey, labelPretty, hint || jt('placeholder_a_completer', 'À compléter'), 'textarea');
         if (hint) {
           var hintEl = document.createElement('div');
           hintEl.className = 'mr-modal-field-hint';
@@ -1377,7 +1460,7 @@ a{color:inherit;}
       '<div class="mr-preview-corps">' + corpsHtml + '</div>' +
       (salutationHtml ? '<div class="mr-preview-salutation">' + salutationHtml + '</div>' : '') +
       (signatureHtml ? '<div class="mr-preview-signature">' + signatureHtml + '</div>' : '') +
-      (refsHtml ? '<div class="mr-preview-refs-title">Références légales</div><ul class="mr-preview-refs">' + refsHtml + '</ul>' : '') +
+      (refsHtml ? '<div class="mr-preview-refs-title">' + escapeHtml(jt('references_legales', 'Références légales')) + '</div><ul class="mr-preview-refs">' + refsHtml + '</ul>' : '') +
       '<div class="mr-preview-foot">' + escapeHtml(pied) + '</div>';
   }
 
@@ -1415,7 +1498,7 @@ a{color:inherit;}
       content.push({ text: signatureText, style: 'signature', margin: [0, 0, 0, 16] });
     }
     if (refsList.length > 0){
-      content.push({ text: 'Références légales', style: 'refsTitle', margin: [0, 14, 0, 4] });
+      content.push({ text: jt('references_legales', 'Références légales'), style: 'refsTitle', margin: [0, 14, 0, 4] });
       content.push({ ul: refsList, style: 'refs' });
     }
 
@@ -1494,7 +1577,7 @@ a{color:inherit;}
     var btnOriginalLabel = btn ? btn.textContent : null;
     if (btn){
       btn.disabled = true;
-      btn.textContent = 'Préparation du PDF…';
+      btn.textContent = jt('pdf_preparation', 'Préparation du PDF…');
     }
     loadPdfMake().then(function(){
       try {
@@ -1508,7 +1591,7 @@ a{color:inherit;}
         });
       } catch(err){
         console.error('[mairies] génération PDF échouée :', err);
-        alert('Impossible de générer le PDF. Erreur : ' + err.message);
+        alert(jt('pdf_error_generate_prefix', 'Impossible de générer le PDF. Erreur : ') + err.message);
         if (btn){
           btn.disabled = false;
           if (btnOriginalLabel) btn.textContent = btnOriginalLabel;
@@ -1516,7 +1599,7 @@ a{color:inherit;}
       }
     }).catch(function(err){
       console.error('[mairies] chargement pdfmake échoué :', err);
-      alert('Impossible de charger la bibliothèque PDF. Vérifiez votre connexion et réessayez.');
+      alert(jt('pdf_error_load_lib', 'Impossible de charger la bibliothèque PDF. Vérifiez votre connexion et réessayez.'));
       if (btn){
         btn.disabled = false;
         if (btnOriginalLabel) btn.textContent = btnOriginalLabel;
