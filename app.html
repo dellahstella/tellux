@@ -683,7 +683,12 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .md-v{font-weight:500;font-size:13px;}
 /* #info style géré inline */
 .tag{display:inline-block;font-size:10px;font-family:var(--mono);padding:1px 7px;border-radius:5px;margin-right:3px;vertical-align:middle;}
-.cform{background:var(--bg);border-radius:var(--r2);padding:18px;margin-top:8px;display:none;border:1px solid var(--border);box-shadow:0 2px 12px rgba(31,35,41,0.06);}
+/* #cform n'a jamais été une modale : panneau de sidebar en flux normal (position:static),
+   d'où le bleed-through (carte/barre de statut/légende visibles autour du stepper) constaté
+   sur PR #975 — corrigé en enveloppant #cform dans #cform-overlay (fixed, plein écran,
+   backdrop opaque), sans toucher la logique des 6 étapes. */
+.cform-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(31,35,41,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:2300;align-items:center;justify-content:center;padding:16px;overflow-y:auto;}
+.cform{background:var(--bg);border-radius:var(--r2);padding:18px;display:none;border:1px solid var(--border);box-shadow:0 12px 40px rgba(0,0,0,.25);max-width:480px;width:100%;max-height:90vh;overflow-y:auto;margin:auto;}
 .cform-title{font-family:var(--font-display);font-size:15px;color:var(--tx);font-weight:500;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
 .cform label{font-size:12px;color:var(--ardoise-clair);display:block;margin-bottom:4px;font-family:var(--font);font-weight:500;}
 .cform input,.cform select,.cform textarea{width:100%;margin-bottom:8px;font-size:13px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg);color:var(--tx);padding:8px 12px;font-family:var(--font);transition:border-color .15s;}
@@ -1774,6 +1779,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 
 <div id="info" style="display:none;background:var(--maquis-pale);border:1px solid var(--maquis-clair);border-radius:var(--r);padding:9px 13px;font-size:13px;color:var(--ardoise-clair);min-height:42px;margin-top:0;line-height:1.5"></div>
 
+<div class="cform-overlay" id="cform-overlay" aria-hidden="true" onclick="if(event.target===this)cancelContrib()">
 <div class="cform" id="cform">
   <div class="cform-title">Contribution terrain</div>
 
@@ -1954,6 +1960,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <button class="btn-save" id="cform-btn-next" onclick="cformNextStep()" disabled>Suivant →</button>
     <button class="btn-save" id="btn-save" onclick="saveContrib()" style="display:none">Enregistrer</button>
   </div>
+</div>
 </div>
 
 <!-- Module déplacé hors de ce fichier — code JS dormant purgé 2026-06-03.
@@ -5592,6 +5599,7 @@ async function loadDB(){
 
 function startContrib(){
   document.getElementById('cform').style.display='block';
+  cformOverlayShow();
   const _bcon=document.getElementById('b-con');
   if(!ACTIVE.con){if(_bcon){tog('con','on-con',_bcon);}else{ACTIVE.con=true;map.addLayer(LAYERS.con);}}
   // Initialiser l'etat du formulaire selon l'instrument selectionne par defaut
@@ -5749,6 +5757,19 @@ function setCtx(value,btnEl){
   if(interiorCtx) interiorCtx.style.display = (value==='interieur') ? 'block' : 'none';
 }
 
+// #cform-overlay — enveloppe fixe plein écran ajoutée pour corriger le bleed-through
+// (bug constaté 2026-08-14 sur PR #975 : #cform était en position:static, aucun backdrop).
+// Toggle systematiquement en meme temps que #cform lui-meme, dont le style.display
+// reste la source de verite lue par ailleurs (form.style.display==='block').
+function cformOverlayShow(){
+  var overlay=document.getElementById('cform-overlay');
+  if(overlay){overlay.style.display='flex';overlay.setAttribute('aria-hidden','false');}
+}
+function cformOverlayHide(){
+  var overlay=document.getElementById('cform-overlay');
+  if(overlay){overlay.style.display='none';overlay.setAttribute('aria-hidden','true');}
+}
+
 function cancelContrib(){
   if(_nativeMag) stopNativeMagCapture(false);
   const protoChk=document.getElementById('c-protocole');if(protoChk)protoChk.checked=false;
@@ -5757,6 +5778,7 @@ function cancelContrib(){
   if(pending){map.removeLayer(pending);pending=null;}
   // Fermer le formulaire
   document.getElementById('cform').style.display='none';
+  cformOverlayHide();
   // Reset des champs saisis
   var v=document.getElementById('c-val');if(v)v.value='';
   var n=document.getElementById('c-note');if(n)n.value='';
@@ -5876,6 +5898,7 @@ async function saveContrib(){
     contribsDB.unshift(saved[0]||row);addMarker(saved[0]||row);
     map.removeLayer(pending);pending=null;
     document.getElementById('cform').style.display='none';
+    cformOverlayHide();
     document.getElementById('c-val').value='';document.getElementById('c-note').value='';
     window._csvStats=null;
     const protoChk=document.getElementById('c-protocole');if(protoChk)protoChk.checked=false;
@@ -6841,6 +6864,7 @@ function startContribFromFAB(){
   // Toggle: if form visible, close it
   if(form&&form.style.display==='block'){
     form.style.display='none';
+    cformOverlayHide();
     if(pending){map.removeLayer(pending);pending=null;}
     if(_contribClickHandler){map.off('click',_contribClickHandler);_contribClickHandler=null;}
     if(fab)fab.classList.remove('fab-active');
@@ -6852,6 +6876,7 @@ function startContribFromFAB(){
   if(btn&&!ACTIVE.con){tog('con','on-con',btn);}
   // Ouvrir le formulaire directement (pas via startContrib qui re-toggle)
   form.style.display='block';
+  cformOverlayShow();
   // Initialiser l'etat du formulaire selon l'instrument selectionne par defaut
   if(typeof onInstrumentChange==='function')onInstrumentChange();
   // Reset position info
