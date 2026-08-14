@@ -911,41 +911,50 @@ a{color:inherit;}
   // Slots communs, pré-remplissables. Le reste des variables devient
   // un champ spécifique au template (textarea).
 
+  // NB : les slots sont des objets statiques construits une seule fois au
+  // chargement du script, avant que document.documentElement.lang ne soit
+  // posé par le script i18n (second <script>, plus bas dans le document).
+  // jt() lit document.documentElement.lang à l'APPEL, pas à la définition —
+  // mais ces tableaux sont évalués immédiatement (var au niveau module), donc
+  // jt() y renverrait toujours le FR (lang pas encore posé à ce stade). Les
+  // labels/placeholders sont donc résolus paresseusement via des fonctions
+  // plutôt que des littéraux, appelées au moment de l'affichage (openModal,
+  // bien après DOMContentLoaded) — cf. commonSlotsFor() plus bas.
   var COMMON_SLOTS_MAIRIE = [
-    { key: 'NOM DE LA COMMUNE', label: 'Nom de la commune', placeholder: 'Ex. Ajaccio', type: 'text', autofill: 'commune_nom' },
-    { key: 'ADRESSE MAIRIE', label: 'Adresse de la mairie', placeholder: 'Ex. Hôtel de ville, place Foch', type: 'text' },
-    { key: 'CODE POSTAL', label: 'Code postal', placeholder: 'Ex. 20000', type: 'text' },
-    { key: 'COMMUNE', label: 'Ville (reprise dans l\'adresse)', placeholder: 'Ex. Ajaccio', type: 'text', autofill: 'commune_nom' },
-    { key: 'TÉLÉPHONE', label: 'Téléphone de la mairie', placeholder: 'Ex. 04 95 00 00 00', type: 'text' },
-    { key: 'EMAIL MAIRIE', label: 'Email de la mairie', placeholder: 'Ex. contact@mairie.fr', type: 'text' },
-    { key: 'DATE', label: 'Date du courrier', placeholder: 'Ex. 24 avril 2026', type: 'text', autofill: 'today_fr' },
-    { key: 'NOM DU MAIRE', label: 'Nom du maire', placeholder: 'Ex. Marie Dupont', type: 'text' }
+    { key: 'NOM DE LA COMMUNE', label: function(){ return jt('lbl_nom_commune', 'Nom de la commune'); }, placeholder: function(){ return jt('ph_ex_ajaccio', 'Ex. Ajaccio'); }, type: 'text', autofill: 'commune_nom' },
+    { key: 'ADRESSE MAIRIE', label: function(){ return jt('lbl_adresse_mairie', 'Adresse de la mairie'); }, placeholder: function(){ return jt('ph_hotel_ville', 'Ex. Hôtel de ville, place Foch'); }, type: 'text' },
+    { key: 'CODE POSTAL', label: function(){ return jt('lbl_code_postal', 'Code postal'); }, placeholder: function(){ return jt('ph_ex_20000', 'Ex. 20000'); }, type: 'text' },
+    { key: 'COMMUNE', label: function(){ return jt('lbl_ville_adresse', 'Ville (reprise dans l\'adresse)'); }, placeholder: function(){ return jt('ph_ex_ajaccio', 'Ex. Ajaccio'); }, type: 'text', autofill: 'commune_nom' },
+    { key: 'TÉLÉPHONE', label: function(){ return jt('lbl_tel_mairie', 'Téléphone de la mairie'); }, placeholder: function(){ return jt('ph_ex_tel_mairie', 'Ex. 04 95 00 00 00'); }, type: 'text' },
+    { key: 'EMAIL MAIRIE', label: function(){ return jt('lbl_email_mairie', 'Email de la mairie'); }, placeholder: function(){ return jt('ph_ex_email_mairie', 'Ex. contact@mairie.fr'); }, type: 'text' },
+    { key: 'DATE', label: function(){ return jt('lbl_date_courrier', 'Date du courrier'); }, placeholder: function(){ return jt('ph_ex_date', 'Ex. 24 avril 2026'); }, type: 'text', autofill: 'today_fr' },
+    { key: 'NOM DU MAIRE', label: function(){ return jt('lbl_nom_maire', 'Nom du maire'); }, placeholder: function(){ return jt('ph_ex_marie_dupont', 'Ex. Marie Dupont'); }, type: 'text' }
   ];
 
   var COMMON_SLOTS_CITOYEN = [
-    { key: 'PRÉNOM NOM', label: 'Votre prénom et nom', placeholder: 'Ex. Marie Dupont', type: 'text' },
-    { key: 'ADRESSE HABITANT', label: 'Votre adresse', placeholder: 'Ex. 12 rue Fesch', type: 'text' },
-    { key: 'CODE POSTAL', label: 'Votre code postal', placeholder: 'Ex. 20000', type: 'text' },
-    { key: 'COMMUNE', label: 'Votre commune', placeholder: 'Ex. Ajaccio', type: 'text', autofill: 'commune_nom' },
-    { key: 'TÉLÉPHONE', label: 'Votre téléphone', placeholder: 'Ex. 06 12 34 56 78', type: 'text' },
-    { key: 'EMAIL', label: 'Votre email', placeholder: 'Ex. vous@exemple.fr', type: 'text' },
-    { key: 'DATE', label: 'Date du courrier', placeholder: 'Ex. 24 avril 2026', type: 'text', autofill: 'today_fr' },
-    { key: 'NOM DE LA COMMUNE', label: 'Nom de votre commune (destinataire)', placeholder: 'Ex. Ajaccio', type: 'text', autofill: 'commune_nom' }
+    { key: 'PRÉNOM NOM', label: function(){ return jt('lbl_votre_nom', 'Votre prénom et nom'); }, placeholder: function(){ return jt('ph_ex_marie_dupont', 'Ex. Marie Dupont'); }, type: 'text' },
+    { key: 'ADRESSE HABITANT', label: function(){ return jt('lbl_votre_adresse', 'Votre adresse'); }, placeholder: function(){ return jt('ph_ex_rue_fesch', 'Ex. 12 rue Fesch'); }, type: 'text' },
+    { key: 'CODE POSTAL', label: function(){ return jt('lbl_votre_cp', 'Votre code postal'); }, placeholder: function(){ return jt('ph_ex_20000', 'Ex. 20000'); }, type: 'text' },
+    { key: 'COMMUNE', label: function(){ return jt('lbl_votre_commune', 'Votre commune'); }, placeholder: function(){ return jt('ph_ex_ajaccio', 'Ex. Ajaccio'); }, type: 'text', autofill: 'commune_nom' },
+    { key: 'TÉLÉPHONE', label: function(){ return jt('lbl_votre_tel', 'Votre téléphone'); }, placeholder: function(){ return jt('ph_ex_tel_citoyen', 'Ex. 06 12 34 56 78'); }, type: 'text' },
+    { key: 'EMAIL', label: function(){ return jt('lbl_votre_email', 'Votre email'); }, placeholder: function(){ return jt('ph_ex_email_citoyen', 'Ex. vous@exemple.fr'); }, type: 'text' },
+    { key: 'DATE', label: function(){ return jt('lbl_date_courrier', 'Date du courrier'); }, placeholder: function(){ return jt('ph_ex_date', 'Ex. 24 avril 2026'); }, type: 'text', autofill: 'today_fr' },
+    { key: 'NOM DE LA COMMUNE', label: function(){ return jt('lbl_nom_commune_dest', 'Nom de votre commune (destinataire)'); }, placeholder: function(){ return jt('ph_ex_ajaccio', 'Ex. Ajaccio'); }, type: 'text', autofill: 'commune_nom' }
   ];
 
   var COMMON_SLOTS_ENTREPRENEUR = [
-    { key: 'RAISON SOCIALE', label: 'Raison sociale', placeholder: 'Ex. Établissement Exemple', type: 'text' },
-    { key: 'ADRESSE ÉTABLISSEMENT', label: 'Adresse de l\'établissement', placeholder: 'Ex. 12 rue Fesch', type: 'text' },
-    { key: 'CODE POSTAL', label: 'Code postal', placeholder: 'Ex. 20000', type: 'text' },
-    { key: 'VILLE', label: 'Ville', placeholder: 'Ex. Ajaccio', type: 'text', autofill: 'commune_nom' },
-    { key: 'TÉLÉPHONE', label: 'Téléphone', placeholder: 'Ex. 04 95 00 00 00', type: 'text' },
-    { key: 'EMAIL', label: 'Email', placeholder: 'Ex. contact@exemple.fr', type: 'text' },
-    { key: 'DATE', label: 'Date du courrier', placeholder: 'Ex. 24 avril 2026', type: 'text', autofill: 'today_fr' }
+    { key: 'RAISON SOCIALE', label: function(){ return jt('lbl_raison_sociale', 'Raison sociale'); }, placeholder: function(){ return jt('ph_ex_etablissement', 'Ex. Établissement Exemple'); }, type: 'text' },
+    { key: 'ADRESSE ÉTABLISSEMENT', label: function(){ return jt('lbl_adresse_etab', 'Adresse de l\'établissement'); }, placeholder: function(){ return jt('ph_ex_rue_fesch', 'Ex. 12 rue Fesch'); }, type: 'text' },
+    { key: 'CODE POSTAL', label: function(){ return jt('lbl_code_postal', 'Code postal'); }, placeholder: function(){ return jt('ph_ex_20000', 'Ex. 20000'); }, type: 'text' },
+    { key: 'VILLE', label: function(){ return jt('lbl_ville', 'Ville'); }, placeholder: function(){ return jt('ph_ex_ajaccio', 'Ex. Ajaccio'); }, type: 'text', autofill: 'commune_nom' },
+    { key: 'TÉLÉPHONE', label: function(){ return jt('lbl_telephone', 'Téléphone'); }, placeholder: function(){ return jt('ph_ex_tel_mairie', 'Ex. 04 95 00 00 00'); }, type: 'text' },
+    { key: 'EMAIL', label: function(){ return jt('lbl_email', 'Email'); }, placeholder: function(){ return jt('ph_ex_email_entrepreneur', 'Ex. contact@exemple.fr'); }, type: 'text' },
+    { key: 'DATE', label: function(){ return jt('lbl_date_courrier', 'Date du courrier'); }, placeholder: function(){ return jt('ph_ex_date', 'Ex. 24 avril 2026'); }, type: 'text', autofill: 'today_fr' }
   ];
 
   // Slot partagé (D4) : ajouté aux 3 slots communs ci-dessus uniquement pour
   // les modèles domaine=radon, jamais pour les modèles EM historiques.
-  var RADON_ZONE_SLOT = { key: 'ZONE RADON', label: 'Zone à potentiel radon (ASNR)', placeholder: 'Ex. 3', type: 'text', autofill: 'radon_zone' };
+  var RADON_ZONE_SLOT = { key: 'ZONE RADON', label: function(){ return jt('lbl_zone_radon', 'Zone à potentiel radon (ASNR)'); }, placeholder: function(){ return jt('ph_ex_zone3', 'Ex. 3'); }, type: 'text', autofill: 'radon_zone' };
 
   // ═══════════════════════════════════════════════════════════════
   // Helpers
@@ -965,6 +974,186 @@ a{color:inherit;}
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // i18n des chaînes JS-rendues (I18N-ANGLAIS-001, volet A — 2026-08-14)
+  // ═══════════════════════════════════════════════════════════════
+  // Dictionnaire distinct de EN_STRINGS (HTML statique, second <script>,
+  // scope non partagé entre les deux balises — même cause que le bug
+  // d'aria-label du burger mobile corrigé le 2026-08-14). jt(key, fr)
+  // renvoie la traduction si document.documentElement.lang === 'en' ET
+  // que la clé existe dans JS_STRINGS_EN, sinon le FR fourni en repli —
+  // permet une intégration lot par lot sans jamais rien casser pour les
+  // chaînes pas encore traduites (même logique que l'early-return du
+  // script i18n HTML).
+  var JS_STRINGS_EN = {
+    // Lot 1/? — slots formulaire courrier (mairie/citoyen/entrepreneur),
+    // communes (chargement/sélection/fiche), chrome modale courrier,
+    // génération PDF.
+    lbl_nom_commune: "Name of the municipality",
+    ph_ex_ajaccio: "E.g. Ajaccio",
+    lbl_adresse_mairie: "Town hall address",
+    ph_hotel_ville: "E.g. Town hall, Place Foch",
+    lbl_code_postal: "Postal code",
+    ph_ex_20000: "E.g. 20000",
+    lbl_ville_adresse: "City (used in the address)",
+    lbl_tel_mairie: "Town hall phone number",
+    ph_ex_tel_mairie: "E.g. 04 95 00 00 00",
+    lbl_email_mairie: "Town hall email",
+    ph_ex_email_mairie: "E.g. contact@townhall.fr",
+    lbl_date_courrier: "Date of the letter",
+    ph_ex_date: "E.g. April 24, 2026",
+    lbl_nom_maire: "Mayor's name",
+    ph_ex_marie_dupont: "E.g. Marie Dupont",
+    lbl_votre_nom: "Your first and last name",
+    lbl_votre_adresse: "Your address",
+    ph_ex_rue_fesch: "E.g. 12 Rue Fesch",
+    lbl_votre_cp: "Your postal code",
+    lbl_votre_commune: "Your municipality",
+    lbl_votre_tel: "Your phone number",
+    ph_ex_tel_citoyen: "E.g. 06 12 34 56 78",
+    lbl_votre_email: "Your email",
+    ph_ex_email_citoyen: "E.g. you@example.fr",
+    lbl_nom_commune_dest: "Name of your municipality (recipient)",
+    lbl_raison_sociale: "Company name",
+    ph_ex_etablissement: "E.g. Example Company",
+    lbl_adresse_etab: "Facility address",
+    lbl_ville: "City",
+    lbl_telephone: "Phone number",
+    lbl_email: "Email",
+    ph_ex_email_entrepreneur: "E.g. contact@example.fr",
+    lbl_zone_radon: "Radon-potential zone (ASNR)",
+    ph_ex_zone3: "E.g. 3",
+    err_communes_indispo: "List of municipalities unavailable. Check your connection.",
+    commune_selectionnee_prefix: "Selected municipality: ",
+    commune_select_placeholder: "Select a municipality to view its profile",
+    fiche_commune_prefix: "Municipality profile — ",
+    eyebrow_mairie_prefix: "Municipality letter · ",
+    eyebrow_entrepreneur_prefix: "Business letter · ",
+    eyebrow_citoyen_prefix: "Citizen letter · ",
+    title_informations_mairie: "Municipality information",
+    title_informations_etablissement: "Facility information",
+    title_vos_coordonnees: "Your contact details",
+    title_contenu_specifique: "Content specific to this letter",
+    hint_options_prefix: "Options: ",
+    placeholder_a_completer: "To be completed",
+    kind_mairie: "Municipality",
+    kind_citoyen: "Citizen",
+    kind_entrepreneur: "Business",
+    pdf_preparation: "Preparing the PDF…",
+    pdf_error_generate_prefix: "Unable to generate the PDF. Error: ",
+    pdf_error_load_lib: "Unable to load the PDF library. Check your connection and try again.",
+    references_legales: "Legal references",
+
+    // Lot 3/? — bloc Contexte géophysique (fiche commune) + bloc Points
+    // atypiques ANFR.
+    geo_loading: "Loading...",
+    geo_zone3_label: "Zone 3",
+    geo_radon_significatif: "Significant radon potential (zone 3, ASNR). Order of June 27, 2018, Annex IV.",
+    geo_zone2_label: "Zone 2",
+    geo_radon_faible_zone2: "Low radon potential, specific geological factors (zone 2, ASNR).",
+    geo_radon_generique: "Radon-potential zone (ASNR).",
+    geo_radon_label: "Radon-potential zone (ASNR)",
+    geo_dataset_asnr: "ASNR dataset",
+    geo_zone1_label: "Zone 1",
+    geo_radon_faible_zone1: "Low radon potential. Municipality not listed in zone 2 or 3 of the order of June 27, 2018.",
+    geo_failles_principales_label: "Main tectonic faults",
+    geo_failles_label: "Tectonic faults",
+    geo_fault_noun: "fault",
+    geo_within_10km_suffix: " within 10 km",
+    geo_aucune_faille: "No main fault within 10 km",
+    geo_faille_proche_prefix: "Closest fault: ",
+    geo_faille_majeure_prefix: "Closest major fault: ",
+    geo_source_brgm_suffix: " Source: BRGM and academic publications.",
+    geo_evaluation_indisponible: "Assessment unavailable",
+    geo_distance_calc_desc: "The distance to main faults is calculated from the centroid of the municipality's antennas, not available here.",
+    geo_donnees_chargement: "Data loading",
+    geo_autres_couches_label: "Other geophysical layers",
+    geo_substrat_value: "Geological substrate, crustal magnetic anomalies",
+    geo_autres_couches_desc: "These layers can be viewed on the Tellux map: BRGM geology (granite, schist, limestone), EMAG2v3 (NOAA crustal magnetic anomalies), documented U/Th sites. For a municipality-level view, use the link below.",
+    geo_explorer_carte_link: "Explore on the Tellux map →",
+    atyp_definition: "An <strong>atypical point</strong> is a location where electromagnetic field exposure substantially exceeds the level observed nationally. The characterization threshold is <strong>9 V/m</strong> as of January 1, 2026 (previously 6 V/m). Article L.34-9-1 II H of the CPCE.",
+    atyp_state1: "No list of atypical points by municipality is available in a structured format as of April 24, 2026. ANFR publishes an annual census as a PDF report. The 2024 census (published in 2025) confirms the closure of nearly all cases identified between 2017 and 2019.",
+    atyp_state2: "To check the situation in your territory, two concrete steps are possible through your municipality.",
+    atyp_link_rapport: "ANFR 2024 report on atypical points (PDF)",
+    atyp_link_page: "ANFR page - Atypical points",
+    atyp_link_demander: "Request an ANFR measurement for the municipality",
+    atyp_link_legal: "View the full legal framework",
+
+    // Lot 4/? — bloc Obligations radon par zone (disclaimer, ressources,
+    // zones 1/2/3), labels catégories/actions du formulaire de dépôt,
+    // badges et métadonnées de résultat.
+    radon_disclaimer: "<em>This content relays the law in force; it does not substitute for it and does not constitute legal advice. Sources should be checked as of the consultation date.</em>",
+    radon_ressources: "<strong>Resources and measurement kits.</strong> Corsica's Regional Health and Environment Plan identifies municipalities as the preferred channel for distributing free screening kits (<a href=\"https://qualitair.corsica/radon-des-kits-de-mesure-gratuits-pour-proteger-votre-sante/\" target=\"_blank\" rel=\"noopener noreferrer\">PRIMAIR campaign / Qualitair Corse</a>, ADEME). Comprehensive references are available from the <a href=\"https://reglementation-controle.asnr.fr/information/dossiers-pedagogiques/le-radon-et-les-professionnels\" target=\"_blank\" rel=\"noopener noreferrer\">ASNR</a> (measurement, ERP FAQ) and the <a href=\"https://www.corse.ars.sante.fr/le-risque-radon\" target=\"_blank\" rel=\"noopener noreferrer\">ARS Corse</a>.",
+    radon_zone3_p1: "<strong>Measurement in public-facing facilities.</strong> For public-facing facilities listed in Article D.1333-32 of the Public Health Code (educational facilities, childcare facilities for children under six, health or social facilities with accommodation, thermal spa facilities, penitentiary facilities), Article <a href=\"https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915\" target=\"_blank\" rel=\"noopener noreferrer\">R.1333-33 of the Public Health Code</a> requires a measurement of radon volumetric activity, at the owner's expense (or the operator's, if an agreement provides for it), renewed every ten years and after any work that changes the building's ventilation or airtightness. A municipality is typically the owner of its schools and daycare centers.",
+    radon_zone3_p2: "<strong>If the reference level is exceeded.</strong> If the result exceeds 300 Bq/m³, the <a href=\"https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000038219644\" target=\"_blank\" rel=\"noopener noreferrer\">order of February 26, 2019</a> requires corrective actions (ventilation, airtightness), then a building assessment if the exceedance persists or exceeds 1,000 Bq/m³. The regulation also requires the measurement result to be displayed near the facility's main entrance.",
+    radon_zone3_p3: "<strong>Information for buyers and tenants.</strong> This municipality is classified as zone 3 — the \"level 3 radon-potential zone\" under the Environmental Code. The risk disclosure statement attached to any sale or rental of a property (including seasonal rentals) must then mention this classification, pursuant to Articles <a href=\"https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074220/LEGISCTA000006176683/\" target=\"_blank\" rel=\"noopener noreferrer\">L.125-5 and R.125-23 of the Environmental Code</a>. This obligation applies to the seller or landlord, not the municipality — but the town hall is often the first point of contact residents turn to with questions. The official property record is available on <a href=\"https://www.georisques.gouv.fr/\" target=\"_blank\" rel=\"noopener noreferrer\">georisques.gouv.fr</a>.",
+    radon_zone2_p1: "<strong>Measurement in public-facing facilities.</strong> Article <a href=\"https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915\" target=\"_blank\" rel=\"noopener noreferrer\">R.1333-33 of the Public Health Code</a> requires mandatory radon measurement in public-facing facilities listed in Article D.1333-32 (schools, daycare centers, health or social facilities with accommodation…) in zone 3. In zone 2, like this one, this obligation only applies if measurements already taken in the facility exceeded the reference level of 300 Bq/m³ — it is not systematic here.",
+    radon_zone2_p2: "<strong>Information for buyers and tenants.</strong> The obligation to disclose radon information in the risk disclosure statement (<a href=\"https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074220/LEGISCTA000006176683/\" target=\"_blank\" rel=\"noopener noreferrer\">L.125-5 and R.125-23 of the Environmental Code</a>) specifically applies to municipalities classified as \"level 3 radon-potential zone,\" that is, zone 3 under the order of June 27, 2018. This municipality, classified as zone 2, does not fall within this scope: this requirement does not apply here.",
+    radon_zone1_p1: "This municipality is classified as zone 1 (low radon potential). No radon-specific regulatory obligation applies systematically at this zoning level. Article <a href=\"https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915\" target=\"_blank\" rel=\"noopener noreferrer\">R.1333-33 of the Public Health Code</a> provides, exceptionally and regardless of zone, for measurement in public-facing facilities if measurements already taken exceeded the reference level of 300 Bq/m³.",
+    depot_cat_enseignement: "Educational facility",
+    depot_cat_petite_enfance: "Early childhood facility (daycare center)",
+    depot_cat_sanitaire_social_hebergement: "Health or social facility with accommodation",
+    depot_cat_thermal: "Thermal spa facility",
+    depot_cat_penitentiaire: "Penitentiary facility",
+    depot_cat_mairie: "Town hall building",
+    depot_cat_autre: "Public-facing facility",
+    depot_action_aucune_action_requise: "No action required",
+    depot_action_ventilation_etancheite_engagee: "Ventilation / sealing work underway",
+    depot_action_expertise_complementaire_en_cours: "Further assessment underway",
+    role_mairie_short: "Town hall",
+    role_technique_short: "Municipal technical department",
+    role_delegataire_short: "Agent authorized",
+    depot_repere_above: "Above the 300 Bq/m³ marker — a marker, not an alert threshold",
+    depot_repere_below: "Below the 300 Bq/m³ marker",
+    depot_certifie_badge: "certified — ASNR-approved body",
+    depot_meta_prefix: "Measured on ",
+    depot_meta_by: " by ",
+    depot_meta_agrement: " (approval ",
+    depot_meta_norme_suffix: ", standard NF EN ISO 11665-4)",
+    depot_resultats_titre_prefix: "Results submitted by the municipality (",
+    depot_warning: "⚠ Certified point-in-time measurement, not extrapolable over time or space; does not constitute a territorial diagnosis.",
+
+    // Lot 5/5 — DERNIER LOT — formulaire de dépôt radon : récapitulatif,
+    // hints dynamiques, messages de validation, soumission.
+    dr_recap_empty: "Complete the form above to see the summary.",
+    recap_label_deposant: "Submitter",
+    recap_label_commune: "Municipality",
+    recap_label_etablissement: "Facility",
+    recap_label_organisme: "Approved body",
+    recap_label_date: "Measurement date",
+    recap_label_valeur: "Measured value",
+    recap_label_zone_homogene: "Homogeneous zone",
+    org_hint_default: "List of bodies approved by the ASNR for radon measurement (Article R.1333-36 CSP), levels 1 and 2. If your body does not appear in the list, submission is still possible but will remain pending until the approval is manually confirmed.",
+    org_hint_confirmed_prefix: "ASNR approval confirmed — reference ",
+    org_hint_confirmed_infix: " (level ",
+    org_hint_no_match: "We could not automatically confirm this body's approval in the ASNR list. Your submission is still possible: it will be manually reviewed before any publication.",
+    valeur_hint_out_of_range: "Value outside the typical range — check your entry (unit Bq/m³, not kBq/m³).",
+    valeur_hint_above_300: "Above the 300 Bq/m³ marker — a marker, not an alert threshold.",
+    err_email_invalid: "Institutional email missing or invalid.",
+    err_commune_non_reconnue: "Municipality not recognized — select it from the list provided.",
+    err_role_manquant: "Specify in what capacity you are submitting.",
+    err_etablissement_manquant: "Name of the facility missing.",
+    err_categorie_manquante: "Facility category missing.",
+    err_organisme_manquant: "Approved body missing.",
+    err_date_manquante: "Measurement date missing.",
+    err_date_future: "The measurement date cannot be in the future.",
+    err_valeur_manquante: "Measured value missing.",
+    err_valeur_invalide: "Measured value invalid.",
+    err_valeur_hors_plage: "Value outside the typical range — check the confirmation box to continue.",
+    err_lat_lon: "Enter both latitude AND longitude, or leave both blank.",
+    err_coords_hors_corse: "Coordinates outside the Corsica area — check your entry or leave these fields blank.",
+    err_consentement: "Open-data consent is required to submit.",
+    err_exactitude: "Confirmation of accuracy is required to submit.",
+    dr_envoi_en_cours: "Submitting…",
+    dr_submit_error: "The submission could not be recorded. Check your connection and try again. If the problem persists, contact Tellux.",
+    dr_submit_btn_js: "Submit",
+    dr_zone_hint_prefix: "Radon-potential zone (ASNR): zone ",
+    dr_zone_hint_suffix: " (automatically derived)."
+  };
+  function jt(key, fr){
+    return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
   }
 
   // Extrait toutes les variables [CHAMP] uniques d'un template
@@ -1058,7 +1247,7 @@ a{color:inherit;}
       .catch(function(err){
         console.warn('[mairies] chargement communes échoué :', err);
         var hint = document.getElementById('mr-commune-hint');
-        if (hint) hint.textContent = 'Liste des communes indisponible. Vérifiez votre connexion.';
+        if (hint) hint.textContent = jt('err_communes_indispo', 'Liste des communes indisponible. Vérifiez votre connexion.');
       });
   }
 
@@ -1096,10 +1285,10 @@ a{color:inherit;}
     var ficheTitle = document.getElementById('mr-fiche-title');
     if (commune){
       if (info){
-        info.textContent = 'Commune sélectionnée : ' + commune.nom + ' — INSEE ' + commune.code_insee;
+        info.textContent = jt('commune_selectionnee_prefix', 'Commune sélectionnée : ') + commune.nom + ' — INSEE ' + commune.code_insee;
         info.classList.remove('empty');
       }
-      if (ficheTitle) ficheTitle.textContent = 'Fiche commune — ' + commune.nom;
+      if (ficheTitle) ficheTitle.textContent = jt('fiche_commune_prefix', 'Fiche commune — ') + commune.nom;
       if (updateUrl){
         var url = new URL(window.location.href);
         url.searchParams.set('commune', commune.code_insee);
@@ -1107,7 +1296,7 @@ a{color:inherit;}
       }
     } else {
       if (info){ info.textContent = ''; info.classList.add('empty'); }
-      if (ficheTitle) ficheTitle.textContent = 'Sélectionnez une commune pour afficher sa fiche';
+      if (ficheTitle) ficheTitle.textContent = jt('commune_select_placeholder', 'Sélectionnez une commune pour afficher sa fiche');
     }
     renderAntennesForCommune(commune);
     renderEtabForCommune(commune);
@@ -1177,16 +1366,16 @@ a{color:inherit;}
     // Domaine EM historique (domaine absent ou != 'radon') — inchangé par D4.
     var mairieList = templatesData.templates.filter(function(t){ return t.categorie === 'mairie' && t.domaine !== 'radon'; });
     var citoyenList = templatesData.templates.filter(function(t){ return t.categorie === 'citoyen' && t.domaine !== 'radon'; });
-    renderCategoryCards('mr-courriers-list', mairieList, 'Mairie');
-    renderCategoryCards('mr-citoyens-list', citoyenList, 'Citoyen');
+    renderCategoryCards('mr-courriers-list', mairieList, jt('kind_mairie', 'Mairie'));
+    renderCategoryCards('mr-citoyens-list', citoyenList, jt('kind_citoyen', 'Citoyen'));
 
     // Domaine radon (D4) — regroupé par public dans sa propre section.
     var radonCitoyenList = templatesData.templates.filter(function(t){ return t.domaine === 'radon' && t.categorie === 'citoyen'; });
     var radonMairieList = templatesData.templates.filter(function(t){ return t.domaine === 'radon' && t.categorie === 'mairie'; });
     var radonEntrepreneurList = templatesData.templates.filter(function(t){ return t.domaine === 'radon' && t.categorie === 'entrepreneur'; });
-    renderCategoryCards('mr-radon-citoyen-list', radonCitoyenList, 'Citoyen');
-    renderCategoryCards('mr-radon-mairie-list', radonMairieList, 'Mairie');
-    renderCategoryCards('mr-radon-entrepreneur-list', radonEntrepreneurList, 'Entrepreneur');
+    renderCategoryCards('mr-radon-citoyen-list', radonCitoyenList, jt('kind_citoyen', 'Citoyen'));
+    renderCategoryCards('mr-radon-mairie-list', radonMairieList, jt('kind_mairie', 'Mairie'));
+    renderCategoryCards('mr-radon-entrepreneur-list', radonEntrepreneurList, jt('kind_entrepreneur', 'Entrepreneur'));
   }
 
   function renderCategoryCards(containerId, list, kind){
@@ -1230,9 +1419,9 @@ a{color:inherit;}
     var form = document.getElementById('mr-modal-form');
     if (!modal || !title || !intro || !form) return;
 
-    eyebrow.textContent = tpl.categorie === 'mairie' ? 'Courrier mairie · ' + tpl.destinataire_label
-      : tpl.categorie === 'entrepreneur' ? 'Courrier entrepreneur · ' + tpl.destinataire_label
-      : 'Courrier citoyen · ' + tpl.destinataire_label;
+    eyebrow.textContent = tpl.categorie === 'mairie' ? jt('eyebrow_mairie_prefix', 'Courrier mairie · ') + tpl.destinataire_label
+      : tpl.categorie === 'entrepreneur' ? jt('eyebrow_entrepreneur_prefix', 'Courrier entrepreneur · ') + tpl.destinataire_label
+      : jt('eyebrow_citoyen_prefix', 'Courrier citoyen · ') + tpl.destinataire_label;
     title.textContent = tpl.titre;
     intro.textContent = tpl.intro_card;
 
@@ -1242,13 +1431,13 @@ a{color:inherit;}
     var commonSlots = commonSlotsFor(tpl);
     var commonTitle = document.createElement('div');
     commonTitle.className = 'mr-modal-form-title';
-    commonTitle.textContent = tpl.categorie === 'mairie' ? 'Informations mairie'
-      : tpl.categorie === 'entrepreneur' ? 'Informations établissement'
-      : 'Vos coordonnées';
+    commonTitle.textContent = tpl.categorie === 'mairie' ? jt('title_informations_mairie', 'Informations mairie')
+      : tpl.categorie === 'entrepreneur' ? jt('title_informations_etablissement', 'Informations établissement')
+      : jt('title_vos_coordonnees', 'Vos coordonnées');
     form.appendChild(commonTitle);
 
     commonSlots.forEach(function(slot){
-      var wrap = createFieldWrap(slot.key, slot.label, slot.placeholder, 'text');
+      var wrap = createFieldWrap(slot.key, slot.label(), slot.placeholder(), 'text');
       var input = wrap.querySelector('input, textarea');
       // Pré-remplissage automatique
       var prefill = '';
@@ -1275,7 +1464,7 @@ a{color:inherit;}
     if (specifics.length > 0){
       var specTitle = document.createElement('div');
       specTitle.className = 'mr-modal-form-title';
-      specTitle.textContent = 'Contenu spécifique à ce courrier';
+      specTitle.textContent = jt('title_contenu_specifique', 'Contenu spécifique à ce courrier');
       form.appendChild(specTitle);
 
       specifics.forEach(function(rawKey){
@@ -1290,7 +1479,7 @@ a{color:inherit;}
           // Cas "A / B / C" : options multiples, utiliser la version en majuscules courtes comme label
           var parts = rawKey.split(' / ');
           label = parts[0].trim();
-          hint = 'Options : ' + parts.slice(1).join(' / ');
+          hint = jt('hint_options_prefix', 'Options : ') + parts.slice(1).join(' / ');
         } else if (rawKey.indexOf(',') > 0 && rawKey.length > 40){
           // Long libellé avec virgule : extraire une label courte si possible
           label = rawKey.split(',')[0].trim();
@@ -1298,7 +1487,7 @@ a{color:inherit;}
         }
         // Afficher label en "Sentence case"
         var labelPretty = label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
-        var wrap = createFieldWrap(rawKey, labelPretty, hint || 'À compléter', 'textarea');
+        var wrap = createFieldWrap(rawKey, labelPretty, hint || jt('placeholder_a_completer', 'À compléter'), 'textarea');
         if (hint) {
           var hintEl = document.createElement('div');
           hintEl.className = 'mr-modal-field-hint';
@@ -1377,7 +1566,7 @@ a{color:inherit;}
       '<div class="mr-preview-corps">' + corpsHtml + '</div>' +
       (salutationHtml ? '<div class="mr-preview-salutation">' + salutationHtml + '</div>' : '') +
       (signatureHtml ? '<div class="mr-preview-signature">' + signatureHtml + '</div>' : '') +
-      (refsHtml ? '<div class="mr-preview-refs-title">Références légales</div><ul class="mr-preview-refs">' + refsHtml + '</ul>' : '') +
+      (refsHtml ? '<div class="mr-preview-refs-title">' + escapeHtml(jt('references_legales', 'Références légales')) + '</div><ul class="mr-preview-refs">' + refsHtml + '</ul>' : '') +
       '<div class="mr-preview-foot">' + escapeHtml(pied) + '</div>';
   }
 
@@ -1415,7 +1604,7 @@ a{color:inherit;}
       content.push({ text: signatureText, style: 'signature', margin: [0, 0, 0, 16] });
     }
     if (refsList.length > 0){
-      content.push({ text: 'Références légales', style: 'refsTitle', margin: [0, 14, 0, 4] });
+      content.push({ text: jt('references_legales', 'Références légales'), style: 'refsTitle', margin: [0, 14, 0, 4] });
       content.push({ ul: refsList, style: 'refs' });
     }
 
@@ -1494,7 +1683,7 @@ a{color:inherit;}
     var btnOriginalLabel = btn ? btn.textContent : null;
     if (btn){
       btn.disabled = true;
-      btn.textContent = 'Préparation du PDF…';
+      btn.textContent = jt('pdf_preparation', 'Préparation du PDF…');
     }
     loadPdfMake().then(function(){
       try {
@@ -1508,7 +1697,7 @@ a{color:inherit;}
         });
       } catch(err){
         console.error('[mairies] génération PDF échouée :', err);
-        alert('Impossible de générer le PDF. Erreur : ' + err.message);
+        alert(jt('pdf_error_generate_prefix', 'Impossible de générer le PDF. Erreur : ') + err.message);
         if (btn){
           btn.disabled = false;
           if (btnOriginalLabel) btn.textContent = btnOriginalLabel;
@@ -1516,7 +1705,7 @@ a{color:inherit;}
       }
     }).catch(function(err){
       console.error('[mairies] chargement pdfmake échoué :', err);
-      alert('Impossible de charger la bibliothèque PDF. Vérifiez votre connexion et réessayez.');
+      alert(jt('pdf_error_load_lib', 'Impossible de charger la bibliothèque PDF. Vérifiez votre connexion et réessayez.'));
       if (btn){
         btn.disabled = false;
         if (btnOriginalLabel) btn.textContent = btnOriginalLabel;
@@ -2324,9 +2513,9 @@ a{color:inherit;}
     var radonObligBody = document.getElementById('mr-radon-oblig-body');
     if (!geoBody || !atypBody) return;
 
-    geoBody.innerHTML = '<div class="mr-geophys-loading">Chargement...</div>';
+    geoBody.innerHTML = '<div class="mr-geophys-loading">' + jt('geo_loading', 'Chargement...') + '</div>';
     atypBody.innerHTML = '';  // le bloc atypiques n'a besoin d'aucun chargement
-    if (radonObligBody) radonObligBody.innerHTML = '<div class="mr-geophys-loading">Chargement...</div>';
+    if (radonObligBody) radonObligBody.innerHTML = '<div class="mr-geophys-loading">' + jt('geo_loading', 'Chargement...') + '</div>';
 
     // Lancer les chargements si necessaire
     Promise.all([
@@ -2356,31 +2545,31 @@ a{color:inherit;}
       var cat = radonInfo.categorie;
       var catLabel, pillClass, desc;
       if (cat === 3){
-        catLabel = 'Zone 3';
+        catLabel = jt('geo_zone3_label', 'Zone 3');
         pillClass = 'mr-pill-radon-3';
-        desc = 'Potentiel radon significatif (zone 3, ASNR). Arrêté du 27 juin 2018, annexe IV.';
+        desc = jt('geo_radon_significatif', 'Potentiel radon significatif (zone 3, ASNR). Arrêté du 27 juin 2018, annexe IV.');
       } else if (cat === 2){
-        catLabel = 'Zone 2';
+        catLabel = jt('geo_zone2_label', 'Zone 2');
         pillClass = 'mr-pill-radon-2';
-        desc = 'Potentiel radon faible, facteurs géologiques particuliers (zone 2, ASNR).';
+        desc = jt('geo_radon_faible_zone2', 'Potentiel radon faible, facteurs géologiques particuliers (zone 2, ASNR).');
       } else {
         catLabel = 'Zone ' + cat;
         pillClass = 'mr-pill-radon-2';
-        desc = 'Zone à potentiel radon (ASNR).';
+        desc = jt('geo_radon_generique', 'Zone à potentiel radon (ASNR).');
       }
       radonHtml = '<div class="mr-geophys-item ' + (cat === 3 ? 'critique' : (cat === 2 ? 'moderee' : 'faible')) + '">' +
-        '<div class="mr-geophys-item-label">Zone à potentiel radon (ASNR)</div>' +
+        '<div class="mr-geophys-item-label">' + jt('geo_radon_label', 'Zone à potentiel radon (ASNR)') + '</div>' +
         '<div class="mr-geophys-item-value"><span class="mr-pill ' + pillClass + '">' + catLabel + '</span></div>' +
         '<div class="mr-geophys-item-sub">' + escapeHtml(desc) + ' ' +
-          '<a href="https://www.data.gouv.fr/datasets/connaitre-le-potentiel-radon-de-ma-commune" target="_blank" rel="noopener noreferrer">Dataset ASNR</a>' +
+          '<a href="https://www.data.gouv.fr/datasets/connaitre-le-potentiel-radon-de-ma-commune" target="_blank" rel="noopener noreferrer">' + jt('geo_dataset_asnr', 'Dataset ASNR') + '</a>' +
         '</div>' +
       '</div>';
     } else {
       // Non référencée en zone 2 ou 3 : par défaut zone 1 (potentiel faible)
       radonHtml = '<div class="mr-geophys-item faible">' +
-        '<div class="mr-geophys-item-label">Zone à potentiel radon (ASNR)</div>' +
-        '<div class="mr-geophys-item-value"><span class="mr-pill mr-pill-radon-1">Zone 1</span></div>' +
-        '<div class="mr-geophys-item-sub">Potentiel radon faible. Commune non listée en zone 2 ou 3 de l\'arrêté du 27 juin 2018.</div>' +
+        '<div class="mr-geophys-item-label">' + jt('geo_radon_label', 'Zone à potentiel radon (ASNR)') + '</div>' +
+        '<div class="mr-geophys-item-value"><span class="mr-pill mr-pill-radon-1">' + jt('geo_zone1_label', 'Zone 1') + '</span></div>' +
+        '<div class="mr-geophys-item-sub">' + jt('geo_radon_faible_zone1', 'Potentiel radon faible. Commune non listée en zone 2 ou 3 de l\'arrêté du 27 juin 2018.') + '</div>' +
       '</div>';
     }
     items.push(radonHtml);
@@ -2397,29 +2586,29 @@ a{color:inherit;}
       var proche = dists.filter(function(d){ return d.dist_km < 10; });
       var state, pillCls, desc2;
       if (proche.length > 0){
-        state = proche.length + ' faille' + (proche.length > 1 ? 's' : '') + ' à moins de 10 km';
+        state = proche.length + ' ' + jt('geo_fault_noun', 'faille') + (proche.length > 1 ? 's' : '') + jt('geo_within_10km_suffix', ' à moins de 10 km');
         pillCls = 'mr-pill-radon-2';
-        desc2 = 'Faille la plus proche : ' + nearest.faille.nom + ' (' + Math.round(nearest.dist_km) + ' km, ' + (nearest.faille.type || '—') + ').';
+        desc2 = jt('geo_faille_proche_prefix', 'Faille la plus proche : ') + nearest.faille.nom + ' (' + Math.round(nearest.dist_km) + ' km, ' + (nearest.faille.type || '—') + ').';
       } else {
-        state = 'Aucune faille principale à moins de 10 km';
+        state = jt('geo_aucune_faille', 'Aucune faille principale à moins de 10 km');
         pillCls = 'mr-pill-radon-1';
-        desc2 = 'Faille majeure la plus proche : ' + nearest.faille.nom + ' (' + Math.round(nearest.dist_km) + ' km).';
+        desc2 = jt('geo_faille_majeure_prefix', 'Faille majeure la plus proche : ') + nearest.faille.nom + ' (' + Math.round(nearest.dist_km) + ' km).';
       }
       faillesHtml = '<div class="mr-geophys-item ' + (proche.length > 0 ? 'moderee' : 'faible') + '">' +
-        '<div class="mr-geophys-item-label">Failles tectoniques principales</div>' +
+        '<div class="mr-geophys-item-label">' + jt('geo_failles_principales_label', 'Failles tectoniques principales') + '</div>' +
         '<div class="mr-geophys-item-value">' + escapeHtml(state) + '</div>' +
-        '<div class="mr-geophys-item-sub">' + escapeHtml(desc2) + ' Source : BRGM et publications académiques.</div>' +
+        '<div class="mr-geophys-item-sub">' + escapeHtml(desc2) + jt('geo_source_brgm_suffix', ' Source : BRGM et publications académiques.') + '</div>' +
       '</div>';
     } else if (!center){
       faillesHtml = '<div class="mr-geophys-item">' +
-        '<div class="mr-geophys-item-label">Failles tectoniques</div>' +
-        '<div class="mr-geophys-item-value">Évaluation indisponible</div>' +
-        '<div class="mr-geophys-item-sub">La distance aux failles principales est calculée à partir du barycentre des antennes de la commune, non disponible ici.</div>' +
+        '<div class="mr-geophys-item-label">' + jt('geo_failles_label', 'Failles tectoniques') + '</div>' +
+        '<div class="mr-geophys-item-value">' + jt('geo_evaluation_indisponible', 'Évaluation indisponible') + '</div>' +
+        '<div class="mr-geophys-item-sub">' + jt('geo_distance_calc_desc', 'La distance aux failles principales est calculée à partir du barycentre des antennes de la commune, non disponible ici.') + '</div>' +
       '</div>';
     } else {
       faillesHtml = '<div class="mr-geophys-item">' +
-        '<div class="mr-geophys-item-label">Failles tectoniques</div>' +
-        '<div class="mr-geophys-item-value">Données en cours de chargement</div>' +
+        '<div class="mr-geophys-item-label">' + jt('geo_failles_label', 'Failles tectoniques') + '</div>' +
+        '<div class="mr-geophys-item-value">' + jt('geo_donnees_chargement', 'Données en cours de chargement') + '</div>' +
       '</div>';
     }
     items.push(faillesHtml);
@@ -2428,15 +2617,15 @@ a{color:inherit;}
     // filtrables par commune sans PostGIS ou MNT raster)
     items.push(
       '<div class="mr-geophys-item">' +
-        '<div class="mr-geophys-item-label">Autres couches géophysiques</div>' +
-        '<div class="mr-geophys-item-value">Substrat géologique, anomalies magnétiques crustales</div>' +
-        '<div class="mr-geophys-item-sub">Ces couches sont consultables sur la carte Tellux : géologie BRGM (granite, schiste, calcaire), EMAG2v3 (anomalies magnétiques crustales NOAA), sites U/Th documentés. Pour une lecture par commune, utilisez le lien ci-dessous.</div>' +
+        '<div class="mr-geophys-item-label">' + jt('geo_autres_couches_label', 'Autres couches géophysiques') + '</div>' +
+        '<div class="mr-geophys-item-value">' + jt('geo_substrat_value', 'Substrat géologique, anomalies magnétiques crustales') + '</div>' +
+        '<div class="mr-geophys-item-sub">' + jt('geo_autres_couches_desc', 'Ces couches sont consultables sur la carte Tellux : géologie BRGM (granite, schiste, calcaire), EMAG2v3 (anomalies magnétiques crustales NOAA), sites U/Th documentés. Pour une lecture par commune, utilisez le lien ci-dessous.') + '</div>' +
       '</div>'
     );
 
     var linksHtml = '<div class="mr-geophys-links">';
     if (center){
-      linksHtml += '<a class="mr-geophys-link" href="app.html#/z=12&c=' + center.lat.toFixed(5) + ',' + center.lon.toFixed(5) + '&m=I" target="_blank" rel="noopener">Explorer sur la carte Tellux →</a>';
+      linksHtml += '<a class="mr-geophys-link" href="app.html#/z=12&c=' + center.lat.toFixed(5) + ',' + center.lon.toFixed(5) + '&m=I" target="_blank" rel="noopener">' + jt('geo_explorer_carte_link', 'Explorer sur la carte Tellux →') + '</a>';
     }
     linksHtml += '</div>';
 
@@ -2497,6 +2686,18 @@ a{color:inherit;}
     expertise_complementaire_en_cours: 'Expertise complémentaire en cours'
   };
 
+  // Résolution paresseuse (appelée au rendu, pas au chargement du script) :
+  // même piège que COMMON_SLOTS_* si ces lookups étaient faits dans les objets
+  // ci-dessus directement. Clé JS_STRINGS_EN = 'depot_cat_' + code / 'depot_action_' + code.
+  function depotCategorieLabel(code){
+    var fr = DEPOT_RADON_CATEGORIE_LABELS[code] || code;
+    return jt('depot_cat_' + code, fr);
+  }
+  function depotStatutActionLabel(code){
+    var fr = DEPOT_RADON_STATUT_ACTION_LABELS[code] || code;
+    return jt('depot_action_' + code, fr);
+  }
+
   // Rendu établissement par établissement (Brique D §2) — jamais une couleur
   // de zone recolorée, jamais fusionné avec le zonage 2/3 déjà affiché plus haut.
   function renderDepotsRadonHtml(code_insee){
@@ -2505,29 +2706,36 @@ a{color:inherit;}
     var items = deposits.map(function(d){
       var repereClass = d.valeur_moyenne_bq_m3 > 300 ? ' mr-depot-radon-repere-au-dessus' : '';
       var repereText = d.valeur_moyenne_bq_m3 > 300
-        ? 'Au-dessus du repère de 300 Bq/m³ — un repère, pas un seuil d\'alerte'
-        : 'En dessous du repère de 300 Bq/m³';
+        ? jt('depot_repere_above', 'Au-dessus du repère de 300 Bq/m³ — un repère, pas un seuil d\'alerte')
+        : jt('depot_repere_below', 'En dessous du repère de 300 Bq/m³');
       var actionHtml = d.statut_action
-        ? '<div class="mr-depot-radon-item-action">' + escapeHtml(DEPOT_RADON_STATUT_ACTION_LABELS[d.statut_action] || d.statut_action) + '</div>'
+        ? '<div class="mr-depot-radon-item-action">' + escapeHtml(depotStatutActionLabel(d.statut_action)) + '</div>'
         : '';
       return '<div class="mr-depot-radon-item">' +
-        '<div class="mr-depot-radon-item-header"><strong>' + escapeHtml(d.nom_etablissement) + '</strong><span class="mr-depot-radon-badge">certifié — organisme agréé ASNR</span></div>' +
-        '<div class="mr-depot-radon-item-sub">' + escapeHtml(DEPOT_RADON_CATEGORIE_LABELS[d.categorie_erp] || d.categorie_erp) + '</div>' +
+        '<div class="mr-depot-radon-item-header"><strong>' + escapeHtml(d.nom_etablissement) + '</strong><span class="mr-depot-radon-badge">' + jt('depot_certifie_badge', 'certifié — organisme agréé ASNR') + '</span></div>' +
+        '<div class="mr-depot-radon-item-sub">' + escapeHtml(depotCategorieLabel(d.categorie_erp)) + '</div>' +
         '<div class="mr-depot-radon-item-value">' + escapeHtml(String(d.valeur_moyenne_bq_m3)) + ' Bq/m³ <span class="mr-depot-radon-item-repere' + repereClass + '">' + repereText + '</span></div>' +
-        '<div class="mr-depot-radon-item-meta">Mesuré le ' + escapeHtml(d.date_mesurage) + ' par ' + escapeHtml(d.organisme_agree_nom) + ' (agrément ' + escapeHtml(d.organisme_agree_numero) + ', norme NF EN ISO 11665-4)</div>' +
+        '<div class="mr-depot-radon-item-meta">' + jt('depot_meta_prefix', 'Mesuré le ') + escapeHtml(d.date_mesurage) + jt('depot_meta_by', ' par ') + escapeHtml(d.organisme_agree_nom) + jt('depot_meta_agrement', ' (agrément ') + escapeHtml(d.organisme_agree_numero) + jt('depot_meta_norme_suffix', ', norme NF EN ISO 11665-4)') + '</div>' +
         actionHtml +
         '</div>';
     }).join('');
     return '<div class="mr-depot-radon-list">' +
-      '<h4 class="mr-depot-radon-list-title">Résultats déposés par la commune (' + deposits.length + ')</h4>' +
+      '<h4 class="mr-depot-radon-list-title">' + jt('depot_resultats_titre_prefix', 'Résultats déposés par la commune (') + deposits.length + ')</h4>' +
       items +
-      '<div class="mr-depot-radon-item-warning">⚠ Mesure ponctuelle certifiée, non extrapolable dans le temps ni dans l\'espace ; ne vaut pas diagnostic territorial.</div>' +
+      '<div class="mr-depot-radon-item-warning">' + jt('depot_warning', '⚠ Mesure ponctuelle certifiée, non extrapolable dans le temps ni dans l\'espace ; ne vaut pas diagnostic territorial.') + '</div>' +
       '</div>';
   }
 
-  var RADON_OBLIG_DISCLAIMER = '<p class="mr-radon-oblig-disclaimer"><em>Ce contenu relaie le droit en vigueur ; il ne s\'y substitue pas et ne constitue pas un conseil juridique. Sources à vérifier à la date de consultation.</em></p>';
+  // Fonctions (pas des var) : évaluées à l'appel dans renderRadonObligations(),
+  // bien après DOMContentLoaded — jt() y lit document.documentElement.lang de
+  // façon fiable (même piège que COMMON_SLOTS_*, cf. commit Lot 1).
+  function radonObligDisclaimer(){
+    return '<p class="mr-radon-oblig-disclaimer">' + jt('radon_disclaimer', '<em>Ce contenu relaie le droit en vigueur ; il ne s\'y substitue pas et ne constitue pas un conseil juridique. Sources à vérifier à la date de consultation.</em>') + '</p>';
+  }
 
-  var RADON_OBLIG_RESSOURCES = '<p><strong>Ressources et kits de mesure.</strong> Le Plan régional santé environnement de Corse identifie les mairies comme relais privilégié de distribution des kits de dépistage gratuits (campagne <a href="https://qualitair.corsica/radon-des-kits-de-mesure-gratuits-pour-proteger-votre-sante/" target="_blank" rel="noopener noreferrer">PRIMAIR / Qualitair Corse</a>, ADEME). Des référentiels complets sont disponibles auprès de l\'<a href="https://reglementation-controle.asnr.fr/information/dossiers-pedagogiques/le-radon-et-les-professionnels" target="_blank" rel="noopener noreferrer">ASNR</a> (mesurage, FAQ ERP) et de l\'<a href="https://www.corse.ars.sante.fr/le-risque-radon" target="_blank" rel="noopener noreferrer">ARS Corse</a>.</p>';
+  function radonObligRessources(){
+    return '<p>' + jt('radon_ressources', '<strong>Ressources et kits de mesure.</strong> Le Plan régional santé environnement de Corse identifie les mairies comme relais privilégié de distribution des kits de dépistage gratuits (campagne <a href="https://qualitair.corsica/radon-des-kits-de-mesure-gratuits-pour-proteger-votre-sante/" target="_blank" rel="noopener noreferrer">PRIMAIR / Qualitair Corse</a>, ADEME). Des référentiels complets sont disponibles auprès de l\'<a href="https://reglementation-controle.asnr.fr/information/dossiers-pedagogiques/le-radon-et-les-professionnels" target="_blank" rel="noopener noreferrer">ASNR</a> (mesurage, FAQ ERP) et de l\'<a href="https://www.corse.ars.sante.fr/le-risque-radon" target="_blank" rel="noopener noreferrer">ARS Corse</a>.') + '</p>';
+  }
 
   function renderRadonObligations(commune){
     var body = document.getElementById('mr-radon-oblig-body');
@@ -2537,24 +2745,24 @@ a{color:inherit;}
 
     if (zone === 3){
       html = '<div class="mr-legal-content">' +
-        '<p><strong>Mesurage dans les établissements recevant du public.</strong> Pour les établissements recevant du public listés à l\'article D.1333-32 du code de la santé publique (établissements d\'enseignement, accueil collectif d\'enfants de moins de six ans, établissements sanitaires ou sociaux avec hébergement, établissements thermaux, établissements pénitentiaires), l\'article <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915" target="_blank" rel="noopener noreferrer">R.1333-33 du code de la santé publique</a> prévoit un mesurage de l\'activité volumique du radon à la charge du propriétaire (ou de l\'exploitant si une convention le prévoit), renouvelé tous les dix ans et après toute intervention modifiant la ventilation ou l\'étanchéité du bâtiment. Une commune est typiquement propriétaire de ses écoles et de ses crèches.</p>' +
-        '<p><strong>En cas de dépassement du niveau de référence.</strong> Si le résultat dépasse 300 Bq/m³, l\'<a href="https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000038219644" target="_blank" rel="noopener noreferrer">arrêté du 26 février 2019</a> prévoit des actions correctives (ventilation, étanchéité), puis une expertise du bâtiment si le dépassement persiste ou dépasse 1 000 Bq/m³. Le texte prévoit aussi l\'affichage du résultat du mesurage près de l\'entrée principale de l\'établissement.</p>' +
-        '<p><strong>Information des acquéreurs et locataires.</strong> Cette commune est classée en zone 3 — la « zone à potentiel radon de niveau 3 » au sens du code de l\'environnement. L\'état des risques annexé à toute vente ou location d\'un bien (y compris saisonnière) doit alors mentionner ce classement, en application des articles <a href="https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074220/LEGISCTA000006176683/" target="_blank" rel="noopener noreferrer">L.125-5 et R.125-23 du code de l\'environnement</a>. Cette obligation concerne le vendeur ou le bailleur, pas la commune — mais la mairie est souvent le premier guichet questionné par les administrés. La fiche officielle du bien est disponible sur <a href="https://www.georisques.gouv.fr/" target="_blank" rel="noopener noreferrer">georisques.gouv.fr</a>.</p>' +
-        RADON_OBLIG_RESSOURCES +
-        RADON_OBLIG_DISCLAIMER +
+        '<p>' + jt('radon_zone3_p1', '<strong>Mesurage dans les établissements recevant du public.</strong> Pour les établissements recevant du public listés à l\'article D.1333-32 du code de la santé publique (établissements d\'enseignement, accueil collectif d\'enfants de moins de six ans, établissements sanitaires ou sociaux avec hébergement, établissements thermaux, établissements pénitentiaires), l\'article <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915" target="_blank" rel="noopener noreferrer">R.1333-33 du code de la santé publique</a> prévoit un mesurage de l\'activité volumique du radon à la charge du propriétaire (ou de l\'exploitant si une convention le prévoit), renouvelé tous les dix ans et après toute intervention modifiant la ventilation ou l\'étanchéité du bâtiment. Une commune est typiquement propriétaire de ses écoles et de ses crèches.') + '</p>' +
+        '<p>' + jt('radon_zone3_p2', '<strong>En cas de dépassement du niveau de référence.</strong> Si le résultat dépasse 300 Bq/m³, l\'<a href="https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000038219644" target="_blank" rel="noopener noreferrer">arrêté du 26 février 2019</a> prévoit des actions correctives (ventilation, étanchéité), puis une expertise du bâtiment si le dépassement persiste ou dépasse 1 000 Bq/m³. Le texte prévoit aussi l\'affichage du résultat du mesurage près de l\'entrée principale de l\'établissement.') + '</p>' +
+        '<p>' + jt('radon_zone3_p3', '<strong>Information des acquéreurs et locataires.</strong> Cette commune est classée en zone 3 — la « zone à potentiel radon de niveau 3 » au sens du code de l\'environnement. L\'état des risques annexé à toute vente ou location d\'un bien (y compris saisonnière) doit alors mentionner ce classement, en application des articles <a href="https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074220/LEGISCTA000006176683/" target="_blank" rel="noopener noreferrer">L.125-5 et R.125-23 du code de l\'environnement</a>. Cette obligation concerne le vendeur ou le bailleur, pas la commune — mais la mairie est souvent le premier guichet questionné par les administrés. La fiche officielle du bien est disponible sur <a href="https://www.georisques.gouv.fr/" target="_blank" rel="noopener noreferrer">georisques.gouv.fr</a>.') + '</p>' +
+        radonObligRessources() +
+        radonObligDisclaimer() +
         '</div>';
     } else if (zone === 2){
       html = '<div class="mr-legal-content">' +
-        '<p><strong>Mesurage dans les établissements recevant du public.</strong> L\'article <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915" target="_blank" rel="noopener noreferrer">R.1333-33 du code de la santé publique</a> prévoit un mesurage obligatoire du radon dans les établissements recevant du public listés à l\'article D.1333-32 (écoles, crèches, établissements sanitaires ou sociaux avec hébergement…) en zone 3. En zone 2, comme celle-ci, cette obligation ne s\'applique que si des mesures déjà réalisées dans l\'établissement ont dépassé le niveau de référence de 300 Bq/m³ — elle n\'est pas systématique ici.</p>' +
-        '<p><strong>Information des acquéreurs et locataires.</strong> L\'obligation d\'information sur le radon dans l\'état des risques (<a href="https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074220/LEGISCTA000006176683/" target="_blank" rel="noopener noreferrer">L.125-5 et R.125-23 du code de l\'environnement</a>) vise spécifiquement les communes classées en « zone à potentiel radon de niveau 3 », c\'est-à-dire la zone 3 au sens de l\'arrêté du 27 juin 2018. Cette commune, classée zone 2, n\'entre pas dans ce périmètre : cette mention ne s\'applique pas ici.</p>' +
-        RADON_OBLIG_RESSOURCES +
-        RADON_OBLIG_DISCLAIMER +
+        '<p>' + jt('radon_zone2_p1', '<strong>Mesurage dans les établissements recevant du public.</strong> L\'article <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915" target="_blank" rel="noopener noreferrer">R.1333-33 du code de la santé publique</a> prévoit un mesurage obligatoire du radon dans les établissements recevant du public listés à l\'article D.1333-32 (écoles, crèches, établissements sanitaires ou sociaux avec hébergement…) en zone 3. En zone 2, comme celle-ci, cette obligation ne s\'applique que si des mesures déjà réalisées dans l\'établissement ont dépassé le niveau de référence de 300 Bq/m³ — elle n\'est pas systématique ici.') + '</p>' +
+        '<p>' + jt('radon_zone2_p2', '<strong>Information des acquéreurs et locataires.</strong> L\'obligation d\'information sur le radon dans l\'état des risques (<a href="https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074220/LEGISCTA000006176683/" target="_blank" rel="noopener noreferrer">L.125-5 et R.125-23 du code de l\'environnement</a>) vise spécifiquement les communes classées en « zone à potentiel radon de niveau 3 », c\'est-à-dire la zone 3 au sens de l\'arrêté du 27 juin 2018. Cette commune, classée zone 2, n\'entre pas dans ce périmètre : cette mention ne s\'applique pas ici.') + '</p>' +
+        radonObligRessources() +
+        radonObligDisclaimer() +
         '</div>';
     } else {
       html = '<div class="mr-legal-content">' +
-        '<p>Cette commune est classée en zone 1 (potentiel radon faible). Aucune obligation réglementaire spécifique au radon ne s\'applique de façon systématique à ce niveau de zonage. L\'article <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915" target="_blank" rel="noopener noreferrer">R.1333-33 du code de la santé publique</a> prévoit, à titre exceptionnel et quelle que soit la zone, un mesurage dans les établissements recevant du public si des mesures déjà réalisées ont dépassé le niveau de référence de 300 Bq/m³.</p>' +
-        RADON_OBLIG_RESSOURCES +
-        RADON_OBLIG_DISCLAIMER +
+        '<p>' + jt('radon_zone1_p1', 'Cette commune est classée en zone 1 (potentiel radon faible). Aucune obligation réglementaire spécifique au radon ne s\'applique de façon systématique à ce niveau de zonage. L\'article <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915" target="_blank" rel="noopener noreferrer">R.1333-33 du code de la santé publique</a> prévoit, à titre exceptionnel et quelle que soit la zone, un mesurage dans les établissements recevant du public si des mesures déjà réalisées ont dépassé le niveau de référence de 300 Bq/m³.') + '</p>' +
+        radonObligRessources() +
+        radonObligDisclaimer() +
         '</div>';
     }
     body.innerHTML = html + renderDepotsRadonHtml(commune.code_insee);
@@ -2570,22 +2778,22 @@ a{color:inherit;}
     // commune n'est extractible automatiquement en v1.
     body.innerHTML =
       '<div class="mr-atyp-definition">' +
-        'Un <strong>point atypique</strong> est un lieu où l\'exposition aux champs électromagnétiques dépasse substantiellement le niveau observé au niveau national. ' +
+        jt('atyp_definition', 'Un <strong>point atypique</strong> est un lieu où l\'exposition aux champs électromagnétiques dépasse substantiellement le niveau observé au niveau national. ' +
         'Le seuil de caractérisation est de <strong>9 V/m</strong> à compter du 1er janvier 2026 (auparavant 6 V/m). ' +
-        'Article L.34-9-1 II H du CPCE.' +
+        'Article L.34-9-1 II H du CPCE.') +
       '</div>' +
       '<div class="mr-atyp-state">' +
-        'Aucune liste des points atypiques par commune n\'est disponible dans un format structuré au 24 avril 2026. L\'ANFR publie un recensement annuel sous forme de rapport PDF. ' +
-        'Le recensement 2024 (publié en 2025) confirme la fermeture de la quasi-totalité des cas identifiés entre 2017 et 2019.' +
+        jt('atyp_state1', 'Aucune liste des points atypiques par commune n\'est disponible dans un format structuré au 24 avril 2026. L\'ANFR publie un recensement annuel sous forme de rapport PDF. ' +
+        'Le recensement 2024 (publié en 2025) confirme la fermeture de la quasi-totalité des cas identifiés entre 2017 et 2019.') +
       '</div>' +
       '<div class="mr-atyp-state">' +
-        'Pour vérifier la situation sur votre territoire, deux démarches concrètes sont possibles via votre commune.' +
+        jt('atyp_state2', 'Pour vérifier la situation sur votre territoire, deux démarches concrètes sont possibles via votre commune.') +
       '</div>' +
       '<div class="mr-atyp-links">' +
-        '<a class="mr-atyp-link" href="' + ANFR_PA_PDF_URL + '" target="_blank" rel="noopener noreferrer">Rapport ANFR 2024 sur les points atypiques (PDF)</a>' +
-        '<a class="mr-atyp-link" href="' + ANFR_PA_PAGE_URL + '" target="_blank" rel="noopener noreferrer">Page ANFR - Points atypiques</a>' +
-        '<a class="mr-atyp-link" href="#courrier" onclick="document.querySelector(\'.mr-tab[data-tab=\\\'courrier\\\']\').click(); return false;">Demander une mesure ANFR sur la commune</a>' +
-        '<a class="mr-atyp-link" href="#legal" onclick="document.querySelector(\'.mr-tab[data-tab=\\\'legal\\\']\').click(); return false;">Voir le cadre légal complet</a>' +
+        '<a class="mr-atyp-link" href="' + ANFR_PA_PDF_URL + '" target="_blank" rel="noopener noreferrer">' + jt('atyp_link_rapport', 'Rapport ANFR 2024 sur les points atypiques (PDF)') + '</a>' +
+        '<a class="mr-atyp-link" href="' + ANFR_PA_PAGE_URL + '" target="_blank" rel="noopener noreferrer">' + jt('atyp_link_page', 'Page ANFR - Points atypiques') + '</a>' +
+        '<a class="mr-atyp-link" href="#courrier" onclick="document.querySelector(\'.mr-tab[data-tab=\\\'courrier\\\']\').click(); return false;">' + jt('atyp_link_demander', 'Demander une mesure ANFR sur la commune') + '</a>' +
+        '<a class="mr-atyp-link" href="#legal" onclick="document.querySelector(\'.mr-tab[data-tab=\\\'legal\\\']\').click(); return false;">' + jt('atyp_link_legal', 'Voir le cadre légal complet') + '</a>' +
       '</div>';
   }
 
@@ -2693,7 +2901,11 @@ a{color:inherit;}
     var email = document.getElementById('dr-email').value.trim();
     var communeInput = document.getElementById('dr-commune').value.trim();
     var role = document.getElementById('dr-role').value;
-    var roleLabels = { mairie: 'Mairie', service_technique_communal: 'Service technique communal', delegataire_mandate: 'Délégataire mandaté' };
+    var roleLabels = {
+      mairie: jt('role_mairie_short', 'Mairie'),
+      service_technique_communal: jt('role_technique_short', 'Service technique communal'),
+      delegataire_mandate: jt('role_delegataire_short', 'Délégataire mandaté')
+    };
     var etablissement = document.getElementById('dr-etablissement').value.trim();
     var categorieSelect = document.getElementById('dr-categorie');
     var categorieLabel = categorieSelect.options[categorieSelect.selectedIndex] ? categorieSelect.options[categorieSelect.selectedIndex].textContent : '';
@@ -2703,21 +2915,21 @@ a{color:inherit;}
     var zoneHomogene = document.getElementById('dr-zone-homogene').value.trim();
 
     if (!email && !communeInput && !etablissement && !organisme && !dateMesurage && !valeur){
-      recap.textContent = 'Complétez le formulaire ci-dessus pour voir le récapitulatif.';
+      recap.textContent = jt('dr_recap_empty', 'Complétez le formulaire ci-dessus pour voir le récapitulatif.');
       return;
     }
 
     var zone = drSelectedCommune ? drGetRadonZone(drSelectedCommune.code_insee) : null;
 
     var rows = [];
-    rows.push(['Déposant', (roleLabels[role] || '—') + (email ? ' · ' + email : '')]);
-    rows.push(['Commune', communeInput || '—']);
-    if (zone != null) rows.push(['Zone à potentiel radon (ASNR)', 'Zone ' + zone]);
-    rows.push(['Établissement', (etablissement || '—') + (categorieLabel ? ' · ' + categorieLabel : '')]);
-    rows.push(['Organisme agréé', organisme || '—']);
-    rows.push(['Date du mesurage', dateMesurage || '—']);
-    rows.push(['Valeur mesurée', valeur ? valeur + ' Bq/m³' : '—']);
-    if (zoneHomogene) rows.push(['Zone homogène', zoneHomogene]);
+    rows.push([jt('recap_label_deposant', 'Déposant'), (roleLabels[role] || '—') + (email ? ' · ' + email : '')]);
+    rows.push([jt('recap_label_commune', 'Commune'), communeInput || '—']);
+    if (zone != null) rows.push([jt('geo_radon_label', 'Zone à potentiel radon (ASNR)'), 'Zone ' + zone]);
+    rows.push([jt('recap_label_etablissement', 'Établissement'), (etablissement || '—') + (categorieLabel ? ' · ' + categorieLabel : '')]);
+    rows.push([jt('recap_label_organisme', 'Organisme agréé'), organisme || '—']);
+    rows.push([jt('recap_label_date', 'Date du mesurage'), dateMesurage || '—']);
+    rows.push([jt('recap_label_valeur', 'Valeur mesurée'), valeur ? valeur + ' Bq/m³' : '—']);
+    if (zoneHomogene) rows.push([jt('recap_label_zone_homogene', 'Zone homogène'), zoneHomogene]);
 
     recap.innerHTML = '<dl>' + rows.map(function(r){
       return '<dt>' + escapeHtml(r[0]) + '</dt><dd>' + escapeHtml(r[1]) + '</dd>';
@@ -2730,14 +2942,14 @@ a{color:inherit;}
     if (!input || !hint) return;
     var val = input.value.trim();
     if (!val){
-      hint.textContent = 'Liste des organismes agréés par l\'ASNR pour le mesurage du radon (article R.1333-36 CSP), niveaux 1 et 2. Si votre organisme n\'apparaît pas dans la liste, le dépôt reste possible mais restera en attente jusqu\'à confirmation manuelle de l\'agrément.';
+      hint.textContent = jt('org_hint_default', 'Liste des organismes agréés par l\'ASNR pour le mesurage du radon (article R.1333-36 CSP), niveaux 1 et 2. Si votre organisme n\'apparaît pas dans la liste, le dépôt reste possible mais restera en attente jusqu\'à confirmation manuelle de l\'agrément.');
       return;
     }
     var match = findOrganismeByInput(val);
     if (match){
-      hint.textContent = 'Agrément ASNR confirmé — référence ' + match.numero_agrement + ' (niveau ' + match.niveau + ').';
+      hint.textContent = jt('org_hint_confirmed_prefix', 'Agrément ASNR confirmé — référence ') + match.numero_agrement + jt('org_hint_confirmed_infix', ' (niveau ') + match.niveau + ').';
     } else {
-      hint.textContent = 'Nous n\'avons pas pu confirmer automatiquement l\'agrément de cet organisme dans la liste ASNR. Votre dépôt reste possible : il sera vérifié manuellement avant toute publication.';
+      hint.textContent = jt('org_hint_no_match', 'Nous n\'avons pas pu confirmer automatiquement l\'agrément de cet organisme dans la liste ASNR. Votre dépôt reste possible : il sera vérifié manuellement avant toute publication.');
     }
   }
 
@@ -2754,10 +2966,10 @@ a{color:inherit;}
       return;
     }
     if (v === 0 || v > 100000){
-      hint.textContent = 'Valeur hors plage courante — vérifiez la saisie (unité Bq/m³, pas kBq/m³).';
+      hint.textContent = jt('valeur_hint_out_of_range', 'Valeur hors plage courante — vérifiez la saisie (unité Bq/m³, pas kBq/m³).');
       confirmWrap.hidden = false;
     } else {
-      hint.textContent = v > 300 ? 'Au-dessus du repère de 300 Bq/m³ — un repère, pas un seuil d\'alerte.' : '';
+      hint.textContent = v > 300 ? jt('valeur_hint_above_300', 'Au-dessus du repère de 300 Bq/m³ — un repère, pas un seuil d\'alerte.') : '';
       confirmWrap.hidden = true;
       if (confirmBox) confirmBox.checked = false;
     }
@@ -2773,40 +2985,40 @@ a{color:inherit;}
   function drValidate(){
     var errors = [];
     var email = document.getElementById('dr-email').value.trim();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Email institutionnel manquant ou invalide.');
-    if (!drSelectedCommune) errors.push('Commune non reconnue — choisissez-la dans la liste proposée.');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push(jt('err_email_invalid', 'Email institutionnel manquant ou invalide.'));
+    if (!drSelectedCommune) errors.push(jt('err_commune_non_reconnue', 'Commune non reconnue — choisissez-la dans la liste proposée.'));
     var role = document.getElementById('dr-role').value;
-    if (!role) errors.push('Précisez en quelle qualité vous déposez.');
+    if (!role) errors.push(jt('err_role_manquant', 'Précisez en quelle qualité vous déposez.'));
     var etablissement = document.getElementById('dr-etablissement').value.trim();
-    if (!etablissement) errors.push('Nom de l\'établissement manquant.');
+    if (!etablissement) errors.push(jt('err_etablissement_manquant', 'Nom de l\'établissement manquant.'));
     var categorie = document.getElementById('dr-categorie').value;
-    if (!categorie) errors.push('Catégorie de l\'établissement manquante.');
+    if (!categorie) errors.push(jt('err_categorie_manquante', 'Catégorie de l\'établissement manquante.'));
     var organisme = document.getElementById('dr-organisme').value.trim();
-    if (!organisme) errors.push('Organisme agréé manquant.');
+    if (!organisme) errors.push(jt('err_organisme_manquant', 'Organisme agréé manquant.'));
     var dateMesurage = document.getElementById('dr-date-mesurage').value;
-    if (!dateMesurage) errors.push('Date du mesurage manquante.');
-    else if (dateMesurage > new Date().toISOString().slice(0, 10)) errors.push('La date du mesurage ne peut pas être dans le futur.');
+    if (!dateMesurage) errors.push(jt('err_date_manquante', 'Date du mesurage manquante.'));
+    else if (dateMesurage > new Date().toISOString().slice(0, 10)) errors.push(jt('err_date_future', 'La date du mesurage ne peut pas être dans le futur.'));
     var valeurRaw = document.getElementById('dr-valeur').value;
-    if (valeurRaw === '') errors.push('Valeur mesurée manquante.');
+    if (valeurRaw === '') errors.push(jt('err_valeur_manquante', 'Valeur mesurée manquante.'));
     else {
       var v = Number(valeurRaw);
-      if (isNaN(v) || v < 0) errors.push('Valeur mesurée invalide.');
+      if (isNaN(v) || v < 0) errors.push(jt('err_valeur_invalide', 'Valeur mesurée invalide.'));
       else if (v === 0 || v > 100000){
         var confirmBox = document.getElementById('dr-valeur-confirm');
-        if (!confirmBox || !confirmBox.checked) errors.push('Valeur hors plage courante — cochez la confirmation pour continuer.');
+        if (!confirmBox || !confirmBox.checked) errors.push(jt('err_valeur_hors_plage', 'Valeur hors plage courante — cochez la confirmation pour continuer.'));
       }
     }
     var latRaw = document.getElementById('dr-lat').value;
     var lonRaw = document.getElementById('dr-lon').value;
-    if ((latRaw === '') !== (lonRaw === '')) errors.push('Renseignez latitude ET longitude, ou laissez les deux vides.');
+    if ((latRaw === '') !== (lonRaw === '')) errors.push(jt('err_lat_lon', 'Renseignez latitude ET longitude, ou laissez les deux vides.'));
     else if (latRaw !== '' && lonRaw !== ''){
       var lat = Number(latRaw), lon = Number(lonRaw);
       if (isNaN(lat) || lat < 41 || lat > 43.5 || isNaN(lon) || lon < 8 || lon > 10){
-        errors.push('Coordonnées hors de la zone Corse — vérifiez la saisie ou laissez ces champs vides.');
+        errors.push(jt('err_coords_hors_corse', 'Coordonnées hors de la zone Corse — vérifiez la saisie ou laissez ces champs vides.'));
       }
     }
-    if (!document.getElementById('dr-consentement').checked) errors.push('Le consentement d\'ouverture est requis pour déposer.');
-    if (!document.getElementById('dr-exactitude').checked) errors.push('La confirmation d\'exactitude est requise pour déposer.');
+    if (!document.getElementById('dr-consentement').checked) errors.push(jt('err_consentement', 'Le consentement d\'ouverture est requis pour déposer.'));
+    if (!document.getElementById('dr-exactitude').checked) errors.push(jt('err_exactitude', 'La confirmation d\'exactitude est requise pour déposer.'));
     return errors;
   }
 
@@ -2836,7 +3048,7 @@ a{color:inherit;}
     }
 
     var btn = document.getElementById('dr-submit-btn');
-    if (btn){ btn.disabled = true; btn.textContent = 'Envoi en cours…'; }
+    if (btn){ btn.disabled = true; btn.textContent = jt('dr_envoi_en_cours', 'Envoi en cours…'); }
 
     var fileInput = document.getElementById('dr-document');
     var file = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
@@ -2874,8 +3086,8 @@ a{color:inherit;}
       document.getElementById('dr-success').hidden = false;
     }).catch(function(err){
       console.warn('[mairies] depot radon echoue :', err);
-      drShowError('Le dépôt n\'a pas pu être enregistré. Vérifiez votre connexion et réessayez. Si le problème persiste, contactez Tellux.');
-      if (btn){ btn.disabled = false; btn.textContent = 'Soumettre le dépôt'; }
+      drShowError(jt('dr_submit_error', 'Le dépôt n\'a pas pu être enregistré. Vérifiez votre connexion et réessayez. Si le problème persiste, contactez Tellux.'));
+      if (btn){ btn.disabled = false; btn.textContent = jt('dr_submit_btn_js', 'Soumettre le dépôt'); }
     });
   }
 
@@ -2894,7 +3106,7 @@ a{color:inherit;}
     document.getElementById('dr-success').hidden = true;
     document.getElementById('depot-radon-form-wrap').hidden = false;
     var btn = document.getElementById('dr-submit-btn');
-    if (btn){ btn.disabled = false; btn.textContent = 'Soumettre le dépôt'; }
+    if (btn){ btn.disabled = false; btn.textContent = jt('dr_submit_btn_js', 'Soumettre le dépôt'); }
   }
 
   function initDepotRadonForm(){
@@ -2906,7 +3118,7 @@ a{color:inherit;}
       drSelectedCommune = findCommuneByInput(communeInput.value);
       var zoneHint = document.getElementById('dr-commune-zone-hint');
       if (zoneHint){
-        zoneHint.textContent = drSelectedCommune ? 'Zone à potentiel radon (ASNR) : zone ' + drGetRadonZone(drSelectedCommune.code_insee) + ' (dérivée automatiquement).' : '';
+        zoneHint.textContent = drSelectedCommune ? jt('dr_zone_hint_prefix', 'Zone à potentiel radon (ASNR) : zone ') + drGetRadonZone(drSelectedCommune.code_insee) + jt('dr_zone_hint_suffix', ' (dérivée automatiquement).') : '';
       }
       drUpdateRecap();
     });
