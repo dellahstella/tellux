@@ -1044,7 +1044,42 @@ a{color:inherit;}
     pdf_preparation: "Preparing the PDF…",
     pdf_error_generate_prefix: "Unable to generate the PDF. Error: ",
     pdf_error_load_lib: "Unable to load the PDF library. Check your connection and try again.",
-    references_legales: "Legal references"
+    references_legales: "Legal references",
+
+    // Lot 3/? — bloc Contexte géophysique (fiche commune) + bloc Points
+    // atypiques ANFR.
+    geo_loading: "Loading...",
+    geo_zone3_label: "Zone 3",
+    geo_radon_significatif: "Significant radon potential (zone 3, ASNR). Order of June 27, 2018, Annex IV.",
+    geo_zone2_label: "Zone 2",
+    geo_radon_faible_zone2: "Low radon potential, specific geological factors (zone 2, ASNR).",
+    geo_radon_generique: "Radon-potential zone (ASNR).",
+    geo_radon_label: "Radon-potential zone (ASNR)",
+    geo_dataset_asnr: "ASNR dataset",
+    geo_zone1_label: "Zone 1",
+    geo_radon_faible_zone1: "Low radon potential. Municipality not listed in zone 2 or 3 of the order of June 27, 2018.",
+    geo_failles_principales_label: "Main tectonic faults",
+    geo_failles_label: "Tectonic faults",
+    geo_fault_noun: "fault",
+    geo_within_10km_suffix: " within 10 km",
+    geo_aucune_faille: "No main fault within 10 km",
+    geo_faille_proche_prefix: "Closest fault: ",
+    geo_faille_majeure_prefix: "Closest major fault: ",
+    geo_source_brgm_suffix: " Source: BRGM and academic publications.",
+    geo_evaluation_indisponible: "Assessment unavailable",
+    geo_distance_calc_desc: "The distance to main faults is calculated from the centroid of the municipality's antennas, not available here.",
+    geo_donnees_chargement: "Data loading",
+    geo_autres_couches_label: "Other geophysical layers",
+    geo_substrat_value: "Geological substrate, crustal magnetic anomalies",
+    geo_autres_couches_desc: "These layers can be viewed on the Tellux map: BRGM geology (granite, schist, limestone), EMAG2v3 (NOAA crustal magnetic anomalies), documented U/Th sites. For a municipality-level view, use the link below.",
+    geo_explorer_carte_link: "Explore on the Tellux map →",
+    atyp_definition: "An <strong>atypical point</strong> is a location where electromagnetic field exposure substantially exceeds the level observed nationally. The characterization threshold is <strong>9 V/m</strong> as of January 1, 2026 (previously 6 V/m). Article L.34-9-1 II H of the CPCE.",
+    atyp_state1: "No list of atypical points by municipality is available in a structured format as of April 24, 2026. ANFR publishes an annual census as a PDF report. The 2024 census (published in 2025) confirms the closure of nearly all cases identified between 2017 and 2019.",
+    atyp_state2: "To check the situation in your territory, two concrete steps are possible through your municipality.",
+    atyp_link_rapport: "ANFR 2024 report on atypical points (PDF)",
+    atyp_link_page: "ANFR page - Atypical points",
+    atyp_link_demander: "Request an ANFR measurement for the municipality",
+    atyp_link_legal: "View the full legal framework"
   };
   function jt(key, fr){
     return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
@@ -2407,9 +2442,9 @@ a{color:inherit;}
     var radonObligBody = document.getElementById('mr-radon-oblig-body');
     if (!geoBody || !atypBody) return;
 
-    geoBody.innerHTML = '<div class="mr-geophys-loading">Chargement...</div>';
+    geoBody.innerHTML = '<div class="mr-geophys-loading">' + jt('geo_loading', 'Chargement...') + '</div>';
     atypBody.innerHTML = '';  // le bloc atypiques n'a besoin d'aucun chargement
-    if (radonObligBody) radonObligBody.innerHTML = '<div class="mr-geophys-loading">Chargement...</div>';
+    if (radonObligBody) radonObligBody.innerHTML = '<div class="mr-geophys-loading">' + jt('geo_loading', 'Chargement...') + '</div>';
 
     // Lancer les chargements si necessaire
     Promise.all([
@@ -2439,31 +2474,31 @@ a{color:inherit;}
       var cat = radonInfo.categorie;
       var catLabel, pillClass, desc;
       if (cat === 3){
-        catLabel = 'Zone 3';
+        catLabel = jt('geo_zone3_label', 'Zone 3');
         pillClass = 'mr-pill-radon-3';
-        desc = 'Potentiel radon significatif (zone 3, ASNR). Arrêté du 27 juin 2018, annexe IV.';
+        desc = jt('geo_radon_significatif', 'Potentiel radon significatif (zone 3, ASNR). Arrêté du 27 juin 2018, annexe IV.');
       } else if (cat === 2){
-        catLabel = 'Zone 2';
+        catLabel = jt('geo_zone2_label', 'Zone 2');
         pillClass = 'mr-pill-radon-2';
-        desc = 'Potentiel radon faible, facteurs géologiques particuliers (zone 2, ASNR).';
+        desc = jt('geo_radon_faible_zone2', 'Potentiel radon faible, facteurs géologiques particuliers (zone 2, ASNR).');
       } else {
         catLabel = 'Zone ' + cat;
         pillClass = 'mr-pill-radon-2';
-        desc = 'Zone à potentiel radon (ASNR).';
+        desc = jt('geo_radon_generique', 'Zone à potentiel radon (ASNR).');
       }
       radonHtml = '<div class="mr-geophys-item ' + (cat === 3 ? 'critique' : (cat === 2 ? 'moderee' : 'faible')) + '">' +
-        '<div class="mr-geophys-item-label">Zone à potentiel radon (ASNR)</div>' +
+        '<div class="mr-geophys-item-label">' + jt('geo_radon_label', 'Zone à potentiel radon (ASNR)') + '</div>' +
         '<div class="mr-geophys-item-value"><span class="mr-pill ' + pillClass + '">' + catLabel + '</span></div>' +
         '<div class="mr-geophys-item-sub">' + escapeHtml(desc) + ' ' +
-          '<a href="https://www.data.gouv.fr/datasets/connaitre-le-potentiel-radon-de-ma-commune" target="_blank" rel="noopener noreferrer">Dataset ASNR</a>' +
+          '<a href="https://www.data.gouv.fr/datasets/connaitre-le-potentiel-radon-de-ma-commune" target="_blank" rel="noopener noreferrer">' + jt('geo_dataset_asnr', 'Dataset ASNR') + '</a>' +
         '</div>' +
       '</div>';
     } else {
       // Non référencée en zone 2 ou 3 : par défaut zone 1 (potentiel faible)
       radonHtml = '<div class="mr-geophys-item faible">' +
-        '<div class="mr-geophys-item-label">Zone à potentiel radon (ASNR)</div>' +
-        '<div class="mr-geophys-item-value"><span class="mr-pill mr-pill-radon-1">Zone 1</span></div>' +
-        '<div class="mr-geophys-item-sub">Potentiel radon faible. Commune non listée en zone 2 ou 3 de l\'arrêté du 27 juin 2018.</div>' +
+        '<div class="mr-geophys-item-label">' + jt('geo_radon_label', 'Zone à potentiel radon (ASNR)') + '</div>' +
+        '<div class="mr-geophys-item-value"><span class="mr-pill mr-pill-radon-1">' + jt('geo_zone1_label', 'Zone 1') + '</span></div>' +
+        '<div class="mr-geophys-item-sub">' + jt('geo_radon_faible_zone1', 'Potentiel radon faible. Commune non listée en zone 2 ou 3 de l\'arrêté du 27 juin 2018.') + '</div>' +
       '</div>';
     }
     items.push(radonHtml);
@@ -2480,29 +2515,29 @@ a{color:inherit;}
       var proche = dists.filter(function(d){ return d.dist_km < 10; });
       var state, pillCls, desc2;
       if (proche.length > 0){
-        state = proche.length + ' faille' + (proche.length > 1 ? 's' : '') + ' à moins de 10 km';
+        state = proche.length + ' ' + jt('geo_fault_noun', 'faille') + (proche.length > 1 ? 's' : '') + jt('geo_within_10km_suffix', ' à moins de 10 km');
         pillCls = 'mr-pill-radon-2';
-        desc2 = 'Faille la plus proche : ' + nearest.faille.nom + ' (' + Math.round(nearest.dist_km) + ' km, ' + (nearest.faille.type || '—') + ').';
+        desc2 = jt('geo_faille_proche_prefix', 'Faille la plus proche : ') + nearest.faille.nom + ' (' + Math.round(nearest.dist_km) + ' km, ' + (nearest.faille.type || '—') + ').';
       } else {
-        state = 'Aucune faille principale à moins de 10 km';
+        state = jt('geo_aucune_faille', 'Aucune faille principale à moins de 10 km');
         pillCls = 'mr-pill-radon-1';
-        desc2 = 'Faille majeure la plus proche : ' + nearest.faille.nom + ' (' + Math.round(nearest.dist_km) + ' km).';
+        desc2 = jt('geo_faille_majeure_prefix', 'Faille majeure la plus proche : ') + nearest.faille.nom + ' (' + Math.round(nearest.dist_km) + ' km).';
       }
       faillesHtml = '<div class="mr-geophys-item ' + (proche.length > 0 ? 'moderee' : 'faible') + '">' +
-        '<div class="mr-geophys-item-label">Failles tectoniques principales</div>' +
+        '<div class="mr-geophys-item-label">' + jt('geo_failles_principales_label', 'Failles tectoniques principales') + '</div>' +
         '<div class="mr-geophys-item-value">' + escapeHtml(state) + '</div>' +
-        '<div class="mr-geophys-item-sub">' + escapeHtml(desc2) + ' Source : BRGM et publications académiques.</div>' +
+        '<div class="mr-geophys-item-sub">' + escapeHtml(desc2) + jt('geo_source_brgm_suffix', ' Source : BRGM et publications académiques.') + '</div>' +
       '</div>';
     } else if (!center){
       faillesHtml = '<div class="mr-geophys-item">' +
-        '<div class="mr-geophys-item-label">Failles tectoniques</div>' +
-        '<div class="mr-geophys-item-value">Évaluation indisponible</div>' +
-        '<div class="mr-geophys-item-sub">La distance aux failles principales est calculée à partir du barycentre des antennes de la commune, non disponible ici.</div>' +
+        '<div class="mr-geophys-item-label">' + jt('geo_failles_label', 'Failles tectoniques') + '</div>' +
+        '<div class="mr-geophys-item-value">' + jt('geo_evaluation_indisponible', 'Évaluation indisponible') + '</div>' +
+        '<div class="mr-geophys-item-sub">' + jt('geo_distance_calc_desc', 'La distance aux failles principales est calculée à partir du barycentre des antennes de la commune, non disponible ici.') + '</div>' +
       '</div>';
     } else {
       faillesHtml = '<div class="mr-geophys-item">' +
-        '<div class="mr-geophys-item-label">Failles tectoniques</div>' +
-        '<div class="mr-geophys-item-value">Données en cours de chargement</div>' +
+        '<div class="mr-geophys-item-label">' + jt('geo_failles_label', 'Failles tectoniques') + '</div>' +
+        '<div class="mr-geophys-item-value">' + jt('geo_donnees_chargement', 'Données en cours de chargement') + '</div>' +
       '</div>';
     }
     items.push(faillesHtml);
@@ -2511,15 +2546,15 @@ a{color:inherit;}
     // filtrables par commune sans PostGIS ou MNT raster)
     items.push(
       '<div class="mr-geophys-item">' +
-        '<div class="mr-geophys-item-label">Autres couches géophysiques</div>' +
-        '<div class="mr-geophys-item-value">Substrat géologique, anomalies magnétiques crustales</div>' +
-        '<div class="mr-geophys-item-sub">Ces couches sont consultables sur la carte Tellux : géologie BRGM (granite, schiste, calcaire), EMAG2v3 (anomalies magnétiques crustales NOAA), sites U/Th documentés. Pour une lecture par commune, utilisez le lien ci-dessous.</div>' +
+        '<div class="mr-geophys-item-label">' + jt('geo_autres_couches_label', 'Autres couches géophysiques') + '</div>' +
+        '<div class="mr-geophys-item-value">' + jt('geo_substrat_value', 'Substrat géologique, anomalies magnétiques crustales') + '</div>' +
+        '<div class="mr-geophys-item-sub">' + jt('geo_autres_couches_desc', 'Ces couches sont consultables sur la carte Tellux : géologie BRGM (granite, schiste, calcaire), EMAG2v3 (anomalies magnétiques crustales NOAA), sites U/Th documentés. Pour une lecture par commune, utilisez le lien ci-dessous.') + '</div>' +
       '</div>'
     );
 
     var linksHtml = '<div class="mr-geophys-links">';
     if (center){
-      linksHtml += '<a class="mr-geophys-link" href="app.html#/z=12&c=' + center.lat.toFixed(5) + ',' + center.lon.toFixed(5) + '&m=I" target="_blank" rel="noopener">Explorer sur la carte Tellux →</a>';
+      linksHtml += '<a class="mr-geophys-link" href="app.html#/z=12&c=' + center.lat.toFixed(5) + ',' + center.lon.toFixed(5) + '&m=I" target="_blank" rel="noopener">' + jt('geo_explorer_carte_link', 'Explorer sur la carte Tellux →') + '</a>';
     }
     linksHtml += '</div>';
 
@@ -2653,22 +2688,22 @@ a{color:inherit;}
     // commune n'est extractible automatiquement en v1.
     body.innerHTML =
       '<div class="mr-atyp-definition">' +
-        'Un <strong>point atypique</strong> est un lieu où l\'exposition aux champs électromagnétiques dépasse substantiellement le niveau observé au niveau national. ' +
+        jt('atyp_definition', 'Un <strong>point atypique</strong> est un lieu où l\'exposition aux champs électromagnétiques dépasse substantiellement le niveau observé au niveau national. ' +
         'Le seuil de caractérisation est de <strong>9 V/m</strong> à compter du 1er janvier 2026 (auparavant 6 V/m). ' +
-        'Article L.34-9-1 II H du CPCE.' +
+        'Article L.34-9-1 II H du CPCE.') +
       '</div>' +
       '<div class="mr-atyp-state">' +
-        'Aucune liste des points atypiques par commune n\'est disponible dans un format structuré au 24 avril 2026. L\'ANFR publie un recensement annuel sous forme de rapport PDF. ' +
-        'Le recensement 2024 (publié en 2025) confirme la fermeture de la quasi-totalité des cas identifiés entre 2017 et 2019.' +
+        jt('atyp_state1', 'Aucune liste des points atypiques par commune n\'est disponible dans un format structuré au 24 avril 2026. L\'ANFR publie un recensement annuel sous forme de rapport PDF. ' +
+        'Le recensement 2024 (publié en 2025) confirme la fermeture de la quasi-totalité des cas identifiés entre 2017 et 2019.') +
       '</div>' +
       '<div class="mr-atyp-state">' +
-        'Pour vérifier la situation sur votre territoire, deux démarches concrètes sont possibles via votre commune.' +
+        jt('atyp_state2', 'Pour vérifier la situation sur votre territoire, deux démarches concrètes sont possibles via votre commune.') +
       '</div>' +
       '<div class="mr-atyp-links">' +
-        '<a class="mr-atyp-link" href="' + ANFR_PA_PDF_URL + '" target="_blank" rel="noopener noreferrer">Rapport ANFR 2024 sur les points atypiques (PDF)</a>' +
-        '<a class="mr-atyp-link" href="' + ANFR_PA_PAGE_URL + '" target="_blank" rel="noopener noreferrer">Page ANFR - Points atypiques</a>' +
-        '<a class="mr-atyp-link" href="#courrier" onclick="document.querySelector(\'.mr-tab[data-tab=\\\'courrier\\\']\').click(); return false;">Demander une mesure ANFR sur la commune</a>' +
-        '<a class="mr-atyp-link" href="#legal" onclick="document.querySelector(\'.mr-tab[data-tab=\\\'legal\\\']\').click(); return false;">Voir le cadre légal complet</a>' +
+        '<a class="mr-atyp-link" href="' + ANFR_PA_PDF_URL + '" target="_blank" rel="noopener noreferrer">' + jt('atyp_link_rapport', 'Rapport ANFR 2024 sur les points atypiques (PDF)') + '</a>' +
+        '<a class="mr-atyp-link" href="' + ANFR_PA_PAGE_URL + '" target="_blank" rel="noopener noreferrer">' + jt('atyp_link_page', 'Page ANFR - Points atypiques') + '</a>' +
+        '<a class="mr-atyp-link" href="#courrier" onclick="document.querySelector(\'.mr-tab[data-tab=\\\'courrier\\\']\').click(); return false;">' + jt('atyp_link_demander', 'Demander une mesure ANFR sur la commune') + '</a>' +
+        '<a class="mr-atyp-link" href="#legal" onclick="document.querySelector(\'.mr-tab[data-tab=\\\'legal\\\']\').click(); return false;">' + jt('atyp_link_legal', 'Voir le cadre légal complet') + '</a>' +
       '</div>';
   }
 
