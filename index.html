@@ -259,12 +259,12 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
   </div>
   <div>
     <div class="lp-hero-map">
-      <div class="lp-scope-head"><span>360 communes &middot; RF certifiées ANFR</span><span class="lp-scope-live"><span class="lp-scope-dot"></span>Données réelles</span></div>
+      <div class="lp-scope-head"><span data-i18n-key="scope_head">360 communes &middot; RF certifiées ANFR</span><span class="lp-scope-live"><span class="lp-scope-dot"></span><span data-i18n-key="scope_live">Données réelles</span></span></div>
       <div class="lp-map-sim" id="lp-hero-map"></div>
       <div class="lp-map-stats">
-        <div class="lp-map-stat"><div class="lp-map-stat-val">3 000</div><div class="lp-map-stat-label">antennes</div></div>
-        <div class="lp-map-stat"><div class="lp-map-stat-val"><span data-stat="supports-total">1 026</span></div><div class="lp-map-stat-label" title="Source ANFR CartoRadio &middot; compte dérivé du JSON pipeline">supports</div></div>
-        <div class="lp-map-stat"><div class="lp-map-stat-val">8 000<span style="font-size:12px">+</span></div><div class="lp-map-stat-label">km lignes HTA/HTB</div></div>
+        <div class="lp-map-stat"><div class="lp-map-stat-val">3 000</div><div class="lp-map-stat-label" data-i18n-key="stat_antennes">antennes</div></div>
+        <div class="lp-map-stat"><div class="lp-map-stat-val"><span data-stat="supports-total">1 026</span></div><div class="lp-map-stat-label" data-i18n-key="stat_supports" data-i18n-title-key="stat_supports_tt" title="Source ANFR CartoRadio &middot; compte dérivé du JSON pipeline">supports</div></div>
+        <div class="lp-map-stat"><div class="lp-map-stat-val">8 000<span style="font-size:12px">+</span></div><div class="lp-map-stat-label" data-i18n-key="stat_km">km lignes HTA/HTB</div></div>
       </div>
     </div>
   </div>
@@ -311,7 +311,7 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 <!-- SECTION : Patrimoine — seconde application de la même méthode (restauré + texte intégral, audit A.2-3) -->
 <div class="lp-appsec lp-appsec-patrimoine reveal">
   <div class="lp-appsec-inner">
-    <div class="lp-appsec-eyebrow"><span class="lp-appsec-eyebrow-line"></span>Seconde application de la même méthode</div>
+    <div class="lp-appsec-eyebrow"><span class="lp-appsec-eyebrow-line"></span><span data-i18n-key="patrimoine_eyebrow">Seconde application de la même méthode</span></div>
     <h2 class="lp-appsec-h2" data-i18n-key="patrimoine_h2">Le patrimoine corse comme commun culturel</h2>
     <p class="lp-appsec-p" data-i18n-key="patrimoine_p">La même exigence de sources et de statut, appliquée à un autre objet : mégalithes, édifices et sites de Corse, cartographiés et documentés avec la même rigueur. Une application culturelle, distincte de la couche EM et autofinancée, encore en bêta.</p>
     <a class="lp-appsec-cta" data-i18n-key="patrimoine_cta" href="patrimoine.html">Explorer le patrimoine (bêta) &rarr;</a>
@@ -585,7 +585,14 @@ if(document.readyState === 'loading'){
     method_eyebrow: 'The method',
     method_bridge: 'This same method (open sources, explicit status, rigorous framing) underpins a second application, distinct from the EM layer.',
     mairies_eyebrow: 'Tools dedicated to Corsican local authorities',
-    geomag_eyebrow: 'Scientific culture'
+    geomag_eyebrow: 'Scientific culture',
+    patrimoine_eyebrow: 'A second application of the same method',
+    scope_head: '360 municipalities &middot; ANFR-certified RF',
+    scope_live: 'Real data',
+    stat_antennes: 'antennas',
+    stat_supports: 'supports',
+    stat_supports_tt: 'Source: ANFR CartoRadio · count derived from JSON pipeline',
+    stat_km: 'km HTA/HTB lines'
     // "TELLUX" (logo) omis : identique FR/EN, aucune traduction nécessaire.
     // Toggle EN/FR (#lang-toggle-en*) omis : déjà géré par le script dédié ci-dessus.
   };
@@ -594,6 +601,13 @@ if(document.readyState === 'loading'){
     if (!Object.prototype.hasOwnProperty.call(EN_STRINGS, key)) return;
     if (el.tagName === 'META') { el.setAttribute('content', EN_STRINGS[key]); }
     else { el.innerHTML = EN_STRINGS[key]; }
+  });
+  // data-i18n-title-key : traduit l'attribut title (tooltip au survol), distinct
+  // du contenu visible géré ci-dessus — un élément peut porter les deux.
+  document.querySelectorAll('[data-i18n-title-key]').forEach(function(el){
+    var key = el.getAttribute('data-i18n-title-key');
+    if (!Object.prototype.hasOwnProperty.call(EN_STRINGS, key)) return;
+    el.setAttribute('title', EN_STRINGS[key]);
   });
   document.documentElement.setAttribute('lang', 'en');
 })();
