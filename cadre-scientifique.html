@@ -847,6 +847,25 @@ w_I  = 0,2   (gamma ambiant)
      attente avant merge (carve-out #2, contenu public neuf).
      ═══════════════════════════════════════════════════════════════════════ -->
 <script>
+// ═══ Persistance du choix de langue (2026-08-15) ═══
+// localStorage.tellux_lang prioritaire sur ?lang=en : les liens de nav
+// internes ne portent pas ?lang=en, donc un choix EN se perdait à chaque
+// clic vers une autre page. ?lang=en reste un repli pour les liens
+// partagés/marque-pages — jamais écrit automatiquement dans localStorage,
+// seul un clic explicite sur le toggle y écrit (cf. IIFE ci-dessous).
+function telluxGetStoredLang(){
+  try { var v = window.localStorage.getItem('tellux_lang'); return (v === 'en' || v === 'fr') ? v : null; }
+  catch (_e) { return null; }
+}
+function telluxGetEffectiveLang(){
+  var stored = telluxGetStoredLang();
+  if (stored) return stored;
+  try {
+    var p = new URLSearchParams(window.location.search);
+    if ((p.get('lang') || '').toLowerCase() === 'en') return 'en';
+  } catch (_e) {}
+  return 'fr';
+}
 (function(){
   'use strict';
   var t = document.getElementById('lang-toggle-en');
@@ -854,7 +873,7 @@ w_I  = 0,2   (gamma ambiant)
   var params;
   try { params = new URLSearchParams(window.location.search); }
   catch (_e) { return; }
-  var inEN = (params.get('lang') || 'fr').toLowerCase() === 'en';
+  var inEN = telluxGetEffectiveLang() === 'en';
   if (inEN) { params.delete('lang'); } else { params.set('lang', 'en'); }
   var qs = params.toString();
   t.setAttribute('href', window.location.pathname + (qs ? '?' + qs : '') + (window.location.hash || ''));
@@ -869,6 +888,9 @@ w_I  = 0,2   (gamma ambiant)
     t.setAttribute('lang', 'en');
     t.setAttribute('title', 'View this page in English');
   }
+  t.addEventListener('click', function(){
+    try { window.localStorage.setItem('tellux_lang', inEN ? 'fr' : 'en'); } catch (_e2) {}
+  });
 })();
 
 /* i18n EN — traduction intégrale (sommaire + sections 1-11 + annexe A,
@@ -879,10 +901,7 @@ w_I  = 0,2   (gamma ambiant)
    merge (carve-out #2, contenu public neuf). */
 (function(){
   'use strict';
-  var params;
-  try { params = new URLSearchParams(window.location.search); }
-  catch (_e) { return; }
-  if ((params.get('lang') || 'fr').toLowerCase() !== 'en') return; // FR = source de vérité, early-return
+  if (telluxGetEffectiveLang() !== 'en') return; // FR = source de vérité, early-return
   var EN_STRINGS = {
     page_title: "Scientific Approach — Tellux",
     meta_description: "Methodological specification document for the Tellux calculation model: four-domain architecture, terrestrial gamma component, magnetic superposition, Expert mode composite index.",
