@@ -2963,7 +2963,17 @@ a{color:inherit;}
     menu.setAttribute('aria-hidden', String(!open));
     menu.classList.toggle('is-open', open);
     document.body.classList.toggle('no-scroll', open);
-    btn.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+    // Corrige le bug i18n du 2026-08-14 : ce script tourne dans une autre
+    // balise <script> que le dictionnaire EN_STRINGS (pas de scope partagé),
+    // donc pas d'accès direct à EN_STRINGS ici. document.documentElement.lang
+    // est en revanche posé par le script i18n dès le chargement, en mode
+    // ?lang=en uniquement — lecture fiable, sans dépendance de scope.
+    // Garder "Open menu" synchronisé avec EN_STRINGS.nav_burger_aria si cette
+    // clé est retraduite un jour.
+    var isEN = document.documentElement.lang === 'en';
+    btn.setAttribute('aria-label', open
+      ? (isEN ? 'Close menu' : 'Fermer le menu')
+      : (isEN ? 'Open menu' : 'Ouvrir le menu'));
   }
 
   btn.addEventListener('click', () => {
