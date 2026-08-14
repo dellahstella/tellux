@@ -69,6 +69,17 @@ a{color:inherit;}
 .mr-nav-link:hover{color:var(--pierre);}
 .mr-nav-cta{background:var(--maquis);color:var(--pierre);border:none;padding:8px 18px;border-radius:5px;font-size:12px;font-family:var(--fu);font-weight:500;cursor:pointer;transition:background .15s;text-decoration:none;display:inline-block;}
 .mr-nav-cta:hover{background:#4d6e47;}
+.mr-nav-actions{display:flex;align-items:center;gap:20px;}
+/* Sélecteur de langue — conteneur générique, prêt pour un futur état à 3
+   valeurs (FR/CO/EN, cf. I18N-CORSE-TOGGLE-001, non activé). Un pill par
+   langue disponible : aujourd'hui un seul (EN, flip FR⇄EN par JS), demain
+   un groupe de pills sans restructuration. Même patron que index.html. */
+.lp-lang-switch{display:flex;align-items:center;gap:2px;padding-right:20px;border-right:1px solid rgba(245,240,231,.18);}
+.lp-lang-pill{font-family:var(--fu);font-size:11px;font-weight:600;letter-spacing:.4px;line-height:1;color:var(--pierre);background:rgba(194,133,51,.14);border:1px solid var(--ocre);border-radius:999px;padding:5px 11px;text-decoration:none;transition:background .15s,color .15s;}
+.lp-lang-pill:hover{background:var(--ocre);color:var(--ardoise);}
+.lp-lang-pill:focus{outline:2px solid var(--ocre);outline-offset:2px;}
+.mr-mobile-lang-switch{display:flex;padding-top:16px;margin-top:-4px;border-top:1px solid rgba(245,240,231,.18);}
+.mr-mobile-lang-switch .lp-lang-pill{font-size:14px;padding:9px 16px;}
 
 /* HERO */
 .mr-hero{background:var(--ardoise);color:var(--pierre);padding:72px 40px 56px;}
@@ -416,6 +427,7 @@ a{color:inherit;}
 /* MOBILE */
 @media (max-width:960px){
   .mr-nav-links{display:none;}
+  .lp-lang-switch{display:none;}
   .lp-nav-burger{display:flex;}
   .lp-mobile-menu{display:flex;}
   .mr-modal-body{grid-template-columns:1fr;}
@@ -472,17 +484,25 @@ a{color:inherit;}
     <a class="mr-nav-link" href="patrimoine.html">Patrimoine (bêta)</a>
     <a class="mr-nav-cta" href="app.html">Accéder à la carte →</a>
   </div>
-  <button class="lp-nav-burger" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="lp-mobile-menu">
-    <span class="lp-burger-line"></span>
-    <span class="lp-burger-line"></span>
-    <span class="lp-burger-line"></span>
-  </button>
+  <div class="mr-nav-actions">
+    <div class="lp-lang-switch" role="group" aria-label="Langue">
+      <a href="?lang=en" hreflang="en" lang="en" id="lang-toggle-en" class="lp-lang-pill" title="View this page in English">EN</a>
+    </div>
+    <button class="lp-nav-burger" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="lp-mobile-menu">
+      <span class="lp-burger-line"></span>
+      <span class="lp-burger-line"></span>
+      <span class="lp-burger-line"></span>
+    </button>
+  </div>
 </nav>
 
 <div class="lp-mobile-menu" id="lp-mobile-menu" aria-hidden="true">
   <a class="lp-mobile-link" href="index.html">Accueil</a>
   <a class="lp-mobile-link" href="app.html">Cartographie EM</a>
   <a class="lp-mobile-link" href="patrimoine.html">Patrimoine (bêta)</a>
+  <div class="mr-mobile-lang-switch" role="group" aria-label="Langue">
+    <a href="?lang=en" hreflang="en" lang="en" id="lang-toggle-en-mobile" class="lp-lang-pill" title="View this page in English">EN</a>
+  </div>
   <a class="lp-mobile-cta" href="app.html">Accéder à la carte →</a>
 </div>
 
@@ -2966,6 +2986,84 @@ a{color:inherit;}
       setOpen(false);
     }
   });
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     Toggle de langue FR ⇄ EN — infrastructure seule (extension I18N-ANGLAIS-001
+     à mairies.html, audit code↔doc du 2026-08-14 : 0 écart trouvé, FR stable).
+     Même patron non destructif que les 4 pages déjà traduites : calcule un
+     href qui ajoute/retire ?lang=en, préserve les autres paramètres et le
+     hash. AUCUNE traduction ici — EN_STRINGS est un dictionnaire vide, donc
+     même avec ?lang=en le DOM n'est PAS modifié. Portée : le HTML statique
+     uniquement (voir INVENTAIRE_CHAINES_FR_EN_MAIRIES_2026-08-14.md pour le
+     détail et la réserve sur le contenu JS-rendu, hors périmètre de cette
+     infra). Chantier de traduction = étape séparée, non engagée.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+  'use strict';
+  var toggles = [document.getElementById('lang-toggle-en'), document.getElementById('lang-toggle-en-mobile')].filter(Boolean);
+  if (!toggles.length) return;
+  var params;
+  try { params = new URLSearchParams(window.location.search); }
+  catch (_e) { return; }
+  var inEN = (params.get('lang') || 'fr').toLowerCase() === 'en';
+  if (inEN) { params.delete('lang'); } else { params.set('lang', 'en'); }
+  var qs = params.toString();
+  var href = window.location.pathname + (qs ? '?' + qs : '') + (window.location.hash || '');
+  toggles.forEach(function(t){
+    t.setAttribute('href', href);
+    if (inEN) {
+      t.textContent = 'FR';
+      t.setAttribute('hreflang', 'fr');
+      t.setAttribute('lang', 'fr');
+      t.setAttribute('title', 'Retour au français');
+    } else {
+      t.textContent = 'EN';
+      t.setAttribute('hreflang', 'en');
+      t.setAttribute('lang', 'en');
+      t.setAttribute('title', 'View this page in English');
+    }
+  });
+})();
+
+/* i18n EN — infrastructure seule, aucune chaîne traduite (dictionnaire vide
+   intentionnel). Early-return sans ?lang=en garantit 0 mutation DOM ; avec
+   ?lang=en, EN_STRINGS étant vide, aucune clé ne matche non plus — la page
+   reste entièrement en français jusqu'au premier lot de traduction. Structure
+   prête : il suffira de peupler EN_STRINGS et de tagger les éléments HTML
+   statiques avec data-i18n-key (+ data-i18n-title-key pour les tooltips,
+   mécanisme déjà éprouvé sur index.html) pour activer la traduction, lot par
+   lot, sans toucher à ce script. */
+(function(){
+  'use strict';
+  var params;
+  try { params = new URLSearchParams(window.location.search); }
+  catch (_e) { return; }
+  if ((params.get('lang') || 'fr').toLowerCase() !== 'en') return;
+
+  var EN_STRINGS = {
+    // Vide — premier lot de traduction à venir (voir
+    // _drafts/INVENTAIRE_CHAINES_FR_EN_MAIRIES_2026-08-14.md).
+  };
+
+  document.querySelectorAll('[data-i18n-key]').forEach(function(el){
+    var key = el.getAttribute('data-i18n-key');
+    if (!Object.prototype.hasOwnProperty.call(EN_STRINGS, key)) return;
+    if (el.tagName === 'META') { el.setAttribute('content', EN_STRINGS[key]); }
+    else if (el.tagName === 'TITLE') { el.textContent = EN_STRINGS[key]; }
+    else { el.innerHTML = EN_STRINGS[key]; }
+  });
+  // data-i18n-title-key : traduit l'attribut title (tooltip), distinct du
+  // contenu visible géré ci-dessus — un élément peut porter les deux (cf.
+  // fix index.html 2026-08-14, entité HTML non décodée par setAttribute).
+  document.querySelectorAll('[data-i18n-title-key]').forEach(function(el){
+    var key = el.getAttribute('data-i18n-title-key');
+    if (!Object.prototype.hasOwnProperty.call(EN_STRINGS, key)) return;
+    el.setAttribute('title', EN_STRINGS[key]);
+  });
+  document.documentElement.setAttribute('lang', 'en');
 })();
 </script>
 
