@@ -321,36 +321,40 @@ footer.page-footer a {
     <li>Les mesures de champ radioélectrique certifiées ANFR disponibles sur le territoire corse (30 entrées au 25 avril 2026, dont 29 en intérieur) sont insuffisantes pour une validation locale fine de la couche radiofréquence.</li>
     <li>La consommation du réseau électrique RTE n'est pas intégrée en temps réel ; un profil horaire estimé sert de repli (cf. <code>RTE-OPENDATA-001</code>).</li>
     <li>Les segments du réseau HTA modélisés par Biot-Savart utilisent un courant uniforme estimé à 225 A, faute de champ tension par segment dans la donnée publique disponible (cf. <code>HTA-TENSION-001</code>).</li>
-    <li>Le calcul Biot-Savart appliqué aux segments basse tension (BT) torsadés est actuellement désactivé dans l'application (<code>USE_BT_SEGMENTS = false</code>) pour cause de cancellation insuffisante du modèle géométrique HTA appliqué à des conducteurs de géométrie différente (cf. <code>BT-CALIBRATION-001</code>).</li>
     <li>La correction triphasée du modèle ELF utilise un coefficient <code>k = 0.5</code> approximé au-delà de 20 mètres ; la géométrie pylône-par-pylône n'est pas modélisée (cf. <code>ELF-TRIPH-001</code>).</li>
     <li>La couche Forêts publiques ONF intégrée ne distingue pas les essences ; la version BD Forêt V3 par essence n'est pas disponible en flux raster stable (cf. <code>BDFORET-GRANULARITE-001</code>).</li>
     <li>L'intégration de la radiométrie aérienne BRGM est non réalisée à date (cf. <code>RADIO-AERO-001</code>).</li>
-    <li>Couverture du dataset radon corse : la règle départementale appliquée par le modèle classe l'intégralité des 124 communes du département 2A (Corse-du-Sud) en zone 3, conformément à l'arrêté du 27 juin 2018 annexe IV. La liste explicite des communes 2B (Haute-Corse) classées zone 3 par le décret 2018-434 reste partielle dans le dataset Tellux (14 communes listées sur 70 à 85 attendues), les autres étant traitées par estimation lithologique ASNR par défaut (cf. <code>RADON-DATASET-COVERAGE-001</code>).</li>
   </ul>
 
-  <h3>Zones gelées (en attente de relecture physicien)</h3>
-  <p>Certaines constantes du moteur de calcul sont volontairement gelées. Elles restent en place pour permettre l'usage exploratoire de l'application, mais ne seront considérées comme stabilisées qu'après relecture méthodologique par un physicien tiers. Ces zones sont publiquement identifiées dans le tracker de dettes techniques.</p>
+  <h3>Zones gelées et zones re-dérivées (régime à deux vitesses)</h3>
+  <p>Certaines constantes du moteur de calcul sont volontairement gelées ou soumises à un régime de re-dérivation encadré. Deux régimes coexistent depuis juillet 2026 : un <strong>verrou plein</strong>, non re-dérivable en interne, qui attend une relecture méthodologique par un physicien tiers avant toute évolution ; et un <strong>régime de re-dérivation interne sous discipline stricte</strong> (calibration documentée, validation croisée, étiquetage explicite « estimation centrale », jamais « calibré / validé / majorant »), où la relecture physicien reste sollicitée pour la crédibilité du projet mais ne bloque plus l'itération. Ces zones sont publiquement identifiées dans le tracker de dettes techniques.</p>
   <table class="zones-gelees">
     <thead>
       <tr>
         <th>Identifiant</th>
         <th>Objet</th>
-        <th>Pourquoi en attente</th>
+        <th>Statut</th>
         <th>Condition de levée</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td><code>GELÉ-001</code></td>
-        <td>Pondérations du mode Expertise (<code>w_M</code>, <code>w_RF</code>, <code>w_I</code>) et bornes de normalisation <code>EXPERT_BOUNDS_DEFAULT</code></td>
-        <td>Constantes provisoires non validées</td>
-        <td>Relecture méthodologique par un physicien tiers qualifié</td>
+        <td><code>GELÉ-001a</code></td>
+        <td>Pondérations du mode Expertise (<code>w_M</code>, <code>w_RF</code>, <code>w_I</code> = 0,4/0,4/0,2) et note épistémique associée</td>
+        <td>Verrou plein — choix méthodologique/éditorial, non re-dérivable par calibration interne</td>
+        <td>Relecture méthodologique par un physicien tiers qualifié (constantes inchangées depuis leur fixation)</td>
+      </tr>
+      <tr>
+        <td><code>GELÉ-001b</code></td>
+        <td>Bornes de normalisation du mode Expertise (<code>EXPERT_BOUNDS_DEFAULT</code> — ELF, RF, gamma)</td>
+        <td>Re-dérivable en interne depuis juillet 2026 (paramètres de calibration, pas des choix éditoriaux). La borne RF a déjà été re-dérivée et publiée (0 à 1 500 µW/m², arbitrage du 2026-07-01) ; les bornes ELF et gamma restent à leurs valeurs d'origine</td>
+        <td>Re-dérivation interne sous LOO-CV + intervalles de confiance + étiquetage « estimation centrale » obligatoire ; relecture physicien tiers sollicitée en parallèle, non bloquante</td>
       </tr>
       <tr>
         <td><code>NCRP-001</code></td>
-        <td>Composante terrestre de <code>calcGammaAmbient</code>, formule NCRP 94</td>
-        <td>Validation méthodologique externe requise</td>
-        <td>Lié à <code>GELÉ-001</code></td>
+        <td>Composante terrestre de <code>calcGammaAmbient</code> — formule NCRP 94 et coefficients par lithotype</td>
+        <td>Formule elle-même verrouillée en permanence (standard publié, non re-dérivable). Coefficients (Verdoya et al. 2009) relus par un physicien tiers et actifs depuis août 2026 pour les granitoïdes, la granodiorite et les schistes (voir <a href="/cadre-scientifique.html#section-4">Cadre scientifique §4</a>)</td>
+        <td>Formule : non concernée, verrou permanent. Extension des coefficients aux 5 lithologies restantes (ophiolite, serpentinite, gneiss, calcaire, alluvions) : conditionnée à une source quantifiée non encore disponible</td>
       </tr>
       <tr>
         <td><code>TÉLÉ-001</code></td>
@@ -365,12 +369,6 @@ footer.page-footer a {
         <td>Demande adressée fin avril 2026 à EDF SEI, retour en attente</td>
       </tr>
       <tr>
-        <td><code>BT-CALIBRATION-001</code></td>
-        <td>Modèle Biot-Savart appliqué aux segments BT torsadés</td>
-        <td>Cancellation géométrique insuffisante du modèle HTA transposé</td>
-        <td>Recalibration physique du modèle BT, session dédiée</td>
-      </tr>
-      <tr>
         <td><code>RADIO-AERO-001</code></td>
         <td>Radiométrie aérienne BRGM (composante ionisante affinée)</td>
         <td>Pas de flux WMS / WFS public identifié</td>
@@ -379,7 +377,7 @@ footer.page-footer a {
     </tbody>
   </table>
   <h3>Note de méthode — chaîne « activité → dose » (gamma terrestre)</h3>
-  <p>Par transparence sur la zone gelée <code>NCRP-001</code> : la chaîne de conversion standard entre activité du sol et débit de dose est celle de l'UNSCEAR — débit de dose absorbée dans l'air D (nGy/h) = 0,462·C<sub>Ra-226</sub> + 0,604·C<sub>Th-232</sub> + 0,0417·C<sub>K-40</sub>, avec les concentrations C exprimées en Bq/kg de sol sec (UNSCEAR 2000, annexe B). Distinction d'unités stricte : le <strong>nGy/h</strong> est une dose absorbée dans l'air (grandeur des modèles) ; le <strong>nSv/h</strong> affiché par les balises Téléray est un équivalent de dose ambiant H*(10), conversion ≈ ×1,2 pour le gamma environnemental — les deux ne se comparent pas directement. La formule NCRP 94 utilisée par le moteur (gelée, cf. <code>NCRP-001</code> ci-dessus) travaille en concentrations élémentaires (ppm U, ppm Th, % K) ; sa mise en cohérence avec la chaîne UNSCEAR fait partie de la relecture physicien attendue.</p>
+  <p>Par transparence sur la zone gelée <code>NCRP-001</code> : la chaîne de conversion standard entre activité du sol et débit de dose est celle de l'UNSCEAR — débit de dose absorbée dans l'air D (nGy/h) = 0,462·C<sub>Ra-226</sub> + 0,604·C<sub>Th-232</sub> + 0,0417·C<sub>K-40</sub>, avec les concentrations C exprimées en Bq/kg de sol sec (UNSCEAR 2000, annexe B). Distinction d'unités stricte : le <strong>nGy/h</strong> est une dose absorbée dans l'air (grandeur des modèles) ; le <strong>nSv/h</strong> affiché par les balises Téléray est un équivalent de dose ambiant H*(10), conversion ≈ ×1,2 pour le gamma environnemental — les deux ne se comparent pas directement. La formule NCRP 94 utilisée par le moteur (structure verrouillée en permanence, cf. <code>NCRP-001</code> ci-dessus — les coefficients, eux, sont désormais actifs pour plusieurs lithotypes depuis août 2026) travaille en concentrations élémentaires (ppm U, ppm Th, % K) ; sa mise en cohérence avec la chaîne UNSCEAR reste un point ouvert, non traité par le dégel partiel d'août 2026, qui portait sur les coefficients par lithotype et non sur cette réconciliation d'unités entre chaînes de calcul.</p>
 </section>
 
 <section>
