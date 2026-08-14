@@ -1113,7 +1113,44 @@ a{color:inherit;}
     depot_meta_agrement: " (approval ",
     depot_meta_norme_suffix: ", standard NF EN ISO 11665-4)",
     depot_resultats_titre_prefix: "Results submitted by the municipality (",
-    depot_warning: "⚠ Certified point-in-time measurement, not extrapolable over time or space; does not constitute a territorial diagnosis."
+    depot_warning: "⚠ Certified point-in-time measurement, not extrapolable over time or space; does not constitute a territorial diagnosis.",
+
+    // Lot 5/5 — DERNIER LOT — formulaire de dépôt radon : récapitulatif,
+    // hints dynamiques, messages de validation, soumission.
+    dr_recap_empty: "Complete the form above to see the summary.",
+    recap_label_deposant: "Submitter",
+    recap_label_commune: "Municipality",
+    recap_label_etablissement: "Facility",
+    recap_label_organisme: "Approved body",
+    recap_label_date: "Measurement date",
+    recap_label_valeur: "Measured value",
+    recap_label_zone_homogene: "Homogeneous zone",
+    org_hint_default: "List of bodies approved by the ASNR for radon measurement (Article R.1333-36 CSP), levels 1 and 2. If your body does not appear in the list, submission is still possible but will remain pending until the approval is manually confirmed.",
+    org_hint_confirmed_prefix: "ASNR approval confirmed — reference ",
+    org_hint_confirmed_infix: " (level ",
+    org_hint_no_match: "We could not automatically confirm this body's approval in the ASNR list. Your submission is still possible: it will be manually reviewed before any publication.",
+    valeur_hint_out_of_range: "Value outside the typical range — check your entry (unit Bq/m³, not kBq/m³).",
+    valeur_hint_above_300: "Above the 300 Bq/m³ marker — a marker, not an alert threshold.",
+    err_email_invalid: "Institutional email missing or invalid.",
+    err_commune_non_reconnue: "Municipality not recognized — select it from the list provided.",
+    err_role_manquant: "Specify in what capacity you are submitting.",
+    err_etablissement_manquant: "Name of the facility missing.",
+    err_categorie_manquante: "Facility category missing.",
+    err_organisme_manquant: "Approved body missing.",
+    err_date_manquante: "Measurement date missing.",
+    err_date_future: "The measurement date cannot be in the future.",
+    err_valeur_manquante: "Measured value missing.",
+    err_valeur_invalide: "Measured value invalid.",
+    err_valeur_hors_plage: "Value outside the typical range — check the confirmation box to continue.",
+    err_lat_lon: "Enter both latitude AND longitude, or leave both blank.",
+    err_coords_hors_corse: "Coordinates outside the Corsica area — check your entry or leave these fields blank.",
+    err_consentement: "Open-data consent is required to submit.",
+    err_exactitude: "Confirmation of accuracy is required to submit.",
+    dr_envoi_en_cours: "Submitting…",
+    dr_submit_error: "The submission could not be recorded. Check your connection and try again. If the problem persists, contact Tellux.",
+    dr_submit_btn_js: "Submit",
+    dr_zone_hint_prefix: "Radon-potential zone (ASNR): zone ",
+    dr_zone_hint_suffix: " (automatically derived)."
   };
   function jt(key, fr){
     return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
@@ -2864,7 +2901,11 @@ a{color:inherit;}
     var email = document.getElementById('dr-email').value.trim();
     var communeInput = document.getElementById('dr-commune').value.trim();
     var role = document.getElementById('dr-role').value;
-    var roleLabels = { mairie: 'Mairie', service_technique_communal: 'Service technique communal', delegataire_mandate: 'Délégataire mandaté' };
+    var roleLabels = {
+      mairie: jt('role_mairie_short', 'Mairie'),
+      service_technique_communal: jt('role_technique_short', 'Service technique communal'),
+      delegataire_mandate: jt('role_delegataire_short', 'Délégataire mandaté')
+    };
     var etablissement = document.getElementById('dr-etablissement').value.trim();
     var categorieSelect = document.getElementById('dr-categorie');
     var categorieLabel = categorieSelect.options[categorieSelect.selectedIndex] ? categorieSelect.options[categorieSelect.selectedIndex].textContent : '';
@@ -2874,21 +2915,21 @@ a{color:inherit;}
     var zoneHomogene = document.getElementById('dr-zone-homogene').value.trim();
 
     if (!email && !communeInput && !etablissement && !organisme && !dateMesurage && !valeur){
-      recap.textContent = 'Complétez le formulaire ci-dessus pour voir le récapitulatif.';
+      recap.textContent = jt('dr_recap_empty', 'Complétez le formulaire ci-dessus pour voir le récapitulatif.');
       return;
     }
 
     var zone = drSelectedCommune ? drGetRadonZone(drSelectedCommune.code_insee) : null;
 
     var rows = [];
-    rows.push(['Déposant', (roleLabels[role] || '—') + (email ? ' · ' + email : '')]);
-    rows.push(['Commune', communeInput || '—']);
-    if (zone != null) rows.push(['Zone à potentiel radon (ASNR)', 'Zone ' + zone]);
-    rows.push(['Établissement', (etablissement || '—') + (categorieLabel ? ' · ' + categorieLabel : '')]);
-    rows.push(['Organisme agréé', organisme || '—']);
-    rows.push(['Date du mesurage', dateMesurage || '—']);
-    rows.push(['Valeur mesurée', valeur ? valeur + ' Bq/m³' : '—']);
-    if (zoneHomogene) rows.push(['Zone homogène', zoneHomogene]);
+    rows.push([jt('recap_label_deposant', 'Déposant'), (roleLabels[role] || '—') + (email ? ' · ' + email : '')]);
+    rows.push([jt('recap_label_commune', 'Commune'), communeInput || '—']);
+    if (zone != null) rows.push([jt('geo_radon_label', 'Zone à potentiel radon (ASNR)'), 'Zone ' + zone]);
+    rows.push([jt('recap_label_etablissement', 'Établissement'), (etablissement || '—') + (categorieLabel ? ' · ' + categorieLabel : '')]);
+    rows.push([jt('recap_label_organisme', 'Organisme agréé'), organisme || '—']);
+    rows.push([jt('recap_label_date', 'Date du mesurage'), dateMesurage || '—']);
+    rows.push([jt('recap_label_valeur', 'Valeur mesurée'), valeur ? valeur + ' Bq/m³' : '—']);
+    if (zoneHomogene) rows.push([jt('recap_label_zone_homogene', 'Zone homogène'), zoneHomogene]);
 
     recap.innerHTML = '<dl>' + rows.map(function(r){
       return '<dt>' + escapeHtml(r[0]) + '</dt><dd>' + escapeHtml(r[1]) + '</dd>';
@@ -2901,14 +2942,14 @@ a{color:inherit;}
     if (!input || !hint) return;
     var val = input.value.trim();
     if (!val){
-      hint.textContent = 'Liste des organismes agréés par l\'ASNR pour le mesurage du radon (article R.1333-36 CSP), niveaux 1 et 2. Si votre organisme n\'apparaît pas dans la liste, le dépôt reste possible mais restera en attente jusqu\'à confirmation manuelle de l\'agrément.';
+      hint.textContent = jt('org_hint_default', 'Liste des organismes agréés par l\'ASNR pour le mesurage du radon (article R.1333-36 CSP), niveaux 1 et 2. Si votre organisme n\'apparaît pas dans la liste, le dépôt reste possible mais restera en attente jusqu\'à confirmation manuelle de l\'agrément.');
       return;
     }
     var match = findOrganismeByInput(val);
     if (match){
-      hint.textContent = 'Agrément ASNR confirmé — référence ' + match.numero_agrement + ' (niveau ' + match.niveau + ').';
+      hint.textContent = jt('org_hint_confirmed_prefix', 'Agrément ASNR confirmé — référence ') + match.numero_agrement + jt('org_hint_confirmed_infix', ' (niveau ') + match.niveau + ').';
     } else {
-      hint.textContent = 'Nous n\'avons pas pu confirmer automatiquement l\'agrément de cet organisme dans la liste ASNR. Votre dépôt reste possible : il sera vérifié manuellement avant toute publication.';
+      hint.textContent = jt('org_hint_no_match', 'Nous n\'avons pas pu confirmer automatiquement l\'agrément de cet organisme dans la liste ASNR. Votre dépôt reste possible : il sera vérifié manuellement avant toute publication.');
     }
   }
 
@@ -2925,10 +2966,10 @@ a{color:inherit;}
       return;
     }
     if (v === 0 || v > 100000){
-      hint.textContent = 'Valeur hors plage courante — vérifiez la saisie (unité Bq/m³, pas kBq/m³).';
+      hint.textContent = jt('valeur_hint_out_of_range', 'Valeur hors plage courante — vérifiez la saisie (unité Bq/m³, pas kBq/m³).');
       confirmWrap.hidden = false;
     } else {
-      hint.textContent = v > 300 ? 'Au-dessus du repère de 300 Bq/m³ — un repère, pas un seuil d\'alerte.' : '';
+      hint.textContent = v > 300 ? jt('valeur_hint_above_300', 'Au-dessus du repère de 300 Bq/m³ — un repère, pas un seuil d\'alerte.') : '';
       confirmWrap.hidden = true;
       if (confirmBox) confirmBox.checked = false;
     }
@@ -2944,40 +2985,40 @@ a{color:inherit;}
   function drValidate(){
     var errors = [];
     var email = document.getElementById('dr-email').value.trim();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Email institutionnel manquant ou invalide.');
-    if (!drSelectedCommune) errors.push('Commune non reconnue — choisissez-la dans la liste proposée.');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push(jt('err_email_invalid', 'Email institutionnel manquant ou invalide.'));
+    if (!drSelectedCommune) errors.push(jt('err_commune_non_reconnue', 'Commune non reconnue — choisissez-la dans la liste proposée.'));
     var role = document.getElementById('dr-role').value;
-    if (!role) errors.push('Précisez en quelle qualité vous déposez.');
+    if (!role) errors.push(jt('err_role_manquant', 'Précisez en quelle qualité vous déposez.'));
     var etablissement = document.getElementById('dr-etablissement').value.trim();
-    if (!etablissement) errors.push('Nom de l\'établissement manquant.');
+    if (!etablissement) errors.push(jt('err_etablissement_manquant', 'Nom de l\'établissement manquant.'));
     var categorie = document.getElementById('dr-categorie').value;
-    if (!categorie) errors.push('Catégorie de l\'établissement manquante.');
+    if (!categorie) errors.push(jt('err_categorie_manquante', 'Catégorie de l\'établissement manquante.'));
     var organisme = document.getElementById('dr-organisme').value.trim();
-    if (!organisme) errors.push('Organisme agréé manquant.');
+    if (!organisme) errors.push(jt('err_organisme_manquant', 'Organisme agréé manquant.'));
     var dateMesurage = document.getElementById('dr-date-mesurage').value;
-    if (!dateMesurage) errors.push('Date du mesurage manquante.');
-    else if (dateMesurage > new Date().toISOString().slice(0, 10)) errors.push('La date du mesurage ne peut pas être dans le futur.');
+    if (!dateMesurage) errors.push(jt('err_date_manquante', 'Date du mesurage manquante.'));
+    else if (dateMesurage > new Date().toISOString().slice(0, 10)) errors.push(jt('err_date_future', 'La date du mesurage ne peut pas être dans le futur.'));
     var valeurRaw = document.getElementById('dr-valeur').value;
-    if (valeurRaw === '') errors.push('Valeur mesurée manquante.');
+    if (valeurRaw === '') errors.push(jt('err_valeur_manquante', 'Valeur mesurée manquante.'));
     else {
       var v = Number(valeurRaw);
-      if (isNaN(v) || v < 0) errors.push('Valeur mesurée invalide.');
+      if (isNaN(v) || v < 0) errors.push(jt('err_valeur_invalide', 'Valeur mesurée invalide.'));
       else if (v === 0 || v > 100000){
         var confirmBox = document.getElementById('dr-valeur-confirm');
-        if (!confirmBox || !confirmBox.checked) errors.push('Valeur hors plage courante — cochez la confirmation pour continuer.');
+        if (!confirmBox || !confirmBox.checked) errors.push(jt('err_valeur_hors_plage', 'Valeur hors plage courante — cochez la confirmation pour continuer.'));
       }
     }
     var latRaw = document.getElementById('dr-lat').value;
     var lonRaw = document.getElementById('dr-lon').value;
-    if ((latRaw === '') !== (lonRaw === '')) errors.push('Renseignez latitude ET longitude, ou laissez les deux vides.');
+    if ((latRaw === '') !== (lonRaw === '')) errors.push(jt('err_lat_lon', 'Renseignez latitude ET longitude, ou laissez les deux vides.'));
     else if (latRaw !== '' && lonRaw !== ''){
       var lat = Number(latRaw), lon = Number(lonRaw);
       if (isNaN(lat) || lat < 41 || lat > 43.5 || isNaN(lon) || lon < 8 || lon > 10){
-        errors.push('Coordonnées hors de la zone Corse — vérifiez la saisie ou laissez ces champs vides.');
+        errors.push(jt('err_coords_hors_corse', 'Coordonnées hors de la zone Corse — vérifiez la saisie ou laissez ces champs vides.'));
       }
     }
-    if (!document.getElementById('dr-consentement').checked) errors.push('Le consentement d\'ouverture est requis pour déposer.');
-    if (!document.getElementById('dr-exactitude').checked) errors.push('La confirmation d\'exactitude est requise pour déposer.');
+    if (!document.getElementById('dr-consentement').checked) errors.push(jt('err_consentement', 'Le consentement d\'ouverture est requis pour déposer.'));
+    if (!document.getElementById('dr-exactitude').checked) errors.push(jt('err_exactitude', 'La confirmation d\'exactitude est requise pour déposer.'));
     return errors;
   }
 
@@ -3007,7 +3048,7 @@ a{color:inherit;}
     }
 
     var btn = document.getElementById('dr-submit-btn');
-    if (btn){ btn.disabled = true; btn.textContent = 'Envoi en cours…'; }
+    if (btn){ btn.disabled = true; btn.textContent = jt('dr_envoi_en_cours', 'Envoi en cours…'); }
 
     var fileInput = document.getElementById('dr-document');
     var file = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
@@ -3045,8 +3086,8 @@ a{color:inherit;}
       document.getElementById('dr-success').hidden = false;
     }).catch(function(err){
       console.warn('[mairies] depot radon echoue :', err);
-      drShowError('Le dépôt n\'a pas pu être enregistré. Vérifiez votre connexion et réessayez. Si le problème persiste, contactez Tellux.');
-      if (btn){ btn.disabled = false; btn.textContent = 'Soumettre le dépôt'; }
+      drShowError(jt('dr_submit_error', 'Le dépôt n\'a pas pu être enregistré. Vérifiez votre connexion et réessayez. Si le problème persiste, contactez Tellux.'));
+      if (btn){ btn.disabled = false; btn.textContent = jt('dr_submit_btn_js', 'Soumettre le dépôt'); }
     });
   }
 
@@ -3065,7 +3106,7 @@ a{color:inherit;}
     document.getElementById('dr-success').hidden = true;
     document.getElementById('depot-radon-form-wrap').hidden = false;
     var btn = document.getElementById('dr-submit-btn');
-    if (btn){ btn.disabled = false; btn.textContent = 'Soumettre le dépôt'; }
+    if (btn){ btn.disabled = false; btn.textContent = jt('dr_submit_btn_js', 'Soumettre le dépôt'); }
   }
 
   function initDepotRadonForm(){
@@ -3077,7 +3118,7 @@ a{color:inherit;}
       drSelectedCommune = findCommuneByInput(communeInput.value);
       var zoneHint = document.getElementById('dr-commune-zone-hint');
       if (zoneHint){
-        zoneHint.textContent = drSelectedCommune ? 'Zone à potentiel radon (ASNR) : zone ' + drGetRadonZone(drSelectedCommune.code_insee) + ' (dérivée automatiquement).' : '';
+        zoneHint.textContent = drSelectedCommune ? jt('dr_zone_hint_prefix', 'Zone à potentiel radon (ASNR) : zone ') + drGetRadonZone(drSelectedCommune.code_insee) + jt('dr_zone_hint_suffix', ' (dérivée automatiquement).') : '';
       }
       drUpdateRecap();
     });
