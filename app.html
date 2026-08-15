@@ -2321,7 +2321,47 @@ var JS_STRINGS_EN = {
   prod_type_interco: "Interconnection",
   prod_type_biogaz: "Biogas",
   hta_lignes_prefix: "HTA: ",
-  hta_lignes_suffix: " lines"
+  hta_lignes_suffix: " lines",
+
+  // Zone E (rapport d'audit initial) — Formulaire de contribution :
+  // validation et hints dynamiques.
+  instr_hint_smartphone_mag: "Measure with Phyphox → Magnetometer → read the magnitude. Typical value in Corsica: 44–48 µT (44,000–48,000 nT). Select the unit your app displays.",
+  instr_hint_smartphone_rssi: "Network signal — typical value: -50 to -100 dBm",
+  instr_hint_smartphone_wifi: "WiFi signal — typical value: -30 to -80 dBm",
+  instr_hint_trifield: "TriField TF2 — nT or mG for magnetic field (1 mG = 100 nT), V/m for RF",
+  instr_hint_cornet: "Cornet ED88T — typical value in urban areas: 0.1–5 V/m",
+  instr_hint_rtlsdr: "RTL-SDR — describe the frequencies and levels observed",
+  instr_hint_autre_capteur: "Specify the unit and method in the note",
+  instr_hint_anfr: "Certified ANFR measurement — legal limit: 28 V/m in inhabited areas",
+  instr_hint_observation: "Describe what you observe (interference, effects...)",
+  csv_err_court: "Empty or too-short CSV (fewer than 2 lines).",
+  csv_err_format: "Format not recognized: no magnitude column or x/y/z columns found.",
+  csv_err_vide: "No valid magnetic data in the CSV.",
+  csv_summary_prefix: "📊 File imported: ",
+  csv_summary_points_moyenne: " points · average ",
+  csv_duree_prefix: " · duration ",
+  cap_native_unsupported: "This browser does not support direct access to the magnetometer. Use CSV import or manual entry.",
+  cap_lecture_prefix: "Reading in progress: ",
+  cap_echantillons_suffix: " samples",
+  cap_err_capteur_prefix: "Sensor error: ",
+  cap_err_capteur_suffix: ". Try again or use manual entry.",
+  cap_stop_btn: "⏹ Stop the capture (average after 3s min.)",
+  cap_init_sensor: "Initializing the sensor…",
+  cap_err_demarrage_prefix: "Unable to start the magnetometer: ",
+  cap_resume_btn: "📱 Capture with the phone's magnetometer",
+  cap_moyenne_prefix: "Average: ",
+  cap_trop_peu_prefix: "Too few samples (",
+  cap_trop_peu_suffix: "). Keep the phone still for longer.",
+  ph_ex_ut: "e.g. 45.3",
+  ph_ex_nt: "e.g. 44800",
+  ph_pas_valeur: "No numerical value required",
+  val_err_numerique_requise: "Numerical value required for this instrument.",
+  val_err_hors_plage_multi_prefix: "Value out of range: expected ",
+  val_err_hors_plage_multi_infix: " for ",
+  val_err_hors_plage_multi_suffix: ". Value entered: ",
+  val_err_hors_plage_simple_prefix: "Value out of range for ",
+  val_err_hors_plage_simple_infix: ": expected ",
+  val_err_hors_plage_simple_suffix: ". Check your entry."
 };
 function jt(key, fr){
   return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
@@ -2710,7 +2750,7 @@ function formatMagneticField(value, unit){
 
 function parsePhyphoxCSV(text){
   const lines=text.trim().replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
-  if(lines.length<2) throw new Error('CSV vide ou trop court (moins de 2 lignes).');
+  if(lines.length<2) throw new Error(jt('csv_err_court','CSV vide ou trop court (moins de 2 lignes).'));
   const sep=lines[0].includes(';')?';':',';
   const cols=lines[0].split(sep).map(s=>s.replace(/^["'\s]+|["'\s]+$/g,'').toLowerCase());
   const idxAbs=cols.findIndex(c=>/absolute|magnitude|total/.test(c));
@@ -2719,7 +2759,7 @@ function parsePhyphoxCSV(text){
   const idxZ=cols.findIndex(c=>/\bz\b/.test(c));
   const idxT=cols.findIndex(c=>/time/.test(c));
   if(idxAbs<0&&(idxX<0||idxY<0||idxZ<0))
-    throw new Error('Format non reconnu : aucune colonne magnitude ni x/y/z trouvee.');
+    throw new Error(jt('csv_err_format','Format non reconnu : aucune colonne magnitude ni x/y/z trouvee.'));
   const values=[];let tmin=Infinity,tmax=-Infinity;
   for(let i=1;i<lines.length;i++){
     const line=lines[i].trim();if(!line)continue;
@@ -2732,7 +2772,7 @@ function parsePhyphoxCSV(text){
     if(!isNaN(mag)&&mag>0) values.push(mag);
     if(idxT>=0&&!isNaN(row[idxT])){if(row[idxT]<tmin)tmin=row[idxT];if(row[idxT]>tmax)tmax=row[idxT];}
   }
-  if(!values.length) throw new Error('Aucune donnee magnetique valide dans le CSV.');
+  if(!values.length) throw new Error(jt('csv_err_vide','Aucune donnee magnetique valide dans le CSV.'));
   const mean=values.reduce((a,b)=>a+b,0)/values.length;
   const stddev=Math.sqrt(values.reduce((a,b)=>a+(b-mean)**2,0)/values.length);
   const duree=(tmax>-Infinity&&tmin<Infinity)?Math.round(tmax-tmin):null;
@@ -2758,8 +2798,8 @@ function handlePhyphoxCSV(input){
       const sum=document.getElementById('csv-summary');
       if(sum){
         sum.style.display='block';
-        const dureeStr=stats.duree_s!==null?' · duree '+stats.duree_s+'s':'';
-        sum.textContent='📊 Fichier importe : '+stats.n_points+' points · moyenne '+stats.mean+' µT · σ='+stats.stddev+' µT · min '+stats.min+' / max '+stats.max+' µT'+dureeStr;
+        const dureeStr=stats.duree_s!==null?jt('csv_duree_prefix',' · duree ')+stats.duree_s+'s':'';
+        sum.textContent=jt('csv_summary_prefix','📊 Fichier importe : ')+stats.n_points+jt('csv_summary_points_moyenne',' points · moyenne ')+stats.mean+' µT · σ='+stats.stddev+' µT · min '+stats.min+' / max '+stats.max+' µT'+dureeStr;
       }
     }catch(err){
       window._csvStats=null;
@@ -2798,7 +2838,7 @@ async function startNativeMagCapture(){
 
   if(!isNativeMagSupported()){
     statusEl.style.display='block';
-    statusEl.textContent="Ce navigateur ne supporte pas l'acces direct au magnetometre. Utilisez l'import CSV ou la saisie manuelle.";
+    statusEl.textContent=jt('cap_native_unsupported',"Ce navigateur ne supporte pas l'acces direct au magnetometre. Utilisez l'import CSV ou la saisie manuelle.");
     return;
   }
 
@@ -2811,7 +2851,7 @@ async function startNativeMagCapture(){
       if(isFinite(mag) && mag > 0){
         _nativeMagReadings.push(mag);
         statusEl.style.display='block';
-        statusEl.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--tx)">Lecture en cours&nbsp;: ' + formatMagneticField(mag,'µT') + '</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">' + _nativeMagReadings.length + ' echantillons</div>';
+        statusEl.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--tx)">'+jt('cap_lecture_prefix','Lecture en cours&nbsp;: ')+ formatMagneticField(mag,'µT') + '</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">' + _nativeMagReadings.length + jt('cap_echantillons_suffix',' echantillons') + '</div>';
       }
     });
 
@@ -2819,21 +2859,21 @@ async function startNativeMagCapture(){
       const errName = (event.error && event.error.name) || 'Erreur inconnue';
       const errMsg = (event.error && event.error.message) || '';
       statusEl.style.display='block';
-      statusEl.textContent = 'Erreur capteur : ' + errName + (errMsg ? ' — ' + errMsg : '') + '. Reessayez ou utilisez la saisie manuelle.';
+      statusEl.textContent = jt('cap_err_capteur_prefix','Erreur capteur : ') + errName + (errMsg ? ' — ' + errMsg : '') + jt('cap_err_capteur_suffix','. Reessayez ou utilisez la saisie manuelle.');
       stopNativeMagCapture(false);
     });
 
     _nativeMag.start();
-    btn.textContent = '\u23F9 Arreter la capture (moyenne apres 3s min.)';
+    btn.textContent = jt('cap_stop_btn', '\u23F9 Arreter la capture (moyenne apres 3s min.)');
     statusEl.style.display='block';
-    statusEl.textContent = 'Initialisation du capteur\u2026';
+    statusEl.textContent = jt('cap_init_sensor', 'Initialisation du capteur\u2026');
 
     _nativeMagTimer = setTimeout(() => {
       if(_nativeMag) stopNativeMagCapture(true);
     }, 10000);
   }catch(err){
     statusEl.style.display='block';
-    statusEl.textContent = 'Impossible de demarrer le magnetometre : ' + (err.message || err.name || 'erreur inconnue') + '.';
+    statusEl.textContent = jt('cap_err_demarrage_prefix','Impossible de demarrer le magnetometre : ') + (err.message || err.name || 'erreur inconnue') + '.';
     _nativeMag = null;
   }
 }
@@ -2846,7 +2886,7 @@ function stopNativeMagCapture(applyResult){
     try{ _nativeMag.stop(); }catch(e){}
     _nativeMag = null;
   }
-  if(btn) btn.textContent = '\u{1F4F1} Capturer avec le magnetometre du telephone';
+  if(btn) btn.textContent = jt('cap_resume_btn', '\u{1F4F1} Capturer avec le magnetometre du telephone');
 
   if(applyResult && _nativeMagReadings.length >= 5){
     const n = _nativeMagReadings.length;
@@ -2863,12 +2903,12 @@ function stopNativeMagCapture(applyResult){
 
     if(statusEl){
       statusEl.style.display='block';
-      statusEl.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--tx)">Moyenne&nbsp;: ' + formatMagneticField(mean,'µT') + '</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">σ=' + (Math.round(stddev*100)/100) + ' µT · min ' + (Math.round(min*100)/100) + ' / max ' + (Math.round(max*100)/100) + ' µT · ' + n + ' echantillons</div>';
+      statusEl.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--tx)">'+jt('cap_moyenne_prefix','Moyenne&nbsp;: ')+ formatMagneticField(mean,'µT') + '</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">σ=' + (Math.round(stddev*100)/100) + ' µT · min ' + (Math.round(min*100)/100) + ' / max ' + (Math.round(max*100)/100) + ' µT · ' + n + jt('cap_echantillons_suffix',' echantillons') + '</div>';
     }
   } else if(applyResult && _nativeMagReadings.length < 5){
     if(statusEl){
       statusEl.style.display='block';
-      statusEl.textContent = 'Trop peu d\'echantillons (' + _nativeMagReadings.length + '). Gardez le telephone stable plus longtemps.';
+      statusEl.textContent = jt('cap_trop_peu_prefix','Trop peu d\'echantillons (') + _nativeMagReadings.length + jt('cap_trop_peu_suffix','). Gardez le telephone stable plus longtemps.');
     }
   }
   _nativeMagReadings = [];
@@ -2882,21 +2922,24 @@ function onInstrumentChange(){
   const valInput = document.getElementById('c-val');
   const csvRow = document.getElementById('c-csv-row');
   if(!c){hintEl.style.display='none';return;}
-  hintEl.textContent = c.hint;
+  // Résolution lazy — INSTRUMENT_CONSTRAINTS reste en FR au niveau module
+  // (même piège que PRESCRIPTION_METHODS/INSTRUMENT_LABELS), jt() résolu ici
+  // au changement d'instrument (après DOMContentLoaded).
+  hintEl.textContent = jt('instr_hint_'+type, c.hint);
   hintEl.style.display = 'block';
   // Instruments multi-unites (smartphone_mag, trifield)
   if(c.units){
     const def=c.defaultUnit;
     for(let o of unitSel.options){if(o.value===def){o.selected=true;break;}}
     unitSel.disabled=false;
-    valInput.placeholder=def==='µT'?'ex: 45.3':'ex: 44800';
+    valInput.placeholder=def==='µT'?jt('ph_ex_ut','ex: 45.3'):jt('ph_ex_nt','ex: 44800');
   } else if(c.unit && c.unit !== 'description'){
     for(let o of unitSel.options){ if(o.value===c.unit){o.selected=true;break;} }
     unitSel.disabled = false;
   } else if(c.unit==='description'){
     for(let o of unitSel.options){ if(o.value==='description'){o.selected=true;break;} }
     unitSel.disabled = true;
-    valInput.placeholder = 'Pas de valeur numerique requise';
+    valInput.placeholder = jt('ph_pas_valeur','Pas de valeur numerique requise');
   } else {
     unitSel.disabled = false;
   }
@@ -2914,17 +2957,21 @@ function validateContrib(){
   if(!c) return {ok:true};
   if(c.unit==='description') return {ok:true};
   // Instruments multi-unites
+  // "Valeur numerique requise pour cet instrument." dédupliqué en une seule
+  // clé (val_err_numerique_requise) : texte FR byte-identique dans les deux
+  // branches (multi-unité l.2921 et simple l.2928), traduction EN identique
+  // livrée pour les deux — pas de raison de dupliquer la clé.
   if(c.units){
-    if(isNaN(val)) return {ok:false, msg:'Valeur numerique requise pour cet instrument.'};
+    if(isNaN(val)) return {ok:false, msg:jt('val_err_numerique_requise','Valeur numerique requise pour cet instrument.')};
     const range=c.units[unit];
     if(range && (val<range.min||val>range.max)){
-      return {ok:false, msg:'Valeur hors plage : attendu '+range.min+'–'+range.max+' '+unit+' pour '+type+'. Valeur saisie : '+val+' '+unit+'.'};
+      return {ok:false, msg:jt('val_err_hors_plage_multi_prefix','Valeur hors plage : attendu ')+range.min+'–'+range.max+' '+unit+jt('val_err_hors_plage_multi_infix',' pour ')+type+jt('val_err_hors_plage_multi_suffix','. Valeur saisie : ')+val+' '+unit+'.'};
     }
     return {ok:true};
   }
-  if(isNaN(val) && c.min!==null) return {ok:false, msg:'Valeur numerique requise pour cet instrument.'};
+  if(isNaN(val) && c.min!==null) return {ok:false, msg:jt('val_err_numerique_requise','Valeur numerique requise pour cet instrument.')};
   if(c.min!==null && (val < c.min || val > c.max)){
-    return {ok:false, msg:'Valeur hors plage pour '+type+' : attendu '+c.min+'–'+c.max+' '+c.unit+'. Verifiez votre saisie.'};
+    return {ok:false, msg:jt('val_err_hors_plage_simple_prefix','Valeur hors plage pour ')+type+jt('val_err_hors_plage_simple_infix',' : attendu ')+c.min+'–'+c.max+' '+c.unit+jt('val_err_hors_plage_simple_suffix','. Verifiez votre saisie.')};
   }
   return {ok:true};
 }
