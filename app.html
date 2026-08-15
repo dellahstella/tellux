@@ -2116,9 +2116,65 @@ if(DARK)document.documentElement.setAttribute('data-theme','dark');
 // ex. dans une fonction de rendu appelée après DOMContentLoaded), jamais au
 // niveau module.
 var JS_STRINGS_EN = {
-  // Vide — à remplir lot par lot. Inventaire des zones à couvrir (A-I) dans
-  // le rapport d'audit initial (_drafts/AUDIT_INVENTAIRE_I18N_APP_2026-08-15.md,
-  // §2.3) et son complément (_drafts/COMPLEMENT_AUDIT_ZONES_HI_GAPS_APP_2026-08-15.md).
+  // Lot A (2026-08-15) — zones §A/§B/§D/§F du complément d'audit :
+  // updateCondSummaries(), menu FAB (via I18N_ENTRIES, pas ici), module
+  // Capteurs appareil, notifications info()/setStatus() dispersées.
+  // Reste à remplir (zones A-G du rapport initial + G1/G2 du complément) :
+  // _drafts/AUDIT_INVENTAIRE_I18N_APP_2026-08-15.md,
+  // _drafts/COMPLEMENT_AUDIT_ZONES_HI_GAPS_APP_2026-08-15.md.
+
+  // §A — updateCondSummaries()
+  cond_checking: "checking…",
+  cond_tempete_majeure_prefix: "Major storm (Kp ",
+  cond_tempete_mineure_prefix: "Minor storm (Kp ",
+  cond_actif_prefix: "Active (Kp ",
+  cond_calme_prefix: "Calm (Kp ",
+  cond_orage_actif: "Active storm",
+  cond_ducting: "Ducting possible",
+  cond_stables_prefix: "Stable (",
+  cond_heure_pleine_prefix: "Peak hours (×",
+  cond_heure_creuse_prefix: "Off-peak hours (×",
+  cond_charge_normale_prefix: "Normal load (×",
+
+  // §D — module Capteurs appareil (séquence complète)
+  cap_disabled_tab_toast: "Available with the Tellux app (coming soon).",
+  cap_perm_refused: "Sensor permission denied.",
+  cap_mag_required_record: "Native magnetometer required to record a measurement. Use the Technical measurement tab.",
+  cap_mag_required_calc: "Native magnetometer required to calculate a measurement. Invalid sensor mode.",
+  cap_not_enough_samples: "Not enough samples — try again.",
+  cap_geoloc_unavailable: "Geolocation unavailable",
+  cap_geoloc_error_prefix: "Unable to get the position: ",
+  cap_no_measurement: "No measurement to submit",
+  cap_invalid_unit: "Measurement rejected: invalid unit (degrees). Native magnetometer required.",
+  cap_position_required: "Position required — click \"Use my current position\" or place a point on the map.",
+  cap_consent_required: "Please accept storage of the measurement",
+  cap_sending: "Sending…",
+  cap_sent_success: "Measurement sent — thank you for your Tellux contribution!",
+  cap_send_failed_prefix: "Submission failed: ",
+  cap_submit_btn_js: "Submit the measurement",
+
+  // §F — notifications info()/setStatus() dispersées
+  csv_invalid_prefix: "Invalid CSV: ",
+  click_to_place_measurement: "Click on the map to place your measurement.",
+  cform_position_js: "Click on the map to place the point",
+  line_hta_aerien: "Overhead HTA line · EDF SEI open data",
+  reseau_osm_prefix: "OSM grid: ",
+  reseau_osm_suffix: " lines",
+  hta_indisponible: "HTA: unavailable",
+  bt_zoom_hint: "Zoom in to see the BT grid (zoom ≥ 12)",
+  bt_loading: "Loading BT grid…",
+  bt_line_aerien: "Overhead BT line · EDF SEI",
+  bt_line_souterrain: "Underground BT line · EDF SEI",
+  mesures_em_prefix: "EM measurements — ",
+  mesures_em_infix: " certified ANFR/EXEM sheets (2024–2026) · ",
+  mesures_em_suffix: " citizen contribution(s)",
+  sites_uth_prefix: "U/Th sites to measure — ",
+  sites_uth_suffix: " candidate sites loaded · doses not measured, in situ measurement required",
+  sites_remarq_prefix: "Substrate anomalies (serpentinite, magnetite) & Th-234 — ",
+  sites_remarq_suffix: " sites · documentary data, in situ measurement required",
+  cert_unavailable: "Certified sheets unavailable — try again shortly.",
+  cert_downloaded_prefix: "File downloaded — ",
+  cert_downloaded_suffix: " certified ANFR/EXEM sheets (JSON)."
 };
 function jt(key, fr){
   return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
@@ -2560,7 +2616,7 @@ function handlePhyphoxCSV(input){
       }
     }catch(err){
       window._csvStats=null;
-      info('CSV invalide : '+err.message,'error',5000);
+      info(jt('csv_invalid_prefix', 'CSV invalide : ')+err.message,'error',5000);
     }
   };
   reader.readAsText(file);
@@ -2806,7 +2862,7 @@ function tog(id,cls,btn){
         lCert.addTo(map);
         var nContrib=(typeof contribsDB!=='undefined')?contribsDB.length:0;
         var nCert=(MESURES_CERTIFIEES||[]).length;
-        info('Mesures EM \u2014 '+nCert+' fiches ANFR/EXEM certifiées (2024\u20132026) \u00B7 '+nContrib+' contribution(s) citoyenne(s)',null,5000);
+        info(jt('mesures_em_prefix', 'Mesures EM — ')+nCert+jt('mesures_em_infix', ' fiches ANFR/EXEM certifiées (2024–2026) · ')+nContrib+jt('mesures_em_suffix', ' contribution(s) citoyenne(s)'),null,5000);
       });
     }
 
@@ -5635,7 +5691,7 @@ function startContrib(){
   if(!ACTIVE.con){if(_bcon){tog('con','on-con',_bcon);}else{ACTIVE.con=true;map.addLayer(LAYERS.con);}}
   // Initialiser l'etat du formulaire selon l'instrument selectionne par defaut
   if(typeof onInstrumentChange==='function')onInstrumentChange();
-  info('Cliquez sur la carte pour placer votre mesure.','warn');
+  info(jt('click_to_place_measurement', 'Cliquez sur la carte pour placer votre mesure.'),'warn');
   _armContribClick();
 }
 function _armContribClick(){
@@ -5705,7 +5761,7 @@ function _placeContribMarker(lat,lng){
 function repositionMarker(){
   if(pending){map.removeLayer(pending);pending=null;}
   var posInfo=document.getElementById('c-position-info');
-  if(posInfo)posInfo.textContent='Cliquez sur la carte pour placer le point';
+  if(posInfo)posInfo.textContent=jt('cform_position_js', 'Cliquez sur la carte pour placer le point');
   var reposBtn=document.getElementById('btn-reposition');
   if(reposBtn)reposBtn.style.display='none';
   var igrfBox=document.getElementById('c-igrf-box');if(igrfBox)igrfBox.style.display='none';
@@ -5819,7 +5875,7 @@ function cancelContrib(){
   var csvInp=document.getElementById('csv-phyphox-input');if(csvInp)csvInp.value='';
   // Reset indicateur position
   var posInfo=document.getElementById('c-position-info');
-  if(posInfo)posInfo.textContent='Cliquez sur la carte pour placer le point';
+  if(posInfo)posInfo.textContent=jt('cform_position_js', 'Cliquez sur la carte pour placer le point');
   var reposBtn=document.getElementById('btn-reposition');
   if(reposBtn)reposBtn.style.display='none';
   // Désactiver le FAB active state
@@ -6308,7 +6364,7 @@ async function loadReseau(){
       const pts=row.pts;
       if(!pts||pts.length<2) return;
       L.polyline(pts,{color:'#b85c00',weight:1.2,opacity:0.65,dashArray:'3 2'})
-        .on('click',()=>info('Ligne HTA aérienne · EDF SEI open data')).addTo(lRes);
+        .on('click',()=>info(jt('line_hta_aerien', 'Ligne HTA aérienne · EDF SEI open data'))).addTo(lRes);
     });
     setStatus('HTA: '+all.length+' lignes');
     console.log('✅ HTA:',all.length,'lignes');
@@ -6333,9 +6389,9 @@ async function loadReseau(){
         L.polyline(pts,{color,weight:v>=50000?2:1.5,opacity:.7,dashArray:v>=50000?null:'4 3'})
           .bindTooltip((v>=50000?'HTB ':'HTA ')+v/1000+'kV',{sticky:true}).addTo(lRes);n++;
       });
-      if(n>0){setStatus('Réseau OSM: '+n+' lignes');return;}
+      if(n>0){setStatus(jt('reseau_osm_prefix', 'Réseau OSM: ')+n+jt('reseau_osm_suffix', ' lignes'));return;}
     }catch(e2){}
-    setStatus('HTA: indisponible');
+    setStatus(jt('hta_indisponible', 'HTA: indisponible'));
   }
   loadChargeReseau();
 }
@@ -6346,12 +6402,12 @@ let _btLoaded=false;
 async function loadBT(){
   const zoom=map.getZoom();
   if(zoom<12){
-    setStatus('Zoomer pour voir le réseau BT (zoom ≥ 12)');
+    setStatus(jt('bt_zoom_hint', 'Zoomer pour voir le réseau BT (zoom ≥ 12)'));
     setTimeout(()=>setStatus(''),3000);
     return;
   }
   lBT.clearLayers();
-  setStatus('Chargement réseau BT…');
+  setStatus(jt('bt_loading', 'Chargement réseau BT…'));
   const b=map.getBounds();
   const s=b.getSouth().toFixed(4),n=b.getNorth().toFixed(4);
   const w=b.getWest().toFixed(4),e=b.getEast().toFixed(4);
@@ -6373,7 +6429,7 @@ async function loadBT(){
         color:isAerien?'#d97706':'#92400e',
         weight:1.2,opacity:0.65,
         dashArray:isAerien?null:'3 2'
-      }).on('click',()=>info('Ligne BT '+(isAerien?'aérienne':'souterraine')+' · EDF SEI'))
+      }).on('click',()=>info(isAerien ? jt('bt_line_aerien', 'Ligne BT aérienne · EDF SEI') : jt('bt_line_souterrain', 'Ligne BT souterraine · EDF SEI')))
         .addTo(lBT);
       n_drawn++;
     });
@@ -6912,11 +6968,11 @@ function startContribFromFAB(){
   if(typeof onInstrumentChange==='function')onInstrumentChange();
   // Reset position info
   var posInfo=document.getElementById('c-position-info');
-  if(posInfo)posInfo.textContent='Cliquez sur la carte pour placer le point';
+  if(posInfo)posInfo.textContent=jt('cform_position_js', 'Cliquez sur la carte pour placer le point');
   var reposBtn=document.getElementById('btn-reposition');
   if(reposBtn)reposBtn.style.display='none';
   var igrfBox=document.getElementById('c-igrf-box');if(igrfBox)igrfBox.style.display='none';
-  info('Cliquez sur la carte pour placer votre mesure.','warn');
+  info(jt('click_to_place_measurement', 'Cliquez sur la carte pour placer votre mesure.'),'warn');
   // Attendre le prochain tick pour que la carte ait fini de traiter le toggle
   setTimeout(function(){_armContribClick();},0);
   if(fab)fab.classList.add('fab-active');
@@ -7180,7 +7236,7 @@ async function togPointsChauds(btn){
   await loadPointsChaudsRadio();
   _renderPointsChauds();
   lPointsChaudsRadio.addTo(map); showLegend('pointsChauds',true); btn.className='lbtn on-points-chauds';
-  info('Sites U/Th à mesurer — ' + (POINTS_CHAUDS_RADIO||[]).length + ' sites candidats chargés · doses non mesurées, mesures in situ requises',null,5000);
+  info(jt('sites_uth_prefix', 'Sites U/Th à mesurer — ') + (POINTS_CHAUDS_RADIO||[]).length + jt('sites_uth_suffix', ' sites candidats chargés · doses non mesurées, mesures in situ requises'),null,5000);
 }
 
 // ═══ Anomalies de substrat (serpentinite, magnétite) & Th-234 ═══
@@ -7281,7 +7337,7 @@ async function togSitesRemarquables(btn) {
   btn.className = 'lbtn on-sites-remarq';
   ACTIVE.sitesRemarq = true;
   showLegend('sitesRemarq', true);
-  info('Anomalies de substrat (serpentinite, magnétite) & Th-234 — ' + (SITES_REMARQUABLES || []).length + ' sites · données documentaires, mesures in situ requises',null,5000);
+  info(jt('sites_remarq_prefix', 'Anomalies de substrat (serpentinite, magnétite) & Th-234 — ') + (SITES_REMARQUABLES || []).length + jt('sites_remarq_suffix', ' sites · données documentaires, mesures in situ requises'),null,5000);
 }
 
 // ═══ Mesures certifiées ANFR/EXEM ═══
@@ -7317,7 +7373,7 @@ function loadMesuresCertifiees() {
 // Telechargement des 30 fiches certifiees ANFR/EXEM en JSON (wrapper avec metadata source/licence)
 function downloadCertifiedJSON() {
   if (!MESURES_CERTIFIEES || MESURES_CERTIFIEES.length === 0) {
-    info('Fiches certifiées non disponibles — réessayer dans quelques instants.', 'warn', 5000);
+    info(jt('cert_unavailable', 'Fiches certifiées non disponibles — réessayer dans quelques instants.'), 'warn', 5000);
     return;
   }
   const wrapper = {
@@ -7342,7 +7398,7 @@ function downloadCertifiedJSON() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  info('Fichier téléchargé — ' + MESURES_CERTIFIEES.length + ' fiches certifiées ANFR/EXEM (JSON).', 'success', 5000);
+  info(jt('cert_downloaded_prefix', 'Fichier téléchargé — ') + MESURES_CERTIFIEES.length + jt('cert_downloaded_suffix', ' fiches certifiées ANFR/EXEM (JSON).'), 'success', 5000);
 }
 
 // Detecte si une fiche est basse frequence (objet communicant fixe, protocole 9 kHz-100 kHz)
@@ -7655,19 +7711,19 @@ function updateCondSummaries(){
   const solEl = document.getElementById('cond-summary-solaire');
   if(solEl){
     if(isNaN(kpNum)){
-      solEl.textContent = 'vérification…';
+      solEl.textContent = jt('cond_checking', 'vérification…');
       solEl.style.color = 'var(--tx3)';
     } else if(kpNum >= 7){
-      solEl.textContent = 'Tempête majeure (Kp ' + kpNum.toFixed(1) + ')';
+      solEl.textContent = jt('cond_tempete_majeure_prefix', 'Tempête majeure (Kp ') + kpNum.toFixed(1) + ')';
       solEl.style.color = 'var(--danger)';
     } else if(kpNum >= 5){
-      solEl.textContent = 'Tempête mineure (Kp ' + kpNum.toFixed(1) + ')';
+      solEl.textContent = jt('cond_tempete_mineure_prefix', 'Tempête mineure (Kp ') + kpNum.toFixed(1) + ')';
       solEl.style.color = 'var(--danger)';
     } else if(kpNum >= 4){
-      solEl.textContent = 'Actif (Kp ' + kpNum.toFixed(1) + ')';
+      solEl.textContent = jt('cond_actif_prefix', 'Actif (Kp ') + kpNum.toFixed(1) + ')';
       solEl.style.color = 'var(--warn)';
     } else {
-      solEl.textContent = 'Calme (Kp ' + kpNum.toFixed(1) + ')';
+      solEl.textContent = jt('cond_calme_prefix', 'Calme (Kp ') + kpNum.toFixed(1) + ')';
       solEl.style.color = 'var(--acc)';
     }
   }
@@ -7680,13 +7736,13 @@ function updateCondSummaries(){
     const stormActive = /orage|storm|foudre|éclair/i.test(lightV) && !/aucun|—|vérif/i.test(lightV);
     const ducting = /ducting/i.test(meteoS);
     if(stormActive){
-      atmoEl.textContent = 'Orage actif';
+      atmoEl.textContent = jt('cond_orage_actif', 'Orage actif');
       atmoEl.style.color = 'var(--danger)';
     } else if(ducting){
-      atmoEl.textContent = 'Ducting possible';
+      atmoEl.textContent = jt('cond_ducting', 'Ducting possible');
       atmoEl.style.color = 'var(--warn)';
     } else if(meteoN && meteoN !== '—'){
-      atmoEl.textContent = 'Stables (' + meteoN.replace(/^N\s*/,'') + ')';
+      atmoEl.textContent = jt('cond_stables_prefix', 'Stables (') + meteoN.replace(/^N\s*/,'') + ')';
       atmoEl.style.color = 'var(--acc)';
     } else {
       atmoEl.textContent = '—';
@@ -7698,13 +7754,13 @@ function updateCondSummaries(){
   if(resEl){
     const cf = (typeof chargeFacteur !== 'undefined') ? chargeFacteur : 1.0;
     if(cf > 1.15){
-      resEl.textContent = 'Heure pleine (×' + cf.toFixed(2) + ')';
+      resEl.textContent = jt('cond_heure_pleine_prefix', 'Heure pleine (×') + cf.toFixed(2) + ')';
       resEl.style.color = 'var(--warn)';
     } else if(cf < 0.85){
-      resEl.textContent = 'Heure creuse (×' + cf.toFixed(2) + ')';
+      resEl.textContent = jt('cond_heure_creuse_prefix', 'Heure creuse (×') + cf.toFixed(2) + ')';
       resEl.style.color = 'var(--acc)';
     } else {
-      resEl.textContent = 'Charge normale (×' + cf.toFixed(2) + ')';
+      resEl.textContent = jt('cond_charge_normale_prefix', 'Charge normale (×') + cf.toFixed(2) + ')';
       resEl.style.color = 'var(--ardoise-clair)';
     }
   }
@@ -7843,7 +7899,7 @@ function switchContribTab(id){
 // reserve pour la future app native, mais le clic sur l'onglet n'ouvre plus rien —
 // juste un toast bref, pas de panneau trompeur presente comme actif aujourd'hui.
 function handleDisabledCapTab(){
-  if(typeof info === 'function') info('Disponible avec l\'application Tellux (à venir).','warn',3500);
+  if(typeof info === 'function') info(jt('cap_disabled_tab_toast', 'Disponible avec l\'application Tellux (à venir).'),'warn',3500);
 }
 
 // ═══ CAPTEURS APPAREIL — Web Sensors API ═══
@@ -7943,7 +7999,7 @@ async function capStartLiveReadings(){
       try{
         const perm=await DeviceOrientationEvent.requestPermission();
         if(perm==='granted') capFallbackToOrientation();
-        else { const w=document.getElementById('cap-compat-warn');if(w){w.style.display='block';w.querySelector('strong').textContent='Permission capteurs refusée.';} }
+        else { const w=document.getElementById('cap-compat-warn');if(w){w.style.display='block';w.querySelector('strong').textContent=jt('cap_perm_refused', 'Permission capteurs refusée.');} }
       }catch(e){ capFallbackToOrientation(); }
     }else{
       capFallbackToOrientation();
@@ -7988,7 +8044,7 @@ function capStartRecording(){
   // collecter de samples (sinon pollution avec angles DeviceOrientation).
   if(capApiUsed && capApiUsed!=='Magnetometer'){
     if(typeof info==='function'){
-      info('<span style="color:var(--danger)">Magnetometre natif requis pour enregistrer une mesure. Utilisez l onglet Mesure technique.</span>',null,5000);
+      info('<span style="color:var(--danger)">' + jt('cap_mag_required_record', 'Magnetometre natif requis pour enregistrer une mesure. Utilisez l onglet Mesure technique.') + '</span>',null,5000);
     }
     return;
   }
@@ -8038,12 +8094,12 @@ function capComputeStats(){
   // capCheckSupport et capStartRecording empechent en theorie d arriver ici
   // en mode DeviceOrientation, ce check est une protection supplementaire.
   if(capApiUsed!=='Magnetometer'){
-    if(typeof info==='function')info('<span style="color:var(--danger)">Magnetometre natif requis pour calculer une mesure. Mode capteur non valide.</span>',null,5000);
+    if(typeof info==='function')info('<span style="color:var(--danger)">' + jt('cap_mag_required_calc', 'Magnetometre natif requis pour calculer une mesure. Mode capteur non valide.') + '</span>',null,5000);
     capSamples=[];
     return;
   }
   if(capSamples.length<3){
-    if(typeof info==='function')info('<span style="color:var(--danger)">Pas assez d\'échantillons — recommencez.</span>',null,5000);
+    if(typeof info==='function')info('<span style="color:var(--danger)">' + jt('cap_not_enough_samples', 'Pas assez d\'échantillons — recommencez.') + '</span>',null,5000);
     return;
   }
   const vals=capSamples;
@@ -8073,7 +8129,7 @@ function capComputeStats(){
 }
 
 function capRequestGeolocation(){
-  if(!CAP_SUPPORT.geolocation){alert('Géolocalisation non disponible');return;}
+  if(!CAP_SUPPORT.geolocation){alert(jt('cap_geoloc_unavailable', 'Géolocalisation non disponible'));return;}
   navigator.geolocation.getCurrentPosition(
     pos=>{
       const lat=pos.coords.latitude,lon=pos.coords.longitude;
@@ -8083,26 +8139,26 @@ function capRequestGeolocation(){
       if(lonEl)lonEl.textContent=lon.toFixed(5);
       window.capPosition={lat,lon};
     },
-    err=>alert('Impossible d\'obtenir la position : '+err.message),
+    err=>alert(jt('cap_geoloc_error_prefix', 'Impossible d\'obtenir la position : ')+err.message),
     {enableHighAccuracy:true,timeout:10000}
   );
 }
 
 async function capSubmitMeasurement(){
-  if(!window.capLastMeasurement){alert('Aucune mesure à soumettre');return;}
+  if(!window.capLastMeasurement){alert(jt('cap_no_measurement', 'Aucune mesure à soumettre'));return;}
   // Triple verrou final : refuser tout envoi en mode degres / DeviceOrientation.
   // Ne devrait jamais etre atteint apres capCheckSupport + capStartRecording +
   // capComputeStats, mais sert d ultime garde-fou avant INSERT Supabase.
   const _m=window.capLastMeasurement;
   if(_m && (_m.unit==='°'||_m.unit==='deg')){
-    alert('Mesure refusee : unite invalide (degres). Magnetometre natif requis.');
+    alert(jt('cap_invalid_unit', 'Mesure refusee : unite invalide (degres). Magnetometre natif requis.'));
     return;
   }
-  if(!window.capPosition||window.capPosition.lat===undefined){alert('Position requise — cliquez sur "Utiliser ma position actuelle" ou placez un point sur la carte.');return;}
+  if(!window.capPosition||window.capPosition.lat===undefined){alert(jt('cap_position_required', 'Position requise — cliquez sur "Utiliser ma position actuelle" ou placez un point sur la carte.'));return;}
   const consent=document.getElementById('cap-consent-check');
-  if(!consent||!consent.checked){alert('Merci d\'accepter le stockage de la mesure');return;}
+  if(!consent||!consent.checked){alert(jt('cap_consent_required', 'Merci d\'accepter le stockage de la mesure'));return;}
   const btn=document.getElementById('cap-btn-submit');
-  if(btn){btn.disabled=true;btn.textContent='Envoi…';}
+  if(btn){btn.disabled=true;btn.textContent=jt('cap_sending', 'Envoi…');}
   const note=(document.getElementById('cap-note')||{}).value||'';
   const m=window.capLastMeasurement;
   const row={
@@ -8120,11 +8176,11 @@ async function capSubmitMeasurement(){
   Object.keys(row).forEach(k=>{if(row[k]===null||row[k]===undefined)delete row[k];});
   try{
     await sbPost('/rest/v1/contributions',[row]);
-    if(typeof info==='function')info('Mesure envoyée — merci pour votre contribution Tellux !',null,5000);
+    if(typeof info==='function')info(jt('cap_sent_success', 'Mesure envoyée — merci pour votre contribution Tellux !'),null,5000);
     closeContribLevelModal();
   }catch(e){
-    alert('Envoi échoué : '+(e.message||'erreur réseau'));
-    if(btn){btn.disabled=false;btn.textContent='Envoyer la mesure';}
+    alert(jt('cap_send_failed_prefix', 'Envoi échoué : ')+(e.message||'erreur réseau'));
+    if(btn){btn.disabled=false;btn.textContent=jt('cap_submit_btn_js', 'Envoyer la mesure');}
   }
 }
 
@@ -8708,7 +8764,10 @@ function capCleanup(){
 ["gloss_tab_glossaire",".glossary-tab[data-tab='glossaire']","","Glossaire","Glussariu","Glossary"],
 ["gloss_tab_guides",".glossary-tab[data-tab='guides']","","Guides pratiques","Guide pratiche","Practical guides"],
 ["gloss_search_ph","#glossary-search","placeholder","Rechercher un terme...","Circà un termine...","Search for a term..."],
-["gloss_search_aria","#glossary-search","aria-label","Rechercher dans le glossaire","Circà in u glussariu","Search the glossary"]
+["gloss_search_aria","#glossary-search","aria-label","Rechercher dans le glossaire","Circà in u glussariu","Search the glossary"],
+["fab_mini_label",".fab-mini-label","","Contribution terrain","","Field contribution"],
+["fab_mini_aria",".fab-mini","aria-label","Contribution terrain","","Field contribution"],
+["fab_mesure_tt","#fab-mesure","title","Actions terrain","","Field actions"]
 ]/* I18N-CO-ENTRIES-END */;
 
   // Conformité protocole : dictionnaire I18N = { fr:{...}, co:{...} }
