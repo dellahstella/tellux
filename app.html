@@ -2267,7 +2267,61 @@ var JS_STRINGS_EN = {
   v2_footer_reperes: "Natural background in Corsica: 75–150 nSv/h · Radon reference level: 300 Bq/m³ (Art. R. 1333-28 CSP)",
   popup_sub_perturbation: "Disturbance",
   popup_sub_naturel: "Natural",
-  popup_footer_source: "Source: Biot-Savart EDF SEI · CartoRadio ANFR · Tellux model"
+  popup_footer_source: "Source: Biot-Savart EDF SEI · CartoRadio ANFR · Tellux model",
+
+  // Zones C + D + G (rapport d'audit initial) — Prescription de mesure,
+  // labels contribution/instruments, popups réseau électrique.
+  presc_panel_title: "Measurement guide",
+  presc_panel_subtitle: "Recommended methods for this point. Click to start the measurement with the pre-selected instrument.",
+  presc_mag_smartphone_name: "Smartphone magnetometer",
+  presc_mag_smartphone_desc: "Phyphox or Sensor Kinetics. Place the phone still for 30s, read the average.",
+  presc_wifi_scan_name: "WiFi + cellular scan",
+  presc_wifi_scan_desc: "WiGLE WiFi or Network Cell Info. Scan for 2-5 min while walking.",
+  presc_trifield_mag_name: "TriField TF2 — magnetic",
+  presc_trifield_mag_desc: "DC magnetic mode. Stable reading for 10s. Compare to the IGRF model.",
+  presc_trifield_rf_name: "TriField TF2 — RF",
+  presc_trifield_rf_desc: "RF mode. Slow 360-degree rotation, note the maximum.",
+  presc_trifield_elf_name: "TriField TF2 — ELF 50Hz",
+  presc_trifield_elf_desc: "ELF mode. 10cm from devices, compare at 1m.",
+  presc_cornet_rf_name: "Cornet ED88T — RF spectrum",
+  presc_cornet_rf_desc: "RF scan 100MHz-8GHz. Peak + average mode. Identify the bands.",
+  presc_rtlsdr_spectre_name: "RTL-SDR — full spectrum",
+  presc_rtlsdr_spectre_desc: "SDR# or CubicSDR. Waterfall capture. Identify peaks and bands.",
+  presc_observation_name: "Field observation",
+  presc_observation_desc: "Visually document: visible antennas, cables, transformers, sources.",
+  presc_level_accessible: "Accessible",
+  presc_level_dedie: "Dedicated sensor",
+  presc_level_avance: "Advanced",
+  presc_validation_title: "Validation levels",
+  presc_validation_body: "Accessible = reproducible protocol, no specialized equipment (Rubin 2006). Dedicated sensor = quantitative measurement, calibration recommended. Advanced = expert use, interpretation required.",
+  presc_disclaimer: "These recommendations fall within the scope of precautionary environmental hygiene. They do not constitute a medical diagnosis or a therapeutic prescription. Tellux does not label any location as \"dangerous\" or \"safe.\"",
+  presc_close_btn: "Close",
+  tier_label_aveugle: "Blind protocol",
+  tier_label_auto: "Automatic",
+  tier_label_declaratif: "Self-reported",
+  instr_label_smartphone_mag: "Phone magnetometer",
+  instr_label_smartphone_rssi: "Network signal",
+  instr_label_smartphone_wifi: "WiFi signal",
+  instr_label_trifield: "TriField TF2",
+  instr_label_cornet: "Cornet ED88T",
+  instr_label_rtlsdr: "RTL-SDR",
+  instr_label_autre_capteur: "External sensor",
+  instr_label_anfr: "ANFR measurement",
+  instr_label_observation: "Observation",
+  instr_label_ressenti: "Perceived (legacy)",
+  contrib_summary_zero: "No contributions",
+  contrib_summary_suffix_singular: " contribution",
+  contrib_summary_suffix_plural_s: "s",
+  prod_puissance_label: "Power: ",
+  prod_type_hydro_barrage: "Hydro / dam",
+  prod_type_hydro_fil: "Run-of-river hydro",
+  prod_type_eolien: "Wind",
+  prod_type_diesel: "Diesel",
+  prod_type_tac: "Gas turbine",
+  prod_type_interco: "Interconnection",
+  prod_type_biogaz: "Biogas",
+  hta_lignes_prefix: "HTA: ",
+  hta_lignes_suffix: " lines"
 };
 function jt(key, fr){
   return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
@@ -6128,9 +6182,11 @@ function tierBadge(tier){
 }
 
 function tierLabel(tier){
-  if(tier === 1) return 'Protocole aveugle';
-  if(tier === 2) return 'Automatique';
-  return 'Déclaratif';
+  // Résolution lazy — tierLabel() n'est appelée que depuis renderList() (au
+  // rendu, après DOMContentLoaded), jamais au niveau module.
+  if(tier === 1) return jt('tier_label_aveugle','Protocole aveugle');
+  if(tier === 2) return jt('tier_label_auto','Automatique');
+  return jt('tier_label_declaratif','Déclaratif');
 }
 
 const INSTRUMENT_LABELS = {
@@ -6147,7 +6203,10 @@ const INSTRUMENT_LABELS = {
 };
 
 function instrumentLabel(type){
-  return INSTRUMENT_LABELS[type] || type || '—';
+  // Résolution lazy dans la fonction (appelée au rendu, jamais au niveau
+  // module où INSTRUMENT_LABELS est défini) — même piège que PRESCRIPTION_METHODS.
+  var fr = INSTRUMENT_LABELS[type] || type || '—';
+  return type && INSTRUMENT_LABELS[type] ? jt('instr_label_'+type, fr) : fr;
 }
 
 function updateContribSummary(){
@@ -6155,9 +6214,9 @@ function updateContribSummary(){
   if(!el) return;
   const n = (typeof contribsDB !== 'undefined' && Array.isArray(contribsDB)) ? contribsDB.length : 0;
   if(n === 0){
-    el.textContent = 'Aucune contribution';
+    el.textContent = jt('contrib_summary_zero','Aucune contribution');
   } else {
-    el.textContent = n + ' contribution' + (n > 1 ? 's' : '');
+    el.textContent = n + jt('contrib_summary_suffix_singular',' contribution') + (n > 1 ? jt('contrib_summary_suffix_plural_s','s') : '');
   }
 }
 
@@ -6372,10 +6431,14 @@ async function loadProd(){
   }));
   const nonEolFromProd = PROD_ELECTRIQUE.filter(s => s.type !== 'Eolien');
   const all = nonEolFromProd.concat(eolFromOdre);
+  // R\u00e9solution lazy \u2014 PROD_TYPE_KEYS mappe le type FR (valeur de donn\u00e9e,
+  // canonique) vers une cl\u00e9 JS_STRINGS_EN ; r\u00e9solu ici au rendu (forEach
+  // appel\u00e9 apr\u00e8s DOMContentLoaded), jamais au niveau module.
+  const PROD_TYPE_KEYS={'Hydraulique / barrage':'prod_type_hydro_barrage','Hydraulique au fil de l eau':'prod_type_hydro_fil','Eolien':'prod_type_eolien','Diesel':'prod_type_diesel','TAC':'prod_type_tac','Interconnexion':'prod_type_interco','Biogaz':'prod_type_biogaz'};
   all.forEach(s=>{
     const color=TYPE_COLOR[s.type]||'#5c5c5c';
     const size=s.puissance>50?12:s.puissance>10?9:7;
-    const popup='<b>'+s.nom+'</b> \u00b7 '+s.commune+'<br><span style="color:'+color+';font-weight:500">'+s.type+'</span><br>Puissance: <b>'+s.puissance+' MW</b>'+(s.exploitant?'<br>'+s.exploitant:'');
+    const popup='<b>'+s.nom+'</b> \u00b7 '+s.commune+'<br><span style="color:'+color+';font-weight:500">'+jt(PROD_TYPE_KEYS[s.type],s.type)+'</span><br>'+jt('prod_puissance_label','Puissance: ')+'<b>'+s.puissance+' MW</b>'+(s.exploitant?'<br>'+s.exploitant:'');
     L.marker([s.lat,s.lon],{icon:mkIcon(color,true,size),zIndexOffset:120})
       .on('click',function(){info(popup);}).addTo(lProd);
   });
@@ -6459,7 +6522,7 @@ async function loadReseau(){
       L.polyline(pts,{color:'#b85c00',weight:1.2,opacity:0.65,dashArray:'3 2'})
         .on('click',()=>info(jt('line_hta_aerien', 'Ligne HTA aérienne · EDF SEI open data'))).addTo(lRes);
     });
-    setStatus('HTA: '+all.length+' lignes');
+    setStatus(jt('hta_lignes_prefix','HTA: ')+all.length+jt('hta_lignes_suffix',' lignes'));
     console.log('✅ HTA:',all.length,'lignes');
     // Construction grille Biot-Savart v2 (une fois, au premier chargement)
     if (typeof buildSegmentGrid === 'function' && !SEGMENT_GRID) {
@@ -7156,22 +7219,28 @@ function openPrescription(){
     document.body.appendChild(panel);
   }
   const badgeColors={vert:'var(--acc)',ocre:'var(--warn)',bleu:'var(--info)'};
-  panel.innerHTML='<div style="font-family:var(--font-display);font-size:15px;color:var(--tx);font-weight:500;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)">Prescription de mesure</div>'+
-    '<div style="font-size:11px;color:var(--tx3);margin-bottom:12px">Methodes recommandees pour ce point. Cliquez pour demarrer la mesure avec l\'instrument pre-selectionne.</div>'+
+  // Résolution lazy des jt() ici (dans le rendu, appelé au clic FAB — après
+  // DOMContentLoaded) : PRESCRIPTION_METHODS lui-même reste au niveau module
+  // en FR (piège connu, cf. en-tête JS_STRINGS_EN plus haut), mais name/desc/
+  // level ne sont traduits qu'à ce point d'appel, jamais à la définition du
+  // tableau.
+  const PRESC_LEVEL_KEYS={'Accessible':'presc_level_accessible','Capteur dedie':'presc_level_dedie','Avance':'presc_level_avance'};
+  panel.innerHTML='<div style="font-family:var(--font-display);font-size:15px;color:var(--tx);font-weight:500;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)">'+jt('presc_panel_title','Prescription de mesure')+'</div>'+
+    '<div style="font-size:11px;color:var(--tx3);margin-bottom:12px">'+jt('presc_panel_subtitle','Methodes recommandees pour ce point. Cliquez pour demarrer la mesure avec l\'instrument pre-selectionne.')+'</div>'+
     PRESCRIPTION_METHODS.map(m=>'<div style="padding:10px;margin-bottom:6px;border:1px solid var(--border);border-radius:var(--r);cursor:pointer;transition:all .15s;background:var(--bg)" onmouseover="this.style.background=\'var(--pierre-ombre)\'" onmouseout="this.style.background=\'var(--bg)\'" onclick="startFromPrescription(\''+m.instrument+'\',\''+m.unit+'\')">'+
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
       '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+badgeColors[m.badge]+'"></span>'+
-      '<span style="font-weight:500;font-size:13px;color:var(--tx)">'+m.name+'</span>'+
-      '<span style="margin-left:auto;font-size:10px;color:var(--tx3);font-family:var(--mono)">'+m.level+'</span>'+
+      '<span style="font-weight:500;font-size:13px;color:var(--tx)">'+jt('presc_'+m.id+'_name',m.name)+'</span>'+
+      '<span style="margin-left:auto;font-size:10px;color:var(--tx3);font-family:var(--mono)">'+jt(PRESC_LEVEL_KEYS[m.level]||'presc_level_accessible',m.level)+'</span>'+
       '</div>'+
-      '<div style="font-size:11px;color:var(--ardoise-clair);line-height:1.4">'+m.desc+'</div>'+
+      '<div style="font-size:11px;color:var(--ardoise-clair);line-height:1.4">'+jt('presc_'+m.id+'_desc',m.desc)+'</div>'+
     '</div>').join('')+
     '<div style="margin-top:10px;padding:8px;background:rgba(123,119,112,0.08);border-radius:var(--r);font-size:10px;color:var(--tx3);line-height:1.5">'+
-    '<strong style="display:block;margin-bottom:3px;color:var(--ardoise-clair)">Niveaux de validation</strong>'+
-    'Accessible = protocole reproductible, aucun equipement specialise (Rubin 2006). Capteur dedie = mesure quantitative, etalonnage recommande. Avance = usage expert, interpretation requise.<br>'+
-    '<span style="display:block;margin-top:4px;color:var(--tx3)">Ces recommandations relevent de l\'hygiene environnementale de precaution. Elles ne constituent pas un diagnostic medical ni une prescription therapeutique. Tellux ne qualifie aucun lieu de "dangereux" ou de "sain".</span>'+
+    '<strong style="display:block;margin-bottom:3px;color:var(--ardoise-clair)">'+jt('presc_validation_title','Niveaux de validation')+'</strong>'+
+    jt('presc_validation_body','Accessible = protocole reproductible, aucun equipement specialise (Rubin 2006). Capteur dedie = mesure quantitative, etalonnage recommande. Avance = usage expert, interpretation requise.')+'<br>'+
+    '<span style="display:block;margin-top:4px;color:var(--tx3)">'+jt('presc_disclaimer','Ces recommandations relevent de l\'hygiene environnementale de precaution. Elles ne constituent pas un diagnostic medical ni une prescription therapeutique. Tellux ne qualifie aucun lieu de "dangereux" ou de "sain".')+'</span>'+
     '</div>'+
-    '<button onclick="document.getElementById(\'prescription-panel\').style.display=\'none\';document.getElementById(\'fab-mesure\').classList.remove(\'fab-active\')" style="width:100%;margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--ardoise-clair);cursor:pointer;font-family:var(--font);font-size:12px">Fermer</button>';
+    '<button onclick="document.getElementById(\'prescription-panel\').style.display=\'none\';document.getElementById(\'fab-mesure\').classList.remove(\'fab-active\')" style="width:100%;margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--ardoise-clair);cursor:pointer;font-family:var(--font);font-size:12px">'+jt('presc_close_btn','Fermer')+'</button>';
   panel.style.display='block';
 }
 
