@@ -1150,7 +1150,14 @@ a{color:inherit;}
     dr_submit_error: "The submission could not be recorded. Check your connection and try again. If the problem persists, contact Tellux.",
     dr_submit_btn_js: "Submit",
     dr_zone_hint_prefix: "Radon-potential zone (ASNR): zone ",
-    dr_zone_hint_suffix: " (automatically derived)."
+    dr_zone_hint_suffix: " (automatically derived).",
+
+    // Complément — sous-libellés updateCorseOverviewStats() (2026-08-15,
+    // signalés lors de la vérification du fix de persistance de langue).
+    overview_ant_sub_prefix: "out of ",
+    overview_ant_sub_suffix: " municipalities",
+    overview_radon_sub_prefix: "zone 3: ",
+    overview_radon_sub_infix: " · zone 2: "
   };
   function jt(key, fr){
     return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
@@ -2446,7 +2453,7 @@ a{color:inherit;}
     var elAntSub = document.getElementById('mr-corse-kpi-antennes-sub');
     if (elAnt && antennesData && antennesData._meta){
       elAnt.textContent = String(antennesData._meta.n_supports_total);
-      if (elAntSub) elAntSub.textContent = 'sur ' + antennesData._meta.n_communes_avec_antenne + ' communes';
+      if (elAntSub) elAntSub.textContent = jt('overview_ant_sub_prefix', 'sur ') + antennesData._meta.n_communes_avec_antenne + jt('overview_ant_sub_suffix', ' communes');
     }
 
     var elRadon = document.getElementById('mr-corse-kpi-radon');
@@ -2459,7 +2466,7 @@ a{color:inherit;}
         else if (cat === 2) zone2++;
       });
       elRadon.textContent = String(zone3 + zone2);
-      if (elRadonSub) elRadonSub.textContent = 'zone 3 : ' + zone3 + ' · zone 2 : ' + zone2;
+      if (elRadonSub) elRadonSub.textContent = jt('overview_radon_sub_prefix', 'zone 3 : ') + zone3 + jt('overview_radon_sub_infix', ' · zone 2 : ') + zone2;
     }
   }
 
