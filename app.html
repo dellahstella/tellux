@@ -640,6 +640,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .op-row{display:none;align-items:center;gap:8px;font-size:11px;color:var(--tx3);margin-bottom:6px;font-family:var(--mono);}
 .op-row input[type=range]{flex:1;}
 #map{width:100%;height:520px;border-radius:var(--r2);border:1px solid var(--border);}
+/* Mode "placement de point" contribution terrain (2026-08-19) — indicateur visuel léger
+   pendant l'attente du clic carte, avant que #cform ne soit affiché (cf. startContribFromFAB). */
+#map.contrib-placement-mode{cursor:crosshair;box-shadow:0 0 0 3px var(--acc, #2d9b87);}
 .mpanel{background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;margin-top:8px;display:none;}
 .mpanel-title{font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
 .mstates{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
@@ -2417,6 +2420,13 @@ function jt(key, fr){
 }
 
 let contribsDB=[],pending=null,cachedIGRF={},_contribClickHandler=null;
+// Flux "placement avant formulaire" (2026-08-19) — voir startContribFromFAB/_placeContribMarker.
+// _contribAwaitingFirstPlacement : true entre l'armement du clic carte et la reception du
+// premier clic valide (Corse) ; #cform reste masque tant que ce flag est actif.
+// _pendingPrescription : instrument/unite choisis via "Prescription de mesure" avant que le
+// point ne soit place — appliques par _openContribFormAfterPlacement() une fois le formulaire
+// reellement ouvert (voir startFromPrescription).
+let _contribAwaitingFirstPlacement=false,_pendingPrescription=null;
 // ctxContrib : contexte Exterieur/Interieur du formulaire #cform, fixe par setCtx()
 // (etape 1 du stepper). Defaut 'exterieur' (cas d'usage terrain le plus courant) —
 // avant le 2026-08-13, setCtx() n'existait pas et cette variable n'etait jamais
@@ -6050,6 +6060,13 @@ function _placeContribMarker(lat,lng){
   updateIGRFDisplay(lat, lng);
   info('Position placee — remplissez le formulaire.','success',5000);
   cformUpdateStep1NextState();
+  // Flux "placement avant formulaire" (2026-08-19) — affichage seulement, la sauvegarde
+  // Supabase reste inchangee (ailleurs dans ce fichier). #cform n'a jamais ete affiche par
+  // startContribFromFAB() dans ce cas ; on l'ouvre maintenant que le point est pose.
+  if(_contribAwaitingFirstPlacement){
+    _contribAwaitingFirstPlacement=false;
+    _openContribFormAfterPlacement();
+  }
 }
 function repositionMarker(){
   if(pending){map.removeLayer(pending);pending=null;}
@@ -7280,12 +7297,17 @@ function runAutoTests(){ return Promise.resolve(); }
 function startContribFromFAB(){
   const form=document.getElementById('cform');
   const fab=document.getElementById('fab-mesure');
-  // Toggle: if form visible, close it
-  if(form&&form.style.display==='block'){
+  // Toggle : si le formulaire est visible OU qu'on attend deja un clic de placement,
+  // annuler/fermer (couvre le nouvel etat intermediaire "carte en mode placement,
+  // #cform pas encore affiche" — cf. bloc "Open" plus bas).
+  if((form&&form.style.display==='block')||_contribAwaitingFirstPlacement){
     form.style.display='none';
     cformOverlayHide();
     if(pending){map.removeLayer(pending);pending=null;}
     if(_contribClickHandler){map.off('click',_contribClickHandler);_contribClickHandler=null;}
+    _contribAwaitingFirstPlacement=false;
+    _pendingPrescription=null;
+    _setContribPlacementHint(false);
     if(fab)fab.classList.remove('fab-active');
     info('');
     return;
@@ -7293,24 +7315,76 @@ function startContribFromFAB(){
   // Open — activer la couche contributions sans la toggler deux fois
   const btn=document.getElementById('b-con');
   if(btn&&!ACTIVE.con){tog('con','on-con',btn);}
-  // Ouvrir le formulaire directement (pas via startContrib qui re-toggle)
+  // Flux "placement avant formulaire" (2026-08-19) — remplace l'ancien ouvrir-le-
+  // formulaire-immediatement : #cform reste masque tant qu'aucun point n'est place.
+  // Sur mobile (sidebar/carte empilees), afficher le formulaire avant le placement
+  // poussait la carte hors champ visible, rendant le clic de placement difficile
+  // voire impossible sans scroll manuel non guide. La carte bascule en mode
+  // "placement" (curseur crosshair + surbrillance) et scrolle dans le champ visible
+  // sur mobile ; le clic est arme comme avant. #cform ne s'ouvre qu'une fois le
+  // point recu — voir _placeContribMarker() -> _openContribFormAfterPlacement().
+  _contribAwaitingFirstPlacement=true;
+  info(jt('click_to_place_measurement', 'Cliquez sur la carte pour placer votre mesure.'),'warn');
+  _setContribPlacementHint(true);
+  _scrollMapIntoViewIfMobile();
+  // Attendre le prochain tick pour que la carte ait fini de traiter le toggle
+  setTimeout(function(){_armContribClick();},0);
+  if(fab)fab.classList.add('fab-active');
+}
+
+// Affiche #cform une fois le point place — extrait de l'ancien startContribFromFAB()
+// qui l'affichait immediatement (avant meme le clic carte). Affichage seulement ;
+// aucune logique de sauvegarde/soumission ici. Appelee depuis _placeContribMarker().
+function _openContribFormAfterPlacement(){
+  const form=document.getElementById('cform');
+  if(!form) return;
+  _setContribPlacementHint(false);
   form.style.display='block';
   cformOverlayShow();
   // Initialiser l'etat du formulaire selon l'instrument selectionne par defaut
   if(typeof onInstrumentChange==='function')onInstrumentChange();
-  // Reset position info
-  var posInfo=document.getElementById('c-position-info');
-  if(posInfo)posInfo.textContent=jt('cform_position_js', 'Cliquez sur la carte pour placer le point');
-  var reposBtn=document.getElementById('btn-reposition');
-  if(reposBtn)reposBtn.style.display='none';
-  var igrfBox=document.getElementById('c-igrf-box');if(igrfBox)igrfBox.style.display='none';
-  info(jt('click_to_place_measurement', 'Cliquez sur la carte pour placer votre mesure.'),'warn');
-  // Attendre le prochain tick pour que la carte ait fini de traiter le toggle
-  setTimeout(function(){_armContribClick();},0);
-  if(fab)fab.classList.add('fab-active');
-  // Ouverture fraiche du stepper — toujours a l'etape 1 (sauf appel depuis
-  // startFromPrescription(), qui navigue explicitement vers l'etape 2 ensuite).
+  // Ouverture fraiche du stepper — toujours a l'etape 1, sauf prescription en
+  // attente (cf. startFromPrescription) qui navigue explicitement vers l'etape 2
+  // juste apres, comme le faisait l'ancien flux immediatement apres l'ouverture.
   if(typeof cformShowStep==='function') cformShowStep(1);
+  if(_pendingPrescription){
+    var presc=_pendingPrescription;
+    _pendingPrescription=null;
+    cformGoToStep(2);
+    setTimeout(function(){
+      var typeSel=document.getElementById('c-type');
+      if(typeSel){
+        for(var i=0;i<typeSel.options.length;i++){
+          if(typeSel.options[i].value===presc.instrument){typeSel.selectedIndex=i;break;}
+        }
+        onInstrumentChange();
+      }
+      if(presc.unit&&presc.unit!=='description'){
+        var unitSel=document.getElementById('c-unit');
+        if(unitSel){
+          for(var i=0;i<unitSel.options.length;i++){
+            if(unitSel.options[i].value===presc.unit){unitSel.selectedIndex=i;break;}
+          }
+        }
+      }
+    },100);
+  }
+}
+
+function _setContribPlacementHint(on){
+  var mapEl=document.getElementById('map');
+  if(mapEl) mapEl.classList.toggle('contrib-placement-mode', !!on);
+}
+
+// Mobile (sidebar/carte empilees, breakpoint 768px comme le reste du fichier) : la carte
+// n'est pas forcement dans le champ visible au moment du clic FAB. Scroll guide vers la
+// carte pour que le placement soit possible sans manipulation manuelle de l'utilisateur.
+function _scrollMapIntoViewIfMobile(){
+  if(window.innerWidth>768) return;
+  var mapEl=document.getElementById('map');
+  if(mapEl && typeof mapEl.scrollIntoView==='function'){
+    mapEl.scrollIntoView({behavior:(tlxReduceMotion()?'auto':'smooth'), block:'start'});
+  }
 }
 
 // ═══ MODAL CHOIX NIVEAU CONTRIBUTION TERRAIN ═══
@@ -7345,9 +7419,10 @@ function toggleFabMenu(){
   const fab=document.getElementById('fab-mesure');
   const form=document.getElementById('cform');
   const presc=document.getElementById('prescription-panel');
-  // Si un formulaire est ouvert, fermer tout
-  if(form&&form.style.display==='block'){
-    startContribFromFAB(); // toggle off
+  // Si un formulaire est ouvert OU qu'on attend un clic de placement (nouvel etat
+  // intermediaire, cf. startContribFromFAB), fermer/annuler tout.
+  if((form&&form.style.display==='block')||_contribAwaitingFirstPlacement){
+    startContribFromFAB(); // toggle off (gere aussi l'etat d'attente de placement)
     closeFabMenu();
     return;
   }
@@ -7430,7 +7505,18 @@ function startFromPrescription(instrument,unit){
   // ca le fermerait au lieu d'y naviguer. On ne l'ouvre que s'il ne l'est pas deja
   // (appel direct depuis le FAB "Prescription", cas residuel defensif).
   var form=document.getElementById('cform');
-  if(!form || form.style.display!=='block'){ startContribFromFAB(); }
+  if(!form || form.style.display!=='block'){
+    // Flux "placement avant formulaire" (2026-08-19) : le formulaire n'existe pas
+    // encore tant que le point n'est pas place. Stocker la prescription ; elle sera
+    // appliquee par _openContribFormAfterPlacement() une fois le point pose et le
+    // formulaire reellement ouvert (meme logique goToStep(2)+preselection qu'avant,
+    // juste decalee apres le placement plutot qu'appliquee immediatement).
+    _pendingPrescription={instrument:instrument,unit:unit};
+    startContribFromFAB();
+    return;
+  }
+  // Formulaire deja ouvert (cas "Comment mesurer ?" dans le stepper deja visible) :
+  // comportement inchange, application immediate.
   cformGoToStep(2);
   // Pre-selectionner l'instrument et l'unite
   setTimeout(function(){
