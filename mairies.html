@@ -309,8 +309,18 @@ a{color:inherit;}
 /* MODALE COURRIER */
 .mr-modal-backdrop{display:none;position:fixed;inset:0;background:rgba(31,35,41,0.5);z-index:100;align-items:center;justify-content:center;padding:20px;}
 .mr-modal-backdrop.open{display:flex;}
-.mr-modal{background:var(--pierre);border-radius:12px;width:100%;max-width:1100px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,0.25);overflow:hidden;}
-.mr-modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 28px 14px;border-bottom:1px solid var(--border);}
+/* max-height doublée vh/dvh — iOS Safari calcule 100vh sur le plus grand viewport possible
+   (barre d'adresse rétractée), pas sur le viewport réellement visible. Avec seulement vh, la
+   modale peut être dimensionnée plus haute que ce qui est effectivement affiché quand la barre
+   d'adresse est visible, poussant l'en-tête (et sa croix de fermeture) hors champ malgré un
+   centrage flex qui a l'air correct sur desktop/émulateur Chrome. dvh (dynamic viewport height,
+   support large depuis iOS 15.4/2022) suit le viewport visuel réel ; la ligne vh reste en repli
+   pour les navigateurs qui ignorent dvh (règle CSS invalide → ignorée, valeur précédente gardée).
+   Bug remonté mobile (session Grok, 2026-08-19), non reproduit tel quel en émulation Chrome
+   DevTools (qui recalcule vh dynamiquement, contrairement à Safari) — fix ciblant la cause la
+   plus probable au vu du symptôme exact (croix disparaît au scroll, piégé sans sortie). */
+.mr-modal{background:var(--pierre);border-radius:12px;width:100%;max-width:1100px;max-height:92vh;max-height:92dvh;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,0.25);overflow:hidden;}
+.mr-modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 28px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:2;background:var(--pierre);}
 .mr-modal-header-text{flex:1;}
 .mr-modal-eyebrow{font-family:var(--fm);font-size:10px;color:var(--ocre);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;}
 .mr-modal-title{font-family:var(--ff);font-size:19px;font-weight:600;line-height:1.3;}
@@ -318,7 +328,7 @@ a{color:inherit;}
 .mr-modal-close:hover{color:var(--ardoise);}
 .mr-modal-intro{font-size:13px;color:var(--mica);line-height:1.7;padding:0 28px;font-style:italic;margin-top:12px;}
 .mr-modal-body{flex:1;overflow:hidden;display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1.1fr);gap:0;min-height:0;}
-.mr-modal-form{overflow-y:auto;padding:20px 28px;border-right:1px solid var(--border);}
+.mr-modal-form{overflow-y:auto;padding:20px 28px;border-right:1px solid var(--border);overscroll-behavior:contain;}
 .mr-modal-form-title{font-family:var(--ff);font-size:13px;font-weight:600;color:var(--ardoise);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
 .mr-modal-form-title:not(:first-child){margin-top:22px;}
 .mr-modal-field{margin-bottom:12px;}
@@ -356,7 +366,7 @@ a{color:inherit;}
 .mr-depot-radon-item-meta{font-size:10.5px;color:var(--mica);margin-top:4px;}
 .mr-depot-radon-item-action{margin-top:6px;font-size:10.5px;color:#1a6b5c;font-style:italic;}
 .mr-depot-radon-item-warning{font-size:10.5px;color:var(--mica);font-style:italic;margin-top:6px;line-height:1.5;}
-.mr-modal-preview{overflow-y:auto;padding:20px 28px;background:#fff;}
+.mr-modal-preview{overflow-y:auto;padding:20px 28px;background:#fff;overscroll-behavior:contain;}
 .mr-modal-preview-label{font-family:var(--fm);font-size:10px;color:var(--mica);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;}
 .mr-preview-paper{background:white;border:1px solid var(--brume);border-radius:4px;padding:28px 32px;font-family:var(--fu);font-size:12px;line-height:1.6;color:var(--ardoise);box-shadow:0 2px 8px rgba(31,35,41,0.04);}
 .mr-preview-band{font-family:var(--ff);font-size:11px;color:var(--ocre);letter-spacing:1px;padding-bottom:10px;margin-bottom:16px;border-bottom:1px solid var(--brume);}
@@ -372,7 +382,7 @@ a{color:inherit;}
 .mr-preview-refs li{margin-bottom:3px;}
 .mr-preview-placeholder{background:rgba(194,133,51,0.12);color:var(--ocre);padding:1px 3px;border-radius:2px;font-family:var(--fm);font-size:11px;}
 .mr-preview-foot{text-align:center;font-family:var(--fm);font-size:10px;color:var(--mica);margin-top:20px;padding-top:10px;border-top:1px solid var(--brume);}
-.mr-modal-actions{display:flex;gap:10px;padding:16px 28px;border-top:1px solid var(--border);background:var(--brume);flex-wrap:wrap;align-items:center;}
+.mr-modal-actions{display:flex;gap:10px;padding:16px 28px;border-top:1px solid var(--border);background:var(--brume);flex-wrap:wrap;align-items:center;position:sticky;bottom:0;z-index:2;}
 .mr-modal-actions-hint{font-size:11px;color:var(--mica);font-style:italic;flex:1;min-width:200px;}
 .mr-btn-primary{background:var(--maquis);color:var(--pierre);border:none;padding:10px 20px;border-radius:6px;font-size:13px;font-family:var(--fu);font-weight:500;cursor:pointer;transition:background .15s;}
 .mr-btn-primary:hover{background:#4d6e47;}
@@ -431,8 +441,8 @@ a{color:inherit;}
   .lp-nav-burger{display:flex;}
   .lp-mobile-menu{display:flex;}
   .mr-modal-body{grid-template-columns:1fr;}
-  .mr-modal-form{border-right:none;border-bottom:1px solid var(--border);max-height:45vh;}
-  .mr-modal-preview{max-height:45vh;}
+  .mr-modal-form{border-right:none;border-bottom:1px solid var(--border);max-height:45vh;max-height:45dvh;}
+  .mr-modal-preview{max-height:45vh;max-height:45dvh;}
   .mr-antennes-kpis, .mr-etab-kpis, .mr-corse-kpis{grid-template-columns:repeat(2,1fr);}
 }
 @media (max-width:768px){
@@ -455,7 +465,12 @@ a{color:inherit;}
   .mr-antennes-filters{padding:10px 12px;}
   .mr-citoyen{padding:48px 20px;}
   .mr-footer{padding:28px 20px;}
-  .mr-modal{max-height:96vh;}
+  /* Panneau plein écran sur mobile plutôt qu'une carte centrée avec marge — supprime tout
+     risque de dépassement de viewport (cause la plus probable du bug croix-disparaît, cf.
+     commentaire .mr-modal ci-dessus) et donne un bouton de sortie pleine largeur toujours
+     visible en bas (.mr-modal-actions, déjà sticky) en plus de la croix en haut (déjà sticky). */
+  .mr-modal-backdrop{padding:0;}
+  .mr-modal{max-width:100%;width:100%;height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;border-radius:0;}
   .mr-modal-header{padding:18px 20px 12px;}
   .mr-modal-intro{padding:0 20px;}
   .mr-modal-form, .mr-modal-preview{padding:16px 20px;}
