@@ -369,7 +369,12 @@ a{color:inherit;}
 .mr-modal-preview{overflow-y:auto;padding:20px 28px;background:#fff;overscroll-behavior:contain;}
 .mr-modal-preview-label{font-family:var(--fm);font-size:10px;color:var(--mica);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;}
 .mr-preview-paper{background:white;border:1px solid var(--brume);border-radius:4px;padding:28px 32px;font-family:var(--fu);font-size:12px;line-height:1.6;color:var(--ardoise);box-shadow:0 2px 8px rgba(31,35,41,0.04);}
-.mr-preview-band{font-family:var(--ff);font-size:11px;color:var(--ocre);letter-spacing:1px;padding-bottom:10px;margin-bottom:16px;border-bottom:1px solid var(--brume);}
+/* B1 (2026-08-19) — bandeau/pied Tellux déplacés hors de .mr-preview-paper : ce ne sont plus des
+   lignes de la lettre (corps imprimable) mais des légendes d'app, au-dessus/en-dessous de la
+   « feuille ». Miroir du PDF : bandeau → pdfmake header (page margin), pied → pdfmake footer
+   (déjà hors content avant ce changement). Le corps du courrier lit désormais comme émanant
+   uniquement de la mairie, sur écran comme dans le PDF téléchargé. */
+.mr-preview-band{font-family:var(--ff);font-size:11px;color:var(--ocre);letter-spacing:1px;text-align:center;margin-bottom:8px;}
 .mr-preview-expediteur{white-space:pre-line;margin-bottom:16px;}
 .mr-preview-destinataire{white-space:pre-line;margin-bottom:16px;margin-left:auto;text-align:left;max-width:50%;}
 .mr-preview-objet{font-weight:600;margin-bottom:14px;}
@@ -381,7 +386,7 @@ a{color:inherit;}
 .mr-preview-refs{font-size:10.5px;color:var(--mica);line-height:1.5;padding-left:16px;margin:0;}
 .mr-preview-refs li{margin-bottom:3px;}
 .mr-preview-placeholder{background:rgba(194,133,51,0.12);color:var(--ocre);padding:1px 3px;border-radius:2px;font-family:var(--fm);font-size:11px;}
-.mr-preview-foot{text-align:center;font-family:var(--fm);font-size:10px;color:var(--mica);margin-top:20px;padding-top:10px;border-top:1px solid var(--brume);}
+.mr-preview-foot{text-align:center;font-family:var(--fm);font-size:10px;color:var(--mica);margin-top:8px;}
 .mr-modal-actions{display:flex;gap:10px;padding:16px 28px;border-top:1px solid var(--border);background:var(--brume);flex-wrap:wrap;align-items:center;position:sticky;bottom:0;z-index:2;}
 .mr-modal-actions-hint{font-size:11px;color:var(--mica);font-style:italic;flex:1;min-width:200px;}
 .mr-btn-primary{background:var(--maquis);color:var(--pierre);border:none;padding:10px 20px;border-radius:6px;font-size:13px;font-family:var(--fu);font-weight:500;cursor:pointer;transition:background .15s;}
@@ -877,7 +882,12 @@ a{color:inherit;}
       <div class="mr-modal-form" id="mr-modal-form"></div>
       <div class="mr-modal-preview">
         <div class="mr-modal-preview-label" data-i18n-key="modal_preview_label">Prévisualisation</div>
+        <!-- Bandeau/pied Tellux hors de la « feuille » .mr-preview-paper (B1, 2026-08-19) : la
+             lettre elle-même (paper) doit lire comme émanant uniquement de la mairie. Ces deux
+             légendes restent visibles comme chrome d'app, hors du contenu imprimable. -->
+        <div class="mr-preview-band" id="mr-preview-band"></div>
         <div class="mr-preview-paper" id="mr-preview-paper"></div>
+        <div class="mr-preview-foot" id="mr-preview-foot"></div>
       </div>
     </div>
     <div class="mr-modal-actions">
@@ -1569,6 +1579,13 @@ a{color:inherit;}
     var t = currentTemplate;
     var bandeau = templatesData && templatesData._meta ? templatesData._meta.bandeau_canonical : 'Tellux — Révéler l\'invisible';
     var pied = templatesData && templatesData._meta ? templatesData._meta.pied_canonical : "Courrier préparé avec l'appui de Tellux · tellux.pages.dev";
+    // B1 (2026-08-19) — bandeau/pied Tellux rendus hors de .mr-preview-paper (la « feuille »),
+    // dans les légendes d'app sœurs #mr-preview-band/#mr-preview-foot. Le corps du courrier
+    // (paper) ne contient plus aucune mention Tellux, sur écran comme dans le PDF téléchargé.
+    var bandCaption = document.getElementById('mr-preview-band');
+    if (bandCaption) bandCaption.textContent = bandeau;
+    var footCaption = document.getElementById('mr-preview-foot');
+    if (footCaption) footCaption.textContent = pied;
 
     var expediteurHtml = (t.expediteur || []).map(function(l){ return substituteHtml(l.replace(/\t/g, '  '), fieldValues); }).join('<br>');
     var destinataireHtml = (t.destinataire_bloc || []).map(function(l){ return substituteHtml(l, fieldValues); }).join('<br>');
@@ -1580,7 +1597,6 @@ a{color:inherit;}
     var refsHtml = (t.references || []).map(function(r){ return '<li>' + substituteHtml(r, fieldValues) + '</li>'; }).join('');
 
     preview.innerHTML =
-      '<div class="mr-preview-band">' + escapeHtml(bandeau) + '</div>' +
       '<div class="mr-preview-expediteur">' + expediteurHtml + '</div>' +
       '<div class="mr-preview-destinataire">' + destinataireHtml + '</div>' +
       '<div class="mr-preview-objet">' + objetHtml + '</div>' +
@@ -1588,8 +1604,7 @@ a{color:inherit;}
       '<div class="mr-preview-corps">' + corpsHtml + '</div>' +
       (salutationHtml ? '<div class="mr-preview-salutation">' + salutationHtml + '</div>' : '') +
       (signatureHtml ? '<div class="mr-preview-signature">' + signatureHtml + '</div>' : '') +
-      (refsHtml ? '<div class="mr-preview-refs-title">' + escapeHtml(jt('references_legales', 'Références légales')) + '</div><ul class="mr-preview-refs">' + refsHtml + '</ul>' : '') +
-      '<div class="mr-preview-foot">' + escapeHtml(pied) + '</div>';
+      (refsHtml ? '<div class="mr-preview-refs-title">' + escapeHtml(jt('references_legales', 'Références légales')) + '</div><ul class="mr-preview-refs">' + refsHtml + '</ul>' : '');
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1612,7 +1627,6 @@ a{color:inherit;}
     var refsList = (tpl.references || []).map(function(r){ return { text: substitute(r, values), style: 'refs' }; });
 
     var content = [
-      { text: bandeau, style: 'band', margin: [0, 0, 0, 18] },
       { text: expediteurText, style: 'sender', margin: [0, 0, 0, 14] },
       { text: destinataireText, style: 'recipient', alignment: 'right', margin: [0, 0, 0, 18] },
       { text: objetText, style: 'subject', margin: [0, 0, 0, 14] },
@@ -1638,7 +1652,10 @@ a{color:inherit;}
         keywords: 'Tellux, loi Abeille, ANFR, commune'
       },
       pageSize: 'A4',
-      pageMargins: [54, 54, 54, 64],
+      // B1 (2026-08-19) — bandeau déplacé de content (corps de la lettre) vers header (marge
+      // de page, hors zone lettre), même traitement que pied/footer déjà en place. Marge haute
+      // 54→64 pour laisser la place au bandeau, symétrique de la marge basse existante (footer).
+      pageMargins: [54, 64, 54, 64],
       defaultStyle: { font: 'Roboto', fontSize: 10.5, lineHeight: 1.4, color: '#1F2329' },
       styles: {
         band: { fontSize: 10, color: '#C28533', characterSpacing: 1, bold: true },
@@ -1651,6 +1668,14 @@ a{color:inherit;}
         refs: { fontSize: 9, color: '#74706A', lineHeight: 1.35 }
       },
       content: content,
+      header: function(){
+        return {
+          text: bandeau,
+          style: 'band',
+          alignment: 'center',
+          margin: [54, 18, 54, 0]
+        };
+      },
       footer: function(currentPage, pageCount){
         return {
           text: pied + '    ·    page ' + currentPage + ' / ' + pageCount,
