@@ -37,7 +37,9 @@ Altiani, Biguglia, Bisinchi, Borgo, Brando, Castellare-Di-Mercurio, Centuri, Erb
 **Communes catégorie 3** (liste partielle — voir avertissement §6) :  
 Albertacce, Algajola, Aregno, Asco, Avapessa, Barbaggio, Bastia, Belgodère, Calacuccia, Calenzana, Calvi, Canale-di-Verde, Canavaggia, Casamaccioli, Casanova, Castifao, Castiglione, Castineta, Castirla, Cateri, Chisa, Corbara, Corscia, Corte, Costa, Farinole, Favalello, Feliceto, Furiani, Galeria, Ghisoni, Isolaccio-di-Fiumorbo, Lama, Lavatoggio, Lento, Linguizzetta, Lozzi, Lumio, Manso, Mausoleo, Moltifao, Moncale, Montegrosso, Monticello, Morosaglia, Muracciole, Muro, Nessa, Noceta, Novella, Occhiatana, Oletta, Olmeta-di-Capocorso, Olmeta-di-Tuda, Olmi-Cappella, Omessa, Palasca, Patrimonio, Piedigriggio, Pietralba, Piève, Pigna, Pioggiola, Poggio-di-Nazza, Poggio-di-Venaco, Poggio-d'Oletta, Popolasca, Prato-di-Giovellina, Prunelli-di-Fiumorbo, Rapale, Saint-Florent, San-Gavino-di-Fiumorbo, San-Gavino-di-Tenda…
 
-**Communes catégorie 1** : toutes les autres communes de 2B (~250 communes), non représentées dans Tellux.
+**Communes catégorie 1** : toutes les autres communes de 2B (~107 communes), non représentées dans Tellux.
+
+> **Correction 2026-07-16.** Valeur antérieure « ~250 communes » erronée (dépassait l'effectif total de la Haute-Corse). Décompte dur : la Haute-Corse compte ~236 communes ; le geojson `radon_zones_corse.geojson` en recense 129 en catégories 2/3 (92 cat 3 + 37 cat 2, vérifié contre HEAD 4a45c0a + arrêté du 27 juin 2018). Reste ≈ **107 communes en catégorie 1** (zone 1 = potentiel faible). ⚠ **Précision (vérif Légifrance) :** l'arrêté du 27 juin 2018 énonce bien la zone 1 comme **défaut explicite** du département de Haute-Corse (« tout le département en zone 1, sauf [communes zone 2]… sauf [communes zone 3] ») — ce sont les communes zone 2/3 qui sont listées comme exceptions ; les communes zone 1 ne sont pas énumérées individuellement (elles sont le résidu). La Corse-du-Sud (2A) est intégralement catégorie 3. Aucun impact public : la zone 1 n'est pas stockée dans le geojson ni affichée sur la carte (choix de lisibilité Tellux, pas une propriété de l'arrêté).
 
 ---
 
