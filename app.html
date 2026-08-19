@@ -216,37 +216,6 @@
   letter-spacing:0.01em;
 }
 
-/* Tooltip Points chauds U/Th — contenu long (notes documentaires 200+ car.)
-   width:max-content + max-width:280px : le tooltip absolu shrink-to-fit
-   prendrait sinon la largeur min-content (mot le plus long ~100 px) et
-   wrapperait chaque mot sur sa propre ligne. */
-.leaflet-tooltip.tellux-pc-tooltip{
-  width:max-content;
-  max-width:280px;
-  white-space:normal;
-  line-height:1.4;
-  font-size:12px;
-  padding:8px 10px;
-  background:var(--tx-pierre);
-  border:1px solid var(--border);
-  border-radius:8px;
-  box-shadow:0 2px 10px rgba(0,0,0,.15);
-  color:var(--tx-ardoise);
-}
-.leaflet-tooltip.tellux-pc-tooltip em{
-  font-size:11px;
-  color:var(--tx-mica);
-  line-height:1.35;
-  display:block;
-  margin-top:4px;
-}
-@media (max-width:768px){
-  .leaflet-tooltip.tellux-pc-tooltip{
-    max-width:min(260px,calc(100vw - 40px));
-    font-size:11px;
-  }
-}
-
 /* ═══ Mesures EM : layer certifiées ANFR/EXEM ═══ */
 @keyframes cert-halo-pulse {
   0%   { box-shadow: 0 0 0 0 rgba(194, 133, 51, 0.8); }
@@ -624,19 +593,19 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-openrad{background:#e7f0ee!important;color:#2f5f54!important;border-color:#4a8a7a!important;font-weight:500;}
 .on-foret{background:#eef3e9!important;color:#3F5B3A!important;border-color:#6b8a5c!important;font-weight:500;}
 .on-postes{background:#faf2e3!important;color:#8A5E22!important;border-color:#C28533!important;font-weight:500;}
-.on-points-chauds{background:#fdf4f3!important;color:#8E2F1F!important;border-color:#c16b5a!important;font-weight:500;}
 .on-sites-remarq{background:#e8eef5!important;color:#1F3A5F!important;border-color:#5a7a9e!important;font-weight:500;}
 /* Lot 3.1 (2026-06-29) — affordance ON uniforme : toute couche active (.lbtn .on-*)
    reçoit un marqueur ✓ + gras, en plus de sa teinte propre. Corrige l'incohérence
    d'affordance signalée (certaines couches sans état visible net). */
 .lbtn[class*=" on-"]{font-weight:600;}
 .lbtn[class*=" on-"]::after{content:"\2713";margin-left:3px;font-size:9px;font-weight:700;line-height:1;opacity:.9;}
-/* Tooltip sites geophys remarquables — aligne sur pattern tellux-pc-tooltip
-   (Points chauds U/Th). Le commentaire ligne 219-222 explique pourquoi
-   width:max-content + max-width:280px est obligatoire : sans width
-   max-content, le tooltip absolu shrink-to-fit prendrait min-content
-   (mot le plus long ~100px) et wrapperait en colonne 99px observe en prod.
-   Sprint V5 13 mai 2026 — vraie cause format colonne identifiee. */
+/* Tooltip sites geophys remarquables — width:max-content + max-width:280px
+   obligatoire : sans width max-content, le tooltip absolu shrink-to-fit
+   prendrait min-content (mot le plus long ~100px) et wrapperait en colonne
+   99px observe en prod. Sprint V5 13 mai 2026 — vraie cause format colonne
+   identifiee. (Pattern partagé à l'origine avec .tellux-pc-tooltip, retirée
+   le 2026-08-19 avec la couche carte Points chauds U/Th — cf. item 2,
+   chantier retrait U/Th public.) */
 .leaflet-tooltip.tellux-sr-tooltip{
   width:max-content;
   max-width:280px;
@@ -1556,7 +1525,12 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 
       <h5 class="subgroup-header">C. Sites documentaires</h5>
       <p class="subgroup-text">Catalogues documentaires et comparaisons. Données issues de la littérature ou de mesures externes — mesures in situ requises pour confirmation locale.</p>
-      <button class="lbtn" id="b-points-chauds" data-domains="ionisant" title="Sites U/Th à mesurer — catalogue de sites candidats à des mesures radiométriques (doses non mesurées, sources documentaires BRGM ou analogies géologiques)" onclick="togPointsChauds(this)"><span style="display:inline-block;width:8px;height:8px;background:#8E2F1F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Sites U/Th à mesurer</button>
+      <!-- Couche « Sites U/Th à mesurer » retirée de la carte publique le 2026-08-19 (décision
+           Soleil, risque nocebo A.4 sur un catalogue 100% documentaire/non mesuré) — contenu
+           transposé en fiche documentaire sur cadre-scientifique.html. Le chargement des données
+           (POINTS_CHAUDS_RADIO, via loadPointsChaudsRadio()/loadSitesApp()) reste actif au boot
+           pour le boost ponctuel du calcul gamma composite (calcGammaAmbient) — voir commentaire
+           au-dessus de loadPointsChaudsRadio(). -->
       <button class="lbtn" id="b-sites-remarq" data-domains="statique ionisant" title="Anomalies de substrat à signature EM réelle — 3 sites ophiolitiques (serpentinite Albu/Nonza, magnétite Farinole) à anomalie magnétique + surveillance Th-234 naturel (Bouches de Bonifacio — étude IRSN 2004, désormais ASNR). 4 sites documentaires, mesures in situ requises." onclick="togSitesRemarquables(this)"><span style="display:inline-block;width:10px;height:10px;background:#1F3A5F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Anomalies de substrat (serpentinite, magnétite) &amp; Th-234</button>
       <button class="lbtn" id="b-crustal" data-domains="statique" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF) — opt-in, comparaison locale/mondiale" onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales)</button>
 
@@ -2168,8 +2142,6 @@ var JS_STRINGS_EN = {
   mesures_em_prefix: "EM measurements — ",
   mesures_em_infix: " certified ANFR/EXEM sheets (2024–2026) · ",
   mesures_em_suffix: " citizen contribution(s)",
-  sites_uth_prefix: "U/Th sites to measure — ",
-  sites_uth_suffix: " candidate sites loaded · doses not measured, in situ measurement required",
   sites_remarq_prefix: "Substrate anomalies (serpentinite, magnetite) & Th-234 — ",
   sites_remarq_suffix: " sites · documentary data, in situ measurement required",
   cert_unavailable: "Certified sheets unavailable — try again shortly.",
@@ -2376,12 +2348,6 @@ var JS_STRINGS_EN = {
   openrad_note_prefix: "Indicative citizen measurement, heterogeneous sensor, ",
   openrad_note_bold: "not certified",
   openrad_note_suffix: ". Gamma/X, not radon. Source: OpenRadiation (ODbL).",
-  pc_dose_non_mesuree: "Dose not measured",
-  pc_dose_estimee_suffix: " nSv/h estimated",
-  pc_statut_mesure_requise: "In situ measurement required",
-  pc_statut_indice_documente: "Documented indicator (BRGM)",
-  pc_precision_prefix: " · precision: ",
-  pc_rayon_prefix: "radius ",
   sr_cat_ophiolite: "Ophiolite",
   sr_cat_minier: "Historical mining site",
   sr_cat_surveillance: "Radiological monitoring",
@@ -2687,7 +2653,9 @@ const wmsEmag=L.imageOverlay(
 const lTherm=L.layerGroup();
 const lFailles=L.layerGroup();
 const lPostesSources=L.layerGroup();
-const lPointsChaudsRadio=L.layerGroup();
+// lPointsChaudsRadio (couche carte Points chauds U/Th) retirée le 2026-08-19 avec son bouton —
+// voir commentaire au-dessus de loadPointsChaudsRadio() : les données POINTS_CHAUDS_RADIO
+// restent chargées au boot pour le calcul, seul l'affichage carte a été retiré.
 // lSit/lSit2/lAlign/lEgl/lTour/lIndu/lCast/lPont : couches patrimoniales migrées vers patrimoine.html
 // anciennes couches supprimées — déplacées hors de ce fichier
 const lBT=L.layerGroup(),lAnt=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lHotRF=L.layerGroup(),lSitesRemarq=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
@@ -2753,15 +2721,6 @@ const LEGEND_HTML={
     '<div class="leg-why">Points de référence pour calibrer les anomalies locales mesurées.</div>'+
     '<div class="leg-src">BRGM · ASNR · EMAG2v3</div>'+
     '</div>',
-  pointsChauds:'<div class="leg-block">'+
-    '<b class="leg-title">Sites U/Th à mesurer</b>'+
-    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Catalogue de sites candidats à des mesures radiométriques</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#8E2F1F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span>Site candidat (dose non mesurée)</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;border:1px dashed #8E2F1F;border-radius:50%;background:#8E2F1F14;vertical-align:middle;margin-right:4px"></span>Cercle pointillé — rayon d\'influence indicatif (m, variable par site)</div>'+
-    '<div class="leg-row" style="font-size:9px;color:var(--tx3)">Sources documentaires BRGM · mesures in situ requises</div>'+
-    '<div class="leg-why">Uranium et thorium émettent un rayonnement ionisant naturel mesurable en surface.</div>'+
-    '<div class="leg-src">BRGM · analogies géologiques · Supabase</div>'+
-    '</div>',
   radon:'<div class="leg-block"><b class="leg-title">Potentiel radon</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Exhalation du sous-sol, géologie granitique</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#C28533;opacity:0.4;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Zone 3 — potentiel radon significatif</div>'+
@@ -2818,7 +2777,6 @@ const LEGEND_HTML_EN={
   prod:'<div class="leg-block"><b class="leg-title">Generation sites</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Corsican power grid generation plants</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydro dam</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Run-of-river hydro</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Wind</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogas</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Gas turbine (combustion turbine)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnection</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Size according to power output:</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
   con:'<div class="leg-block"><b class="leg-title">EM measurements</b><div class="leg-sub" style="font-size:10px;color:var(--tx-mica,#7B7770);margin:2px 0 4px">30 ANFR/EXEM sheets + citizen contributions</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Compliant &lt; 5 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Compliant 5–28 V/m</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#7c0000;transform:rotate(45deg);border:2px solid #C28533;vertical-align:middle;margin-right:4px"></span> Non-compliant &gt; 28 V/m (e.g. Monticello)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Detail per sheet by clicking the marker</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Low frequency 9 kHz–100 kHz</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#5c3a9b;border-radius:50%;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Citizen contribution (cluster)</div><div class="leg-src">ANFR/EXEM · Tellux crowdsourced</div></div>',
   sitesRemarq:'<div class="leg-block"><b class="leg-title">Substrate anomalies (serpentinite, magnetite) & Th-234</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Sites with a genuine EM/ionizing link — magnetic substrate + Th-234 monitoring</div><div class="leg-row"><svg width="12" height="12" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px"><polygon points="7,1 13,5.5 10.5,13 3.5,13 1,5.5" fill="#1F3A5F" stroke="#F5F0E7" stroke-width="1.5"/></svg> Ophiolite — serpentinite &amp; magnetite (magnetic anomaly)</div><div class="leg-row"><svg width="12" height="12" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px"><polygon points="7,1 8.5,5.5 13,5.5 9.25,8.25 10.75,13 7,10.25 3.25,13 4.75,8.25 1,5.5 5.5,5.5" fill="#3F5B3A" stroke="#F5F0E7" stroke-width="1"/></svg> Natural Th-234 monitoring (Bonifacio)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">4 sites · documentary data · field measurement required</div><div class="leg-why">Reference points for calibrating measured local anomalies.</div><div class="leg-src">BRGM · ASNR · EMAG2v3</div></div>',
-  pointsChauds:'<div class="leg-block"><b class="leg-title">U/Th sites to measure</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Catalog of candidate sites for radiometric measurement</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#8E2F1F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span>Candidate site (dose not measured)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;border:1px dashed #8E2F1F;border-radius:50%;background:#8E2F1F14;vertical-align:middle;margin-right:4px"></span>Dashed circle — indicative radius of influence (m, varies per site)</div><div class="leg-row" style="font-size:9px;color:var(--tx3)">BRGM documentary sources · in situ measurement required</div><div class="leg-why">Uranium and thorium emit natural ionizing radiation measurable at the surface.</div><div class="leg-src">BRGM · geological analogues · Supabase</div></div>',
   radon:'<div class="leg-block"><b class="leg-title">Radon potential</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Subsurface exhalation, granitic geology</div><div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#C28533;opacity:0.4;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Zone 3 — significant radon potential</div><div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#EDD59A;opacity:0.6;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Zone 2 — low potential, specific geological factors</div><div class="leg-src">ASNR · order of June 27, 2018 · 216 in zone 3 + 37 in zone 2</div></div>',
   radonDepots:'<div class="leg-block"><b class="leg-title">Radon deposits, public-facing facilities (certified)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Measurement results submitted by municipalities, verified by Tellux</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;transform:rotate(45deg);vertical-align:middle;margin-right:4px"></span>Below the 300 Bq/m³ marker</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#b85c00;transform:rotate(45deg);vertical-align:middle;margin-right:4px"></span>Above the 300 Bq/m³ marker — a marker, not an alert threshold</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Precise point per facility, never merged with the zone 2/3 mapping. Certified point-in-time measurement, not extrapolable.</div><div class="leg-src">Municipal submission · ASNR-approved body · NF EN ISO 11665-4 · manual Tellux review before publication</div></div>',
   air:'<div class="leg-block"><b class="leg-title">Fine particulate matter PM2.5 (air)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">2024 modeled annual average · Qualitair Corse · 200 m</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Color rendering = official Qualitair Corse scale (deeper hue = higher concentration). Displayed at reduced opacity.</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #6b8fb5;margin-top:3px;font-size:9px;color:#4a4f5e;font-style:italic">▸ Annual reference points: WHO 5 µg/m³ · EU limit value 25 µg/m³.<br><span style="font-size:8px;color:#8b92a5">Regulatory reference points — not a Tellux alert threshold</span></div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#eef3f7;border:1px solid #cddbe6;border-radius:4px;font-size:8.5px;color:#3f5b7a;line-height:1.4"><b>Displayed for visualization.</b> Mixed origin, natural and anthropogenic; classified here as an anthropogenic source for exposure reading purposes. Not a Tellux calculation.</div><div class="leg-src">Qualitair Corse · 200 m modeling · ODbL 1.0 / CC BY-SA 2.0 FR</div></div>',
@@ -3094,8 +3052,8 @@ function validateContrib(){
 // Résolution lazy EN — appelée uniquement au rendu (updateLegendPanel, après
 // DOMContentLoaded), jamais au niveau module : LEGEND_HTML_EN n'est encore
 // rempli que pour 16/22 blocs (Groupes 1+2/3) — repli automatique sur le FR
-// pour les 6 blocs restants (pointsChauds, radon, radonDepots, air, openrad,
-// postesSources) tant que leur traduction n'est pas fournie, même principe
+// pour les blocs restants (radon, radonDepots, air, openrad, postesSources)
+// tant que leur traduction n'est pas fournie, même principe
 // anti-drift que jt()/I18N_ENTRIES : jamais de DOM cassé faute de traduction.
 function legendHtmlFor(id){
   return (document.documentElement.lang === 'en' && typeof LEGEND_HTML_EN !== 'undefined' && LEGEND_HTML_EN[id]) ? LEGEND_HTML_EN[id] : LEGEND_HTML[id];
@@ -4649,6 +4607,13 @@ function adaptSiteUthFromApp(s) {
   const p = s.properties || {};
   return { id: s.slug, nom: s.nom, lat: s.lat, lon: s.lon, dose_gamma_estimee_nSv_h: p.dose_gamma_estimee_nSv_h != null ? p.dose_gamma_estimee_nSv_h : null, rayon_influence_m: p.rayon_influence_m || 500, statut: p.statut_mesure || 'indice_documente_non_mesure', precision_coord: s.precision_coord || null, note: s.description || '' };
 }
+// Alias historique — depuis le 2026-08-19, n'est plus appelé QUE depuis le boot
+// (Promise.all plus bas dans ce fichier) : la couche carte « Sites U/Th à mesurer »
+// (bouton, layer group, tooltip) a été retirée (risque nocebo A.4, décision Soleil,
+// contenu transposé en fiche documentaire cadre-scientifique.html). Ce chargement
+// reste nécessaire et volontairement inconditionnel : POINTS_CHAUDS_RADIO alimente
+// le boost ponctuel de calcGammaAmbient (~L.5330) indépendamment de toute UI —
+// le retirer casserait silencieusement ce calcul.
 function loadPointsChaudsRadio() { return loadSitesApp(); }
 
 // ═══ Source RF réelle : antennes ANFR (Supabase antennas_corse) — PUBLIÉ EN PROD (label « estimation centrale », ADR-032) ═══
@@ -7565,52 +7530,14 @@ async function togPostesSources(btn){
   info('Postes sources EDF SEI chargés — ' + (POSTES_SOURCES||[]).length + ' postes (OSM)',null,5000);
 }
 
-// ═══ Rendu / toggle points chauds U/Th ═══
-// Formatte le contenu du tooltip d'un site U/Th en fonction de son statut.
-// Doses null => affichage "non mesurée" + badge statut ; jamais d'extrapolation.
-function _formatPcTooltip(pc) {
-  const doseHtml = (pc.dose_gamma_estimee_nSv_h == null || !Number.isFinite(pc.dose_gamma_estimee_nSv_h))
-    ? '<span style="color:#8E2F1F;font-weight:600">'+jt('pc_dose_non_mesuree','Dose non mesurée')+'</span>'
-    : (pc.dose_gamma_estimee_nSv_h + jt('pc_dose_estimee_suffix',' nSv/h estimé'));
-  const statutLabel = pc.statut === 'mesure_requise'
-    ? jt('pc_statut_mesure_requise','Mesure in situ requise')
-    : (pc.statut === 'indice_documente_non_mesure' ? jt('pc_statut_indice_documente','Indice documenté (BRGM)') : '');
-  const precisionLabel = pc.precision_coord
-    ? jt('pc_precision_prefix',' · précision : ') + pc.precision_coord
-    : '';
-  return '<b>' + pc.nom + '</b>'
-    + '<br>' + doseHtml
-    + ' <span style="font-size:10px;color:var(--tx3)">('+jt('pc_rayon_prefix','rayon ') + pc.rayon_influence_m + ' m' + precisionLabel + ')</span>'
-    + (statutLabel ? '<br><span style="font-size:10px;color:#1F3A5F;font-weight:600">' + statutLabel + '</span>' : '')
-    + '<br><em>' + (pc.note || '') + '</em>';
-}
-let _pcRendered = false;
-function _renderPointsChauds() {
-  if (_pcRendered) return;
-  _pcRendered = true;
-  (POINTS_CHAUDS_RADIO || []).forEach(pc => {
-    const icon = L.divIcon({
-      className: 'pc-radio-icon',
-      html: '<div style="width:12px;height:12px;background:#8E2F1F;transform:rotate(45deg);border:2px solid #F5F0E7;box-shadow:0 1px 3px rgba(0,0,0,.4);"></div>',
-      iconSize: [18, 18]
-    });
-    // Cercle du rayon d'influence
-    L.circle([pc.lat, pc.lon], {radius: pc.rayon_influence_m, color:'#8E2F1F', fillColor:'#8E2F1F', fillOpacity:0.08, weight:1, dashArray:'3,3'})
-      .addTo(lPointsChaudsRadio);
-    L.marker([pc.lat, pc.lon], {icon})
-      .bindTooltip(_formatPcTooltip(pc),{sticky:true,direction:'top',className:'tellux-pc-tooltip',maxWidth:300})
-      .addTo(lPointsChaudsRadio);
-  });
-}
-async function togPointsChauds(btn){
-  if(map.hasLayer(lPointsChaudsRadio)){
-    map.removeLayer(lPointsChaudsRadio); showLegend('pointsChauds',false); btn.className='lbtn'; return;
-  }
-  await loadPointsChaudsRadio();
-  _renderPointsChauds();
-  lPointsChaudsRadio.addTo(map); showLegend('pointsChauds',true); btn.className='lbtn on-points-chauds';
-  info(jt('sites_uth_prefix', 'Sites U/Th à mesurer — ') + (POINTS_CHAUDS_RADIO||[]).length + jt('sites_uth_suffix', ' sites candidats chargés · doses non mesurées, mesures in situ requises'),null,5000);
-}
+// ═══ Points chauds U/Th — couche carte retirée le 2026-08-19 (décision Soleil, risque nocebo
+// A.4 sur un catalogue 100% documentaire/non mesuré) ═══
+// _formatPcTooltip / _renderPointsChauds / togPointsChauds ainsi que le bouton #b-points-chauds,
+// la couche lPointsChaudsRadio, la légende pointsChauds et le CSS .tellux-pc-tooltip/.on-points-chauds
+// ont été retirés avec elle. Contenu transposé en fiche documentaire sur cadre-scientifique.html.
+// Le chargement des données (POINTS_CHAUDS_RADIO) reste actif et indépendant de cette UI — voir
+// commentaire au-dessus de loadPointsChaudsRadio() : le boost ponctuel du calcul gamma composite
+// (calcGammaAmbient) continue de s'appliquer exactement comme avant.
 
 // ═══ Anomalies de substrat (serpentinite, magnétite) & Th-234 ═══
 // M2 (2026-05-13) — source unique public/data/sites_app.json (filter type=site_em).
@@ -7675,7 +7602,8 @@ function _srFormatTooltip(s) {
 }
 
 // Sprint V5 13 mai 2026 — retour au pattern bindTooltip simple identique
-// a tellux-pc-tooltip (qui marche). Revert zele V2 (panBy + tooltipopen
+// à celui utilisé alors par .tellux-pc-tooltip (couche Points chauds U/Th,
+// retirée depuis — cf. commentaire plus haut). Revert zele V2 (panBy + tooltipopen
 // listener inertes), V3 (flip direction close+reopen), V4 (re-bind on
 // click direction switch). La vraie cause format colonne etait CSS
 // (manque de width:max-content), pas JS.
@@ -8958,8 +8886,6 @@ function capCleanup(){
 ["lyr_hyd_tt","#b-hyd","title","Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct","Falde è corsi d'acqua sutterranei (BRGM REMNAPPE) — stratu visuale ; u calculu adopra un dataset distintu","Groundwater and underground watercourses (BRGM REMNAPPE) — visual layer; the calculation uses a separate dataset"],
 ["lyr_foret","#b-foret","","Forêts publiques","Fureste publiche","Public forests"],
 ["lyr_foret_tt","#b-foret","title","Forêts publiques ONF via WMS IGN Géoplateforme — couche visuelle niveau A (pas de modulation calcul). BD Forêt V2 complète non disponible en WMS public.","Fureste publiche ONF via WMS IGN Géoplateforme — stratu visuale livellu A (nisuna mudulazione di calculu). BD Forêt V2 cumpleta micca dispunibule in WMS publicu.","ONF public forests via IGN Géoplateforme WMS — level A visual layer (no calculation modulation). Full BD Forêt V2 not available as public WMS."],
-["lyr_uth","#b-points-chauds","","Sites U/Th à mesurer","Siti U/Th da misurà","U/Th sites to measure"],
-["lyr_uth_tt","#b-points-chauds","title","Sites U/Th à mesurer — catalogue de sites candidats à des mesures radiométriques (doses non mesurées, sources documentaires BRGM ou analogies géologiques)","Siti U/Th da misurà — catalogu di siti candidati à misure radiometriche (dose micca misurate, fonti ducumentarie BRGM o analugie geulogiche)","U/Th sites to measure — catalog of candidate sites for radiometric measurement (doses not measured, BRGM documentary sources or geological analogues)"],
 ["lyr_remarq","#b-sites-remarq","","Anomalies de substrat (serpentinite, magnétite) & Th-234","Anumalie di sustratu (serpentinite, magnetite) & Th-234","Substrate anomalies (serpentinite, magnetite) & Th-234"],
 ["lyr_remarq_tt","#b-sites-remarq","title","Anomalies de substrat à signature EM réelle — 3 sites ophiolitiques (serpentinite Albu/Nonza, magnétite Farinole) à anomalie magnétique + surveillance Th-234 naturel (Bouches de Bonifacio — étude IRSN 2004, désormais ASNR). 4 sites documentaires, mesures in situ requises.","Anumalie di sustratu à signatura EM reale — 3 siti ofiolitichi (serpentinite Albu/Nonza, magnetite Farinole) à anumalia magnetica + surviglianza Th-234 naturale (Bocche di Bunifaziu — studiu IRSN 2004, oghje ASNR). 4 siti ducumentari, misure in situ richieste.","Substrate anomalies with a genuine EM signature — 3 ophiolitic sites (Albu/Nonza serpentinite, Farinole magnetite) with magnetic anomaly + natural Th-234 monitoring (Bouches de Bonifacio — 2004 IRSN study, now ASNR). 4 documentary sites, in situ measurement required."],
 ["lyr_crustal","#b-crustal","","Anomalies de référence (mondiales)","Anumalie di riferenza (mundiale)","Reference anomalies (worldwide)"],
