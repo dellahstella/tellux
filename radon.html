@@ -285,6 +285,11 @@ a{color:inherit;}
 .rd-legend-row{display:flex;align-items:center;gap:6px;margin-top:2px;}
 .rd-legend-swatch{width:12px;height:10px;border-radius:2px;display:inline-block;flex-shrink:0;}
 .rd-map-back{position:absolute;top:12px;right:12px;z-index:400;background:white;border:1px solid var(--brume);border-radius:6px;padding:7px 12px;font-size:11px;font-family:var(--fu);color:var(--tyrrh);text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+/* Recherche commune — repositionnée sous la carte, ancien onglet "Ma commune"
+   retiré (2026-08-20, décision Soleil : la zone est déjà lisible sur la
+   carte, l'onglet dédié n'apportait rien de plus pour son seul badge — le
+   texte d'obligations légales, lui, reste affiché ici). */
+.rd-commune-block{margin-top:48px;padding-top:32px;border-top:1px solid var(--brume);}
 .rd-map-back:hover{border-color:var(--tyrrh);}
 
 /* MOBILE */
@@ -375,14 +380,13 @@ a{color:inherit;}
 
   <div class="mr-tabs" role="tablist">
     <button class="mr-tab active" data-tab="carte" role="tab" aria-selected="true" data-i18n-key="tab_carte">Carte</button>
-    <button class="mr-tab" data-tab="commune" role="tab" aria-selected="false" data-i18n-key="tab_commune">Ma commune</button>
-    <button class="mr-tab" data-tab="courrier" role="tab" aria-selected="false" data-i18n-key="tab_courrier">Générer un courrier</button>
+    <button class="mr-tab" data-tab="courrier" role="tab" aria-selected="false" data-i18n-key="tab_courrier">Démarches</button>
   </div>
 
   <!-- ONGLET 1 : CARTE -->
   <section class="mr-tab-panel active" data-panel="carte" role="tabpanel" id="carte">
     <h2 class="mr-section-h2" data-i18n-key="carte_h2">Carte du potentiel radon</h2>
-    <p class="mr-section-sub" data-i18n-key="carte_sub">Trois couches, activables indépendamment : le zonage réglementaire ASNR, les dépôts de mesurage certifiés en établissements recevant du public, et la géologie BRGM comme repère de lecture. Pour les autres couches EM (magnétique, RF), voir <a href="app.html" data-i18n-key="carte_app_link">la cartographie EM</a>.</p>
+    <p class="mr-section-sub" data-i18n-key="carte_sub">Cinq couches, activables indépendamment : le zonage réglementaire ASNR, les dépôts de mesurage certifiés en établissements recevant du public, la géologie BRGM et les cavités souterraines comme repères de lecture, et les particules fines PM2,5 pour une lecture croisée de l'exposition. Pour les autres couches EM (magnétique, RF), voir <a href="app.html" data-i18n-key="carte_app_link">la cartographie EM</a>.</p>
     <div class="rd-map-wrap">
       <div class="rd-map-sidebar">
         <div class="rd-map-sidebar-title" data-i18n-key="sidebar_title">Couches</div>
@@ -396,6 +400,10 @@ a{color:inherit;}
           <span id="rd-geo-op-v">60%</span>
         </div>
         <div class="rd-lbtn-hint" data-i18n-key="lyr_geo_hint">Granite, schiste, calcaire — repère de lecture, pas une couche radon en soi.</div>
+        <button class="rd-lbtn" id="rd-b-cav" onclick="rdToggleCav(this)"><span class="sq" style="background:#5c3a9b"></span><span data-i18n-key="lyr_cav">Cavités souterraines</span></button>
+        <div class="rd-lbtn-hint" data-i18n-key="lyr_cav_hint">Grottes, karst, mines (BRGM) — mécanisme d'accumulation possible du radon en sous-sol.</div>
+        <button class="rd-lbtn" id="rd-b-air" onclick="rdToggleAir(this)"><span class="sq" style="background:#6b8fb5"></span><span data-i18n-key="lyr_air">Particules fines PM2,5</span></button>
+        <div class="rd-lbtn-hint" data-i18n-key="lyr_air_hint">Moyenne annuelle modélisée 2024 (Qualitair Corse). Mise en visualisation, pas un calcul Tellux.</div>
       </div>
       <div class="rd-map">
         <div id="rd-leaflet-map" style="height:100%;width:100%;"></div>
@@ -403,45 +411,56 @@ a{color:inherit;}
         <div class="rd-legend" id="rd-legend" hidden></div>
       </div>
     </div>
+
+    <!-- Recherche commune — sous la carte (ancien onglet dédié "Ma commune" retiré,
+         2026-08-20 : la zone à potentiel radon est déjà lisible sur la carte ci-dessus ;
+         le texte d'obligations légales, qui n'a pas d'équivalent visuel, reste ici. Les
+         dépôts ERP de la commune sélectionnée sont dans l'onglet "Démarches". -->
+    <div class="rd-commune-block">
+      <h2 class="mr-section-h2" data-i18n-key="commune_h2">Ma commune</h2>
+      <p class="mr-section-sub" data-i18n-key="commune_sub">Recherchez une commune corse pour connaître sa zone à potentiel radon et les obligations légales qui s'y appliquent.</p>
+
+      <div class="mr-commune-picker">
+        <label class="mr-commune-label" for="rd-commune-input" data-i18n-key="commune_label">Rechercher une commune</label>
+        <input type="text" id="rd-commune-input" class="mr-commune-input" list="rd-communes-corse" data-i18n-placeholder-key="commune_placeholder" placeholder="Ex. Ajaccio (2A)" autocomplete="off">
+        <datalist id="rd-communes-corse"></datalist>
+        <p class="mr-commune-hint" id="rd-commune-hint" data-i18n-key="commune_hint">360 communes corses. Tapez un nom pour commencer.</p>
+        <p class="mr-commune-selected empty" id="rd-commune-selected"></p>
+      </div>
+
+      <div id="rd-commune-fiche" hidden>
+        <h3 class="mr-fiche-commune-title" id="rd-fiche-title" data-i18n-key="commune_select_placeholder">Sélectionnez une commune</h3>
+
+        <section class="mr-geophys-section">
+          <h3 class="mr-geophys-title" data-i18n-key="geophys_title">Zone à potentiel radon</h3>
+          <p class="mr-geophys-lead" data-i18n-key="geophys_lead">Classement officiel ASNR (arrêté du 27 juin 2018), sinon estimation lithologique par défaut (zone 1).</p>
+          <div id="rd-geophys-body"><div class="mr-geophys-loading" data-i18n-key="geo_loading">Chargement...</div></div>
+        </section>
+
+        <section class="mr-etab-section" id="rd-radon-oblig-section" aria-labelledby="rd-radon-oblig-title">
+          <div class="mr-etab-header">
+            <h3 class="mr-etab-title" id="rd-radon-oblig-title" data-i18n-key="radon_oblig_title">Radon — obligations &amp; ressources</h3>
+          </div>
+          <p class="mr-etab-lead" data-i18n-key="radon_oblig_lead">Ce que prévoient les textes pour votre commune, selon sa zone à potentiel radon (ASNR). Relais du droit en vigueur ; ne constitue pas un conseil juridique.</p>
+          <div id="rd-radon-oblig-body"></div>
+        </section>
+      </div>
+    </div>
   </section>
 
-  <!-- ONGLET 2 : MA COMMUNE -->
-  <section class="mr-tab-panel" data-panel="commune" role="tabpanel">
-    <h2 class="mr-section-h2" data-i18n-key="commune_h2">Ma commune</h2>
-    <p class="mr-section-sub" data-i18n-key="commune_sub">Recherchez une commune corse pour connaître sa zone à potentiel radon, les obligations légales qui s'y appliquent et les dépôts de mesurage certifiés déjà publiés.</p>
-
-    <div class="mr-commune-picker">
-      <label class="mr-commune-label" for="rd-commune-input" data-i18n-key="commune_label">Rechercher une commune</label>
-      <input type="text" id="rd-commune-input" class="mr-commune-input" list="rd-communes-corse" data-i18n-placeholder-key="commune_placeholder" placeholder="Ex. Ajaccio (2A)" autocomplete="off">
-      <datalist id="rd-communes-corse"></datalist>
-      <p class="mr-commune-hint" id="rd-commune-hint" data-i18n-key="commune_hint">360 communes corses. Tapez un nom pour commencer.</p>
-      <p class="mr-commune-selected empty" id="rd-commune-selected"></p>
-    </div>
-
-    <div id="rd-commune-fiche" hidden>
-      <h3 class="mr-fiche-commune-title" id="rd-fiche-title" data-i18n-key="commune_select_placeholder">Sélectionnez une commune</h3>
-
-      <section class="mr-geophys-section">
-        <h3 class="mr-geophys-title" data-i18n-key="geophys_title">Zone à potentiel radon</h3>
-        <p class="mr-geophys-lead" data-i18n-key="geophys_lead">Classement officiel ASNR (arrêté du 27 juin 2018), sinon estimation lithologique par défaut (zone 1).</p>
-        <div id="rd-geophys-body"><div class="mr-geophys-loading" data-i18n-key="geo_loading">Chargement...</div></div>
-      </section>
-
-      <section class="mr-etab-section" id="rd-radon-oblig-section" aria-labelledby="rd-radon-oblig-title">
-        <div class="mr-etab-header">
-          <h3 class="mr-etab-title" id="rd-radon-oblig-title" data-i18n-key="radon_oblig_title">Radon — obligations &amp; ressources</h3>
-        </div>
-        <p class="mr-etab-lead" data-i18n-key="radon_oblig_lead">Ce que prévoient les textes pour votre commune, selon sa zone à potentiel radon (ASNR). Relais du droit en vigueur ; ne constitue pas un conseil juridique.</p>
-        <div id="rd-radon-oblig-body"></div>
-      </section>
-    </div>
-  </section>
-
-  <!-- ONGLET 3 : GÉNÉRER UN COURRIER -->
+  <!-- ONGLET 2 : DÉMARCHES (courriers + dépôts de la commune sélectionnée) -->
   <section class="mr-tab-panel" data-panel="courrier" role="tabpanel">
-    <h2 class="mr-section-h2" data-i18n-key="courrier_h2">Générer un courrier</h2>
-    <p class="mr-section-sub" data-i18n-key="courrier_sub">Quatre modèles de courriers radon, prêts à personnaliser : sélectionnez un modèle, remplissez les champs, téléchargez le document au format PDF. Les textes sont cadrés juridiquement mais restent des modèles que vous validez avant envoi.</p>
+    <h2 class="mr-section-h2" data-i18n-key="courrier_h2">Dépôts et courriers radon</h2>
+    <p class="mr-section-sub" data-i18n-key="courrier_sub">Les résultats de mesurage déjà publiés pour votre commune, et quatre modèles de courriers radon prêts à personnaliser : sélectionnez un modèle, remplissez les champs, téléchargez le document au format PDF. Les textes sont cadrés juridiquement mais restent des modèles que vous validez avant envoi.</p>
     <p class="mr-etab-note-eaje" id="rd-courrier-en-note" data-i18n-key="courrier_en_note" hidden>Note : les modèles de courriers eux-mêmes restent en français, quel que soit le réglage de langue de la page — ils s'adressent à des administrations françaises.</p>
+
+    <section class="mr-etab-section" id="rd-courrier-depots-section" aria-labelledby="rd-courrier-depots-title">
+      <div class="mr-etab-header">
+        <h3 class="mr-etab-title" id="rd-courrier-depots-title" data-i18n-key="courrier_depots_title">Dépôts de votre commune</h3>
+      </div>
+      <p class="mr-etab-lead" data-i18n-key="courrier_depots_lead">Résultats de mesurage déjà publiés, si votre commune a été sélectionnée dans l'onglet Carte.</p>
+      <div id="rd-courrier-depots-body"><p class="mr-depot-radon-empty" data-i18n-key="courrier_depots_none_selected">Sélectionnez votre commune dans l'onglet <a href="#carte" onclick="document.querySelector('.mr-tab[data-tab=&quot;carte&quot;]').click();return false;">Carte</a> pour voir les dépôts déjà publiés.</p></div>
+    </section>
 
     <h3 class="mr-courrier-group-title" data-i18n-key="group_citoyen">Citoyen</h3>
     <div class="mr-cards" id="rd-radon-citoyen-list"></div>
@@ -623,7 +642,12 @@ a{color:inherit;}
     map_radon_loaded_prefix: "Radon zoning loaded — ",
     map_radon_loaded_suffix: " municipalities (zone 2 + zone 3)",
     map_depots_loaded_prefix: "Certified radon ERP deposits — ",
-    map_depots_loaded_suffix: " facility(ies), verified by Tellux before publication"
+    map_depots_loaded_suffix: " facility(ies), verified by Tellux before publication",
+    lyr_cav_map: "Underground cavities (BRGM)",
+    legend_cav_desc: "Caves, karst, mines — a possible mechanism for radon accumulation underground.",
+    lyr_air_map: "Fine particulate matter PM2.5",
+    legend_air_desc: "2024 modeled annual average · Qualitair Corse. Displayed for visualization, not a Tellux calculation.",
+    map_unavailable: "The interactive map could not load. Radon zoning and legal obligations remain available further down this page (municipality search)."
   };
   function jt(key, fr){
     return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
@@ -677,7 +701,7 @@ a{color:inherit;}
   // utilisable. Sans cette garde, une exception non interceptée à l'init de
   // la carte casserait tout le script (y compris les onglets et le moteur
   // de courrier), car ils partagent la même IIFE de haut niveau.
-  var rdMap = null, rdLRadon = null, rdLDepots = null, rdWmsGeo = null;
+  var rdMap = null, rdLRadon = null, rdLDepots = null, rdWmsGeo = null, rdWmsCav = null, rdLAir = null;
   if (typeof L !== 'undefined') {
     try {
       rdMap = L.map('rd-leaflet-map', { zoomControl: true, minZoom: 7, maxZoom: 17 }).setView([42.15, 9.1], 8);
@@ -688,6 +712,13 @@ a{color:inherit;}
       rdLRadon = L.layerGroup();
       rdLDepots = L.layerGroup();
       rdWmsGeo = L.tileLayer.wms('https://geoservices.brgm.fr/geologie', { layers: 'GEOLOGIE', format: 'image/png', transparent: true, opacity: 0.6, zIndex: 2 });
+      // Cavités et PM2,5 — migrées depuis app.html le 2026-08-20 (décision Soleil : chaque
+      // couche vit dans l'app qui correspond à son domaine causal — cavités = mécanisme
+      // d'accumulation du radon en sous-sol, PM2,5 = lecture croisée d'exposition). Mêmes
+      // constantes source qu'app.html (wmsCav, lAir), pas d'auto-merge : contenu déjà publié
+      // ailleurs, simple déplacement de couche, pas de nouvelle affirmation factuelle.
+      rdWmsCav = L.tileLayer.wms('https://geoservices.brgm.fr/risques', { layers: 'CAVITE_LOCALISEE', format: 'image/png', transparent: true, opacity: 0.7, zIndex: 4 });
+      rdLAir = L.tileLayer('https://tiles.arcgis.com/tiles/VQopoXNvUqHYZHjY/arcgis/rest/services/2024_PM25_MA_200M_AIRES_tif/MapServer/tile/{z}/{y}/{x}', { opacity: 0.6, minNativeZoom: 9, maxNativeZoom: 14, zIndex: 5, bounds: [[41.2, 8.4], [43.1, 9.7]], attribution: 'PM2,5 &copy; Qualitair Corse — ODbL 1.0 / CC BY-SA 2.0 FR' });
     } catch (e) {
       console.warn('[radon] initialisation de la carte Leaflet échouée :', e);
       rdMap = null;
@@ -695,12 +726,12 @@ a{color:inherit;}
   }
   if (!rdMap) {
     var rdMapEl = document.getElementById('rd-leaflet-map');
-    if (rdMapEl) rdMapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;padding:24px;text-align:center;color:var(--mica);font-size:13px;line-height:1.6">' + jt('map_unavailable', 'La carte interactive n’a pas pu se charger. Le zonage radon et les obligations légales restent consultables dans l’onglet « Ma commune ».') + '</div>';
+    if (rdMapEl) rdMapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;padding:24px;text-align:center;color:var(--mica);font-size:13px;line-height:1.6">' + jt('map_unavailable', 'La carte interactive n’a pas pu se charger. Le zonage radon et les obligations légales restent consultables plus bas sur cette page (recherche par commune).') + '</div>';
   }
 
   // Cache unique du geojson radon — partagé entre la couche carte (polygones)
-  // et l'index par commune (onglet « Ma commune »), un seul fetch pour les
-  // deux usages plutôt que deux fetchs indépendants (amélioration sur le
+  // et l'index par commune (bloc "Ma commune" sous la carte), un seul fetch pour
+  // les deux usages plutôt que deux fetchs indépendants (amélioration sur le
   // pattern app.html/mairies.html, qui fetchaient chacun séparément).
   var _radonGeojsonCache = null;
   var _radonGeojsonPromise = null;
@@ -851,6 +882,18 @@ a{color:inherit;}
         '<div class="rd-legend-row"><span class="rd-legend-swatch" style="background:#b85c00;border-radius:50%"></span>' + jt('legend_depot_above', 'Au-dessus du repère 300 Bq/m³') + '</div>'
       );
     }
+    if (rdMap.hasLayer(rdWmsCav)) {
+      blocks.push(
+        '<div class="rd-legend-title" style="margin-top:' + (blocks.length ? '10px' : '0') + '">' + jt('lyr_cav_map', 'Cavités souterraines (BRGM)') + '</div>' +
+        '<div class="rd-legend-row" style="font-size:10px;color:var(--mica)">' + jt('legend_cav_desc', 'Grottes, karst, mines — mécanisme d\'accumulation possible du radon en sous-sol.') + '</div>'
+      );
+    }
+    if (rdMap.hasLayer(rdLAir)) {
+      blocks.push(
+        '<div class="rd-legend-title" style="margin-top:' + (blocks.length ? '10px' : '0') + '">' + jt('lyr_air_map', 'Particules fines PM2,5') + '</div>' +
+        '<div class="rd-legend-row" style="font-size:10px;color:var(--mica)">' + jt('legend_air_desc', 'Moyenne annuelle modélisée 2024 · Qualitair Corse. Mise en visualisation, pas un calcul Tellux.') + '</div>'
+      );
+    }
     if (!blocks.length) { el.hidden = true; el.innerHTML = ''; return; }
     el.hidden = false;
     el.innerHTML = blocks.join('<div style="height:1px;background:var(--brume);margin:8px 0"></div>');
@@ -871,6 +914,16 @@ a{color:inherit;}
     var row = document.getElementById('rd-geo-op-row');
     if (rdMap.hasLayer(rdWmsGeo)) { rdMap.removeLayer(rdWmsGeo); btn.classList.remove('on'); if (row) row.hidden = true; return; }
     rdWmsGeo.addTo(rdMap); btn.classList.add('on'); if (row) row.hidden = false;
+  };
+  window.rdToggleCav = function(btn){
+    if (!rdMap) return;
+    if (rdMap.hasLayer(rdWmsCav)) { rdMap.removeLayer(rdWmsCav); btn.classList.remove('on'); updateRdLegend(); return; }
+    rdWmsCav.addTo(rdMap); btn.classList.add('on'); updateRdLegend();
+  };
+  window.rdToggleAir = function(btn){
+    if (!rdMap) return;
+    if (rdMap.hasLayer(rdLAir)) { rdMap.removeLayer(rdLAir); btn.classList.remove('on'); updateRdLegend(); return; }
+    rdLAir.addTo(rdMap); btn.classList.add('on'); updateRdLegend();
   };
   // Exposé pour le slider d'opacité (attribut oninput inline dans le HTML)
   window.rdWmsGeo = rdWmsGeo;
@@ -956,8 +1009,9 @@ a{color:inherit;}
         '<div class="mr-geophys-item-value"><span class="mr-pill mr-pill-radon-1">' + jt('geo_zone1_label', 'Zone 1') + '</span></div>' +
         '<div class="mr-geophys-item-sub">' + jt('geo_radon_faible_zone1', 'Potentiel radon faible. Commune non listée en zone 2 ou 3 de l\'arrêté du 27 juin 2018.') + '</div></div>';
     }
-    body.innerHTML = '<div class="mr-geophys-items">' + html + '</div>' +
-      '<div class="mr-geophys-links"><a class="mr-geophys-link" href="#carte" onclick="document.querySelector(\'.mr-tab[data-tab=&quot;carte&quot;]\').click();return false;" data-i18n-key="commune_voir_carte_link">' + jt('commune_voir_carte_link', 'Voir sur la carte radon →') + '</a></div>';
+    // Pas de lien "voir sur la carte" ici : ce bloc vit désormais sous la carte elle-même
+    // (ancien onglet dédié "Ma commune" retiré, 2026-08-20), le renvoi est redondant.
+    body.innerHTML = '<div class="mr-geophys-items">' + html + '</div>';
   }
 
   function radonObligDisclaimer(){
@@ -1011,7 +1065,17 @@ a{color:inherit;}
         '<p>' + jt('radon_zone1_p1', 'Cette commune est classée en zone 1 (potentiel radon faible). Aucune obligation réglementaire spécifique au radon ne s\'applique de façon systématique à ce niveau de zonage. L\'article <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915" target="_blank" rel="noopener noreferrer">R.1333-33 du code de la santé publique</a> prévoit, à titre exceptionnel et quelle que soit la zone, un mesurage dans les établissements recevant du public si des mesures déjà réalisées ont dépassé le niveau de référence de 300 Bq/m³.') + '</p>' +
         radonObligRessources() + radonObligDisclaimer() + '</div>';
     }
-    body.innerHTML = html + (renderDepotsRadonHtml(commune.code_insee) || '<p class="mr-depot-radon-empty">' + jt('depot_none', 'Aucun dépôt publié pour cette commune à ce jour.') + '</p>');
+    // Les dépôts ERP de la commune ne sont plus ajoutés ici (2026-08-20) : ce bloc vit sous
+    // la carte (obligations légales uniquement) ; les dépôts sont dans l'onglet "Démarches"
+    // — voir renderCourrierDepots() — pour rester au plus près du geste "vérifier avant
+    // d'écrire un courrier".
+    body.innerHTML = html;
+  }
+
+  function renderCourrierDepots(commune){
+    var body = document.getElementById('rd-courrier-depots-body');
+    if (!body || !commune) return;
+    body.innerHTML = renderDepotsRadonHtml(commune.code_insee) || '<p class="mr-depot-radon-empty">' + jt('depot_none', 'Aucun dépôt publié pour cette commune à ce jour.') + '</p>';
   }
 
   function setSelectedCommune(commune, updateUrl){
@@ -1032,6 +1096,7 @@ a{color:inherit;}
         if (selectedCommune && selectedCommune.code_insee === commune.code_insee) {
           renderRadonGeophys(commune);
           renderRadonObligations(commune);
+          renderCourrierDepots(commune);
         }
       });
     } else {
@@ -1061,6 +1126,10 @@ a{color:inherit;}
     var input = document.getElementById('rd-commune-input');
     if (input) input.value = commune.nom + ' (' + commune.departement + ')';
     setSelectedCommune(commune, false);
+    // Arrivée depuis un lien externe (ex. mairies.html) : la fiche vit sous la carte,
+    // pas immédiatement visible au chargement — on y amène l'oeil.
+    var block = document.getElementById('rd-commune-fiche');
+    if (block) setTimeout(function(){ block.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 400);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1473,10 +1542,9 @@ function telluxGetEffectiveLang(){
     hero_cta_prefix: "Quick access: ",
     hero_cta_link: "Generate a letter →",
     tab_carte: "Map",
-    tab_commune: "My municipality",
-    tab_courrier: "Generate a letter",
+    tab_courrier: "Take action",
     carte_h2: "Radon-potential map",
-    carte_sub: "Three layers, each togglable independently: the official ASNR zoning, certified measurement deposits in public-facing facilities, and BRGM geology as a reading aid. For the other EM layers (magnetic, RF), see <a href=\"app.html\">the EM mapping</a>.",
+    carte_sub: "Five layers, each togglable independently: the official ASNR zoning, certified measurement deposits in public-facing facilities, BRGM geology and underground cavities as reading aids, and fine particulate matter PM2.5 for a cross-exposure reading. For the other EM layers (magnetic, RF), see <a href=\"app.html\">the EM mapping</a>.",
     carte_app_link: "the EM mapping",
     sidebar_title: "Layers",
     lyr_radon: "Radon zoning (ASNR 2/3)",
@@ -1485,20 +1553,26 @@ function telluxGetEffectiveLang(){
     lyr_depots_hint: "Measurement results submitted by municipalities, verified by Tellux before publication. Never merged with the zoning.",
     lyr_geo: "BRGM geology",
     lyr_geo_hint: "Granite, schist, limestone — a reading aid, not a radon layer in itself.",
+    lyr_cav: "Underground cavities",
+    lyr_cav_hint: "Caves, karst, mines (BRGM) — a possible mechanism for radon accumulation underground.",
+    lyr_air: "Fine particulate matter PM2.5",
+    lyr_air_hint: "2024 modeled annual average (Qualitair Corse). Displayed for visualization, not a Tellux calculation.",
     carte_back_em: "← Full EM mapping",
     commune_h2: "My municipality",
-    commune_sub: "Search for a Corsican municipality to find its radon-potential zone, the legal obligations that apply, and the certified measurement deposits already published.",
+    commune_sub: "Search for a Corsican municipality to find its radon-potential zone and the legal obligations that apply.",
     commune_label: "Search for a municipality",
     commune_placeholder: "E.g. Ajaccio (2A)",
     commune_hint: "360 Corsican municipalities. Start typing a name.",
     commune_select_placeholder: "Select a municipality",
-    commune_voir_carte_link: "See on the radon map →",
     geophys_title: "Radon-potential zone",
     geophys_lead: "Official ASNR classification (order of June 27, 2018), otherwise a default lithological estimate (zone 1).",
     radon_oblig_title: "Radon — obligations &amp; resources",
     radon_oblig_lead: "What the regulations provide for your commune, based on its radon-potential zone (ASNR). A relay of the law in force; does not constitute legal advice.",
-    courrier_h2: "Generate a letter",
-    courrier_sub: "Four radon letter templates, ready to personalize: select a template, fill in the fields, download the document as a PDF. The texts are legally framed but remain templates that you validate before sending.",
+    courrier_h2: "Deposits and radon letters",
+    courrier_sub: "The measurement results already published for your municipality, and four radon letter templates ready to personalize: select a template, fill in the fields, download the document as a PDF. The texts are legally framed but remain templates that you validate before sending.",
+    courrier_depots_title: "Your municipality's deposits",
+    courrier_depots_lead: "Measurement results already published, if your municipality was selected on the Map tab.",
+    courrier_depots_none_selected: "Select your municipality on the <a href=\"#carte\" onclick=\"document.querySelector('.mr-tab[data-tab=&quot;carte&quot;]').click();return false;\">Map</a> tab to see deposits already published.",
     courrier_en_note: "Note: the letter templates themselves remain in French regardless of the page's language setting — they are addressed to French administrations.",
     group_citoyen: "Citizen",
     group_mairie: "Municipality",
