@@ -236,6 +236,37 @@ a{color:inherit;}
 .mr-etab-error button{margin-top:10px;background:var(--porphyre);color:white;border:none;padding:7px 14px;border-radius:5px;font-size:11px;font-family:var(--fu);cursor:pointer;}
 .mr-etab-loading{padding:32px 12px;text-align:center;color:var(--mica);font-size:12px;font-family:var(--fm);letter-spacing:1px;}
 
+/* BLOC MUTUALISATION — état des lieux (B2). Construit côté client depuis
+   antennes_par_commune_corse.json (supports groupés par lat/lon exacts,
+   déjà arrondis 5 décimales à la construction du fichier — cf. _meta.note) :
+   >=2 opérateurs au même point = support mutualisé. Aucune nouvelle source. */
+.mr-mutual-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
+.mr-mutual-kpi{border-radius:8px;padding:14px 16px;border:1px solid var(--brume);}
+.mr-mutual-kpi-value{font-family:var(--ff);font-size:24px;font-weight:600;line-height:1.1;}
+.mr-mutual-kpi-label{font-family:var(--fm);font-size:9.5px;letter-spacing:0.8px;color:var(--mica);text-transform:uppercase;margin-top:6px;}
+.mr-mutual-kpi.vert{background:rgba(63,91,58,0.05);border-color:rgba(63,91,58,0.2);}
+.mr-mutual-kpi.vert .mr-mutual-kpi-value{color:var(--maquis);}
+.mr-mutual-kpi.orange{background:rgba(194,133,51,0.06);border-color:rgba(194,133,51,0.22);}
+.mr-mutual-kpi.orange .mr-mutual-kpi-value{color:var(--ocre);}
+.mr-mutual-kpi.rouge{background:rgba(142,47,31,0.05);border-color:rgba(142,47,31,0.2);}
+.mr-mutual-kpi.rouge .mr-mutual-kpi-value{color:var(--porphyre);}
+.mr-mutual-list{border:1px solid var(--brume);border-radius:8px;overflow:hidden;}
+.mr-mutual-row{display:grid;grid-template-columns:14px 1fr 130px 150px;gap:12px;padding:10px 16px;align-items:center;border-bottom:1px solid var(--brume);font-size:12px;}
+.mr-mutual-row:last-child{border-bottom:none;}
+.mr-mutual-row.header{background:var(--pierre);font-family:var(--fm);font-size:10px;letter-spacing:1px;color:var(--mica);text-transform:uppercase;padding:8px 16px;}
+.mr-mutual-dot{width:9px;height:9px;border-radius:50%;}
+.mr-mutual-dot.vert{background:var(--maquis);}
+.mr-mutual-dot.orange{background:var(--ocre);}
+.mr-mutual-dot.rouge{background:var(--porphyre);}
+.mr-mutual-ops{font-weight:500;color:var(--ardoise);}
+.mr-mutual-gps{font-family:var(--fm);font-size:10.5px;color:var(--mica);}
+.mr-mutual-etat{font-size:11px;}
+.mr-mutual-etat.rouge{color:var(--porphyre);font-weight:500;}
+.mr-mutual-etat.orange{color:var(--ocre);}
+.mr-mutual-etat.vert{color:var(--maquis);}
+.mr-mutual-legend{font-size:11px;color:var(--mica);line-height:1.6;margin-top:14px;padding-top:14px;border-top:1px solid var(--brume);}
+.mr-mutual-legend span{white-space:nowrap;margin-right:14px;}
+
 /* BLOC CONTEXTE GEOPHYSIQUE et BLOC POINTS ATYPIQUES (passe 3 Fiche commune) */
 .mr-geo-atyp-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:20px;margin-bottom:20px;}
 .mr-geophys-section, .mr-atyp-section{background:white;border:1px solid var(--brume);border-radius:10px;padding:24px 26px;}
@@ -277,6 +308,15 @@ a{color:inherit;}
 .mr-card-num{font-family:var(--fm);font-size:10px;color:var(--ocre);letter-spacing:1.5px;margin-bottom:8px;}
 .mr-card-title{font-family:var(--ff);font-size:15px;font-weight:600;color:var(--ardoise);margin-bottom:8px;line-height:1.35;}
 .mr-card-desc{font-size:12px;color:var(--mica);line-height:1.6;}
+/* Badge SIMULATION vs MESURE — distinction visuelle demandée B2, jusqu'ici
+   seulement portée par le titre/texte des courriers concernés (MAIRIE_01,
+   MAIRIE_02, CITOYEN_02). Reste côté UI app (carte + modale) uniquement :
+   ne rentre jamais dans .mr-preview-paper ni le PDF (doctrine B1 — le corps
+   du courrier n'émane que de la mairie, pas de mention Tellux/app dedans). */
+.mr-badge-type{display:inline-block;font-family:var(--fm);font-size:9px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;padding:2px 8px;border-radius:20px;margin-bottom:6px;}
+.mr-badge-type.mesure{background:rgba(63,91,58,0.12);color:var(--maquis);border:1px solid rgba(63,91,58,0.3);}
+.mr-badge-type.simulation{background:rgba(194,133,51,0.14);color:var(--ocre);border:1px solid rgba(194,133,51,0.35);}
+.mr-modal-eyebrow .mr-badge-type{margin-bottom:0;margin-left:8px;vertical-align:middle;}
 
 /* CHECKLIST */
 .mr-steps{list-style:none;counter-reset:mr-step;margin-top:8px;}
@@ -289,6 +329,25 @@ a{color:inherit;}
 .mr-legal-block{background:white;border:1px solid var(--brume);border-radius:10px;padding:22px;margin-bottom:14px;}
 .mr-legal-title{font-family:var(--ff);font-size:15px;font-weight:600;margin-bottom:8px;}
 .mr-legal-desc{font-size:12px;color:var(--mica);line-height:1.7;font-style:italic;}
+
+/* BLOCS ACTION (B2) — "Ce que votre commune peut faire" reformulé action-first,
+   cadre légal complet relégué en second niveau (accordéon <details> natif,
+   pas de JS : contenu statique, jamais re-rendu). Modèle repris pour tout
+   futur bloc légal dense candidat au même traitement. */
+.mr-action-list{display:flex;flex-direction:column;gap:14px;margin-top:14px;}
+.mr-action-item{border:1px solid var(--brume);border-radius:8px;padding:16px 18px;}
+.mr-action-tag{display:inline-block;font-family:var(--fm);font-size:9.5px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--tyrrh);background:rgba(31,58,95,0.06);border:1px solid rgba(31,58,95,0.16);border-radius:20px;padding:2px 9px;margin-bottom:8px;}
+.mr-action-tag.obligation{color:var(--ocre);background:rgba(194,133,51,0.08);border-color:rgba(194,133,51,0.22);}
+.mr-action-title{font-family:var(--ff);font-size:15px;font-weight:600;color:var(--ardoise);margin-bottom:6px;line-height:1.3;}
+.mr-action-summary{font-size:12.5px;color:var(--ardoise);line-height:1.65;margin-bottom:10px;}
+.mr-action-link{font-size:11.5px;color:var(--tyrrh);text-decoration:none;border-bottom:1px dotted rgba(31,58,95,0.4);}
+.mr-action-link:hover{border-bottom-style:solid;}
+.mr-action-detail{margin-top:10px;}
+.mr-action-detail summary{font-family:var(--fm);font-size:10.5px;color:var(--mica);letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;padding:6px 0;list-style:none;}
+.mr-action-detail summary::-webkit-details-marker{display:none;}
+.mr-action-detail summary::before{content:'▸ ';display:inline-block;transition:transform .15s;}
+.mr-action-detail[open] summary::before{content:'▾ ';}
+.mr-action-detail p{font-size:12px;color:var(--mica);line-height:1.75;margin-top:8px;}
 
 /* SECTION CITOYENNE — fond contrasté */
 .mr-citoyen{background:var(--brume);padding:72px 40px;margin-top:48px;}
@@ -589,6 +648,15 @@ a{color:inherit;}
       <div id="mr-etab-body"></div>
     </section>
 
+    <!-- Bloc Mutualisation — état des lieux (B2), plein-largeur, actif quand commune selectionnee -->
+    <section class="mr-etab-section" id="mr-mutual-section" aria-labelledby="mr-mutual-title" hidden>
+      <div class="mr-etab-header">
+        <h3 class="mr-etab-title" id="mr-mutual-title" data-i18n-key="mutual_title">Mutualisation — état des lieux</h3>
+      </div>
+      <p class="mr-etab-lead" data-i18n-key="mutual_lead">Sites d'antennes ANFR de la commune, regroupés par emplacement exact. Un support <strong>mutualisé</strong> héberge plusieurs opérateurs au même point ; un support <strong>mono-opérateur</strong> est une opportunité de regroupement pour un futur projet, à surveiller de plus près s'il se trouve à moins de 100 m d'un établissement sensible recensé.</p>
+      <div id="mr-mutual-body"></div>
+    </section>
+
     <!-- Blocs 3 et 4 (passe 3) : Contexte géophysique + Points atypiques, en grille 2 colonnes -->
     <div class="mr-geo-atyp-grid" id="mr-geo-atyp-wrap" hidden>
       <section class="mr-geophys-section" id="mr-geophys-section" aria-labelledby="mr-geophys-title">
@@ -617,7 +685,7 @@ a{color:inherit;}
   <!-- ONGLET 2 : GÉNÉRER UN COURRIER -->
   <section class="mr-tab-panel" data-panel="courrier" role="tabpanel">
     <h2 class="mr-section-h2" data-i18n-key="courrier_h2">Générer un courrier</h2>
-    <p class="mr-section-sub" data-i18n-key="courrier_sub">Six modèles de courriers administratifs prêts à personnaliser. Sélectionnez un modèle, remplissez les champs, téléchargez le document au format PDF. Les textes sont cadrés juridiquement mais restent des modèles que vous validez avant envoi.</p>
+    <p class="mr-section-sub" data-i18n-key="courrier_sub">Des modèles de courriers administratifs prêts à personnaliser. Sélectionnez un modèle, remplissez les champs, téléchargez le document au format PDF. Les textes sont cadrés juridiquement mais restent des modèles que vous validez avant envoi.</p>
     <p class="mr-etab-note-eaje" id="mr-courrier-en-note" data-i18n-key="courrier_en_note" hidden></p>
     <div class="mr-cards" id="mr-courriers-list">
       <!-- Cards injectées en JS -->
@@ -679,12 +747,65 @@ a{color:inherit;}
     <div class="mr-legal-block">
       <h3 class="mr-legal-title" data-i18n-key="legal_can_title">Ce que votre commune peut faire</h3>
       <div class="mr-legal-content">
-        <p data-i18n-key="legal_can_p0">Votre commune dispose de cinq leviers concrets, tous prévus par la loi.</p>
-        <p data-i18n-key="legal_can_p1">Elle reçoit et publie les dossiers d'information (DIM). Tout opérateur qui projette d'installer ou de modifier substantiellement une antenne soumise à avis ou accord de l'Agence nationale des fréquences doit transmettre un dossier à la mairie, un mois avant le dépôt de sa demande d'urbanisme. La mairie met ce dossier à disposition des habitants dans un délai de dix jours, par affichage en mairie et publication sur son site internet. Les habitants disposent d'un mois pour formuler leurs observations (article L.34-9-1 II B et D).</p>
-        <p data-i18n-key="legal_can_p2">Elle peut demander une simulation d'exposition. Dans les huit jours qui suivent la réception d'un dossier d'information, le maire peut exiger de l'opérateur une simulation des niveaux d'exposition que générera l'installation. Cette simulation, élaborée selon les lignes directrices de l'Agence nationale des fréquences, est jointe au dossier mis à la disposition du public. C'est un outil de pédagogie visuelle qui permet de voir, et pas seulement d'imaginer, ce que fera l'antenne (article L.34-9-1 II C).</p>
-        <p data-i18n-key="legal_can_p3">Elle peut demander un état des lieux des installations existantes. À tout moment, le maire peut demander à l'Agence nationale des fréquences ou à un opérateur la liste des installations radioélectriques présentes sur le territoire communal. C'est utile pour comparer avec la cartographie publique, <a href="https://www.cartoradio.fr/" target="_blank" rel="noopener noreferrer">cartoradio.fr</a>, et pour construire une base de données communale fiable (article L.34-9-1 II B).</p>
-        <p data-i18n-key="legal_can_p4">Elle peut saisir l'Agence nationale des fréquences pour une mesure d'exposition. Les communes figurent parmi les organismes habilités à signer une demande de mesure au titre du dispositif national de surveillance, mis en place par un décret de 2013. La mesure est gratuite pour le demandeur. Elle peut porter sur un lieu accessible au public, sur une école, une crèche, un EHPAD, ou sur un logement à la demande d'un habitant. La saisine se fait en ligne sur le portail <a href="https://mesures.anfr.fr/" target="_blank" rel="noopener noreferrer">mesures.anfr.fr</a>, et les résultats sont publiés sur <a href="https://www.cartoradio.fr/" target="_blank" rel="noopener noreferrer">cartoradio.fr</a> (décret n° 2013-1162).</p>
-        <p data-i18n-key="legal_can_p5">Elle peut demander une instance de concertation départementale. Lorsque le maire estime qu'une médiation est nécessaire, il peut saisir le préfet d'une demande de réunion d'une instance de concertation départementale. Cette instance, présidée par le préfet, réunit l'État, l'Agence régionale de santé, l'Agence nationale des fréquences, les collectivités, les opérateurs et les associations agréées. Son avis n'est pas contraignant, mais il pèse dans la suite du dossier et peut débloquer des situations tendues (article L.34-9-1 III, décret n° 2016-1106).</p>
+        <p data-i18n-key="legal_can_p0">Votre commune dispose de cinq leviers concrets, tous prévus par la loi — le détail juridique de chacun est disponible en dépliant « Cadre légal complet ».</p>
+      </div>
+      <div class="mr-action-list">
+
+        <div class="mr-action-item">
+          <span class="mr-action-tag obligation" data-i18n-key="action1_tag">Obligation de l'opérateur</span>
+          <div class="mr-action-title" data-i18n-key="action1_title">Recevoir et publier le dossier d'information (DIM)</div>
+          <p class="mr-action-summary" data-i18n-key="action1_summary">Un opérateur qui projette une antenne soumise à avis ANFR doit vous transmettre son dossier un mois avant sa demande d'urbanisme. Vous le publiez sous dix jours ; les habitants ont un mois pour réagir.</p>
+          <a class="mr-action-link" href="#courrier" data-i18n-key="action1_link" onclick="document.querySelector('.mr-tab[data-tab=&quot;courrier&quot;]').click(); return false;">Générer l'avis de mise à disposition →</a>
+          <details class="mr-action-detail">
+            <summary data-i18n-key="action_detail_summary">Cadre légal complet</summary>
+            <p data-i18n-key="legal_can_p1">Elle reçoit et publie les dossiers d'information (DIM). Tout opérateur qui projette d'installer ou de modifier substantiellement une antenne soumise à avis ou accord de l'Agence nationale des fréquences doit transmettre un dossier à la mairie, un mois avant le dépôt de sa demande d'urbanisme. La mairie met ce dossier à disposition des habitants dans un délai de dix jours, par affichage en mairie et publication sur son site internet. Les habitants disposent d'un mois pour formuler leurs observations (article L.34-9-1 II B et D).</p>
+          </details>
+        </div>
+
+        <div class="mr-action-item">
+          <span class="mr-action-tag" data-i18n-key="action2_tag">À la demande du maire</span>
+          <div class="mr-action-title" data-i18n-key="action2_title">Demander une simulation d'exposition</div>
+          <p class="mr-action-summary" data-i18n-key="action2_summary">Dans les huit jours suivant la réception du dossier, vous pouvez exiger de l'opérateur une simulation des niveaux d'exposition, établie selon les lignes directrices ANFR.</p>
+          <a class="mr-action-link" href="#courrier" data-i18n-key="action2_link" onclick="document.querySelector('.mr-tab[data-tab=&quot;courrier&quot;]').click(); return false;">Générer la demande de simulation →</a>
+          <details class="mr-action-detail">
+            <summary data-i18n-key="action_detail_summary">Cadre légal complet</summary>
+            <p data-i18n-key="legal_can_p2">Elle peut demander une simulation d'exposition. Dans les huit jours qui suivent la réception d'un dossier d'information, le maire peut exiger de l'opérateur une simulation des niveaux d'exposition que générera l'installation. Cette simulation, élaborée selon les lignes directrices de l'Agence nationale des fréquences, est jointe au dossier mis à la disposition du public. C'est un outil de pédagogie visuelle qui permet de voir, et pas seulement d'imaginer, ce que fera l'antenne (article L.34-9-1 II C).</p>
+          </details>
+        </div>
+
+        <div class="mr-action-item">
+          <span class="mr-action-tag" data-i18n-key="action3_tag">À la demande du maire</span>
+          <div class="mr-action-title" data-i18n-key="action3_title">Demander l'état des lieux des installations existantes</div>
+          <p class="mr-action-summary" data-i18n-key="action3_summary">Vous pouvez demander à l'ANFR ou à un opérateur la liste des installations radioélectriques présentes sur votre commune, à comparer avec <a href="https://www.cartoradio.fr/" target="_blank" rel="noopener noreferrer">cartoradio.fr</a>.</p>
+          <a class="mr-action-link" href="#courrier" data-i18n-key="action3_link" onclick="document.querySelector('.mr-tab[data-tab=&quot;courrier&quot;]').click(); return false;">Générer la demande d'état des lieux →</a>
+          <details class="mr-action-detail">
+            <summary data-i18n-key="action_detail_summary">Cadre légal complet</summary>
+            <p data-i18n-key="legal_can_p3">Elle peut demander un état des lieux des installations existantes. À tout moment, le maire peut demander à l'Agence nationale des fréquences ou à un opérateur la liste des installations radioélectriques présentes sur le territoire communal. C'est utile pour comparer avec la cartographie publique, <a href="https://www.cartoradio.fr/" target="_blank" rel="noopener noreferrer">cartoradio.fr</a>, et pour construire une base de données communale fiable (article L.34-9-1 II B).</p>
+          </details>
+        </div>
+
+        <div class="mr-action-item">
+          <span class="mr-action-tag" data-i18n-key="action4_tag">À la demande du maire</span>
+          <div class="mr-action-title" data-i18n-key="action4_title">Saisir l'ANFR d'une demande de mesure</div>
+          <p class="mr-action-summary" data-i18n-key="action4_summary">Votre commune peut saisir gratuitement l'ANFR pour une mesure d'exposition sur un lieu accessible au public, une école, une crèche, ou un logement à la demande d'un habitant.</p>
+          <a class="mr-action-link" href="#courrier" data-i18n-key="action4_link" onclick="document.querySelector('.mr-tab[data-tab=&quot;courrier&quot;]').click(); return false;">Générer la demande de mesure →</a>
+          <details class="mr-action-detail">
+            <summary data-i18n-key="action_detail_summary">Cadre légal complet</summary>
+            <p data-i18n-key="legal_can_p4">Elle peut saisir l'Agence nationale des fréquences pour une mesure d'exposition. Les communes figurent parmi les organismes habilités à signer une demande de mesure au titre du dispositif national de surveillance, mis en place par un décret de 2013. La mesure est gratuite pour le demandeur. Elle peut porter sur un lieu accessible au public, sur une école, une crèche, un EHPAD, ou sur un logement à la demande d'un habitant. La saisine se fait en ligne sur le portail <a href="https://mesures.anfr.fr/" target="_blank" rel="noopener noreferrer">mesures.anfr.fr</a>, et les résultats sont publiés sur <a href="https://www.cartoradio.fr/" target="_blank" rel="noopener noreferrer">cartoradio.fr</a> (décret n° 2013-1162).</p>
+          </details>
+        </div>
+
+        <div class="mr-action-item">
+          <span class="mr-action-tag" data-i18n-key="action5_tag">À la demande du maire</span>
+          <div class="mr-action-title" data-i18n-key="action5_title">Saisir le préfet d'une instance de concertation</div>
+          <p class="mr-action-summary" data-i18n-key="action5_summary">Si une médiation est nécessaire, vous pouvez demander au préfet de réunir État, ARS, ANFR, collectivités, opérateurs et associations agréées.</p>
+          <a class="mr-action-link" href="#courrier" data-i18n-key="action5_link" onclick="document.querySelector('.mr-tab[data-tab=&quot;courrier&quot;]').click(); return false;">Générer la saisine du préfet →</a>
+          <details class="mr-action-detail">
+            <summary data-i18n-key="action_detail_summary">Cadre légal complet</summary>
+            <p data-i18n-key="legal_can_p5">Elle peut demander une instance de concertation départementale. Lorsque le maire estime qu'une médiation est nécessaire, il peut saisir le préfet d'une demande de réunion d'une instance de concertation départementale. Cette instance, présidée par le préfet, réunit l'État, l'Agence régionale de santé, l'Agence nationale des fréquences, les collectivités, les opérateurs et les associations agréées. Son avis n'est pas contraignant, mais il pèse dans la suite du dossier et peut débloquer des situations tendues (article L.34-9-1 III, décret n° 2016-1106).</p>
+          </details>
+        </div>
+
       </div>
     </div>
 
@@ -1057,6 +1178,8 @@ a{color:inherit;}
     eyebrow_mairie_prefix: "Municipality letter · ",
     eyebrow_entrepreneur_prefix: "Business letter · ",
     eyebrow_citoyen_prefix: "Citizen letter · ",
+    badge_mesure: "MEASUREMENT — on-site, ANFR/accredited body",
+    badge_simulation: "SIMULATION — theoretical, 8 days",
     title_informations_mairie: "Municipality information",
     title_informations_etablissement: "Facility information",
     title_vos_coordonnees: "Your contact details",
@@ -1332,6 +1455,7 @@ a{color:inherit;}
     }
     renderAntennesForCommune(commune);
     renderEtabForCommune(commune);
+    renderMutualisationForCommune(commune);
     renderGeoAtypForCommune(commune);
   }
 
@@ -1410,6 +1534,14 @@ a{color:inherit;}
     renderCategoryCards('mr-radon-entrepreneur-list', radonEntrepreneurList, jt('kind_entrepreneur', 'Entrepreneur'));
   }
 
+  // Badge SIMULATION vs MESURE (B2) — voir commentaire CSS .mr-badge-type.
+  // Jamais injecté dans le corps du courrier (preview/PDF), uniquement carte + modale.
+  function typeExpoBadgeHtml(typeExpo){
+    if (typeExpo === 'mesure') return '<span class="mr-badge-type mesure">' + escapeHtml(jt('badge_mesure', 'MESURE — terrain, ANFR/organisme accrédité')) + '</span>';
+    if (typeExpo === 'simulation') return '<span class="mr-badge-type simulation">' + escapeHtml(jt('badge_simulation', 'SIMULATION — théorique, 8 jours')) + '</span>';
+    return '';
+  }
+
   function renderCategoryCards(containerId, list, kind){
     var container = document.getElementById(containerId);
     if (!container) return;
@@ -1418,8 +1550,10 @@ a{color:inherit;}
       var btn = document.createElement('button');
       btn.className = 'mr-card';
       btn.type = 'button';
+      var badgeHtml = item.type_expo ? typeExpoBadgeHtml(item.type_expo) : '';
       btn.innerHTML =
         '<div class="mr-card-num">' + kind + ' · ' + String(i+1).padStart(2, '0') + '</div>' +
+        badgeHtml +
         '<div class="mr-card-title"></div>' +
         '<div class="mr-card-desc"></div>';
       btn.querySelector('.mr-card-title').textContent = item.titre;
@@ -1451,9 +1585,10 @@ a{color:inherit;}
     var form = document.getElementById('mr-modal-form');
     if (!modal || !title || !intro || !form) return;
 
-    eyebrow.textContent = tpl.categorie === 'mairie' ? jt('eyebrow_mairie_prefix', 'Courrier mairie · ') + tpl.destinataire_label
+    var eyebrowText = tpl.categorie === 'mairie' ? jt('eyebrow_mairie_prefix', 'Courrier mairie · ') + tpl.destinataire_label
       : tpl.categorie === 'entrepreneur' ? jt('eyebrow_entrepreneur_prefix', 'Courrier entrepreneur · ') + tpl.destinataire_label
       : jt('eyebrow_citoyen_prefix', 'Courrier citoyen · ') + tpl.destinataire_label;
+    eyebrow.innerHTML = escapeHtml(eyebrowText) + (tpl.type_expo ? typeExpoBadgeHtml(tpl.type_expo) : '');
     title.textContent = tpl.titre;
     intro.textContent = tpl.intro_card;
 
@@ -2448,6 +2583,124 @@ a{color:inherit;}
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // Bloc Mutualisation — état des lieux (B2)
+  // ═══════════════════════════════════════════════════════════════
+  // Aucune nouvelle source : supports déjà groupés (lat/lon arrondis 5
+  // décimales, operateur) dans antennes_par_commune_corse.json. Deux
+  // supports au même (lat, lon) mais operateurs distincts = même site
+  // physique mutualisé. Seuil "sensible" repris du seuil zone critique
+  // Loi Abeille déjà utilisé pour le bloc établissements (ZONE_CRITIQUE_M,
+  // 100 m, arrêté du 12 octobre 2016) — aucun nouveau seuil inventé.
+
+  function computeMutualisationForCommune(code_insee){
+    var supports = (antennesData && antennesData.communes[code_insee] && antennesData.communes[code_insee].supports) || [];
+    var clusters = {};
+    supports.forEach(function(s){
+      var key = s.lat + ',' + s.lon;
+      if (!clusters[key]) clusters[key] = { lat: s.lat, lon: s.lon, operateurs: [], n_antennes: 0 };
+      if (clusters[key].operateurs.indexOf(s.operateur) === -1) clusters[key].operateurs.push(s.operateur);
+      clusters[key].n_antennes += (s.n_antennes || 0);
+    });
+
+    var communeEtabs = (etabByInsee && etabByInsee[code_insee]) || { enseignement: [], 'medico-social': [], 'petite-enfance': [] };
+    var etabFlat = ETAB_CATEGORIES.reduce(function(acc, cat){ return acc.concat(communeEtabs[cat] || []); }, []);
+
+    return Object.keys(clusters).map(function(key){
+      var c = clusters[key];
+      var mono = c.operateurs.length === 1;
+      var etat, distSensible = null;
+      if (!mono){
+        etat = 'vert';
+      } else {
+        var minDist = Infinity;
+        etabFlat.forEach(function(feat){
+          var coords = (feat.geometry && feat.geometry.coordinates) || [];
+          var lon = coords[0], lat = coords[1];
+          if (lat == null || lon == null) return;
+          var d = haversineDistance(c.lat, c.lon, lat, lon);
+          if (d < minDist) minDist = d;
+        });
+        distSensible = (minDist === Infinity) ? null : Math.round(minDist);
+        etat = (minDist < ZONE_CRITIQUE_M) ? 'rouge' : 'orange';
+      }
+      return { lat: c.lat, lon: c.lon, operateurs: c.operateurs.sort(), n_antennes: c.n_antennes, etat: etat, dist_sensible_m: distSensible };
+    }).sort(function(a, b){
+      var ordre = { rouge: 0, orange: 1, vert: 2 };
+      return ordre[a.etat] - ordre[b.etat];
+    });
+  }
+
+  function renderMutualisationForCommune(commune){
+    var section = document.getElementById('mr-mutual-section');
+    if (!section) return;
+    if (!commune){ section.hidden = true; return; }
+    section.hidden = false;
+
+    var body = document.getElementById('mr-mutual-body');
+    if (!body) return;
+
+    var needLoad = (etabByInsee == null) || (antennesData == null);
+    if (!needLoad){ renderMutualBody(commune.code_insee); return; }
+
+    body.innerHTML = '<div class="mr-etab-loading">Chargement des données de mutualisation...</div>';
+    Promise.all([loadAntennes(), loadEtablissements()]).then(function(){
+      if (selectedCommune && selectedCommune.code_insee === commune.code_insee){
+        renderMutualBody(commune.code_insee);
+      }
+    }).catch(function(){
+      body.innerHTML = '<div class="mr-etab-error">Chargement temporairement indisponible. ' +
+        '<button type="button" onclick="if(selectedCommune)renderMutualisationForCommune(selectedCommune)">Réessayer</button></div>';
+    });
+  }
+
+  function renderMutualBody(code_insee){
+    var body = document.getElementById('mr-mutual-body');
+    if (!body) return;
+
+    var supports = (antennesData && antennesData.communes[code_insee] && antennesData.communes[code_insee].supports) || [];
+    if (supports.length === 0){
+      body.innerHTML = '<div class="mr-etab-empty"><strong>Aucune antenne ANFR recensée sur votre commune</strong>Le constat de mutualisation ne peut pas être établi sans installation à situer.</div>';
+      return;
+    }
+
+    var sites = computeMutualisationForCommune(code_insee);
+    var nVert = sites.filter(function(s){ return s.etat === 'vert'; }).length;
+    var nOrange = sites.filter(function(s){ return s.etat === 'orange'; }).length;
+    var nRouge = sites.filter(function(s){ return s.etat === 'rouge'; }).length;
+
+    var kpisHtml = '<div class="mr-mutual-kpis">' +
+      '<div class="mr-mutual-kpi vert"><div class="mr-mutual-kpi-value">' + nVert + '</div><div class="mr-mutual-kpi-label">Sites mutualisés</div></div>' +
+      '<div class="mr-mutual-kpi orange"><div class="mr-mutual-kpi-value">' + nOrange + '</div><div class="mr-mutual-kpi-label">Opportunités de regroupement</div></div>' +
+      '<div class="mr-mutual-kpi rouge"><div class="mr-mutual-kpi-value">' + nRouge + '</div><div class="mr-mutual-kpi-label">Mono-opérateur près d\'un site sensible</div></div>' +
+    '</div>';
+
+    var rowsHtml = '<div class="mr-mutual-row header"><div></div><div>Opérateur(s)</div><div>Coordonnées</div><div style="text-align:right">État</div></div>' +
+      sites.map(function(s){
+        var etatLabel = s.etat === 'vert' ? (s.operateurs.length + ' opérateurs mutualisés')
+          : s.etat === 'rouge' ? ('mono-opérateur · ' + s.dist_sensible_m + ' m d\'un site sensible')
+          : 'mono-opérateur · opportunité';
+        return '<div class="mr-mutual-row">' +
+          '<div class="mr-mutual-dot ' + s.etat + '"></div>' +
+          '<div class="mr-mutual-ops">' + escapeHtml(s.operateurs.join(', ')) + '</div>' +
+          '<div class="mr-mutual-gps">' + s.lat.toFixed(5) + ', ' + s.lon.toFixed(5) + '</div>' +
+          '<div class="mr-mutual-etat ' + s.etat + '" style="text-align:right">' + escapeHtml(etatLabel) + '</div>' +
+        '</div>';
+      }).join('');
+
+    var legendHtml = '<div class="mr-mutual-legend">' +
+      '<span><span class="mr-mutual-dot vert" style="display:inline-block;vertical-align:middle;margin-right:4px"></span>Mutualisé — ≥ 2 opérateurs au même site</span>' +
+      '<span><span class="mr-mutual-dot orange" style="display:inline-block;vertical-align:middle;margin-right:4px"></span>Opportunité — mono-opérateur, pas de site sensible à proximité</span>' +
+      '<span><span class="mr-mutual-dot rouge" style="display:inline-block;vertical-align:middle;margin-right:4px"></span>À surveiller — mono-opérateur à moins de 100 m d\'un site sensible</span>' +
+    '</div>';
+
+    var linksHtml = '<div class="mr-etab-links">' +
+      '<a class="mr-etab-link" href="#courrier" onclick="document.querySelector(\'.mr-tab[data-tab=&quot;courrier&quot;]\').click(); return false;">' + escapeHtml(jt('mutual_link_courriers', 'Voir les modèles de courrier mutualisation')) + '</a>' +
+    '</div>';
+
+    body.innerHTML = kpisHtml + '<div class="mr-mutual-list">' + rowsHtml + '</div>' + legendHtml + linksHtml;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // Bloc Contexte geophysique + Bloc Points atypiques ANFR
   // (Fiche commune, Passe 3)
   // ═══════════════════════════════════════════════════════════════
@@ -3365,6 +3618,9 @@ function telluxGetEffectiveLang(){
     antennes_lead: "List of ANFR antennas listed within the commune's territory, extracted from the public CartoRadio registry. This information consists of administrative facts declared by the operators.",
     etab_title: "Sensitive facilities nearby",
     etab_lead: "Schools, medico-social facilities, and early childhood facilities located near the commune's ANFR antennas. The <strong>Loi Abeille</strong> and the order of October 12, 2016 require operators to identify, in their information files (DIM), sensitive facilities located within 100 meters of any installation.",
+    mutual_title: "Site sharing — current status",
+    mutual_lead: "ANFR antenna sites in the commune, grouped by exact location. A <strong>shared</strong> site hosts several operators at the same point; a <strong>single-operator</strong> site is a sharing opportunity for a future project, worth watching more closely if it sits within 100 m of a recorded sensitive facility.",
+    mutual_link_courriers: "View site-sharing letter templates",
     geophys_title: "Geophysical context",
     geophys_lead: "A concise summary of the commune's geological and environmental data. Summary view: for a detailed exploration, open the Tellux map.",
     atyp_title: "ANFR atypical points",
@@ -3372,7 +3628,7 @@ function telluxGetEffectiveLang(){
     radon_oblig_title: "Radon — obligations &amp; resources",
     radon_oblig_lead: "What the regulations provide for your commune, based on its radon-potential zone (ASNR). A relay of the law in force; does not constitute legal advice.",
     courrier_h2: "Generate a letter",
-    courrier_sub: "Six administrative letter templates ready to personalize. Select a template, fill in the fields, download the document as a PDF. The texts are legally framed but remain templates that you validate before sending.",
+    courrier_sub: "Administrative letter templates ready to personalize. Select a template, fill in the fields, download the document as a PDF. The texts are legally framed but remain templates that you validate before sending.",
     courrier_en_note: "Letter templates are provided in French, as they are addressed to French administrations.",
     citoyen_eyebrow: "For residents",
     citoyen_h2: "Citizens: <em>contact your municipality</em>",
@@ -3390,7 +3646,28 @@ function telluxGetEffectiveLang(){
     legal_abeille_p2: "The law was supplemented in 2021 by the law on reducing the digital sector's environmental footprint, known as the loi REEN, which adds a new obligation: in rural and sparsely populated areas, the mayor can ask the operator to justify why it did not choose to share its antenna with existing infrastructure. A decree from January 2023 specifies the terms of this justification (Law No. 2021-1485, Decree No. 2023-4).",
     legal_abeille_p3: "The legal framework is now stable. The three main reference points are Article L.34-9-1 of the Postal and Electronic Communications Code, the order of October 12, 2016, which specifies the content of the information files sent to municipalities, and the 2011 Conseil d'État case law that defines the dividing line between the mayor's powers and those of the State.",
     legal_can_title: "What your municipality can do",
-    legal_can_p0: "Your municipality has five concrete levers, all provided for by law.",
+    legal_can_p0: "Your municipality has five concrete levers, all provided for by law — the full legal detail of each is available by expanding \"Full legal framework\".",
+    action1_tag: "Operator's obligation",
+    action1_title: "Receive and publish the information file (DIM)",
+    action1_summary: "An operator planning an antenna subject to ANFR approval must submit its file to you one month before its planning application. You publish it within ten days; residents have one month to respond.",
+    action1_link: "Generate the public-notice letter →",
+    action2_tag: "At the mayor's request",
+    action2_title: "Request an exposure simulation",
+    action2_summary: "Within eight days of receiving the file, you can require the operator to provide a simulation of exposure levels, prepared according to ANFR guidelines.",
+    action2_link: "Generate the simulation request →",
+    action3_tag: "At the mayor's request",
+    action3_title: "Request an inventory of existing installations",
+    action3_summary: "You can ask ANFR or an operator for the list of radio installations present in your municipality, to compare with <a href=\"https://www.cartoradio.fr/\" target=\"_blank\" rel=\"noopener noreferrer\">cartoradio.fr</a>.",
+    action3_link: "Generate the inventory request →",
+    action4_tag: "At the mayor's request",
+    action4_title: "Refer the matter to ANFR for a measurement",
+    action4_summary: "Your municipality can refer the matter to ANFR free of charge for an exposure measurement at a place accessible to the public, a school, a daycare center, or a home at a resident's request.",
+    action4_link: "Generate the measurement request →",
+    action5_tag: "At the mayor's request",
+    action5_title: "Refer the matter to the prefect for a consultation body",
+    action5_summary: "If mediation is needed, you can ask the prefect to convene the State, the Regional Health Agency, ANFR, local authorities, operators, and approved associations.",
+    action5_link: "Generate the referral to the prefect →",
+    action_detail_summary: "Full legal framework",
     legal_can_p1: "It receives and publishes information files (DIM). Any operator planning to install or substantially modify an antenna subject to the opinion or approval of the Agence nationale des fréquences must submit a file to the municipality one month before filing its planning application. The municipality makes this file available to residents within ten days, through posting at the town hall and publication on its website. Residents then have one month to submit their comments (Article L.34-9-1 II B and D).",
     legal_can_p2: "It can request an exposure simulation. Within eight days of receiving an information file, the mayor can require the operator to provide a simulation of the exposure levels the installation will generate. This simulation, prepared according to the Agence nationale des fréquences' guidelines, is attached to the file made available to the public. It is a visual educational tool that lets people see, not just imagine, what the antenna will do (Article L.34-9-1 II C).",
     legal_can_p3: "It can request an inventory of existing installations. At any time, the mayor can ask the Agence nationale des fréquences or an operator for the list of radio installations present within the commune's territory. This is useful for comparison with the public mapping, <a href=\"https://www.cartoradio.fr/\" target=\"_blank\" rel=\"noopener noreferrer\">cartoradio.fr</a>, and for building a reliable municipal database (Article L.34-9-1 II B).",
