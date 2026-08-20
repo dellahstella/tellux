@@ -587,13 +587,10 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .on-res{background:#fefaf0!important;color:#78350f!important;border-color:#d4a96a!important;font-weight:500;}
 .on-bt{background:#fff8e6!important;color:#d97706!important;border-color:#f5a855!important;font-weight:500;}
 .on-failles{background:#fdf4f3!important;color:#8E2F1F!important;border-color:#c16b5a!important;font-weight:500;}
-.on-radon{background:#F5E8D0!important;color:#8a5a1e!important;border-color:#C28533!important;font-weight:500;}
-.on-radon-depots{background:#e3f2ed!important;color:#0f5a4d!important;border-color:#0f766e!important;font-weight:500;}
 .on-air{background:#E3ECF3!important;color:#2f5b7a!important;border-color:#6b8fb5!important;font-weight:500;}
 .on-openrad{background:#e7f0ee!important;color:#2f5f54!important;border-color:#4a8a7a!important;font-weight:500;}
 .on-foret{background:#eef3e9!important;color:#3F5B3A!important;border-color:#6b8a5c!important;font-weight:500;}
 .on-postes{background:#faf2e3!important;color:#8A5E22!important;border-color:#C28533!important;font-weight:500;}
-.on-sites-remarq{background:#e8eef5!important;color:#1F3A5F!important;border-color:#5a7a9e!important;font-weight:500;}
 /* Lot 3.1 (2026-06-29) — affordance ON uniforme : toute couche active (.lbtn .on-*)
    reçoit un marqueur ✓ + gras, en plus de sa teinte propre. Corrige l'incohérence
    d'affordance signalée (certaines couches sans état visible net). */
@@ -1555,8 +1552,15 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <p class="subgroup-text">Couches qui modulent directement le calcul Tellux : susceptibilité magnétique du substrat, potentiel radon, fond magnétique régional. La proximité de failles est un indicateur de contexte (affiché en popup), non intégré au calcul.</p>
       <button class="lbtn" id="b-geo" data-domains="statique" title="Carte géologique BRGM — granite, schiste, calcaire" onclick="tog('geo','on-geo',this)"><span class="sq" style="background:#1a6b5c"></span>Géologie BRGM</button>
       <button class="lbtn" id="b-failles" data-domains="statique" title="Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)" onclick="togFailles(this)"><span class="ln" style="background:#8E2F1F"></span>Failles tectoniques</button>
-      <button class="lbtn" id="b-radon" data-domains="ionisant" title="Potentiel radon géologique — zones ASNR 2/3" onclick="tog('radon','on-radon',this)"><span class="sq" style="background:#C28533"></span>Radon</button>
-      <button class="lbtn" id="b-radon-depots" data-domains="ionisant" title="Dépôts radon ERP certifiés — résultats de mesurage déposés par les communes, vérifiés par Tellux avant publication. Points précis par établissement, jamais fusionnés avec le zonage 2/3." onclick="togRadonDepots(this)"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle"></span>Dépôts radon ERP (certifié)</button>
+      <!-- Couches « Radon » et « Dépôts radon ERP (certifié) » retirées de la carte publique le
+           2026-08-20 (pattern PR #990 : consolidation dans une app dédiée, pas un retrait de
+           contenu). Le zonage ASNR, les dépôts ERP et la géologie BRGM en couche de référence
+           radon sont désormais sur radon.html, avec en plus une lecture par commune et les 4
+           courriers radon (auparavant sur mairies.html). Le chargement des données
+           (indexRadonZonesOfficial() au boot, calcRadonPotential()) reste actif et INCHANGÉ —
+           voir bloc "DOMAINE I — Potentiel radon" plus bas dans ce fichier : le calcul composite
+           (calcGammaAmbient, boost ponctuel) continue de s'appliquer exactement comme avant. -->
+      <a class="lbtn" href="radon.html" title="Zonage radon ASNR, dépôts ERP certifiés et courriers dédiés — ouvre l'application radon" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px"><span class="sq" style="background:#C28533"></span>Voir le volet radon &rarr;</a>
       <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Fond magnétique régional</button>
 
       <h5 class="subgroup-header">B. Contexte territorial (géologie, hydro, forêts)</h5>
@@ -1574,7 +1578,14 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
            (POINTS_CHAUDS_RADIO, via loadPointsChaudsRadio()/loadSitesApp()) reste actif au boot
            pour le boost ponctuel du calcul gamma composite (calcGammaAmbient) — voir commentaire
            au-dessus de loadPointsChaudsRadio(). -->
-      <button class="lbtn" id="b-sites-remarq" data-domains="statique ionisant" title="Anomalies de substrat à signature EM réelle — 3 sites ophiolitiques (serpentinite Albu/Nonza, magnétite Farinole) à anomalie magnétique + surveillance Th-234 naturel (Bouches de Bonifacio — étude IRSN 2004, désormais ASNR). 4 sites documentaires, mesures in situ requises." onclick="togSitesRemarquables(this)"><span style="display:inline-block;width:10px;height:10px;background:#1F3A5F;transform:rotate(45deg);border:1px solid #F5F0E7;vertical-align:middle"></span>Anomalies de substrat (serpentinite, magnétite) &amp; Th-234</button>
+      <!-- Couche « Anomalies de substrat (serpentinite, magnétite) & Th-234 » retirée de la carte
+           publique le 2026-08-20 (pattern PR #990, même logique que le retrait "Sites U/Th" du
+           2026-08-19) — contenu transposé en fiche documentaire cadre-scientifique.html §10.9
+           (voir diff cadre-scientifique.html). Le chargement des données (SITES_REMARQUABLES,
+           via loadSitesApp(), même loader partagé que POINTS_CHAUDS_RADIO) reste actif et
+           INCONDITIONNEL au boot : NE PAS retirer la déclaration `let SITES_REMARQUABLES = [];`
+           ni son assignation dans loadSitesApp() — elles sont indissociables du chargement de
+           POINTS_CHAUDS_RADIO qui alimente le boost ponctuel de calcGammaAmbient. -->
       <button class="lbtn" id="b-crustal" data-domains="statique" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF) — opt-in, comparaison locale/mondiale" onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales)</button>
 
       <h5 class="subgroup-header">D. Mesures citoyennes — rayonnement gamma</h5>
@@ -2743,13 +2754,8 @@ const lPostesSources=L.layerGroup();
 // restent chargées au boot pour le calcul, seul l'affichage carte a été retiré.
 // lSit/lSit2/lAlign/lEgl/lTour/lIndu/lCast/lPont : couches patrimoniales migrées vers patrimoine.html
 // anciennes couches supprimées — déplacées hors de ce fichier
-const lBT=L.layerGroup(),lAnt=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lHotRF=L.layerGroup(),lSitesRemarq=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
+const lBT=L.layerGroup(),lAnt=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lHotRF=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
 const lCrustal=L.layerGroup();
-const lRadon=L.layerGroup();
-// lRadonDepots (D5) : dépôts radon ERP certifiés déposés par les communes,
-// jamais fusionné visuellement avec le zonage 2/3 (lRadon) — points précis
-// par établissement, patron visuel des mesures certifiées RF/EXEM (lCert).
-const lRadonDepots=L.layerGroup();
 // Qualitair Corse — PM2.5 moyenne annuelle modelisee 2024 (tuiles ArcGIS publiques, HTTP 200 sans
 // token verifie 2026-07-08 ; ODbL 1.0 / CC BY-SA 2.0 FR). Couche de CO-EXPOSITION affichee EN REGARD du
 // radon : mise en visualisation cote a cote, AUCUN croisement ni calcul Tellux. Raster pre-rendu
@@ -2765,9 +2771,9 @@ const lCert=L.layerGroup();
 // reduits (montre les traces / la couverture citoyenne). Chargee au 1er toggle (loadOpenRad).
 const _openRadCanvas=L.canvas({padding:0.5});
 const lOpenRad=L.layerGroup();
-const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,con:lCon,therm:lTherm,crustal:lCrustal,sitesRemarq:lSitesRemarq,radon:lRadon,air:lAir,openrad:lOpenRad};
+const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,con:lCon,therm:lTherm,crustal:lCrustal,air:lAir,openrad:lOpenRad};
 const WMS={geo:wmsGeo,hyd:wmsHyd,cav:wmsCav,emag:wmsEmag,foret:wmsForet};
-const ACTIVE={bt:false,ant:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,hotrf:false,res:false,prod:false,con:true,therm:false,crustal:false,sitesRemarq:false,radon:false,air:false,openrad:false};
+const ACTIVE={bt:false,ant:false,geo:false,hyd:false,cav:false,emag:false,foret:false,hot:true,hotrf:false,res:false,prod:false,con:true,therm:false,crustal:false,air:false,openrad:false};
 
 const LEGEND_CORE_IDS=new Set(['hot','hotrf']);
 const LEGEND_MAX_CONTEXT=3;
@@ -2797,27 +2803,6 @@ const LEGEND_HTML={
     '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Basse fréquence 9 kHz–100 kHz</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#5c3a9b;border-radius:50%;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Contribution citoyenne (cluster)</div>'+
     '<div class="leg-src">ANFR/EXEM · Tellux crowdsourcé</div>'+
-    '</div>',
-  sitesRemarq:'<div class="leg-block"><b class="leg-title">Anomalies de substrat (serpentinite, magnétite) & Th-234</b>'+
-    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Sites à lien EM/ionisant réel — substrat magnétique + surveillance Th-234</div>'+
-    '<div class="leg-row"><svg width="12" height="12" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px"><polygon points="7,1 13,5.5 10.5,13 3.5,13 1,5.5" fill="#1F3A5F" stroke="#F5F0E7" stroke-width="1.5"/></svg> Ophiolite — serpentinite &amp; magnétite (anomalie magnétique)</div>'+
-    '<div class="leg-row"><svg width="12" height="12" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px"><polygon points="7,1 8.5,5.5 13,5.5 9.25,8.25 10.75,13 7,10.25 3.25,13 4.75,8.25 1,5.5 5.5,5.5" fill="#3F5B3A" stroke="#F5F0E7" stroke-width="1"/></svg> Surveillance Th-234 naturel (Bonifacio)</div>'+
-    '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">4 sites · données documentaires · mesures terrain requises</div>'+
-    '<div class="leg-why">Points de référence pour calibrer les anomalies locales mesurées.</div>'+
-    '<div class="leg-src">BRGM · ASNR · EMAG2v3</div>'+
-    '</div>',
-  radon:'<div class="leg-block"><b class="leg-title">Potentiel radon</b>'+
-    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Exhalation du sous-sol, géologie granitique</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#C28533;opacity:0.4;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Zone 3 — potentiel radon significatif</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#EDD59A;opacity:0.6;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Zone 2 — potentiel faible, facteurs géologiques particuliers</div>'+
-    '<div class="leg-src">ASNR · arrêté du 27 juin 2018 · 216 en zone 3 + 37 en zone 2</div>'+
-    '</div>',
-  radonDepots:'<div class="leg-block"><b class="leg-title">Dépôts radon ERP (certifié)</b>'+
-    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Résultats de mesurage déposés par les communes, vérifiés par Tellux</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;transform:rotate(45deg);vertical-align:middle;margin-right:4px"></span>En dessous du repère de 300 Bq/m³</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#b85c00;transform:rotate(45deg);vertical-align:middle;margin-right:4px"></span>Au-dessus du repère de 300 Bq/m³ — un repère, pas un seuil d\'alerte</div>'+
-    '<div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Point précis par établissement, jamais fusionné avec le zonage 2/3. Mesure ponctuelle certifiée, non extrapolable.</div>'+
-    '<div class="leg-src">Dépôt communal · organisme agréé ASNR · NF EN ISO 11665-4 · revue manuelle Tellux avant publication</div>'+
     '</div>',
   air:'<div class="leg-block"><b class="leg-title">Particules fines PM2,5 (air)</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Moyenne annuelle modélisée 2024 · Qualitair Corse · 200 m</div>'+
@@ -2861,9 +2846,6 @@ const LEGEND_HTML_EN={
   bt:'<div class="leg-block"><b class="leg-title">LV grid</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Street-level electrical distribution</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>Overhead BT</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>Underground BT</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 11</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Generation sites</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Corsican power grid generation plants</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydro dam</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Run-of-river hydro</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Wind</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogas</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Gas turbine (combustion turbine)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnection</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Size according to power output:</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
   con:'<div class="leg-block"><b class="leg-title">EM measurements</b><div class="leg-sub" style="font-size:10px;color:var(--tx-mica,#7B7770);margin:2px 0 4px">30 ANFR/EXEM sheets + citizen contributions</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Compliant &lt; 5 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Compliant 5–28 V/m</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#7c0000;transform:rotate(45deg);border:2px solid #C28533;vertical-align:middle;margin-right:4px"></span> Non-compliant &gt; 28 V/m (e.g. Monticello)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Detail per sheet by clicking the marker</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Low frequency 9 kHz–100 kHz</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#5c3a9b;border-radius:50%;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Citizen contribution (cluster)</div><div class="leg-src">ANFR/EXEM · Tellux crowdsourced</div></div>',
-  sitesRemarq:'<div class="leg-block"><b class="leg-title">Substrate anomalies (serpentinite, magnetite) & Th-234</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Sites with a genuine EM/ionizing link — magnetic substrate + Th-234 monitoring</div><div class="leg-row"><svg width="12" height="12" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px"><polygon points="7,1 13,5.5 10.5,13 3.5,13 1,5.5" fill="#1F3A5F" stroke="#F5F0E7" stroke-width="1.5"/></svg> Ophiolite — serpentinite &amp; magnetite (magnetic anomaly)</div><div class="leg-row"><svg width="12" height="12" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px"><polygon points="7,1 8.5,5.5 13,5.5 9.25,8.25 10.75,13 7,10.25 3.25,13 4.75,8.25 1,5.5 5.5,5.5" fill="#3F5B3A" stroke="#F5F0E7" stroke-width="1"/></svg> Natural Th-234 monitoring (Bonifacio)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">4 sites · documentary data · field measurement required</div><div class="leg-why">Reference points for calibrating measured local anomalies.</div><div class="leg-src">BRGM · ASNR · EMAG2v3</div></div>',
-  radon:'<div class="leg-block"><b class="leg-title">Radon potential</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Subsurface exhalation, granitic geology</div><div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#C28533;opacity:0.4;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Zone 3 — significant radon potential</div><div class="leg-row"><span style="display:inline-block;width:12px;height:10px;background:#EDD59A;opacity:0.6;border:1px solid #C28533;vertical-align:middle;margin-right:4px"></span>Zone 2 — low potential, specific geological factors</div><div class="leg-src">ASNR · order of June 27, 2018 · 216 in zone 3 + 37 in zone 2</div></div>',
-  radonDepots:'<div class="leg-block"><b class="leg-title">Radon deposits, public-facing facilities (certified)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Measurement results submitted by municipalities, verified by Tellux</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;transform:rotate(45deg);vertical-align:middle;margin-right:4px"></span>Below the 300 Bq/m³ marker</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#b85c00;transform:rotate(45deg);vertical-align:middle;margin-right:4px"></span>Above the 300 Bq/m³ marker — a marker, not an alert threshold</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Precise point per facility, never merged with the zone 2/3 mapping. Certified point-in-time measurement, not extrapolable.</div><div class="leg-src">Municipal submission · ASNR-approved body · NF EN ISO 11665-4 · manual Tellux review before publication</div></div>',
   air:'<div class="leg-block"><b class="leg-title">Fine particulate matter PM2.5 (air)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">2024 modeled annual average · Qualitair Corse · 200 m</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Color rendering = official Qualitair Corse scale (deeper hue = higher concentration). Displayed at reduced opacity.</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #6b8fb5;margin-top:3px;font-size:9px;color:#4a4f5e;font-style:italic">▸ Annual reference points: WHO 5 µg/m³ · EU limit value 25 µg/m³.<br><span style="font-size:8px;color:#8b92a5">Regulatory reference points — not a Tellux alert threshold</span></div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#eef3f7;border:1px solid #cddbe6;border-radius:4px;font-size:8.5px;color:#3f5b7a;line-height:1.4"><b>Displayed for visualization.</b> Mixed origin, natural and anthropogenic; classified here as an anthropogenic source for exposure reading purposes. Not a Tellux calculation.</div><div class="leg-src">Qualitair Corse · 200 m modeling · ODbL 1.0 / CC BY-SA 2.0 FR</div></div>',
   openrad:'<div class="leg-block"><b class="leg-title">Citizen gamma (OpenRadiation)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Ambient gamma/X dose rate · citizen measurements · Geiger tubes</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;opacity:0.55;vertical-align:middle;margin-right:4px"></span>Citizen measurement point (µSv/h)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4"><b>Gamma/X, not radon.</b> Independent display layer — not fed into the index or the gamma calculation.</div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#eef3f0;border:1px solid #cfe0da;border-radius:4px;font-size:8.5px;color:#2f5f54;line-height:1.4"><b>Indicative measurements, not certified.</b> Heterogeneous sensors. The dataset includes <b>continuous tracks</b> (a single walking session accounts for several hundred points) → displayed density <b>≠ number of measurement sites</b>.</div><div class="leg-src">OpenRadiation contributors — ODbL</div></div>',
   postesSources:'<div class="leg-block"><b class="leg-title">EDF SEI substations</b><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Substation &#x2264; 63 kV</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Substation &#x2265; 150 kV</div><div class="leg-why">HTB/HTA grid nodes — significant ELF 50 Hz field nearby.</div><div class="leg-src">EDF SEI · OSM · 21 substations</div></div>'
@@ -3210,7 +3192,6 @@ function tog(id,cls,btn){
     if(id==='hotrf'&&lHotRF.getLayers().length===0)buildHotRF();
     if(id==='therm'&&lTherm.getLayers().length===0)loadSitesApp().then(buildThermLayer);
     if(id==='crustal'){if(lCrustal.getLayers().length===0)buildCrustalLayer();showCrustalGauge(true);}
-    if(id==='radon'&&lRadon.getLayers().length===0)buildRadonLayer();
     if(id==='openrad'&&lOpenRad.getLayers().length===0)loadOpenRad();
     // tour/indu/cast/pont : couches patrimoniales migrées vers patrimoine.html
     if(id==='res'&&lRes.getLayers().length===0)loadReseau();
@@ -5217,57 +5198,12 @@ function calcTerrestrialGamma(lithology){
 // Remplace 8 circleMarkers approximatifs (PR radon-polygons-integration).
 let _radonGeojsonCache = null;
 
-function radonStyle(feature){
-  var cat = feature.properties.categorie;
-  if(cat === 3){
-    return {fillColor:'#C28533', fillOpacity:0.40, color:'#C28533', weight:1, opacity:0.8};
-  }
-  if(cat === 2){
-    return {fillColor:'#EDD59A', fillOpacity:0.25, color:'#C28533', weight:1, opacity:0.6};
-  }
-  // Fallback neutre si cat inattendue
-  return {fillColor:'#EFE9DC', fillOpacity:0.15, color:'#74706A', weight:1, opacity:0.4};
-}
-
-function radonOnEachFeature(feature, layer){
-  var p = feature.properties || {};
-  var cat = p.categorie;
-  var catText = cat === 3 ? jt('radon_zone3_cat','Zone 3 — potentiel radon significatif')
-              : cat === 2 ? jt('radon_zone2_cat','Zone 2 — potentiel radon faible (facteurs géologiques particuliers)')
-              : jt('radon_zone_non_classee','Zone à potentiel radon non classée');
-  // Point de vérité unique = la DONNÉE : properties.source du geojson porte l'attribution
-  // complète (« ASNR — arrêté du 27 juin 2018 »). Le code ne compose plus rien (il ré-apposait
-  // l'arrêté → doublon + « IRSN » résiduel, audit prod F1 2026-07-10). Un futur changement de
-  // texte réglementaire = mise à jour du geojson, sans toucher ce code.
-  var src = p.source || 'ASNR';
-  layer.bindPopup(
-    '<b>' + (p.nom_commune || 'Commune') + '</b><br>'
-    + '<span style="font-size:11px;color:var(--tx-mica)">INSEE ' + (p.code_insee || '—') + (p.departement ? ' · ' + p.departement : '') + '</span><br>'
-    + catText + '<br>'
-    + '<span style="font-size:10px;color:var(--tx-mica);font-style:italic">'+jt('radon_source_prefix','Source : ')+ src + '</span>'
-  );
-}
-
-async function buildRadonLayer(){
-  // Nettoyage (idempotent : si déjà populée, on sort)
-  if(lRadon.getLayers().length > 0) return;
-  try {
-    if(!_radonGeojsonCache){
-      var r = await fetch('public/data/radon_zones_corse.geojson');
-      if(!r.ok) throw new Error('HTTP ' + r.status);
-      _radonGeojsonCache = await r.json();
-    }
-    var gj = L.geoJSON(_radonGeojsonCache, {
-      style: radonStyle,
-      onEachFeature: radonOnEachFeature
-    });
-    lRadon.addLayer(gj);
-    var meta = _radonGeojsonCache.metadata || {};
-    console.log('[Tellux] Radon polygones chargés : ' + (meta.features_total || (_radonGeojsonCache.features||[]).length) + ' communes (cat.2+cat.3)');
-  } catch(e){
-    console.warn('[Tellux] Radon GeoJSON indisponible : ' + e.message);
-  }
-}
+// buildRadonLayer()/radonStyle()/radonOnEachFeature() — rendu carte du zonage ASNR — retirés le
+// 2026-08-20 (pattern PR #990) : la carte du zonage radon vit désormais sur radon.html
+// (fetchRadonGeojson()/buildRadonMapLayer(), fetch unifié). `_radonGeojsonCache` ci-dessus reste
+// déclarée et ACTIVEMENT peuplée : indexRadonZonesOfficial() ci-dessous (qui alimente
+// RADON_L3_INSEE_SET/RADON_L3_NAME_SET pour calcRadonPotential()) la réutilise si déjà présente,
+// sinon effectue son propre fetch indépendant — INCHANGÉ par ce retrait.
 
 // ═══ OpenRadiation — mesures citoyennes gamma/X (couche d'affichage indépendante, ODbL) ═══
 // Points bruts, rayon + opacité réduits (couverture / traces), rendu canvas (2000+ points).
@@ -7948,104 +7884,21 @@ async function togPostesSources(btn){
 // ═══ Anomalies de substrat (serpentinite, magnétite) & Th-234 ═══
 // M2 (2026-05-13) — source unique public/data/sites_app.json (filter type=site_em).
 // Le loader unifié `loadSitesApp()` (L.3835) peuple SITES_REMARQUABLES via
-// `adaptSiteEMFromApp` (L.3853). loadSitesRemarquables() est conservé comme
-// thin wrapper rétro-compat.
+// `adaptSiteEMFromApp` (L.3853).
 let SITES_REMARQUABLES = [];
+// ⚠️ NE PAS SUPPRIMER — SITES_REMARQUABLES est peuplée par loadSitesApp(), le même loader
+// partagé qui peuple POINTS_CHAUDS_RADIO (boost ponctuel calcGammaAmbient). Seul le code de
+// RENDU CARTE ci-dessous (consommateurs de cette variable) a été retiré le 2026-08-20 (pattern
+// PR #990) ; la variable et son assignation dans loadSitesApp() restent INCHANGÉES.
 
-function loadSitesRemarquables() { return loadSitesApp(); }
+// loadSitesRemarquables() — thin wrapper retiré le 2026-08-20 : plus aucun appelant après le
+// retrait de togSitesRemarquables() ci-dessous (vérifié par grep). loadSitesApp() reste appelé
+// directement ailleurs (boot Promise.all) pour peupler POINTS_CHAUDS_RADIO/SITES_REMARQUABLES/
+// THERMAL_SOURCES_CORSE — CE POINT D'APPEL N'EST PAS TOUCHÉ.
 
-// Mapping catégorie → rendu visuel (forme + couleur palette Tellux DA v2).
-// Brief 29 — ajout 4e cat 'geologique' pour les 33 sites geologiques nouveaux
-// rapatries via Option gamma (Lac de Tolla, Foret Tartagine, Monte Cinto, Capu
-// Bianchi, Gorges Inzecca, etc.). Couleur maquis_pale (DA Tellux v2), shape
-// circle distinct des 3 cats SR historiques (pentagon/diamond/star).
-// Brief 33 P2 (2026-05-06) — ajout 5e cat 'hydraulique' pour les 6 barrages
-// (axe_em=hydrauliques). Triangle bleu eau, distinct des 4 autres shapes.
-const SR_RENDU = {
-  'ophiolite':        { color: '#1F3A5F', shape: 'pentagon' },
-  'minier':           { color: '#C28533', shape: 'diamond' },
-  'surveillance_radio': { color: '#3F5B3A', shape: 'star' },
-  'geologique':       { color: '#5C7A3A', shape: 'circle' },
-  'hydraulique':      { color: '#3D7BA8', shape: 'triangle' }
-};
-
-function _srIconHtml(categorie) {
-  const r = SR_RENDU[categorie] || { color: '#1F2329', shape: 'diamond' };
-  if (r.shape === 'pentagon') {
-    return '<svg width="14" height="14" viewBox="0 0 14 14" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))"><polygon points="7,1 13,5.5 10.5,13 3.5,13 1,5.5" fill="' + r.color + '" stroke="#F5F0E7" stroke-width="1.5"/></svg>';
-  }
-  if (r.shape === 'star') {
-    return '<svg width="14" height="14" viewBox="0 0 14 14" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))"><polygon points="7,1 8.5,5.5 13,5.5 9.25,8.25 10.75,13 7,10.25 3.25,13 4.75,8.25 1,5.5 5.5,5.5" fill="' + r.color + '" stroke="#F5F0E7" stroke-width="1"/></svg>';
-  }
-  // Brief 29 — 4e shape circle pour cat geologique (sites geol non-SR).
-  if (r.shape === 'circle') {
-    return '<svg width="14" height="14" viewBox="0 0 14 14" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))"><circle cx="7" cy="7" r="5" fill="' + r.color + '" stroke="#F5F0E7" stroke-width="1.5"/></svg>';
-  }
-  // Brief 33 P2 — 5e shape triangle pointe-bas pour cat hydraulique (barrages).
-  if (r.shape === 'triangle') {
-    return '<svg width="14" height="14" viewBox="0 0 14 14" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))"><polygon points="7,12 1,2 13,2" fill="' + r.color + '" stroke="#F5F0E7" stroke-width="1.5"/></svg>';
-  }
-  return '<div style="width:12px;height:12px;background:' + r.color + ';transform:rotate(45deg);border:2px solid #F5F0E7;box-shadow:0 1px 3px rgba(0,0,0,.35);"></div>';
-}
-
-function _srFormatTooltip(s) {
-  // Brief 29 — ajout label "Site géologique" pour la 4e cat.
-  // Brief 33 P2 — ajout label "Ouvrage hydraulique" pour la 5e cat.
-  const categorieLabel = {
-    'ophiolite': jt('sr_cat_ophiolite','Ophiolite'),
-    'minier': jt('sr_cat_minier','Site minier historique'),
-    'surveillance_radio': jt('sr_cat_surveillance','Surveillance radiologique'),
-    'geologique': jt('sr_cat_geologique','Site géologique'),
-    'hydraulique': jt('sr_cat_hydraulique','Ouvrage hydraulique')
-  }[s.categorie] || s.categorie;
-  const precisionLabel = s.precision_coord === 'communal'
-    ? '<br><span style="font-size:10px;color:#C28533;font-weight:600">'+jt('sr_precision_communale','⚠ Précision communale — localisation à affiner')+'</span>'
-    : '';
-  return '<b>' + s.nom + '</b>'
-    + '<br><span style="font-size:10px;color:#1F3A5F;font-weight:600">' + categorieLabel + '</span>'
-    + precisionLabel
-    + '<br><em>' + (s.note_ui || '') + '</em>';
-}
-
-// Sprint V5 13 mai 2026 — retour au pattern bindTooltip simple identique
-// à celui utilisé alors par .tellux-pc-tooltip (couche Points chauds U/Th,
-// retirée depuis — cf. commentaire plus haut). Revert zele V2 (panBy + tooltipopen
-// listener inertes), V3 (flip direction close+reopen), V4 (re-bind on
-// click direction switch). La vraie cause format colonne etait CSS
-// (manque de width:max-content), pas JS.
-let _srRendered = false;
-function _renderSitesRemarquables() {
-  if (_srRendered) return;
-  _srRendered = true;
-  (SITES_REMARQUABLES || []).forEach(s => {
-    const icon = L.divIcon({
-      className: 'sr-icon',
-      html: _srIconHtml(s.categorie),
-      iconSize: [18, 18],
-      iconAnchor: [9, 9]
-    });
-    L.marker([s.lat, s.lon], { icon })
-      .bindTooltip(_srFormatTooltip(s), { sticky: true, direction: 'top', className: 'tellux-sr-tooltip', maxWidth: 300 })
-      .addTo(lSitesRemarq);
-  });
-}
-
-async function togSitesRemarquables(btn) {
-  if (map.hasLayer(lSitesRemarq)) {
-    map.removeLayer(lSitesRemarq);
-    btn.className = 'lbtn';
-    ACTIVE.sitesRemarq = false;
-    showLegend('sitesRemarq', false);
-    return;
-  }
-  await loadSitesRemarquables();
-  _renderSitesRemarquables();
-  lSitesRemarq.addTo(map);
-  btn.className = 'lbtn on-sites-remarq';
-  ACTIVE.sitesRemarq = true;
-  showLegend('sitesRemarq', true);
-  info(jt('sites_remarq_prefix', 'Anomalies de substrat (serpentinite, magnétite) & Th-234 — ') + (SITES_REMARQUABLES || []).length + jt('sites_remarq_suffix', ' sites · données documentaires, mesures in situ requises'),null,5000);
-}
+// SR_RENDU / _srIconHtml() / _srFormatTooltip() / _renderSitesRemarquables() / togSitesRemarquables()
+// retirés le 2026-08-20 (pattern PR #990) — rendu carte de la couche "Anomalies de substrat",
+// migré sur radon.html à titre de fiche documentaire (voir cadre-scientifique.html §10.9).
 
 // ═══ Mesures certifiées ANFR/EXEM ═══
 // Source : public/data/cartoradio_certified_corse.json (régénération 27 avril 2026, 30 fiches).
@@ -8282,97 +8135,12 @@ function _renderMesuresCertifiees() {
   });
 }
 
-// ═══ Dépôts radon ERP certifiés (D5) — mêmes patron visuel que lCert ═══
-// Source : table Supabase radon_depots_erp, RLS filtrant déjà côté serveur
-// (anon ne voit que statut_verification_tellux = 'publie'). Jamais fusionné
-// avec le zonage 2/3 (lRadon) : point précis par établissement, popup avec
-// provenance complète, warning permanent, repère 300 Bq/m³ (pas un verdict).
-let RADON_DEPOTS_ERP = [];
-let _radonDepotsLoadPromise = null;
-let _radonDepotsRendered = false;
-
-function loadRadonDepotsErp() {
-  if (_radonDepotsLoadPromise) return _radonDepotsLoadPromise;
-  _radonDepotsLoadPromise = (async () => {
-    try {
-      RADON_DEPOTS_ERP = await sbGet('radon_depots_erp?select=nom_etablissement,categorie_erp,commune_insee,lat,lon,valeur_moyenne_bq_m3,date_mesurage,organisme_agree_nom,organisme_agree_numero,statut_action&statut_verification_tellux=eq.publie&lat=not.is.null&lon=not.is.null');
-    } catch (e) {
-      console.warn('[Tellux] Dépôts radon ERP indisponibles : ' + e.message);
-      RADON_DEPOTS_ERP = [];
-    }
-    return RADON_DEPOTS_ERP;
-  })();
-  return _radonDepotsLoadPromise;
-}
-
-const RADON_DEPOT_CATEGORIE_LABELS = {
-  enseignement: "Établissement d'enseignement", petite_enfance: 'Accueil petite enfance (crèche)',
-  sanitaire_social_hebergement: 'Établissement sanitaire ou social avec hébergement', thermal: 'Établissement thermal',
-  penitentiaire: 'Établissement pénitentiaire', mairie: 'Bâtiment mairie', autre: 'Établissement recevant du public'
-};
-const RADON_DEPOT_STATUT_ACTION_LABELS = {
-  aucune_action_requise: 'Aucune action requise', ventilation_etancheite_engagee: 'Ventilation / étanchéité engagée',
-  expertise_complementaire_en_cours: 'Expertise complémentaire en cours'
-};
-
-function _radonDepotColor(d) {
-  return d.valeur_moyenne_bq_m3 > 300 ? '#b85c00' : '#0f766e';
-}
-
-function _radonDepotFormatPopup(d) {
-  const color = _radonDepotColor(d);
-  const repereHtml = d.valeur_moyenne_bq_m3 > 300
-    ? '<div style="font-size:11px;color:#b85c00;font-weight:600">'+jt('rdepot_au_dessus','Au-dessus du repère de 300 Bq/m³ — un repère, pas un seuil d\'alerte')+'</div>'
-    : '<div style="font-size:11px;color:#0f766e">'+jt('rdepot_en_dessous','En dessous du repère de 300 Bq/m³')+'</div>';
-  // Résolution lazy — RADON_DEPOT_CATEGORIE_LABELS/RADON_DEPOT_STATUT_ACTION_LABELS
-  // restent en FR au niveau module (même piège que INSTRUMENT_LABELS) ; jt()
-  // résolu ici au rendu du popup (appelé après DOMContentLoaded).
-  const actionHtml = d.statut_action
-    ? '<div style="font-size:11px;color:#0f5a4d;font-style:italic;margin-top:2px">' + jt('rdepot_statut_'+d.statut_action, RADON_DEPOT_STATUT_ACTION_LABELS[d.statut_action] || d.statut_action) + '</div>'
-    : '';
-  return '<div class="cert-popup-header">' + d.nom_etablissement + '</div>'
-    + '<div style="font-size:11px;color:var(--tx-mica,#7B7770);margin-bottom:4px">' + jt('rdepot_cat_'+d.categorie_erp, RADON_DEPOT_CATEGORIE_LABELS[d.categorie_erp] || d.categorie_erp) + '</div>'
-    + '<div class="cert-popup-badge-conforme">'+jt('rdepot_badge_certifie','certifié — organisme agréé ASNR')+'</div>'
-    + '<div class="cert-popup-value" style="color:' + color + '">' + d.valeur_moyenne_bq_m3 + ' Bq/m³</div>'
-    + repereHtml
-    + actionHtml
-    + '<div style="font-size:11px;margin-top:4px"><b>'+jt('cert_date_label','Date :')+'</b> ' + d.date_mesurage + jt('cert_infix_dot',' · ')+'<b>'+jt('rdepot_organisme_label','Organisme :')+'</b> ' + d.organisme_agree_nom + '</div>'
-    + '<div style="font-size:11px"><b>'+jt('rdepot_agrement_label','Agrément :')+'</b> ' + d.organisme_agree_numero + jt('cert_infix_dot',' · ')+'<b>'+jt('rdepot_norme_label','Norme :')+'</b> NF EN ISO 11665-4</div>'
-    + '<div class="cert-popup-precision">'+jt('rdepot_precision_note','⚠ Mesure ponctuelle certifiée, non extrapolable dans le temps ni dans l\'espace ; ne vaut pas diagnostic territorial.')+'</div>';
-}
-
-function _renderRadonDepotsErp() {
-  if (_radonDepotsRendered) return;
-  _radonDepotsRendered = true;
-  (RADON_DEPOTS_ERP || []).forEach(d => {
-    const color = _radonDepotColor(d);
-    const icon = L.divIcon({
-      className: 'cert-icon',
-      html: '<div style="width:12px;height:12px;background:' + color + ';transform:rotate(45deg);border:2px solid #F5F0E7;box-shadow:0 1px 3px rgba(0,0,0,.35);"></div>',
-      iconSize: [18, 18],
-      iconAnchor: [9, 9]
-    });
-    L.marker([d.lat, d.lon], { icon })
-      .bindPopup(_radonDepotFormatPopup(d), { className: 'tellux-cert-popup', maxWidth: 340, autoPan: true })
-      .addTo(lRadonDepots);
-  });
-}
-
-async function togRadonDepots(btn) {
-  if (map.hasLayer(lRadonDepots)) {
-    map.removeLayer(lRadonDepots); btn.className = 'lbtn'; showLegend('radonDepots', false); return;
-  }
-  try {
-    await loadRadonDepotsErp();
-    _renderRadonDepotsErp();
-    lRadonDepots.addTo(map);
-    btn.className = 'lbtn on-radon-depots';
-    showLegend('radonDepots', true);
-    info('Dépôts radon ERP certifiés — ' + (RADON_DEPOTS_ERP || []).length + ' établissement(s), vérifiés par Tellux avant publication', null, 5000);
-  } catch (e) {
-    info('<span style="color:var(--danger)">Dépôts radon ERP : erreur de chargement</span>', null, 5000);
-  }
-}
+// Bloc « Dépôts radon ERP » retiré de app.html le 2026-08-20 (pattern PR #990) — la carte des
+// dépôts ERP certifiés (issus de radon_depots_erp via sbGet()) vit désormais sur radon.html
+// (fetchRadonDepotsErp(), fetch unifié alimentant à la fois la carte et l'onglet "Ma commune").
+// Bloc vérifié 100% autonome (aucune fonction ni variable ici n'est référencée par
+// calcRadonPotential()/calcGammaAmbient — confirmé par grep avant retrait) : aucun risque pour
+// le calcul composite.
 
 // CHAOS-7 model reference (DTU Space, Denmark)
 // Not directly fetchable via API without registration
@@ -9345,7 +9113,6 @@ function capCleanup(){
 ["lyr_geo_tt","#b-geo","title","Carte géologique BRGM — granite, schiste, calcaire","Carta geulogica BRGM — granitu, schistu, calcariu","BRGM geological map — granite, schist, limestone"],
 ["lyr_failles","#b-failles","","Failles tectoniques","Faglie tettoniche","Tectonic faults"],
 ["lyr_failles_tt","#b-failles","title","Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)","Faglie tettoniche BRGM — 8 faglie principale (attive + quaternarie)","BRGM tectonic faults — 8 main faults (active + Quaternary)"],
-["lyr_radon_tt","#b-radon","title","Potentiel radon géologique — zones ASNR 2/3","Putenziale radon geulogicu — zone ASNR 2/3","Geological radon potential — ASNR zones 2/3"],
 ["lyr_emag","#b-emag","","Fond magnétique régional","Fondu magneticu regiunale","Regional magnetic background"],
 ["lyr_emag_tt","#b-emag","title","Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse","Fondu magneticu regiunale NOAA EMAG2v3 — anumalie di u zoccalu prufondu corsu","NOAA EMAG2v3 regional magnetic background — deep basement anomalies of Corsica"],
 ["lyr_cav","#b-cav","","Cavités","Cavità","Cavities"],
@@ -9356,8 +9123,6 @@ function capCleanup(){
 ["lyr_hyd_tt","#b-hyd","title","Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct","Falde è corsi d'acqua sutterranei (BRGM REMNAPPE) — stratu visuale ; u calculu adopra un dataset distintu","Groundwater and underground watercourses (BRGM REMNAPPE) — visual layer; the calculation uses a separate dataset"],
 ["lyr_foret","#b-foret","","Forêts publiques","Fureste publiche","Public forests"],
 ["lyr_foret_tt","#b-foret","title","Forêts publiques ONF via WMS IGN Géoplateforme — couche visuelle niveau A (pas de modulation calcul). BD Forêt V2 complète non disponible en WMS public.","Fureste publiche ONF via WMS IGN Géoplateforme — stratu visuale livellu A (nisuna mudulazione di calculu). BD Forêt V2 cumpleta micca dispunibule in WMS publicu.","ONF public forests via IGN Géoplateforme WMS — level A visual layer (no calculation modulation). Full BD Forêt V2 not available as public WMS."],
-["lyr_remarq","#b-sites-remarq","","Anomalies de substrat (serpentinite, magnétite) & Th-234","Anumalie di sustratu (serpentinite, magnetite) & Th-234","Substrate anomalies (serpentinite, magnetite) & Th-234"],
-["lyr_remarq_tt","#b-sites-remarq","title","Anomalies de substrat à signature EM réelle — 3 sites ophiolitiques (serpentinite Albu/Nonza, magnétite Farinole) à anomalie magnétique + surveillance Th-234 naturel (Bouches de Bonifacio — étude IRSN 2004, désormais ASNR). 4 sites documentaires, mesures in situ requises.","Anumalie di sustratu à signatura EM reale — 3 siti ofiolitichi (serpentinite Albu/Nonza, magnetite Farinole) à anumalia magnetica + surviglianza Th-234 naturale (Bocche di Bunifaziu — studiu IRSN 2004, oghje ASNR). 4 siti ducumentari, misure in situ richieste.","Substrate anomalies with a genuine EM signature — 3 ophiolitic sites (Albu/Nonza serpentinite, Farinole magnetite) with magnetic anomaly + natural Th-234 monitoring (Bouches de Bonifacio — 2004 IRSN study, now ASNR). 4 documentary sites, in situ measurement required."],
 ["lyr_crustal","#b-crustal","","Anomalies de référence (mondiales)","Anumalie di riferenza (mundiale)","Reference anomalies (worldwide)"],
 ["lyr_crustal_tt","#b-crustal","title","5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF) — opt-in, comparaison locale/mondiale","5 anumalie magnetiche crustale mundiale di riferenza (crateri d'impattu + BIF) — opt-in, paragone lucale/mundiale","5 worldwide reference crustal magnetic anomalies (impact craters + BIF) — opt-in, local/global comparison"],
 ["btn_expert_aria","#btn-expert","aria-label","Outils experts","Strumenti esperti","Expert tools"],
