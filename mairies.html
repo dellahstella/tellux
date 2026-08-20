@@ -411,20 +411,10 @@ a{color:inherit;}
 .mr-depot-radon-success h3{font-family:var(--ff);font-size:16px;font-weight:600;margin-bottom:8px;color:var(--maquis);}
 .mr-depot-radon-success p{font-size:13px;color:var(--mica);line-height:1.7;margin-bottom:16px;}
 
-/* Dépôts radon publiés — Fiche commune (Brique D), jamais fusionné au zonage 2/3 */
-.mr-depot-radon-list{margin-top:18px;padding-top:16px;border-top:1px solid var(--border);}
-.mr-depot-radon-list-title{font-family:var(--ff);font-size:13px;font-weight:600;color:var(--ardoise);margin-bottom:10px;}
-.mr-depot-radon-item{background:var(--pierre);border-radius:8px;padding:12px 14px;margin-bottom:10px;font-size:12px;}
-.mr-depot-radon-item-header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:2px;}
-.mr-depot-radon-item-header strong{font-family:var(--ff);font-size:13px;color:var(--ardoise);}
-.mr-depot-radon-badge{font-family:var(--fm);font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:#1a6b5c;background:#e3f2ed;border:1px solid #b6ddd0;border-radius:20px;padding:2px 8px;white-space:nowrap;}
-.mr-depot-radon-item-sub{color:var(--mica);font-size:11px;margin-bottom:6px;}
-.mr-depot-radon-item-value{font-family:var(--ff);font-size:15px;font-weight:600;color:var(--ardoise);margin-bottom:2px;}
-.mr-depot-radon-item-repere{font-family:var(--fu);font-size:10.5px;font-weight:400;color:var(--mica);margin-left:6px;}
-.mr-depot-radon-item-repere-au-dessus{color:#b85c00;}
-.mr-depot-radon-item-meta{font-size:10.5px;color:var(--mica);margin-top:4px;}
-.mr-depot-radon-item-action{margin-top:6px;font-size:10.5px;color:#1a6b5c;font-style:italic;}
-.mr-depot-radon-item-warning{font-size:10.5px;color:var(--mica);font-style:italic;margin-top:6px;line-height:1.5;}
+/* .mr-depot-radon-list/-item*/-badge (rendu établissement par établissement du panneau
+   obligations) retirés le 2026-08-20 (D6, Option B) avec renderDepotsRadonHtml() — ce rendu vit
+   désormais sur radon.html. .mr-depot-radon-wrap/-checkbox-label/-warning/-recap/-error/-actions/
+   -success ci-dessus sont INCHANGÉS (formulaire de dépôt mairie, fonctionnalité distincte). */
 .mr-modal-preview{overflow-y:auto;padding:20px 28px;background:#fff;overscroll-behavior:contain;}
 .mr-modal-preview-label{font-family:var(--fm);font-size:10px;color:var(--mica);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;}
 .mr-preview-paper{background:white;border:1px solid var(--brume);border-radius:4px;padding:28px 32px;font-family:var(--fu);font-size:12px;line-height:1.6;color:var(--ardoise);box-shadow:0 2px 8px rgba(31,35,41,0.04);}
@@ -461,7 +451,6 @@ a{color:inherit;}
 .mr-legal-content p:last-child{margin-bottom:0;}
 .mr-legal-content a{color:var(--tyrrh);text-decoration:none;border-bottom:1px dotted rgba(31,58,95,0.4);transition:border-color .15s;}
 .mr-legal-content a:hover{border-bottom-color:var(--tyrrh);}
-.mr-radon-oblig-disclaimer{font-size:11px;color:var(--mica);line-height:1.6;margin-top:4px;}
 
 /* Checklist enrichie */
 .mr-step-desc{font-style:normal;}
@@ -671,12 +660,16 @@ a{color:inherit;}
       </section>
     </div>
 
-    <!-- Bloc Radon — obligations & ressources (plein-largeur, actif quand commune selectionnee, contenu genere selon la zone) -->
+    <!-- Bloc Radon — renvoi (D6, Option B, 2026-08-20) : le zonage, les obligations légales
+         par zone et les dépôts ERP vivent désormais sur radon.html, plutôt que dupliqués ici.
+         Texte légal = source unique (articles de loi qui divergeraient en cas de duplication
+         non maintenue, cf. discipline anti-péremption A.0/A.5 bis). Actif quand une commune est
+         sélectionnée, comme l'ancien panneau ; le lien porte le code INSEE en query. -->
     <section class="mr-etab-section" id="mr-radon-oblig-section" aria-labelledby="mr-radon-oblig-title" hidden>
       <div class="mr-etab-header">
         <h3 class="mr-etab-title" id="mr-radon-oblig-title" data-i18n-key="radon_oblig_title">Radon — obligations &amp; ressources</h3>
       </div>
-      <p class="mr-etab-lead" data-i18n-key="radon_oblig_lead">Ce que prévoient les textes pour votre commune, selon sa zone à potentiel radon (ASNR). Relais du droit en vigueur ; ne constitue pas un conseil juridique.</p>
+      <p class="mr-etab-lead" data-i18n-key="radon_renvoi_lead">Le zonage radon, les obligations légales par zone et les dépôts de mesurage certifiés ont désormais leur propre application, avec la fiche de votre commune déjà pré-remplie.</p>
       <div id="mr-radon-oblig-body"></div>
     </section>
 
@@ -705,28 +698,16 @@ a{color:inherit;}
       </div>
     </section>
 
-    <!-- Section radon (D4) : regroupée par public (Citoyen / Mairie / Entrepreneur), amorce D2 sans le forcer partout -->
+    <!-- Section radon (D6, Option B, 2026-08-20) : les 4 modèles de courriers radon (Citoyen /
+         Mairie / Entrepreneur) vivent désormais sur radon.html (onglet "Générer un courrier"),
+         source unique pour un contenu qui cite des articles de loi. -->
     <section class="mr-courrier-radon" id="courrier-radon">
       <div class="mr-courrier-radon-eyebrow">
         <div class="mr-courrier-radon-eyebrow-line"></div><span data-i18n-key="radon_eyebrow">Radon</span>
       </div>
       <h2 class="mr-section-h2" data-i18n-key="radon_courriers_h2">Courriers radon</h2>
-      <p class="mr-section-sub" data-i18n-key="radon_courriers_sub">Quatre modèles pour le dépistage et le mesurage du radon. À bien distinguer : le kit de dépistage gratuit (programme PRIMAIR, Qualitair Corse, ADEME) donne une mesure indicative ; seul un mesurage réglementaire par organisme agréé ASNR fait foi pour les obligations légales. Regroupés ci-dessous par public concerné.</p>
-
-      <h3 class="mr-courrier-radon-group-title" data-i18n-key="radon_group_citoyen">Citoyen</h3>
-      <div class="mr-cards" id="mr-radon-citoyen-list">
-        <!-- Cards injectées en JS -->
-      </div>
-
-      <h3 class="mr-courrier-radon-group-title" data-i18n-key="radon_group_mairie">Mairie</h3>
-      <div class="mr-cards" id="mr-radon-mairie-list">
-        <!-- Cards injectées en JS -->
-      </div>
-
-      <h3 class="mr-courrier-radon-group-title" data-i18n-key="radon_group_entrepreneur">Entrepreneur / employeur</h3>
-      <div class="mr-cards" id="mr-radon-entrepreneur-list">
-        <!-- Cards injectées en JS -->
-      </div>
+      <p class="mr-section-sub" data-i18n-key="radon_courriers_renvoi_p">Les 4 modèles de courriers radon (kit de dépistage, mesurage réglementaire ERP, distribution des kits, mesurage en milieu professionnel) sont désormais réunis sur l'application radon dédiée, avec le même moteur de génération PDF.</p>
+      <a class="mr-geophys-link" href="radon.html#courrier" target="_blank" rel="noopener" data-i18n-key="radon_courriers_renvoi_cta">Générer un courrier radon &rarr;</a>
     </section>
   </section>
 
@@ -1219,8 +1200,9 @@ a{color:inherit;}
     geo_donnees_chargement: "Data loading",
     geo_autres_couches_label: "Other geophysical layers",
     geo_substrat_value: "Geological substrate, crustal magnetic anomalies",
-    geo_autres_couches_desc: "These layers can be viewed on the Tellux map: BRGM geology (granite, schist, limestone), EMAG2v3 (NOAA crustal magnetic anomalies), documented U/Th sites. For a municipality-level view, use the link below.",
+    geo_autres_couches_desc: "These layers can be viewed on the Tellux map: BRGM geology (granite, schist, limestone), EMAG2v3 (NOAA crustal magnetic anomalies), documented U/Th sites. Radon zoning and ERP deposits now have their own dedicated application. For a municipality-level view, use the links below.",
     geo_explorer_carte_link: "Explore on the Tellux map →",
+    geo_explorer_radon_link: "Radon zoning &amp; ERP deposits by municipality →",
     atyp_definition: "An <strong>atypical point</strong> is a location where electromagnetic field exposure substantially exceeds the level observed nationally. The characterization threshold is <strong>9 V/m</strong> as of January 1, 2026 (previously 6 V/m). Article L.34-9-1 II H of the CPCE.",
     atyp_state1: "No list of atypical points by municipality is available in a structured format as of April 24, 2026. ANFR publishes an annual census as a PDF report. The 2024 census (published in 2025) confirms the closure of nearly all cases identified between 2017 and 2019.",
     atyp_state2: "To check the situation in your territory, two concrete steps are possible through your municipality.",
@@ -1229,39 +1211,15 @@ a{color:inherit;}
     atyp_link_demander: "Request an ANFR measurement for the municipality",
     atyp_link_legal: "View the full legal framework",
 
-    // Lot 4/? — bloc Obligations radon par zone (disclaimer, ressources,
-    // zones 1/2/3), labels catégories/actions du formulaire de dépôt,
-    // badges et métadonnées de résultat.
-    radon_disclaimer: "<em>This content relays the law in force; it does not substitute for it and does not constitute legal advice. Sources should be checked as of the consultation date.</em>",
-    radon_ressources: "<strong>Resources and measurement kits.</strong> Corsica's Regional Health and Environment Plan identifies municipalities as the preferred channel for distributing free screening kits (<a href=\"https://qualitair.corsica/radon-des-kits-de-mesure-gratuits-pour-proteger-votre-sante/\" target=\"_blank\" rel=\"noopener noreferrer\">PRIMAIR campaign / Qualitair Corse</a>, ADEME). Comprehensive references are available from the <a href=\"https://reglementation-controle.asnr.fr/information/dossiers-pedagogiques/le-radon-et-les-professionnels\" target=\"_blank\" rel=\"noopener noreferrer\">ASNR</a> (measurement, ERP FAQ) and the <a href=\"https://www.corse.ars.sante.fr/le-risque-radon\" target=\"_blank\" rel=\"noopener noreferrer\">ARS Corse</a>.",
-    radon_zone3_p1: "<strong>Measurement in public-facing facilities.</strong> For public-facing facilities listed in Article D.1333-32 of the Public Health Code (educational facilities, childcare facilities for children under six, health or social facilities with accommodation, thermal spa facilities, penitentiary facilities), Article <a href=\"https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915\" target=\"_blank\" rel=\"noopener noreferrer\">R.1333-33 of the Public Health Code</a> requires a measurement of radon volumetric activity, at the owner's expense (or the operator's, if an agreement provides for it), renewed every ten years and after any work that changes the building's ventilation or airtightness. A municipality is typically the owner of its schools and daycare centers.",
-    radon_zone3_p2: "<strong>If the reference level is exceeded.</strong> If the result exceeds 300 Bq/m³, the <a href=\"https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000038219644\" target=\"_blank\" rel=\"noopener noreferrer\">order of February 26, 2019</a> requires corrective actions (ventilation, airtightness), then a building assessment if the exceedance persists or exceeds 1,000 Bq/m³. The regulation also requires the measurement result to be displayed near the facility's main entrance.",
-    radon_zone3_p3: "<strong>Information for buyers and tenants.</strong> This municipality is classified as zone 3 — the \"level 3 radon-potential zone\" under the Environmental Code. The risk disclosure statement attached to any sale or rental of a property (including seasonal rentals) must then mention this classification, pursuant to Articles <a href=\"https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074220/LEGISCTA000006176683/\" target=\"_blank\" rel=\"noopener noreferrer\">L.125-5 and R.125-23 of the Environmental Code</a>. This obligation applies to the seller or landlord, not the municipality — but the town hall is often the first point of contact residents turn to with questions. The official property record is available on <a href=\"https://www.georisques.gouv.fr/\" target=\"_blank\" rel=\"noopener noreferrer\">georisques.gouv.fr</a>.",
-    radon_zone2_p1: "<strong>Measurement in public-facing facilities.</strong> Article <a href=\"https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915\" target=\"_blank\" rel=\"noopener noreferrer\">R.1333-33 of the Public Health Code</a> requires mandatory radon measurement in public-facing facilities listed in Article D.1333-32 (schools, daycare centers, health or social facilities with accommodation…) in zone 3. In zone 2, like this one, this obligation only applies if measurements already taken in the facility exceeded the reference level of 300 Bq/m³ — it is not systematic here.",
-    radon_zone2_p2: "<strong>Information for buyers and tenants.</strong> The obligation to disclose radon information in the risk disclosure statement (<a href=\"https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074220/LEGISCTA000006176683/\" target=\"_blank\" rel=\"noopener noreferrer\">L.125-5 and R.125-23 of the Environmental Code</a>) specifically applies to municipalities classified as \"level 3 radon-potential zone,\" that is, zone 3 under the order of June 27, 2018. This municipality, classified as zone 2, does not fall within this scope: this requirement does not apply here.",
-    radon_zone1_p1: "This municipality is classified as zone 1 (low radon potential). No radon-specific regulatory obligation applies systematically at this zoning level. Article <a href=\"https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915\" target=\"_blank\" rel=\"noopener noreferrer\">R.1333-33 of the Public Health Code</a> provides, exceptionally and regardless of zone, for measurement in public-facing facilities if measurements already taken exceeded the reference level of 300 Bq/m³.",
-    depot_cat_enseignement: "Educational facility",
-    depot_cat_petite_enfance: "Early childhood facility (daycare center)",
-    depot_cat_sanitaire_social_hebergement: "Health or social facility with accommodation",
-    depot_cat_thermal: "Thermal spa facility",
-    depot_cat_penitentiaire: "Penitentiary facility",
-    depot_cat_mairie: "Town hall building",
-    depot_cat_autre: "Public-facing facility",
-    depot_action_aucune_action_requise: "No action required",
-    depot_action_ventilation_etancheite_engagee: "Ventilation / sealing work underway",
-    depot_action_expertise_complementaire_en_cours: "Further assessment underway",
+    // radon_disclaimer/radon_ressources/radon_zone3_p1-p3/radon_zone2_p1-p2/radon_zone1_p1 et
+    // depot_cat_*/depot_action_* — retirés le 2026-08-20 (D6, Option B) avec
+    // renderRadonObligations()/depotCategorieLabel()/depotStatutActionLabel(), leurs seuls
+    // appelants. Ce texte légal vit désormais en source unique sur radon.html.
     role_mairie_short: "Town hall",
     role_technique_short: "Municipal technical department",
     role_delegataire_short: "Agent authorized",
-    depot_repere_above: "Above the 300 Bq/m³ marker — a marker, not an alert threshold",
-    depot_repere_below: "Below the 300 Bq/m³ marker",
-    depot_certifie_badge: "certified — ASNR-approved body",
-    depot_meta_prefix: "Measured on ",
-    depot_meta_by: " by ",
-    depot_meta_agrement: " (approval ",
-    depot_meta_norme_suffix: ", standard NF EN ISO 11665-4)",
-    depot_resultats_titre_prefix: "Results submitted by the municipality (",
-    depot_warning: "⚠ Certified point-in-time measurement, not extrapolable over time or space; does not constitute a territorial diagnosis.",
+    // depot_repere_*/depot_certifie_badge/depot_meta_*/depot_resultats_titre_prefix/depot_warning
+    // — retirés le 2026-08-20 (D6, Option B) avec renderDepotsRadonHtml(), leur seul appelant.
 
     // Lot 5/5 — DERNIER LOT — formulaire de dépôt radon : récapitulatif,
     // hints dynamiques, messages de validation, soumission.
@@ -1525,13 +1483,10 @@ a{color:inherit;}
     renderCategoryCards('mr-courriers-list', mairieList, jt('kind_mairie', 'Mairie'));
     renderCategoryCards('mr-citoyens-list', citoyenList, jt('kind_citoyen', 'Citoyen'));
 
-    // Domaine radon (D4) — regroupé par public dans sa propre section.
-    var radonCitoyenList = templatesData.templates.filter(function(t){ return t.domaine === 'radon' && t.categorie === 'citoyen'; });
-    var radonMairieList = templatesData.templates.filter(function(t){ return t.domaine === 'radon' && t.categorie === 'mairie'; });
-    var radonEntrepreneurList = templatesData.templates.filter(function(t){ return t.domaine === 'radon' && t.categorie === 'entrepreneur'; });
-    renderCategoryCards('mr-radon-citoyen-list', radonCitoyenList, jt('kind_citoyen', 'Citoyen'));
-    renderCategoryCards('mr-radon-mairie-list', radonMairieList, jt('kind_mairie', 'Mairie'));
-    renderCategoryCards('mr-radon-entrepreneur-list', radonEntrepreneurList, jt('kind_entrepreneur', 'Entrepreneur'));
+    // Domaine radon (D4) — retiré le 2026-08-20 (D6, Option B) : les 4 modèles radon sont
+    // désormais rendus sur radon.html, section #courrier-radon ici réduite à un lien renvoi
+    // (voir HTML statique plus haut). templatesData.templates continue de contenir ces entrées
+    // (domaine='radon') — mairies.html ne les filtre/rend simplement plus.
   }
 
   // Badge SIMULATION vs MESURE (B2) — voir commentaire CSS .mr-badge-type.
@@ -2821,13 +2776,12 @@ a{color:inherit;}
     Promise.all([
       loadAntennes().catch(function(){ return null; }),
       loadRadon().catch(function(){ return null; }),
-      loadFailles().catch(function(){ return null; }),
-      loadDepotsRadon().catch(function(){ return null; })
+      loadFailles().catch(function(){ return null; })
     ]).then(function(){
       if (selectedCommune && selectedCommune.code_insee === commune.code_insee){
         renderGeophys(commune);
         renderAtypiques(commune);
-        renderRadonObligations(commune);
+        renderRadonRenvoi(commune);
       }
     });
   }
@@ -2919,7 +2873,7 @@ a{color:inherit;}
       '<div class="mr-geophys-item">' +
         '<div class="mr-geophys-item-label">' + jt('geo_autres_couches_label', 'Autres couches géophysiques') + '</div>' +
         '<div class="mr-geophys-item-value">' + jt('geo_substrat_value', 'Substrat géologique, anomalies magnétiques crustales') + '</div>' +
-        '<div class="mr-geophys-item-sub">' + jt('geo_autres_couches_desc', 'Ces couches sont consultables sur la carte Tellux : géologie BRGM (granite, schiste, calcaire), EMAG2v3 (anomalies magnétiques crustales NOAA), sites U/Th documentés. Pour une lecture par commune, utilisez le lien ci-dessous.') + '</div>' +
+        '<div class="mr-geophys-item-sub">' + jt('geo_autres_couches_desc', 'Ces couches sont consultables sur la carte Tellux : géologie BRGM (granite, schiste, calcaire), EMAG2v3 (anomalies magnétiques crustales NOAA), sites U/Th documentés. Le zonage radon et les dépôts ERP ont leur propre application dédiée. Pour une lecture par commune, utilisez les liens ci-dessous.') + '</div>' +
       '</div>'
     );
 
@@ -2927,6 +2881,7 @@ a{color:inherit;}
     if (center){
       linksHtml += '<a class="mr-geophys-link" href="app.html#/z=12&c=' + center.lat.toFixed(5) + ',' + center.lon.toFixed(5) + '&m=I" target="_blank" rel="noopener">' + jt('geo_explorer_carte_link', 'Explorer sur la carte Tellux →') + '</a>';
     }
+    linksHtml += '<a class="mr-geophys-link" href="radon.html' + (commune && commune.code_insee ? '?commune=' + encodeURIComponent(commune.code_insee) : '') + '" target="_blank" rel="noopener">' + jt('geo_explorer_radon_link', 'Zonage radon &amp; dépôts ERP par commune →') + '</a>';
     linksHtml += '</div>';
 
     body.innerHTML = '<div class="mr-geophys-items">' + items.join('') + '</div>' + linksHtml;
@@ -2939,133 +2894,18 @@ a{color:inherit;}
     return info ? info.categorie : 1;
   }
 
-  // Dépôts D5 publiés (Brique D) : chargement unique, indexé par commune.
-  // La RLS de radon_depots_erp filtre déjà côté serveur (anon ne voit que
-  // statut_verification_tellux = 'publie') — le filtre explicite ici est
-  // documentaire, pas un garde-fou supplémentaire nécessaire.
-  var depotsRadonData = null;
-  var depotsRadonLoadPromise = null;
-
-  function loadDepotsRadon(){
-    if (depotsRadonLoadPromise) return depotsRadonLoadPromise;
-    var url = SB_URL_PUBLIC + '/rest/v1/radon_depots_erp?select=commune_insee,nom_etablissement,categorie_erp,valeur_moyenne_bq_m3,date_mesurage,organisme_agree_nom,organisme_agree_numero,statut_action&statut_verification_tellux=eq.publie&order=date_mesurage.desc';
-    depotsRadonLoadPromise = fetch(url, {
-      headers: { 'apikey': SB_ANON_KEY_PUBLIC, 'Authorization': 'Bearer ' + SB_ANON_KEY_PUBLIC }
-    })
-      .then(function(r){ if (!r.ok) throw new Error('depots radon HTTP ' + r.status); return r.json(); })
-      .then(function(rows){
-        var byCommune = {};
-        (rows || []).forEach(function(d){
-          if (!byCommune[d.commune_insee]) byCommune[d.commune_insee] = [];
-          byCommune[d.commune_insee].push(d);
-        });
-        depotsRadonData = byCommune;
-        return depotsRadonData;
-      })
-      .catch(function(err){
-        console.warn('[mairies] chargement depots radon echoue :', err);
-        depotsRadonLoadPromise = null;
-        throw err;
-      });
-    return depotsRadonLoadPromise;
-  }
-
-  var DEPOT_RADON_CATEGORIE_LABELS = {
-    enseignement: "Établissement d'enseignement",
-    petite_enfance: 'Accueil petite enfance (crèche)',
-    sanitaire_social_hebergement: 'Établissement sanitaire ou social avec hébergement',
-    thermal: 'Établissement thermal',
-    penitentiaire: 'Établissement pénitentiaire',
-    mairie: 'Bâtiment mairie',
-    autre: 'Établissement recevant du public'
-  };
-
-  var DEPOT_RADON_STATUT_ACTION_LABELS = {
-    aucune_action_requise: 'Aucune action requise',
-    ventilation_etancheite_engagee: 'Ventilation / étanchéité engagée',
-    expertise_complementaire_en_cours: 'Expertise complémentaire en cours'
-  };
-
-  // Résolution paresseuse (appelée au rendu, pas au chargement du script) :
-  // même piège que COMMON_SLOTS_* si ces lookups étaient faits dans les objets
-  // ci-dessus directement. Clé JS_STRINGS_EN = 'depot_cat_' + code / 'depot_action_' + code.
-  function depotCategorieLabel(code){
-    var fr = DEPOT_RADON_CATEGORIE_LABELS[code] || code;
-    return jt('depot_cat_' + code, fr);
-  }
-  function depotStatutActionLabel(code){
-    var fr = DEPOT_RADON_STATUT_ACTION_LABELS[code] || code;
-    return jt('depot_action_' + code, fr);
-  }
-
-  // Rendu établissement par établissement (Brique D §2) — jamais une couleur
-  // de zone recolorée, jamais fusionné avec le zonage 2/3 déjà affiché plus haut.
-  function renderDepotsRadonHtml(code_insee){
-    var deposits = (depotsRadonData && depotsRadonData[code_insee]) || [];
-    if (deposits.length === 0) return '';
-    var items = deposits.map(function(d){
-      var repereClass = d.valeur_moyenne_bq_m3 > 300 ? ' mr-depot-radon-repere-au-dessus' : '';
-      var repereText = d.valeur_moyenne_bq_m3 > 300
-        ? jt('depot_repere_above', 'Au-dessus du repère de 300 Bq/m³ — un repère, pas un seuil d\'alerte')
-        : jt('depot_repere_below', 'En dessous du repère de 300 Bq/m³');
-      var actionHtml = d.statut_action
-        ? '<div class="mr-depot-radon-item-action">' + escapeHtml(depotStatutActionLabel(d.statut_action)) + '</div>'
-        : '';
-      return '<div class="mr-depot-radon-item">' +
-        '<div class="mr-depot-radon-item-header"><strong>' + escapeHtml(d.nom_etablissement) + '</strong><span class="mr-depot-radon-badge">' + jt('depot_certifie_badge', 'certifié — organisme agréé ASNR') + '</span></div>' +
-        '<div class="mr-depot-radon-item-sub">' + escapeHtml(depotCategorieLabel(d.categorie_erp)) + '</div>' +
-        '<div class="mr-depot-radon-item-value">' + escapeHtml(String(d.valeur_moyenne_bq_m3)) + ' Bq/m³ <span class="mr-depot-radon-item-repere' + repereClass + '">' + repereText + '</span></div>' +
-        '<div class="mr-depot-radon-item-meta">' + jt('depot_meta_prefix', 'Mesuré le ') + escapeHtml(d.date_mesurage) + jt('depot_meta_by', ' par ') + escapeHtml(d.organisme_agree_nom) + jt('depot_meta_agrement', ' (agrément ') + escapeHtml(d.organisme_agree_numero) + jt('depot_meta_norme_suffix', ', norme NF EN ISO 11665-4)') + '</div>' +
-        actionHtml +
-        '</div>';
-    }).join('');
-    return '<div class="mr-depot-radon-list">' +
-      '<h4 class="mr-depot-radon-list-title">' + jt('depot_resultats_titre_prefix', 'Résultats déposés par la commune (') + deposits.length + ')</h4>' +
-      items +
-      '<div class="mr-depot-radon-item-warning">' + jt('depot_warning', '⚠ Mesure ponctuelle certifiée, non extrapolable dans le temps ni dans l\'espace ; ne vaut pas diagnostic territorial.') + '</div>' +
-      '</div>';
-  }
-
-  // Fonctions (pas des var) : évaluées à l'appel dans renderRadonObligations(),
-  // bien après DOMContentLoaded — jt() y lit document.documentElement.lang de
-  // façon fiable (même piège que COMMON_SLOTS_*, cf. commit Lot 1).
-  function radonObligDisclaimer(){
-    return '<p class="mr-radon-oblig-disclaimer">' + jt('radon_disclaimer', '<em>Ce contenu relaie le droit en vigueur ; il ne s\'y substitue pas et ne constitue pas un conseil juridique. Sources à vérifier à la date de consultation.</em>') + '</p>';
-  }
-
-  function radonObligRessources(){
-    return '<p>' + jt('radon_ressources', '<strong>Ressources et kits de mesure.</strong> Le Plan régional santé environnement de Corse identifie les mairies comme relais privilégié de distribution des kits de dépistage gratuits (campagne <a href="https://qualitair.corsica/radon-des-kits-de-mesure-gratuits-pour-proteger-votre-sante/" target="_blank" rel="noopener noreferrer">PRIMAIR / Qualitair Corse</a>, ADEME). Des référentiels complets sont disponibles auprès de l\'<a href="https://reglementation-controle.asnr.fr/information/dossiers-pedagogiques/le-radon-et-les-professionnels" target="_blank" rel="noopener noreferrer">ASNR</a> (mesurage, FAQ ERP) et de l\'<a href="https://www.corse.ars.sante.fr/le-risque-radon" target="_blank" rel="noopener noreferrer">ARS Corse</a>.') + '</p>';
-  }
-
-  function renderRadonObligations(commune){
+  // loadDepotsRadon()/renderDepotsRadonHtml()/renderRadonObligations() — retirés le 2026-08-20
+  // (D6, Option B) : le texte légal par zone (articles L.125-5, R.1333-33, etc.) et les dépôts
+  // ERP vivent désormais en source unique sur radon.html, pour éviter une divergence silencieuse
+  // entre deux copies d'un même texte réglementaire (discipline anti-péremption A.0/A.5 bis).
+  // getRadonZone()/radonData/loadRadon() restent INCHANGÉS — partagés avec
+  // updateCorseOverviewStats(), voir plus haut.
+  function renderRadonRenvoi(commune){
     var body = document.getElementById('mr-radon-oblig-body');
     if (!body) return;
-    var zone = getRadonZone(commune.code_insee);
-    var html;
-
-    if (zone === 3){
-      html = '<div class="mr-legal-content">' +
-        '<p>' + jt('radon_zone3_p1', '<strong>Mesurage dans les établissements recevant du public.</strong> Pour les établissements recevant du public listés à l\'article D.1333-32 du code de la santé publique (établissements d\'enseignement, accueil collectif d\'enfants de moins de six ans, établissements sanitaires ou sociaux avec hébergement, établissements thermaux, établissements pénitentiaires), l\'article <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915" target="_blank" rel="noopener noreferrer">R.1333-33 du code de la santé publique</a> prévoit un mesurage de l\'activité volumique du radon à la charge du propriétaire (ou de l\'exploitant si une convention le prévoit), renouvelé tous les dix ans et après toute intervention modifiant la ventilation ou l\'étanchéité du bâtiment. Une commune est typiquement propriétaire de ses écoles et de ses crèches.') + '</p>' +
-        '<p>' + jt('radon_zone3_p2', '<strong>En cas de dépassement du niveau de référence.</strong> Si le résultat dépasse 300 Bq/m³, l\'<a href="https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000038219644" target="_blank" rel="noopener noreferrer">arrêté du 26 février 2019</a> prévoit des actions correctives (ventilation, étanchéité), puis une expertise du bâtiment si le dépassement persiste ou dépasse 1 000 Bq/m³. Le texte prévoit aussi l\'affichage du résultat du mesurage près de l\'entrée principale de l\'établissement.') + '</p>' +
-        '<p>' + jt('radon_zone3_p3', '<strong>Information des acquéreurs et locataires.</strong> Cette commune est classée en zone 3 — la « zone à potentiel radon de niveau 3 » au sens du code de l\'environnement. L\'état des risques annexé à toute vente ou location d\'un bien (y compris saisonnière) doit alors mentionner ce classement, en application des articles <a href="https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074220/LEGISCTA000006176683/" target="_blank" rel="noopener noreferrer">L.125-5 et R.125-23 du code de l\'environnement</a>. Cette obligation concerne le vendeur ou le bailleur, pas la commune — mais la mairie est souvent le premier guichet questionné par les administrés. La fiche officielle du bien est disponible sur <a href="https://www.georisques.gouv.fr/" target="_blank" rel="noopener noreferrer">georisques.gouv.fr</a>.') + '</p>' +
-        radonObligRessources() +
-        radonObligDisclaimer() +
-        '</div>';
-    } else if (zone === 2){
-      html = '<div class="mr-legal-content">' +
-        '<p>' + jt('radon_zone2_p1', '<strong>Mesurage dans les établissements recevant du public.</strong> L\'article <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915" target="_blank" rel="noopener noreferrer">R.1333-33 du code de la santé publique</a> prévoit un mesurage obligatoire du radon dans les établissements recevant du public listés à l\'article D.1333-32 (écoles, crèches, établissements sanitaires ou sociaux avec hébergement…) en zone 3. En zone 2, comme celle-ci, cette obligation ne s\'applique que si des mesures déjà réalisées dans l\'établissement ont dépassé le niveau de référence de 300 Bq/m³ — elle n\'est pas systématique ici.') + '</p>' +
-        '<p>' + jt('radon_zone2_p2', '<strong>Information des acquéreurs et locataires.</strong> L\'obligation d\'information sur le radon dans l\'état des risques (<a href="https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074220/LEGISCTA000006176683/" target="_blank" rel="noopener noreferrer">L.125-5 et R.125-23 du code de l\'environnement</a>) vise spécifiquement les communes classées en « zone à potentiel radon de niveau 3 », c\'est-à-dire la zone 3 au sens de l\'arrêté du 27 juin 2018. Cette commune, classée zone 2, n\'entre pas dans ce périmètre : cette mention ne s\'applique pas ici.') + '</p>' +
-        radonObligRessources() +
-        radonObligDisclaimer() +
-        '</div>';
-    } else {
-      html = '<div class="mr-legal-content">' +
-        '<p>' + jt('radon_zone1_p1', 'Cette commune est classée en zone 1 (potentiel radon faible). Aucune obligation réglementaire spécifique au radon ne s\'applique de façon systématique à ce niveau de zonage. L\'article <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915" target="_blank" rel="noopener noreferrer">R.1333-33 du code de la santé publique</a> prévoit, à titre exceptionnel et quelle que soit la zone, un mesurage dans les établissements recevant du public si des mesures déjà réalisées ont dépassé le niveau de référence de 300 Bq/m³.') + '</p>' +
-        radonObligRessources() +
-        radonObligDisclaimer() +
-        '</div>';
-    }
-    body.innerHTML = html + renderDepotsRadonHtml(commune.code_insee);
+    var href = 'radon.html?commune=' + encodeURIComponent(commune.code_insee);
+    body.innerHTML = '<a class="mr-geophys-link" href="' + href + '" target="_blank" rel="noopener">' +
+      jt('radon_renvoi_cta', 'Voir le volet radon de ma commune &rarr;') + '</a>';
   }
 
   function renderAtypiques(commune){
@@ -3626,7 +3466,8 @@ function telluxGetEffectiveLang(){
     atyp_title: "ANFR atypical points",
     atyp_lead: "Points where exposure substantially exceeds the level observed nationally (Article L.34-9-1 II H of the CPCE).",
     radon_oblig_title: "Radon — obligations &amp; resources",
-    radon_oblig_lead: "What the regulations provide for your commune, based on its radon-potential zone (ASNR). A relay of the law in force; does not constitute legal advice.",
+    radon_renvoi_lead: "Radon zoning, legal obligations by zone, and certified measurement deposits now have their own dedicated application, with your municipality's profile already pre-filled.",
+    radon_renvoi_cta: "See the radon section for my municipality &rarr;",
     courrier_h2: "Generate a letter",
     courrier_sub: "Administrative letter templates ready to personalize. Select a template, fill in the fields, download the document as a PDF. The texts are legally framed but remain templates that you validate before sending.",
     courrier_en_note: "Letter templates are provided in French, as they are addressed to French administrations.",
@@ -3635,10 +3476,8 @@ function telluxGetEffectiveLang(){
     citoyen_sub: "Two letter templates to send to your municipality to obtain information, request measurements, or report a deployment. The letters restate the municipality's legal obligations without making an individual diagnosis.",
     radon_eyebrow: "Radon",
     radon_courriers_h2: "Radon letters",
-    radon_courriers_sub: "Four templates for radon screening and measurement. An important distinction: the free screening kit (PRIMAIR program, Qualitair Corse, ADEME) gives an indicative reading; only a regulatory measurement by an ASNR-approved body is legally valid for compliance obligations. Grouped below by intended audience.",
-    radon_group_citoyen: "Citizen",
-    radon_group_mairie: "Municipality",
-    radon_group_entrepreneur: "Business owner / employer",
+    radon_courriers_renvoi_p: "The 4 radon letter templates (screening kit, regulatory ERP measurement, kit distribution, professional measurement) are now gathered on the dedicated radon application, with the same PDF generation engine.",
+    radon_courriers_renvoi_cta: "Generate a radon letter &rarr;",
     legal_h2: "Legal framework",
     legal_sub: "A reminder of the applicable regulations and the division of responsibilities between the State, operators, the prefect, and the municipality regarding EM exposure and antenna deployment.",
     legal_abeille_title: "What the Loi Abeille says",
