@@ -1380,6 +1380,46 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   </div>
 </div>
 
+<!-- Fiche « Mon lieu » (2026-08-20) — résumé lisible non-expert. Chrome identique à
+     #contrib-level-modal (backdrop, header, corps scrollable), aucune nouvelle
+     classe CSS introduite. Contenu public neuf — revue Claude web avant merge
+     (carve-out #2). Pas de bouton "partager" (vie privée, décision Soleil différée). -->
+<div id="myplace-modal" role="dialog" aria-modal="true" aria-labelledby="myplace-title" aria-hidden="true" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(31,35,41,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:2300;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeMyPlaceModal()">
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:480px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:var(--font)">
+    <header style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px 10px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <h3 id="myplace-title" style="font-family:var(--font-display);font-size:16px;font-weight:600;color:var(--tx);margin:0;letter-spacing:-0.01em">Mon lieu</h3>
+      <button id="myplace-close-btn" onclick="closeMyPlaceModal()" aria-label="Fermer" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--tx3);line-height:1;padding:2px 6px">&#x2715;</button>
+    </header>
+
+    <!-- Vue 1 : saisie position -->
+    <div id="myplace-view-input" style="padding:18px 22px;overflow-y:auto">
+      <p id="myplace-lead" style="font-size:12px;color:var(--ardoise-clair);margin:0 0 16px;line-height:1.6">Un résumé de ce qui est recensé autour d'un point précis, en langage simple : antennes à proximité, ligne électrique la plus proche, ordre de grandeur du champ, statut de chaque donnée.</p>
+
+      <button type="button" onclick="myPlaceRequestGeolocation()" style="width:100%;padding:10px 16px;border:1px solid var(--border);border-radius:var(--r);background:var(--pierre-ombre);color:var(--ardoise);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px">&#128205; <span id="myplace-geoloc-label">Utiliser ma position</span></button>
+
+      <div style="display:flex;align-items:center;gap:10px;margin:4px 0 14px;color:var(--tx3);font-size:11px"><span style="flex:1;height:1px;background:var(--border)"></span><span id="myplace-ou-label">ou</span><span style="flex:1;height:1px;background:var(--border)"></span></div>
+
+      <label for="myplace-address-input" style="display:block;font-size:11px;color:var(--tx3);margin-bottom:6px" id="myplace-address-label">Tapez une adresse</label>
+      <div style="display:flex;gap:8px;margin-bottom:4px">
+        <input id="myplace-address-input" type="text" placeholder="Ex. Cours Napoléon, Ajaccio" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--tx);font-family:var(--font);font-size:13px" onkeydown="if(event.key==='Enter'){event.preventDefault();myPlaceSearchAddress();}">
+        <button type="button" onclick="myPlaceSearchAddress()" id="myplace-search-btn" style="padding:9px 16px;border:none;border-radius:var(--r);background:var(--tyrrh,#1F3A5F);color:#fff;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer">Chercher</button>
+      </div>
+      <div id="myplace-address-results" style="margin-top:8px;display:none;border:1px solid var(--border);border-radius:var(--r);overflow:hidden"></div>
+      <div id="myplace-input-status" style="font-size:11px;color:var(--tx3);margin-top:8px;min-height:14px"></div>
+
+      <p id="myplace-privacy-note" style="font-size:10.5px;color:var(--tx3);line-height:1.5;margin:16px 0 0;padding-top:12px;border-top:1px solid var(--border)">Cette analyse reste sur votre appareil : ni l'adresse, ni la position, ni le résultat ne sont enregistrés ou partagés par Tellux.</p>
+    </div>
+
+    <!-- Vue 2 : résumé (masquée par défaut) -->
+    <div id="myplace-view-summary" style="display:none;overflow-y:auto">
+      <div style="padding:0 22px">
+        <button type="button" onclick="myPlaceBackToInput()" style="background:none;border:none;color:var(--tyrrh,#1F3A5F);font-family:var(--font);font-size:12px;cursor:pointer;padding:10px 0 4px;display:flex;align-items:center;gap:4px"><span id="myplace-back-label">← Nouvelle recherche</span></button>
+      </div>
+      <div id="myplace-summary-body" style="padding:6px 22px 20px"></div>
+    </div>
+  </div>
+</div>
+
 <!-- Panel Méthodologie & Incertitudes -->
 <div id="methodology-panel" role="region" aria-labelledby="methodology-title" aria-hidden="true" style="display:none;padding:16px;background:var(--pierre-ombre);border-radius:var(--r2);max-width:720px;margin:12px auto 16px;border:1px solid var(--border);font-size:12px;color:var(--ardoise-clair);line-height:1.6">
 
@@ -2413,13 +2453,48 @@ var JS_STRINGS_EN = {
   crustal_ctx_sq_name: "Diurnal variation (Sq)",
   crustal_ctx_sq_desc: "Natural daily oscillation of the field (~06:00-18:00)",
   crustal_centre_carte: "Map center",
-  crustal_ref_contexte: "Context references (nT)"
+  crustal_ref_contexte: "Context references (nT)",
+  myplace_geoloc_unavailable: "Geolocation not available in this browser.",
+  myplace_geoloc_pending: "Locating…",
+  myplace_geoloc_error_prefix: "Position unavailable: ",
+  myplace_address_empty: "Type an address first.",
+  myplace_address_pending: "Searching…",
+  myplace_address_noresult: "No address found. Try a more precise wording.",
+  myplace_address_error_prefix: "Search unavailable: ",
+  myplace_loading: "Calculating…",
+  myplace_calc_error: "Could not compute this point.",
+  myplace_ant_unavailable: "Antenna registry not loaded.",
+  myplace_ant_500_suffix: " antenna(s) recorded within 500 m (",
+  myplace_ant_1000_suffix: " within 1 km).",
+  myplace_ant_title: "ANFR antennas nearby",
+  pill_declaratif: "Declarative — ANFR registry",
+  myplace_hta_none: "No high-voltage line recorded within the search range (about 2 km).",
+  myplace_hta_prefix: "About ",
+  myplace_hta_suffix: " m.",
+  myplace_hta_title: "Nearest high-voltage line",
+  pill_modelise: "Declared position — calculated distance",
+  myplace_champ_title: "Combined electromagnetic field (order of magnitude)",
+  pill_estime: "Modeled estimate",
+  myplace_gamma_title: "Ambient gamma dose (order of magnitude)",
+  myplace_gamma_unavailable: "unavailable for this point",
+  pill_gamma_ancre: "Anchored — terrestrial measured (Corsican batholith)",
+  pill_gamma_extrapole: "Extrapolated — regional analogue",
+  pill_gamma_encours: "Cosmic only — terrestrial not available here",
+  myplace_radon_classe_prefix: "Radon potential zone: class ",
+  myplace_radon_title: "Radon potential (regulatory zoning)",
+  pill_radon_officiel: "Official — decree No. 2018-434",
+  pill_radon_estime: "Estimate — local geology",
+  myplace_footer_note: "Estimates from the Tellux model — never an on-site measurement, never a diagnosis. For measured data: the \"+\" button (Field contribution) below, or the \"Request an ANFR measurement\" letter template on mairies.html."
 };
 function jt(key, fr){
   return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
 }
 
 let contribsDB=[],pending=null,cachedIGRF={},_contribClickHandler=null;
+// Fiche « Mon lieu » (2026-08-20) — positions antennes ANFR retenues en agrégat pur,
+// en plus des marqueurs Leaflet déjà créés par loadAnt() (aucune modification de la
+// boucle de rendu existante). Sert uniquement countAntennasWithinRadius().
+let ANTENNES_LOCATIONS=[];
 // Flux "placement avant formulaire" (2026-08-19) — voir startContribFromFAB/_placeContribMarker.
 // _contribAwaitingFirstPlacement : true entre l'armement du clic carte et la reception du
 // premier clic valide (Corse) ; #cform reste masque tant que ce flag est actif.
@@ -3971,6 +4046,57 @@ function buildSegmentGrid(polylines) {
 function getSegmentsNear(lat, lon) {
   if (!SEGMENT_GRID) return [];
   return SEGMENT_GRID[tileKey(lat, lon)] || [];
+}
+
+// ─── Fiche « Mon lieu » (2026-08-20) — distance à la ligne HTA la plus proche ───
+// Géométrie pure, réutilise HTA_SEGMENTS_DATA/getSegmentsNear déjà chargés pour
+// calcMagneticELF_v2 (aucune modification de calcMagneticELF_v2 ni de sa sortie ;
+// même transformation lat/lon→mètres que calcBiotSavartSegmentVec, sans formule
+// de champ). getSegmentsNear ne cherche que dans la tuile du point cliqué (~1 km,
+// marge d'indexation 2 tuiles ≈ 2 km, même pruning que le calcul ELF) : si aucun
+// segment n'y est indexé, la ligne la plus proche est à plus de cette portée —
+// retourné explicitement comme tel, jamais confondu avec « aucune ligne ».
+function distancePointToSegmentM(lat, lon, segLat1, segLon1, segLat2, segLon2) {
+  const METERS_PER_DEG_LAT = 111320;
+  const METERS_PER_DEG_LON = 111320 * Math.cos(42.0 * Math.PI / 180);
+  const x1 = (segLon1 - lon) * METERS_PER_DEG_LON;
+  const y1 = (segLat1 - lat) * METERS_PER_DEG_LAT;
+  const x2 = (segLon2 - lon) * METERS_PER_DEG_LON;
+  const y2 = (segLat2 - lat) * METERS_PER_DEG_LAT;
+  const dx = x2 - x1, dy = y2 - y1;
+  const segLen = Math.sqrt(dx*dx + dy*dy);
+  if (segLen < 1) return Math.sqrt(x1*x1 + y1*y1);
+  const ux = dx / segLen, uy = dy / segLen;
+  const t = Math.max(0, Math.min(segLen, -x1*ux - y1*uy));
+  const px = x1 + t*ux, py = y1 + t*uy;
+  return Math.sqrt(px*px + py*py);
+}
+function nearestHTADistanceM(lat, lon) {
+  if (!SEGMENT_GRID || !HTA_SEGMENTS_DATA) return { known: false, distance_m: null };
+  const nearby = getSegmentsNear(lat, lon);
+  let minD = Infinity;
+  nearby.forEach(idx => {
+    const s = HTA_SEGMENTS_DATA[idx];
+    if (!s) return;
+    const d = distancePointToSegmentM(lat, lon, s.lat1, s.lon1, s.lat2, s.lon2);
+    if (d < minD) minD = d;
+  });
+  if (minD === Infinity) return { known: false, distance_m: null }; // hors portée de recherche (~2 km), pas "aucune ligne"
+  return { known: true, distance_m: Math.round(minD) };
+}
+
+// ─── Fiche « Mon lieu » — nombre d'antennes ANFR dans un rayon donné ───
+// Lit ANTENNES_LOCATIONS (peuplé en agrégat pur par loadAnt(), sans toucher au
+// rendu des marqueurs). Distances en km via dist() (haversine, déjà utilisée
+// partout ailleurs dans ce fichier).
+function countAntennasWithinRadius(lat, lon, radiusKm) {
+  if (!Array.isArray(ANTENNES_LOCATIONS) || ANTENNES_LOCATIONS.length === 0) return null;
+  let n = 0;
+  for (let i = 0; i < ANTENNES_LOCATIONS.length; i++) {
+    const a = ANTENNES_LOCATIONS[i];
+    if (dist(lat, lon, a.lat, a.lon) <= radiusKm) n++;
+  }
+  return n;
 }
 
 // Grille spatiale BT (dette BT-ELF-001) — structure identique à la grille HTA
@@ -5861,6 +5987,7 @@ async function loadAnt(){try{
       // remplace l'ancien pattern click→info() qui écrivait dans le panneau #info persistant et ne
       // s'effaçait jamais à la désactivation de la couche (bug confirmé, session 2026-08-19).
       L.marker([f.lat,f.lon],{icon:mkIcon(GC[gen]||GC.default,false,9),zIndexOffset:100}).bindTooltip((f.commune||'Corse')+' · '+(f.operateur||'?'),{sticky:true}).addTo(lAnt);
+      ANTENNES_LOCATIONS.push({lat:f.lat,lon:f.lon}); // fiche « Mon lieu » — agrégat pur, une entrée par position distincte (miroir des marqueurs)
       seenPos.add(posKey);
     }
   });
@@ -7281,6 +7408,10 @@ function runAutoTests(){ return Promise.resolve(); }
 <!-- Bouton Quête (Hypothèses) → système complet migré vers patrimoine.html -->
 <!-- FAB mini-menu -->
 <div class="fab-menu" id="fab-menu">
+  <div class="fab-menu-item" onclick="openMyPlaceModal();closeFabMenu();">
+    <span class="fab-mini-label" id="myplace-fab-label">Mon lieu</span>
+    <button id="myplace-fab-btn" class="fab-mini" style="background:var(--tyrrh,#1F3A5F)" aria-label="Analyser mon adresse ou ma position" onclick="event.stopPropagation();openMyPlaceModal();closeFabMenu();">&#128205;</button>
+  </div>
   <div class="fab-menu-item" onclick="openContribLevelModal();closeFabMenu();">
     <span class="fab-mini-label">Contribution terrain</span>
     <button class="fab-mini" style="background:var(--acc)" aria-label="Contribution terrain" onclick="event.stopPropagation();openContribLevelModal();closeFabMenu();">+</button>
@@ -7385,6 +7516,195 @@ function _scrollMapIntoViewIfMobile(){
   if(mapEl && typeof mapEl.scrollIntoView==='function'){
     mapEl.scrollIntoView({behavior:(tlxReduceMotion()?'auto':'smooth'), block:'start'});
   }
+}
+
+// Échappement HTML minimal — utilisé par la fiche « Mon lieu » pour les libellés
+// d'adresse (résultats BAN) et noms de commune (reverseGeocodeCommune), tous deux
+// des données externes injectées en innerHTML.
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+// ═══ FICHE « MON LIEU » (2026-08-20) ═══
+// Résumé non-expert pour un point donné (géolocalisation ou adresse). Réutilise
+// intégralement calcAll()/calcAll_v2() (aucune modification de calcGammaAmbient,
+// GELÉ-001a, NCRP-001 — uniquement lecture/agrégation de la sortie v2 déjà
+// produite par la même fonction que le popup carte), le geocoding BAN déjà en
+// service pour reverseGeocodeCommune (aucun nouveau service externe), et le
+// pattern navigator.geolocation déjà en usage pour capRequestGeolocation
+// (même flux natif de consentement navigateur, pas de tracking silencieux).
+// A.4 : aucun vocabulaire danger/sécurité ; chaque valeur porte un statut
+// explicite (déclaratif / modélisé / officiel / estimé), jamais mêlé au texte.
+
+function openMyPlaceModal(){
+  var modal=document.getElementById('myplace-modal');
+  if(!modal) return;
+  modal.style.display='flex';
+  modal.setAttribute('aria-hidden','false');
+  myPlaceBackToInput();
+}
+function closeMyPlaceModal(){
+  var modal=document.getElementById('myplace-modal');
+  if(!modal) return;
+  modal.style.display='none';
+  modal.setAttribute('aria-hidden','true');
+}
+function myPlaceBackToInput(){
+  var vIn=document.getElementById('myplace-view-input'), vOut=document.getElementById('myplace-view-summary');
+  if(vIn) vIn.style.display='block';
+  if(vOut) vOut.style.display='none';
+  var status=document.getElementById('myplace-input-status');
+  if(status) status.textContent='';
+  var results=document.getElementById('myplace-address-results');
+  if(results){results.style.display='none';results.innerHTML='';}
+}
+
+function myPlaceRequestGeolocation(){
+  var status=document.getElementById('myplace-input-status');
+  if(!navigator.geolocation){
+    if(status) status.textContent=jt('myplace_geoloc_unavailable','Géolocalisation non disponible dans ce navigateur.');
+    return;
+  }
+  if(status) status.textContent=jt('myplace_geoloc_pending','Localisation en cours…');
+  navigator.geolocation.getCurrentPosition(
+    function(pos){ myPlaceAnalyze(pos.coords.latitude, pos.coords.longitude); },
+    function(err){ if(status) status.textContent=jt('myplace_geoloc_error_prefix','Position indisponible : ')+err.message; },
+    {enableHighAccuracy:true,timeout:10000}
+  );
+}
+
+// Geocoding — même service que reverseGeocodeCommune (api-adresse.data.gouv.fr,
+// BAN, sans clé), endpoint /search/ au lieu de /reverse/. Aucun nouveau service.
+async function myPlaceSearchAddress(){
+  var input=document.getElementById('myplace-address-input');
+  var status=document.getElementById('myplace-input-status');
+  var results=document.getElementById('myplace-address-results');
+  var q=input?input.value.trim():'';
+  if(!q){ if(status) status.textContent=jt('myplace_address_empty','Tapez une adresse d\'abord.'); return; }
+  if(status) status.textContent=jt('myplace_address_pending','Recherche…');
+  if(results){results.style.display='none';results.innerHTML='';}
+  try{
+    var url='https://api-adresse.data.gouv.fr/search/?q='+encodeURIComponent(q)+'&limit=5&lat=42.15&lon=9.1'; // biais géographique Corse (centre approx.)
+    var r=await fetch(url,{signal:AbortSignal.timeout(6000)});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    var d=await r.json();
+    var feats=(d&&d.features)||[];
+    if(feats.length===0){
+      if(status) status.textContent=jt('myplace_address_noresult','Aucune adresse trouvée. Essayez une formulation plus précise.');
+      return;
+    }
+    if(status) status.textContent='';
+    if(results){
+      results.style.display='block';
+      results.innerHTML=feats.map(function(f,i){
+        var label=(f.properties&&f.properties.label)||q;
+        var lon=f.geometry.coordinates[0], lat=f.geometry.coordinates[1];
+        return '<button type="button" onclick="myPlaceAnalyze('+lat+','+lon+')" style="display:block;width:100%;text-align:left;padding:9px 12px;border:none;border-top:'+(i>0?'1px solid var(--border)':'none')+';background:var(--bg);color:var(--tx);font-family:var(--font);font-size:12.5px;cursor:pointer">'+escapeHtml(label)+'</button>';
+      }).join('');
+    }
+  }catch(e){
+    if(status) status.textContent=jt('myplace_address_error_prefix','Recherche indisponible : ')+e.message;
+  }
+}
+
+async function myPlaceAnalyze(lat, lon){
+  var vIn=document.getElementById('myplace-view-input'), vOut=document.getElementById('myplace-view-summary');
+  var body=document.getElementById('myplace-summary-body');
+  if(vIn) vIn.style.display='none';
+  if(vOut) vOut.style.display='block';
+  if(body) body.innerHTML='<p style="font-size:12px;color:var(--tx3);padding:16px 0">'+escapeHtml(jt('myplace_loading','Calcul en cours…'))+'</p>';
+
+  var commune_info=null, altitude_m=undefined;
+  try{
+    var res=await Promise.all([reverseGeocodeCommune(lat,lon), fetchAltitudeIGN(lat,lon)]);
+    commune_info=res[0]; altitude_m=res[1];
+  }catch(e){ /* fallback silencieux — calcAll gère déjà commune_info/altitude_m absents (comportement inchangé du clic carte) */ }
+
+  var v2;
+  try{
+    v2=calcAll(lat,lon,{commune_info:commune_info,altitude_m:altitude_m}).v2;
+  }catch(e){
+    if(body) body.innerHTML='<p style="font-size:12px;color:var(--porphyre,#8E2F1F);padding:16px 0">'+escapeHtml(jt('myplace_calc_error','Calcul impossible pour ce point.'))+'</p>';
+    return;
+  }
+
+  var n500=countAntennasWithinRadius(lat,lon,0.5);
+  var n1000=countAntennasWithinRadius(lat,lon,1);
+  var hta=nearestHTADistanceM(lat,lon);
+
+  myPlaceRenderSummary({lat:lat,lon:lon,commune_info:commune_info,v2:v2,n500:n500,n1000:n1000,hta:hta});
+}
+
+function myPlaceStatusPill(text,tone){
+  var colors={
+    declaratif:{bg:'rgba(31,58,95,0.08)',fg:'var(--tyrrh,#1F3A5F)'},
+    modelise:{bg:'rgba(194,133,51,0.12)',fg:'var(--warn,#C28533)'},
+    officiel:{bg:'rgba(63,91,58,0.10)',fg:'var(--acc,#3F5B3A)'},
+    estime:{bg:'rgba(194,133,51,0.12)',fg:'var(--warn,#C28533)'}
+  };
+  var c=colors[tone]||colors.modelise;
+  return '<span style="display:inline-block;font-size:9.5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;padding:2px 8px;border-radius:20px;background:'+c.bg+';color:'+c.fg+'">'+escapeHtml(text)+'</span>';
+}
+
+function myPlaceRow(title,valueHtml,pillText,pillTone){
+  return '<div style="border-top:1px solid var(--border);padding:12px 0">'+
+    '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px">'+
+      '<span style="font-size:12.5px;font-weight:600;color:var(--tx)">'+escapeHtml(title)+'</span>'+
+      myPlaceStatusPill(pillText,pillTone)+
+    '</div>'+
+    '<div style="font-size:12.5px;color:var(--ardoise-clair);line-height:1.55">'+valueHtml+'</div>'+
+  '</div>';
+}
+
+function myPlaceRenderSummary(d){
+  var body=document.getElementById('myplace-summary-body');
+  if(!body) return;
+  var v2=d.v2;
+
+  var communeLabel=(d.commune_info&&d.commune_info.nom)?d.commune_info.nom:null;
+  var headerHtml='<p style="font-size:11px;color:var(--tx3);font-family:var(--mono);margin:0 0 6px">'+d.lat.toFixed(4)+'°N '+d.lon.toFixed(4)+'°E'+(communeLabel?' · '+escapeHtml(communeLabel):'')+'</p>';
+
+  // Antennes ANFR à proximité — déclaratif (positions publiées par les opérateurs, registre CartoRadio)
+  var antHtml=(d.n500===null)
+    ? jt('myplace_ant_unavailable','Registre des antennes non chargé.')
+    : (d.n500+jt('myplace_ant_500_suffix',' antenne(s) recensée(s) dans un rayon de 500 m (')+d.n1000+jt('myplace_ant_1000_suffix',' dans 1 km).'));
+  var antRow=myPlaceRow(jt('myplace_ant_title','Antennes ANFR à proximité'),antHtml,jt('pill_declaratif','Déclaratif — registre ANFR'),'declaratif');
+
+  // Ligne HTA la plus proche — position déclarée EDF SEI, distance calculée
+  var htaHtml=!d.hta.known
+    ? jt('myplace_hta_none','Aucune ligne haute tension recensée dans le rayon de recherche (environ 2 km).')
+    : (jt('myplace_hta_prefix','Environ ')+d.hta.distance_m+jt('myplace_hta_suffix',' m.'));
+  var htaRow=myPlaceRow(jt('myplace_hta_title','Ligne électrique haute tension la plus proche'),htaHtml,jt('pill_modelise','Position déclarée — distance calculée'),'modelise');
+
+  // Champ composite — même seuils/libellés que showInterp(), pas de nouveau barème
+  var absScore=Math.abs(v2 && v2.domains && v2.domains.magnetic && v2.domains.magnetic.elf ? Math.round(v2.domains.magnetic.elf.B_total_nT) : 0);
+  var champLvl=absScore<30?jt('interp_lvl_tres_calme','Très calme'):absScore<100?jt('interp_lvl_modere','Modéré'):absScore<300?jt('interp_lvl_actif','Actif'):jt('interp_lvl_intense','Intense');
+  var champHtml=escapeHtml(champLvl)+' <span style="color:var(--tx3)">('+Math.round(v2.domains.magnetic.elf.B_total_nT)+' nT, composante liée aux lignes/antennes proches)</span>';
+  var champRow=myPlaceRow(jt('myplace_champ_title','Champ électromagnétique combiné (ordre de grandeur)'),champHtml,jt('pill_estime','Estimation modélisée'),'estime');
+
+  // Gamma — mêmes libellés de statut que la popup carte (ancré/extrapolé/en cours)
+  var gammaC=v2.domains.ionizing.gamma.components||{};
+  var gammaVal=v2.domains.ionizing.gamma.dose_rate_nSv_h;
+  var gammaPill=gammaC.terrestrial_status==='ancre'?jt('pill_gamma_ancre','Ancré — terrestre mesuré (batholite corse)')
+    :gammaC.terrestrial_status==='extrapole'?jt('pill_gamma_extrapole','Extrapolé — analogue régional')
+    :jt('pill_gamma_encours','Cosmique seule — terrestre non disponible ici');
+  var gammaTone=gammaC.terrestrial_status==='ancre'?'officiel':gammaC.terrestrial_status==='extrapole'?'estime':'modelise';
+  var gammaHtml=(gammaVal!=null?Math.round(gammaVal*10)/10+' nSv/h':jt('myplace_gamma_unavailable','indisponible pour ce point'));
+  var gammaRow=myPlaceRow(jt('myplace_gamma_title','Dose gamma ambiante (ordre de grandeur)'),gammaHtml,gammaPill,gammaTone);
+
+  // Radon — zonage réglementaire officiel vs estimation lithologique, jamais mêlés
+  var radon=v2.domains.ionizing.radon||{};
+  var radonOfficial=radon.class_source==='official_decree_2018_434';
+  var radonHtml=jt('myplace_radon_classe_prefix','Zone à potentiel radon : classe ')+(radon.class!=null?radon.class:'—')+(radon.activity_estimate_Bq_m3?' <span style="color:var(--tx3)">(estimation '+radon.activity_estimate_Bq_m3[0]+'–'+radon.activity_estimate_Bq_m3[1]+' Bq/m³)</span>':'');
+  var radonPill=radonOfficial?jt('pill_radon_officiel','Officiel — décret n° 2018-434'):jt('pill_radon_estime','Estimation — géologie locale');
+  var radonRow=myPlaceRow(jt('myplace_radon_title','Potentiel radon (zonage réglementaire)'),radonHtml,radonPill,radonOfficial?'officiel':'estime');
+
+  body.innerHTML=headerHtml+antRow+htaRow+champRow+gammaRow+radonRow+
+    '<p style="font-size:10.5px;color:var(--tx3);line-height:1.5;margin:14px 0 0;padding-top:12px;border-top:1px solid var(--border)">'+
+    escapeHtml(jt('myplace_footer_note','Estimations issues du modèle Tellux — jamais une mesure sur place, jamais un diagnostic. Pour une donnée mesurée : bouton « + » (Contribution terrain) ci-dessous, ou le modèle de courrier « Faire mesurer l\'exposition » sur mairies.html.'))+
+    '</p>';
 }
 
 // ═══ MODAL CHOIX NIVEAU CONTRIBUTION TERRAIN ═══
@@ -9198,7 +9518,19 @@ function capCleanup(){
 ["stats_protocole_infix","#stats-panel > div:last-of-type","","· Protocole ANFR/DR 15-4 · Toutes mesures conformes sauf","","· Protocol ANFR/DR 15-4 · All measurements compliant except"],
 ["stats_infraction_suffix","#stats-panel > div:last-of-type","","Monticello San Quilico #192990 (29.05 V/m · 20/03/2025) — rapport d'infraction établi","","Monticello San Quilico #192990 (29.05 V/m · March 20, 2025) — infraction report filed"],
 ["stats_nc_badge",".nc-badge","","NON CONFORME","","NON-COMPLIANT"],
-["interp_nat_static","#interp-nat-activity + div","","Activité naturelle élevée (C/L) = signal géologique intéressant (susceptibilité du substrat, influence hydrologique), documenté sur sites anciens. Perturbations humaines ELF/RF faibles = contexte préservé.","","High natural activity (C/L) = an interesting geological signal (substrate susceptibility, hydrological influence), documented on ancient sites. Low ELF/RF human disturbance = preserved context."]
+["interp_nat_static","#interp-nat-activity + div","","Activité naturelle élevée (C/L) = signal géologique intéressant (susceptibilité du substrat, influence hydrologique), documenté sur sites anciens. Perturbations humaines ELF/RF faibles = contexte préservé.","","High natural activity (C/L) = an interesting geological signal (substrate susceptibility, hydrological influence), documented on ancient sites. Low ELF/RF human disturbance = preserved context."],
+["myplace_fab_label","#myplace-fab-label","","Mon lieu","","My place"],
+["myplace_fab_btn_aria","#myplace-fab-btn","aria-label","Analyser mon adresse ou ma position","","Analyze my address or my position"],
+["myplace_title","#myplace-title","","Mon lieu","","My place"],
+["myplace_close_aria","#myplace-close-btn","aria-label","Fermer","","Close"],
+["myplace_lead","#myplace-lead","","Un résumé de ce qui est recensé autour d'un point précis, en langage simple : antennes à proximité, ligne électrique la plus proche, ordre de grandeur du champ, statut de chaque donnée.","","A summary of what is recorded around a precise point, in plain language: nearby antennas, nearest power line, order of magnitude of the field, status of each figure."],
+["myplace_geoloc_btn_label","#myplace-geoloc-label","","Utiliser ma position","","Use my position"],
+["myplace_ou_label","#myplace-ou-label","","ou","","or"],
+["myplace_address_label","#myplace-address-label","","Tapez une adresse","","Type an address"],
+["myplace_address_ph","#myplace-address-input","placeholder","Ex. Cours Napoléon, Ajaccio","","E.g. Cours Napoléon, Ajaccio"],
+["myplace_search_btn","#myplace-search-btn","","Chercher","","Search"],
+["myplace_privacy_note","#myplace-privacy-note","","Cette analyse reste sur votre appareil : ni l'adresse, ni la position, ni le résultat ne sont enregistrés ou partagés par Tellux.","","This analysis stays on your device: Tellux does not store or share the address, the position, or the result."],
+["myplace_back_label","#myplace-back-label","","← Nouvelle recherche","","← New search"]
 ]/* I18N-CO-ENTRIES-END */;
 
   // Conformité protocole : dictionnaire I18N = { fr:{...}, co:{...} }
