@@ -8192,11 +8192,75 @@ function _certOpenCross(targetId) {
   }
 }
 
+// ─── Anti-superposition lCert (2026-08-20) ───
+// Constat (étape 0, dataset réel cartoradio_certified_corse.json) : 3 paires de
+// fiches légitimes et distinctes sont à moins de 30 m l'une de l'autre — jamais
+// des coordonnées EXACTEMENT identiques (pas de collision bit-à-bit dans les 30
+// fiches), mais assez proches pour que leurs icônes (18×18 px) se recouvrent à
+// l'écran. Cas le plus serré : Calvi « Route du Stade » (190580/190593), 0,9 m —
+// note des données elles-mêmes : « Deux points de mesure réalisés lors de la
+// même inspection ». Ce ne sont pas des doublons à fusionner, ce sont deux
+// mesures réelles distinctes (protocoles différents). lCert n'est pas
+// clusterisée (commentaire L2759) : le second marqueur se retrouve empilé sous
+// le premier en DOM et ne reçoit plus de clic.
+//
+// Fix : décalage PUREMENT visuel du rendu Leaflet, jamais des données. Les
+// fiches à moins de CERT_PROXIMITY_THRESHOLD_M (40 m — marge au-delà de la
+// paire la plus large connue, Monticello 29,8 m) sont regroupées et réparties
+// en cercle de CERT_OFFSET_RADIUS_M (18 m) autour du centre du groupe. Une
+// fiche isolée (cas normal, 27 des 30) n'est jamais touchée : positions[i]
+// reste égal à {m.lat, m.lon}. MESURES_CERTIFIEES[i].lat/lon ne sont JAMAIS
+// modifiées (export JSON, .length et tout autre usage restent sur les vraies
+// coordonnées — seul le marker Leaflet est positionné au point décalé).
+const CERT_PROXIMITY_THRESHOLD_M = 40;
+const CERT_OFFSET_RADIUS_M = 18;
+
+function _certGroupNearby(mesures, thresholdM) {
+  const n = mesures.length;
+  const parent = Array.from({length: n}, (_, i) => i);
+  function find(x){ while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }
+  function union(a, b){ const ra = find(a), rb = find(b); if (ra !== rb) parent[ra] = rb; }
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (dist(mesures[i].lat, mesures[i].lon, mesures[j].lat, mesures[j].lon) * 1000 <= thresholdM) {
+        union(i, j);
+      }
+    }
+  }
+  const groups = {};
+  for (let i = 0; i < n; i++) { const r = find(i); (groups[r] = groups[r] || []).push(i); }
+  return Object.values(groups);
+}
+
+function _certOffsetPositions(mesures) {
+  const groups = _certGroupNearby(mesures, CERT_PROXIMITY_THRESHOLD_M);
+  const positions = new Array(mesures.length);
+  groups.forEach(idxs => {
+    if (idxs.length === 1) {
+      positions[idxs[0]] = { lat: mesures[idxs[0]].lat, lon: mesures[idxs[0]].lon };
+      return;
+    }
+    const cLat = idxs.reduce((s, i) => s + mesures[i].lat, 0) / idxs.length;
+    const cLon = idxs.reduce((s, i) => s + mesures[i].lon, 0) / idxs.length;
+    const METERS_PER_DEG_LAT = 111320;
+    const METERS_PER_DEG_LON = 111320 * Math.cos(cLat * Math.PI / 180);
+    idxs.forEach((i, k) => {
+      const angle = (2 * Math.PI * k) / idxs.length;
+      positions[i] = {
+        lat: cLat + (CERT_OFFSET_RADIUS_M * Math.sin(angle)) / METERS_PER_DEG_LAT,
+        lon: cLon + (CERT_OFFSET_RADIUS_M * Math.cos(angle)) / METERS_PER_DEG_LON
+      };
+    });
+  });
+  return positions;
+}
+
 function _renderMesuresCertifiees() {
   if (_certRendered) return;
   _certRendered = true;
-  (MESURES_CERTIFIEES || []).forEach(m => {
-    let lat = m.lat, lon = m.lon;
+  const _certPositions = _certOffsetPositions(MESURES_CERTIFIEES || []);
+  (MESURES_CERTIFIEES || []).forEach((m, _certIdx) => {
+    let lat = _certPositions[_certIdx].lat, lon = _certPositions[_certIdx].lon;
     const icon = L.divIcon({
       className: 'cert-icon',
       html: _certIconHtml(m),
