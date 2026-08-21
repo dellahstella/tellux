@@ -1814,6 +1814,22 @@ a{color:inherit;}
   // ═══════════════════════════════════════════════════════════════
   document.addEventListener('DOMContentLoaded', function(){
     initTabs();
+    // Pont d'ancrage externe : un lien arrivant avec #démarches (ex. depuis
+    // index.html section Agir) doit activer l'onglet Démarches (data-tab=
+    // "courrier") au chargement. Le système d'onglets (initTabs ci-dessus)
+    // ne lit pas le hash par défaut — il n'est piloté que par .click(). On ne
+    // renomme pas data-tab="courrier" (trop de sites d'appel internes,
+    // cf. L352/L365/L424 + onclicks inline) ; seule la VALEUR du hash est
+    // testée ici. decodeURIComponent tolère les deux formes possibles du
+    // fragment ("#démarches" ou son équivalent pourcent-encodé) selon le
+    // navigateur d'origine du lien externe.
+    try {
+      var _hash = decodeURIComponent(window.location.hash || '');
+      if (_hash === '#démarches') {
+        var _courrierTab = document.querySelector('.mr-tab[data-tab="courrier"]');
+        if (_courrierTab) _courrierTab.click();
+      }
+    } catch (_e) { /* hash malformé — ne pas casser le reste de l'init */ }
     initModalDismiss();
     renderRadonObligationsStatic(); // toujours visible, sans recherche de commune (D7)
     initDepotRadonForm();
