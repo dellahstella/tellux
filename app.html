@@ -107,21 +107,39 @@
 .status-dot--pending{background:var(--tx-ocre);box-shadow:0 0 0 2px rgba(194,133,51,.25);}
 .status-dot--ok{background:var(--tx-maquis);box-shadow:0 0 0 2px rgba(63,91,58,.25);}
 .status-dot--error{background:var(--tx-porphyre);box-shadow:0 0 0 2px rgba(142,47,31,.25);}
-/* Footer raffiné */
-.tx-footer{margin-top:16px;padding:16px 4px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;font-family:var(--font);font-size:11px;color:var(--tx-mica);letter-spacing:0.01em;}
+/* Footer raffiné — 4e élément en flux non catalogué par le brief, converti en pied
+   flottant (passage plein écran, brief Soleil 2026-08-20 §2 étape 2). Pas un simple
+   oubli cosmétique : c'était genuinement cassé — <main> devenu 0px de haut (tout son
+   contenu est absolute/fixed), .tx-footer restait le seul enfant en flux de <body>, et
+   son margin-top:16px "traversait" ce <main> vide par collapsing margin CSS jusqu'à
+   <html>, gonflant document.documentElement.scrollHeight de 900 à 916px — un scroll de
+   page fantôme de 16px, invisible à l'œil mais un vrai régression (la contrainte "html,
+   body 100%, plus de scroll de page" du brief §1 n'était plus respectée). Fix : même
+   traitement que #tlx-footer de patrimoine.html (position:absolute, pilule centrée en
+   bas), qui a le même rôle (marque + liens légaux) et le même souci a priori chez eux
+   (jamais eu ce bug seulement parce qu'ils l'avaient déjà sorti du flux). bottom:60px
+   (pas 12px comme patrimoine.html) : ici #conditions-bar occupe déjà tout bottom:0 en
+   z-index:999 — 60px aligne .tx-footer sur la même ligne que #legende/
+   #tellux-legends-context (également bottom:60px), au centre, entre les deux. Masqué
+   <768px (comme patrimoine.html <640px) : sur mobile, la ligne bottom:60px est déjà
+   disputée par le tiroir couches (#layers-toggle) et les autres flottants — la marque/
+   liens légaux ne sont pas assez prioritaires pour justifier l'encombrement
+   supplémentaire ; les mêmes liens restent atteignables depuis index.html. */
+.tx-footer{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);z-index:1000;margin:0;padding:8px 16px;background:rgba(245,240,231,0.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:var(--r2);box-shadow:0 4px 16px rgba(31,35,41,0.12);display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:center;font-family:var(--font);font-size:11px;color:var(--tx-mica);letter-spacing:0.01em;max-width:calc(100vw - 24px);}
 .tx-footer .tx-footer-brand{font-family:var(--font-display);font-size:13px;color:var(--tx-ardoise);font-weight:500;}
-.tx-footer .tx-footer-sources{flex:1;text-align:center;font-size:10px;}
-.tx-footer .tx-footer-links{display:flex;flex-wrap:wrap;gap:20px;align-items:center;font-size:11px;}
+.tx-footer .tx-footer-sources{font-size:10px;}
+.tx-footer .tx-footer-links{display:flex;flex-wrap:wrap;gap:14px;align-items:center;font-size:11px;justify-content:center;}
 .tx-footer a{color:var(--tx-tyrrhenien);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s;}
 .tx-footer a:hover{border-bottom-color:var(--tx-tyrrhenien);}
+@media (max-width:768px){
+  .tx-footer{display:none;}
+}
 /* Responsive header */
 @media (max-width:768px){
   .hdr{flex-wrap:wrap;gap:10px;padding:10px 0;}
   .hdr-actions{gap:6px;width:100%;justify-content:flex-start;}
   .hdr-btn{padding:5px 10px;font-size:10px;}
   .hdr-status{display:none;}
-  .tx-footer{flex-direction:column;text-align:center;gap:8px;}
-  .tx-footer .tx-footer-sources{text-align:center;}
 }
 /* === fin Tellux v6 design === */
 /* === Tellux v6 design — Vague 2 (modes, boutons, légende) === */
@@ -420,23 +438,36 @@
 #about-modal a{color:var(--tx-tyrrhenien)!important;text-decoration:none;border-bottom:1px solid currentColor;}
 #about-modal > div{background:var(--tx-pierre)!important;border:1px solid var(--border)!important;border-radius:14px!important;}
 
-/* === Legendes contextuelles Zone 2 (sous la carte, FIFO max 3) === */
+/* === Legendes contextuelles Zone 2 — panneau flottant (passage plein écran, brief
+   Soleil 2026-08-20 §2 étape 2 : élément en flux non catalogué par le brief, "conteneur
+   sous la carte" dans l'ancien layout empilé — cassait entièrement une fois la carte
+   plein écran). position:fixed (dernier enfant de <main>, pas descendant de .map-col
+   positionné → même raisonnement que #lightning-warn). Placé en bas-GAUCHE, symétrique
+   de #legende (bas-droite, bottom:60px;right:12px) : les deux flottent au-dessus de
+   #conditions-bar (bottom:0;z-index:999) sans le recouvrir. Le toggling display
+   flex/none reste piloté par updateLegendPanel() (JS, inchangé) — display:none ici
+   n'est que l'état initial avant JS. === */
 #tellux-legends-context{
   display:none;
-  width:100%;
+  position:fixed;
+  bottom:60px;
+  left:12px;
+  z-index:1000;
+  max-width:calc(100vw - 24px);
   min-height:80px;
-  max-height:180px;
-  margin:16px 0;
+  max-height:40vh;
+  margin:0;
   padding:14px 18px;
   background:var(--pierre-ombre);
   border:1px solid var(--border);
   border-radius:var(--r2);
-  box-shadow:0 1px 3px rgba(31,35,41,.04);
+  box-shadow:0 4px 16px rgba(31,35,41,0.12);
   gap:12px;
   flex-wrap:wrap;
   align-items:stretch;
   justify-content:flex-start;
   font-family:var(--font);
+  overflow-y:auto;
 }
 .legend-context-pill{
   flex:1 1 auto;
@@ -459,21 +490,48 @@
 .legend-context-pill .leg-row{display:flex;align-items:center;gap:6px;margin:2px 0;color:var(--tx-ardoise);}
 .legend-context-pill .leg-src{font-size:9px;color:var(--tx-mica);font-style:italic;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);}
 @media (max-width:768px){
-  #tellux-legends-context{padding:10px 12px;margin:10px 0;max-height:none;}
+  #tellux-legends-context{padding:10px 12px;left:8px;right:8px;max-width:none;max-height:35vh;}
   .legend-context-pill{min-width:100%;max-width:100%;}
 }
 /* === fin legendes contextuelles === */
 
 
-body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:16px;max-width:1100px;margin:0 auto;font-size:15px;line-height:1.5;}
+/* === Passage plein écran (pattern patrimoine.html, brief Soleil 2026-08-20) ===
+   html,body occupent 100% du viewport, plus de scroll de page ; #map (via .map-wrap
+   > .map-col) remplit tout l'espace en position:absolute;inset:0. Tout le chrome
+   (header, sidebar couches, légendes, bandeaux) devient flottant par-dessus. */
+html{height:100%;}
+body{font-family:var(--font);background:var(--bg);color:var(--tx);margin:0;padding:0;height:100%;font-size:15px;line-height:1.5;}
 h1,h2,.tx-display{font-family:var(--font-display);font-weight:500;letter-spacing:-0.01em;}
 h3,h4,h5{font-family:var(--font);font-weight:600;}
 .tx-num,.tx-score,.tx-coord,.mono{font-family:var(--mono);}
 .tx-micro{font-family:var(--font);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--tx-mica);}
-.hdr{display:flex;align-items:center;gap:12px;padding:10px 0 10px;border-bottom:1px solid var(--border);margin-bottom:12px;}
-.logo-mark{width:32px;height:32px;border-radius:8px;background:var(--acc);display:flex;align-items:center;justify-content:center;}
+/* .hdr — header compact flottant (coin haut-gauche), pattern #tlx-header de patrimoine.html.
+   Remplace l'ancien bandeau en flux pleine largeur (7 liens + statut + thème). Les 7 actions
+   (Méthodologie/Comprendre les termes/Glossaire/À propos/Radon/Patrimoine/Mairies) vivent
+   désormais dans #hdr-menu, un tiroir compact ouvert via #hdr-menu-toggle — voir §3 du
+   livrable pour la justification (les 3 premières sont des actions internes à app.html,
+   pas des liens de page, donc ne pouvaient pas migrer vers index.html comme le brief le
+   supposait pour "les 6 liens retirés"). markup + classes .hdr-actions/.hdr-btn inchangés
+   (préserve les sélecteurs i18n JT_TABLE ".hdr-actions ...", aucune ligne i18n à modifier). */
+.hdr{position:absolute;top:12px;left:12px;z-index:1000;display:flex;align-items:center;gap:10px;background:rgba(245,240,231,0.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:var(--r2);padding:8px 12px;box-shadow:0 4px 16px rgba(31,35,41,0.12);border:1px solid var(--border);max-width:calc(100vw - 24px);}
+.logo-mark{width:36px;height:36px;border-radius:8px;background:var(--acc);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .logo-mark svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;}
-.logo-text{font-size:18px;font-weight:500;letter-spacing:.02em;}
+.logo-mark img{width:36px;height:36px;border-radius:6px;display:block;}
+.logo-text{font-size:16px;font-weight:500;letter-spacing:.02em;}
+.hdr-tagline{display:none;}
+.hdr-menu-toggle{flex-shrink:0;width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:var(--pierre-ombre);color:var(--tx-ardoise);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;margin-left:4px;}
+.hdr-menu-toggle:hover{background:var(--tx-brume);}
+/* #hdr-menu réutilise .hdr-actions/.hdr-btn tels quels (mêmes classes, même markup) ;
+   ce bloc les surcharge en liste verticale flottante repliable, plus spécifique que
+   l'ancien ".hdr-actions{margin-left:auto;...}" et que son media(max-width:768px)
+   ci-dessous (qui reste inoffensif mais inerte une fois #hdr-menu positionné en dehors
+   du flux de .hdr). */
+#hdr-menu{position:absolute;top:64px;left:12px;z-index:1000;display:none;flex-direction:column;align-items:stretch;gap:6px;background:rgba(245,240,231,0.97);backdrop-filter:blur(8px);border-radius:var(--r2);padding:10px;box-shadow:0 8px 28px rgba(31,35,41,0.18);border:1px solid var(--border);width:240px;max-width:calc(100vw - 24px);}
+#hdr-menu.open{display:flex;}
+#hdr-menu .hdr-btn{width:100%;text-align:left;}
+#hdr-menu .hdr-menu-sep{height:1px;background:var(--border);margin:4px 2px;}
+#hdr-menu .hdr-status{padding:4px 2px 0;}
 .logo-ver{font-family:var(--mono);font-size:10px;color:var(--tx3);background:var(--bg3);padding:2px 7px;border-radius:20px;margin-left:4px;}
 .db-bar{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--pierre-ombre);border-radius:var(--r);border:1px solid var(--border);margin-bottom:10px;font-family:var(--mono);font-size:11px;}
 .db-dot{width:8px;height:8px;border-radius:50%;background:#ccc;flex-shrink:0;transition:background .4s;}
@@ -633,7 +691,11 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .add-btn:hover{background:var(--maquis-clair);color:#fff;}
 .op-row{display:none;align-items:center;gap:8px;font-size:11px;color:var(--tx3);margin-bottom:6px;font-family:var(--mono);}
 .op-row input[type=range]{flex:1;}
-#map{width:100%;height:520px;border-radius:var(--r2);border:1px solid var(--border);}
+#map{position:absolute;inset:0;width:100%;height:100%;}
+/* .map-wrap / .map-col — conteneurs plein écran (remplace l'ancien flux empilé
+   520px + sidebar poussée en flex ; voir bloc "Phase 2" plus bas, neutralisé). */
+.map-wrap{position:absolute;inset:0;}
+.map-wrap .map-col{position:absolute;inset:0;}
 /* Mode "placement de point" contribution terrain (2026-08-19) — indicateur visuel léger
    pendant l'attente du clic carte, avant que #cform ne soit affiché (cf. startContribFromFAB). */
 #map.contrib-placement-mode{cursor:crosshair;box-shadow:0 0 0 3px var(--acc, #2d9b87);}
@@ -860,21 +922,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .theme-toggle:hover{background:var(--pierre-ombre);}
 /* Mobile responsive */
 @media(max-width:768px){
-  body{padding:6px;}
-  .hdr{padding:6px 0;gap:6px;}
   .pbar{grid-template-columns:repeat(2,1fr);gap:4px;}
   .pc{padding:6px 8px;}
   .db-bar{font-size:10px;padding:4px 8px;}
-  #map{height:calc(100vh - 190px)!important;border-radius:8px;}
-  .map-wrap .layers-accordion{
-    position:fixed;top:0;left:0;right:0;z-index:1100;
-    background:var(--bg);max-height:0;overflow-y:auto;
-    transition:max-height .3s ease;
-    box-shadow:0 4px 20px rgba(0,0,0,.15);border-radius:0 0 12px 12px;
-    padding:0 8px;
-  }
-  .map-wrap .layers-accordion.mob-open{max-height:55vh;padding:8px;}
-  .mob-toggle{display:flex!important;}
   .lbtn{font-size:10px;padding:5px 10px;min-height:36px;}
   .mtab{font-size:11px;min-height:36px;}
   #info{font-size:12px;padding:8px 12px;}
@@ -887,15 +937,43 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   #prescription-panel{width:calc(100vw - 32px)!important;right:16px!important;left:16px!important;}
   .hypo-panel{top:6px;right:6px;width:calc(100vw - 60px);}
 }
-.mob-toggle{
-  display:none;position:fixed;top:12px;right:12px;z-index:1200;
+/* #layers-toggle — remplace #mob-toggle + #sidebar-toggle (passage plein écran, brief
+   Soleil 2026-08-20 §1.3, option (a) retenue). Un seul bouton, visible à tous les
+   breakpoints, pilote l'unique tiroir couches ci-dessous. Reprend tel quel le
+   positionnement de l'ancien #mob-toggle (top:12px;right:12px;z-index:1200), qui ne
+   collisionnait avec rien — le header réduit vit maintenant en haut-GAUCHE (.hdr),
+   laissant le coin haut-droit libre à tous les breakpoints, desktop compris. */
+#layers-toggle{
+  display:flex;position:fixed;top:12px;right:12px;z-index:1200;
   width:40px;height:40px;border-radius:50%;
   background:var(--bg);border:1px solid var(--border);
   box-shadow:0 2px 8px rgba(0,0,0,.12);cursor:pointer;
   font-size:18px;align-items:center;justify-content:center;color:var(--ardoise-clair);
 }
 
-/* Accordéon couches */
+/* Accordéon couches — tiroir flottant unifié mobile+desktop (passage plein écran,
+   brief Soleil §1.3). Remplace l'ancien layout desktop "push-flow" (flex:0 0 420px,
+   repli à 48px via .collapsed) ET l'ancien tiroir mobile "descend du haut"
+   (max-height 0→55vh). Un seul mécanisme (transform:translateX, ancré à droite,
+   pleine hauteur) réutilisé aux deux breakpoints, fermé par défaut. z-index:1100
+   repris À L'IDENTIQUE de l'ancien tiroir mobile — aucune collision nouvelle avec
+   la pile z-index existante (confirmé par inventaire complet en préparation de ce
+   diff : coexiste sous #about-modal/2000, #expert-modal/2100, .glossary-drawer/2100,
+   #myplace-modal/2300, .disclaimer-overlay/9999+ ; au-dessus de #conditions-bar/999,
+   .fab-mesure/1050). #sidebar-toggle (repli 48px) est retiré : binaire
+   ouvert/fermé désormais, comme le drawer Glossaire déjà présent dans ce fichier. */
+.map-wrap .layers-accordion{
+  position:fixed;top:0;right:0;bottom:0;z-index:1100;
+  width:420px;max-width:92vw;
+  background:var(--bg);overflow-y:auto;
+  box-shadow:-4px 0 20px rgba(0,0,0,.15);
+  transform:translateX(100%);transition:transform .3s ease-out;
+  padding:8px;
+}
+.map-wrap .layers-accordion.open{transform:translateX(0);}
+@media(max-width:768px){
+  .map-wrap .layers-accordion{width:100%;max-width:100%;}
+}
 .layers-accordion{display:flex;flex-direction:column;gap:4px;}
 .accordion-cat{background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:all .2s;flex-shrink:0;}
 .accordion-cat-header{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;background:var(--pierre-ombre);font-weight:500;font-size:12px;color:var(--ardoise-clair);user-select:none;transition:all .2s;}
@@ -1005,78 +1083,35 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 }
 @keyframes badgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
 
-/* === Phase 2 — Layout desktop sidebar fixe (≥ 1024px) === */
-/* Seuil abaisse de 1200 a 1024px (diagnostic 22/07) : en dessous de 1200px,
-   #map retombait sur l'ancien layout empile + hauteur fixe 520px, non
-   conscient de la hauteur de viewport — deborde sur fenetre courte
-   (~1024x640 type partage d'ecran Teams). Le mecanisme desktop existant
-   (setDesktopMapHeight, JS) est deja correctement height-aware ; on
-   etend simplement son seuil d'activation. */
-/* Bouton réduire sidebar — caché par défaut (mobile) */
-.sidebar-toggle{display:none;}
-@media (min-width:1024px){
-  body{max-width:none;padding:16px 24px;}
-  .map-wrap{
-    display:flex;
-    gap:16px;
-    align-items:stretch;
-    /* height settée dynamiquement par JS (setDesktopMapHeight) */
-  }
-  .map-wrap .layers-accordion{
-    flex:0 0 420px;
-    overflow-y:auto;
-    max-height:100%;
-    height:100%;
-    padding:4px 8px 8px 4px;
-    border-right:1px solid var(--border);
-    transition:flex-basis .25s ease;
-    /* reset styles drawer mobile */
-    position:static!important;
-    top:auto;left:auto;right:auto;
-    width:auto!important;
-    box-shadow:none;
-    border-radius:0;
-  }
-  .map-wrap .map-col{
-    flex:1;
-    position:relative;
-    min-width:0; /* permet flex shrink */
-  }
-  .map-wrap .map-col #map{
-    height:100%!important;
-    width:100%;
-    border-radius:var(--r2);
-  }
-  .mob-toggle{display:none!important;}
-  /* Bouton réduire sidebar — visible en desktop */
-  .sidebar-toggle{
-    display:flex;align-items:center;justify-content:center;
-    width:28px;height:28px;margin:2px 0 6px auto;
-    border:1px solid var(--border);border-radius:6px;
-    background:var(--pierre-ombre);color:var(--tx3);
-    font-size:11px;cursor:pointer;
-    transition:all .15s;
-    position:sticky;top:0;z-index:2;
-  }
-  .sidebar-toggle:hover{background:var(--bg3);color:var(--tx);}
-  /* État collapsed */
-  .map-wrap .layers-accordion.collapsed{
-    flex:0 0 48px;
-    overflow:hidden;
-    padding:4px;
-  }
-  .map-wrap .layers-accordion.collapsed .accordion-cat{display:none;}
-  .map-wrap .layers-accordion.collapsed .sidebar-toggle{
-    margin:2px auto;
-  }
-  .map-wrap .layers-accordion.collapsed .sidebar-toggle-icon{
-    transform:rotate(180deg);
-  }
-}
-/* === fin Phase 2 === */
+/* === Phase 2 — Layout desktop sidebar fixe (≥ 1024px) — RETIRÉ (passage plein écran,
+   brief Soleil 2026-08-20). L'ancien mécanisme poussait la carte en flex (sidebar
+   420px push-layout + état .collapsed 48px-rail) et forçait #map à height:100%!important
+   dans un .map-col en position:relative — modèle incompatible avec le plein écran
+   (#map est maintenant position:absolute;inset:0 en permanence, cf. règle #map plus haut).
+   Remplacé par le tiroir fixe unifié .map-wrap .layers-accordion (position:fixed, tous
+   breakpoints, classe .open) défini plus bas — même mécanisme qu'en mobile, étendu au
+   desktop plutôt que le contraire (voir §3 du livrable pour la justification du choix).
+   #sidebar-toggle et #mob-toggle sont fusionnés dans #layers-toggle (bouton unique,
+   toujours visible) ; l'état .collapsed (rail 48px) est abandonné au profit d'un modèle
+   binaire ouvert/fermé, cohérent avec l'idiome déjà existant du glossary-drawer.
+   setDesktopMapHeight() (JS, plus bas) devient inutile pour la même raison : sizing
+   pur-CSS + trackResize natif de Leaflet. Bloc conservé en commentaire pour traçabilité,
+   ne s'applique plus (toutes ses règles sont soit retirées soit rendues obsolètes par
+   les nouvelles règles). */
+/* === fin Phase 2 (retiré) === */
 
 /* === Phase 3 — Mode Expertise === */
-#expert-bandeau{position:absolute;top:0;left:0;right:0;z-index:600;background:#1F2329;color:#F5F0E7;font-family:var(--mono);font-size:10px;padding:5px 12px;display:none;align-items:center;gap:8px;border-bottom:2px solid #C28533;letter-spacing:.02em;flex-wrap:wrap;pointer-events:all;}
+/* top:0 → top:88px (passage plein écran, brief Soleil 2026-08-20 §2 étape 4, valeur
+   VÉRIFIÉE en Playwright — voir §7 du livrable). Ancré au sommet de .map-col (désormais
+   plein écran), un top:0 placerait ce bandeau plein-largeur littéralement sous #hdr
+   (top:12px) et #layers-toggle (top:12px, 40px) qui, bien qu'en z-index supérieur
+   (1000/1200 > 600) et donc visuellement au-dessus, créeraient un chevauchement
+   disgracieux. Un premier essai à 70px (estimation à vue, hauteur #hdr supposée ~52-56px)
+   s'est révélé insuffisant : mesure Playwright réelle #hdr.getBoundingClientRect() → 70px
+   de haut, donc bottom:82px (top:12+70) — 70px chevauchait encore de 12px. 88px dégage
+   #hdr avec ~6px de marge. Contenu textuel uniquement — pas de valeur pondérée/étiquette
+   touchée, aucun contenu GELÉ-001a modifié. */
+#expert-bandeau{position:absolute;top:88px;left:0;right:0;z-index:600;background:#1F2329;color:#F5F0E7;font-family:var(--mono);font-size:10px;padding:5px 12px;display:none;align-items:center;gap:8px;border-bottom:2px solid #C28533;letter-spacing:.02em;flex-wrap:wrap;pointer-events:all;}
 #expert-bandeau.visible{display:flex;}
 #expert-panel{border-top:1px solid var(--border);padding:10px 12px;display:none;background:var(--pierre-ombre);margin-top:4px;border-radius:0 0 var(--r) var(--r);}
 #expert-panel.visible{display:block;}
@@ -1197,12 +1232,17 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       </div>
     </div>
 
-    <p class="d-foot">Tellux ne remplace pas une mesure professionnelle. <a href="#" onclick="event.preventDefault();dismissDisclaimer();var p=document.getElementById('methodology-panel');p.style.display='block';p.setAttribute('aria-hidden','false');">Méthodologie complète →</a></p>
+    <p class="d-foot">Tellux ne remplace pas une mesure professionnelle. <a href="#" onclick="event.preventDefault();dismissDisclaimer();var p=document.getElementById('methodology-panel');p.style.display='flex';p.setAttribute('aria-hidden','false');">Méthodologie complète →</a></p>
 
     <button class="d-btn" onclick="dismissDisclaimer()">Accéder à la carte</button>
   </div>
 </div>
 
+<!-- Header compact flottant — passage plein écran (brief Soleil 2026-08-20). Les 7 actions
+     de l'ancien .hdr-actions vivent maintenant dans #hdr-menu (tiroir replié par défaut,
+     ouvert via #hdr-menu-toggle). Markup interne des boutons/liens strictement inchangé
+     (mêmes onclick/href/title) — préserve les sélecteurs i18n JT_TABLE ".hdr-actions ..."
+     sans modification. -->
 <div class="hdr">
   <a href="/" class="logo-mark" id="tx-logo" title="Tellux — Révéler l'invisible" aria-label="Retour à l'accueil Tellux" style="text-decoration:none">
     <img src="assets/logo/tellux_logo.svg" alt="Tellux — Révéler l'invisible" width="52" height="52">
@@ -1211,18 +1251,21 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <span class="logo-text">Tellux</span>
     <div class="hdr-tagline"><em>Révéler l'invisible</em> · Corse</div>
   </div>
-  <div class="hdr-actions">
-<button class="hdr-btn" onclick="toggleMethodology()" title="Méthodologie & sources">Méthodologie</button>
+  <span id="sb-status-dot" class="status-dot status-dot--pending" title="Supabase connexion en cours…" aria-label="Statut Supabase"></span>
+  <button id="theme-toggle" class="theme-toggle" onclick="toggleTheme()" title="Basculer thème clair / sombre" aria-label="Basculer thème clair / sombre">🌙</button>
+  <button id="hdr-menu-toggle" class="hdr-menu-toggle" type="button" onclick="toggleHdrMenu()" aria-haspopup="true" aria-expanded="false" aria-controls="hdr-menu" aria-label="Menu Tellux" title="Menu">☰</button>
+</div>
+<div class="hdr-actions" id="hdr-menu" aria-hidden="true">
+    <button class="hdr-btn" onclick="toggleMethodology()" title="Méthodologie & sources">Méthodologie</button>
     <button class="hdr-btn" onclick="openGlossaryDrawer()" title="Glossaire & guides pratiques">Comprendre les termes</button>
     <a class="hdr-btn" href="/guide-et-glossaire.html#glossaire" target="_blank" rel="noopener" title="Guide et glossaire technique complet (page publique)" style="text-decoration:none">Glossaire</a>
     <button class="hdr-btn" onclick="openAboutModal()" title="À propos du projet">À propos</button>
+    <span class="hdr-menu-sep" aria-hidden="true"></span>
     <a class="hdr-btn" href="radon.html" title="Zonage radon ASNR, dépôts ERP certifiés et courriers dédiés" style="text-decoration:none">Radon</a>
     <a class="hdr-btn" href="patrimoine.html" title="Cartographie patrimoniale de la Corse" style="text-decoration:none">Patrimoine (bêta)</a>
     <a class="hdr-btn" href="mairies.html" title="Outils administratifs pour les communes corses" style="text-decoration:none">Élu·e ? Outils mairie →</a>
-    <span id="sb-status-dot" class="status-dot status-dot--pending" title="Supabase connexion en cours…" aria-label="Statut Supabase"></span>
+    <span class="hdr-menu-sep" aria-hidden="true"></span>
     <span class="hdr-status" id="hdr-status">chargement…</span>
-    <button id="theme-toggle" class="theme-toggle" onclick="toggleTheme()" title="Basculer thème clair / sombre" aria-label="Basculer thème clair / sombre">🌙</button>
-  </div>
 </div>
 
 <!-- Modal À propos -->
@@ -1416,7 +1459,15 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 </div>
 
 <!-- Panel Méthodologie & Incertitudes -->
-<div id="methodology-panel" role="region" aria-labelledby="methodology-title" aria-hidden="true" style="display:none;padding:16px;background:var(--pierre-ombre);border-radius:var(--r2);max-width:720px;margin:12px auto 16px;border:1px solid var(--border);font-size:12px;color:var(--ardoise-clair);line-height:1.6">
+<!-- #methodology-panel — converti en modal centré (chrome identique à #about-modal), passage
+     plein écran (brief Soleil 2026-08-20). Vivait auparavant en flux sous le header (margin:12px
+     auto 16px) : cette position n'a plus de sens une fois le header réduit et flottant — élément
+     absent de l'inventaire initial du brief, découvert en relisant app.html en entier (§2 étape 2
+     du brief). toggleMethodology() (inchangée de nom, 3 points d'appel : bouton hdr-menu, lien
+     disclaimer, croix ✕ interne) bascule maintenant display:flex/none pour permettre le centrage,
+     au lieu de block/none. -->
+<div id="methodology-panel" role="dialog" aria-modal="true" aria-labelledby="methodology-title" aria-hidden="true" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:2000;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)toggleMethodology()">
+<div style="padding:16px;background:var(--pierre-ombre);border-radius:var(--r2);max-width:720px;width:100%;max-height:88vh;overflow-y:auto;border:1px solid var(--border);font-size:12px;color:var(--ardoise-clair);line-height:1.6;box-shadow:var(--shadow-lg,0 8px 32px rgba(31,35,41,.18))">
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
   <h3 id="methodology-title" style="margin:0;color:var(--tx);font-size:14px;font-weight:600">🔬 Méthodologie & Audit</h3>
@@ -1487,16 +1538,29 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 <p style="margin:12px 0 0;font-size:11px;font-style:italic;color:var(--tx3)">📚 Corpus & audit complets : <a href="https://github.com/dellahstella/tellux" target="_blank" style="color:var(--acc);text-decoration:none;">GitHub tellux</a></p>
 
 </div>
+</div><!-- /#methodology-panel -->
 
 <!-- Panneau Conditions actuelles — Brief 46 : déplacé dans #legende (cf. .map-col après #map). -->
 
 <main id="main">
-<div id="lightning-warn" style="display:none;background:#fff3e6;border:1px solid #f5a855;border-radius:var(--r);padding:6px 12px;font-size:11px;color:#854d0e;margin-bottom:8px"></div>
+<!-- #lightning-warn — élément en flux non catalogué par le brief (§2 étape 2), converti en
+     bandeau flottant plein-largeur en haut de carte (passage plein écran). position:fixed
+     (pas absolute : #lightning-warn n'est pas un descendant de .map-col, contrairement à
+     #expert-bandeau — fixed le rend indépendant de tout ancêtre positionné). top:88px (et
+     non 0, même correctif VÉRIFIÉ Playwright que #expert-bandeau ci-dessus §2 étape 4 :
+     évite le chevauchement avec #hdr, mesuré à 70px de haut, top:12px → bottom:82px).
+     z-index:590, juste sous #expert-bandeau (600) : les deux bandeaux plein-largeur
+     peuvent en théorie coexister (orage + mode Expertise actifs simultanément), au MÊME
+     top:88px désormais — aucun mécanisme d'empilement vertical n'existe pour ce cas rare,
+     signalé en §7 du livrable plutôt que résolu ici (pas dans le périmètre du brief ;
+     préexistant, pas introduit par ce diff). -->
+<div id="lightning-warn" style="display:none;position:fixed;top:88px;left:0;right:0;z-index:590;background:#fff3e6;border-bottom:1px solid #f5a855;padding:6px 12px;font-size:11px;color:#854d0e;text-align:center"></div>
 <div class="map-wrap">
-<button class="mob-toggle" id="mob-toggle" onclick="const a=document.getElementById('layers-accordion');a.classList.toggle('mob-open');this.textContent=a.classList.contains('mob-open')?'✕':'☰'" aria-label="Couches">☰</button>
+<!-- #layers-toggle — remplace #mob-toggle + #sidebar-toggle (passage plein écran, brief
+     Soleil 2026-08-20 §1.3, option (a)). Bouton unique, tous breakpoints, pilote
+     .layers-accordion via .open (voir toggleLayersPanel(), JS). -->
+<button id="layers-toggle" type="button" onclick="toggleLayersPanel()" aria-label="Couches" aria-expanded="false">☰</button>
 <div class="layers-accordion" id="layers-accordion">
-  <!-- Bouton réduire sidebar (desktop uniquement) -->
-  <button class="sidebar-toggle" id="sidebar-toggle" type="button" onclick="toggleSidebar()" aria-label="Réduire la sidebar" title="Réduire la sidebar"><span class="sidebar-toggle-icon">◀</span></button>
 
   <!-- Filtre par domaine physique : 5 chips additifs au-dessus de l'accordion. État initial "Tous" actif. -->
   <div class="domain-chips" role="group" aria-label="Filtre par domaine physique">
@@ -3147,7 +3211,9 @@ function tog(id,cls,btn){
   // Guard : couche migrée hors de ce fichier
   // ou référence cassée — sortie silencieuse pour éviter map.addLayer(undefined).
   if(!LAYERS[id]&&!WMS[id])return;
-  if(window.innerWidth<=600){const a=document.getElementById('layers-accordion'),b=document.getElementById('mob-toggle');if(a&&a.classList.contains('mob-open')){a.classList.remove('mob-open');if(b)b.textContent='☰';}}
+  // Ferme le tiroir couches après sélection, mobile seulement (desktop : le tiroir plein
+  // écran reste ouvert entre plusieurs bascules, comme l'ancien layout push-flow desktop).
+  if(window.innerWidth<=600){const a=document.getElementById('layers-accordion');if(a&&a.classList.contains('open'))a.classList.remove('open');}
   if(ACTIVE[id]){WMS[id]?map.removeLayer(WMS[id]):map.removeLayer(LAYERS[id]);ACTIVE[id]=false;if(btn)btn.className='lbtn';
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='none';
     if(id==='emag')document.getElementById('emag-op-row').style.display='none';
@@ -5591,17 +5657,32 @@ map.on('click',async e=>{
   // Sprint app-ui-polish (mai 2026) \u2014 Item 3 : autoPan force Leaflet a recentrer
   // la carte pour garder le popup dans le viewport. autoPanPaddingTopLeft reserve
   // de la place pour le header tlx en haut (80px) et marge gauche (20px).
+  // Retune passage plein ecran (brief Soleil 2026-08-20 \u00a72 etape 4) : 80\u2192120,
+  // VALEUR VERIFIEE en Playwright (pas une estimation \u00e0 vue) \u2014 #hdr flottant mesure
+  // 70px de haut (top:12px \u2192 bottom:82px) ; #expert-bandeau/#lightning-warn (retunes
+  // \u00e0 top:88px, ~26px de haut quand visibles) etendent la zone haute occupee jusqu'\u00e0
+  // ~114px. 120 couvre les deux cas (header seul, ou header + bandeau actif) avec une
+  // petite marge, sans etat \u00e0 suivre.
   // Sprint flash (mai 2026, edge case Item 3) \u2014 anchor adaptatif : si clic
   // proche du top (containerPoint.y < 150), le popup s'ouvre EN DESSOUS du
   // point (offset Y positif) au lieu d'au-dessus (defaut Leaflet). Resout
   // l'edge case ou panBy fallback etait insuffisant (cap\u00e9 par bounds Leaflet
   // sud-est Corse).
+  // VIGILANCE (decouverte en testant ce diff, PAS une regression introduite par lui \u2014
+  // confirme par A/B sur app.html non modifie, meme comportement \u00e0 l'identique, cf. \u00a77
+  // du livrable) : un clic tres pres du bord haut de #map peut declencher une exception
+  // "Maximum call stack size exceeded" dans Leaflet (_limitCenter/_getBoundsOffset,
+  // recursion interne \u00e0 leaflet.min.js autour de map.setMaxBounds([[40.5,7.5],[44.0,10.5]])
+  // + maxBoundsViscosity=0.8, L.2726-2727). Prexistant \u00e0 HEAD 96e5599, reproductible \u00e0
+  // l'identique sur l'original \u2014 hors perimetre de ce chantier (toucherait la logique
+  // Leaflet/bounds, pas la conteneurisation visuelle). Signale, pas corrige ici.
   const containerPoint = map.latLngToContainerPoint(e.latlng);
   const mapHeight = map.getContainer().getBoundingClientRect().height;
   const isNearTop = containerPoint.y < 150;
   const popupOffset = isNearTop ? L.point(0, 80) : L.point(0, -10);
-  // autoPanPaddingBottomRight 100px : barre conditions ~80px collapsed + marge.
-  const calcPopup=L.popup({closeButton:true,className:'delta-popup',autoPan:true,keepInView:true,autoPanPaddingTopLeft:L.point(20,80),autoPanPaddingBottomRight:L.point(20,100),offset:popupOffset})
+  // autoPanPaddingBottomRight 100px : barre conditions ~80px collapsed + marge (composant
+  // inchange par ce diff, valeur toujours valide).
+  const calcPopup=L.popup({closeButton:true,className:'delta-popup',autoPan:true,keepInView:true,autoPanPaddingTopLeft:L.point(20,120),autoPanPaddingBottomRight:L.point(20,100),offset:popupOffset})
     .setLatLng(e.latlng).setContent('<span style="font-size:12px">\u23f3 calcul\u2026</span>').openOn(map);
   const igrf=fetchIGRF(lat,lng);
   // Résolution commune officielle (décret radon 2018-434) + altitude IGN RGE Alti
@@ -5824,12 +5905,15 @@ map.on('click',async e=>{
   // contenu initial (placeholder '⏳ calcul…' court → rien a panner). Apres
   // setContent(html) avec le contenu final volumineux (~700px), Leaflet ne
   // re-pan PAS automatiquement. Fix : check viewport + panBy manuel via rAF
-  // (apres layout finalise). Padding 80px en haut (header tlx) + 60px en bas
-  // (conditions-bar collapsed).
+  // Padding 80→120px en haut (retune passage plein ecran, valeur VERIFIEE Playwright,
+  // meme raisonnement qu'autoPanPaddingTopLeft ci-dessus : #hdr (70px, top:12) +
+  // #expert-bandeau/#lightning-warn (26px, top:88) eventuellement visibles) + 60px en
+  // bas (conditions-bar collapsed, composant inchange par ce chantier, valeur toujours
+  // valide).
   requestAnimationFrame(() => {
     if(!calcPopup._container) return;
     const r = calcPopup._container.getBoundingClientRect();
-    const padTop = 80, padBottom = 60;
+    const padTop = 120, padBottom = 60;
     if(r.top < padTop){
       map.panBy([0, r.top - padTop], {animate: !tlxReduceMotion(), duration: 0.3});
     } else if(r.bottom > window.innerHeight - padBottom){
@@ -7264,11 +7348,46 @@ function toggleTheme(){
 }
 
 function toggleMethodology(){
+  // #methodology-panel converti en modal centré (passage plein écran, brief Soleil
+  // 2026-08-20) — 'flex' au lieu de 'block' pour permettre le centrage via
+  // align-items/justify-content sur le wrapper. 3 points d'appel inchangés (bouton
+  // #hdr-menu, lien disclaimer, croix ✕ interne).
   const panel = document.getElementById('methodology-panel');
   const willShow = panel.style.display === 'none';
-  panel.style.display = willShow ? 'block' : 'none';
+  panel.style.display = willShow ? 'flex' : 'none';
   panel.setAttribute('aria-hidden', String(!willShow));
 }
+
+// #hdr-menu — tiroir compact du header réduit (passage plein écran, brief Soleil
+// 2026-08-20). Ferme sur clic extérieur et sur Échap, même idiome que le drawer
+// Glossaire (closeGlossaryDrawer(), voir plus bas).
+function toggleHdrMenu(){
+  var m = document.getElementById('hdr-menu');
+  var btn = document.getElementById('hdr-menu-toggle');
+  if(!m || !btn) return;
+  var willOpen = !m.classList.contains('open');
+  m.classList.toggle('open', willOpen);
+  m.setAttribute('aria-hidden', String(!willOpen));
+  btn.setAttribute('aria-expanded', String(willOpen));
+}
+function closeHdrMenu(){
+  var m = document.getElementById('hdr-menu');
+  var btn = document.getElementById('hdr-menu-toggle');
+  if(!m || !m.classList.contains('open')) return;
+  m.classList.remove('open');
+  m.setAttribute('aria-hidden', 'true');
+  if(btn) btn.setAttribute('aria-expanded', 'false');
+}
+document.addEventListener('click', function(e){
+  var m = document.getElementById('hdr-menu');
+  var btn = document.getElementById('hdr-menu-toggle');
+  if(!m || !m.classList.contains('open')) return;
+  if(m.contains(e.target) || (btn && btn.contains(e.target))) return;
+  closeHdrMenu();
+});
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape') closeHdrMenu();
+});
 
 // Init toggle icon — IGN Plan V2 unique, pas de swap de tuiles nécessaire.
 if(DARK){
@@ -8710,23 +8829,18 @@ function capCleanup(){
 // l'appelait a ete supprime — fondu dans le champ Contexte (optionnel) du
 // stepper #cform, qui passe par saveContrib() comme toute mesure technique.
 
-/* === Phase 2 — Layout desktop sidebar fixe (≥ 1024px) === */
+/* === Phase 2 JS — Layout desktop sidebar fixe (≥ 1024px) — SIMPLIFIÉ (passage plein
+   écran, brief Soleil 2026-08-20). setDesktopMapHeight() et son resize listener sont
+   retirés : ils calculaient à la main la hauteur de .map-wrap (viewport - position du
+   haut - marge) pour compenser un layout en flux ; devenu inutile maintenant que #map
+   est position:absolute;inset:0 en CSS pur et que Leaflet retaille lui-même via son
+   trackResize natif (option par défaut de L.map, jamais désactivée dans ce fichier).
+   openFirstAccordionDesktop() est conservé : ouvrir la première catégorie par défaut
+   reste pertinent une fois le tiroir lui-même ouvert, indépendamment de son mécanisme
+   d'ouverture. window.toggleSidebar (collapse 48px) est remplacé par
+   window.toggleLayersPanel (binaire ouvert/fermé, classe .open, cf. §3 du livrable). */
 (function(){
   var DESKTOP_MQ = window.matchMedia('(min-width:1024px)');
-  var BOTTOM_MARGIN_PX = 24;
-
-  function setDesktopMapHeight(){
-    var mw = document.querySelector('.map-wrap');
-    if(!mw) return;
-    if(!DESKTOP_MQ.matches){
-      mw.style.height = '';
-      return;
-    }
-    var top = mw.getBoundingClientRect().top;
-    var h = Math.max(400, window.innerHeight - top - BOTTOM_MARGIN_PX);
-    mw.style.height = h + 'px';
-    try{ if(window.map && typeof window.map.invalidateSize==='function'){ window.map.invalidateSize(); } }catch(e){}
-  }
 
   function openFirstAccordionDesktop(){
     if(!DESKTOP_MQ.matches) return;
@@ -8739,46 +8853,30 @@ function capCleanup(){
   // Expose map globally for invalidateSize hook (L.map var is const local to module scope)
   try{ if(typeof map!=='undefined') window.map = map; }catch(e){}
 
-  // Debounced resize
-  var rzTimer=null;
-  window.addEventListener('resize', function(){
-    if(rzTimer) clearTimeout(rzTimer);
-    rzTimer = setTimeout(setDesktopMapHeight, 120);
-  });
-
-  // Also listen to media query transitions (mobile↔desktop crossing)
-  try{
-    if(DESKTOP_MQ.addEventListener){
-      DESKTOP_MQ.addEventListener('change', function(){
-        setDesktopMapHeight();
-        openFirstAccordionDesktop();
-      });
-    }
-  }catch(e){}
-
   function init(){
-    setDesktopMapHeight();
     openFirstAccordionDesktop();
   }
 
-  // Toggle sidebar collapsed/expanded (exposé globalement pour onclick HTML)
-  window.toggleSidebar = function(){
+  // Ouvre/ferme le tiroir couches unifié (exposé globalement pour onclick HTML,
+  // #layers-toggle — remplace #mob-toggle + #sidebar-toggle).
+  window.toggleLayersPanel = function(){
     var la = document.getElementById('layers-accordion');
+    var btn = document.getElementById('layers-toggle');
     if(!la) return;
-    la.classList.toggle('collapsed');
-    var btn = document.getElementById('sidebar-toggle');
+    la.classList.toggle('open');
+    var isOpen = la.classList.contains('open');
     if(btn){
-      var isCollapsed = la.classList.contains('collapsed');
-      // TODO i18n : réécrit l'aria-label/title en dur en FR à chaque clic,
-      // écrasant la traduction posée par I18N_ENTRIES (sidebar_toggle_aria/
-      // sidebar_toggle_tt) après le premier clic — même bug de classe que le
-      // burger mobile de mairies.html (corrigé PR #982). À corriger avec jt()
-      // une fois "Agrandir la sidebar" traduit (JS_STRINGS_EN), pas avant —
-      // aucune traduction inventée dans ce brief infra-only.
-      btn.setAttribute('aria-label', isCollapsed ? 'Agrandir la sidebar' : 'Réduire la sidebar');
-      btn.setAttribute('title', isCollapsed ? 'Agrandir la sidebar' : 'Réduire la sidebar');
+      // Glyphe ☰/✕ (langue-agnostique) + aria-expanded (booléen) seulement : ne pas
+      // réécrire aria-label en dur ici, ça écraserait la traduction posée par JT_TABLE
+      // au chargement/changement de langue — même piège que l'ancien toggleSidebar()
+      // (TODO retiré avec lui). "Couches" reste correct que le tiroir soit ouvert ou non.
+      btn.textContent = isOpen ? '✕' : '☰';
+      btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     }
-    // invalidateSize après la fin de transition (0.25s) pour que Leaflet recalcule
+    // invalidateSize après la fin de transition (.3s, cf. CSS) pour que Leaflet recalcule
+    // l'espace visible (utile si un jour le tiroir réduit la zone carte au lieu de flotter
+    // par-dessus ; sans effet aujourd'hui puisque #map reste plein écran sous le tiroir,
+    // conservé par cohérence avec l'ancien toggleSidebar()).
     setTimeout(function(){
       try{ if(window.map && typeof window.map.invalidateSize==='function') window.map.invalidateSize(); }catch(e){}
     }, 300);
@@ -9045,9 +9143,13 @@ function capCleanup(){
 ["cap_note_ph","#cap-note","placeholder","Notes optionnelles (contexte, observations…)","Note ozzionale (cuntestu, osservazione…)","Optional notes (context, observations…)"],
 ["cap_submit","#cap-btn-submit","","Envoyer la mesure","Mandà a misura","Submit the measurement"],
 ["methodo_title","#methodology-title","","🔬 Méthodologie & Audit","🔬 Metodulugia è Audit","🔬 Methodology & Audit"],
-["mob_toggle_aria","#mob-toggle","aria-label","Couches","Strati","Layers"],
-["sidebar_toggle_aria","#sidebar-toggle","aria-label","Réduire la sidebar","Riduce a colonna laterale","Collapse the sidebar"],
-["sidebar_toggle_tt","#sidebar-toggle","title","Réduire la sidebar","Riduce a colonna laterale","Collapse the sidebar"],
+/* #mob_toggle_aria / #sidebar_toggle_aria / #sidebar_toggle_tt fusionnés en une seule
+   ligne (passage plein écran, brief Soleil 2026-08-20) : #mob-toggle et #sidebar-toggle
+   n'existent plus, remplacés par le bouton unique #layers-toggle. La ligne title
+   "Réduire la sidebar" est retirée avec elle (l'ouverture/fermeture binaire ne se
+   "réduit" plus à un rail 48px, cf. §3 du livrable) — aucune traduction n'est perdue,
+   seule la structure du contrôle qu'elles ciblaient a changé. */
+["layers_toggle_aria","#layers-toggle","aria-label","Couches","Strati","Layers"],
 ["chips_aria",".domain-chips","aria-label","Filtre par domaine physique","Filtru per duminiu fisicu","Filter by physical domain"],
 ["chip_label",".chip-label","","Domaine","Duminiu","Domain"],
 ["chip_all",".domain-chip[data-domain-filter='all']","","Tous","Tutti","All"],
