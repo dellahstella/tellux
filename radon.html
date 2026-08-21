@@ -159,8 +159,8 @@ a{color:inherit;}
 .mr-modal-form-title:not(:first-child){margin-top:22px;}
 .mr-modal-field{margin-bottom:12px;}
 .mr-modal-field label{display:block;font-family:var(--fm);font-size:10px;color:var(--mica);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:5px;}
-.mr-modal-field input, .mr-modal-field textarea{width:100%;font-family:var(--fu);font-size:13px;padding:9px 11px;border-radius:5px;border:1px solid var(--border);background:white;color:var(--ardoise);resize:vertical;}
-.mr-modal-field input:focus, .mr-modal-field textarea:focus{outline:none;border-color:var(--ocre);}
+.mr-modal-field input, .mr-modal-field textarea, .mr-modal-field select{width:100%;font-family:var(--fu);font-size:13px;padding:9px 11px;border-radius:5px;border:1px solid var(--border);background:white;color:var(--ardoise);resize:vertical;}
+.mr-modal-field input:focus, .mr-modal-field textarea:focus, .mr-modal-field select:focus{outline:none;border-color:var(--ocre);}
 .mr-modal-field-hint{font-size:11px;color:var(--mica);margin-top:4px;font-style:italic;line-height:1.5;}
 .mr-modal-preview{overflow-y:auto;padding:20px 28px;background:#fff;overscroll-behavior:contain;}
 .mr-modal-preview-label{font-family:var(--fm);font-size:10px;color:var(--mica);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;}
@@ -208,6 +208,21 @@ a{color:inherit;}
 .mr-depot-radon-item-action{margin-top:6px;font-size:10.5px;color:#1a6b5c;font-style:italic;}
 .mr-depot-radon-item-warning{font-size:10.5px;color:var(--mica);font-style:italic;margin-top:6px;line-height:1.5;}
 .mr-depot-radon-empty{padding:12px 0;color:var(--mica);font-size:12px;font-style:italic;}
+
+/* DÉPÔT RADON — formulaire de soumission (migré depuis mairies.html le 2026-08-20, item 5) */
+.mr-depot-radon-wrap{background:white;border:1px solid var(--brume);border-radius:10px;padding:24px 28px;max-width:640px;}
+.mr-depot-radon-checkbox-label{display:flex !important;align-items:flex-start;gap:8px;font-family:var(--fu) !important;font-size:12px !important;color:var(--ardoise);text-transform:none !important;letter-spacing:normal !important;cursor:pointer;}
+.mr-depot-radon-checkbox-label input[type="checkbox"]{width:auto;margin-top:2px;flex-shrink:0;}
+.mr-depot-radon-warning{margin:16px 0;padding:10px 14px;background:#fdf6e3;border:1px solid #e0d4b0;border-radius:6px;font-size:12px;color:#7a5a1e;}
+.mr-depot-radon-recap{font-size:12px;color:var(--mica);line-height:1.7;background:var(--pierre);border-radius:6px;padding:12px 14px;}
+.mr-depot-radon-recap dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;}
+.mr-depot-radon-recap dt{font-family:var(--fm);font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--mica);}
+.mr-depot-radon-recap dd{margin:0;color:var(--ardoise);}
+.mr-depot-radon-error{margin:14px 0;padding:10px 14px;background:#fbe9e7;border:1px solid #e8a69a;border-radius:6px;font-size:12px;color:#8c2f22;}
+.mr-depot-radon-actions{margin-top:18px;}
+.mr-depot-radon-success{background:white;border:1px solid var(--brume);border-radius:10px;padding:24px 28px;max-width:640px;}
+.mr-depot-radon-success h3{font-family:var(--ff);font-size:16px;font-weight:600;margin-bottom:8px;color:var(--maquis);}
+.mr-depot-radon-success p{font-size:13px;color:var(--mica);line-height:1.7;margin-bottom:16px;}
 
 /* FOOTER */
 .mr-footer{background:var(--ardoise);color:var(--mica);padding:36px 40px;}
@@ -370,7 +385,7 @@ a{color:inherit;}
         <button class="rd-lbtn" id="rd-b-radon" onclick="rdToggleRadon(this)"><span class="sq" style="background:#C28533"></span><span data-i18n-key="lyr_radon">Zonage radon (ASNR 2/3)</span></button>
         <div class="rd-lbtn-hint" data-i18n-key="lyr_radon_hint">216 communes en zone 3, 37 en zone 2 — arrêté du 27 juin 2018.</div>
         <button class="rd-lbtn" id="rd-b-depots" onclick="rdToggleDepots(this)"><span class="sq" style="background:#0f766e;transform:rotate(45deg)"></span><span data-i18n-key="lyr_depots">Dépôts radon ERP (certifié)</span></button>
-        <div class="rd-lbtn-hint" data-i18n-key="lyr_depots_hint">Résultats de mesurage déposés par les communes, vérifiés par Tellux avant publication. Jamais fusionnés avec le zonage.</div>
+        <div class="rd-lbtn-hint" data-i18n-key="lyr_depots_hint">Résultats de mesurage déposés par les communes, vérifiés par Tellux avant publication. Jamais fusionnés avec le zonage. Aucun dépôt publié à ce jour — <a href="#courrier" onclick="document.querySelector('.mr-tab[data-tab=&quot;courrier&quot;]').click();document.getElementById('rd-depot-form-section').scrollIntoView({behavior:'smooth'});return false;">soyez la première commune à en déposer un</a>.</div>
         <button class="rd-lbtn" id="rd-b-geo" onclick="rdToggleGeo(this)"><span class="sq" style="background:#1a6b5c"></span><span data-i18n-key="lyr_geo">Géologie BRGM</span></button>
         <div class="rd-op-row" id="rd-geo-op-row" hidden>
           <input type="range" min="0.1" max="1" step="0.05" value="0.35" oninput="rdWmsGeo.setOpacity(+this.value);document.getElementById('rd-geo-op-v').textContent=Math.round(this.value*100)+'%'">
@@ -439,6 +454,141 @@ a{color:inherit;}
       </div>
       <p class="mr-etab-lead" data-i18n-key="courrier_depots_lead">Résultats de mesurage déjà publiés, si votre commune a été sélectionnée dans l'onglet Carte.</p>
       <div id="rd-courrier-depots-body"><p class="mr-depot-radon-empty" data-i18n-key="courrier_depots_none_selected">Sélectionnez votre commune dans l'onglet <a href="#carte" onclick="document.querySelector('.mr-tab[data-tab=&quot;carte&quot;]').click();return false;">Carte</a> pour voir les dépôts déjà publiés.</p></div>
+      <p class="mr-etab-cta" style="margin-top:16px">
+        <a href="#rd-depot-form-section" class="mr-btn-primary" style="text-decoration:none;display:inline-block" data-i18n-key="courrier_depots_cta" onclick="document.getElementById('rd-depot-form-section').scrollIntoView({behavior:'smooth'});return true;">Déposer un résultat de mesurage radon →</a>
+      </p>
+    </section>
+
+    <!-- Formulaire de dépôt ERP (D5, migré depuis mairies.html le 2026-08-20, item 5) — ERP
+         institutionnels uniquement, jamais logements privés. La commune dépose, Tellux
+         héberge/agrège, aucune ligne ne devient publique sans revue manuelle (cf. RLS table
+         radon_depots_erp — statut_verification_tellux = 'publie' seul lisible,
+         certifie_institutionnel jamais positionnable par le client). Commune choisie dans ce
+         formulaire indépendante de selectedCommune (onglet Carte) — même isolation que sur
+         mairies.html d'origine. -->
+    <section class="mr-etab-section" id="rd-depot-form-section" aria-labelledby="rd-depot-form-title">
+      <div class="mr-etab-header">
+        <h3 class="mr-etab-title" id="rd-depot-form-title" data-i18n-key="depot_h2">Déposer un résultat de mesurage radon</h3>
+      </div>
+      <p class="mr-etab-lead" data-i18n-key="depot_sub">Votre commune est détentrice de ses résultats de mesurage radon dans les établissements recevant du public dont elle est propriétaire (école, crèche…) — Tellux héberge, agrège et affiche ces résultats, il n'est à aucun moment autorité de mesure. Réservé aux établissements recevant du public institutionnels (écoles, crèches, mairies, établissements sanitaires/sociaux) : jamais un logement privé. Chaque dépôt est vérifié manuellement par Tellux avant toute publication.</p>
+
+      <div id="depot-radon-form-wrap" class="mr-depot-radon-wrap">
+        <form id="depot-radon-form" novalidate>
+
+          <div class="mr-modal-form-title" data-i18n-key="dr_title_identification">Identification</div>
+          <div class="mr-modal-field">
+            <label for="dr-email" data-i18n-key="dr_email_label">Email institutionnel</label>
+            <input type="email" id="dr-email" name="deposant_email" data-i18n-placeholder-key="dr_email_ph" placeholder="Ex. contact@mairie-nomcommune.fr" required>
+            <div class="mr-modal-field-hint" data-i18n-key="dr_email_hint">Utilisez de préférence l'adresse officielle de la mairie ou du service technique. Aucun lien de confirmation automatique n'est envoyé (pas d'infrastructure d'email transactionnel côté Tellux) — la cohérence commune/adresse est vérifiée manuellement avant publication.</div>
+          </div>
+          <div class="mr-modal-field">
+            <label for="dr-commune" data-i18n-key="dr_commune_label">Commune</label>
+            <input type="text" id="dr-commune" list="communes-corse" data-i18n-placeholder-key="commune_input_ph" placeholder="Commencez à taper le nom de votre commune…" autocomplete="off" required>
+            <div class="mr-modal-field-hint" id="dr-commune-zone-hint"></div>
+          </div>
+          <div class="mr-modal-field">
+            <label for="dr-role" data-i18n-key="dr_role_label">Vous déposez en tant que</label>
+            <select id="dr-role" name="deposant_role" required>
+              <option value="" data-i18n-key="opt_select">— Sélectionner —</option>
+              <option value="mairie" data-i18n-key="opt_role_mairie">Mairie</option>
+              <option value="service_technique_communal" data-i18n-key="opt_role_technique">Service technique communal</option>
+              <option value="delegataire_mandate" data-i18n-key="opt_role_delegataire">Délégataire mandaté par la commune</option>
+            </select>
+          </div>
+
+          <div class="mr-modal-form-title" data-i18n-key="dr_title_etablissement">Établissement concerné</div>
+          <div class="mr-modal-field">
+            <label for="dr-etablissement" data-i18n-key="dr_etab_label">Nom de l'établissement</label>
+            <input type="text" id="dr-etablissement" name="nom_etablissement" data-i18n-placeholder-key="dr_etab_ph" placeholder="Ex. École primaire du centre" required>
+          </div>
+          <div class="mr-modal-field">
+            <label for="dr-categorie" data-i18n-key="dr_categorie_label">Catégorie de l'établissement (art. D.1333-32 CSP)</label>
+            <select id="dr-categorie" name="categorie_erp" required>
+              <option value="" data-i18n-key="opt_select">— Sélectionner —</option>
+              <option value="enseignement" data-i18n-key="opt_cat_enseignement">Établissement d'enseignement (école, collège…)</option>
+              <option value="petite_enfance" data-i18n-key="opt_cat_petite_enfance">Accueil collectif d'enfants de moins de six ans (crèche)</option>
+              <option value="sanitaire_social_hebergement" data-i18n-key="opt_cat_sanitaire">Établissement sanitaire ou social avec hébergement</option>
+              <option value="thermal" data-i18n-key="opt_cat_thermal">Établissement thermal</option>
+              <option value="penitentiaire" data-i18n-key="opt_cat_penitentiaire">Établissement pénitentiaire</option>
+              <option value="mairie" data-i18n-key="opt_cat_mairie">Bâtiment mairie</option>
+              <option value="autre" data-i18n-key="opt_cat_autre">Autre ERP institutionnel</option>
+            </select>
+          </div>
+          <div class="mr-modal-field">
+            <label for="dr-lat" data-i18n-key="dr_coords_label">Coordonnées de l'établissement (optionnel)</label>
+            <div style="display:flex;gap:8px">
+              <input type="number" id="dr-lat" data-i18n-placeholder-key="dr_lat_ph" placeholder="Latitude — ex. 41.3868" step="any" min="41" max="43.5" style="flex:1">
+              <input type="number" id="dr-lon" data-i18n-placeholder-key="dr_lon_ph" placeholder="Longitude — ex. 9.1543" step="any" min="8" max="10" style="flex:1">
+            </div>
+            <div class="mr-modal-field-hint" data-i18n-key="dr_coords_hint">Facultatif — sans coordonnées, ce dépôt figurera dans la liste de votre commune mais n'apparaîtra pas comme point sur la carte Tellux. Repérez le bâtiment sur <a href="app.html" target="_blank" rel="noopener">la carte Tellux</a> ou un autre service de cartographie pour obtenir ses coordonnées.</div>
+          </div>
+
+          <div class="mr-modal-form-title" data-i18n-key="dr_title_mesurage">Données du mesurage</div>
+          <div class="mr-modal-field">
+            <label for="dr-organisme" data-i18n-key="dr_organisme_label">Organisme agréé ASNR ayant réalisé le mesurage</label>
+            <input type="text" id="dr-organisme" list="organismes-agrees-radon" data-i18n-placeholder-key="dr_organisme_ph" placeholder="Commencez à taper le nom de l'organisme…" autocomplete="off" required>
+            <datalist id="organismes-agrees-radon"></datalist>
+            <div class="mr-modal-field-hint" id="dr-organisme-hint" data-i18n-key="dr_organisme_hint">Liste des organismes agréés par l'ASNR pour le mesurage du radon (article R.1333-36 CSP), niveaux 1 et 2. Si votre organisme n'apparaît pas dans la liste, le dépôt reste possible mais restera en attente jusqu'à confirmation manuelle de l'agrément.</div>
+          </div>
+          <div class="mr-modal-field">
+            <label for="dr-date-mesurage" data-i18n-key="dr_date_label">Date du rapport de mesurage</label>
+            <input type="date" id="dr-date-mesurage" name="date_mesurage" required>
+          </div>
+          <div class="mr-modal-field">
+            <label for="dr-valeur" data-i18n-key="dr_valeur_label">Activité volumique moyenne (Bq/m³)</label>
+            <input type="number" id="dr-valeur" name="valeur_moyenne_bq_m3" min="0" step="1" required>
+            <div class="mr-modal-field-hint" id="dr-valeur-hint"></div>
+          </div>
+          <div class="mr-modal-field" id="dr-valeur-confirm-wrap" hidden>
+            <label class="mr-depot-radon-checkbox-label"><input type="checkbox" id="dr-valeur-confirm"> <span data-i18n-key="dr_valeur_confirm_label">Je confirme cette valeur inhabituelle (hors plage courante) — elle sera signalée à la revue manuelle.</span></label>
+          </div>
+          <div class="mr-modal-field">
+            <label for="dr-zone-homogene" data-i18n-key="dr_zone_label">Zone homogène mesurée dans le bâtiment (optionnel)</label>
+            <input type="text" id="dr-zone-homogene" name="zone_homogene" data-i18n-placeholder-key="dr_zone_ph" placeholder="Ex. salle de classe 1, aile nord…">
+          </div>
+          <div class="mr-modal-field">
+            <label for="dr-statut-action" data-i18n-key="dr_statut_label">Action engagée (si dépassement constaté — optionnel)</label>
+            <select id="dr-statut-action" name="statut_action">
+              <option value="" data-i18n-key="opt_non_renseigne">— Non renseigné —</option>
+              <option value="aucune_action_requise" data-i18n-key="opt_action_aucune">Aucune action requise</option>
+              <option value="ventilation_etancheite_engagee" data-i18n-key="opt_action_ventilation">Ventilation / étanchéité engagée</option>
+              <option value="expertise_complementaire_en_cours" data-i18n-key="opt_action_expertise">Expertise complémentaire en cours</option>
+            </select>
+          </div>
+
+          <div class="mr-modal-form-title" data-i18n-key="dr_title_piece">Pièce justificative</div>
+          <div class="mr-modal-field">
+            <label for="dr-document" data-i18n-key="dr_document_label">Rapport de mesurage (PDF)</label>
+            <input type="file" id="dr-document" accept="application/pdf">
+            <div class="mr-modal-field-hint" data-i18n-key="dr_document_hint">Archivé pour la vérification interne Tellux — non republié publiquement. Seuls les champs structurés ci-dessus sont rendus publics après vérification.</div>
+          </div>
+
+          <div class="mr-modal-form-title" data-i18n-key="dr_title_consentement">Consentement d'ouverture</div>
+          <div class="mr-modal-field">
+            <label class="mr-depot-radon-checkbox-label"><input type="checkbox" id="dr-consentement" required> <span data-i18n-key="dr_consentement_label">J'autorise Tellux à republier ces résultats en donnée ouverte, sous licence ouverte, avec attribution à la commune et à l'organisme agréé.</span></label>
+          </div>
+          <div class="mr-modal-field">
+            <label class="mr-depot-radon-checkbox-label"><input type="checkbox" id="dr-exactitude" required> <span data-i18n-key="dr_exactitude_label">Je confirme que ces informations sont exactes.</span></label>
+          </div>
+
+          <div class="mr-depot-radon-warning" data-i18n-key="dr_warning">⚠ Mesure ponctuelle certifiée, non extrapolable dans le temps ni dans l'espace ; ne vaut pas diagnostic territorial.</div>
+
+          <div class="mr-modal-form-title" data-i18n-key="dr_title_recap">Récapitulatif</div>
+          <div id="dr-recap" class="mr-depot-radon-recap" data-i18n-key="dr_recap_placeholder">Complétez le formulaire ci-dessus pour voir le récapitulatif.</div>
+
+          <div id="dr-submit-error" class="mr-depot-radon-error" hidden></div>
+          <div class="mr-depot-radon-actions">
+            <button type="submit" class="mr-btn-primary" id="dr-submit-btn" data-i18n-key="dr_submit_btn">Soumettre le dépôt</button>
+          </div>
+        </form>
+
+        <div id="dr-success" class="mr-depot-radon-success" hidden>
+          <h3 data-i18n-key="dr_success_title">Dépôt reçu — en attente de vérification</h3>
+          <p data-i18n-key="dr_success_p">Votre dépôt a bien été enregistré. Il sera vérifié manuellement par l'équipe Tellux (cohérence des champs, confirmation de l'agrément de l'organisme) avant toute publication. Aucune donnée n'est rendue publique avant cette vérification.</p>
+          <button type="button" class="mr-btn-ghost" id="dr-new-deposit-btn" data-i18n-key="dr_success_new_btn">Effectuer un nouveau dépôt</button>
+        </div>
+      </div>
+      <datalist id="communes-corse"></datalist>
     </section>
 
     <h3 class="mr-courrier-group-title" data-i18n-key="group_citoyen">Citoyen</h3>
@@ -520,6 +670,44 @@ a{color:inherit;}
   // ═══════════════════════════════════════════════════════════════
   var JS_STRINGS_EN = {
     geo_radon_generique: "Radon-potential zone (ASNR).",
+    geo_radon_label: "Radon-potential zone (ASNR)",
+    role_mairie_short: "Town hall",
+    role_technique_short: "Municipal technical department",
+    role_delegataire_short: "Agent authorized",
+    dr_recap_empty: "Complete the form above to see the summary.",
+    recap_label_deposant: "Submitter",
+    recap_label_commune: "Municipality",
+    recap_label_etablissement: "Facility",
+    recap_label_organisme: "Approved body",
+    recap_label_date: "Measurement date",
+    recap_label_valeur: "Measured value",
+    recap_label_zone_homogene: "Homogeneous zone",
+    org_hint_default: "List of bodies approved by the ASNR for radon measurement (Article R.1333-36 CSP), levels 1 and 2. If your body does not appear in the list, submission is still possible but will remain pending until the approval is manually confirmed.",
+    org_hint_confirmed_prefix: "ASNR approval confirmed — reference ",
+    org_hint_confirmed_infix: " (level ",
+    org_hint_no_match: "We could not automatically confirm this body's approval in the ASNR list. Your submission is still possible: it will be manually reviewed before any publication.",
+    valeur_hint_out_of_range: "Value outside the typical range — check your entry (unit Bq/m³, not kBq/m³).",
+    valeur_hint_above_300: "Above the 300 Bq/m³ marker — a marker, not an alert threshold.",
+    err_email_invalid: "Institutional email missing or invalid.",
+    err_commune_non_reconnue: "Municipality not recognized — select it from the list provided.",
+    err_role_manquant: "Specify in what capacity you are submitting.",
+    err_etablissement_manquant: "Name of the facility missing.",
+    err_categorie_manquante: "Facility category missing.",
+    err_organisme_manquant: "Approved body missing.",
+    err_date_manquante: "Measurement date missing.",
+    err_date_future: "The measurement date cannot be in the future.",
+    err_valeur_manquante: "Measured value missing.",
+    err_valeur_invalide: "Measured value invalid.",
+    err_valeur_hors_plage: "Value outside the typical range — check the confirmation box to continue.",
+    err_lat_lon: "Enter both latitude AND longitude, or leave both blank.",
+    err_coords_hors_corse: "Coordinates outside the Corsica area — check your entry or leave these fields blank.",
+    err_consentement: "Open-data consent is required to submit.",
+    err_exactitude: "Confirmation of accuracy is required to submit.",
+    dr_envoi_en_cours: "Submitting…",
+    dr_submit_error: "The submission could not be recorded. Check your connection and try again. If the problem persists, contact Tellux.",
+    dr_submit_btn_js: "Submit",
+    dr_zone_hint_prefix: "Radon-potential zone (ASNR): zone ",
+    dr_zone_hint_suffix: " (automatically derived).",
     radon_disclaimer: "<em>This content relays the law in force; it does not substitute for it and does not constitute legal advice. Sources should be checked as of the consultation date.</em>",
     radon_ressources: "<strong>Resources and measurement kits.</strong> Corsica's Regional Health and Environment Plan identifies municipalities as the preferred channel for distributing free screening kits (<a href=\"https://qualitair.corsica/radon-des-kits-de-mesure-gratuits-pour-proteger-votre-sante/\" target=\"_blank\" rel=\"noopener noreferrer\">PRIMAIR campaign / Qualitair Corse</a>, ADEME). Comprehensive references are available from the <a href=\"https://reglementation-controle.asnr.fr/information/dossiers-pedagogiques/le-radon-et-les-professionnels\" target=\"_blank\" rel=\"noopener noreferrer\">ASNR</a> (measurement, ERP FAQ) and the <a href=\"https://www.corse.ars.sante.fr/le-risque-radon\" target=\"_blank\" rel=\"noopener noreferrer\">ARS Corse</a>.",
     radon_zone3_p1: "<strong>Measurement in public-facing facilities.</strong> For public-facing facilities listed in Article D.1333-32 of the Public Health Code (educational facilities, childcare facilities for children under six, health or social facilities with accommodation, thermal spa facilities, penitentiary facilities), Article <a href=\"https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037016915\" target=\"_blank\" rel=\"noopener noreferrer\">R.1333-33 of the Public Health Code</a> requires a measurement of radon volumetric activity, at the owner's expense (or the operator's, if an agreement provides for it), renewed every ten years and after any work that changes the building's ventilation or airtightness. A municipality is typically the owner of its schools and daycare centers.",
@@ -916,15 +1104,40 @@ a{color:inherit;}
   function loadCommunes(){
     return fetch('public/data/communes_corse.json')
       .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function(d){ communesData = d.communes; return d; })
+      .then(function(d){ communesData = d.communes; populateCommuneDatalist(communesData); return d; })
       .catch(function(err){
         console.warn('[radon] chargement communes échoué :', err);
       });
   }
   // populateCommuneDatalist()/findCommuneByInput() retirées le 2026-08-20 (D7) avec la
-  // recherche de commune — communesData reste chargée : applyUrlCommune() (lien externe
-  // mairies.html?commune=XXXXX) en a toujours besoin pour résoudre le code_insee reçu en
-  // query string, même sans UI de recherche visible sur cette page.
+  // recherche de commune page-level — communesData restait chargée pour applyUrlCommune()
+  // (lien externe mairies.html?commune=XXXXX). Les deux sont réintroduites ci-dessous le même
+  // jour (item 5, migration du formulaire de dépôt ERP) mais SCOPÉES au seul champ #dr-commune
+  // du formulaire — aucune recherche de commune page-level ne réapparaît sur l'onglet Carte.
+  function populateCommuneDatalist(list){
+    var dl = document.getElementById('communes-corse');
+    if (!dl) return;
+    dl.innerHTML = '';
+    var frag = document.createDocumentFragment();
+    (list || []).forEach(function(c){
+      var opt = document.createElement('option');
+      opt.value = c.nom + ' (' + c.departement + ')';
+      opt.dataset.insee = c.code_insee;
+      frag.appendChild(opt);
+    });
+    dl.appendChild(frag);
+  }
+  function findCommuneByInput(val){
+    if (!communesData || !val) return null;
+    var match = val.match(/^(.+?)\s*\((2A|2B)\)\s*$/);
+    var name = match ? match[1].trim() : val.trim();
+    var dep = match ? match[2] : null;
+    var hits = communesData.filter(function(c){
+      if (dep && c.departement !== dep) return false;
+      return c.nom.toLowerCase() === name.toLowerCase();
+    });
+    return hits.length === 1 ? hits[0] : null;
+  }
   function getRadonZone(code_insee){
     var info = RADON_BY_INSEE[code_insee];
     return info ? info.categorie : 1;
@@ -1031,10 +1244,12 @@ a{color:inherit;}
       }
     });
   }
-  // initCommunePicker()/findCommuneByInput() retirées le 2026-08-20 (D7) avec la recherche de
-  // commune — plus d'input à écouter. applyUrlCommune() reste : c'est le seul mécanisme restant
-  // qui peut encore positionner selectedCommune (lien externe mairies.html?commune=XXXXX), pour
-  // l'autofill courrier — voir setSelectedCommune().
+  // initCommunePicker() (recherche de commune page-level, onglet Carte) retirée le 2026-08-20
+  // (D7) — plus d'input à écouter côté Carte. findCommuneByInput() a été réintroduite le même
+  // jour (item 5) mais scopée au seul champ #dr-commune du formulaire de dépôt (cf. bloc
+  // COMMUNES plus haut) — ce n'est pas un retour de la recherche page-level. applyUrlCommune()
+  // reste : c'est le mécanisme qui peut encore positionner selectedCommune (lien externe
+  // mairies.html?commune=XXXXX), pour l'autofill courrier — voir setSelectedCommune().
   function applyUrlCommune(){
     if (!communesData) return;
     var params = new URLSearchParams(window.location.search);
@@ -1043,6 +1258,307 @@ a{color:inherit;}
     var commune = communesData.filter(function(c){ return c.code_insee === code; })[0];
     if (!commune) return;
     setSelectedCommune(commune, false);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // Dépôt ouvert radon communal (D5) — ERP institutionnels uniquement,
+  // jamais logements privés. La commune dépose, Tellux héberge/agrège,
+  // aucune ligne ne devient publique sans revue manuelle (cf. RLS table
+  // radon_depots_erp — statut_verification_tellux = 'publie' seul lisible,
+  // certifie_institutionnel jamais positionnable par le client). Migré
+  // depuis mairies.html le 2026-08-20 (item 5) — logique de
+  // validation/statut inchangée, portée telle quelle.
+  // ═══════════════════════════════════════════════════════════════
+
+  var organismesAgreesData = null;
+  var organismesAgreesLoadPromise = null;
+
+  function loadOrganismesAgrees(){
+    if (organismesAgreesLoadPromise) return organismesAgreesLoadPromise;
+    organismesAgreesLoadPromise = fetch('public/data/organismes_agrees_radon.json')
+      .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(d){
+        organismesAgreesData = d.organismes;
+        populateOrganismesDatalist(organismesAgreesData);
+        return d;
+      })
+      .catch(function(err){
+        console.warn('[radon] chargement organismes agrees echoue :', err);
+        organismesAgreesLoadPromise = null;
+        throw err;
+      });
+    return organismesAgreesLoadPromise;
+  }
+
+  function populateOrganismesDatalist(list){
+    var dl = document.getElementById('organismes-agrees-radon');
+    if (!dl) return;
+    dl.innerHTML = '';
+    var frag = document.createDocumentFragment();
+    (list || []).forEach(function(o){
+      var opt = document.createElement('option');
+      opt.value = o.nom;
+      frag.appendChild(opt);
+    });
+    dl.appendChild(frag);
+  }
+
+  function findOrganismeByInput(val){
+    if (!organismesAgreesData || !val) return null;
+    var name = val.trim().toLowerCase();
+    var hits = organismesAgreesData.filter(function(o){ return o.nom.toLowerCase() === name; });
+    if (hits.length > 1) hits.sort(function(a, b){ return a.niveau - b.niveau; });
+    return hits[0] || null;
+  }
+
+  var drSelectedCommune = null; // commune choisie dans ce formulaire, independante de selectedCommune (onglet Carte)
+
+  function drUpdateRecap(){
+    var recap = document.getElementById('dr-recap');
+    if (!recap) return;
+
+    var email = document.getElementById('dr-email').value.trim();
+    var communeInput = document.getElementById('dr-commune').value.trim();
+    var role = document.getElementById('dr-role').value;
+    var roleLabels = {
+      mairie: jt('role_mairie_short', 'Mairie'),
+      service_technique_communal: jt('role_technique_short', 'Service technique communal'),
+      delegataire_mandate: jt('role_delegataire_short', 'Délégataire mandaté')
+    };
+    var etablissement = document.getElementById('dr-etablissement').value.trim();
+    var categorieSelect = document.getElementById('dr-categorie');
+    var categorieLabel = categorieSelect.options[categorieSelect.selectedIndex] ? categorieSelect.options[categorieSelect.selectedIndex].textContent : '';
+    var organisme = document.getElementById('dr-organisme').value.trim();
+    var dateMesurage = document.getElementById('dr-date-mesurage').value;
+    var valeur = document.getElementById('dr-valeur').value;
+    var zoneHomogene = document.getElementById('dr-zone-homogene').value.trim();
+
+    if (!email && !communeInput && !etablissement && !organisme && !dateMesurage && !valeur){
+      recap.textContent = jt('dr_recap_empty', 'Complétez le formulaire ci-dessus pour voir le récapitulatif.');
+      return;
+    }
+
+    var zone = drSelectedCommune ? getRadonZone(drSelectedCommune.code_insee) : null;
+
+    var rows = [];
+    rows.push([jt('recap_label_deposant', 'Déposant'), (roleLabels[role] || '—') + (email ? ' · ' + email : '')]);
+    rows.push([jt('recap_label_commune', 'Commune'), communeInput || '—']);
+    if (zone != null) rows.push([jt('geo_radon_label', 'Zone à potentiel radon (ASNR)'), 'Zone ' + zone]);
+    rows.push([jt('recap_label_etablissement', 'Établissement'), (etablissement || '—') + (categorieLabel ? ' · ' + categorieLabel : '')]);
+    rows.push([jt('recap_label_organisme', 'Organisme agréé'), organisme || '—']);
+    rows.push([jt('recap_label_date', 'Date du mesurage'), dateMesurage || '—']);
+    rows.push([jt('recap_label_valeur', 'Valeur mesurée'), valeur ? valeur + ' Bq/m³' : '—']);
+    if (zoneHomogene) rows.push([jt('recap_label_zone_homogene', 'Zone homogène'), zoneHomogene]);
+
+    recap.innerHTML = '<dl>' + rows.map(function(r){
+      return '<dt>' + escapeHtml(r[0]) + '</dt><dd>' + escapeHtml(r[1]) + '</dd>';
+    }).join('') + '</dl>';
+  }
+
+  function drUpdateOrganismeHint(){
+    var input = document.getElementById('dr-organisme');
+    var hint = document.getElementById('dr-organisme-hint');
+    if (!input || !hint) return;
+    var val = input.value.trim();
+    if (!val){
+      hint.textContent = jt('org_hint_default', 'Liste des organismes agréés par l\'ASNR pour le mesurage du radon (article R.1333-36 CSP), niveaux 1 et 2. Si votre organisme n\'apparaît pas dans la liste, le dépôt reste possible mais restera en attente jusqu\'à confirmation manuelle de l\'agrément.');
+      return;
+    }
+    var match = findOrganismeByInput(val);
+    if (match){
+      hint.textContent = jt('org_hint_confirmed_prefix', 'Agrément ASNR confirmé — référence ') + match.numero_agrement + jt('org_hint_confirmed_infix', ' (niveau ') + match.niveau + ').';
+    } else {
+      hint.textContent = jt('org_hint_no_match', 'Nous n\'avons pas pu confirmer automatiquement l\'agrément de cet organisme dans la liste ASNR. Votre dépôt reste possible : il sera vérifié manuellement avant toute publication.');
+    }
+  }
+
+  function drUpdateValeurHint(){
+    var input = document.getElementById('dr-valeur');
+    var hint = document.getElementById('dr-valeur-hint');
+    var confirmWrap = document.getElementById('dr-valeur-confirm-wrap');
+    var confirmBox = document.getElementById('dr-valeur-confirm');
+    if (!input || !hint || !confirmWrap) return;
+    var v = input.value === '' ? null : Number(input.value);
+    if (v == null || isNaN(v)){
+      hint.textContent = '';
+      confirmWrap.hidden = true;
+      return;
+    }
+    if (v === 0 || v > 100000){
+      hint.textContent = jt('valeur_hint_out_of_range', 'Valeur hors plage courante — vérifiez la saisie (unité Bq/m³, pas kBq/m³).');
+      confirmWrap.hidden = false;
+    } else {
+      hint.textContent = v > 300 ? jt('valeur_hint_above_300', 'Au-dessus du repère de 300 Bq/m³ — un repère, pas un seuil d\'alerte.') : '';
+      confirmWrap.hidden = true;
+      if (confirmBox) confirmBox.checked = false;
+    }
+  }
+
+  function drShowError(msg){
+    var box = document.getElementById('dr-submit-error');
+    if (!box) return;
+    box.textContent = msg;
+    box.hidden = false;
+  }
+
+  function drValidate(){
+    var errors = [];
+    var email = document.getElementById('dr-email').value.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push(jt('err_email_invalid', 'Email institutionnel manquant ou invalide.'));
+    if (!drSelectedCommune) errors.push(jt('err_commune_non_reconnue', 'Commune non reconnue — choisissez-la dans la liste proposée.'));
+    var role = document.getElementById('dr-role').value;
+    if (!role) errors.push(jt('err_role_manquant', 'Précisez en quelle qualité vous déposez.'));
+    var etablissement = document.getElementById('dr-etablissement').value.trim();
+    if (!etablissement) errors.push(jt('err_etablissement_manquant', 'Nom de l\'établissement manquant.'));
+    var categorie = document.getElementById('dr-categorie').value;
+    if (!categorie) errors.push(jt('err_categorie_manquante', 'Catégorie de l\'établissement manquante.'));
+    var organisme = document.getElementById('dr-organisme').value.trim();
+    if (!organisme) errors.push(jt('err_organisme_manquant', 'Organisme agréé manquant.'));
+    var dateMesurage = document.getElementById('dr-date-mesurage').value;
+    if (!dateMesurage) errors.push(jt('err_date_manquante', 'Date du mesurage manquante.'));
+    else if (dateMesurage > new Date().toISOString().slice(0, 10)) errors.push(jt('err_date_future', 'La date du mesurage ne peut pas être dans le futur.'));
+    var valeurRaw = document.getElementById('dr-valeur').value;
+    if (valeurRaw === '') errors.push(jt('err_valeur_manquante', 'Valeur mesurée manquante.'));
+    else {
+      var v = Number(valeurRaw);
+      if (isNaN(v) || v < 0) errors.push(jt('err_valeur_invalide', 'Valeur mesurée invalide.'));
+      else if (v === 0 || v > 100000){
+        var confirmBox = document.getElementById('dr-valeur-confirm');
+        if (!confirmBox || !confirmBox.checked) errors.push(jt('err_valeur_hors_plage', 'Valeur hors plage courante — cochez la confirmation pour continuer.'));
+      }
+    }
+    var latRaw = document.getElementById('dr-lat').value;
+    var lonRaw = document.getElementById('dr-lon').value;
+    if ((latRaw === '') !== (lonRaw === '')) errors.push(jt('err_lat_lon', 'Renseignez latitude ET longitude, ou laissez les deux vides.'));
+    else if (latRaw !== '' && lonRaw !== ''){
+      var lat = Number(latRaw), lon = Number(lonRaw);
+      if (isNaN(lat) || lat < 41 || lat > 43.5 || isNaN(lon) || lon < 8 || lon > 10){
+        errors.push(jt('err_coords_hors_corse', 'Coordonnées hors de la zone Corse — vérifiez la saisie ou laissez ces champs vides.'));
+      }
+    }
+    if (!document.getElementById('dr-consentement').checked) errors.push(jt('err_consentement', 'Le consentement d\'ouverture est requis pour déposer.'));
+    if (!document.getElementById('dr-exactitude').checked) errors.push(jt('err_exactitude', 'La confirmation d\'exactitude est requise pour déposer.'));
+    return errors;
+  }
+
+  function drUploadDocument(file){
+    if (!file) return Promise.resolve(null);
+    var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    var path = Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8) + '_' + safeName;
+    return fetch(SB_URL_PUBLIC + '/storage/v1/object/radon-depots-documents/' + encodeURIComponent(path), {
+      method: 'POST',
+      headers: { 'apikey': SB_ANON_KEY_PUBLIC, 'Authorization': 'Bearer ' + SB_ANON_KEY_PUBLIC, 'Content-Type': file.type || 'application/pdf' },
+      body: file
+    }).then(function(r){
+      if (!r.ok) throw new Error('upload HTTP ' + r.status);
+      return path;
+    });
+  }
+
+  function drSubmit(ev){
+    ev.preventDefault();
+    var errorBox = document.getElementById('dr-submit-error');
+    if (errorBox){ errorBox.hidden = true; errorBox.textContent = ''; }
+
+    var errors = drValidate();
+    if (errors.length > 0){
+      drShowError(errors.join(' '));
+      return;
+    }
+
+    var btn = document.getElementById('dr-submit-btn');
+    if (btn){ btn.disabled = true; btn.textContent = jt('dr_envoi_en_cours', 'Envoi en cours…'); }
+
+    var fileInput = document.getElementById('dr-document');
+    var file = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+
+    drUploadDocument(file).then(function(documentPath){
+      var matched = findOrganismeByInput(document.getElementById('dr-organisme').value.trim());
+      var latRaw = document.getElementById('dr-lat').value;
+      var lonRaw = document.getElementById('dr-lon').value;
+      var payload = {
+        commune_insee: drSelectedCommune.code_insee,
+        nom_etablissement: document.getElementById('dr-etablissement').value.trim(),
+        categorie_erp: document.getElementById('dr-categorie').value,
+        zone_radon_commune: getRadonZone(drSelectedCommune.code_insee),
+        organisme_agree_nom: document.getElementById('dr-organisme').value.trim(),
+        organisme_agree_numero: matched ? matched.numero_agrement : 'non confirmé automatiquement',
+        date_mesurage: document.getElementById('dr-date-mesurage').value,
+        valeur_moyenne_bq_m3: Number(document.getElementById('dr-valeur').value),
+        zone_homogene: document.getElementById('dr-zone-homogene').value.trim() || null,
+        statut_action: document.getElementById('dr-statut-action').value || null,
+        deposant_role: document.getElementById('dr-role').value,
+        deposant_email: document.getElementById('dr-email').value.trim(),
+        consentement_ouverture: true,
+        document_source: documentPath,
+        lat: latRaw !== '' ? Number(latRaw) : null,
+        lon: lonRaw !== '' ? Number(lonRaw) : null
+      };
+      return fetch(SB_URL_PUBLIC + '/rest/v1/radon_depots_erp', {
+        method: 'POST',
+        headers: { 'apikey': SB_ANON_KEY_PUBLIC, 'Authorization': 'Bearer ' + SB_ANON_KEY_PUBLIC, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(payload)
+      });
+    }).then(function(r){
+      if (!r.ok) return r.text().then(function(t){ throw new Error(t || ('HTTP ' + r.status)); });
+      document.getElementById('depot-radon-form-wrap').hidden = true;
+      document.getElementById('dr-success').hidden = false;
+    }).catch(function(err){
+      console.warn('[radon] depot radon echoue :', err);
+      drShowError(jt('dr_submit_error', 'Le dépôt n\'a pas pu être enregistré. Vérifiez votre connexion et réessayez. Si le problème persiste, contactez Tellux.'));
+      if (btn){ btn.disabled = false; btn.textContent = jt('dr_submit_btn_js', 'Soumettre le dépôt'); }
+    });
+  }
+
+  function drResetForm(){
+    var form = document.getElementById('depot-radon-form');
+    if (form) form.reset();
+    drSelectedCommune = null;
+    var zoneHint = document.getElementById('dr-commune-zone-hint');
+    if (zoneHint) zoneHint.textContent = '';
+    var errorBox = document.getElementById('dr-submit-error');
+    if (errorBox){ errorBox.hidden = true; errorBox.textContent = ''; }
+    var confirmWrap = document.getElementById('dr-valeur-confirm-wrap');
+    if (confirmWrap) confirmWrap.hidden = true;
+    drUpdateRecap();
+    drUpdateOrganismeHint();
+    document.getElementById('dr-success').hidden = true;
+    document.getElementById('depot-radon-form-wrap').hidden = false;
+    var btn = document.getElementById('dr-submit-btn');
+    if (btn){ btn.disabled = false; btn.textContent = jt('dr_submit_btn_js', 'Soumettre le dépôt'); }
+  }
+
+  function initDepotRadonForm(){
+    var form = document.getElementById('depot-radon-form');
+    if (!form) return;
+
+    var communeInput = document.getElementById('dr-commune');
+    communeInput.addEventListener('input', function(){
+      drSelectedCommune = findCommuneByInput(communeInput.value);
+      var zoneHint = document.getElementById('dr-commune-zone-hint');
+      if (zoneHint){
+        zoneHint.textContent = drSelectedCommune ? jt('dr_zone_hint_prefix', 'Zone à potentiel radon (ASNR) : zone ') + getRadonZone(drSelectedCommune.code_insee) + jt('dr_zone_hint_suffix', ' (dérivée automatiquement).') : '';
+      }
+      drUpdateRecap();
+    });
+
+    ['dr-email', 'dr-role', 'dr-etablissement', 'dr-categorie', 'dr-organisme', 'dr-date-mesurage', 'dr-valeur', 'dr-zone-homogene'].forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', drUpdateRecap);
+    });
+
+    var organismeInput = document.getElementById('dr-organisme');
+    if (organismeInput) organismeInput.addEventListener('input', drUpdateOrganismeHint);
+
+    var valeurInput = document.getElementById('dr-valeur');
+    if (valeurInput) valeurInput.addEventListener('input', drUpdateValeurHint);
+
+    form.addEventListener('submit', drSubmit);
+
+    var newDepositBtn = document.getElementById('dr-new-deposit-btn');
+    if (newDepositBtn) newDepositBtn.addEventListener('click', drResetForm);
+
+    drUpdateOrganismeHint();
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1363,7 +1879,9 @@ a{color:inherit;}
     initTabs();
     initModalDismiss();
     renderRadonObligationsStatic(); // toujours visible, sans recherche de commune (D7)
+    initDepotRadonForm();
     Promise.all([loadCommunes(), loadTemplates()]).then(function(){ applyUrlCommune(); });
+    loadOrganismesAgrees().catch(function(){ /* silencieux, retry possible depuis UI */ });
   });
 
 })();
@@ -1461,7 +1979,7 @@ function telluxGetEffectiveLang(){
     lyr_radon: "Radon zoning (ASNR 2/3)",
     lyr_radon_hint: "216 municipalities in zone 3, 37 in zone 2 — order of June 27, 2018.",
     lyr_depots: "Radon deposits, ERP (certified)",
-    lyr_depots_hint: "Measurement results submitted by municipalities, verified by Tellux before publication. Never merged with the zoning.",
+    lyr_depots_hint: "Measurement results submitted by municipalities, verified by Tellux before publication. Never merged with the zoning. No deposit published to date — <a href=\"#courrier\" onclick=\"document.querySelector('.mr-tab[data-tab=&quot;courrier&quot;]').click();document.getElementById('rd-depot-form-section').scrollIntoView({behavior:'smooth'});return false;\">be the first municipality to submit one</a>.",
     lyr_geo: "BRGM geology",
     lyr_geo_hint: "Granite, schist, limestone — a reading aid, not a radon layer in itself.",
     lyr_cav: "Underground cavities",
@@ -1481,7 +1999,63 @@ function telluxGetEffectiveLang(){
     courrier_depots_title: "Your municipality's deposits",
     courrier_depots_lead: "Measurement results already published, if your municipality was selected on the Map tab.",
     courrier_depots_none_selected: "Select your municipality on the <a href=\"#carte\" onclick=\"document.querySelector('.mr-tab[data-tab=&quot;carte&quot;]').click();return false;\">Map</a> tab to see deposits already published.",
+    courrier_depots_cta: "Submit a measurement result →",
     courrier_en_note: "Note: the letter templates themselves remain in French regardless of the page's language setting — they are addressed to French administrations.",
+    commune_input_ph: "Start typing your municipality's name...",
+    depot_h2: "Submit a radon measurement result",
+    depot_sub: "Your municipality holds its radon measurement results for public-facing facilities it owns (school, daycare center...) — Tellux hosts, aggregates, and displays these results; it is never the measuring authority. Reserved for institutional public-facing facilities (schools, daycare centers, town halls, health/social facilities): never a private home. Every submission is manually reviewed by Tellux before publication.",
+    dr_title_identification: "Identification",
+    dr_email_label: "Institutional email",
+    dr_email_ph: "E.g. contact@mairie-townname.fr",
+    dr_email_hint: "Preferably use the official address of the town hall or technical department. No automatic confirmation link is sent (Tellux has no transactional email infrastructure) — the consistency between the municipality and the address is checked manually before publication.",
+    dr_commune_label: "Municipality",
+    dr_role_label: "Submitting as",
+    opt_select: "— Select —",
+    opt_role_mairie: "Town hall",
+    opt_role_technique: "Municipal technical department",
+    opt_role_delegataire: "Agent authorized by the municipality",
+    dr_title_etablissement: "Facility concerned",
+    dr_etab_label: "Name of the facility",
+    dr_etab_ph: "E.g. Centre Primary School",
+    dr_categorie_label: "Facility category (Art. D.1333-32 CSP)",
+    opt_cat_enseignement: "Educational facility (school, middle school...)",
+    opt_cat_petite_enfance: "Childcare facility for children under six (daycare center)",
+    opt_cat_sanitaire: "Health or social facility with accommodation",
+    opt_cat_thermal: "Thermal spa facility",
+    opt_cat_penitentiaire: "Penitentiary facility",
+    opt_cat_mairie: "Town hall building",
+    opt_cat_autre: "Other institutional public-facing facility",
+    dr_coords_label: "Facility coordinates (optional)",
+    dr_lat_ph: "Latitude — e.g. 41.3868",
+    dr_lon_ph: "Longitude — e.g. 9.1543",
+    dr_coords_hint: "Optional — without coordinates, this submission will appear in your municipality's list but will not appear as a point on the Tellux map. Locate the building on <a href=\"app.html\" target=\"_blank\" rel=\"noopener\">the Tellux map</a> or another mapping service to obtain its coordinates.",
+    dr_title_mesurage: "Measurement data",
+    dr_organisme_label: "ASNR-approved body that carried out the measurement",
+    dr_organisme_ph: "Start typing the body's name...",
+    dr_organisme_hint: "List of bodies approved by the ASNR for radon measurement (Article R.1333-36 CSP), levels 1 and 2. If your body does not appear in the list, submission is still possible but will remain pending until the approval is manually confirmed.",
+    dr_date_label: "Date of the measurement report",
+    dr_valeur_label: "Average volumetric activity (Bq/m³)",
+    dr_valeur_confirm_label: "I confirm this unusual value (outside the typical range) — it will be flagged for manual review.",
+    dr_zone_label: "Homogeneous zone measured in the building (optional)",
+    dr_zone_ph: "E.g. classroom 1, north wing...",
+    dr_statut_label: "Action taken (if an exceedance was found — optional)",
+    opt_non_renseigne: "— Not specified —",
+    opt_action_aucune: "No action required",
+    opt_action_ventilation: "Ventilation / sealing work underway",
+    opt_action_expertise: "Further assessment underway",
+    dr_title_piece: "Supporting document",
+    dr_document_label: "Measurement report (PDF)",
+    dr_document_hint: "Archived for Tellux's internal review — not republished publicly. Only the structured fields above are made public after review.",
+    dr_title_consentement: "Open-data consent",
+    dr_consentement_label: "I authorize Tellux to republish these results as open data, under an open license, with attribution to the municipality and the approved body.",
+    dr_exactitude_label: "I confirm that this information is accurate.",
+    dr_warning: "⚠ Certified point-in-time measurement, not extrapolable over time or space; does not constitute a territorial diagnosis.",
+    dr_title_recap: "Summary",
+    dr_recap_placeholder: "Complete the form above to see the summary.",
+    dr_submit_btn: "Submit",
+    dr_success_title: "Submission received — pending review",
+    dr_success_p: "Your submission has been recorded. It will be manually reviewed by the Tellux team (consistency of fields, confirmation of the body's approval) before any publication. No data is made public before this review.",
+    dr_success_new_btn: "Submit another entry",
     group_citoyen: "Citizen",
     group_mairie: "Municipality",
     group_entrepreneur: "Business",
