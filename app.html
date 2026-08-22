@@ -107,33 +107,13 @@
 .status-dot--pending{background:var(--tx-ocre);box-shadow:0 0 0 2px rgba(194,133,51,.25);}
 .status-dot--ok{background:var(--tx-maquis);box-shadow:0 0 0 2px rgba(63,91,58,.25);}
 .status-dot--error{background:var(--tx-porphyre);box-shadow:0 0 0 2px rgba(142,47,31,.25);}
-/* Footer raffiné — 4e élément en flux non catalogué par le brief, converti en pied
-   flottant (passage plein écran, brief Soleil 2026-08-20 §2 étape 2). Pas un simple
-   oubli cosmétique : c'était genuinement cassé — <main> devenu 0px de haut (tout son
-   contenu est absolute/fixed), .tx-footer restait le seul enfant en flux de <body>, et
-   son margin-top:16px "traversait" ce <main> vide par collapsing margin CSS jusqu'à
-   <html>, gonflant document.documentElement.scrollHeight de 900 à 916px — un scroll de
-   page fantôme de 16px, invisible à l'œil mais un vrai régression (la contrainte "html,
-   body 100%, plus de scroll de page" du brief §1 n'était plus respectée). Fix : même
-   traitement que #tlx-footer de patrimoine.html (position:absolute, pilule centrée en
-   bas), qui a le même rôle (marque + liens légaux) et le même souci a priori chez eux
-   (jamais eu ce bug seulement parce qu'ils l'avaient déjà sorti du flux). bottom:60px
-   (pas 12px comme patrimoine.html) : ici #conditions-bar occupe déjà tout bottom:0 en
-   z-index:999 — 60px aligne .tx-footer sur la même ligne que #legende/
-   #tellux-legends-context (également bottom:60px), au centre, entre les deux. Masqué
-   <768px (comme patrimoine.html <640px) : sur mobile, la ligne bottom:60px est déjà
-   disputée par le tiroir couches (#layers-toggle) et les autres flottants — la marque/
-   liens légaux ne sont pas assez prioritaires pour justifier l'encombrement
-   supplémentaire ; les mêmes liens restent atteignables depuis index.html. */
-.tx-footer{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);z-index:1000;margin:0;padding:8px 16px;background:rgba(245,240,231,0.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:var(--r2);box-shadow:0 4px 16px rgba(31,35,41,0.12);display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:center;font-family:var(--font);font-size:11px;color:var(--tx-mica);letter-spacing:0.01em;max-width:calc(100vw - 24px);}
-.tx-footer .tx-footer-brand{font-family:var(--font-display);font-size:13px;color:var(--tx-ardoise);font-weight:500;}
-.tx-footer .tx-footer-sources{font-size:10px;}
-.tx-footer .tx-footer-links{display:flex;flex-wrap:wrap;gap:14px;align-items:center;font-size:11px;justify-content:center;}
-.tx-footer a{color:var(--tx-tyrrhenien);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s;}
-.tx-footer a:hover{border-bottom-color:var(--tx-tyrrhenien);}
-@media (max-width:768px){
-  .tx-footer{display:none;}
-}
+/* .tx-footer (pied flottant bottom:60px, introduit brief Soleil 2026-08-20 §2 étape 2 pour
+   fixer un scroll fantôme de <main> 0px de haut) retiré entièrement (repro Soleil 2026-08-23) :
+   il flottait par-dessus la carte plein écran et en capturait le bas, desktop comme mobile
+   selon le constat — alors que la contrainte anti-scroll-fantôme qui l'avait fait naître reste
+   résolue par construction (aucun élément en flux normal ne subsiste pour la recréer). Marque
+   + liens légaux regroupés dans #hdr-menu (cf. commentaire HTML avant #hdr-menu, plus haut) —
+   aucun lien retiré, seulement déplacé. */
 /* Responsive header */
 @media (max-width:768px){
   .hdr{flex-wrap:wrap;gap:10px;padding:10px 0;}
@@ -515,6 +495,12 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    supposait pour "les 6 liens retirés"). markup + classes .hdr-actions/.hdr-btn inchangés
    (préserve les sélecteurs i18n JT_TABLE ".hdr-actions ...", aucune ligne i18n à modifier). */
 .hdr{position:absolute;top:12px;left:12px;z-index:1000;display:flex;align-items:center;gap:10px;background:rgba(245,240,231,0.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:var(--r2);padding:8px 12px;box-shadow:0 4px 16px rgba(31,35,41,0.12);border:1px solid var(--border);max-width:calc(100vw - 24px);}
+/* Flèche retour vers index.html (repro Soleil 2026-08-23) — le logo pointait déjà vers "/"
+   (aria-label "Retour à l'accueil Tellux" inchangé dessus), mais sans affordance visuelle de
+   navigation ; ce bouton la rend explicite. Même gabarit que .hdr-menu-toggle (cercle 30px)
+   pour cohérence visuelle dans la pilule flottante. */
+.hdr-back-btn{flex-shrink:0;width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:var(--pierre-ombre);color:var(--tx-ardoise);font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;text-decoration:none;}
+.hdr-back-btn:hover{background:var(--tx-brume);}
 .logo-mark{width:36px;height:36px;border-radius:8px;background:var(--acc);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .logo-mark svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;}
 .logo-mark img{width:36px;height:36px;border-radius:6px;display:block;}
@@ -1251,6 +1237,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
      (mêmes onclick/href/title) — préserve les sélecteurs i18n JT_TABLE ".hdr-actions ..."
      sans modification. -->
 <div class="hdr">
+  <a href="/" class="hdr-back-btn" id="hdr-back-btn" title="Retour à l'accueil Tellux" aria-label="Retour à l'accueil Tellux">←</a>
   <a href="/" class="logo-mark" id="tx-logo" title="Tellux — Révéler l'invisible" aria-label="Retour à l'accueil Tellux" style="text-decoration:none">
     <img src="assets/logo/tellux_logo.svg" alt="Tellux — Révéler l'invisible" width="52" height="52">
   </a>
@@ -1271,6 +1258,16 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <a class="hdr-btn" href="radon.html" title="Zonage radon ASNR, dépôts ERP certifiés et courriers dédiés" style="text-decoration:none">Radon</a>
     <a class="hdr-btn" href="patrimoine.html" title="Cartographie patrimoniale de la Corse" style="text-decoration:none">Patrimoine (bêta)</a>
     <a class="hdr-btn" href="mairies.html" title="Outils administratifs pour les communes corses" style="text-decoration:none">Élu·e ? Outils mairie →</a>
+    <span class="hdr-menu-sep" aria-hidden="true"></span>
+    <!-- Regroupées ici depuis l'ancien .tx-footer, retiré (repro Soleil 2026-08-23 : flottait
+         par-dessus la carte plein écran, bottom:60px, z-index:1000 — capturait le bas du
+         viewport). Le brief autorise le retrait seulement si ces liens restent accessibles
+         ailleurs ; ils ne l'étaient pas encore ici (Mentions légales/Transparence/Ressources
+         absents de #hdr-menu avant ce commit) — ajoutés pour rendre le retrait légitime,
+         aucun lien légal supprimé. -->
+    <a class="hdr-btn" href="/#ressources" style="text-decoration:none">Ressources</a>
+    <a class="hdr-btn" href="/mentions-legales.html" style="text-decoration:none">Mentions légales &amp; confidentialité</a>
+    <a class="hdr-btn" href="/transparence.html" style="text-decoration:none">Transparence</a>
     <span class="hdr-menu-sep" aria-hidden="true"></span>
     <span class="hdr-status" id="hdr-status">chargement…</span>
 </div>
@@ -5932,7 +5929,21 @@ map.on('click',async e=>{
   _geoLastPoint={lat,lng,igrf,human,geo,crustal,susc_nT,skinD,tellPct,geoType,solLabel,indice:indiceTellux,label:itLabel,verdict:itVerdict,implanTip,rf:nRFcalib,radon_class,gamma_nSvh};
 });
 
-function addMarker(c){L.marker([c.lat,c.lon],{icon:mkIcon('#5c3a9b',false,11),zIndexOffset:200}).on('click',()=>info(`<span class="tag" style="background:#f0e8ff;color:#5c3a9b;border:0.5px solid #9b72d4">DB</span><b>${c.type}</b>${c.valeur?' — '+c.valeur+' '+(c.unite||'nT'):''}${c.note?`<br><i style="font-size:11px;color:var(--tx3)">${c.note}</i>`:''}<br><span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">IGRF:${c.igrf_nt||'—'}nT · score:${c.score_anomalie||'—'} · Kp:${c.kp||'—'} · Bz:${c.bz||'—'}nT</span>`)).addTo(lCon);}
+// Points violets (contributions citoyennes) alignés sur le pattern bindTooltip sticky des
+// autres couches de points (antennes/BT/postes sources/points chauds, cf. loadAnt/loadProd/
+// loadBT/loadPointsChauds) — remplace l'ancien .on('click',()=>info(...)) (repro Soleil
+// 2026-08-23 : clic/survol sur un point violet n'affichait rien). Root cause identifiée :
+// ce n'est pas un bug de binding, le handler click tournait bien — c'est #info lui-même
+// (cible de info()) qui est rendu invisible depuis le passage plein écran (PR #1005) : en
+// position:static dans <main> (devenu 0px de haut), il se retrouve peint sous .hdr (position:
+// absolute;z-index:1000, même coin haut-gauche), confirmé par elementFromPoint. #info reste
+// utilisé ailleurs (messages info()/warn() du flux #cform) — non retouché ici, hors périmètre
+// de ce chantier (bug plus large signalé séparément) ; seul addMarker() est migré vers un
+// mécanisme qui ne dépend pas de #info, comme toutes les autres couches de points.
+function addMarker(c){
+  var html='<span class="tag" style="background:#f0e8ff;color:#5c3a9b;border:0.5px solid #9b72d4">DB</span><b>'+c.type+'</b>'+(c.valeur?' — '+c.valeur+' '+(c.unite||'nT'):'')+(c.note?'<br><i style="font-size:11px;color:var(--tx3)">'+c.note+'</i>':'')+'<br><span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">IGRF:'+(c.igrf_nt||'—')+'nT · score:'+(c.score_anomalie||'—')+' · Kp:'+(c.kp||'—')+' · Bz:'+(c.bz||'—')+'nT</span>';
+  L.marker([c.lat,c.lon],{icon:mkIcon('#5c3a9b',false,11),zIndexOffset:200}).bindTooltip(html,{sticky:true}).addTo(lCon);
+}
 
 // ── ANFR ANTENNES CORSE — loader Supabase + émetteurs radio/TV majeurs ──
 // Restauré post-v8 (régression cleanup). Domaine EM strict — aucune dépendance patrimoine/agro.
@@ -8934,18 +8945,11 @@ function capCleanup(){
 <div id="tellux-legends-context" aria-label="Légendes des couches contextuelles activées"></div>
 </main>
 
-<footer class="tx-footer">
-  <div class="tx-footer-brand">Tellux Corse</div>
-  <div class="tx-footer-sources"><em>Révéler l'invisible</em> · projet de recherche citoyen</div>
-  <div class="tx-footer-links">
-    <a href="/app.html">Application carte</a>
-    <a href="/mairies.html">Outils mairies</a>
-    <a href="/#ressources">Ressources</a>
-    <span aria-hidden="true">|</span>
-    <a href="/mentions-legales.html">Mentions légales &amp; confidentialité</a>
-    <a href="/transparence.html">Transparence</a>
-  </div>
-</footer>
+<!-- .tx-footer retiré (repro Soleil 2026-08-23 : flottait par-dessus la carte plein écran,
+     capturait le bas du viewport en desktop). Marque + liens légaux regroupés dans #hdr-menu
+     (tiroir sandwich haut-gauche) — Ressources/Mentions légales/Transparence ajoutés là-bas ;
+     Application carte (cette page même) et Outils mairies déjà présents/redondants. Aucun lien
+     supprimé, seulement déplacé. -->
 <!-- Glossaire & guides — drawer lateral (feat/glossary-drawer) -->
 <div id="glossary-drawer" class="glossary-drawer" aria-hidden="true" role="region" aria-labelledby="glossary-title">
   <div class="glossary-drawer-header">
@@ -9109,6 +9113,8 @@ function capCleanup(){
 ["d_btn",".d-btn","","Accéder à la carte","Accede à a carta","Access the map"],
 ["logo_title","#tx-logo","title","Tellux — Révéler l'invisible","Tellux — Palesà l'invisibile","Tellux — Revealing the Invisible"],
 ["logo_aria","#tx-logo","aria-label","Retour à l'accueil Tellux","Ritornu à l'accolta Tellux","Back to Tellux home"],
+["hdr_back_title","#hdr-back-btn","title","Retour à l'accueil Tellux","Ritornu à l'accolta Tellux","Back to Tellux home"],
+["hdr_back_aria","#hdr-back-btn","aria-label","Retour à l'accueil Tellux","Ritornu à l'accolta Tellux","Back to Tellux home"],
 ["tagline_em",".hdr-tagline em","","Révéler l'invisible","Palesà l'invisibile","Revealing the invisible"],
 ["tagline_suffix",".hdr-tagline","","· Corse","· Corsica","· Corsica"],
 ["nav_methodo",".hdr-actions button[onclick='toggleMethodology()']","","Méthodologie","Metodulugia","Methodology"],
@@ -9378,14 +9384,9 @@ function capCleanup(){
 ["ib_geo",".ib-title@2","","Géologie & eau souterraine","Geulugia è acqua sutterranea","Geology & groundwater"],
 ["interp_advice",".interp-advice-title","","Que faire avec cette information ?","Chì fà cù st'infurmazione ?","What to do with this information?"],
 ["interp_close_tt",".interp-title button[title='Fermer']","title","Fermer","Chjode","Close"],
-["footer_brand",".tx-footer-brand","","Tellux Corse","Tellux Corsica","Tellux Corse"],
-["footer_em",".tx-footer-sources em","","Révéler l'invisible","Palesà l'invisibile","Revealing the invisible"],
-["footer_suffix",".tx-footer-sources","","· projet de recherche citoyen","· prugettu di ricerca citatinu","· citizen research project"],
-["footer_app",".tx-footer-links a@0","","Application carte","Applicazione carta","Map application"],
-["footer_mairies",".tx-footer-links a@1","","Outils mairies","Strumenti merrie","Municipal tools"],
-["footer_ressources",".tx-footer-links a@2","","Ressources","Risorse","Resources"],
-["footer_mentions",".tx-footer-links a@3","","Mentions légales & confidentialité","Menzione legale è cunfidenzialità","Legal notice & privacy"],
-["footer_transparence",".tx-footer-links a@4","","Transparence","Trasparenza","Transparency"],
+["nav_ressources",".hdr-actions a[href='/#ressources']","","Ressources","Risorse","Resources"],
+["nav_mentions",".hdr-actions a[href='/mentions-legales.html']","","Mentions légales & confidentialité","Menzione legale è cunfidenzialità","Legal notice & privacy"],
+["nav_transparence",".hdr-actions a[href='/transparence.html']","","Transparence","Trasparenza","Transparency"],
 ["gloss_title","#glossary-title","","Glossaire & guides","Glussariu è guide","Glossary & guides"],
 ["gloss_close_aria",".glossary-drawer-close","aria-label","Fermer","Chjode","Close"],
 ["gloss_tab_glossaire",".glossary-tab[data-tab='glossaire']","","Glossaire","Glussariu","Glossary"],
