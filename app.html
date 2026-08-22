@@ -716,10 +716,17 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    sur PR #975 — corrigé en enveloppant #cform dans #cform-overlay (fixed, plein écran,
    backdrop opaque), sans toucher la logique des 6 étapes. */
 .cform-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(31,35,41,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:2300;align-items:center;justify-content:center;padding:16px;overflow-y:auto;}
-.cform{background:var(--bg);border-radius:var(--r2);padding:18px;display:none;border:1px solid var(--border);box-shadow:0 12px 40px rgba(0,0,0,.25);max-width:480px;width:100%;max-height:90vh;overflow-y:auto;margin:auto;}
+.cform{background:var(--bg);border-radius:var(--r2);padding:18px;display:none;border:1px solid var(--border);box-shadow:0 12px 40px rgba(0,0,0,.25);max-width:480px;width:100%;max-height:90vh;overflow-y:auto;overflow-x:hidden;margin:auto;}
 .cform-title{font-family:var(--font-display);font-size:15px;color:var(--tx);font-weight:500;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
 .cform label{font-size:12px;color:var(--ardoise-clair);display:block;margin-bottom:4px;font-family:var(--font);font-weight:500;}
-.cform input,.cform select,.cform textarea{width:100%;margin-bottom:8px;font-size:13px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg);color:var(--tx);padding:8px 12px;font-family:var(--font);transition:border-color .15s;}
+/* :not([type=checkbox]):not([type=radio]) (repro Soleil 2026-08-22, étape 4/6) — cette règle
+   vise les champs texte/nombre/select/textarea du form ; sans l'exclusion, elle s'appliquait
+   aussi aux 3 checkboxes de l'étape 4 (Conditions de mesure), qui sont en display:flex avec un
+   <span> de label à côté (pas des .mat-chip, qui masquent leur input et échappent au sélecteur
+   ci-dessous). width:100% y étirait la checkbox à la largeur de toute la ligne, écrasant le
+   <span> (min-width:0) à 0px — texte du label rendu invisible, et le débordement résultant
+   provoquait la scrollbar horizontale (cf. overflow-x:hidden ajouté ci-dessus en défense). */
+.cform input:not([type="checkbox"]):not([type="radio"]),.cform select,.cform textarea{width:100%;margin-bottom:8px;font-size:13px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg);color:var(--tx);padding:8px 12px;font-family:var(--font);transition:border-color .15s;}
 .cform input:focus,.cform select:focus,.cform textarea:focus{border-color:var(--acc);outline:none;box-shadow:0 0 0 2px var(--maquis-pale);}
 .cform-step{font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;margin-top:12px;}
 .cform-btns{display:flex;gap:8px;margin-top:8px;}
