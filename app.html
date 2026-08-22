@@ -6117,6 +6117,22 @@ function _armContribClick(){
   // Retirer un éventuel handler précédent pour éviter les doublons
   if(_contribClickHandler){map.off('click',_contribClickHandler);_contribClickHandler=null;}
   _contribClickHandler=function(e){
+    // Garde anti-collision cluster (repro prod 2026-08-22) : un clic sur une bulle
+    // de cluster #cform-lCon (markerClusterGroup, zoomToBoundsOnClick:true) fait
+    // remonter le "click" jusqu'à la carte (propagation Leaflet interne, distincte
+    // du DOM) EN PLUS de déclencher l'animation de zoom propre au cluster. Si on
+    // laisse _placeContribMarker ajouter/retirer le marker "pending" pendant cette
+    // transition de zoom, les deux mutations concurrentes de la carte font planter
+    // leaflet.markercluster (RangeError: Maximum call stack size exceeded, dans
+    // _recursivelyRemoveChildrenFromMap, via _moveEnd/_onPanTransitionEnd/_adjustPan
+    // — le formulaire ne s'ouvre alors jamais). Un clic sur une bulle de cluster
+    // n'est de toute façon jamais une intention de placement : on l'ignore et on
+    // re-arme l'écoute pour laisser l'utilisateur cliquer un point vide de la carte.
+    var target = e.originalEvent && e.originalEvent.target;
+    if(target && target.closest && target.closest('.tellux-cluster-icon')){
+      _armContribClick();
+      return;
+    }
     _contribClickHandler=null;
     _placeContribMarker(e.latlng.lat,e.latlng.lng);
   };
