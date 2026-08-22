@@ -8486,7 +8486,13 @@ function _renderMesuresCertifiees() {
       iconSize: [18, 18],
       iconAnchor: [9, 9]
     });
-    const marker = L.marker([lat, lon], { icon })
+    // Non conforme (halo pulsant, cf. .cert-marker-non-conforme) rendu au-dessus de son
+    // voisin immédiat (cf. _certOffsetPositions, qui écarte les points quasi-superposés en
+    // cercle serré) — sinon le z-index par défaut de Leaflet (dérivé de la position écran, pas
+    // du statut conforme/non conforme) peut faire passer un marqueur conforme adjacent
+    // au-dessus du marqueur non conforme qui clignote, le masquant partiellement. Repro Soleil
+    // 2026-08-23.
+    const marker = L.marker([lat, lon], { icon, zIndexOffset: m.conforme === false ? 500 : 0 })
       .bindPopup(_certFormatPopup(m), { className: 'tellux-cert-popup', maxWidth: 340, autoPan: true });
     _certMarkerById[m.id] = marker;
     lCert.addLayer(marker);
