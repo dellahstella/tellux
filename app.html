@@ -998,6 +998,23 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    et la suite) — un seul point de réglage pour toute la famille de controls Leaflet plutôt
    que corriger panneau par panneau, cf. brief "corriger le pattern général". */
 .leaflet-top,.leaflet-bottom{z-index:1150;}
+/* Chevauchement des contrôles flottants haut-gauche/haut-droite (repro Soleil 2026-08-23,
+   desktop large viewport + mobile portrait — même défaut aux deux tailles, cf. repro) :
+   ce même passage à z-index:1150 ci-dessus (nécessaire pour le point 7, ci-dessus) a un
+   effet de bord jamais audité ensuite — les controls Leaflet natifs topleft (zoom +/-, puis
+   le bouton recentrer 📍 qui s'empile dessous) passent maintenant AU-DESSUS de .hdr
+   (z-index:1000), alors qu'ils occupent le même coin haut-gauche (10-12px du bord). Résultat
+   confirmé en repro : la flèche retour (#hdr-back-btn, à l'intérieur de .hdr) est totalement
+   inatteignable au clic, cachée sous le bouton zoom "−" (elementFromPoint confirme
+   .leaflet-control-zoom-out au point exact de la flèche). Côté haut-droite, même défaut
+   symétrique : #layers-toggle (position:fixed, z-index:1200) recouvre entièrement le switch
+   de fond de carte natif Leaflet (.leaflet-control-layers), le rendant inatteignable au clic
+   (confirmé, elementFromPoint renvoie #layers-toggle). Fix : au lieu de rejouer le jeu du
+   z-index (qui ne fait que déplacer le problème), les deux coins Leaflet sont repositionnés
+   PLUS BAS pour ne plus occuper le même espace que .hdr / #layers-toggle — élimine le
+   chevauchement à la source plutôt que de choisir qui gagne. */
+.leaflet-top.leaflet-left{top:84px;}
+.leaflet-top.leaflet-right{top:54px;}
 @media(max-width:768px){
   .map-wrap .layers-accordion{width:100%;max-width:100%;}
 }
@@ -1243,6 +1260,15 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 /* Sprint app-ui-polish (mai 2026) — bottom remonte de 14px a 60px pour passer au-dessus
    de #conditions-bar (barre permanente bas de carte qui couvre ~50px collapsed). */
 #legende{position:absolute;bottom:60px;right:12px;z-index:1000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:none;}
+/* #legende (bouton "?" aide) chevauchait .fab-mesure (repro Soleil 2026-08-23, desktop large
+   viewport) : bottom:60px + 36px de haut débordait de 12px sur .fab-mesure (bottom:20px,
+   52px de haut). Remonté à 84px — 36px de haut + 12px de marge sous .fab-mesure
+   (900-20-52-12=816, 900-84-36=780, marge confirmée). Correctif MOBILE : voir la règle
+   @media(max-width:600px) plus bas dans ce fichier (Sprint app-ui-polish, mai 2026) —
+   celle-là gagnait déjà la cascade sur ce viewport (600px ⊂ 768px), donc c'est ELLE qui a
+   été mise à jour plutôt que d'en superposer une seconde ici (piège de cascade déjà
+   rencontré deux fois dans ce chantier — une seule source de vérité par breakpoint). */
+#legende{bottom:84px;}
 /* Fix overlap #delta-hover / #conditions-bar — même pattern que #legende bottom:60px */
 .map-col .leaflet-bottom.leaflet-left{margin-bottom:44px;}
 #legende > *{pointer-events:auto;}
@@ -1259,10 +1285,18 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 #legende-content #tellux-leg-panel{position:static;background:transparent!important;border:none!important;border-radius:0!important;box-shadow:none!important;padding:0!important;margin:0!important;max-width:none!important;max-height:none!important;overflow:visible!important;}
 [data-theme="dark"] #legende-toggle{background:rgba(26,29,37,0.92);color:var(--tx-pierre,#F5F0E7);}
 [data-theme="dark"] #legende-content{background:rgba(26,29,37,0.95);color:var(--tx-pierre,#F5F0E7);}
-@media (max-width:600px){
-  /* Sprint app-ui-polish (mai 2026) — bottom mobile = 56px (au-dessus #conditions-bar
-     collapsed ~46px sur mobile, marge ~10px). */
-  #legende{bottom:56px;right:8px;}
+@media (max-width:768px){
+  /* Sprint app-ui-polish (mai 2026) — bottom mobile pensé pour dégager #conditions-bar
+     collapsed. Seuil élargi de 600px à 768px (repro Soleil 2026-08-23) pour matcher le
+     seuil standard désormais utilisé par .mobile-tabbar/.fab-mesure/#conditions-bar (cf.
+     Phase 1 nav mobile, PR #1019) — entre 600 et 768px, .mobile-tabbar est déjà affichée
+     mais cette règle ne l'était pas encore, laissant #legende à la valeur desktop (84px)
+     dans cette tranche, incohérent avec .fab-mesure déjà remonté. Valeur 56px devenue fausse
+     avec l'arrivée de .mobile-tabbar (58-60px) : #legende chevauchait .fab-mesure de 24px
+     dans cette bande (confirmé en repro). Recalculée pour dégager .fab-mesure mobile
+     (bottom:calc(12px + var(--mobile-tabbar-h)), 52px de haut) avec la même marge 12px que
+     la version desktop ci-dessus : 12+var(--mobile-tabbar-h)+52+12 = 76+var(--mobile-tabbar-h). */
+  #legende{bottom:calc(76px + var(--mobile-tabbar-h));right:8px;}
   #legende-content{max-width:calc(100vw - 24px);font-size:11.5px;padding:12px 14px;}
 }
 /* === fin Brief 46 === */
