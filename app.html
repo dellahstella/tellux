@@ -988,6 +988,16 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   padding:8px;
 }
 .map-wrap .layers-accordion.open{transform:translateX(0);}
+/* Complément à l'inventaire z-index ci-dessus (repro Soleil 2026-08-23) : l'inventaire de
+   2026 ne couvrait que les éléments custom de ce fichier, pas les controls Leaflet natifs
+   (topright/topleft/bottomright/bottomleft — zoom, switch de fond, gauge crustale
+   #crustal-gauge-panel, #delta-hover), dont le CSS bundlé fixe .leaflet-top/.leaflet-bottom
+   à z-index:1000. Sous 1100 (cette accordéon), donc recouverts quand le tiroir est ouvert —
+   confirmé en repro : gauge crustale invisible sous l'accordéon ouvert, desktop et mobile.
+   Remonté ci-dessous à 1150 (juste au-dessus de l'accordéon, toujours sous #about-modal/2000
+   et la suite) — un seul point de réglage pour toute la famille de controls Leaflet plutôt
+   que corriger panneau par panneau, cf. brief "corriger le pattern général". */
+.leaflet-top,.leaflet-bottom{z-index:1150;}
 @media(max-width:768px){
   .map-wrap .layers-accordion{width:100%;max-width:100%;}
 }
@@ -2748,13 +2758,20 @@ if (TLX_RM_QUERY && typeof TLX_RM_QUERY.addEventListener === 'function') {
     if (typeof L !== 'undefined' && L.Browser) { map._zoomAnimated = !rm && !!L.Browser.any3d; }
   });
 }
-// Sprint V5 13 mai 2026 — bounds nord etendus 43.5 -> 44.0 pour
-// permettre navigation Cap Corse extreme (Tour Agnello 43.005,
-// Tour Giraglia 43.027, Anneaux 43.176). Viscosity 1.0 -> 0.8 :
-// l'utilisateur peut tirer un peu au-dela des bounds avec retour
-// elastique (moins strict, meilleur UX pan).
-map.setMaxBounds([[40.5,7.5],[44.0,10.5]]);
-map.options.maxBoundsViscosity=0.8;
+// maxBounds retiré (repro Soleil 2026-08-23) : la couche "Anomalies de référence
+// (mondiales)" (b-crustal, 5 sites — Bangui 4.4°N, Kursk 51.7°N, Vredefort -27°S,
+// Ries 48.88°N, Chicxulub 21.3°N/-89.5°O) était à la fois affichable ET totalement
+// inatteignable : le clamp [[40.5,7.5],[44.0,10.5]] (Corse + marge) ramenait tout
+// pan/zoom vers ces sites directement en Corse (confirmé en repro : map.setView sur
+// Bangui reste bloqué à ~42.27,9.0). Bonus confirmé en investiguant : ce clamp était
+// la source documentée (cf. commentaire autoPan plus bas, "VIGILANCE... Prexistant à
+// HEAD 96e5599") d'un RangeError "Maximum call stack size exceeded" interne à Leaflet
+// (_limitCenter/_getBoundsOffset) sur clic proche du bord de carte — signalé mais
+// jamais corrigé faute de vouloir toucher la logique bounds ; le retrait élimine ce
+// risque de recursion par construction (plus de contrainte à calculer). Remplacé par
+// un bouton "recentrer sur la Corse" (control Leaflet topleft, sous le zoom) — la
+// carte reste pannable/zoomable librement, comme n'importe quelle carte Leaflet
+// standard sans bounds.
 // Fond unique : IGN Plan V2 — Géoplateforme (sans clé, depuis bascule 2024).
 // ═══ FONDS DE CARTE — 3 options (CartoDB clair par défaut + 2 IGN) ═══
 // CartoDB Positron (variante dark/light) : fond par défaut, sobre, laisse les
@@ -2794,6 +2811,27 @@ const _baseLayers={
 };
 L.control.layers(_baseLayers,null,{position:'topright',collapsed:true}).addTo(map);
 
+// Bouton "recentrer sur la Corse" (compagnon du retrait de maxBounds ci-dessus,
+// repro Soleil 2026-08-23) — topleft, sous le zoom Leaflet natif (même corner,
+// empilement DOM standard, aucun style .leaflet-control custom nécessaire).
+(function(){
+  var recenterCtl=L.control({position:'topleft'});
+  recenterCtl.onAdd=function(){
+    var btn=L.DomUtil.create('button');
+    btn.type='button';
+    var lbl='Recentrer sur la Corse';
+    btn.title=lbl;
+    btn.setAttribute('aria-label',lbl);
+    btn.style.cssText='width:34px;height:34px;border-radius:4px;border:2px solid rgba(0,0,0,.2);background-clip:padding-box;background:#fff;cursor:pointer;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:none;margin-top:8px;padding:0;';
+    btn.innerHTML='📍';
+    btn.onclick=function(){map.setView([42.0,9.0],8,{animate:!tlxReduceMotion()});};
+    L.DomEvent.disableClickPropagation(btn);
+    L.DomEvent.disableScrollPropagation(btn);
+    return btn;
+  };
+  recenterCtl.addTo(map);
+})();
+
 // Labels CartoDB : actifs uniquement avec le fond Carte claire.
 // IGN Plan / Ortho ont leur propre toponymie intégrée.
 // _geoOpacityUserSet/GEO_OPACITY_DEFAULT/GEO_OPACITY_ORTHO/_setGeoOpacitySlider() et le bump
@@ -2824,6 +2862,17 @@ const wmsEmag=L.imageOverlay(
   [[41.3,8.5],[43.1,9.65]],
   {opacity:0.5,zIndex:2,attribution:'EMAG2v3 NOAA/NCEI · Meyer et al. 2017'}
 );
+// Visibilité d'échec (repro Soleil 2026-08-23 : couche invisible même à opacité max).
+// Investigué avant tout fix : bbox/renderingRule/endpoint tous corrects (rasterFunction
+// EMAG2_Color_Scale confirmé disponible côté service via /ImageServer?f=json) — la couche
+// ne rendait rien parce que le endpoint NOAA exportImage renvoyait des erreurs serveur
+// (500 / 503 "Wait timeout for the request exceeded" / timeout complet, testé à plusieurs
+// reprises hors app). Rien à corriger côté config : indisponibilité du service tiers,
+// hors de notre contrôle. Seul ajout possible et fait ici : ne plus laisser l'échec
+// silencieux, afficher un statut explicite au lieu d'une couche qui "ne fait rien".
+wmsEmag.on('error',function(){
+  info('⚠ Fond magnétique régional (NOAA EMAG2v3) — service indisponible, réessayez plus tard.','error',6000);
+});
 
 const lTherm=L.layerGroup();
 const lFailles=L.layerGroup();
