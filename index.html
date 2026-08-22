@@ -119,9 +119,18 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
 .lp-method-step{background:rgba(245,240,231,0.04);border:1px solid rgba(245,240,231,0.14);border-radius:10px;padding:26px 24px 22px;}
 .lp-method-h3{font-family:var(--ff);font-size:17px;color:var(--pierre);font-weight:600;margin-bottom:10px;}
 .lp-method-p{font-size:12px;color:rgba(245,240,231,0.72);line-height:1.7;}
-.lp-method-docs{display:flex;flex-wrap:wrap;gap:10px;}
-.lp-doc-pill{font-family:var(--fm);font-size:11px;color:var(--ocre);background:rgba(194,133,51,0.10);border:1px solid rgba(194,133,51,0.25);border-radius:5px;padding:7px 12px;text-decoration:none;transition:background .15s;}
+/* Documentation complète — découplée visuellement du triptyque Mesure/Modèle/Hypothèse
+   (demande Soleil 2026-08-22 : les 4 liens se lisaient comme la suite du triptyque, alors
+   qu'ils ne correspondent pas terme à terme). Séparateur + sous-titre discret ; chaque lien
+   porte désormais une courte description plutôt qu'un libellé nu, sans les regrouper en
+   catégories (4 entrées à plat, cf. brief). */
+.lp-method-docs-intro{font-family:var(--fm);font-size:11px;color:var(--mica);letter-spacing:1.5px;text-transform:uppercase;margin-top:24px;padding-top:24px;border-top:1px solid rgba(245,240,231,0.12);}
+.lp-method-docs{display:grid;grid-template-columns:repeat(2,1fr);gap:18px 28px;margin-top:14px;}
+.lp-doc-entry{display:flex;flex-direction:column;gap:6px;}
+.lp-doc-pill{align-self:flex-start;font-family:var(--fm);font-size:11px;color:var(--ocre);background:rgba(194,133,51,0.10);border:1px solid rgba(194,133,51,0.25);border-radius:5px;padding:7px 12px;text-decoration:none;transition:background .15s;}
 .lp-doc-pill:hover{background:rgba(194,133,51,0.20);}
+.lp-doc-desc{font-size:12px;color:rgba(245,240,231,0.65);line-height:1.5;margin:0;}
+@media(max-width:720px){.lp-method-docs{grid-template-columns:1fr;}}
 .lp-method-bridge{font-family:var(--ff);font-style:italic;font-size:16px;color:rgba(245,240,231,0.85);line-height:1.6;max-width:680px;border-left:3px solid var(--ocre);padding-left:18px;margin-top:28px;}
 @media(max-width:720px){.lp-method-flow{grid-template-columns:1fr;}}
 
@@ -333,11 +342,24 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
       <p class="lp-method-p" data-i18n-key="method_hypothesis_p">Ce qui reste en attente de validation méthodologique externe. Marqué comme tel, jamais présenté comme acquis.</p>
     </div>
   </div>
+  <div class="lp-method-docs-intro" data-i18n-key="method_docs_intro">Documentation complète</div>
   <div class="lp-method-docs" id="ressources">
-    <a class="lp-doc-pill" data-i18n-key="doc_cadre_scientifique" href="/cadre-scientifique.html">Cadre scientifique</a>
-    <a class="lp-doc-pill" data-i18n-key="doc_methode_limites" href="/methode-et-limites.html">Méthode et limites</a>
-    <a class="lp-doc-pill" data-i18n-key="doc_transparence" href="/transparence.html">Transparence</a>
-    <a class="lp-doc-pill" data-i18n-key="doc_guide_glossaire" href="/guide-et-glossaire.html">Guide et glossaire</a>
+    <div class="lp-doc-entry">
+      <a class="lp-doc-pill" data-i18n-key="doc_cadre_scientifique" href="/cadre-scientifique.html">Cadre scientifique</a>
+      <p class="lp-doc-desc" data-i18n-key="doc_cadre_scientifique_desc">Le modèle de calcul en détail : formules, pondérations, confrontation aux mesures réelles.</p>
+    </div>
+    <div class="lp-doc-entry">
+      <a class="lp-doc-pill" data-i18n-key="doc_methode_limites" href="/methode-et-limites.html">Méthode et limites</a>
+      <p class="lp-doc-desc" data-i18n-key="doc_methode_limites_desc">La position épistémique du projet : ce que Tellux affirme, ce qu'il refuse d'affirmer.</p>
+    </div>
+    <div class="lp-doc-entry">
+      <a class="lp-doc-pill" data-i18n-key="doc_transparence" href="/transparence.html">Transparence</a>
+      <p class="lp-doc-desc" data-i18n-key="doc_transparence_desc">Sources utilisées, limites connues, et comment signaler une erreur ou une incohérence.</p>
+    </div>
+    <div class="lp-doc-entry">
+      <a class="lp-doc-pill" data-i18n-key="doc_guide_glossaire" href="/guide-et-glossaire.html">Guide et glossaire</a>
+      <p class="lp-doc-desc" data-i18n-key="doc_guide_glossaire_desc">Mode d'emploi de la carte et glossaire des termes techniques employés.</p>
+    </div>
   </div>
   <div class="lp-method-bridge" data-i18n-key="method_bridge">Cette même exigence de transparence inspire aussi la manière dont Tellux aborde la culture scientifique — à commencer par dix mille ans de champ géomagnétique, ci-dessous.</div>
 </div>
@@ -610,9 +632,14 @@ function telluxGetEffectiveLang(){
     method_hypothesis_h3: 'Hypothesis',
     method_hypothesis_p: 'What remains pending external methodological validation. Labeled as such, never presented as established.',
     doc_cadre_scientifique: 'Scientific framework',
+    doc_cadre_scientifique_desc: 'The calculation model in detail: formulas, weightings, and validation against real measurements.',
     doc_methode_limites: 'Method and limitations',
+    doc_methode_limites_desc: "The project's epistemic stance: what Tellux claims, and what it refuses to claim.",
     doc_transparence: 'Transparency',
+    doc_transparence_desc: 'Sources used, known limitations, and how to report an error or inconsistency.',
     doc_guide_glossaire: 'Guide and glossary',
+    doc_guide_glossaire_desc: 'How to use the map, and a glossary of the technical terms used.',
+    method_docs_intro: 'Full documentation',
     mairies_h2: 'Municipal tools: Loi Abeille framework',
     mairies_p: "An interface dedicated to Corsican municipalities: commune profile, legal framework, letter generation to exercise their prerogatives over EM installations.",
     mairies_cta: 'Open municipal tools &rarr;',
