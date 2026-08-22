@@ -518,6 +518,26 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 #hdr-menu .hdr-btn{width:100%;text-align:left;}
 #hdr-menu .hdr-menu-sep{height:1px;background:var(--border);margin:4px 2px;}
 #hdr-menu .hdr-status{padding:4px 2px 0;}
+/* #info — toast de statut (fonction info(h,type,duration), ~L3264), utilisé par ~20 sites
+   d'appel actifs dans tout le fichier (validation RGPD, position hors Corse, sauvegarde
+   Supabase, hints de placement contribution, etc. — audit fait avant ce fix, aucun site mort
+   trouvé au-delà de ceux déjà migrés vers bindTooltip, cf. addMarker()). Repositionné ici
+   (fixed, coin haut-droit, z-index au-dessus de .hdr/#hdr-menu) — repro confirmée 2026-08-23 :
+   en position:static (styles inline d'origine, jamais modifiés ci-dessous), #info héritait
+   du flux normal de <main>, devenu 0px de haut au passage plein écran (PR #1005) ; une fois
+   rendu visible il se retrouvait peint SOUS .hdr (absolute, z-index:1000, coin haut-gauche —
+   confirmé par elementFromPoint), invisible pour l'utilisateur quel que soit le message. Coin
+   haut-DROIT choisi pour éviter toute collision avec .hdr/#hdr-menu et le zoom Leaflet
+   (tous deux haut-gauche). z-index 2400 — PAS 1500 comme un premier essai l'avait mis : la
+   plupart des sites d'appel de info() sont des validations du flux #cform lui-même (RGPD,
+   position hors Corse, sauvegarde) et doivent rester visibles PENDANT que le formulaire est
+   ouvert, donc au-dessus de #cform-overlay (2300) — vérifié en repro (avant ce correctif de
+   z-index, #cform-overlay masquait le message). Reste sous la strate système 9999+
+   (.disclaimer-overlay/skip-link), qui bloque de toute façon toute interaction avant elle.
+   Les styles inline posés par info() (background/border/color selon le type, padding,
+   border-radius, min-height) restent inchangés — cette règle n'ajoute que le positionnement,
+   aucune propriété en commun avec le JS. */
+#info{position:fixed;top:16px;right:16px;z-index:2400;max-width:min(400px,calc(100vw - 32px));box-shadow:0 4px 16px rgba(31,35,41,0.12);}
 .logo-ver{font-family:var(--mono);font-size:10px;color:var(--tx3);background:var(--bg3);padding:2px 7px;border-radius:20px;margin-left:4px;}
 .db-bar{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--pierre-ombre);border-radius:var(--r);border:1px solid var(--border);margin-bottom:10px;font-family:var(--mono);font-size:11px;}
 .db-dot{width:8px;height:8px;border-radius:50%;background:#ccc;flex-shrink:0;transition:background .4s;}
@@ -920,7 +940,11 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   .db-bar{font-size:10px;padding:4px 8px;}
   .lbtn{font-size:10px;padding:5px 10px;min-height:36px;}
   .mtab{font-size:11px;min-height:36px;}
-  #info{font-size:12px;padding:8px 12px;}
+  /* top:90px (pas 16px comme desktop) : sous 768px, .hdr wrap sur 2 lignes (repro
+     2026-08-23 vérifiée : jusqu'à bottom≈82px) et occupe alors presque toute la largeur —
+     #info coin haut-droit s'y superposait faute de place. Repoussé sous .hdr plutôt que
+     rétréci (le texte des messages doit rester lisible). */
+  #info{font-size:12px;padding:8px 12px;top:90px;}
   .md-grid{grid-template-columns:1fr!important;}
   .legend{flex-direction:column;}
   .mpanel{margin-top:4px;padding:8px;}
