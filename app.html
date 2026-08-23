@@ -1011,6 +1011,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    tabbar (--mobile-tabbar-h) pour ne pas passer dessous (Phase 0 §5.1/5.2 : les deux
    restent en place tels quels sur l'onglet Carte, décision Soleil). */
 .mobile-tabbar{display:none;}
+.mlegend-inline{display:none;}
 @media(max-width:768px){
   :root{--mobile-tabbar-h:60px;}
   #layers-toggle,#hdr-menu-toggle{display:none;}
@@ -1038,7 +1039,31 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     border-radius:0;flex-direction:column;padding:16px;overflow-y:auto;
   }
   #hdr-menu .hdr-btn{font-size:14px;padding:12px 14px;}
+  /* Onglet Couches — fusion .layers-accordion + #legende/#tellux-leg-panel (contrat §2 :
+     "la légende d'une couche active s'affiche inline sous son bouton plutôt que dans un
+     panneau séparé ouvert par « ? »"). #legende (bulle "?") N'EST PAS retiré : il reste
+     utile sur l'onglet Carte (légende core hot/hotrf flottante par-dessus la carte sans
+     quitter la vue carte) — sur l'onglet Couches il est simplement recouvert par
+     l'accordéon plein écran (z-index:1100 > #legende:1000, déjà vrai avant ce diff),
+     aucun changement requis là-dessus. .mlegend-inline (générique, un slot par bouton
+     .lbtn) est peuplé par updateInlineLegendMobile(id,show), appelée depuis showLegend()
+     — même choke point que tog()/togFailles()/togPostesSources(), donc les 15 couches à
+     légende sont couvertes sans point d'accroche par bouton (cf. .mlegend-inline{display:
+     none} plus haut, JS plus bas). Touch : boutons de couches et en-têtes de catégorie
+     agrandis pour cible tactile ≥44px (police/padding desktop trop petits — 10px/3-7px —
+     conçus pour une sidebar 420px, pas un plein écran mobile). */
+  .lbtn{font-size:13px;padding:11px 14px;border-radius:10px;min-height:44px;}
+  .accordion-cat-content{gap:8px;}
+  .accordion-cat-header{padding:12px 14px;font-size:13px;}
+  .domain-chip{padding:7px 13px;font-size:12px;}
+  .mlegend-inline.active{
+    display:block;margin:-4px 0 4px;padding:10px 12px;
+    background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r);
+    font-size:11px;
+  }
+  .mlegend-inline .leg-block{padding:0;}
 }
+[data-theme="dark"] .mlegend-inline.active{background:rgba(255,255,255,.04);}
 .layers-accordion{display:flex;flex-direction:column;gap:4px;}
 .accordion-cat{background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:all .2s;flex-shrink:0;}
 .accordion-cat-header{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;background:var(--pierre-ombre);font-weight:500;font-size:12px;color:var(--ardoise-clair);user-select:none;transition:all .2s;}
@@ -1687,8 +1712,11 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     </div>
     <div class="accordion-cat-content open">
       <button class="lbtn" id="b-hot" data-domains="statique elf" title="Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. Estimation du modèle Tellux, pas une mesure." onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ magnétique composite (nT)</button>
+      <div class="mlegend-inline" id="mleg-hot"></div>
       <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)</button>
+      <div class="mlegend-inline" id="mleg-hotrf"></div>
       <button class="lbtn on-con" id="b-con" data-domains="tous" title="Mesures EM — contributions citoyennes + 30 fiches ANFR/EXEM certifiées (2024-2026)" onclick="tog('con','on-con',this)"><span class="dot" style="background:#5c3a9b"></span>Mesures EM</button>
+      <div class="mlegend-inline" id="mleg-con"></div>
     </div>
   </div>
 
@@ -1700,10 +1728,15 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     </div>
     <div class="accordion-cat-content">
       <button class="lbtn" id="b-ant" data-domains="rf" title="Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR + TDF</button>
+      <div class="mlegend-inline" id="mleg-ant"></div>
       <button class="lbtn" id="b-res" data-domains="elf" title="Lignes et postes électriques haute tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HT</button>
+      <div class="mlegend-inline" id="mleg-res"></div>
       <button class="lbtn" id="b-bt" data-domains="elf" title="Réseau basse tension BT — EDF SEI · zoom ≥ 11" onclick="tog('bt','on-bt',this)"><span class="ln" style="background:#d97706"></span>Réseau BT</button>
+      <div class="mlegend-inline" id="mleg-bt"></div>
       <button class="lbtn" id="b-prod" data-domains="elf" title="Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions" onclick="tog('prod','on-prod',this)"><span class="sq" style="background:#1a5c8c"></span>Sites de production</button>
+      <div class="mlegend-inline" id="mleg-prod"></div>
       <button class="lbtn" id="b-postes" data-domains="elf" title="Postes sources EDF SEI (transformateurs HTB/HTA) — 21 postes OSM" onclick="togPostesSources(this)"><span class="sq" style="background:#C28533;border:1px solid #3F5B3A"></span>Postes sources EDF</button>
+      <div class="mlegend-inline" id="mleg-postesSources"></div>
       <!-- Couche « Particules fines PM2,5 » retirée de la carte publique le 2026-08-20 (décision
            Soleil : co-exposition radon/particulaire, elle vit désormais sur radon.html plutôt
            qu'ici — mise en visualisation, jamais un calcul Tellux). -->
@@ -1726,6 +1759,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
            source de lithologie du calcul radon, cf. getGeoType()/GEO_SUSC_GRID, INCHANGÉS). Déjà
            présente sur radon.html avant ce retrait ; app.html n'en a donc plus de copie. -->
       <button class="lbtn" id="b-failles" data-domains="statique" title="Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)" onclick="togFailles(this)"><span class="ln" style="background:#8E2F1F"></span>Failles tectoniques</button>
+      <div class="mlegend-inline" id="mleg-failles"></div>
       <!-- Couches « Radon » et « Dépôts radon ERP (certifié) » retirées de la carte publique le
            2026-08-20 (pattern PR #990 : consolidation dans une app dédiée, pas un retrait de
            contenu). Le zonage ASNR, les dépôts ERP et la géologie BRGM en couche de référence
@@ -1736,6 +1770,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
            (calcGammaAmbient, boost ponctuel) continue de s'appliquer exactement comme avant. -->
       <a class="lbtn" href="radon.html" title="Zonage radon ASNR, dépôts ERP certifiés et courriers dédiés — ouvre l'application radon" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px"><span class="sq" style="background:#C28533"></span>Voir le volet radon &rarr;</a>
       <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Fond magnétique régional</button>
+      <div class="mlegend-inline" id="mleg-emag"></div>
 
       <h5 class="subgroup-header">B. Contexte territorial (géologie, hydro, forêts)</h5>
       <p class="subgroup-text">Repères géologiques et paysagers, à titre indicatif — aucune couche n'entre dans le calcul.</p>
@@ -1744,8 +1779,11 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
            du radon, elles vivent désormais sur radon.html plutôt qu'ici — aucun calcul Tellux
            n'utilisait cette couche). -->
       <button class="lbtn" id="b-therm" data-domains="statique" title="Émergences thermales — observations de surface, marqueurs de failles actives" onclick="tog('therm','on-therm',this)"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Émergences thermales</button>
+      <div class="mlegend-inline" id="mleg-therm"></div>
       <button class="lbtn" id="b-hyd" data-domains="visuel" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie</button>
+      <div class="mlegend-inline" id="mleg-hyd"></div>
       <button class="lbtn" id="b-foret" data-domains="visuel" title="Forêts publiques ONF via WMS IGN Géoplateforme — couche visuelle niveau A (pas de modulation calcul). BD Forêt V2 complète non disponible en WMS public." onclick="tog('foret','on-foret',this)"><span class="sq" style="background:#3F5B3A"></span>Forêts publiques</button>
+      <div class="mlegend-inline" id="mleg-foret"></div>
 
       <h5 class="subgroup-header">C. Sites documentaires</h5>
       <p class="subgroup-text">Catalogue de comparaison, issu de la littérature ou de mesures externes — hors calcul, confirmation locale à faire sur le terrain.</p>
@@ -1764,10 +1802,12 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
            ni son assignation dans loadSitesApp() — elles sont indissociables du chargement de
            POINTS_CHAUDS_RADIO qui alimente le boost ponctuel de calcGammaAmbient. -->
       <button class="lbtn" id="b-crustal" data-domains="statique" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF) — opt-in, comparaison locale/mondiale" onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales)</button>
+      <div class="mlegend-inline" id="mleg-crustal"></div>
 
       <h5 class="subgroup-header">D. Mesures citoyennes — rayonnement gamma</h5>
       <p class="subgroup-text">Débit de dose gamma/X ambiant mesuré par des citoyens (OpenRadiation, tubes Geiger). <b>Gamma/X, pas radon.</b> Affichage indépendant, hors indice et hors calcul gamma. Mesures indicatives, capteurs hétérogènes non certifiés ; inclut des traces continues (densité affichée ≠ nombre de sites).</p>
       <button class="lbtn" id="b-openrad" data-domains="ionisant" title="Mesures citoyennes de débit de dose gamma/X ambiant (OpenRadiation, tubes Geiger, µSv/h). Gamma/X, PAS radon. Couche d'affichage indépendante — non injectée dans l'indice ni le calcul gamma. Indicatives, capteurs hétérogènes, non certifiées ; inclut des traces (densité ≠ nombre de sites)." onclick="tog('openrad','on-openrad',this)"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Gamma citoyen (OpenRadiation)</button>
+      <div class="mlegend-inline" id="mleg-openrad"></div>
       <!-- TODO backlog couches : Communes radon niveau 3 overlay (GeoJSON geometries à fournir), MNT altitude overlay -->
     </div>
   </div>
@@ -3257,6 +3297,25 @@ function updateLegendPanel(){
     }
   }
 }
+// updateInlineLegendMobile — onglet Couches mobile (contrat CONTRAT_NAV_MOBILE_APP_2026-08-23.md
+// §2 : fusion .layers-accordion + #legende/#tellux-leg-panel, légende inline sous le bouton
+// plutôt que dans le panneau "?"). Appelée depuis showLegend(), même choke point que la Zone 1/2
+// desktop (tog()/togFailles()/togPostesSources() y passent tous) — couvre les 15 couches à
+// légende sans point d'accroche par bouton. Invisible >768px par construction CSS
+// (.mlegend-inline{display:none} hors media query) : aucun check de largeur nécessaire ici,
+// même logique que .mobile-tabbar. N'affecte ni LEGEND_ACTIVE_CORE ni LEGEND_ACTIVE_CONTEXT
+// (Zone 1/2 desktop, #tellux-leg-panel/#tellux-legends-context, INCHANGÉES par ce diff).
+function updateInlineLegendMobile(id,show){
+  const el=document.getElementById('mleg-'+id);
+  if(!el)return;
+  if(show&&LEGEND_HTML[id]){
+    el.innerHTML=legendHtmlFor(id);
+    el.classList.add('active');
+  }else{
+    el.classList.remove('active');
+    el.innerHTML='';
+  }
+}
 function showLegend(id,show){
   if(LEGEND_CORE_IDS.has(id)){
     if(show)LEGEND_ACTIVE_CORE.add(id);else LEGEND_ACTIVE_CORE.delete(id);
@@ -3272,6 +3331,7 @@ function showLegend(id,show){
     }
   }
   updateLegendPanel();
+  updateInlineLegendMobile(id,show);
 }
 function tog(id,cls,btn){
   // Guard : couche migrée hors de ce fichier
