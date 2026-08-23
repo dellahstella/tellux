@@ -2355,8 +2355,6 @@ var JS_STRINGS_EN = {
   implan_tip_correcte: "Suitable siting — low disturbance",
   implan_tip_verifier: "Check disturbance sources before siting",
   implan_tip_deconseillee: "Not recommended for sensitive siting",
-  infobar_perturbation: "Disturbance",
-  infobar_activite_naturelle: "Natural activity",
   link_cartoradio: "CartoRadio ↗",
   elf_contribs_vide: "No nearby contribution",
   elf_iarc_note: "Documentary reference point: IARC class 2B for chronic residential ELF ≥ 300 nT — not an alert threshold, a statistical signal.",
@@ -5831,7 +5829,7 @@ map.on('click',async e=>{
     perturbHumain<=2?jt('it_verdict_perturb_faible','Perturbations faibles \u2014 conditions favorables'):
     perturbHumain<=3?jt('it_verdict_influence_detectable','Influence humaine d\u00e9tectable \u2014 antennes ou lignes'):
     jt('it_verdict_zone_perturbee','Zone perturb\u00e9e \u2014 mesure terrain recommand\u00e9e');
-  const itEmoji=phEmoji;const itLabel=phLabel;const itColor=phColor;
+  const itLabel=phLabel; // itEmoji/itColor retirés le 2026-08-23 (n'étaient utilisés que par l'INFO BAR)
   // Sous-sol simplifié — basé sur susceptibilité magnétique (nT)
   const solLabel=susc_nT>30?jt('sol_fort','Substrat à forte susceptibilité magnétique (granit biotite)'):susc_nT>12?jt('sol_modere','Substrat à susceptibilité modérée'):geo<0?jt('sol_neutre','Substrat neutre (calcaire/ophiolite)'):jt('sol_standard','Substrat standard');
   // Recommandation implantation basée sur perturbation humaine + activité naturelle
@@ -5842,10 +5840,13 @@ map.on('click',async e=>{
     perturbHumain<=3?jt('implan_tip_verifier','V\u00e9rifier les sources de perturbation avant implantation'):
     jt('implan_tip_deconseillee','Zone d\u00e9conseill\u00e9e pour implantation sensible');
 
-  // INFO BAR — Double score lisible
-  info(`${phEmoji} <b style="color:${phColor}">`+jt('infobar_perturbation','Perturbation')+` ${perturbHumain}/5</b> ${phLabel} \u00b7 ${anEmoji} <b style="color:${anColor}">`+jt('infobar_activite_naturelle','Activit\u00e9 naturelle')+` ${activNat}/5</b> ${anLabel}<br>`+
-    `<span style="font-size:11px;color:var(--ardoise-clair)">${itVerdict}</span><br>`+
-    `<span style="font-size:10px;color:var(--tx3)">${implanEmoji} ${implanTip} \u00b7 ${solLabel} \u00b7 ${geoType} \u00b7 <a href="https://www.cartoradio.fr/#/cartographie/point/${lat.toFixed(5)}/${lng.toFixed(5)}" target="_blank" style="color:var(--maquis-clair)">`+jt('link_cartoradio','CartoRadio \u2197')+`</a></span>`);
+  // INFO BAR retiree le 2026-08-23 (repro Soleil, capture a l'appui) : ce bandeau #info
+  // (top-right, z-index 2400, appele sans `duration` donc persistant) dupliquait quasi
+  // integralement le popup ci-dessous (perturbHumain/activNat/itVerdict/implanTip deja
+  // dans calcPopup.setContent, cf. plus bas) et n'avait AUCUN moyen de fermeture -- ni
+  // bouton X, ni timeout, ni clic-exterieur. Les 2 elements qui n'etaient QUE dans ce
+  // bandeau (solLabel, lien CartoRadio cible sur le point clique) ont ete migres dans le
+  // popup lui-meme (ligne 2c ci-dessous) plutot que perdus.
 
   // POPUP — Niveau 1 (simple) + Niveau 2 (technique au survol)
   const deltaStr=delta!==null?(delta>0?'+':'')+delta+' nT':'\u2014';
@@ -5945,6 +5946,10 @@ map.on('click',async e=>{
     '<div style="font-size:10px;color:#4a4f5e;margin:2px 0">'+itVerdict+'</div>'+
     // Ligne 2b : recommandation implantation
     '<div style="font-size:9px;color:#6b7280;margin:1px 0">'+implanEmoji+' '+implanTip+'</div>'+
+    // Ligne 2c : substrat + lien CartoRadio ciblé sur ce point — migré depuis l'INFO BAR
+    // #info (retirée le 2026-08-23, repro Soleil : bandeau persistant, sans bouton ✕,
+    // faisait doublon avec le contenu déjà présent dans ce popup — cf. lignes ci-dessus).
+    '<div style="font-size:9px;color:#6b7280;margin:1px 0">'+solLabel+' · '+geoType+' · <a href="https://www.cartoradio.fr/#/cartographie/point/'+lat.toFixed(5)+'/'+lng.toFixed(5)+'" target="_blank" style="color:var(--maquis-clair)">'+jt('link_cartoradio','CartoRadio ↗')+'</a></div>'+
     // Barre piézo visuelle
     piezoBar+
     // Section domaines v2 (niveau B)
