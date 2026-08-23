@@ -705,16 +705,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 /* Mode "placement de point" contribution terrain (2026-08-19) — indicateur visuel léger
    pendant l'attente du clic carte, avant que #cform ne soit affiché (cf. startContribFromFAB). */
 #map.contrib-placement-mode{cursor:crosshair;box-shadow:0 0 0 3px var(--acc, #2d9b87);}
-.mpanel{background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;margin-top:8px;display:none;}
-.mpanel-title{font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
-.mstates{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
-.ms{background:var(--pierre-ombre);border-radius:var(--r);padding:8px 10px;border:1px solid var(--border);}
-.ms-l{font-size:10px;color:var(--tx3);margin-bottom:3px;font-family:var(--mono);}
-.ms-v{font-size:15px;font-weight:500;}
-.mdelta{border-top:1px solid var(--border);padding-top:8px;display:flex;flex-wrap:wrap;gap:8px;}
-.md-item{flex:1;min-width:140px;}
-.md-l{color:var(--tx3);font-size:10px;font-family:var(--mono);margin-bottom:2px;}
-.md-v{font-weight:500;font-size:13px;}
+/* .mpanel/.mstates/.ms*/.mdelta/.md-* retirés le 2026-08-23 (dette confirmée avec #mpanel,
+   cf. suppression du bloc HTML plus bas — display:none permanent, jamais montré). */
 /* #info style géré inline */
 .tag{display:inline-block;font-size:10px;font-family:var(--mono);padding:1px 7px;border-radius:5px;margin-right:3px;vertical-align:middle;}
 /* #cform n'a jamais été une modale : panneau de sidebar en flux normal (position:static),
@@ -758,18 +750,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;padding:8px 12px;background:var(--pierre-ombre);border-radius:var(--r);border:1px solid var(--border);}
 .leg{display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10px;color:var(--tx3);}
 /* Panneau interprétation */
-.interp{background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-top:10px;display:none;}
-.interp-title{font-size:13px;font-weight:500;color:var(--tx);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
-.interp-score{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 12px;border-radius:var(--r);border:1px solid var(--border);}
-.interp-score-bar{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;}
-.interp-score-fill{height:100%;border-radius:4px;transition:width .5s;}
-.interp-blocks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px;}
-.ib{border-radius:var(--r);padding:10px 12px;border:1px solid var(--border);}
-.ib-icon{font-size:18px;margin-bottom:5px;}
-.ib-title{font-size:11px;font-weight:500;margin-bottom:3px;}
-.ib-text{font-size:11px;color:var(--ardoise-clair);line-height:1.5;}
-.interp-advice{background:var(--pierre-ombre);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--ardoise-clair);line-height:1.6;border-left:3px solid var(--acc);}
-.interp-advice-title{font-size:11px;font-weight:500;color:var(--acc);margin-bottom:4px;}
+/* .interp*/.ib* retirés le 2026-08-23 (dette confirmée avec #interp, cf. suppression du
+   bloc HTML plus bas — display:none permanent, seul appelant showInterp() jamais invoqué). */
 /* === Glossary drawer (right-side tabbed drawer with search) === */
 .glossary-drawer{
   position:fixed;top:0;right:0;width:380px;max-width:90vw;height:100vh;
@@ -1972,32 +1954,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 <!-- Panneau hypothèses migré vers patrimoine.html (purge 6/10).
      XP/badges encore présents — retrait prévu au commit 7. -->
 
-<div class="mpanel" id="mpanel">
-  <div style="display:flex;align-items:center;margin-bottom:6px">
-  <div class="mpanel-title" id="mpanel-loc" style="margin-bottom:0;flex:1">—</div>
-  <button id="btn-export-model" onclick="" style="font-size:10px;padding:2px 10px;border-radius:20px;border:1px solid var(--border);background:var(--pierre-ombre);color:var(--tx3);cursor:pointer;font-family:var(--mono)">⬇ JSON</button>
-  <button onclick="closePanel()" style="font-size:14px;padding:2px 8px;border:none;background:none;color:var(--tx3);cursor:pointer;line-height:1" title="Fermer">✕</button>
-</div>
-  <div class="mstates">
-    <div id="ms-n"><div class="ms"><div class="ms-l">N naturel IGRF+LCS1</div><div class="ms-v" id="m-n" style="color:var(--acc)">—</div></div></div>
-    <div id="ms-nh" style="display:none"><div class="ms"><div class="ms-l">N+H composite total</div><div class="ms-v" id="m-nh" style="color:var(--warn)">—</div></div></div>
-    <div id="ms-d" style="display:none">
-      <div class="ms"><div class="ms-l">Δ anomalie terrain</div><div class="ms-v" id="m-delta" style="font-size:15px;font-weight:600;color:var(--acc)">cliquez sur la carte</div></div>
-      <div style="font-size:11px;color:var(--tx3);padding:4px 8px;background:var(--pierre-ombre);border-radius:var(--r);margin-top:4px">Δ = mesure terrain nT − estimation composite. Nécessite des contributions magnétomètre dans 500 m.</div>
-    </div>
-    <div id="ms-r" style="display:none">
-      <div class="ms"><div class="ms-l">R — mesure réelle terrain</div><div class="ms-v" id="m-r" style="color:var(--info)">—</div></div>
-      <div style="font-size:11px;color:var(--tx3);padding:4px 8px;background:var(--pierre-ombre);border-radius:var(--r);margin-top:4px">Enregistrez une mesure magnétomètre nT via <b>+ Mesure terrain</b>. Les 29 CartoRadio sont en V/m — incompatibles.</div>
-    </div>
-  </div>
-  <div class="mdelta">
-    <div class="md-item"><div class="md-l">Δ anomalie</div><div class="md-v" id="md-delta">—</div></div>
-    <div class="md-item" style="grid-column:span 2"><div class="md-l" style="color:var(--maquis-clair)">Note modèle</div><div class="md-v" id="m-note" style="font-size:11px;color:var(--tx3)">—</div></div>
-    <div class="md-item"><div class="md-l">Facteur hydro</div><div class="md-v" id="m-water">—</div></div>
-    <div class="md-item"><div class="md-l">Faisceaux hertziens</div><div class="md-v" id="m-fh" style="color:var(--warn)">—</div></div>
-    <div class="md-item"><div class="md-l">Score physique <span style="font-family:var(--mono);font-size:9px;color:var(--maquis-clair)">(mesuré)</span></div><div class="md-v" id="m-score-phys">—</div></div>
-  </div>
-</div>
+<!-- #mpanel retiré le 2026-08-23 (dette confirmée : display:none permanent, jamais montré
+     par aucun code live — cf. commentaire au-dessus de map.on('click', ...) plus bas). -->
 
 <div id="info" style="display:none;background:var(--maquis-pale);border:1px solid var(--maquis-clair);border-radius:var(--r);padding:9px 13px;font-size:13px;color:var(--ardoise-clair);min-height:42px;margin-top:0;line-height:1.5"></div>
 
@@ -2262,46 +2220,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 </div>
 
 <!-- PANNEAU INTERPRÉTATION GRAND PUBLIC -->
-<div class="interp" id="interp">
-  <div class="interp-title">
-    <span id="interp-emoji">🌍</span>
-    <span id="interp-titre">Ce que Tellux détecte ici</span>
-    <span style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--tx3)" id="interp-coords"></span>
-    <button onclick="closePanel()" style="font-size:14px;padding:2px 8px;border:none;background:none;color:var(--tx3);cursor:pointer;line-height:1;margin-left:6px" title="Fermer">✕</button>
-  </div>
-  <div class="interp-score">
-    <div style="flex-shrink:0">
-      <div style="font-size:10px;color:var(--tx3);font-family:var(--mono);margin-bottom:2px">ACTIVITÉ GLOBALE</div>
-      <div style="font-size:22px;font-weight:500" id="interp-score-label">—</div>
-    </div>
-    <div style="flex:1;padding-left:12px">
-      <div class="interp-score-bar"><div class="interp-score-fill" id="interp-score-fill" style="width:0%"></div></div>
-      <div style="font-size:10px;color:var(--ardoise-clair);margin-top:6px;line-height:1.4" id="interp-nat-activity">—</div>
-      <div style="font-size:10px;color:var(--ardoise-clair);margin-top:4px;font-style:italic">Activité naturelle élevée (C/L) = signal géologique intéressant (susceptibilité du substrat, influence hydrologique), documenté sur sites anciens. Perturbations humaines ELF/RF faibles = contexte préservé.</div>
-    </div>
-  </div>
-  <div class="interp-blocks">
-    <div class="ib">
-      <div class="ib-icon">🧲</div>
-      <div class="ib-title">Champ naturel de la Terre</div>
-      <div class="ib-text" id="ib-naturel-text">—</div>
-    </div>
-    <div class="ib">
-      <div class="ib-icon">📡</div>
-      <div class="ib-title">Influence humaine</div>
-      <div class="ib-text" id="ib-humain-text">—</div>
-    </div>
-    <div class="ib">
-      <div class="ib-icon">💧</div>
-      <div class="ib-title">Géologie & eau souterraine</div>
-      <div class="ib-text" id="ib-geo-text">—</div>
-    </div>
-  </div>
-  <div class="interp-advice">
-    <div class="interp-advice-title">Que faire avec cette information ?</div>
-    <div id="interp-conseil">—</div>
-  </div>
-</div>
+<!-- #interp retiré le 2026-08-23 (dette confirmée : display:none permanent, seul appelant
+     showInterp() jamais invoqué — cf. commentaire au-dessus de map.on('click', ...)). -->
+
 
 </div><!-- /.map-col -->
 </div>
@@ -2396,35 +2317,14 @@ var JS_STRINGS_EN = {
   cert_downloaded_suffix: " certified ANFR/EXEM sheets (JSON).",
 
   // Zone A (rapport d'audit initial — PAS le §A du complément ci-dessus,
-  // lettrage différent entre les deux documents sources) — popup principal
-  // au clic carte : showInterp() + handler map.on('click'). ~88 clés.
+  // lettrage différent entre les deux documents sources). Les 4 clés interp_lvl_* restent
+  // utilisées par le champ composite du panneau "Mon lieu" (cf. commentaire "même seuils/
+  // libellés que" plus bas) — le reste (interp_desc_*/interp_nat_activity_*/ib_*/conseil_*)
+  // était exclusif à showInterp(), retiré le 2026-08-23 (dette confirmée, cf. plus bas) : nettoyé.
   interp_lvl_tres_calme: "Very calm",
-  interp_desc_tres_calme: "Lightly disturbed area — close to the IGRF reference.",
   interp_lvl_modere: "Moderate",
-  interp_desc_modere: "Detectable but modest human influence.",
   interp_lvl_actif: "Active",
-  interp_desc_actif: "Significant disturbance — nearby antennas or lines.",
   interp_lvl_intense: "Intense",
-  interp_desc_intense: "Strong disturbance — field measurement recommended.",
-  interp_nat_activity_prefix: "Natural activity: ",
-  interp_nat_activity_suffix: "/5 – geological substrate + hydrological influence",
-  ib_naturel_infix: " nT — ",
-  ib_naturel_crustal_pos_prefix: "crustal anomaly +",
-  ib_naturel_crustal_pos_suffix: " nT",
-  ib_naturel_crustal_neg_prefix: "crustal anomaly ",
-  ib_naturel_crustal_neg_suffix: " nT",
-  ib_naturel_ref_normale: "normal IGRF reference",
-  ib_humain_pos_prefix: "+",
-  ib_humain_pos_suffix: " nT (antennas, lines)",
-  ib_humain_nul: "No human influence detected",
-  ib_geo_pos_prefix: "+",
-  ib_geo_pos_suffix: " nT — groundwater or watercourse",
-  ib_geo_nul: "No hydrological influence",
-  conseil_anomalie_prefix: "Δ",
-  conseil_anomalie_suffix: " nT anomaly — repeated measurement recommended. Check Kp/Bz.",
-  conseil_actif: "Active area. Measure with a smartphone magnetometer to get an objective reading.",
-  conseil_calme: "Calm area, ideal as a calibration reference.",
-  conseil_modere: "Moderate activity. A field measurement would validate the estimate.",
   gamma_label_terrestre: "ambient gamma dose (cosmic + terrestrial)",
   gamma_label_cosmique: "ground-level cosmic dose",
   gamma_badge_ancre: "Anchored — terrestrial measured on the Corsican Variscan batholith (Verdoya 1998), Verdoya 2009 coefficients reviewed by a third-party physicist",
@@ -5800,38 +5700,13 @@ function calcFaultProximity(lat, lon) {
   return bonus;
 }
 
-function showInterp(lat,lng,igrf,human,water,score,delta){
-  const panel=document.getElementById('interp');if(!panel)return;
-  panel.style.display='block';
-  document.getElementById('interp-coords').textContent=lat.toFixed(4)+'°N '+lng.toFixed(4)+'°E';
-  const absScore=Math.abs(score);
-  const pct=Math.min(100,Math.round(absScore/5));
-  const fill=document.getElementById('interp-score-fill');
-  fill.style.width=pct+'%';
-  fill.style.background=pct<20?'var(--acc)':pct<50?'var(--warn)':'var(--danger)'; const natScore=Math.round(water*0.3)+geo;
-  let lvl,desc;
-  if(absScore<30){lvl=jt('interp_lvl_tres_calme','Très calme');desc=jt('interp_desc_tres_calme','Zone peu perturbée — proche de la référence IGRF.');}
-  else if(absScore<100){lvl=jt('interp_lvl_modere','Modéré');desc=jt('interp_desc_modere','Influence humaine détectable mais modeste.');}
-  else if(absScore<300){lvl=jt('interp_lvl_actif','Actif');desc=jt('interp_desc_actif','Perturbation significative — antennes ou lignes proches.');}
-  else{lvl=jt('interp_lvl_intense','Intense');desc=jt('interp_desc_intense','Forte perturbation — mesure terrain recommandée.');}
-  document.getElementById('interp-score-label').textContent=lvl;
-  document.getElementById('interp-score-label').style.color=fill.style.background;
-  document.getElementById('interp-score-desc').textContent=desc;
-  document.getElementById('interp-nat-activity').textContent=jt('interp_nat_activity_prefix','Activité naturelle : ')+natScore+jt('interp_nat_activity_suffix','/5 – substrat géologique + influence hydrologique');
-  document.getElementById('interp-emoji').textContent=absScore<30?'🟢':absScore<100?'🟡':absScore<300?'🟠':'🔴';
-  const lcs=calcLCS1(lat,lng);
-  document.getElementById('ib-naturel-text').textContent=
-    Math.round(igrf).toLocaleString()+jt('ib_naturel_infix',' nT — ')+(lcs>10?jt('ib_naturel_crustal_pos_prefix','anomalie crustale +')+lcs+jt('ib_naturel_crustal_pos_suffix',' nT'):lcs<-3?jt('ib_naturel_crustal_neg_prefix','anomalie crustale ')+lcs+jt('ib_naturel_crustal_neg_suffix',' nT'):jt('ib_naturel_ref_normale','référence IGRF normale'));
-  document.getElementById('ib-humain-text').textContent=
-    human>0?jt('ib_humain_pos_prefix','+')+human+jt('ib_humain_pos_suffix',' nT (antennes, lignes)'):jt('ib_humain_nul','Aucune influence humaine détectée');
-  document.getElementById('ib-geo-text').textContent=
-    water>0?jt('ib_geo_pos_prefix','+')+water+jt('ib_geo_pos_suffix',' nT — nappe ou cours d\'eau'):jt('ib_geo_nul','Pas d\'influence hydrologique');
-  const conseil=document.getElementById('interp-conseil');
-  if(delta!==null&&Math.abs(delta)>200) conseil.textContent=jt('conseil_anomalie_prefix','Anomalie Δ')+delta+jt('conseil_anomalie_suffix',' nT — mesure répétée recommandée. Vérifiez Kp/Bz.');
-  else if(absScore>200) conseil.textContent=jt('conseil_actif','Zone active. Mesurez avec magnétomètre smartphone pour objectiver.');
-  else if(absScore<30) conseil.textContent=jt('conseil_calme','Zone calme, idéale comme référence de calibration.');
-  else conseil.textContent=jt('conseil_modere','Activité modérée. Une mesure terrain validerait l\'estimation.');
-}
+// showInterp() + panneaux #interp/#mpanel retirés le 2026-08-23 (arbitrage Soleil, point 2
+// du brief calcWater()) : dette confirmée avant suppression — grep exhaustif sur tout le
+// fichier, showInterp() n'avait plus aucun appelant réel (seule trace : un commentaire de
+// documentation obsolète), #interp et #mpanel sont display:none par défaut en CSS et aucun
+// autre code ne les passe à display:block/flex. Popup live actuel = calcPopup (L.popup dans
+// map.on('click', ...) ci-dessous), Double score Tellux (perturbHumain/activNat) + INFO BAR
+// (info()) — architecture distincte, non affectée par cette suppression.
 
 map.on('click',async e=>{
   if(e.originalEvent&&e.originalEvent._handled)return;
@@ -5873,7 +5748,7 @@ map.on('click',async e=>{
     reverseGeocodeCommune(lat,lng),
     fetchAltitudeIGN(lat,lng)
   ]);
-  const {human,water,geo,scorePhys,score,v2}=calcAll(lat,lng,{commune_info, altitude_m});
+  const {human,geo,v2}=calcAll(lat,lng,{commune_info, altitude_m});
   // Mode Expertise — mémoriser le résultat pour recalcul composite via curseurs
   _expertLastResult = v2;
   _expertLastLatLon = { lat, lon: lng };
@@ -5919,7 +5794,11 @@ map.on('click',async e=>{
   const susc_nT=v2.context.substrate.susceptibility_nT;
   const skinD=calcSkinDepth(lat,lng);
   const tellPct=v2.context.telluric.value; // déjà dans v2, pas de double compute
-  const predicted=Math.round(igrf+human+water*0.3+geo);
+  // water*0.3 retiré du predicted (arbitrage Soleil 2026-08-23, suite audit calcWater()) :
+  // le Δ terrain affiché aux contributeurs "Mode Prospecteur" ne doit plus être partiellement
+  // gonflé par un proxy hydrique non calibré (confidence LOW, calcWater() reste calculé et
+  // stocké — cf. facteur_eau_nt — mais n'influence plus aucune valeur affichée/comparée).
+  const predicted=Math.round(igrf+human+geo);
   let real=null,bd=999;
   contribsDB.forEach(c=>{const d=dist(lat,lng,c.lat,c.lon);if(d<0.5&&d<bd&&c.valeur&&c.unite==='nT'){bd=d;real=c.valeur;}});
   const delta=real!==null?Math.round(real-predicted):null;
@@ -6102,7 +5981,6 @@ map.on('click',async e=>{
       map.panBy([0, r.bottom - (window.innerHeight - padBottom)], {animate: !tlxReduceMotion(), duration: 0.3});
     }
   });
-  document.getElementById('btn-export-model').onclick=()=>exportModel(lat,lng,igrf,human,water,nRFcalib);
   // v8 : bloc extrait hors de ce fichier
   _geoLastPoint={lat,lng,igrf,human,geo,crustal,susc_nT,skinD,tellPct,geoType,solLabel,indice:indiceTellux,label:itLabel,verdict:itVerdict,implanTip,rf:nRFcalib,radon_class,gamma_nSvh};
 });
@@ -6549,9 +6427,11 @@ async function saveContrib(){
   }
   const btn=document.getElementById('btn-save');btn.textContent='Sauvegarde…';btn.disabled=true;
   const igrf=fetchIGRF(ll.lat,ll.lng);
-  const {human,water,geo,scorePhys,score}=calcAll(ll.lat,ll.lng);
+  const {human,water,geo}=calcAll(ll.lat,ll.lng);
   const valeur=parseFloat(document.getElementById('c-val').value)||null;
-  const predicted=igrf+human+water*0.3;
+  // water*0.3 retiré du predicted (cf. commentaire jumeau dans le handler de clic carte) —
+  // même arbitrage, même raison (Δ non calibré par un proxy hydrique low-confidence).
+  const predicted=igrf+human;
   // Collecter les matériaux et appareils cochés
   const mats=[...document.querySelectorAll('#c-mats input:checked')].map(i=>i.value);
   const appareils=[...document.querySelectorAll('#c-appareils input:checked')].map(i=>i.value);
@@ -6600,7 +6480,9 @@ async function saveContrib(){
     kp:parseFloat(curKp)||null,bz:parseFloat(curBz)||null,
     densite_protons:parseFloat(curDensity)||null,flux_protons:parseFloat(curFlux)||null,
     igrf_nt:Math.round(igrf),perturbation_humaine_nt:human,facteur_eau_nt:water,
-    score_anomalie:human+Math.round(water*0.3),
+    // score_anomalie n'inclut plus water*0.3 (même arbitrage que predicted, ci-dessus) —
+    // facteur_eau_nt reste stocké tel quel (brut, diagnostic) pour un audit futur éventuel.
+    score_anomalie:human,
     delta_nt:valeurPivot!==null?Math.round(valeurPivot-predicted):null,
     session_id:sessionId,version_app:'2.4',
     // Nouveaux champs contexte bâtiment
@@ -7477,11 +7359,8 @@ function closeAboutModal(){
   m.setAttribute('aria-hidden','true');
 }
 
-// Close measurement panel
-function closePanel(){
-  const p=document.getElementById('mpanel');
-  if(p) p.style.display='none';
-}
+// closePanel() retiré le 2026-08-23 — ses 2 seuls appelants (boutons ✕ de #mpanel/#interp)
+// ont disparu avec ces panneaux (cf. commentaire au-dessus de map.on('click', ...)).
 
 // Glossary drawer — tabbed lateral panel with client-side search.
 // Remplace l'ancien toggleGlossaire() (accordeon en ligne) par un drawer lateral
@@ -7980,7 +7859,8 @@ function myPlaceRenderSummary(d){
     : (jt('myplace_hta_prefix','Environ ')+d.hta.distance_m+jt('myplace_hta_suffix',' m.'));
   var htaRow=myPlaceRow(jt('myplace_hta_title','Ligne électrique haute tension la plus proche'),htaHtml,jt('pill_modelise','Position déclarée — distance calculée'),'modelise');
 
-  // Champ composite — même seuils/libellés que showInterp(), pas de nouveau barème
+  // Champ composite — mêmes seuils/libellés que l'ancien showInterp() (retiré le 2026-08-23,
+  // dette confirmée), clés interp_lvl_* conservées pour ce panneau — pas de nouveau barème
   var absScore=Math.abs(v2 && v2.domains && v2.domains.magnetic && v2.domains.magnetic.elf ? Math.round(v2.domains.magnetic.elf.B_total_nT) : 0);
   var champLvl=absScore<30?jt('interp_lvl_tres_calme','Très calme'):absScore<100?jt('interp_lvl_modere','Modéré'):absScore<300?jt('interp_lvl_actif','Actif'):jt('interp_lvl_intense','Intense');
   var champHtml=escapeHtml(champLvl)+' <span style="color:var(--tx3)">('+Math.round(v2.domains.magnetic.elf.B_total_nT)+' nT, composante liée aux lignes/antennes proches)</span>';
@@ -9528,7 +9408,6 @@ function capCleanup(){
 ["ms_composite",".ms-l@1","","N+H composite total","N+H cumpostu tutale","N+H total composite"],
 ["ms_delta",".ms-l@2","","Δ anomalie terrain","Δ anumalia di terrenu","Δ field anomaly"],
 ["ms_reel",".ms-l@3","","R — mesure réelle terrain","R — misura reale di terrenu","R — actual field measurement"],
-["m_delta_hint","#m-delta","","cliquez sur la carte","cliccate nant'à a carta","click on the map"],
 ["md_delta",".md-l@0","","Δ anomalie","Δ anumalia","Δ anomaly"],
 ["md_note",".md-l@1","","Note modèle","Nota mudellu","Model note"],
 ["md_hydro",".md-l@2","","Facteur hydro","Fattore idru","Hydro factor"],
@@ -9629,7 +9508,6 @@ function capCleanup(){
 ["stat_10",".stat-lbl@5","","mesures ≥ 10 V/m","misure ≥ 10 V/m","measurements ≥ 10 V/m"],
 ["stat_5",".stat-lbl@6","","mesures ≥ 5 V/m","misure ≥ 5 V/m","measurements ≥ 5 V/m"],
 ["stat_1",".stat-lbl@7","","mesures < 1 V/m","misure < 1 V/m","measurements < 1 V/m"],
-["interp_titre","#interp-titre","","Ce que Tellux détecte ici","Ciò chì Tellux rileva quì","What Tellux detects here"],
 ["interp_activite",".interp-score > div:first-child > div:first-child","","ACTIVITÉ GLOBALE","ATTIVITÀ GLUBALE","OVERALL ACTIVITY"],
 ["ib_naturel",".ib-title@0","","Champ naturel de la Terre","Campu naturale di a Terra","Earth's natural field"],
 ["ib_humain",".ib-title@1","","Influence humaine","Influenza umana","Human influence"],
@@ -9690,7 +9568,6 @@ function capCleanup(){
 ["stats_protocole_infix","#stats-panel > div:last-of-type","","· Protocole ANFR/DR 15-4 · Toutes mesures conformes sauf","","· Protocol ANFR/DR 15-4 · All measurements compliant except"],
 ["stats_infraction_suffix","#stats-panel > div:last-of-type","","Monticello San Quilico #192990 (29.05 V/m · 20/03/2025) — rapport d'infraction établi","","Monticello San Quilico #192990 (29.05 V/m · March 20, 2025) — infraction report filed"],
 ["stats_nc_badge",".nc-badge","","NON CONFORME","","NON-COMPLIANT"],
-["interp_nat_static","#interp-nat-activity + div","","Activité naturelle élevée (C/L) = signal géologique intéressant (susceptibilité du substrat, influence hydrologique), documenté sur sites anciens. Perturbations humaines ELF/RF faibles = contexte préservé.","","High natural activity (C/L) = an interesting geological signal (substrate susceptibility, hydrological influence), documented on ancient sites. Low ELF/RF human disturbance = preserved context."],
 ["myplace_fab_label","#myplace-fab-label","","Mon lieu","","My place"],
 ["myplace_fab_btn_aria","#myplace-fab-btn","aria-label","Analyser mon adresse ou ma position","","Analyze my address or my position"],
 ["myplace_title","#myplace-title","","Mon lieu","","My place"],
