@@ -1686,8 +1686,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <span>Modèle EM</span>
     </div>
     <div class="accordion-cat-content open">
-      <button class="lbtn on-hot" id="b-hot" data-domains="statique elf" title="Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. Estimation du modèle Tellux, pas une mesure." onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ magnétique composite (nT)</button>
-      <button class="lbtn" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)</button>
+      <button class="lbtn" id="b-hot" data-domains="statique elf" title="Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. Estimation du modèle Tellux, pas une mesure." onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ magnétique composite (nT)</button>
+      <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)</button>
       <button class="lbtn on-con" id="b-con" data-domains="tous" title="Mesures EM — contributions citoyennes + 30 fiches ANFR/EXEM certifiées (2024-2026)" onclick="tog('con','on-con',this)"><span class="dot" style="background:#5c3a9b"></span>Mesures EM</button>
     </div>
   </div>
@@ -2867,7 +2867,7 @@ const lPostesSources=L.layerGroup();
 // restent chargées au boot pour le calcul, seul l'affichage carte a été retiré.
 // lSit/lSit2/lAlign/lEgl/lTour/lIndu/lCast/lPont : couches patrimoniales migrées vers patrimoine.html
 // anciennes couches supprimées — déplacées hors de ce fichier
-const lBT=L.layerGroup(),lAnt=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup().addTo(map),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lHotRF=L.layerGroup(),lGeom=L.layerGroup().addTo(map);
+const lBT=L.layerGroup(),lAnt=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup(),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}).addTo(map),lHotRF=L.layerGroup().addTo(map),lGeom=L.layerGroup().addTo(map);
 const lCrustal=L.layerGroup();
 // lAir (Particules fines PM2,5, Qualitair Corse) retirée le 2026-08-20, migrée sur radon.html
 // (co-exposition radon/particulaire — vit désormais aux côtés du zonage radon lui-même).
@@ -2882,7 +2882,11 @@ const _openRadCanvas=L.canvas({padding:0.5});
 const lOpenRad=L.layerGroup();
 const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,con:lCon,therm:lTherm,crustal:lCrustal,openrad:lOpenRad};
 const WMS={hyd:wmsHyd,emag:wmsEmag,foret:wmsForet};
-const ACTIVE={bt:false,ant:false,hyd:false,emag:false,foret:false,hot:true,hotrf:false,res:false,prod:false,con:true,therm:false,crustal:false,openrad:false};
+// hot:false/hotrf:true — modèle RF activé par défaut à la place du champ magnétique
+// composite (arbitrage Soleil 2026-08-23). Swap symétrique avec la déclaration lHot/lHotRF
+// ci-dessous (.addTo(map) déplacé) + les classes on-hot/on-hot-rf des boutons b-hot/b-hot-rf
+// + le boot buildHot()→buildHotRF()/showLegend('hot')→showLegend('hotrf') plus bas.
+const ACTIVE={bt:false,ant:false,hyd:false,emag:false,foret:false,hot:false,hotrf:true,res:false,prod:false,con:true,therm:false,crustal:false,openrad:false};
 
 const LEGEND_CORE_IDS=new Set(['hot','hotrf']);
 const LEGEND_MAX_CONTEXT=3;
@@ -7539,10 +7543,13 @@ if(DARK){
 if(typeof loadNOAA==='function')loadNOAA();
 if(typeof loadCEM==='function')loadCEM();
 loadChargeReseau().then(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}}).catch(()=>{});
-buildHot();
-showLegend('hot',true);
+// buildHotRF() au boot (au lieu de buildHot()) — RF activé par défaut (ACTIVE.hotrf=true).
+// Pas d'équivalent loadChargeReseau() nécessaire : buildHotRF()/calcN_RF_calib() ne dépend
+// pas du facteur de charge RTE (spécifique au domaine ELF/magnétique de buildHot()).
+buildHotRF();
+showLegend('hotrf',true);
 showLegend('con',true); // con est activée par défaut (ACTIVE.con=true via b-con.on-con) — légende cohérente
-// Démarrage : anomalies EM (couche Champ composite + mesures terrain par défaut)
+// Démarrage : anomalies EM (couche RF + mesures terrain par défaut, cf. arbitrage 2026-08-23)
 let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.hotrf){lHotRF.clearLayers();buildHotRF();}},300);}
 map.on('zoomend',rebuildHotDebounced);
