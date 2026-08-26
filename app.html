@@ -3854,69 +3854,53 @@ async function loadAQU(){
   return loadINTERMAGNETObservatory();
 }
 
+// FRAICHEUR — au-delà de cette limite, le fichier statique est considéré périmé
+// (cron en panne, ou job jamais relancé) : on retombe sur Dst/Kp plutôt que
+// d'afficher un delta obsolète sans le signaler. Cron toutes les 30min (cf.
+// .github/workflows/intermagnet-cron.yml) → 3h laisse large marge pour un run
+// manqué occasionnel sans pour autant servir une valeur trop âgée.
+const INTERMAGNET_STALE_AFTER_MS = 3 * 60 * 60 * 1000;
+
 async function loadINTERMAGNETObservatory(){
-  // Iteration sur les observatoires par distance Corse croissante.
-  // Premier observatoire avec >=24 echantillons recents (minute) = succes.
-  for(let i = 0; i < INTERMAGNET_OBSERVATORIES.length; i++){
-    const obs = INTERMAGNET_OBSERVATORIES[i];
-    try{
-      // API réelle BGS GIN Edinburgh (GetData) — cf. commentaire ci-dessus pour la
-      // vérification. samplesPerDay=Minute : seule granularité fine documentée
-      // (pas de "Hour" — testé, 400 rejeté) ; publicationState=reported : seul
-      // état où ces 3 stations ont effectivement des données (testé, "best-avail"
-      // par défaut renvoie "none" sur les mêmes fenêtres). dataDuration=30 reprend
-      // l'intention d'origine (baseline 30j) — accepte que la réponse puisse être
-      // creuse (lacunes de plusieurs jours), filtrée plus bas comme avant.
-      const d = await fetchEnv(
-        'https://imag-data.bgs.ac.uk/GIN_V1/GINServices?Request=GetData&observatoryIagaCode=' + obs.code +
-        '&dataDuration=30&samplesPerDay=Minute&publicationState=reported&Format=json',
-        4000  // timeout court par observatoire
-      );
-      // Format réel = colonnes paralleles {datetime:[...], S:[...], D:[...], H:[...], Z:[...]}
-      // (vérifié en direct) — PAS un tableau d'objets `obs_data` comme l'ancien code
-      // le supposait. S = composante scalaire totale (orientation HDZS), équivalent
-      // du F habituel (IAGA), confirmé par @info.reported_orientation="HDZS" et un
-      // ordre de grandeur (~47000 nT) cohérent avec un champ total à ces latitudes.
-      const times = d?.datetime, scalarF = d?.S;
-      if(!times?.length || !scalarF?.length) continue;
-
-      // Calcul baseline 30j glissants (mediane robuste).
-      const now = Date.now();
-      const cutoff = now - 30 * 86400 * 1000;
-      const recentF = times
-        .map(function(t,idx){ return {t: new Date(t).getTime(), f: parseFloat(scalarF[idx])}; })
-        .filter(function(o){ return !isNaN(o.t) && o.t >= cutoff && !isNaN(o.f); })
-        .map(function(o){ return o.f; })
-        .sort(function(a,b){ return a - b; });
-
-      if(recentF.length < 24){
-        // Pas assez de donnees sur cet observatoire, essayer suivant.
-        continue;
-      }
-
-      const median = recentF[Math.floor(recentF.length / 2)];
-      const F = parseFloat(scalarF[scalarF.length - 1]);
-      if(isNaN(F) || isNaN(median)) continue;
-
-      aquExternalCorr = Math.round(F - median);
-      window._intermagnetSource = obs.code;
-      window._intermagnetBaseline = Math.round(median);
-      window._intermagnetNSamples = recentF.length;
-      // Alias retro-compat pour code existant referencant ces variables.
-      window._aquBaseline = window._intermagnetBaseline;
-      window._aquNSamples = window._intermagnetNSamples;
+  // 2026-08-26 (brief "implémentation 3 chantiers orphelins") : remplace le fetch
+  // direct BGS GIN (PR #1033) par la lecture d'un fichier statique same-origin,
+  // pré-calculé par un job GitHub Actions planifié (scripts/fetch_intermagnet.py,
+  // toutes les 30min) — élimine le CORS (confirmé bloquant sur BGS GIN, cf. #1033)
+  // ET le risque perf/fragilité d'un appel API tierce en direct depuis le
+  // navigateur. Si BGS GIN est ponctuellement indisponible, le dernier fichier
+  // généré reste utilisable (contrairement à une requête live qui casserait),
+  // et la fraîcheur est vérifiée explicitement (pas juste l'absence du fichier)
+  // via generated_at, cf. INTERMAGNET_STALE_AFTER_MS. INTERMAGNET_OBSERVATORIES
+  // (DUR/EBR/CLF) reste défini plus haut à titre documentaire — la sélection de
+  // station se fait désormais côté script (scripts/fetch_intermagnet.py), pas ici.
+  try{
+    const d = await fetchEnv('public/data/intermagnet_latest.json', 4000);
+    if(!d || !d.station_used || !d.generated_at) {
       const _aq = document.getElementById('aqu-status');
-      if(_aq) _aq.textContent = obs.code + ' ' + F.toFixed(0) + ' nT (baseline 30j ' + Math.round(median) + ' nT, n=' + recentF.length + ')';
-      if(typeof _updateDstUI === 'function') _updateDstUI();
-      return;  // succes, on s'arrete
-    }catch(e){
-      // observatoire indisponible (ou bloqué CORS, cf. commentaire ci-dessus), essayer le suivant
-      continue;
+      if(_aq) _aq.style.display = 'none';
+      return; // fichier absent, ou aucune station exploitable au dernier cycle
     }
+    const age_ms = Date.now() - new Date(d.generated_at).getTime();
+    if(isNaN(age_ms) || age_ms > INTERMAGNET_STALE_AFTER_MS){
+      const _aq = document.getElementById('aqu-status');
+      if(_aq) _aq.style.display = 'none';
+      return; // fichier périmé (cron en panne) — fallback Dst/Kp, pas de delta obsolète affiché
+    }
+    aquExternalCorr = Math.round(d.delta_nT);
+    window._intermagnetSource = d.station_used;
+    window._intermagnetBaseline = Math.round(d.baseline_30j_nT);
+    window._intermagnetNSamples = d.n_samples;
+    // Alias retro-compat pour code existant referencant ces variables.
+    window._aquBaseline = window._intermagnetBaseline;
+    window._aquNSamples = window._intermagnetNSamples;
+    const _aq = document.getElementById('aqu-status');
+    if(_aq) _aq.textContent = d.station_used + ' ' + Math.round(d.baseline_30j_nT + d.delta_nT) + ' nT (baseline 30j ' + Math.round(d.baseline_30j_nT) + ' nT, n=' + d.n_samples + ')';
+    if(typeof _updateDstUI === 'function') _updateDstUI();
+  }catch(e){
+    const _aq = document.getElementById('aqu-status');
+    if(_aq) _aq.style.display = 'none';
+    // Fichier statique indisponible -> fallback Dst (niveau 2), comportement inchangé.
   }
-  // Aucun observatoire INTERMAGNET disponible -> fallback Dst (niveau 2)
-  const _aq2 = document.getElementById('aqu-status');
-  if(_aq2) _aq2.style.display = 'none';
 }
 
 // ─── Dst index (Kyoto WDC via NOAA SWPC) ───

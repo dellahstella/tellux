@@ -1,0 +1,101 @@
+name: intermagnet-cron
+
+# Refresh automatique de public/data/intermagnet_latest.json — niveau 1 de la
+# hierarchie de correction externe geomagnetique (cf. app.html calcExternalCorr(),
+# calcMagneticStatic()). Interroge BGS GIN (DUR/EBR/CLF) depuis ce job (hors
+# navigateur, donc hors CORS — confirme bloquant en direct sur BGS GIN, cf. PR
+# #1033) et ecrit un petit fichier statique, plutot qu'un proxy serveur : plus
+# simple, plus robuste si BGS GIN est indisponible ponctuellement (le dernier
+# fichier reste utilisable au lieu de casser une requete live).
+#
+# Brief "implementation 3 chantiers orphelins" (2026-08-26), chantier A/E.
+#
+# Architecture merge : `main` a une vraie protection de branche (PR obligatoire,
+# pas seulement des checks requis, cf. verification 2026-08-26) — ce workflow
+# n'ecrit donc JAMAIS directement sur main. Il ouvre une PR depuis une branche
+# dediee, attend les 2 checks requis (Cloudflare Pages + Scan anti-fuite), puis
+# la merge lui-meme (squash) UNIQUEMENT s'ils passent. Aucun contournement de la
+# protection de branche, aucun secret/token special au-dela du GITHUB_TOKEN par
+# defaut (contents:write + pull-requests:write suffisent).
+#
+# Cadence : toutes les 30 minutes (aligne sur setInterval(loadAQU,...) cote
+# client). Declenchement manuel : Actions > intermagnet-cron > Run workflow.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    name: Regenerer intermagnet_latest.json et merger si les checks passent
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run fetch script (stdlib uniquement, pas de pip install)
+        run: python3 scripts/fetch_intermagnet.py
+
+      - name: Detect changes
+        id: diff
+        run: |
+          if git diff --quiet -- public/data/intermagnet_latest.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Aucun changement detecte, skip."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --stat -- public/data/intermagnet_latest.json
+          fi
+
+      - name: Open PR if changed
+        if: steps.diff.outputs.changed == 'true'
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          BRANCH="bot/intermagnet-$(date -u +%Y%m%d-%H%M%S)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add public/data/intermagnet_latest.json
+          STATION=$(python3 -c "import json; d=json.load(open('public/data/intermagnet_latest.json')); print(d['station_used'] or 'aucune')")
+          DELTA=$(python3 -c "import json; d=json.load(open('public/data/intermagnet_latest.json')); print(d['delta_nT'])")
+          git commit -m "data: refresh intermagnet_latest.json (station=$STATION, delta=${DELTA}nT)
+
+          Regeneration automatique via workflow intermagnet-cron.
+          Source : BGS GIN Edinburgh (DUR/EBR/CLF)."
+          git push origin "$BRANCH"
+          PR_URL=$(gh pr create --base main --head "$BRANCH" \
+            --title "data: refresh intermagnet_latest.json (station=$STATION, delta=${DELTA}nT)" \
+            --body "Régénération automatique (workflow \`intermagnet-cron\`) — pas de contenu applicatif nouveau, uniquement les données du dernier cycle BGS GIN. Auto-merge après CI verte (2 checks requis).")
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$(basename "$PR_URL")" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for required checks and merge
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          PR="${{ steps.pr.outputs.pr_number }}"
+          # --watch --required : attend uniquement les 2 checks requis (Cloudflare Pages +
+          # Scan anti-fuite), pas les informatifs (Axe §5.1 peut rester pending longtemps).
+          # Timeout via `timeout` : 5min max avant abandon (PR laissee ouverte, pas de merge
+          # silencieux force) — checks connus ~15-40s chacun (sessions manuelles precedentes).
+          if timeout 300 gh pr checks "$PR" --required --watch --interval 15; then
+            gh pr merge "$PR" --squash --delete-branch
+          else
+            echo "::warning::Checks requis pas verts (echec ou timeout 5min) sur PR #$PR — laissee ouverte, pas mergee (prochain cycle cron reessaiera une nouvelle PR)."
+          fi
