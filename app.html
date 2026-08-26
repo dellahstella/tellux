@@ -5320,11 +5320,18 @@ function estimateForestDepth(lat1, lon1, lat2, lon2){
 
 // calcRF = fine enveloppe sur RF_field (consommée par calcAll_v2 → v2.domains.rf).
 // Conserve les clés consommées : S_total_uW_m2 (popup+composite GELÉ), confidence, source.
-function calcRF(lat, lon){
-  // applyVegetation=true : calcRF() est le calcul PONCTUEL (calcAll_v2 → clic carte), jamais la
-  // grille de heatmap (buildHotRF() passe par calcN_RF_calib()→RF_field() SANS ce 3e argument,
-  // donc false par défaut) — coût de l'atténuation végétation négligeable sur un seul point.
-  const f = RF_field(lat, lon, true);
+// HOTFIX 2026-08-26 : applyVegetation était codé en dur à `true` ici — calcRF() est certes
+// appelée par le clic carte ponctuel (via calcAll_v2), mais AUSSI par calcAll()/calcAll_v2()
+// depuis buildHot() (couche "Champ magnétique composite", boucle sur toute la grille de la
+// carte — jusqu'à ~1000+ cellules) et depuis le mousemove throttlé (indicateur Δ survol,
+// cf. map.on('mousemove',...) plus bas) : ces deux chemins appellent calcAll() par cellule
+// ou par mouvement de souris, PAS "au clic" — avec applyVegetation forcé à true, chaque
+// cellule/mouvement déclenchait le coût mesuré ~0,5ms/antenne (cf. #1038) MULTIPLIÉ par le
+// nombre de cellules de la grille composite entière → page gelée (reproduit en direct :
+// buildHot() ne rendait plus la main après 30s+). Paramètre maintenant explicite, `false`
+// par défaut — seul le clic carte réel (map.on('click',...)) passe applyVegetation:true.
+function calcRF(lat, lon, applyVegetation){
+  const f = RF_field(lat, lon, applyVegetation);
   return { S_total_uW_m2:f.S_total_uW_m2, E_total_V_m:f.E_total_V_m, contributions:f.contributions, forest_attenuation_dB:f.forest_attenuation_dB, terrain_correction_dB:0, note_ICNIRP:f.note_ICNIRP, source:f.source, confidence:f.confidence, calibrated:false };
 }
 // ═══ Calibration RF interne Tellux — facteur scalaire k sur 30 mesures certifiées (ADR-028) ═══
@@ -5416,7 +5423,7 @@ function calcAll_v2(lat, lon, options) {
     ? calcMagneticELF_v2(lat, lon)
     : calcMagneticELF_v1(lat, lon);
   // Domaine RF
-  const rfResult     = calcRF(lat, lon);
+  const rfResult     = calcRF(lat, lon, options.applyVegetation);
   // Domaine I
   const altitudeFallback = options.altitude_m || null; // intégration DEM future
   const gammaResult  = calcGammaAmbient(lat, lon, altitudeFallback);
@@ -6147,7 +6154,9 @@ map.on('click',async e=>{
     reverseGeocodeCommune(lat,lng),
     fetchAltitudeIGN(lat,lng)
   ]);
-  const {human,geo,v2}=calcAll(lat,lng,{commune_info, altitude_m});
+  // applyVegetation:true — seul point d'entrée légitime pour ce coût (clic carte réel,
+  // pas une boucle de grille) : cf. commentaire calcRF() pour l'incident du 2026-08-26.
+  const {human,geo,v2}=calcAll(lat,lng,{commune_info, altitude_m, applyVegetation:true});
   // Mode Expertise — mémoriser le résultat pour recalcul composite via curseurs
   _expertLastResult = v2;
   _expertLastLatLon = { lat, lon: lng };
