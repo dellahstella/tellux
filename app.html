@@ -512,8 +512,13 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    ce bloc les surcharge en liste verticale flottante repliable, plus spécifique que
    l'ancien ".hdr-actions{margin-left:auto;...}" et que son media(max-width:768px)
    ci-dessous (qui reste inoffensif mais inerte une fois #hdr-menu positionné en dehors
-   du flux de .hdr). */
-#hdr-menu{position:absolute;top:64px;left:12px;z-index:1000;display:none;flex-direction:column;align-items:stretch;gap:6px;background:rgba(245,240,231,0.97);backdrop-filter:blur(8px);border-radius:var(--r2);padding:10px;box-shadow:0 8px 28px rgba(31,35,41,0.18);border:1px solid var(--border);width:240px;max-width:calc(100vw - 24px);}
+   du flux de .hdr).
+   z-index:1160 (2026-08-26, même fix que .map-wrap .layers-accordion juste au-dessus,
+   repro Soleil mobile x3) — était 1000, sous .leaflet-top/.leaflet-bottom/1150 : les
+   contrôles Leaflet natifs (zoom +/−, recentrer 📍) passaient par-dessus l'onglet Infos
+   plein écran mobile, recouvrant "Glossaire"/"À propos". Confirmé par capture directe
+   (screenshot forcé desktop, mêmes contrôles visibles au-dessus du menu). */
+#hdr-menu{position:absolute;top:64px;left:12px;z-index:1160;display:none;flex-direction:column;align-items:stretch;gap:6px;background:rgba(245,240,231,0.97);backdrop-filter:blur(8px);border-radius:var(--r2);padding:10px;box-shadow:0 8px 28px rgba(31,35,41,0.18);border:1px solid var(--border);width:240px;max-width:calc(100vw - 24px);}
 #hdr-menu.open{display:flex;}
 #hdr-menu .hdr-btn{width:100%;text-align:left;}
 #hdr-menu .hdr-menu-sep{height:1px;background:var(--border);margin:4px 2px;}
@@ -962,15 +967,20 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    brief Soleil §1.3). Remplace l'ancien layout desktop "push-flow" (flex:0 0 420px,
    repli à 48px via .collapsed) ET l'ancien tiroir mobile "descend du haut"
    (max-height 0→55vh). Un seul mécanisme (transform:translateX, ancré à droite,
-   pleine hauteur) réutilisé aux deux breakpoints, fermé par défaut. z-index:1100
-   repris À L'IDENTIQUE de l'ancien tiroir mobile — aucune collision nouvelle avec
-   la pile z-index existante (confirmé par inventaire complet en préparation de ce
-   diff : coexiste sous #about-modal/2000, #expert-modal/2100, .glossary-drawer/2100,
-   #myplace-modal/2300, .disclaimer-overlay/9999+ ; au-dessus de #conditions-bar/999,
-   .fab-mesure/1050). #sidebar-toggle (repli 48px) est retiré : binaire
+   pleine hauteur) réutilisé aux deux breakpoints, fermé par défaut.
+   z-index:1160 (2026-08-26, repro Soleil mobile x3 : contrôles Leaflet natifs zoom
+   +/− + bouton recentrer 📍 visibles PAR-DESSUS le tiroir plein écran mobile,
+   recouvrant "Champ magnétique composite"/"Champ électrique RF" — confirmé par
+   capture directe, pas juste un espacement icône/texte cf. #1031). Était 1100 —
+   angle mort de l'audit z-index de cette même session (voir commentaire plus bas,
+   .leaflet-top/.leaflet-bottom relevé à 1150 APRÈS ce commentaire-ci, jamais
+   reporté ici). Coexiste sous #about-modal/2000, #expert-modal/2100,
+   .glossary-drawer/2100, #myplace-modal/2300, .disclaimer-overlay/9999+ ; au-dessus
+   de .leaflet-top/.leaflet-bottom/1150 (désormais), #conditions-bar/999,
+   .fab-mesure/1050. #sidebar-toggle (repli 48px) est retiré : binaire
    ouvert/fermé désormais, comme le drawer Glossaire déjà présent dans ce fichier. */
 .map-wrap .layers-accordion{
-  position:fixed;top:0;right:0;bottom:0;z-index:1100;
+  position:fixed;top:0;right:0;bottom:0;z-index:1160;
   width:420px;max-width:92vw;
   background:var(--bg);overflow-y:auto;
   box-shadow:-4px 0 20px rgba(0,0,0,.15);
