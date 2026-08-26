@@ -5008,14 +5008,42 @@ async function loadANFRForField(){
 const EIRP_BY_GEN={'2G':1000,'3G':1500,'4G':2000,'5G':3000};
 // Estimateur RF unifié : mobile ANFR (Friis) + TDF broadcast + FH. PLUS de fond départemental,
 // PLUS de facteur ×25. Appelé par calcRF (Indice/popup) ET calcN_RF_calib (heatmap/hover).
-function RF_field(lat, lon){
+// Fréquence représentative par génération (bandes ANFR France dominantes en couverture) —
+// utilisée uniquement pour l'atténuation végétation (ITU-R 833-6), pas pour le calcul Friis
+// lui-même (qui reste par EIRP_BY_GEN, inchangé). 2G~900MHz, 3G~2100MHz, 4G~1800MHz, 5G~3500MHz.
+const RF_FREQ_MHZ_BY_GEN = {'2G':900, '3G':2100, '4G':1800, '5G':3500};
+// applyVegetation=false par défaut : voir garde dans la boucle ANFR ci-dessous (coût mesuré
+// prohibitif sur la grille dense de buildHotRF() — jamais activé depuis le rendu heatmap,
+// seulement depuis un calcul ponctuel, ex. calcRF() appelé au clic carte).
+function RF_field(lat, lon, applyVegetation){
   let S_total=0; const contributions=[];
+  let forest_attenuation_dB_max = 0; // pire cas observé parmi les antennes contribuant, cf. note plus bas
   // (1) MOBILE — antennes ANFR réelles, Friis champ libre, superposition quadratique (E²)
   if(ANFR_GRID){
     const gi=Math.floor(lat/0.05), gj=Math.floor(lon/0.05); let E2=0, nb=0;
     for(let i=gi-3;i<=gi+3;i++) for(let j=gj-3;j<=gj+3;j++){
       const cell=ANFR_GRID[i+'_'+j]; if(!cell) continue;
-      cell.forEach(a=>{ const d=Math.max(50, dist(lat,lon,a.lat,a.lon)*1000); E2+=30*(EIRP_BY_GEN[a.generation]||20)/(d*d); nb++; });
+      cell.forEach(a=>{
+        const d=Math.max(50, dist(lat,lon,a.lat,a.lon)*1000);
+        let contrib=30*(EIRP_BY_GEN[a.generation]||20)/(d*d);
+        // Atténuation végétation (ITU-R P.833-6) — voir garde applyVegetation ci-dessous : coûteuse
+        // (échantillonnage point-in-polygon par antenne), donc opt-in explicite, PAS appliquée par
+        // défaut (buildHotRF() appelle calcN_RF_calib()→RF_field() par cellule de heatmap, jusqu'à
+        // ~0,001° de pas au zoom max — mesuré : ~0,5ms/antenne en zone forestière, soit des dizaines
+        // de secondes cumulées sur une grille de heatmap dense — testé, pas supposé). Seul le calcul
+        // ponctuel (clic carte, calcAll) active applyVegetation=true — coût négligible sur 1 point.
+        if(applyVegetation && FORET_DENSE_PARTS){
+          const depth_m = estimateForestDepth(lat, lon, a.lat, a.lon);
+          if(depth_m > 0){
+            const veg = calcVegetationAttenuation(RF_FREQ_MHZ_BY_GEN[a.generation]||1800, depth_m);
+            if(veg){
+              contrib *= Math.pow(10, -veg.L_veg_dB/10); // dB -> ratio linéaire (base puissance/E²)
+              if(veg.L_veg_dB > forest_attenuation_dB_max) forest_attenuation_dB_max = veg.L_veg_dB;
+            }
+          }
+        }
+        E2+=contrib; nb++;
+      });
     }
     if(E2>0){ const S_mob=(E2/377)*1e6; S_total+=S_mob; contributions.push({source_type:'mobile_ANFR',S_uW_m2:Math.round(S_mob*10)/10,distance_m:null,path_name:nb+' antennes ANFR (≤15 km)'}); }
   }
@@ -5031,13 +5059,160 @@ function RF_field(lat, lon){
   // On échelle S par k² : E_total (dérivé de S ci-dessous) devient automatiquement k·E_raw. Défaut k=1.
   S_total *= RF_CALIB_K*RF_CALIB_K;
   const E_total_V_m=Math.round(Math.sqrt(S_total*1e-6*377)*1000)/1000;
-  return { S_total_uW_m2:Math.round(S_total), E_total_V_m, contributions, forest_attenuation_dB:0, terrain_correction_dB:0, note_ICNIRP:'Rappel documentaire : limite ICNIRP grand public en bande GSM ≈ 4,5 W/m² soit 4 500 000 µW/m².', source:'antennes ANFR (Supabase) + émetteurs TDF + faisceaux hertziens', confidence:'low', calibrated:false };
+  // forest_attenuation_dB : pire cas observé parmi les antennes mobiles contribuant (pas une
+  // moyenne — le pire cas est la lecture la plus utile pour un popup "pourquoi ce niveau ici").
+  // 0 si la géométrie n'est pas chargée (dégradation propre) ou si aucun trajet ne traverse la
+  // forêt dense retenue (cf. build_foret_dense_corse_geojson.py pour les classes incluses).
+  return { S_total_uW_m2:Math.round(S_total), E_total_V_m, contributions, forest_attenuation_dB:Math.round(forest_attenuation_dB_max*10)/10, terrain_correction_dB:0, note_ICNIRP:'Rappel documentaire : limite ICNIRP grand public en bande GSM ≈ 4,5 W/m² soit 4 500 000 µW/m².', source:'antennes ANFR (Supabase) + émetteurs TDF + faisceaux hertziens', confidence:'low', calibrated:false };
 }
+// ═══ Atténuation RF par végétation — ITU-R P.833-6 (2007), modèle simplifié (Option A) ═══
+// Brief "chantiers RF/dose" 2026-08-26, chantier 1 — modèle simplifié § de la P.833-6 (2007),
+// PAS le modèle RET (Radiative Energy Transfer) de la version en vigueur P.833-10 (2021), qui
+// utilise 4 paramètres (α/β/W/κ) + un Tableau 3 de saisonnalité par essence — plus défendable
+// scientifiquement, mais nettement plus de travail d'implémentation. Migration vers le modèle
+// RET P.833-10 = chantier séparé, à arbitrer plus tard (pas maintenant, cf. brief §B).
+//
+// Formule (ITU-R P.833-6 (2007), §modèle simplifié, valide pour d < 400 m) :
+//   L_veg = 0.2 · f^0.3 · d^0.6   (L_veg en dB, f en MHz, d = profondeur traversée en m)
+//
+// ⚠ PAS D'INCERTITUDE AFFICHÉE : le ±7-9 dB parfois cité pour ce modèle simplifié n'est pas
+// sourcé (confirmé NO-GO par Cowork lors de la vérification) — omis ici plutôt qu'affiché sans
+// source. Le Tableau 3 (saisonnalité par essence — feuillus/conifères, été/hiver) N'EST PAS
+// utilisé : il appartient au modèle RET P.833-10, pas au modèle simplifié 833-6 repris ici.
+//
+// ─── BRANCHÉ AU CALCUL RF LIVE (2026-08-26, brief "implémentation 3 chantiers
+// orphelins") : la géométrie manquante ci-dessus est maintenant fournie par
+// public/data/foret_dense_corse.geojson (BD Forêt V2 IGN, prétraitée hors-ligne
+// — cf. scripts/build_foret_dense_corse_geojson.py pour la source, la licence
+// Etalab 2.0, le millésime, et les classes CODE_TFV retenues/exclues). Chargée
+// au boot (loadForetDenseGrid()), lookup synchrone (isPointInForest(),
+// estimateForestDepth() plus bas) — pas d'appel réseau par point de calcul,
+// architecture "prétraitement hors-ligne → fichier statique → lookup client
+// synchrone" alignée sur les chantiers A/E et D de la même session. ─────────
+function calcVegetationAttenuation(f_MHz, d_m){
+  if(!(f_MHz>0) || !(d_m>=0)) return null;
+  // Modèle valide pour d<400m (ITU-R P.833-6) — au-delà, extrapolation non couverte par la
+  // formule elle-même ; on la laisse s'appliquer telle quelle (pas de troncature arbitraire),
+  // mais un appelant futur devrait vérifier d<400 avant d'invoquer si la garantie du modèle importe.
+  const L_veg_dB = 0.2 * Math.pow(f_MHz, 0.3) * Math.pow(d_m, 0.6);
+  return {
+    L_veg_dB: Math.round(L_veg_dB * 10) / 10,
+    f_MHz, d_m,
+    model: 'ITU-R P.833-6 (2007), modèle simplifié',
+    source: 'ITU-R Recommendation P.833-6 (09/2007), Attenuation in vegetation',
+    note: 'Modèle simplifié 833-6 — non repris tel quel dans la version en vigueur P.833-10 (2021), qui utilise le modèle RET (α/β/W/κ + saisonnalité par essence, Tableau 3). Valide documentairement pour d < 400 m.'
+  };
+}
+
+// ─── Géométrie forêt dense — chargement + lookup point-in-polygon optimisé ────
+// Le GeoJSON prétraité (~2 880 polygones, ~122 000 sommets au total après
+// simplification — cf. script pour pourquoi la simplification seule ne
+// suffisait pas) est trop volumineux pour un test point-in-polygon naïf répété
+// (dizaines d'antennes × potentiellement des milliers de cellules de heatmap).
+// Parade : bbox précalculée par PARTIE de polygone (2 880 bbox, comparaison
+// quasi gratuite) — le ray-casting coûteux ne s'exécute que sur les parties
+// dont la bbox contient effectivement le point testé (quasi toujours 0 ou 1
+// partie sur 2 880, les fragments de forêt étant géographiquement disjoints).
+// Même principe que ANFR_GRID (bucketing spatial) déjà utilisé dans ce fichier.
+let FORET_DENSE_PARTS = null; // [{bbox:[minLon,minLat,maxLon,maxLat], rings:[[ [lon,lat],... ], ...]}, ...]
+let FORET_DENSE_BBOX_GLOBAL = null; // [minLon,minLat,maxLon,maxLat] + marge — rejet rapide global
+let _foretDensePromise = null;
+function loadForetDenseGrid(){
+  if (_foretDensePromise) return _foretDensePromise;
+  _foretDensePromise = (async () => {
+    try {
+      const r = await fetch('public/data/foret_dense_corse.geojson', {signal: AbortSignal.timeout(8000)});
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      const geom = d.features && d.features[0] && d.features[0].geometry;
+      const polys = geom && geom.type === 'MultiPolygon' ? geom.coordinates
+                  : geom && geom.type === 'Polygon' ? [geom.coordinates] : [];
+      let gMinLon=Infinity, gMinLat=Infinity, gMaxLon=-Infinity, gMaxLat=-Infinity;
+      FORET_DENSE_PARTS = polys.map(function(rings){
+        let minLon=Infinity, minLat=Infinity, maxLon=-Infinity, maxLat=-Infinity;
+        rings[0].forEach(function(pt){
+          if(pt[0]<minLon)minLon=pt[0]; if(pt[0]>maxLon)maxLon=pt[0];
+          if(pt[1]<minLat)minLat=pt[1]; if(pt[1]>maxLat)maxLat=pt[1];
+        });
+        if(minLon<gMinLon)gMinLon=minLon; if(maxLon>gMaxLon)gMaxLon=maxLon;
+        if(minLat<gMinLat)gMinLat=minLat; if(maxLat>gMaxLat)gMaxLat=maxLat;
+        return {bbox:[minLon,minLat,maxLon,maxLat], rings:rings};
+      });
+      // Marge 0.02° (~2km) : un trajet antenne→point peut légèrement déborder la bbox d'une
+      // partie individuelle avant de l'atteindre — rejet global uniquement pour les trajets
+      // manifestement loin de toute forêt (la grande majorité des calculs RF en pratique),
+      // pas de risque de faux négatif sur un trajet réellement proche d'un massif forestier.
+      const M=0.02;
+      FORET_DENSE_BBOX_GLOBAL = [gMinLon-M, gMinLat-M, gMaxLon+M, gMaxLat+M];
+      console.log('[Tellux] foret_dense_corse.geojson chargé : ' + FORET_DENSE_PARTS.length + ' parties');
+    } catch (e) {
+      console.warn('[Tellux] foret_dense_corse.geojson indisponible : ' + e.message);
+    }
+  })();
+  return _foretDensePromise;
+}
+// Ray-casting standard (even-odd rule) sur un anneau [lon,lat][].
+function _pointInRing(lon, lat, ring){
+  let inside = false;
+  for(let i=0, j=ring.length-1; i<ring.length; j=i++){
+    const xi=ring[i][0], yi=ring[i][1], xj=ring[j][0], yj=ring[j][1];
+    const intersect = ((yi>lat)!==(yj>lat)) && (lon < (xj-xi)*(lat-yi)/(yj-yi)+xi);
+    if(intersect) inside = !inside;
+  }
+  return inside;
+}
+function isPointInForest(lat, lon){
+  if(!FORET_DENSE_PARTS) return false;
+  for(let p=0;p<FORET_DENSE_PARTS.length;p++){
+    const part = FORET_DENSE_PARTS[p];
+    const bb = part.bbox;
+    if(lon<bb[0]||lon>bb[2]||lat<bb[1]||lat>bb[3]) continue; // bbox rapide, quasi tout écarté ici
+    // Anneau 0 = extérieur ; anneaux suivants = trous (evacuent la partie extérieure).
+    if(!_pointInRing(lon, lat, part.rings[0])) continue;
+    let inHole = false;
+    for(let h=1; h<part.rings.length; h++){ if(_pointInRing(lon, lat, part.rings[h])){ inHole=true; break; } }
+    if(!inHole) return true;
+  }
+  return false;
+}
+// Profondeur de végétation traversée le long d'un trajet source→point — approximation
+// par échantillonnage borné (PAS une intersection segment/polygone exacte, cf. brief :
+// "turf.js ou équivalent" aurait donné le même ordre de grandeur pour un coût bien plus
+// élevé sur une géométrie à ~122 000 sommets ; l'échantillonnage reste cohérent avec la
+// nature déjà approximative du modèle ITU-R 833-6 simplifié lui-même). N_SAMPLES fixe le
+// coût par appel (borné, indépendant de la distance) ; capé à 400m = limite de validité
+// documentée du modèle (cf. calcVegetationAttenuation).
+const FOREST_DEPTH_MAX_M = 400;
+const FOREST_DEPTH_N_SAMPLES = 12;
+function estimateForestDepth(lat1, lon1, lat2, lon2){
+  if(!FORET_DENSE_PARTS) return 0;
+  // Rejet rapide global (O(1)) : si NI le point NI la source ne sont dans (ou près de) la
+  // bbox globale des massifs forestiers retenus, aucun échantillonnage n'est nécessaire —
+  // la grande majorité des trajets RF (zones urbaines/côtières, hors forêt) s'arrêtent ici,
+  // évitant le coût de FOREST_DEPTH_N_SAMPLES tests point-in-polygon pour rien.
+  const bb = FORET_DENSE_BBOX_GLOBAL;
+  if(bb && (lon1<bb[0]||lon1>bb[2]||lat1<bb[1]||lat1>bb[3]) && (lon2<bb[0]||lon2>bb[2]||lat2<bb[1]||lat2>bb[3])) return 0;
+  const total_m = dist(lat1, lon1, lat2, lon2) * 1000;
+  if(total_m <= 0) return 0;
+  const sampleSpan_m = Math.min(total_m, FOREST_DEPTH_MAX_M);
+  const frac = sampleSpan_m / total_m; // ne sonde que la portion pertinente (≤400m) du trajet
+  let nInside = 0;
+  for(let i=0;i<FOREST_DEPTH_N_SAMPLES;i++){
+    const t = frac * (i+0.5) / FOREST_DEPTH_N_SAMPLES; // échantillons centrés, portion [0,frac]
+    const lat = lat1 + (lat2-lat1)*t, lon = lon1 + (lon2-lon1)*t;
+    if(isPointInForest(lat, lon)) nInside++;
+  }
+  return Math.round((nInside / FOREST_DEPTH_N_SAMPLES) * sampleSpan_m);
+}
+
 // calcRF = fine enveloppe sur RF_field (consommée par calcAll_v2 → v2.domains.rf).
 // Conserve les clés consommées : S_total_uW_m2 (popup+composite GELÉ), confidence, source.
 function calcRF(lat, lon){
-  const f = RF_field(lat, lon);
-  return { S_total_uW_m2:f.S_total_uW_m2, E_total_V_m:f.E_total_V_m, contributions:f.contributions, forest_attenuation_dB:0, terrain_correction_dB:0, note_ICNIRP:f.note_ICNIRP, source:f.source, confidence:f.confidence, calibrated:false };
+  // applyVegetation=true : calcRF() est le calcul PONCTUEL (calcAll_v2 → clic carte), jamais la
+  // grille de heatmap (buildHotRF() passe par calcN_RF_calib()→RF_field() SANS ce 3e argument,
+  // donc false par défaut) — coût de l'atténuation végétation négligeable sur un seul point.
+  const f = RF_field(lat, lon, true);
+  return { S_total_uW_m2:f.S_total_uW_m2, E_total_V_m:f.E_total_V_m, contributions:f.contributions, forest_attenuation_dB:f.forest_attenuation_dB, terrain_correction_dB:0, note_ICNIRP:f.note_ICNIRP, source:f.source, confidence:f.confidence, calibrated:false };
 }
 // ═══ Calibration RF interne Tellux — facteur scalaire k sur 30 mesures certifiées (ADR-028) ═══
 // k = médiane(mesuré/prédit). Applique E_cal=k·E_raw (⇒ S_cal=k²·S_raw, via RF_field). Exclut
@@ -7665,7 +7840,7 @@ let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.hotrf){lHotRF.clearLayers();buildHotRF();}},300);}
 map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
-setTimeout(()=>Promise.all([loadAnt(),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k)
+setTimeout(()=>Promise.all([loadAnt(),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k)
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET DUR/EBR/CLF (nom loadAQU conservé, cf. commentaire fonction) — correction externe réelle niveau 1
 setTimeout(loadDst,5500); // Dst Kyoto via NOAA — correction externe niveau 2 (Sprint astro 2026-05-25)
