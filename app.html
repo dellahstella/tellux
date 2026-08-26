@@ -1235,14 +1235,29 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 /* top:0 → top:88px (passage plein écran, brief Soleil 2026-08-20 §2 étape 4, valeur
    VÉRIFIÉE en Playwright — voir §7 du livrable). Ancré au sommet de .map-col (désormais
    plein écran), un top:0 placerait ce bandeau plein-largeur littéralement sous #hdr
-   (top:12px) et #layers-toggle (top:12px, 40px) qui, bien qu'en z-index supérieur
-   (1000/1200 > 600) et donc visuellement au-dessus, créeraient un chevauchement
-   disgracieux. Un premier essai à 70px (estimation à vue, hauteur #hdr supposée ~52-56px)
-   s'est révélé insuffisant : mesure Playwright réelle #hdr.getBoundingClientRect() → 70px
-   de haut, donc bottom:82px (top:12+70) — 70px chevauchait encore de 12px. 88px dégage
-   #hdr avec ~6px de marge. Contenu textuel uniquement — pas de valeur pondérée/étiquette
-   touchée, aucun contenu GELÉ-001a modifié. */
-#expert-bandeau{position:absolute;top:88px;left:0;right:0;z-index:600;background:#1F2329;color:#F5F0E7;font-family:var(--mono);font-size:10px;padding:5px 12px;display:none;align-items:center;gap:8px;border-bottom:2px solid #C28533;letter-spacing:.02em;flex-wrap:wrap;pointer-events:all;}
+   (top:12px) et #layers-toggle (top:12px, 40px), créant un chevauchement disgracieux.
+   Un premier essai à 70px (estimation à vue, hauteur #hdr supposée ~52-56px) s'est
+   révélé insuffisant : mesure Playwright réelle #hdr.getBoundingClientRect() → 70px de
+   haut, donc bottom:82px (top:12+70) — 70px chevauchait encore de 12px. 88px dégage #hdr
+   avec ~6px de marge. Contenu textuel uniquement — pas de valeur pondérée/étiquette
+   touchée, aucun contenu GELÉ-001a modifié.
+   CORRECTION 2026-08-26 (brief "Bandeau mode Expertise" — repro Soleil : texte tronqué à
+   gauche + aucun bouton de fermeture atteignable après clic) : z-index 600 → 1151. Cause
+   réelle, confirmée par elementFromPoint() aux deux extrémités du bandeau (PAS un bug de
+   positionnement/overflow — left/right/largeur du bandeau mesurés CORRECTS aux deux
+   endroits) : les contrôles Leaflet natifs coin haut-gauche (zoom +/-) et coin haut-droite
+   (switch fond de carte) peignent PAR-DESSUS le bandeau et interceptent le clic, y compris
+   sur le ✕ de fermeture — .leaflet-top/.leaflet-bottom sont passés à z-index:1150 par le
+   fix mobile du 2026-08-23 (cf. commentaire ci-dessous, "repro Soleil mobile x3") SANS
+   ré-auditer ce bandeau, qui datait du 2026-08-20 et n'avait jamais eu besoin de dépasser
+   #hdr/#layers-toggle (1000/1200) puisque les contrôles Leaflet étaient alors sous 1100.
+   Un seul symptôme, pas deux : le texte manquant à gauche/droite est le même contenu que
+   le bouton de fermeture inatteignable, les deux simplement peints sous les contrôles
+   Leaflet natifs. 1152 = juste au-dessus de 1150 (minimal, préserve l'ordre existant sous
+   .layers-accordion/#hdr-menu à 1160 — cf. commentaire #lightning-warn plus bas, même fix
+   appliqué en miroir, même cause ; 1152 > 1151 pour garder #expert-bandeau au-dessus de
+   #lightning-warn si les deux coexistent, même hiérarchie relative qu'avant ce fix). */
+#expert-bandeau{position:absolute;top:88px;left:0;right:0;z-index:1152;background:#1F2329;color:#F5F0E7;font-family:var(--mono);font-size:10px;padding:5px 12px;display:none;align-items:center;gap:8px;border-bottom:2px solid #C28533;letter-spacing:.02em;flex-wrap:wrap;pointer-events:all;}
 #expert-bandeau.visible{display:flex;}
 #expert-panel{border-top:1px solid var(--border);padding:10px 12px;display:none;background:var(--pierre-ombre);margin-top:4px;border-radius:0 0 var(--r) var(--r);}
 #expert-panel.visible{display:block;}
@@ -1722,12 +1737,19 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
      #expert-bandeau — fixed le rend indépendant de tout ancêtre positionné). top:88px (et
      non 0, même correctif VÉRIFIÉ Playwright que #expert-bandeau ci-dessus §2 étape 4 :
      évite le chevauchement avec #hdr, mesuré à 70px de haut, top:12px → bottom:82px).
-     z-index:590, juste sous #expert-bandeau (600) : les deux bandeaux plein-largeur
+     z-index:1151, juste sous #expert-bandeau (1152) : les deux bandeaux plein-largeur
      peuvent en théorie coexister (orage + mode Expertise actifs simultanément), au MÊME
      top:88px désormais — aucun mécanisme d'empilement vertical n'existe pour ce cas rare,
      signalé en §7 du livrable plutôt que résolu ici (pas dans le périmètre du brief ;
-     préexistant, pas introduit par ce diff). -->
-<div id="lightning-warn" style="display:none;position:fixed;top:88px;left:0;right:0;z-index:590;background:#fff3e6;border-bottom:1px solid #f5a855;padding:6px 12px;font-size:11px;color:#854d0e;text-align:center"></div>
+     préexistant, pas introduit par ce diff).
+     CORRECTION 2026-08-26 (brief "Bandeau mode Expertise", cf. commentaire #expert-bandeau
+     ci-dessus pour le diagnostic complet) : 590 → 1151 (pas un simple +1 sur l'ancienne
+     valeur — MÊME cause que #expert-bandeau, donc même ordre de grandeur de correction).
+     .leaflet-top/.leaflet-bottom à z-index:1150 (fix mobile 2026-08-23) peignent par-dessus
+     ce bandeau aussi, jamais réaudité pour lui non plus. Pas encore signalé par Soleil
+     (orage actif = condition rare) mais même mécanisme, donc même correction préventive —
+     signaler plutôt que laisser un bug jumeau non corrigé en attendant qu'il se manifeste. -->
+<div id="lightning-warn" style="display:none;position:fixed;top:88px;left:0;right:0;z-index:1151;background:#fff3e6;border-bottom:1px solid #f5a855;padding:6px 12px;font-size:11px;color:#854d0e;text-align:center"></div>
 <div class="map-wrap">
 <!-- #layers-toggle — remplace #mob-toggle + #sidebar-toggle (passage plein écran, brief
      Soleil 2026-08-20 §1.3, option (a)). Bouton unique, tous breakpoints, pilote
