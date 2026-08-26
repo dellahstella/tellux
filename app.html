@@ -1095,9 +1095,31 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 /* Header descriptif d'un accordéon (paragraphe d'ouverture, ex. Groupe 3 « Contexte naturel »). */
 .cat-header-text{margin:0 0 8px 0;font-size:11px;color:var(--tx3);font-style:italic;line-height:1.5;}
 /* Mini-header de sous-groupe thématique (A/B/C/D), avec son texte descriptif. */
-.subgroup-header{margin:8px 0 2px 0;padding:0;font-family:var(--font);font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;}
+.subgroup-header{margin:0;padding:0;font-family:var(--font);font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;}
 .subgroup-header-first{margin-top:0;}
 .subgroup-text{margin:0 0 6px 0;font-size:10px;color:var(--tx3);font-style:italic;line-height:1.5;}
+/* Sous-accordéon A/B/C/D (brief "Affichage EM" 2026-08-26) : même mécanique JS que
+   .accordion-cat-header/.accordion-cat-content (toggleAccordion() générique, cf. JS),
+   habillage visuel plus compact/discret que les groupes top-niveau — pas de fond
+   coloré à l'état ouvert, juste le chevron + la couleur d'accent sur le texte.
+   Sous-groupe A ("Substrat magnétique") ouvert par défaut au chargement, B/C/D repliés
+   — indépendant de l'état (déjà replié par défaut) des groupes top-niveau eux-mêmes. */
+.subgroup-toggle{display:flex;align-items:center;gap:6px;padding:6px 2px;cursor:pointer;background:none;margin:6px 0 0 0;}
+.subgroup-toggle:first-child{margin-top:0;}
+.subgroup-toggle .subgroup-header{margin:0;}
+.subgroup-toggle.open{background:none;}
+.subgroup-toggle.open .subgroup-header{color:var(--acc);}
+.subgroup-toggle .accordion-cat-icon{width:11px;font-size:9px;}
+.subgroup-content{padding:0 2px;}
+.subgroup-content.open{padding:2px 2px 4px 2px;}
+/* Badges de statut par couche (brief "Affichage EM" 2026-08-26) : catégorise en un
+   coup d'œil le rôle de la couche vis-à-vis du calcul Tellux, sans dépendre du survol
+   du title= (déjà présent sur chaque bouton, conservé tel quel pour le détail complet). */
+.layer-badge{display:inline-block;font-family:var(--mono);font-size:8.5px;padding:1px 6px;border-radius:999px;margin-left:6px;vertical-align:middle;white-space:nowrap;font-weight:500;letter-spacing:.02em;}
+.layer-badge--calc{background:var(--maquis-pale);color:var(--acc);}
+.layer-badge--context{background:var(--pierre-ombre);color:var(--tx3);}
+.layer-badge--hors{background:rgba(142,47,31,.12);color:#8E2F1F;}
+.layer-badge--link{background:rgba(2,132,199,.12);color:#0284c7;}
 
 /* Quête FAB */
 .quest-btn{position:fixed;bottom:20px;left:16px;width:52px;height:52px;border-radius:50%;background:var(--acc);color:white;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);transition:all .2s;z-index:1050;display:flex;align-items:center;justify-content:center;}
@@ -1770,63 +1792,98 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <div class="accordion-cat-content">
       <p class="cat-header-text">Substrat géologique, indicateurs structurels et références comparatives. Certaines couches modulent le calcul Tellux (substrat magnétique, radon, fond magnétique régional), d'autres servent uniquement de contexte visuel — la distinction est explicitée pour chaque couche.</p>
 
-      <h5 class="subgroup-header subgroup-header-first">A. Substrat magnétique</h5>
-      <p class="subgroup-text">Modulent le calcul Tellux : susceptibilité magnétique, potentiel radon, fond magnétique régional. Les failles sont un indicateur de contexte (popup), non intégrées au calcul.</p>
-      <!-- Couche « Géologie BRGM » retirée de la carte publique le 2026-08-20 (décision Soleil :
-           chaque couche vit dans l'app qui correspond à son domaine causal — la géologie est la
-           source de lithologie du calcul radon, cf. getGeoType()/GEO_SUSC_GRID, INCHANGÉS). Déjà
-           présente sur radon.html avant ce retrait ; app.html n'en a donc plus de copie. -->
-      <button class="lbtn" id="b-failles" data-domains="statique" title="Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)" onclick="togFailles(this)"><span class="ln" style="background:#8E2F1F"></span>Failles tectoniques</button>
-      <div class="mlegend-inline" id="mleg-failles"></div>
-      <!-- Couches « Radon » et « Dépôts radon ERP (certifié) » retirées de la carte publique le
-           2026-08-20 (pattern PR #990 : consolidation dans une app dédiée, pas un retrait de
-           contenu). Le zonage ASNR, les dépôts ERP et la géologie BRGM en couche de référence
-           radon sont désormais sur radon.html, avec en plus une lecture par commune et les 4
-           courriers radon (auparavant sur mairies.html). Le chargement des données
-           (indexRadonZonesOfficial() au boot, calcRadonPotential()) reste actif et INCHANGÉ —
-           voir bloc "DOMAINE I — Potentiel radon" plus bas dans ce fichier : le calcul composite
-           (calcGammaAmbient, boost ponctuel) continue de s'appliquer exactement comme avant. -->
-      <a class="lbtn" href="radon.html" title="Zonage radon ASNR, dépôts ERP certifiés et courriers dédiés — ouvre l'application radon" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px"><span class="sq" style="background:#C28533"></span>Voir le volet radon &rarr;</a>
-      <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Fond magnétique régional</button>
-      <div class="mlegend-inline" id="mleg-emag"></div>
+      <!-- Sous-accordéon A/B/C/D (brief "Affichage EM" 2026-08-26) : A ouvert par défaut, B/C/D
+           repliés — indépendant du repli du groupe "Contexte naturel" lui-même (déjà replié par
+           défaut au niveau du groupe top-niveau). Descriptifs longs conservés intégralement en
+           title= (même convention que chaque bouton .lbtn du fichier) plutôt qu'un nouveau
+           mécanisme de disclosure ; réduits ici à une ligne courte visible. Badges de statut par
+           couche : mêmes 4 catégories partout dans ce groupe (Module le calcul / Contexte / Hors
+           calcul / Lien), cf. .layer-badge* plus haut. -->
+      <div class="subgroup">
+        <div class="accordion-cat-header subgroup-toggle open" onclick="toggleAccordion(this)">
+          <span class="accordion-cat-icon open">▶</span>
+          <h5 class="subgroup-header subgroup-header-first">A. Substrat magnétique</h5>
+        </div>
+        <div class="accordion-cat-content subgroup-content open">
+          <p class="subgroup-text" title="Modulent le calcul Tellux : susceptibilité magnétique, potentiel radon, fond magnétique régional. Les failles sont un indicateur de contexte (popup), non intégrées au calcul.">Modulent le calcul (magnétique, radon, fond régional) — failles en contexte seul.</p>
+          <!-- Couche « Géologie BRGM » retirée de la carte publique le 2026-08-20 (décision Soleil :
+               chaque couche vit dans l'app qui correspond à son domaine causal — la géologie est la
+               source de lithologie du calcul radon, cf. getGeoType()/GEO_SUSC_GRID, INCHANGÉS). Déjà
+               présente sur radon.html avant ce retrait ; app.html n'en a donc plus de copie. -->
+          <button class="lbtn" id="b-failles" data-domains="statique" title="Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)" onclick="togFailles(this)"><span class="ln" style="background:#8E2F1F"></span>Failles tectoniques<span class="layer-badge layer-badge--context">Contexte</span></button>
+          <div class="mlegend-inline" id="mleg-failles"></div>
+          <!-- Couches « Radon » et « Dépôts radon ERP (certifié) » retirées de la carte publique le
+               2026-08-20 (pattern PR #990 : consolidation dans une app dédiée, pas un retrait de
+               contenu). Le zonage ASNR, les dépôts ERP et la géologie BRGM en couche de référence
+               radon sont désormais sur radon.html, avec en plus une lecture par commune et les 4
+               courriers radon (auparavant sur mairies.html). Le chargement des données
+               (indexRadonZonesOfficial() au boot, calcRadonPotential()) reste actif et INCHANGÉ —
+               voir bloc "DOMAINE I — Potentiel radon" plus bas dans ce fichier : le calcul composite
+               (calcGammaAmbient, boost ponctuel) continue de s'appliquer exactement comme avant. -->
+          <a class="lbtn" href="radon.html" title="Zonage radon ASNR, dépôts ERP certifiés et courriers dédiés — ouvre l'application radon" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px"><span class="sq" style="background:#C28533"></span>Voir le volet radon &rarr;<span class="layer-badge layer-badge--link">Lien</span></a>
+          <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Fond magnétique régional<span class="layer-badge layer-badge--calc">Module le calcul</span></button>
+          <div class="mlegend-inline" id="mleg-emag"></div>
+        </div>
+      </div>
 
-      <h5 class="subgroup-header">B. Contexte territorial (géologie, hydro, forêts)</h5>
-      <p class="subgroup-text">Repères géologiques et paysagers, à titre indicatif — aucune couche n'entre dans le calcul.</p>
-      <!-- Couche « Cavités » retirée de la carte publique le 2026-08-20 (décision Soleil : les
-           cavités souterraines (grottes, karst, mines) sont un mécanisme d'accumulation possible
-           du radon, elles vivent désormais sur radon.html plutôt qu'ici — aucun calcul Tellux
-           n'utilisait cette couche). -->
-      <button class="lbtn" id="b-therm" data-domains="statique" title="Émergences thermales — observations de surface, marqueurs de failles actives" onclick="tog('therm','on-therm',this)"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Émergences thermales</button>
-      <div class="mlegend-inline" id="mleg-therm"></div>
-      <button class="lbtn" id="b-hyd" data-domains="visuel" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie</button>
-      <div class="mlegend-inline" id="mleg-hyd"></div>
-      <button class="lbtn" id="b-foret" data-domains="visuel" title="Forêts publiques ONF via WMS IGN Géoplateforme — couche visuelle niveau A (pas de modulation calcul). BD Forêt V2 complète non disponible en WMS public." onclick="tog('foret','on-foret',this)"><span class="sq" style="background:#3F5B3A"></span>Forêts publiques</button>
-      <div class="mlegend-inline" id="mleg-foret"></div>
+      <div class="subgroup">
+        <div class="accordion-cat-header subgroup-toggle" onclick="toggleAccordion(this)">
+          <span class="accordion-cat-icon">▶</span>
+          <h5 class="subgroup-header">B. Contexte territorial (géologie, hydro, forêts)</h5>
+        </div>
+        <div class="accordion-cat-content subgroup-content">
+          <p class="subgroup-text" title="Repères géologiques et paysagers, à titre indicatif — aucune couche n'entre dans le calcul.">Repères géologiques et paysagers indicatifs — hors calcul.</p>
+          <!-- Couche « Cavités » retirée de la carte publique le 2026-08-20 (décision Soleil : les
+               cavités souterraines (grottes, karst, mines) sont un mécanisme d'accumulation possible
+               du radon, elles vivent désormais sur radon.html plutôt qu'ici — aucun calcul Tellux
+               n'utilisait cette couche). -->
+          <button class="lbtn" id="b-therm" data-domains="statique" title="Émergences thermales — observations de surface, marqueurs de failles actives" onclick="tog('therm','on-therm',this)"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Émergences thermales<span class="layer-badge layer-badge--context">Contexte</span></button>
+          <div class="mlegend-inline" id="mleg-therm"></div>
+          <button class="lbtn" id="b-hyd" data-domains="visuel" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie<span class="layer-badge layer-badge--context">Contexte</span></button>
+          <div class="mlegend-inline" id="mleg-hyd"></div>
+          <button class="lbtn" id="b-foret" data-domains="visuel" title="Forêts publiques ONF via WMS IGN Géoplateforme — couche visuelle niveau A (pas de modulation calcul). BD Forêt V2 complète non disponible en WMS public." onclick="tog('foret','on-foret',this)"><span class="sq" style="background:#3F5B3A"></span>Forêts publiques<span class="layer-badge layer-badge--context">Contexte</span></button>
+          <div class="mlegend-inline" id="mleg-foret"></div>
+        </div>
+      </div>
 
-      <h5 class="subgroup-header">C. Sites documentaires</h5>
-      <p class="subgroup-text">Catalogue de comparaison, issu de la littérature ou de mesures externes — hors calcul, confirmation locale à faire sur le terrain.</p>
-      <!-- Couche « Sites U/Th à mesurer » retirée de la carte publique le 2026-08-19 (décision
-           Soleil, risque nocebo A.4 sur un catalogue 100% documentaire/non mesuré) — contenu
-           transposé en fiche documentaire sur cadre-scientifique.html. Le chargement des données
-           (POINTS_CHAUDS_RADIO, via loadPointsChaudsRadio()/loadSitesApp()) reste actif au boot
-           pour le boost ponctuel du calcul gamma composite (calcGammaAmbient) — voir commentaire
-           au-dessus de loadPointsChaudsRadio(). -->
-      <!-- Couche « Anomalies de substrat (serpentinite, magnétite) & Th-234 » retirée de la carte
-           publique le 2026-08-20 (pattern PR #990, même logique que le retrait "Sites U/Th" du
-           2026-08-19) — contenu transposé en fiche documentaire cadre-scientifique.html §10.9
-           (voir diff cadre-scientifique.html). Le chargement des données (SITES_REMARQUABLES,
-           via loadSitesApp(), même loader partagé que POINTS_CHAUDS_RADIO) reste actif et
-           INCONDITIONNEL au boot : NE PAS retirer la déclaration `let SITES_REMARQUABLES = [];`
-           ni son assignation dans loadSitesApp() — elles sont indissociables du chargement de
-           POINTS_CHAUDS_RADIO qui alimente le boost ponctuel de calcGammaAmbient. -->
-      <button class="lbtn" id="b-crustal" data-domains="statique" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF) — opt-in, comparaison locale/mondiale" onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales)</button>
-      <div class="mlegend-inline" id="mleg-crustal"></div>
+      <div class="subgroup">
+        <div class="accordion-cat-header subgroup-toggle" onclick="toggleAccordion(this)">
+          <span class="accordion-cat-icon">▶</span>
+          <h5 class="subgroup-header">C. Sites documentaires</h5>
+        </div>
+        <div class="accordion-cat-content subgroup-content">
+          <p class="subgroup-text" title="Catalogue de comparaison, issu de la littérature ou de mesures externes — hors calcul, confirmation locale à faire sur le terrain.">Catalogue de comparaison — hors calcul, à confirmer sur le terrain.</p>
+          <!-- Couche « Sites U/Th à mesurer » retirée de la carte publique le 2026-08-19 (décision
+               Soleil, risque nocebo A.4 sur un catalogue 100% documentaire/non mesuré) — contenu
+               transposé en fiche documentaire sur cadre-scientifique.html. Le chargement des données
+               (POINTS_CHAUDS_RADIO, via loadPointsChaudsRadio()/loadSitesApp()) reste actif au boot
+               pour le boost ponctuel du calcul gamma composite (calcGammaAmbient) — voir commentaire
+               au-dessus de loadPointsChaudsRadio(). -->
+          <!-- Couche « Anomalies de substrat (serpentinite, magnétite) & Th-234 » retirée de la carte
+               publique le 2026-08-20 (pattern PR #990, même logique que le retrait "Sites U/Th" du
+               2026-08-19) — contenu transposé en fiche documentaire cadre-scientifique.html §10.9
+               (voir diff cadre-scientifique.html). Le chargement des données (SITES_REMARQUABLES,
+               via loadSitesApp(), même loader partagé que POINTS_CHAUDS_RADIO) reste actif et
+               INCONDITIONNEL au boot : NE PAS retirer la déclaration `let SITES_REMARQUABLES = [];`
+               ni son assignation dans loadSitesApp() — elles sont indissociables du chargement de
+               POINTS_CHAUDS_RADIO qui alimente le boost ponctuel de calcGammaAmbient. -->
+          <button class="lbtn" id="b-crustal" data-domains="statique" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF) — opt-in, comparaison locale/mondiale" onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales)<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
+          <div class="mlegend-inline" id="mleg-crustal"></div>
+        </div>
+      </div>
 
-      <h5 class="subgroup-header">D. Mesures citoyennes — rayonnement gamma</h5>
-      <p class="subgroup-text">Débit de dose gamma/X ambiant mesuré par des citoyens (OpenRadiation, tubes Geiger). <b>Gamma/X, pas radon.</b> Affichage indépendant, hors indice et hors calcul gamma. Mesures indicatives, capteurs hétérogènes non certifiés ; inclut des traces continues (densité affichée ≠ nombre de sites).</p>
-      <button class="lbtn" id="b-openrad" data-domains="ionisant" title="Mesures citoyennes de débit de dose gamma/X ambiant (OpenRadiation, tubes Geiger, µSv/h). Gamma/X, PAS radon. Couche d'affichage indépendante — non injectée dans l'indice ni le calcul gamma. Indicatives, capteurs hétérogènes, non certifiées ; inclut des traces (densité ≠ nombre de sites)." onclick="tog('openrad','on-openrad',this)"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Gamma citoyen (OpenRadiation)</button>
-      <div class="mlegend-inline" id="mleg-openrad"></div>
-      <!-- TODO backlog couches : Communes radon niveau 3 overlay (GeoJSON geometries à fournir), MNT altitude overlay -->
+      <div class="subgroup">
+        <div class="accordion-cat-header subgroup-toggle" onclick="toggleAccordion(this)">
+          <span class="accordion-cat-icon">▶</span>
+          <h5 class="subgroup-header">D. Mesures citoyennes — rayonnement gamma</h5>
+        </div>
+        <div class="accordion-cat-content subgroup-content">
+          <p class="subgroup-text" title="Débit de dose gamma/X ambiant mesuré par des citoyens (OpenRadiation, tubes Geiger). Gamma/X, pas radon. Affichage indépendant, hors indice et hors calcul gamma. Mesures indicatives, capteurs hétérogènes non certifiés ; inclut des traces continues (densité affichée ≠ nombre de sites).">Mesures citoyennes gamma/X (pas radon) — hors indice, hors calcul.</p>
+          <button class="lbtn" id="b-openrad" data-domains="ionisant" title="Mesures citoyennes de débit de dose gamma/X ambiant (OpenRadiation, tubes Geiger, µSv/h). Gamma/X, PAS radon. Couche d'affichage indépendante — non injectée dans l'indice ni le calcul gamma. Indicatives, capteurs hétérogènes, non certifiées ; inclut des traces (densité ≠ nombre de sites)." onclick="tog('openrad','on-openrad',this)"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Gamma citoyen (OpenRadiation)<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
+          <div class="mlegend-inline" id="mleg-openrad"></div>
+          <!-- TODO backlog couches : Communes radon niveau 3 overlay (GeoJSON geometries à fournir), MNT altitude overlay -->
+        </div>
+      </div>
     </div>
   </div>
 
