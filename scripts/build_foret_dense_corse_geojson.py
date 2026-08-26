@@ -174,7 +174,7 @@ def main():
             "licence": "Etalab Open License 2.0",
             "classes_retenues": "CODE_TFV préfixe FF* (Forêt fermée, couvert arboré >40%) — 19 classes rencontrées (mélanges feuillus/conifères, essences pures : hêtre, châtaignier, chênes, pins, sapin/épicéa, douglas...). Exclus : FO* (forêt ouverte, 10-40%), LA4 (Lande), LA6 (formation herbacée).",
             "date_pretraitement": date.today().isoformat(),
-            "traitement": "mapshaper (fusion 2A+2B, filtre CODE_TFV, reprojection Lambert-93→WGS84, dissolution, simplification Visvalingam 1%) + Shapely (buffer(0) validité).",
+            "traitement": "mapshaper (fusion 2A+2B, filtre CODE_TFV, reprojection Lambert-93→WGS84, dissolution, simplification Visvalingam 0.15% + filtre îlots <5ha) + Shapely (buffer(0) validité).",
         },
         "features": [{
             "type": "Feature",
