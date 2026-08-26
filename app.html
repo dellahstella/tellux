@@ -1015,24 +1015,68 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    chevauchement à la source plutôt que de choisir qui gagne. */
 .leaflet-top.leaflet-left{top:84px;}
 .leaflet-top.leaflet-right{top:54px;}
+.layers-sheet-handle{display:none;}
 @media(max-width:768px){
-  .map-wrap .layers-accordion{width:100%;max-width:100%;}
+  /* Couches — bottom sheet partiel plutôt que remplacement plein écran (brief "refonte nav
+     mobile" 2026-08-26, constat : les 3 onglets remplaçaient l'écran entier au lieu de se
+     superposer à la carte, rendant l'activation d'une couche impossible sans perdre la vue
+     carte). Override COMPLET de transform (pas juste width comme avant ce diff) : axe
+     d'animation passe de translateX (tiroir latéral desktop, inchangé) à translateY (tiroir
+     du bas mobile). Hauteur partielle par défaut (52vh) ; .expanded (posé/retiré par
+     toggleLayersSheetExpand(), JS) l'étend proche du plein écran SANS jamais couvrir la
+     tabbar (bottom:var(--mobile-tabbar-h) fixe dans les deux états) — la carte reste donc
+     toujours au moins partiellement visible ET interactive (zoom/pan) au-dessus du panneau,
+     puisque celui-ci ne couvre plus qu'une portion du bas de l'écran, jamais son intégralité
+     verticale. Pas de scrim/backdrop derrière le panneau : en poser un bloquerait précisément
+     l'interaction carte que ce chantier vise à préserver. */
+  .map-wrap .layers-accordion{
+    left:0;right:0;width:100%;max-width:100%;
+    top:auto;bottom:var(--mobile-tabbar-h);
+    height:52vh;max-height:calc(100% - var(--mobile-tabbar-h) - 64px);
+    border-radius:16px 16px 0 0;
+    box-shadow:0 -4px 20px rgba(0,0,0,.15);
+    padding-top:0;
+    transform:translateY(100%);
+    transition:transform .3s ease-out,height .25s ease;
+  }
+  .map-wrap .layers-accordion.open{transform:translateY(0);}
+  .map-wrap .layers-accordion.expanded{height:calc(100% - var(--mobile-tabbar-h) - 16px);}
+  .layers-sheet-handle{
+    display:flex;align-items:center;justify-content:center;
+    width:100%;padding:10px 0 6px;margin:0 0 4px;
+    background:none;border:none;cursor:pointer;touch-action:manipulation;
+  }
+  .layers-sheet-handle .bar{width:36px;height:4px;border-radius:2px;background:var(--border);}
+  .layers-sheet-handle:hover .bar,.layers-sheet-handle:active .bar{background:var(--tx3);}
 }
-/* Nav mobile — 3 onglets plein écran (Phase 1, point 11, contrat CONTRAT_NAV_MOBILE_APP_
-   2026-08-23.md). Invisible ≥768px par défaut (.mobile-tabbar{display:none} hors media
-   query) — desktop garde .hdr/#layers-toggle/#hdr-menu-toggle exactement comme avant,
-   rien ci-dessous ne s'applique hors de ce media query. Sous 768px : #layers-toggle et
-   #hdr-menu-toggle (désormais redondants avec les onglets Couches/Infos) sont masqués ;
-   .layers-accordion et #hdr-menu restent les MÊMES éléments/mécanismes .open qu'avant
-   (aucune duplication de contenu), simplement pilotés par switchMobileTab() au lieu des
-   boutons ronds. #conditions-bar et .fab-mesure/.fab-menu décalés de la hauteur de la
+/* Nav mobile — tabbar 2 onglets + panneau Couches en bottom sheet (refonte 2026-08-26,
+   brief "refonte nav mobile" — remplace la version 3-onglets-plein-écran de Phase 1,
+   contrat CONTRAT_NAV_MOBILE_APP_2026-08-23.md, dont le choix structurel — chaque onglet
+   remplace l'écran entier — s'est avéré être la cause commune de 3 signalements distincts :
+   activer une couche fait perdre la vue carte, légendes trop lourdes, onglet Infos qui
+   n'est qu'une liste de liens ne justifiant pas un onglet dédié). Invisible ≥768px par
+   défaut (.mobile-tabbar{display:none} hors media query) — desktop garde .hdr/#layers-toggle
+   /#hdr-menu-toggle exactement comme avant, rien ci-dessous ne s'applique hors de ce media
+   query. Sous 768px : #layers-toggle reste masqué (Couches passe par la tabbar), MAIS
+   #hdr-menu-toggle est désormais RÉAFFICHÉ (contrairement à la version précédente qui le
+   masquait aussi) — c'est le mécanisme existant qui sert de "menu hamburger discret" demandé
+   par le brief pour l'ex-onglet Infos, pas un nouveau composant : #hdr-menu et
+   toggleHdrMenu()/closeHdrMenu() (JS, inchangés) fonctionnent déjà de façon autonome sur
+   desktop, on les laisse simplement redevenir le seul point d'entrée mobile aussi, au lieu
+   de dupliquer leur pilotage dans switchMobileTab(). #hdr-menu garde donc sa présentation
+   compacte par défaut (pilule ancrée sous le bouton, cf. règle desktop plus haut) — pas de
+   remplacement plein écran mobile spécifique ci-dessous, contrairement à avant : un menu
+   "discret" n'a pas vocation à occuper tout l'écran. .layers-accordion (Couches) passe en
+   bottom sheet partiel, cf. règles dédiées plus haut (recherche "bottom sheet partiel" dans
+   ce fichier) — la carte reste donc visible/interactive derrière, y compris pendant que
+   Couches est ouvert. #conditions-bar et .fab-mesure/.fab-menu décalés de la hauteur de la
    tabbar (--mobile-tabbar-h) pour ne pas passer dessous (Phase 0 §5.1/5.2 : les deux
-   restent en place tels quels sur l'onglet Carte, décision Soleil). */
+   restent en place tels quels sur l'onglet Carte, décision Soleil, inchangé par ce diff). */
 .mobile-tabbar{display:none;}
 .mlegend-inline{display:none;}
 @media(max-width:768px){
   :root{--mobile-tabbar-h:60px;}
-  #layers-toggle,#hdr-menu-toggle{display:none;}
+  #layers-toggle{display:none;}
   .mobile-tabbar{
     display:flex;position:fixed;left:0;right:0;bottom:0;z-index:1200;
     background:var(--bg);border-top:1px solid var(--border);
@@ -1050,36 +1094,47 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
      cette Phase 1 : exactement le même que celui déjà présent (pré-existant, hors
      périmètre, non corrigé) sur l'ancien override mobile .fab-mesure/.fab-menu de ce
      fichier. Décalage posé juste après chaque règle de base à la place — voir plus bas. */
-  /* #hdr-menu — réutilisé tel quel comme contenu de l'onglet Infos (mêmes boutons/liens,
-     même mécanisme .open) ; seule la présentation change (pilule 240px → plein écran). */
-  #hdr-menu{
-    top:0;left:0;right:0;bottom:var(--mobile-tabbar-h);width:auto;max-width:none;
-    border-radius:0;flex-direction:column;padding:16px;overflow-y:auto;
-  }
-  #hdr-menu .hdr-btn{font-size:14px;padding:12px 14px;}
-  /* Onglet Couches — fusion .layers-accordion + #legende/#tellux-leg-panel (contrat §2 :
+  /* Onglet Couches — .layers-accordion (fusion + #legende/#tellux-leg-panel, contrat §2 :
      "la légende d'une couche active s'affiche inline sous son bouton plutôt que dans un
-     panneau séparé ouvert par « ? »"). #legende (bulle "?") N'EST PAS retiré : il reste
-     utile sur l'onglet Carte (légende core hot/hotrf flottante par-dessus la carte sans
-     quitter la vue carte) — sur l'onglet Couches il est simplement recouvert par
-     l'accordéon plein écran (z-index:1100 > #legende:1000, déjà vrai avant ce diff),
-     aucun changement requis là-dessus. .mlegend-inline (générique, un slot par bouton
-     .lbtn) est peuplé par updateInlineLegendMobile(id,show), appelée depuis showLegend()
-     — même choke point que tog()/togFailles()/togPostesSources(), donc les 15 couches à
-     légende sont couvertes sans point d'accroche par bouton (cf. .mlegend-inline{display:
-     none} plus haut, JS plus bas). Touch : boutons de couches et en-têtes de catégorie
+     panneau séparé ouvert par « ? »" — INCHANGÉ par ce diff, seule la verbosité par défaut
+     change ci-dessous). #legende (bulle "?") N'EST PAS retiré : reste utile sur l'onglet
+     Carte (légende core hot/hotrf flottante par-dessus la carte) — sur Couches il peut
+     rester partiellement visible AU-DESSUS du bottom sheet désormais (celui-ci ne couvre
+     plus tout l'écran), contrairement à la version plein-écran précédente qui le recouvrait
+     entièrement — pas un problème, juste un changement d'exposition, aucune action requise.
+     .mlegend-inline (générique, un slot par bouton .lbtn) est peuplé par
+     updateInlineLegendMobile(id,show), appelée depuis showLegend() — même choke point que
+     tog()/togFailles()/togPostesSources(), donc les 15 couches à légende sont couvertes
+     sans point d'accroche par bouton. Touch : boutons de couches et en-têtes de catégorie
      agrandis pour cible tactile ≥44px (police/padding desktop trop petits — 10px/3-7px —
-     conçus pour une sidebar 420px, pas un plein écran mobile). */
+     conçus pour une sidebar 420px, pas un panneau mobile). */
   .lbtn{font-size:13px;padding:11px 14px;border-radius:10px;min-height:44px;}
   .accordion-cat-content{gap:8px;}
   .accordion-cat-header{padding:12px 14px;font-size:13px;}
   .domain-chip{padding:7px 13px;font-size:12px;}
+  /* Légende allégée par défaut (brief "refonte nav mobile" : "même doctrine que le menu EM
+     desktop #1042 — une ligne courte + badge par défaut, détail complet au clic"). Le
+     contenu injecté par updateInlineLegendMobile() (JS) est désormais enveloppé dans un
+     <details>/<summary> natif — la ligne courte EST le <summary> (texte réutilisé du title=
+     du bouton .lbtn, pas réécrit à la main pour les 15 couches — cohérence garantie avec la
+     source déjà vérifiée), le HTML complet (LEGEND_HTML[id], inchangé, même source que la
+     bulle "?" desktop) ne se déploie qu'au clic. Pas de mécanisme de disclosure inventé :
+     <details> est standard, accessible nativement (clavier, lecteurs d'écran), zéro JS
+     supplémentaire pour l'ouverture/fermeture elle-même. */
   .mlegend-inline.active{
-    display:block;margin:-4px 0 4px;padding:10px 12px;
+    display:block;margin:-4px 0 4px;padding:0 12px;
     background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r);
-    font-size:11px;
+    font-size:11px;overflow:hidden;
   }
-  .mlegend-inline .leg-block{padding:0;}
+  .mlegend-inline .mleg-details{padding:0;}
+  .mlegend-inline .mleg-details summary{
+    padding:10px 0;cursor:pointer;font-weight:600;color:var(--acc);
+    list-style:none;display:flex;align-items:center;gap:6px;
+  }
+  .mlegend-inline .mleg-details summary::-webkit-details-marker{display:none;}
+  .mlegend-inline .mleg-details summary::before{content:'▸';font-size:9px;transition:transform .15s;}
+  .mlegend-inline .mleg-details[open] summary::before{transform:rotate(90deg);}
+  .mlegend-inline .mleg-details .leg-block{padding:0 0 10px;}
 }
 [data-theme="dark"] .mlegend-inline.active{background:rgba(255,255,255,.04);}
 .layers-accordion{display:flex;flex-direction:column;gap:4px;}
@@ -1756,6 +1811,14 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
      .layers-accordion via .open (voir toggleLayersPanel(), JS). -->
 <button id="layers-toggle" type="button" onclick="toggleLayersPanel()" aria-label="Couches" aria-expanded="false">☰</button>
 <div class="layers-accordion" id="layers-accordion">
+
+  <!-- Poignée bottom-sheet mobile (brief "refonte nav mobile" 2026-08-26) : invisible ≥768px
+       (même convention que .mlegend-inline/.mobile-tabbar — masqué hors media query, pas de
+       check de largeur JS nécessaire). Bouton, pas un geste de drag (alternative explicitement
+       permise par le brief) — bascule entre hauteur partielle (défaut) et étendue via
+       toggleLayersSheetExpand(). Sans effet/inatteignable sur desktop (tiroir latéral plein
+       hauteur inchangé). -->
+  <button type="button" class="layers-sheet-handle" id="layers-sheet-handle" onclick="toggleLayersSheetExpand()" aria-label="Agrandir ou réduire le panneau couches" aria-expanded="false"><span class="bar"></span></button>
 
   <!-- Filtre par domaine physique : 5 chips additifs au-dessus de l'accordion. État initial "Tous" actif. -->
   <div class="domain-chips" role="group" aria-label="Filtre par domaine physique">
@@ -3409,11 +3472,20 @@ function updateLegendPanel(){
 // (.mlegend-inline{display:none} hors media query) : aucun check de largeur nécessaire ici,
 // même logique que .mobile-tabbar. N'affecte ni LEGEND_ACTIVE_CORE ni LEGEND_ACTIVE_CONTEXT
 // (Zone 1/2 desktop, #tellux-leg-panel/#tellux-legends-context, INCHANGÉES par ce diff).
+// CORRECTION 2026-08-26 (brief "refonte nav mobile" : "légendes trop lourdes" — même doctrine
+// que le menu EM desktop #1042, ligne courte par défaut + détail au clic) : le HTML complet
+// (legendHtmlFor(id), inchangé, même source que la bulle "?" desktop) est désormais enveloppé
+// dans un <details>/<summary> natif au lieu d'être injecté à plat. La ligne courte réutilise le
+// title= du bouton .lbtn correspondant (première clause avant le tiret, déjà écrite/vérifiée
+// pour ce bouton — pas 15 résumés réécrits à la main, qui risqueraient de diverger de la
+// description réelle) ; repli sur "Légende" si le bouton ou son title sont introuvables.
 function updateInlineLegendMobile(id,show){
   const el=document.getElementById('mleg-'+id);
   if(!el)return;
   if(show&&LEGEND_HTML[id]){
-    el.innerHTML=legendHtmlFor(id);
+    const btn=document.getElementById('b-'+id);
+    const shortLabel=(btn&&btn.title)?btn.title.split(/[—–]/)[0].trim():'Légende';
+    el.innerHTML='<details class="mleg-details"><summary>'+shortLabel+'</summary>'+legendHtmlFor(id)+'</details>';
     el.classList.add('active');
   }else{
     el.classList.remove('active');
@@ -7973,11 +8045,14 @@ function closeHdrMenu(){
 document.addEventListener('click', function(e){
   var m = document.getElementById('hdr-menu');
   var btn = document.getElementById('hdr-menu-toggle');
-  // .mobile-tabbar exempté (repro trouvée en testant Phase 1 nav mobile, 2026-08-23) :
-  // switchMobileTab('infos') ouvre #hdr-menu AVANT que ce clic ne finisse de remonter
-  // jusqu'à document — sans cette exemption, ce même listener le refermait aussitôt
-  // (le clic sur l'onglet est bien "hors #hdr-menu", donc considéré comme un clic
-  // extérieur alors qu'il vient d'en déclencher l'ouverture).
+  // .mobile-tabbar exempté : switchMobileTab() appelle closeHdrMenu() par précaution au
+  // changement d'onglet (cf. commentaire switchMobileTab plus bas) — sans cette exemption,
+  // ce même listener referme #hdr-menu une seconde fois inutilement sur tout tap d'onglet,
+  // et surtout empêcherait toute interaction normale avec la tabbar pendant que #hdr-menu
+  // est ouvert (elle serait traitée comme un "clic extérieur" ordinaire, ce qu'elle est,
+  // mais closeHdrMenu() s'en charge déjà explicitement, pas besoin de ce chemin-ci en plus).
+  // Reliquat de la Phase 1 nav mobile (2026-08-23, race avec l'ancien onglet Infos, retiré
+  // depuis) — exemption conservée, plus défensive que strictement nécessaire aujourd'hui.
   var tabbar = document.getElementById('mobile-tabbar');
   if(!m || !m.classList.contains('open')) return;
   if(m.contains(e.target) || (btn && btn.contains(e.target)) || (tabbar && tabbar.contains(e.target))) return;
@@ -7987,23 +8062,29 @@ document.addEventListener('keydown', function(e){
   if(e.key === 'Escape') closeHdrMenu();
 });
 
-// switchMobileTab — Phase 1 nav mobile (point 11, contrat CONTRAT_NAV_MOBILE_APP_2026-08-23.md).
-// Pilote .layers-accordion et #hdr-menu (mêmes éléments/mécanismes .open que sur desktop,
-// aucun contenu dupliqué) en état EXPLICITE (pas toggle — un onglet cliqué doit toujours
-// mener au même résultat, jamais à l'inverse de l'état courant). Onglet Carte = aucun des
-// deux ouvert (le FAB/#cform/#info/#conditions-bar restent gérés par leurs mécanismes
-// propres, inchangés, cf. Phase 0 §5.1/5.2 du contrat). N'a d'effet que sous 768px (CSS) ;
-// appelable sans risque au-dessus, mais les boutons qui l'appellent sont eux-mêmes masqués
-// par .mobile-tabbar{display:none} hors media query, donc inatteignables sur desktop.
+// switchMobileTab — refonte 2026-08-26 (brief "refonte nav mobile"), 2 onglets au lieu de 3
+// (Carte/Couches — Infos retiré, cf. #hdr-menu-toggle plus haut). Pilote .layers-accordion
+// (mêmes éléments/mécanismes .open que sur desktop, aucun contenu dupliqué) en état EXPLICITE
+// (pas toggle — un onglet cliqué doit toujours mener au même résultat, jamais à l'inverse de
+// l'état courant). Onglet Carte = accordion fermé (le FAB/#cform/#info/#conditions-bar restent
+// gérés par leurs mécanismes propres, inchangés, cf. Phase 0 §5.1/5.2 du contrat original).
+// N'a d'effet que sous 768px (CSS) ; appelable sans risque au-dessus, mais les boutons qui
+// l'appellent sont eux-mêmes masqués par .mobile-tabbar{display:none} hors media query, donc
+// inatteignables sur desktop. #hdr-menu N'EST PLUS piloté ici (avant ce diff : un 3e état
+// "infos" le forçait open/closed en même temps que les onglets) — il a son propre mécanisme
+// autonome (toggleHdrMenu()/closeHdrMenu(), juste au-dessus, INCHANGÉ) via #hdr-menu-toggle,
+// désormais visible sur mobile aussi (cf. CSS). Ferme #hdr-menu par précaution au changement
+// d'onglet (cas : hamburger ouvert puis tap sur un onglet) — pas une régression du mécanisme
+// d'exemption tabbar/clic-extérieur ci-dessus, qui reste utile pour tout autre séquence.
 function switchMobileTab(tab){
   var accordion = document.getElementById('layers-accordion');
-  var hdrMenu = document.getElementById('hdr-menu');
   var layersBtn = document.getElementById('layers-toggle');
-  var hdrBtn = document.getElementById('hdr-menu-toggle');
   if(tab !== 'carte' && typeof closeFabMenu === 'function') closeFabMenu();
+  if(typeof closeHdrMenu === 'function') closeHdrMenu();
   if(accordion){
     var wantCouches = (tab === 'couches');
     accordion.classList.toggle('open', wantCouches);
+    if(!wantCouches) accordion.classList.remove('expanded'); // repli à la hauteur partielle par défaut à la fermeture
     if(layersBtn){
       layersBtn.textContent = wantCouches ? '✕' : '☰';
       layersBtn.setAttribute('aria-expanded', String(wantCouches));
@@ -8012,17 +8093,25 @@ function switchMobileTab(tab){
       try{ if(window.map && typeof window.map.invalidateSize==='function') window.map.invalidateSize(); }catch(e){}
     }, 300);
   }
-  if(hdrMenu){
-    var wantInfos = (tab === 'infos');
-    hdrMenu.classList.toggle('open', wantInfos);
-    hdrMenu.setAttribute('aria-hidden', String(!wantInfos));
-    if(hdrBtn) hdrBtn.setAttribute('aria-expanded', String(wantInfos));
-  }
   document.querySelectorAll('.mtab-btn').forEach(function(btn){
     var isActive = btn.getAttribute('data-tab') === tab;
     btn.classList.toggle('active', isActive);
     if(isActive) btn.setAttribute('aria-current','page'); else btn.removeAttribute('aria-current');
   });
+}
+
+// toggleLayersSheetExpand — bottom sheet Couches mobile (brief "refonte nav mobile"
+// 2026-08-26) : bascule entre hauteur partielle (défaut, 52vh) et étendue (cf. .expanded,
+// CSS) via la poignée .layers-sheet-handle. Alternative au drag explicitement permise par
+// le brief ("drag ou bouton") — plus robuste (pas de gestion de geste/momentum/seuils à
+// maintenir), même résultat pour l'utilisateur (peut voir plus ou moins de la carte).
+function toggleLayersSheetExpand(){
+  var accordion = document.getElementById('layers-accordion');
+  var handle = document.getElementById('layers-sheet-handle');
+  if(!accordion) return;
+  var willExpand = !accordion.classList.contains('expanded');
+  accordion.classList.toggle('expanded', willExpand);
+  if(handle) handle.setAttribute('aria-expanded', String(willExpand));
 }
 
 // Init toggle icon — IGN Plan V2 unique, pas de swap de tuiles nécessaire.
@@ -8087,25 +8176,26 @@ function runAutoTests(){ return Promise.resolve(); }
 </div>
 <button class="fab-mesure" id="fab-mesure" onclick="toggleFabMenu()" title="Actions terrain">+</button>
 
-<!-- Nav mobile — 3 onglets plein écran (Phase 1, point 11 du brief consolidé, contrat
-     CONTRAT_NAV_MOBILE_APP_2026-08-23.md, plan validé Soleil). Invisible ≥768px (desktop
-     inchangé, cf. .mobile-tabbar{display:none} par défaut, activée seulement dans le
-     media query mobile plus bas). Pilote la visibilité de .layers-accordion (onglet
-     Couches, mécanisme .open déjà existant, cf. toggleLayersPanel) et #hdr-menu (onglet
-     Infos, mécanisme .open déjà existant, cf. toggleHdrMenu) — aucun nouveau contenu,
-     uniquement un nouveau point d'entrée mobile vers l'existant (cf. switchMobileTab, JS
-     plus bas). L'onglet Carte n'a pas de contenu propre : c'est l'état "ni couches ni
-     infos ouverts" — #map et ses overlays (FAB, #cform, gauge crustale, #info,
-     #conditions-bar) restent en place tels quels (Phase 0 §5.1/5.2, décision Soleil). -->
+<!-- Nav mobile — 2 onglets (refonte 2026-08-26, brief "refonte nav mobile" — remplace les
+     3 onglets plein écran de Phase 1, contrat CONTRAT_NAV_MOBILE_APP_2026-08-23.md).
+     Invisible ≥768px (desktop inchangé, cf. .mobile-tabbar{display:none} par défaut, activée
+     seulement dans le media query mobile plus bas). Pilote la visibilité de .layers-accordion
+     (onglet Couches, mécanisme .open déjà existant, cf. toggleLayersPanel) — aucun nouveau
+     contenu, uniquement un nouveau point d'entrée mobile vers l'existant (cf. switchMobileTab,
+     JS plus bas). L'onglet Carte n'a pas de contenu propre : c'est l'état "couches fermées" —
+     #map et ses overlays (FAB, #cform, gauge crustale, #info, #conditions-bar) restent en
+     place tels quels (Phase 0 §5.1/5.2, décision Soleil, inchangé par ce diff). Ex-onglet
+     Infos RETIRÉ : son contenu (liste de liens de navigation — Méthodologie, Glossaire, À
+     propos, etc.) ne justifiait pas un onglet dédié à côté de Carte/Couches (constat du
+     brief) — accessible désormais via #hdr-menu-toggle (icône ☰ discrète dans .hdr, mécanisme
+     autonome toggleHdrMenu(), réaffiché sur mobile par ce diff plutôt que masqué comme avant),
+     pas un nouveau composant. -->
 <nav class="mobile-tabbar" id="mobile-tabbar" aria-label="Navigation mobile">
   <button type="button" class="mtab-btn active" data-tab="carte" onclick="switchMobileTab('carte')" aria-current="page">
     <span class="mtab-icon" aria-hidden="true">🗺</span><span class="mtab-label">Carte</span>
   </button>
   <button type="button" class="mtab-btn" data-tab="couches" onclick="switchMobileTab('couches')">
     <span class="mtab-icon" aria-hidden="true">🗂</span><span class="mtab-label">Couches</span>
-  </button>
-  <button type="button" class="mtab-btn" data-tab="infos" onclick="switchMobileTab('infos')">
-    <span class="mtab-icon" aria-hidden="true">ⓘ</span><span class="mtab-label">Infos</span>
   </button>
 </nav>
 
@@ -9765,7 +9855,6 @@ function capCleanup(){
 ["mtab_nav_aria","#mobile-tabbar","aria-label","Navigation mobile","","Mobile navigation"],
 ["mtab_carte",".mtab-btn[data-tab='carte'] .mtab-label","","Carte","","Map"],
 ["mtab_couches",".mtab-btn[data-tab='couches'] .mtab-label","","Couches","","Layers"],
-["mtab_infos",".mtab-btn[data-tab='infos'] .mtab-label","","Infos","","Info"],
 ["sb_dot_tt","#sb-status-dot","title","Supabase connexion en cours…","Supabase cunnessione in corsu…","Supabase connecting…"],
 ["sb_dot_aria","#sb-status-dot","aria-label","Statut Supabase","Statu Supabase","Supabase status"],
 ["hdr_status","#hdr-status","","chargement…","caricamentu…","loading…"],
