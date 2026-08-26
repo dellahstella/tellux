@@ -3337,9 +3337,16 @@ function tog(id,cls,btn){
   // Guard : couche migrée hors de ce fichier
   // ou référence cassée — sortie silencieuse pour éviter map.addLayer(undefined).
   if(!LAYERS[id]&&!WMS[id])return;
-  // Ferme le tiroir couches après sélection, mobile seulement (desktop : le tiroir plein
-  // écran reste ouvert entre plusieurs bascules, comme l'ancien layout push-flow desktop).
-  if(window.innerWidth<=600){const a=document.getElementById('layers-accordion');if(a&&a.classList.contains('open'))a.classList.remove('open');}
+  // Auto-fermeture ≤600px retirée (dette confirmée, trouvée en testant PR #1029) : seuil
+  // hérité d'avant la tabbar mobile (Phase 1, contrat CONTRAT_NAV_MOBILE_APP_2026-08-23.md),
+  // distinct du standard 768px désormais utilisé partout ailleurs (.mobile-tabbar/.fab-mesure/
+  // #conditions-bar). Fermait .layers-accordion en silence sur sélection de couche tout en
+  // laissant l'onglet "Couches" de .mobile-tabbar marqué .active — désynchronisme tabbar/
+  // panneau (le seul indicateur "quel écran est affiché" ne reflétait plus la réalité).
+  // switchMobileTab() gère déjà l'état explicite Carte/Couches/Infos (pas de toggle implicite,
+  // cf. son propre commentaire) ; sous 768px, l'onglet Carte est l'unique mécanisme de retour
+  // à la carte désormais — cohérent avec le comportement desktop juste en dessous (le tiroir
+  // reste ouvert entre plusieurs bascules de couches, comme l'ancien layout push-flow).
   if(ACTIVE[id]){WMS[id]?map.removeLayer(WMS[id]):map.removeLayer(LAYERS[id]);ACTIVE[id]=false;if(btn)btn.className='lbtn';
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='none';
     if(id==='emag')document.getElementById('emag-op-row').style.display='none';
