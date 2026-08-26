@@ -3827,19 +3827,19 @@ let dstLastTimestamp = null;
 //     réutilisé du chantier SECS régional) ; CLF = Chambon-la-Forêt (France,
 //     845km, idem) — mêmes 3 stations que le chantier SECS (brief même session),
 //     réutilisées ici comme hiérarchie de secours niveau 1.
-// ⚠ CORS non résolu, sans rapport avec le point ci-dessus : la vraie API BGS GIN
-// ne renvoie AUCUN header Access-Control-Allow-Origin (vérifié : `curl -sI` sur
-// l'URL exacte ci-dessous, aucune ligne access-control-*) — un fetch() navigateur
-// sera bloqué par la même origin policy, quelle que soit la station interrogée.
-// L'ancien commentaire "inatteignable en prod (CORS BGS)" avait donc raison sur
-// le symptôme (aucun appel n'aboutit en prod) même si l'URL elle-même était EN
-// PLUS mortes (404 serveur confirmé, indépendant du CORS). Ce fix corrige la
-// exactitude du code (station/URL/format) mais NE rend PAS le niveau 1 fonctionnel
-// en prod tel quel — la hiérarchie retombe sur le niveau 2 (Dst NOAA) exactement
-// comme avant, aucun changement de comportement utilisateur observable. Activer
-// réellement le niveau 1 nécessite un proxy côté serveur (Cloudflare Pages
-// Function) pour contourner CORS — infrastructure nouvelle, hors périmètre de ce
-// fix, signalée séparément (même limite pour le chantier SECS, brief même session).
+// ⚠ CORS confirmé bloquant sur la vraie API BGS GIN (aucun header
+// Access-Control-Allow-Origin — vérifié `curl -sI`, aucune ligne access-control-*),
+// donc un fetch() navigateur direct vers imag-data.bgs.ac.uk reste impossible quelle
+// que soit la station. C'était la limite de PR #1033 (ce commentaire décrivait alors
+// un niveau 1 "corrigé mais non fonctionnel en prod"). CORRECTION 2026-08-26 (brief
+// "implémentation 3 chantiers orphelins") : PR #1036 a résolu ce point — plus de fetch
+// navigateur du tout. Un job GitHub Actions (scripts/fetch_intermagnet.py) interroge
+// BGS GIN côté serveur (hors CORS) et écrit public/data/intermagnet_latest.json,
+// que loadINTERMAGNETObservatory() (plus bas) lit en same-origin. Niveau 1 est donc
+// réellement actif en prod depuis #1036, pas juste "corrigé sur le papier" — cf. ce
+// fichier pour l'architecture. Le chantier SECS régional (interpolation spatiale
+// multi-stations, distinct de cette hiérarchie de secours mono-station) reste en
+// standby séparément — limite propre à SECS, pas à ce niveau 1 ici.
 const INTERMAGNET_OBSERVATORIES = [
   {code: 'DUR', lat: 41.65, lon: 14.46, alt: 895,  dist_km_corse: 470},
   {code: 'EBR', lat: 40.96, lon: 0.33,  alt: 44,   dist_km_corse: 733},
