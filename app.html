@@ -5009,6 +5009,48 @@ function RF_field(lat, lon){
   const E_total_V_m=Math.round(Math.sqrt(S_total*1e-6*377)*1000)/1000;
   return { S_total_uW_m2:Math.round(S_total), E_total_V_m, contributions, forest_attenuation_dB:0, terrain_correction_dB:0, note_ICNIRP:'Rappel documentaire : limite ICNIRP grand public en bande GSM ≈ 4,5 W/m² soit 4 500 000 µW/m².', source:'antennes ANFR (Supabase) + émetteurs TDF + faisceaux hertziens', confidence:'low', calibrated:false };
 }
+// ═══ Atténuation RF par végétation — ITU-R P.833-6 (2007), modèle simplifié (Option A) ═══
+// Brief "chantiers RF/dose" 2026-08-26, chantier 1 — modèle simplifié § de la P.833-6 (2007),
+// PAS le modèle RET (Radiative Energy Transfer) de la version en vigueur P.833-10 (2021), qui
+// utilise 4 paramètres (α/β/W/κ) + un Tableau 3 de saisonnalité par essence — plus défendable
+// scientifiquement, mais nettement plus de travail d'implémentation. Migration vers le modèle
+// RET P.833-10 = chantier séparé, à arbitrer plus tard (pas maintenant, cf. brief §B).
+//
+// Formule (ITU-R P.833-6 (2007), §modèle simplifié, valide pour d < 400 m) :
+//   L_veg = 0.2 · f^0.3 · d^0.6   (L_veg en dB, f en MHz, d = profondeur traversée en m)
+//
+// ⚠ PAS D'INCERTITUDE AFFICHÉE : le ±7-9 dB parfois cité pour ce modèle simplifié n'est pas
+// sourcé (confirmé NO-GO par Cowork lors de la vérification) — omis ici plutôt qu'affiché sans
+// source. Le Tableau 3 (saisonnalité par essence — feuillus/conifères, été/hiver) N'EST PAS
+// utilisé : il appartient au modèle RET P.833-10, pas au modèle simplifié 833-6 repris ici.
+//
+// ⚠ NON BRANCHÉ AU CALCUL RF LIVE (arbitrage Soleil 2026-08-26) : cette fonction est
+// documentée, testée, prête — mais PAS appelée depuis RF_field()/calcRF() (forest_attenuation_dB
+// reste à 0 ci-dessous, inchangé). Raison : la couche `foret` de cette app est une tuile WMS
+// visuelle (FORETS.PUBLIQUES, IGN/ONF) sans géométrie interrogeable côté client — aucune donnée
+// n'existe aujourd'hui pour déterminer "d" (profondeur de végétation traversée) par point de
+// calcul, cf. légende existante : "Couche visuelle ONF — atténuation RF en zones boisées prévue,
+// non appliquée dans la version courante." Brancher cette fonction nécessiterait soit une
+// géométrie vectorielle de forêt (BD Forêt V2 — non disponible en WMS public, cf. commentaire
+// LEGEND_HTML.foret plus haut), soit un appel WMS GetFeatureInfo par point (changerait RF_field()
+// en async, impact architecture/performance non évalué — RF_field() est appelé en synchrone,
+// potentiellement des milliers de fois par rendu de heatmap). Les deux options restent hors
+// scope de ce chantier minimal (Option A) — décision Soleil de ne pas improviser un raccourci.
+function calcVegetationAttenuation(f_MHz, d_m){
+  if(!(f_MHz>0) || !(d_m>=0)) return null;
+  // Modèle valide pour d<400m (ITU-R P.833-6) — au-delà, extrapolation non couverte par la
+  // formule elle-même ; on la laisse s'appliquer telle quelle (pas de troncature arbitraire),
+  // mais un appelant futur devrait vérifier d<400 avant d'invoquer si la garantie du modèle importe.
+  const L_veg_dB = 0.2 * Math.pow(f_MHz, 0.3) * Math.pow(d_m, 0.6);
+  return {
+    L_veg_dB: Math.round(L_veg_dB * 10) / 10,
+    f_MHz, d_m,
+    model: 'ITU-R P.833-6 (2007), modèle simplifié',
+    source: 'ITU-R Recommendation P.833-6 (09/2007), Attenuation in vegetation',
+    note: 'Modèle simplifié 833-6 — non repris tel quel dans la version en vigueur P.833-10 (2021), qui utilise le modèle RET (α/β/W/κ + saisonnalité par essence, Tableau 3). Valide documentairement pour d < 400 m.'
+  };
+}
+
 // calcRF = fine enveloppe sur RF_field (consommée par calcAll_v2 → v2.domains.rf).
 // Conserve les clés consommées : S_total_uW_m2 (popup+composite GELÉ), confidence, source.
 function calcRF(lat, lon){
