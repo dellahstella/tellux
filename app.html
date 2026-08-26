@@ -2419,8 +2419,10 @@ var JS_STRINGS_EN = {
   radon_eleve: "High",
   radon_modere: "Moderate",
   radon_faible: "Low",
-  corr_aqu_kp_prefix: "AQU + Kp correction (",
+  corr_aqu_kp_prefix: "AQU + Kp correction (", // dette : clé résiduelle non appelée depuis 2026-08-26 (station AQU retirée, cf. loadINTERMAGNETObservatory), conservée pour ne pas casser un éventuel appel externe
   corr_aqu_kp_suffix: " nT)",
+  corr_intermagnet_prefix: "correction ",
+  corr_intermagnet_kp_suffix: " + Kp (",
   corr_kp_calme: "Kp calm, no correction",
   corr_kp_prefix: "Kp correction = ",
   corr_kp_suffix: " nT (NOAA SWPC)",
@@ -3797,8 +3799,9 @@ function calcSq(lat){
 }
 
 // Correction perturbation externe — hiérarchie 3 niveaux (Sprint astro 2026-05-25) :
-// 1. Observatoire INTERMAGNET AQU (L'Aquila, 270-700km Corse) — niveau 1
-//    Baseline 30 jours glissante (médiane robuste) calculée depuis obs_data BGS.
+// 1. Observatoire INTERMAGNET (DUR/EBR/CLF, 470-845km Corse — AQU retiré 2026-08-26,
+//    station morte, cf. commentaire détaillé plus bas) — niveau 1.
+//    Baseline 30 jours glissante (médiane robuste) calculée depuis les données BGS GIN.
 // 2. Dst Kyoto WDC via NOAA SWPC — niveau 2 (couverture globale temps réel)
 //    Conversion équateur -> Corse via Mayaud 1980 (~Dst × 0.42 pour Corse).
 // 3. Fallback empirique Kp (Menvielle & Berthelier 1991) — niveau 3.
@@ -3806,80 +3809,98 @@ let aquExternalCorr = null; // nT, null = non disponible
 let curDst = null;          // nT, null = non disponible
 let dstLastTimestamp = null;
 
-// ─── Hiérarchie INTERMAGNET — AQU > DUR > CTS par distance Corse ───
-// Sprint astro v2 2026-05-25 (W12) : fallback multi-observatoires italiens
-// pour robustesse en cas d'indisponibilité ponctuelle d'un observatoire.
-// AQU = L'Aquila, 360 km E (Italie centrale)
-// DUR = Duronia, 470 km E (INGV Italie)
-// CTS = Castello Tesino, 480 km NE (INGV Italie)
-// Tous accessibles via le même service BGS data_service.
-// Référence : Lepidi et al. 2021 Remote Sensing 13(16), 3111.
+// ─── Hiérarchie INTERMAGNET — DUR > EBR > CLF par distance Corse ───
+// CORRECTION 2026-08-26 (brief "chantiers RF/dose", point A urgent) : AQU (L'Aquila)
+// retiré, CTS retiré, endpoint + format de réponse réécrits contre l'API réelle.
+// Vérifié en direct (curl, hors CORS navigateur, donc décisif) via
+// https://imag-data.bgs.ac.uk/GIN_V1/GINServices?Request=GetDataDirectory :
+//   - AQU  : publication_state "none", 0/90 jours de données sur mai-août 2026 —
+//     station morte pour ce GIN (aucune preuve directe qu'elle ait été remplacée
+//     par DUR en 2012 comme évoqué au brief, mais aucune donnée récente non plus,
+//     quelle qu'en soit la raison — le résultat pratique est le même : inutilisable).
+//   - CTS  : "Unable to find observatory: CTS" (code observatoire pas reconnu par
+//     ce GIN — entrée invalide depuis l'origine, jamais fonctionnelle).
+//   - DUR/EBR/CLF : reconnus, publication_state "reported", données réelles mais
+//     à latence/lacunes irrégulières (rafales de plusieurs jours puis trous de
+//     1-2 semaines — normal pour des observatoires en soumission "reported", pas
+//     temps réel). DUR = Duronia (Italie, 470km) ; EBR = Ebro (Espagne, 733km,
+//     réutilisé du chantier SECS régional) ; CLF = Chambon-la-Forêt (France,
+//     845km, idem) — mêmes 3 stations que le chantier SECS (brief même session),
+//     réutilisées ici comme hiérarchie de secours niveau 1.
+// ⚠ CORS non résolu, sans rapport avec le point ci-dessus : la vraie API BGS GIN
+// ne renvoie AUCUN header Access-Control-Allow-Origin (vérifié : `curl -sI` sur
+// l'URL exacte ci-dessous, aucune ligne access-control-*) — un fetch() navigateur
+// sera bloqué par la même origin policy, quelle que soit la station interrogée.
+// L'ancien commentaire "inatteignable en prod (CORS BGS)" avait donc raison sur
+// le symptôme (aucun appel n'aboutit en prod) même si l'URL elle-même était EN
+// PLUS mortes (404 serveur confirmé, indépendant du CORS). Ce fix corrige la
+// exactitude du code (station/URL/format) mais NE rend PAS le niveau 1 fonctionnel
+// en prod tel quel — la hiérarchie retombe sur le niveau 2 (Dst NOAA) exactement
+// comme avant, aucun changement de comportement utilisateur observable. Activer
+// réellement le niveau 1 nécessite un proxy côté serveur (Cloudflare Pages
+// Function) pour contourner CORS — infrastructure nouvelle, hors périmètre de ce
+// fix, signalée séparément (même limite pour le chantier SECS, brief même session).
 const INTERMAGNET_OBSERVATORIES = [
-  {code: 'AQU', lat: 42.38, lon: 13.32, alt: 682,  dist_km_corse: 360},
-  {code: 'DUR', lat: 41.65, lon: 14.46, alt: 765,  dist_km_corse: 470},
-  {code: 'CTS', lat: 46.05, lon: 11.65, alt: 1180, dist_km_corse: 480}
+  {code: 'DUR', lat: 41.65, lon: 14.46, alt: 895,  dist_km_corse: 470},
+  {code: 'EBR', lat: 40.96, lon: 0.33,  alt: 44,   dist_km_corse: 733},
+  {code: 'CLF', lat: 48.03, lon: 2.26,  alt: 145,  dist_km_corse: 845}
 ];
 
 async function loadAQU(){
   // Wrapper retro-compat : delegue a loadINTERMAGNETObservatory() (sprint v2).
-  // Conserve nom 'loadAQU' pour compat bootstrap + ID HTML aqu-status historique.
+  // Conserve nom 'loadAQU' pour compat bootstrap + ID HTML aqu-status historique
+  // (nom historique conservé malgré le retrait d'AQU de la liste, cf. commentaire
+  // ci-dessus — casser ce nom romprait le chaînage de boot et les IDs HTML).
   return loadINTERMAGNETObservatory();
 }
 
+// FRAICHEUR — au-delà de cette limite, le fichier statique est considéré périmé
+// (cron en panne, ou job jamais relancé) : on retombe sur Dst/Kp plutôt que
+// d'afficher un delta obsolète sans le signaler. Cron toutes les 30min (cf.
+// .github/workflows/intermagnet-cron.yml) → 3h laisse large marge pour un run
+// manqué occasionnel sans pour autant servir une valeur trop âgée.
+const INTERMAGNET_STALE_AFTER_MS = 3 * 60 * 60 * 1000;
+
 async function loadINTERMAGNETObservatory(){
-  // Iteration sur les observatoires par distance Corse croissante.
-  // Premier observatoire avec >=24h de donnees recentes = succes.
-  for(let i = 0; i < INTERMAGNET_OBSERVATORIES.length; i++){
-    const obs = INTERMAGNET_OBSERVATORIES[i];
-    try{
-      const d = await fetchEnv(
-        'https://geomag.bgs.ac.uk/data_service/data/hourly_means/' + obs.code + '/2025/json/',
-        4000  // timeout court par observatoire
-      );
-      const obsData = d?.obs_data;
-      if(!obsData?.length) continue;
-
-      // Calcul baseline 30j glissants (mediane robuste).
-      const now = Date.now();
-      const cutoff = now - 30 * 86400 * 1000;
-      const recentF = obsData
-        .filter(function(o){
-          const t = new Date(o.date || o.timestamp || o.time).getTime();
-          return !isNaN(t) && t >= cutoff;
-        })
-        .map(function(o){ return parseFloat(o.total_f || o.f); })
-        .filter(function(v){ return !isNaN(v); })
-        .sort(function(a,b){ return a - b; });
-
-      if(recentF.length < 24){
-        // Pas assez de donnees sur cet observatoire, essayer suivant.
-        continue;
-      }
-
-      const median = recentF[Math.floor(recentF.length / 2)];
-      const last = obsData[obsData.length - 1];
-      const F = parseFloat(last?.total_f || last?.f);
-      if(isNaN(F) || isNaN(median)) continue;
-
-      aquExternalCorr = Math.round(F - median);
-      window._intermagnetSource = obs.code;
-      window._intermagnetBaseline = Math.round(median);
-      window._intermagnetNSamples = recentF.length;
-      // Alias retro-compat pour code existant referencant ces variables.
-      window._aquBaseline = window._intermagnetBaseline;
-      window._aquNSamples = window._intermagnetNSamples;
+  // 2026-08-26 (brief "implémentation 3 chantiers orphelins") : remplace le fetch
+  // direct BGS GIN (PR #1033) par la lecture d'un fichier statique same-origin,
+  // pré-calculé par un job GitHub Actions planifié (scripts/fetch_intermagnet.py,
+  // toutes les 30min) — élimine le CORS (confirmé bloquant sur BGS GIN, cf. #1033)
+  // ET le risque perf/fragilité d'un appel API tierce en direct depuis le
+  // navigateur. Si BGS GIN est ponctuellement indisponible, le dernier fichier
+  // généré reste utilisable (contrairement à une requête live qui casserait),
+  // et la fraîcheur est vérifiée explicitement (pas juste l'absence du fichier)
+  // via generated_at, cf. INTERMAGNET_STALE_AFTER_MS. INTERMAGNET_OBSERVATORIES
+  // (DUR/EBR/CLF) reste défini plus haut à titre documentaire — la sélection de
+  // station se fait désormais côté script (scripts/fetch_intermagnet.py), pas ici.
+  try{
+    const d = await fetchEnv('public/data/intermagnet_latest.json', 4000);
+    if(!d || !d.station_used || !d.generated_at) {
       const _aq = document.getElementById('aqu-status');
-      if(_aq) _aq.textContent = obs.code + ' ' + F.toFixed(0) + ' nT (baseline 30j ' + Math.round(median) + ' nT, n=' + recentF.length + 'h)';
-      if(typeof _updateDstUI === 'function') _updateDstUI();
-      return;  // succes, on s'arrete
-    }catch(e){
-      // observatoire indisponible, essayer le suivant
-      continue;
+      if(_aq) _aq.style.display = 'none';
+      return; // fichier absent, ou aucune station exploitable au dernier cycle
     }
+    const age_ms = Date.now() - new Date(d.generated_at).getTime();
+    if(isNaN(age_ms) || age_ms > INTERMAGNET_STALE_AFTER_MS){
+      const _aq = document.getElementById('aqu-status');
+      if(_aq) _aq.style.display = 'none';
+      return; // fichier périmé (cron en panne) — fallback Dst/Kp, pas de delta obsolète affiché
+    }
+    aquExternalCorr = Math.round(d.delta_nT);
+    window._intermagnetSource = d.station_used;
+    window._intermagnetBaseline = Math.round(d.baseline_30j_nT);
+    window._intermagnetNSamples = d.n_samples;
+    // Alias retro-compat pour code existant referencant ces variables.
+    window._aquBaseline = window._intermagnetBaseline;
+    window._aquNSamples = window._intermagnetNSamples;
+    const _aq = document.getElementById('aqu-status');
+    if(_aq) _aq.textContent = d.station_used + ' ' + Math.round(d.baseline_30j_nT + d.delta_nT) + ' nT (baseline 30j ' + Math.round(d.baseline_30j_nT) + ' nT, n=' + d.n_samples + ')';
+    if(typeof _updateDstUI === 'function') _updateDstUI();
+  }catch(e){
+    const _aq = document.getElementById('aqu-status');
+    if(_aq) _aq.style.display = 'none';
+    // Fichier statique indisponible -> fallback Dst (niveau 2), comportement inchangé.
   }
-  // Aucun observatoire INTERMAGNET disponible -> fallback Dst (niveau 2)
-  const _aq2 = document.getElementById('aqu-status');
-  if(_aq2) _aq2.style.display = 'none';
 }
 
 // ─── Dst index (Kyoto WDC via NOAA SWPC) ───
@@ -3975,9 +3996,12 @@ function calcExternalCorr(lat, lon){
   if(typeof lat === 'undefined') lat = 42;
   if(typeof lon === 'undefined') lon = 9;
 
-  // Niveau 1 : INTERMAGNET AQU si disponible (le plus précis, 270-700 km Corse)
+  // Niveau 1 : INTERMAGNET (DUR/EBR/CLF, cf. INTERMAGNET_OBSERVATORIES) si disponible
+  // — le plus précis, 470-845 km Corse. Tag générique 'INTERMAGNET' (pas le code de
+  // la station elle-même, qui varie selon laquelle a répondu) — le code réel reste
+  // accessible via window._intermagnetSource pour l'affichage (cf. _updateDstUI()).
   if(aquExternalCorr !== null){
-    window._extCorrSource = 'AQU';
+    window._extCorrSource = 'INTERMAGNET';
     return aquExternalCorr;
   }
 
@@ -4022,7 +4046,7 @@ function _updateDstUI(){
     const corr = calcExternalCorr();
     const src = window._extCorrSource || '—';
     corrEl.textContent = (corr >= 0 ? '+' : '') + corr + ' nT';
-    corrSEl.textContent = src === 'AQU' ? 'AQU INTERMAGNET 30j'
+    corrSEl.textContent = src === 'INTERMAGNET' ? (window._intermagnetSource || 'INTERMAGNET') + ' 30j'
                         : src === 'Dst' ? 'Dst Kyoto WDC'
                         : src === 'Kp'  ? 'Kp empirique (Menvielle 1991)'
                         : '—';
@@ -4085,7 +4109,7 @@ async function fetchIGRF_precise(lat,lon){
 // DOMAINE M — Composante statique (champ continu géomagnétique)
 // Tâche 5.1 — IMMÉDIAT — refactoring pur de fetchIGRF() en retour structuré v2.
 // Sources : IGRF-14 (Alken et al. 2021) · EMAG2v3/LCS1 (Meyer et al. 2017 + BRGM)
-//           Sq : Campbell (1989, Rev.Geophys.27) · Correction externe : AQU/INTERMAGNET
+//           Sq : Campbell (1989, Rev.Geophys.27) · Correction externe : INTERMAGNET/Dst/Kp
 // Valeurs Corse 2025 : B_total ≈ 46 150–47 200 nT (gradient N-S sur 200 km)
 // IMPORTANT : B_statique et B_ELF sont deux régimes physiquement distincts.
 //   Statique = champ continu géomagnétique + anomalies crustales.
@@ -4099,7 +4123,7 @@ function calcMagneticStatic(lat, lon) {
   const B_principal_nT        = igrfFallback(lat_, lon_);
   const B_anomaly_nT          = calcLCS1(lat_, lon_);  // EMAG2v3 si chargé, LCS1 sinon
   const Sq_correction_nT      = calcSq(lat_);
-  const external_correction_nT = calcExternalCorr(); // AQU INTERMAGNET ou Kp fallback
+  const external_correction_nT = calcExternalCorr(); // INTERMAGNET (DUR/EBR/CLF), Dst ou Kp fallback
   const B_total_nT            = B_principal_nT + B_anomaly_nT + Sq_correction_nT + external_correction_nT;
 
   // Inclinaison et déclinaison Corse — re-dérivées 2026-07-05 sur l'API IGRF-14
@@ -6244,10 +6268,12 @@ map.on('click',async e=>{
   const radonLabel = radon_class===3?jt('radon_eleve','Élevé'):radon_class===2?jt('radon_modere','Modéré'):jt('radon_faible','Faible');
 
   // Label dynamique correction externe (honnêteté scientifique — audit 2026-04-22)
-  // La branche AQU est inatteignable en prod (CORS BGS) — s'activera automatiquement si CORS résolu
+  // La branche INTERMAGNET (DUR/EBR/CLF) est inatteignable en prod (CORS BGS, header
+  // Access-Control-Allow-Origin absent — vérifié en direct 2026-08-26) — s'activera
+  // automatiquement si un proxy CORS est ajouté côté serveur (hors périmètre ici).
   const corrLabel = (() => {
     const corr = calcExternalCorr();
-    if (aquExternalCorr !== null) return jt('corr_aqu_kp_prefix','correction AQU + Kp (')+(corr>=0?'+':'')+corr+jt('corr_aqu_kp_suffix',' nT)');
+    if (aquExternalCorr !== null) return jt('corr_intermagnet_prefix','correction ')+(window._intermagnetSource||'INTERMAGNET')+jt('corr_intermagnet_kp_suffix',' + Kp (')+(corr>=0?'+':'')+corr+jt('corr_aqu_kp_suffix',' nT)');
     if (!isNaN(parseFloat(curKp))) {
       return corr === 0
         ? jt('corr_kp_calme','Kp calme, pas de correction')
@@ -7929,7 +7955,7 @@ map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
 setTimeout(()=>Promise.all([loadAnt(),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k)
 setTimeout(loadMeteo,4000);
-setTimeout(loadAQU,4500); // INTERMAGNET L'Aquila — correction externe réelle niveau 1
+setTimeout(loadAQU,4500); // INTERMAGNET DUR/EBR/CLF (nom loadAQU conservé, cf. commentaire fonction) — correction externe réelle niveau 1
 setTimeout(loadDst,5500); // Dst Kyoto via NOAA — correction externe niveau 2 (Sprint astro 2026-05-25)
 // EMAG2v3 OFF par défaut — toggle manuel via toggleEMAG()
 setTimeout(loadLightning,5000); // Activité orageuse
@@ -7937,7 +7963,7 @@ if(typeof loadNOAA==='function')setInterval(loadNOAA,15*60*1000);
 setInterval(loadDB,5*60*1000);
 setInterval(loadChargeReseau,15*60*1000); // Refresh charge réseau 15min
 setInterval(loadMeteo,30*60*1000);
-setInterval(loadAQU,30*60*1000); // Refresh AQU 30min
+setInterval(loadAQU,30*60*1000); // Refresh INTERMAGNET 30min
 setInterval(loadDst,30*60*1000); // Refresh Dst 30min (latence Kyoto ~30min)
 setInterval(loadLightning,10*60*1000); // Refresh foudre 5min
 // Sprint astro 2026-05-25 : sync UI Kp/Dst/Acquisition independant des fetchs
