@@ -5059,12 +5059,125 @@ function RF_field(lat, lon, applyVegetation){
   // On échelle S par k² : E_total (dérivé de S ci-dessous) devient automatiquement k·E_raw. Défaut k=1.
   S_total *= RF_CALIB_K*RF_CALIB_K;
   const E_total_V_m=Math.round(Math.sqrt(S_total*1e-6*377)*1000)/1000;
+  // Conductivité effective du sol (ITU-R P.527-6, chantier D même brief) — EXPOSÉE
+  // pour information, PAS CONSOMMÉE dans S_total/E_total ci-dessus. Le brief demandait
+  // de "brancher calcSoilConductivityEffective()" via cette grille, mais ne précisait
+  // aucune formule de consommation (contrairement à la végétation, où "soustraire
+  // L_veg dB" est explicite) — RF_field() n'a par ailleurs aucun modèle de réflexion
+  // sol (two-ray ground-reflection ou équivalent) qui consommerait naturellement σ_eff.
+  // Inventer un tel modèle non demandé serait improviser une formule non spécifiée
+  // (signalé au chat plutôt que fait). fréquence 1.8 GHz = repère représentatif
+  // (bande LTE médiane), pas la fréquence réelle de chaque contribution ci-dessus
+  // (le modèle agrège plusieurs bandes/générations, cf. EIRP_BY_GEN).
+  const soilTex = lookupSoilTexture(lat, lon);
+  const soil_conductivity = soilTex
+    ? calcSoilConductivityEffective(1.8, soilTex.rho_b_g_cm3, soilTex.P_sand, soilTex.P_clay)
+    : null;
   // forest_attenuation_dB : pire cas observé parmi les antennes mobiles contribuant (pas une
   // moyenne — le pire cas est la lecture la plus utile pour un popup "pourquoi ce niveau ici").
   // 0 si la géométrie n'est pas chargée (dégradation propre) ou si aucun trajet ne traverse la
   // forêt dense retenue (cf. build_foret_dense_corse_geojson.py pour les classes incluses).
-  return { S_total_uW_m2:Math.round(S_total), E_total_V_m, contributions, forest_attenuation_dB:Math.round(forest_attenuation_dB_max*10)/10, terrain_correction_dB:0, note_ICNIRP:'Rappel documentaire : limite ICNIRP grand public en bande GSM ≈ 4,5 W/m² soit 4 500 000 µW/m².', source:'antennes ANFR (Supabase) + émetteurs TDF + faisceaux hertziens', confidence:'low', calibrated:false };
+  return { S_total_uW_m2:Math.round(S_total), E_total_V_m, contributions, forest_attenuation_dB:Math.round(forest_attenuation_dB_max*10)/10, terrain_correction_dB:0, soil_conductivity, note_ICNIRP:'Rappel documentaire : limite ICNIRP grand public en bande GSM ≈ 4,5 W/m² soit 4 500 000 µW/m².', source:'antennes ANFR (Supabase) + émetteurs TDF + faisceaux hertziens', confidence:'low', calibrated:false };
 }
+// ═══ Conductivité effective du sol — ITU-R P.527-6 (09/2021), équations 67-70 ═══
+// Chantier D du brief "chantiers RF/dose" (2026-08-26) — source primaire directe (PDF
+// officiel ITU, pas de relais/reformulation empirique σ≈a·θ+b, pour éviter une dérive
+// citationnelle). Transcrit depuis Recommendation ITU-R P.527-6 (09/2021), §5.2 "Soil",
+// p.20 (https://www.itu.int/dms_pubrec/itu-r/rec/p/R-REC-P.527-6-202109-I!!PDF-E.pdf),
+// lu directement sur le rendu PDF (pas d'OCR texte, notation grecque fiable).
+//
+// σ1 et σ2 sont des coefficients intermédiaires (S/m) fonction de la densité apparente
+// (ρ_b, g/cm³) et de la texture sable/argile (%) — PAS la silt, absente de ces 2 équations
+// (elle intervient seulement dans le calcul de ρ_b lui-même, éq. 57 du même document, non
+// reproduite ici) :
+//   σ1 = 0.0467 + 0.2204·ρ_b − 0.004111·P_sand − 0.006614·P_clay         (éq. 69)
+//   σ2 = −1.645 + 1.939·ρ_b − 0.0225622·P_sand + 0.01594·P_clay          (éq. 70)
+// σ'_eff et σ''_eff (parties réelle/imaginaire de la "conductivité effective") combinent
+// σ1/σ2 selon la fréquence (f en GHz) via une forme de relaxation type Debye centrée sur
+// 1,35 GHz :
+//   σ'_eff  = (f/1.35) · (σ1−σ2) / (1+(f/1.35)²)                        (éq. 67)
+//   σ''_eff = σ2 + (σ1−σ2) / (1+(f/1.35)²)                              (éq. 68)
+//
+// ⚠ σ'_eff/σ''_eff ne sont PAS directement "la" conductivité du sol au sens où l'entend le
+// modèle ELF/tellurique déjà présent dans ce fichier (SIGMA_ROCK, Wait 1954/Chave 2012,
+// calcSkinDepth/calcTelluricSecondary, domaine <30MHz — cf. P.368, confirmé et INCHANGÉ,
+// hors scope ici). Ce sont des coefficients intermédiaires du modèle de permittivité
+// complexe du sol P.527 §5.2 (éq. 58-66, non reproduites ici — la brique manquante pour
+// une permittivité complète serait la permittivité de l'eau libre ε_fw, éq. 65-66, elle-même
+// dépendante d'équations de permittivité de l'eau de mer plus haut dans le document) —
+// utilisables tels quels comme indicateur de conductivité effective en fonction de la
+// fréquence pour le DOMAINE RF de cette app (antennes mobiles ANFR, systématiquement
+// >100 MHz, donc dans le domaine de validité fréquentiel documenté par les figures 14-15
+// du même paragraphe, tracées de 0,1 à 1000 GHz). Le signe peut être négatif pour σ'_eff
+// (constaté sur les 2 exemples de sol du document lui-même, Tableau 2 — cf. tests) : c'est
+// un terme de correction interne au mélange diélectrique à 4 composantes du document, pas
+// un artefact de transcription — vérifié en reproduisant les 2 sols-types du document.
+//
+// ⚠ NON BRANCHÉ AU CALCUL RF LIVE (même réserve que calcVegetationAttenuation(), chantier 1
+// de la même session) : aucune donnée de texture de sol (% sable/argile, densité apparente)
+// n'existe dans cette app pour la Corse — ni couche, ni source (HWSD/GLDAS mentionnés par
+// le document lui-même comme source possible, non intégrés ici). Fonctions documentées,
+// testées contre les 2 sols-types du Tableau 2 du document, prêtes pour une intégration
+// future si une source de texture de sol est acquise.
+// ─── Grille SoilGrids Corse — chargement + lookup point le plus proche ────────
+// Brief "implémentation 3 chantiers orphelins" (2026-08-26) : source des P_sand/
+// P_clay/rho_b réels pour calcSoilConductivityEffective(), remplace l'absence de
+// donnée signalée dans #1035. Grille pré-calculée hors-ligne (scripts/
+// build_soilgrids_grid_corse.py, SoilGrids v2.0 ISRIC, CC-BY 4.0 — citation :
+// Poggio et al. 2021, SOIL 7, 217-240), ~5.5km de résolution (alignée sur
+// wmm_2025_grid_corse.json, cf. commentaire du script pour la justification —
+// plus grossier que le ~1km proposé au brief, contrainte réelle = fair-use
+// SoilGrids REST 5 req/min contournée via WCS, pas un problème de poids fichier).
+let SOILGRIDS_CORSE = null;
+let _soilGridsPromise = null;
+function loadSoilGridsGrid(){
+  if (_soilGridsPromise) return _soilGridsPromise;
+  _soilGridsPromise = (async () => {
+    try {
+      const r = await fetch('public/data/soilgrids_grid_corse.json', {signal: AbortSignal.timeout(5000)});
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      SOILGRIDS_CORSE = d.grid || [];
+      console.log('[Tellux] soilgrids_grid_corse.json chargé : ' + SOILGRIDS_CORSE.length + ' points');
+    } catch (e) {
+      console.warn('[Tellux] soilgrids_grid_corse.json indisponible : ' + e.message);
+    }
+  })();
+  return _soilGridsPromise;
+}
+// Lookup synchrone (point le plus proche, distance euclidienne lat/lon — grille
+// régulière ~5.5km, approximation suffisante à cette échelle, cf. dist() ailleurs
+// dans ce fichier pour un calcul haversine plus précis si jamais nécessaire).
+// Retourne null si la grille n'est pas encore chargée ou vide (mer/hors domaine).
+function lookupSoilTexture(lat, lon){
+  if (!SOILGRIDS_CORSE || !SOILGRIDS_CORSE.length) return null;
+  let best = null, bestD2 = Infinity;
+  for (const p of SOILGRIDS_CORSE) {
+    const dLat = p.lat - lat, dLon = p.lon - lon;
+    const d2 = dLat*dLat + dLon*dLon;
+    if (d2 < bestD2) { bestD2 = d2; best = p; }
+  }
+  return best; // {lat, lon, P_sand, P_clay, rho_b_g_cm3}
+}
+
+function calcSoilConductivityEffective(f_GHz, rho_b, P_sand, P_clay){
+  if(!(f_GHz>0) || !(rho_b>0) || !(P_sand>=0) || !(P_clay>=0)) return null;
+  const sigma1 = 0.0467 + 0.2204*rho_b - 0.004111*P_sand - 0.006614*P_clay;   // éq. 69, S/m
+  const sigma2 = -1.645 + 1.939*rho_b - 0.0225622*P_sand + 0.01594*P_clay;   // éq. 70, S/m
+  const ratio = f_GHz/1.35;
+  const sigma_eff_real = ratio * ((sigma1-sigma2)/(1+ratio*ratio));          // éq. 67, S/m
+  const sigma_eff_imag = sigma2 + (sigma1-sigma2)/(1+ratio*ratio);           // éq. 68, S/m
+  return {
+    sigma1_S_m: Math.round(sigma1*10000)/10000,
+    sigma2_S_m: Math.round(sigma2*10000)/10000,
+    sigma_eff_real_S_m: Math.round(sigma_eff_real*10000)/10000,
+    sigma_eff_imag_S_m: Math.round(sigma_eff_imag*10000)/10000,
+    f_GHz, rho_b, P_sand, P_clay,
+    source: 'ITU-R Recommendation P.527-6 (09/2021), §5.2 Soil, équations 67-70',
+    note: 'Coefficients intermédiaires du modèle de permittivité complexe du sol P.527 — pas la conductivité ELF/tellurique (SIGMA_ROCK, domaine <30MHz, P.368, inchangée). Domaine de validité documenté : 0,1-1000 GHz (figures 14-16 du même document).'
+  };
+}
+
 // ═══ Atténuation RF par végétation — ITU-R P.833-6 (2007), modèle simplifié (Option A) ═══
 // Brief "chantiers RF/dose" 2026-08-26, chantier 1 — modèle simplifié § de la P.833-6 (2007),
 // PAS le modèle RET (Radiative Energy Transfer) de la version en vigueur P.833-10 (2021), qui
@@ -7840,7 +7953,7 @@ let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.hotrf){lHotRF.clearLayers();buildHotRF();}},300);}
 map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
-setTimeout(()=>Promise.all([loadAnt(),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k)
+setTimeout(()=>Promise.all([loadAnt(),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k)
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET DUR/EBR/CLF (nom loadAQU conservé, cf. commentaire fonction) — correction externe réelle niveau 1
 setTimeout(loadDst,5500); // Dst Kyoto via NOAA — correction externe niveau 2 (Sprint astro 2026-05-25)
