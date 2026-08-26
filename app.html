@@ -5009,6 +5009,64 @@ function RF_field(lat, lon){
   const E_total_V_m=Math.round(Math.sqrt(S_total*1e-6*377)*1000)/1000;
   return { S_total_uW_m2:Math.round(S_total), E_total_V_m, contributions, forest_attenuation_dB:0, terrain_correction_dB:0, note_ICNIRP:'Rappel documentaire : limite ICNIRP grand public en bande GSM ≈ 4,5 W/m² soit 4 500 000 µW/m².', source:'antennes ANFR (Supabase) + émetteurs TDF + faisceaux hertziens', confidence:'low', calibrated:false };
 }
+// ═══ Conductivité effective du sol — ITU-R P.527-6 (09/2021), équations 67-70 ═══
+// Chantier D du brief "chantiers RF/dose" (2026-08-26) — source primaire directe (PDF
+// officiel ITU, pas de relais/reformulation empirique σ≈a·θ+b, pour éviter une dérive
+// citationnelle). Transcrit depuis Recommendation ITU-R P.527-6 (09/2021), §5.2 "Soil",
+// p.20 (https://www.itu.int/dms_pubrec/itu-r/rec/p/R-REC-P.527-6-202109-I!!PDF-E.pdf),
+// lu directement sur le rendu PDF (pas d'OCR texte, notation grecque fiable).
+//
+// σ1 et σ2 sont des coefficients intermédiaires (S/m) fonction de la densité apparente
+// (ρ_b, g/cm³) et de la texture sable/argile (%) — PAS la silt, absente de ces 2 équations
+// (elle intervient seulement dans le calcul de ρ_b lui-même, éq. 57 du même document, non
+// reproduite ici) :
+//   σ1 = 0.0467 + 0.2204·ρ_b − 0.004111·P_sand − 0.006614·P_clay         (éq. 69)
+//   σ2 = −1.645 + 1.939·ρ_b − 0.0225622·P_sand + 0.01594·P_clay          (éq. 70)
+// σ'_eff et σ''_eff (parties réelle/imaginaire de la "conductivité effective") combinent
+// σ1/σ2 selon la fréquence (f en GHz) via une forme de relaxation type Debye centrée sur
+// 1,35 GHz :
+//   σ'_eff  = (f/1.35) · (σ1−σ2) / (1+(f/1.35)²)                        (éq. 67)
+//   σ''_eff = σ2 + (σ1−σ2) / (1+(f/1.35)²)                              (éq. 68)
+//
+// ⚠ σ'_eff/σ''_eff ne sont PAS directement "la" conductivité du sol au sens où l'entend le
+// modèle ELF/tellurique déjà présent dans ce fichier (SIGMA_ROCK, Wait 1954/Chave 2012,
+// calcSkinDepth/calcTelluricSecondary, domaine <30MHz — cf. P.368, confirmé et INCHANGÉ,
+// hors scope ici). Ce sont des coefficients intermédiaires du modèle de permittivité
+// complexe du sol P.527 §5.2 (éq. 58-66, non reproduites ici — la brique manquante pour
+// une permittivité complète serait la permittivité de l'eau libre ε_fw, éq. 65-66, elle-même
+// dépendante d'équations de permittivité de l'eau de mer plus haut dans le document) —
+// utilisables tels quels comme indicateur de conductivité effective en fonction de la
+// fréquence pour le DOMAINE RF de cette app (antennes mobiles ANFR, systématiquement
+// >100 MHz, donc dans le domaine de validité fréquentiel documenté par les figures 14-15
+// du même paragraphe, tracées de 0,1 à 1000 GHz). Le signe peut être négatif pour σ'_eff
+// (constaté sur les 2 exemples de sol du document lui-même, Tableau 2 — cf. tests) : c'est
+// un terme de correction interne au mélange diélectrique à 4 composantes du document, pas
+// un artefact de transcription — vérifié en reproduisant les 2 sols-types du document.
+//
+// ⚠ NON BRANCHÉ AU CALCUL RF LIVE (même réserve que calcVegetationAttenuation(), chantier 1
+// de la même session) : aucune donnée de texture de sol (% sable/argile, densité apparente)
+// n'existe dans cette app pour la Corse — ni couche, ni source (HWSD/GLDAS mentionnés par
+// le document lui-même comme source possible, non intégrés ici). Fonctions documentées,
+// testées contre les 2 sols-types du Tableau 2 du document, prêtes pour une intégration
+// future si une source de texture de sol est acquise.
+function calcSoilConductivityEffective(f_GHz, rho_b, P_sand, P_clay){
+  if(!(f_GHz>0) || !(rho_b>0) || !(P_sand>=0) || !(P_clay>=0)) return null;
+  const sigma1 = 0.0467 + 0.2204*rho_b - 0.004111*P_sand - 0.006614*P_clay;   // éq. 69, S/m
+  const sigma2 = -1.645 + 1.939*rho_b - 0.0225622*P_sand + 0.01594*P_clay;   // éq. 70, S/m
+  const ratio = f_GHz/1.35;
+  const sigma_eff_real = ratio * ((sigma1-sigma2)/(1+ratio*ratio));          // éq. 67, S/m
+  const sigma_eff_imag = sigma2 + (sigma1-sigma2)/(1+ratio*ratio);           // éq. 68, S/m
+  return {
+    sigma1_S_m: Math.round(sigma1*10000)/10000,
+    sigma2_S_m: Math.round(sigma2*10000)/10000,
+    sigma_eff_real_S_m: Math.round(sigma_eff_real*10000)/10000,
+    sigma_eff_imag_S_m: Math.round(sigma_eff_imag*10000)/10000,
+    f_GHz, rho_b, P_sand, P_clay,
+    source: 'ITU-R Recommendation P.527-6 (09/2021), §5.2 Soil, équations 67-70',
+    note: 'Coefficients intermédiaires du modèle de permittivité complexe du sol P.527 — pas la conductivité ELF/tellurique (SIGMA_ROCK, domaine <30MHz, P.368, inchangée). Domaine de validité documenté : 0,1-1000 GHz (figures 14-16 du même document).'
+  };
+}
+
 // calcRF = fine enveloppe sur RF_field (consommée par calcAll_v2 → v2.domains.rf).
 // Conserve les clés consommées : S_total_uW_m2 (popup+composite GELÉ), confidence, source.
 function calcRF(lat, lon){
