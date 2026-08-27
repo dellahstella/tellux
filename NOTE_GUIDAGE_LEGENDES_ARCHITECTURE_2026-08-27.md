@@ -19,9 +19,8 @@ panneau "?", décharger une partie de cette information vers le corpus (liens qu
 sections correspondantes des textes du corpus, une fois la réécriture du corpus faite). Deux
 questions à trancher plus tard, pas maintenant :
 
-- Quel corpus exactement — cadre-scientifique.html (public) ? Le corpus privé
-  (`tellux-corpus-internal`) via une fiche publique dérivée ? Les deux avec un routage
-  différent selon la profondeur d'info ?
+- Quel corpus exactement — cadre-scientifique.html (public) ? Une fiche publique dérivée du
+  corpus scientifique interne ? Les deux avec un routage différent selon la profondeur d'info ?
 - Quelle info reste dans le panneau "?" (repère rapide, lecture au survol) vs quelle info part
   vers le corpus (contexte, méthode, sources détaillées) ? Le panneau compact actuel
   (Fond magnétique régional, 1 ligne) est peut-être déjà proche de ce que "?" devrait
