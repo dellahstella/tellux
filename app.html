@@ -639,7 +639,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .lbtn.on-perma{background:#dcfce7;color:#166534;border-color:#86efac;font-weight:500;}
 .lbtn.on-hypo{background:#e8eef8;color:var(--info);border-color:#6b8fd4;font-weight:500;}
 /* Etat actif partage (Option A — DA v2) pour couches sans variante dediee */
-.lbtn.on-emag,.lbtn.on-prod,.lbtn.on-crustal{background:var(--tx-brume);color:var(--tx-maquis);border-color:var(--tx-maquis);}
+.lbtn.on-emag,.lbtn.on-prod,.lbtn.on-crustal,.lbtn.on-foretdense{background:var(--tx-brume);color:var(--tx-maquis);border-color:var(--tx-maquis);}
 .layers{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;}
 .lbtn{font-size:10px;padding:3px 7px;border-radius:14px;border:1px solid var(--border);background:var(--bg);color:var(--ardoise-clair);cursor:pointer;display:inline-flex;align-items:center;gap:3px;transition:all .15s;white-space:nowrap;}
 /* margin-right explicite (2026-08-26, repro Soleil mobile x3 : icône chevauchant la 1re
@@ -703,8 +703,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     font-size:11px;
   }
 }
-.faille-tooltip{font-family:var(--mono);font-size:10px;background:var(--pierre-ombre,#f7f8fa);color:var(--ardoise-clair,#555);border:1px solid var(--border,rgba(0,0,0,.08));border-radius:6px;padding:4px 8px;line-height:1.5;box-shadow:0 2px 6px rgba(0,0,0,.12);}
-.on-therm{background:#e0f5fe!important;color:#0369a1!important;border-color:#38bdf8!important;font-weight:500;}
 .on-con{background:#f0e8ff!important;color:#5c3a9b!important;border-color:#9b72d4!important;font-weight:500;}
 .add-btn{font-size:11px;padding:5px 14px;border-radius:var(--r);border:1px solid var(--maquis-clair);background:var(--maquis-pale);color:var(--acc);cursor:pointer;margin-left:auto;font-weight:500;}
 .add-btn:hover{background:var(--maquis-clair);color:#fff;}
@@ -1117,8 +1115,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
      entièrement — pas un problème, juste un changement d'exposition, aucune action requise.
      .mlegend-inline (générique, un slot par bouton .lbtn) est peuplé par
      updateInlineLegendMobile(id,show), appelée depuis showLegend() — même choke point que
-     tog()/togFailles()/togPostesSources(), donc les 15 couches à légende sont couvertes
-     sans point d'accroche par bouton. Touch : boutons de couches et en-têtes de catégorie
+     tog()/togPostesSources() (nombre de couches à légende variable selon les ajouts/retraits
+     du menu, cf. LEGEND_HTML — pas un chiffre à maintenir en dur ici). Touch : boutons de
+     couches et en-têtes de catégorie
      agrandis pour cible tactile ≥44px (police/padding desktop trop petits — 10px/3-7px —
      conçus pour une sidebar 420px, pas un panneau mobile). */
   .lbtn{font-size:13px;padding:11px 14px;border-radius:10px;min-height:44px;}
@@ -1868,8 +1867,13 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <div class="mlegend-inline" id="mleg-hot"></div>
       <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)</button>
       <div class="mlegend-inline" id="mleg-hotrf"></div>
-      <button class="lbtn on-con" id="b-con" data-domains="tous" title="Mesures EM — contributions citoyennes + 30 fiches ANFR/EXEM certifiées (2024-2026)" onclick="tog('con','on-con',this)"><span class="dot" style="background:#5c3a9b"></span>Mesures EM</button>
-      <div class="mlegend-inline" id="mleg-con"></div>
+      <!-- b-con (« Mesures EM ») déplacé vers GROUPE 3 "Contexte naturel" / sous-groupe "Repères et
+           mesures externes" le 2026-08-27 (brief "nettoyage Contexte naturel") — regroupé avec
+           Anomalies de référence (mondiales) et Gamma citoyen (OpenRadiation), décision Soleil :
+           les 3 sont des rubriques de mesures/repères externes au calcul composite affiché. id
+           "b-con", onclick="tog('con',...)" et toute la logique JS (_bcon, coreOrder, showLegend,
+           ACTIVE.con activé par défaut) restent INCHANGÉS — seul l'emplacement dans le DOM/menu
+           change. -->
     </div>
   </div>
 
@@ -1903,32 +1907,39 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <span>Contexte naturel</span>
     </div>
     <div class="accordion-cat-content">
-      <p class="cat-header-text">Substrat géologique, indicateurs structurels et références comparatives. Certaines couches modulent le calcul Tellux (substrat magnétique, radon, fond magnétique régional), d'autres servent uniquement de contexte visuel — la distinction est explicitée pour chaque couche.</p>
+      <p class="cat-header-text">Substrat géologique et repères de contexte. Le fond magnétique régional et la forêt dense modulent le calcul Tellux (susceptibilité du socle, atténuation RF) ; les autres couches sont des repères paysagers ou des mesures/comparaisons externes, hors calcul — la distinction est explicitée pour chaque couche.</p>
 
-      <!-- Sous-accordéon à 4 volets (brief "Affichage EM" 2026-08-26, ordre interne encore
-           désigné A/B/C/D dans les commentaires pour s'y référer, mais RETRAIT DU PRÉFIXE LETTRÉ
-           dans le libellé affiché — décision Soleil 2026-08-26, brief "retrait lettrage" : les
-           lettres A/B/C/D n'apportaient rien à l'utilisateur, seul le nom de groupe reste visible
-           (ex. "Substrat magnétique", plus "A. Substrat magnétique"). 1er volet ouvert par défaut,
-           3 suivants repliés — indépendant du repli du groupe "Contexte naturel" lui-même (déjà
-           replié par défaut au niveau du groupe top-niveau). Descriptifs longs conservés
-           intégralement en title= (même convention que chaque bouton .lbtn du fichier) plutôt
-           qu'un nouveau mécanisme de disclosure ; réduits ici à une ligne courte visible. Badges
-           de statut par couche : mêmes 4 catégories partout dans ce groupe (Module le calcul /
-           Contexte / Hors calcul / Lien), cf. .layer-badge* plus haut. -->
+      <!-- Sous-accordéon à 2 volets — restructuré le 2026-08-27 (brief "nettoyage Contexte
+           naturel") : la structure précédente à 4 volets (Substrat magnétique / Contexte
+           territorial / Sites documentaires / Mesures citoyennes, brief "Affichage EM"
+           2026-08-26) laissait des volets à un seul item après le retrait de Failles tectoniques
+           et Émergences thermales (les deux migrées vers radon.html, #1056 — cf. commentaires à
+           leur suppression plus bas dans ce fichier). Fusion validée Soleil ("oui je valide comme
+           ça très bien!") : "Substrat magnétique" + "Contexte territorial" → "Substrat et
+           paysage" ; "Sites documentaires" + "Mesures citoyennes" + Mesures EM (déplacé depuis
+           GROUPE 1 "Modèle EM", cf. commentaire à son ancien emplacement) → "Repères et mesures
+           externes" (les 3 sont des rubriques de mesures/comparaisons externes au calcul composite
+           affiché — aucune ne le module). 1er volet ouvert par défaut, 2nd replié — indépendant du
+           repli du groupe "Contexte naturel" lui-même (déjà replié par défaut au niveau du groupe
+           top-niveau). Badges de statut par couche : mêmes 4 catégories partout dans ce groupe
+           (Module le calcul / Contexte / Hors calcul / Lien), cf. .layer-badge* plus haut. -->
       <div class="subgroup">
         <div class="accordion-cat-header subgroup-toggle open" onclick="toggleAccordion(this)">
           <span class="accordion-cat-icon open">▶</span>
-          <h5 class="subgroup-header subgroup-header-first">Substrat magnétique</h5>
+          <h5 class="subgroup-header subgroup-header-first">Substrat et paysage</h5>
         </div>
         <div class="accordion-cat-content subgroup-content open">
-          <p class="subgroup-text" title="Modulent le calcul Tellux : susceptibilité magnétique, potentiel radon, fond magnétique régional. Les failles sont un indicateur de contexte (popup), non intégrées au calcul.">Modulent le calcul (magnétique, radon, fond régional) — failles en contexte seul.</p>
+          <p class="subgroup-text" title="Fond magnétique régional et forêt dense modulent le calcul Tellux (susceptibilité du socle, atténuation RF). Forêts publiques (ONF, propriété foncière) est un repère paysager, hors calcul.">Fond magnétique régional et forêt dense modulent le calcul — forêts publiques en repère seul.</p>
           <!-- Couche « Géologie BRGM » retirée de la carte publique le 2026-08-20 (décision Soleil :
                chaque couche vit dans l'app qui correspond à son domaine causal — la géologie est la
                source de lithologie du calcul radon, cf. getGeoType()/GEO_SUSC_GRID, INCHANGÉS). Déjà
                présente sur radon.html avant ce retrait ; app.html n'en a donc plus de copie. -->
-          <button class="lbtn" id="b-failles" data-domains="statique" title="Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)" onclick="togFailles(this)"><span class="ln" style="background:#8E2F1F"></span>Failles tectoniques<span class="layer-badge layer-badge--context">Contexte</span></button>
-          <div class="mlegend-inline" id="mleg-failles"></div>
+          <!-- Couche « Failles tectoniques » (b-failles) retirée le 2026-08-27 (brief "nettoyage
+               Contexte naturel") — migrée vers radon.html (#1056), qui en devient l'unique
+               affichage. Voir commentaire au retrait de loadFailles()/renderFailles()/togFailles()
+               plus bas dans ce fichier : FAILLES_CORSE (source de calcul de calcFaultProximity()/
+               calcSubstrateContext()) est TOTALEMENT INDÉPENDANTE de ce qui a été retiré ici et
+               reste INCHANGÉE. -->
           <!-- Couches « Radon » et « Dépôts radon ERP (certifié) » retirées de la carte publique le
                2026-08-20 (pattern PR #990 : consolidation dans une app dédiée, pas un retrait de
                contenu). Le zonage ASNR, les dépôts ERP et la géologie BRGM en couche de référence
@@ -1940,36 +1951,55 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
           <a class="lbtn" href="radon.html" title="Zonage radon ASNR, dépôts ERP certifiés et courriers dédiés — ouvre l'application radon" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px"><span class="sq" style="background:#C28533"></span>Voir le volet radon &rarr;<span class="layer-badge layer-badge--link">Lien</span></a>
           <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Fond magnétique régional<span class="layer-badge layer-badge--calc">Module le calcul</span></button>
           <div class="mlegend-inline" id="mleg-emag"></div>
+          <!-- Couche « Forêt dense » (b-foretdense) ajoutée le 2026-08-27 (brief "nettoyage Contexte
+               naturel" point 5, dette FORET-DENSE-LAYER-001 close par ce diff) : jusqu'ici
+               foret_dense_corse.geojson (BD Forêt V2, #1038) alimentait calcVegetationAttenuation()
+               (RF, clic carte) sans aucune couche visible correspondante — seule « Forêts
+               publiques » (ONF, propriété foncière, sans rapport avec le calcul) était affichée.
+               Cf. buildForetDenseLayer()/lForetDense plus bas dans ce fichier. -->
+          <button class="lbtn" id="b-foretdense" data-domains="rf" title="BD Forêt V2 IGN — couvert arboré dense (canopée >40%), source réelle de l'atténuation RF calculée au clic carte (modèle ITU-R P.833-6). Distincte de « Forêts publiques » (propriété foncière ONF, sans rapport avec le calcul)." onclick="tog('foretdense','on-foretdense',this)"><span class="sq" style="background:#3F5B3A;opacity:.6"></span>Forêt dense (atténuation RF)<span class="layer-badge layer-badge--calc">Module le calcul</span></button>
+          <div class="mlegend-inline" id="mleg-foretdense"></div>
+          <button class="lbtn" id="b-foret" data-domains="visuel" title="Forêts publiques ONF via WMS IGN Géoplateforme — couche visuelle niveau A (pas de modulation calcul), propriété foncière. À ne pas confondre avec « Forêt dense » ci-dessus, qui EST la source géométrique réelle du calcul." onclick="tog('foret','on-foret',this)"><span class="sq" style="background:#3F5B3A"></span>Forêts publiques<span class="layer-badge layer-badge--context">Contexte</span></button>
+          <div class="mlegend-inline" id="mleg-foret"></div>
+          <!-- Couche « Hydrographie » (b-hyd) masquée du menu public le 2026-08-27 (brief "nettoyage
+               Contexte naturel" point 3, décision Soleil) — conservée en dette RÉSERVÉE, NI migrée
+               NI supprimée : bouton, wmsHyd, tog('hyd',...) et LEGEND_HTML['hyd']/LEGEND_HTML_EN
+               restent INCHANGÉS dans le code JS, seul l'affichage du bouton est retiré ici par
+               commentaire. Réactivable par un futur brief en dé-commentant le bloc ci-dessous, sans
+               reconstruction. Les entrées i18n JT_TABLE ["lyr_hyd","lyr_hyd_tt"] visant #b-hyd sont
+               laissées telles quelles : sans élément DOM à cibler tant que ce bloc reste commenté,
+               elles ne s'appliquent simplement à rien (aucune erreur). -->
+          <!--
+          <button class="lbtn" id="b-hyd" data-domains="visuel" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie<span class="layer-badge layer-badge--context">Contexte</span></button>
+          <div class="mlegend-inline" id="mleg-hyd"></div>
+          -->
         </div>
       </div>
 
       <div class="subgroup">
         <div class="accordion-cat-header subgroup-toggle" onclick="toggleAccordion(this)">
           <span class="accordion-cat-icon">▶</span>
-          <h5 class="subgroup-header">Contexte territorial (géologie, hydro, forêts)</h5>
+          <h5 class="subgroup-header">Repères et mesures externes</h5>
         </div>
         <div class="accordion-cat-content subgroup-content">
-          <p class="subgroup-text" title="Repères géologiques et paysagers, à titre indicatif — aucune couche n'entre dans le calcul.">Repères géologiques et paysagers indicatifs — hors calcul.</p>
+          <p class="subgroup-text" title="Mesures EM (contributions citoyennes + fiches ANFR/EXEM certifiées), Anomalies de référence mondiales (catalogue documentaire issu de la littérature) et Gamma citoyen (OpenRadiation) — 3 rubriques de mesures ou repères externes, regroupées ici. Aucune ne module le calcul composite Tellux affiché.">Mesures et repères externes — contributions citoyennes, fiches certifiées, catalogue de comparaison.</p>
+          <!-- Couche « Émergences thermales » (b-therm) retirée le 2026-08-27 (brief "nettoyage
+               Contexte naturel") — migrée vers radon.html (#1056), off par défaut là-bas, qui en
+               devient l'unique affichage. THERMAL_SOURCES_CORSE (peuplée par loadSitesApp(), même
+               loader partagé que SITES_REMARQUABLES/POINTS_CHAUDS_RADIO) reste chargée mais n'a
+               plus de consommateur d'affichage ici — cf. commentaire au retrait de
+               buildThermLayer() plus bas dans ce fichier. -->
           <!-- Couche « Cavités » retirée de la carte publique le 2026-08-20 (décision Soleil : les
                cavités souterraines (grottes, karst, mines) sont un mécanisme d'accumulation possible
                du radon, elles vivent désormais sur radon.html plutôt qu'ici — aucun calcul Tellux
                n'utilisait cette couche). -->
-          <button class="lbtn" id="b-therm" data-domains="statique" title="Émergences thermales — observations de surface, marqueurs de failles actives" onclick="tog('therm','on-therm',this)"><span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Émergences thermales<span class="layer-badge layer-badge--context">Contexte</span></button>
-          <div class="mlegend-inline" id="mleg-therm"></div>
-          <button class="lbtn" id="b-hyd" data-domains="visuel" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie<span class="layer-badge layer-badge--context">Contexte</span></button>
-          <div class="mlegend-inline" id="mleg-hyd"></div>
-          <button class="lbtn" id="b-foret" data-domains="visuel" title="Forêts publiques ONF via WMS IGN Géoplateforme — couche visuelle niveau A (pas de modulation calcul). BD Forêt V2 complète non disponible en WMS public." onclick="tog('foret','on-foret',this)"><span class="sq" style="background:#3F5B3A"></span>Forêts publiques<span class="layer-badge layer-badge--context">Contexte</span></button>
-          <div class="mlegend-inline" id="mleg-foret"></div>
-        </div>
-      </div>
-
-      <div class="subgroup">
-        <div class="accordion-cat-header subgroup-toggle" onclick="toggleAccordion(this)">
-          <span class="accordion-cat-icon">▶</span>
-          <h5 class="subgroup-header">Sites documentaires</h5>
-        </div>
-        <div class="accordion-cat-content subgroup-content">
-          <p class="subgroup-text" title="Catalogue de comparaison, issu de la littérature ou de mesures externes — hors calcul, confirmation locale à faire sur le terrain.">Catalogue de comparaison — hors calcul, à confirmer sur le terrain.</p>
+          <!-- b-con (« Mesures EM ») déplacé ici depuis GROUPE 1 "Modèle EM" le 2026-08-27 (brief
+               "nettoyage Contexte naturel", décision Soleil) — id, onclick et logique JS
+               INCHANGÉS (cf. commentaire à son ancien emplacement). Badge "Hors calcul" ajouté :
+               affiche des mesures de comparaison (contributions + fiches certifiées), n'entre pas
+               dans le calcul composite, cohérent avec les 2 boutons voisins de ce sous-groupe. -->
+          <button class="lbtn on-con" id="b-con" data-domains="tous" title="Mesures EM — contributions citoyennes + 30 fiches ANFR/EXEM certifiées (2024-2026)" onclick="tog('con','on-con',this)"><span class="dot" style="background:#5c3a9b"></span>Mesures EM<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
+          <div class="mlegend-inline" id="mleg-con"></div>
           <!-- Couche « Sites U/Th à mesurer » retirée de la carte publique le 2026-08-19 (décision
                Soleil, risque nocebo A.4 sur un catalogue 100% documentaire/non mesuré) — contenu
                transposé en fiche documentaire sur cadre-scientifique.html. Le chargement des données
@@ -1986,16 +2016,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
                POINTS_CHAUDS_RADIO qui alimente le boost ponctuel de calcGammaAmbient. -->
           <button class="lbtn" id="b-crustal" data-domains="statique" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF) — opt-in, comparaison locale/mondiale" onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales)<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
           <div class="mlegend-inline" id="mleg-crustal"></div>
-        </div>
-      </div>
-
-      <div class="subgroup">
-        <div class="accordion-cat-header subgroup-toggle" onclick="toggleAccordion(this)">
-          <span class="accordion-cat-icon">▶</span>
-          <h5 class="subgroup-header">Mesures citoyennes — rayonnement gamma</h5>
-        </div>
-        <div class="accordion-cat-content subgroup-content">
-          <p class="subgroup-text" title="Débit de dose gamma/X ambiant mesuré par des citoyens (OpenRadiation, tubes Geiger). Gamma/X, pas radon. Affichage indépendant, hors indice et hors calcul gamma. Mesures indicatives, capteurs hétérogènes non certifiés ; inclut des traces continues (densité affichée ≠ nombre de sites).">Mesures citoyennes gamma/X (pas radon) — hors indice, hors calcul.</p>
           <button class="lbtn" id="b-openrad" data-domains="ionisant" title="Mesures citoyennes de débit de dose gamma/X ambiant (OpenRadiation, tubes Geiger, µSv/h). Gamma/X, PAS radon. Couche d'affichage indépendante — non injectée dans l'indice ni le calcul gamma. Indicatives, capteurs hétérogènes, non certifiées ; inclut des traces (densité ≠ nombre de sites)." onclick="tog('openrad','on-openrad',this)"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Gamma citoyen (OpenRadiation)<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
           <div class="mlegend-inline" id="mleg-openrad"></div>
           <!-- TODO backlog couches : Communes radon niveau 3 overlay (GeoJSON geometries à fournir), MNT altitude overlay -->
@@ -3093,8 +3113,9 @@ wmsEmag.on('error',function(){
   info('⚠ Fond magnétique régional (NOAA EMAG2v3) — service indisponible, réessayez plus tard.','error',6000);
 });
 
-const lTherm=L.layerGroup();
-const lFailles=L.layerGroup();
+// lTherm/lFailles retirées le 2026-08-27 (brief "nettoyage Contexte naturel") — couches
+// migrées vers radon.html (#1056), qui en devient l'unique affichage. lForetDense (nouvelle,
+// cf. plus bas) prend la place laissée dans LAYERS ci-dessous par lTherm.
 const lPostesSources=L.layerGroup();
 // lPointsChaudsRadio (couche carte Points chauds U/Th) retirée le 2026-08-19 avec son bouton —
 // voir commentaire au-dessus de loadPointsChaudsRadio() : les données POINTS_CHAUDS_RADIO
@@ -3114,7 +3135,17 @@ const lCert=L.layerGroup();
 // reduits (montre les traces / la couverture citoyenne). Chargee au 1er toggle (loadOpenRad).
 const _openRadCanvas=L.canvas({padding:0.5});
 const lOpenRad=L.layerGroup();
-const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,con:lCon,therm:lTherm,crustal:lCrustal,openrad:lOpenRad};
+// lForetDense — couche visuelle réelle pour foret_dense_corse.geojson (BD Forêt V2, #1038),
+// ajoutée le 2026-08-27 (brief "nettoyage Contexte naturel" point 5, dette FORET-DENSE-LAYER-001
+// close par ce diff) : jusqu'ici cette source alimentait calcVegetationAttenuation() (RF, clic
+// carte uniquement — cf. #1038/#1039) sans AUCUNE couche visible correspondante, seule
+// "Forêts publiques" (ONF, propriété foncière, sans rapport avec le calcul) était affichée —
+// confusion possible entre les deux. Canvas renderer (L.canvas()) plutôt que le SVG par défaut
+// de Leaflet : ~2 880 polygones / ~122 000 sommets (cf. build_foret_dense_corse_geojson.py),
+// mesuré nettement plus rapide à peindre en canvas qu'en SVG pour ce volume de géométrie.
+const _foretDenseCanvas=L.canvas({padding:0.5});
+const lForetDense=L.layerGroup();
+const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,con:lCon,foretdense:lForetDense,crustal:lCrustal,openrad:lOpenRad};
 const WMS={hyd:wmsHyd,emag:wmsEmag,foret:wmsForet};
 // hot:false/hotrf:true — modèle RF activé par défaut à la place du champ magnétique
 // composite (arbitrage Soleil 2026-08-23). Swap symétrique avec la déclaration lHot/lHotRF
@@ -3129,14 +3160,13 @@ const LEGEND_ACTIVE_CONTEXT=[];
 const LEGEND_HTML={
   hot:'<div class="leg-block"><b class="leg-title">Champ magnétique composite (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (réseau) + susceptibilité du substrat</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#8b92a5">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · susceptibilité BRGM</div></div>',
   hotrf:'<div class="leg-block"><b class="leg-title">Champ électrique RF (V/m)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofréquences — modèle Tellux (calibration interne)</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:2px"><span>plus faible</span><span>plus marqué ▸</span></div><div style="font-size:8px;color:#8b92a5;width:140px;margin-bottom:4px;line-height:1.3">Échelle <b>relative</b> au modèle RF interne (bins 0,40 · 0,55 · 0,85 · 1,5 V/m) — valeurs absolues faibles.</div><div class="leg-row" style="font-size:8.5px;color:#4a4f5e;line-height:1.35"><span style="display:inline-block;width:10px;height:8px;background:#3f007d;border-radius:2px;vertical-align:middle;margin-right:4px"></span><b style="color:#3f007d">&gt; 1,5 V/m</b> — hors échelle ambiante typique (~p99 du modèle) : zone à vérifier par mesure, pas un seuil sanitaire.</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #2171b5;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ Repère ICNIRP public : 28–61 V/m selon fréquence<br><span style="font-size:8px;color:#8b92a5">Repère indicatif — pas de seuil d\'alerte</span></div><div class="leg-row" style="margin-top:4px;padding-left:8px;border-left:2px solid #9ecae1;font-size:8.5px;color:#4a4f5e;line-height:1.45"><b>Repères de lecture</b> (ordres de grandeur mesurés, pas des seuils sanitaires) :<br>· médiane nationale ~0,4 V/m (campagnes de mesures ANFR)<br>· haut de l\'ambiant typique ~1,5 V/m<br>· « point atypique » ANFR : ≥ 9 V/m depuis le 01/01/2026 (6 V/m auparavant)<br>· limite réglementaire : 28–61 V/m selon fréquence (téléphonie mobile 36–61 V/m)</div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#fdf6e3;border:1px solid #e0d4b0;border-radius:4px;font-size:8.5px;color:#7a5a1e;line-height:1.4"><b>Modèle Tellux — calibration interne.</b> Propagation depuis ~3000 antennes ANFR, calée sur 30 mesures certifiées ANFR/EXEM. <b>Estimation centrale d\'ordre de grandeur</b> (dispersion x/÷~3,3) — champ EXTÉRIEUR : sous-estime les sites les plus exposés, surestime l\'intérieur des bâtiments (~12 dB) et les zones boisées/rurales. Relecture physicien en cours ; ne remplace pas une mesure certifiée.</div><div class="leg-src">Friis · ~3000 antennes ANFR · calibration interne extérieurs</div></div>',
-  failles:'<div class="leg-block"><b class="leg-title">Failles tectoniques</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#8E2F1F;vertical-align:middle;margin-right:4px"></span><b style="color:#8E2F1F">Active</b> — faille active</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;border-top:2px dashed #C28533;vertical-align:middle;margin-right:4px"></span><b style="color:#C28533">Quaternaire</b> — faille ancienne</div><div class="leg-row" style="font-size:9px;color:var(--tx3)">Tracé indicatif ~30 km · axe orienté</div><div class="leg-why">Les failles actives amplifient localement le champ magnétique naturel.</div><div class="leg-src">BRGM Corte · 8 failles principales</div></div>',
+  foretdense:'<div class="leg-block"><b class="leg-title">Forêt dense (atténuation RF)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">BD Forêt V2 IGN — couvert arboré dense (canopée &gt;40%)</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#3F5B3A;opacity:.6;border:1px solid #3F5B3A"></span> Zone où l\'atténuation RF s\'applique au clic carte</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">À distinguer de « Forêts publiques » (ONF, propriété foncière) — cette couche-ci EST la source géométrique réelle du calcul (modèle ITU-R P.833-6, cf. popup clic).</div><div class="leg-src">IGN BD Forêt V2 · scripts/build_foret_dense_corse_geojson.py</div></div>',
   hyd:'<div class="leg-block"><b class="leg-title">Nappes</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Eau souterraine proche de la surface — couche visuelle BRGM ; le calcul utilise un dataset distinct</div><img src="https://geoservices.brgm.fr/risques?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.1.1&FORMAT=image/png&LAYER=REMNAPPE_FR" style="max-width:260px;width:100%;display:block;margin:4px 0;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:4px;padding:4px;box-sizing:border-box" alt="Légende Remontées de nappes (BRGM REMNAPPE_FR)"><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Légende renvoyée en direct par le serveur BRGM — remplace l\'ancienne liste statique (« Affleurante / Sub-affleurante ») qui décrivait une autre classification que celle réellement servie.</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
   foret:'<div class="leg-block"><b class="leg-title">Forêts publiques</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Couche visuelle ONF — atténuation RF en zones boisées prévue, non appliquée dans la version courante. En Corse, ce jeu de données IGN ne classe actuellement aucune parcelle en « domaniale » — seule la catégorie « non domaniale » apparaît sur la carte, bien que la légende ci-dessous liste les deux.</div><img src="https://data.geopf.fr/wms-v/ows?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.3.0&FORMAT=image/png&LAYER=FORETS.PUBLIQUES" style="max-width:260px;width:100%;display:block;margin:4px 0;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:4px;padding:4px;box-sizing:border-box" alt="Légende Forêts publiques"><div class="leg-src">IGN · ONF · Géoplateforme</div></div>',
   ant:'<div class="leg-block"><b class="leg-title">Antennes ANFR</b><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a4b8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a4b8c">2G</b> GSM — voix, SMS</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a6b5c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a6b5c">3G</b> UMTS — data mobile</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#b85c00">4G</b> LTE — haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#991b1b">5G</b> NR — très haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#6b7280">Infra</b> FH · TV · FM · PMR</div><div class="leg-row"><span style="display:inline-block;position:relative;width:12px;height:12px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:5px;top:0;width:2px;height:12px;background:#5f5e5a"></span><span style="position:absolute;top:5px;left:0;width:12px;height:2px;background:#5f5e5a"></span></span>Émetteur radio/TV majeur</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Opérateurs : Orange · SFR · Bouygues · Free<br><span id="leg-ant-count">—</span> sites · Source ANFR open data</div><div class="leg-src">ANFR · Supabase · SUP_SUPPORT 2026</div><div style="border-top:1px solid rgba(0,0,0,.08);padding-top:6px;margin-top:4px"><div style="font-family:var(--mono);font-size:9px;color:var(--tx3);margin-bottom:4px">MESURES CEM OFFICIELLES (losanges) · limite légale = 28 V/m :</div><div style="display:flex;flex-wrap:wrap;gap:4px"><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#0f766e;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#0f766e">Faible</b> &lt; 0.5 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#b85c00">Modéré</b> 0.5–2 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#991b1b">Élevé</b> 2–5 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#5c0000;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#5c0000">Très élevé</b> 5–28 V/m</div><div class="leg" style="padding:2px 6px;background:#fff8e6;border-radius:20px;border:1.5px solid #ffd700"><span style="display:inline-block;width:8px;height:8px;background:#7c0000;border:1.5px solid #ffd700;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#7c0000">⚠ &gt;28 V/m</b> non conforme</div></div></div></div>',
   emag:'<div class="leg-block"><b class="leg-title">Fond magnétique régional</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Signature magnétique du socle profond</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#dc2626;border-radius:2px"></span> Positif (granit, gabbro)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#2563eb;border-radius:2px"></span> Négatif (calcaire, schiste)</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Fond régional profond (~50-100km)</span></div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Non lié à l\'homme · EMAG2v3 NOAA</span></div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Résolution 2 arc-min (≈ 3,7 km) — grille mondiale, domaine public NOAA</span></div><div class="leg-why">Révèle la structure géologique profonde — non lié aux activités humaines.</div><div class="leg-src">Cagniard 1953 · Meyer et al. 2017</div></div>',
   crustal:'<div class="leg-block"><b class="leg-title">Anomalies de référence (mondiales)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Cinq références pédagogiques mondiales</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#8E2F1F33;border:2px solid #8E2F1F;border-radius:50%"></span> Anomalie négative (cratère, intrusion)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C2853333;border:2px solid #C28533;border-radius:50%"></span> Anomalie positive (BIF, gisement ferrifère)</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">5 références · Bangui · Kursk · Vredefort · Ries · Chicxulub</span></div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Panneau comparatif en haut à droite quand couche active</span></div><div class="leg-src">EMAG2v3 NOAA · publications académiques</div></div>',
   res:'<div class="leg-block"><b class="leg-title">Réseau électrique</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>Ligne HTA 20kV</div><div class="leg-row"><span style="display:inline-block;width:14px;height:3px;background:#5c2000;vertical-align:middle;margin-right:4px"></span>Ligne HTB 63-225kV</div><div class="leg-src">EDF SEI · Supabase · OSM</div></div>',
-  therm:'<div class="leg-block"><b class="leg-title">Émergences thermales</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Observations de surface, marqueurs de failles actives</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0ea5e9;border:2px solid white;border-radius:50%;box-shadow:0 0 3px #0ea5e966;vertical-align:middle;margin-right:4px"></span>Station active — Baracci, Guagno-les-Bains, Pietrapola</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0ea5e9;border:2px solid white;border-radius:50%;box-shadow:0 0 3px #0ea5e966;vertical-align:middle;margin-right:4px"></span>Fermée ou informelle — Guitera, Caldane</div><div class="leg-src">5 émergences thermales répertoriées en Corse.</div></div>',
     bt:'<div class="leg-block"><b class="leg-title">Réseau BT</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Distribution électrique dans les rues</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>BT aérien</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>BT souterrain</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 11</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Sites de production</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Centrales du réseau électrique corse</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique barrage</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique fil de l&#39;eau</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogaz</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>TAC (turbine à combustion)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnexion</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Taille selon puissance :</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
   con:'<div class="leg-block"><b class="leg-title">Mesures EM</b>'+
@@ -3171,14 +3201,13 @@ const LEGEND_HTML={
 const LEGEND_HTML_EN={
   hot:'<div class="leg-block"><b class="leg-title">Composite magnetic field (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (grid) + substrate susceptibility</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT: IARC class 2B documentary reference point.<br><span style="font-size:8px;color:#8b92a5">Not an alert threshold — see popup Details</span></div><div class="leg-src">Biot-Savart · EDF SEI · BRGM susceptibility</div></div>',
   hotrf:'<div class="leg-block"><b class="leg-title">RF electric field (V/m)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofrequency — Tellux model (internal calibration)</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:2px"><span>weaker</span><span>more pronounced ▸</span></div><div style="font-size:8px;color:#8b92a5;width:140px;margin-bottom:4px;line-height:1.3">Scale <b>relative</b> to the internal RF model (bins 0.40 · 0.55 · 0.85 · 1.5 V/m) — low absolute values.</div><div class="leg-row" style="font-size:8.5px;color:#4a4f5e;line-height:1.35"><span style="display:inline-block;width:10px;height:8px;background:#3f007d;border-radius:2px;vertical-align:middle;margin-right:4px"></span><b style="color:#3f007d">&gt; 1.5 V/m</b> — outside the typical ambient range (~p99 of the model): an area to verify by measurement, not a health threshold.</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #2171b5;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ Public ICNIRP reference: 28–61 V/m depending on frequency.<br><span style="font-size:8px;color:#8b92a5">Indicative reference — not an alert threshold</span></div><div class="leg-row" style="margin-top:4px;padding-left:8px;border-left:2px solid #9ecae1;font-size:8.5px;color:#4a4f5e;line-height:1.45"><b>Reading reference points</b> (measured orders of magnitude, not health thresholds):<br>· national median ~0.4 V/m (ANFR measurement campaigns)<br>· top of the typical ambient range ~1.5 V/m<br>· ANFR "atypical point": ≥ 9 V/m since January 1, 2026 (6 V/m previously)<br>· regulatory limit: 28–61 V/m depending on frequency (mobile telephony 36–61 V/m)</div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#fdf6e3;border:1px solid #e0d4b0;border-radius:4px;font-size:8.5px;color:#7a5a1e;line-height:1.4"><b>Tellux model — internal calibration.</b> Propagation from ~3,000 ANFR antennas, anchored on 30 certified ANFR/EXEM measurements. <b>Central order-of-magnitude estimate</b> (dispersion x/÷~3.3) — OUTDOOR field: underestimates the most exposed sites, overestimates indoor levels (~12 dB) and wooded/rural areas. Physicist review underway; does not replace a certified measurement.</div><div class="leg-src">Friis · ~3,000 ANFR antennas · internal outdoor calibration</div></div>',
-  failles:'<div class="leg-block"><b class="leg-title">Tectonic faults</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#8E2F1F;vertical-align:middle;margin-right:4px"></span><b style="color:#8E2F1F">Active</b> — active fault</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;border-top:2px dashed #C28533;vertical-align:middle;margin-right:4px"></span><b style="color:#C28533">Quaternary</b> — ancient fault</div><div class="leg-row" style="font-size:9px;color:var(--tx3)">Indicative trace ~30 km · oriented axis</div><div class="leg-why">Active faults locally amplify the natural magnetic field.</div><div class="leg-src">BRGM Corte · 8 main faults</div></div>',
+  foretdense:'<div class="leg-block"><b class="leg-title">Dense forest (RF attenuation)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">IGN BD Forêt V2 — dense tree cover (canopy &gt;40%)</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#3F5B3A;opacity:.6;border:1px solid #3F5B3A"></span> Area where RF attenuation applies on map click</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Distinct from "Public forests" (ONF, land ownership) — this layer IS the real geometric source of the calculation (ITU-R P.833-6 model, see click popup).</div><div class="leg-src">IGN BD Forêt V2 · scripts/build_foret_dense_corse_geojson.py</div></div>',
   hyd:'<div class="leg-block"><b class="leg-title">Groundwater</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Groundwater near the surface — BRGM visual layer; the calculation uses a separate dataset</div><img src="https://geoservices.brgm.fr/risques?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.1.1&FORMAT=image/png&LAYER=REMNAPPE_FR" style="max-width:260px;width:100%;display:block;margin:4px 0;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:4px;padding:4px;box-sizing:border-box" alt="Groundwater rise legend (BRGM REMNAPPE_FR)"><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Legend served live by the BRGM server — replaces the previous static list (\"Outcropping / Sub-outcropping\"), which described a different classification than the one actually rendered.</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
   foret:'<div class="leg-block"><b class="leg-title">Public forests</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ONF visual layer — RF attenuation in wooded areas planned, not applied in the current version. In Corsica, this IGN dataset currently classifies no parcel as "state-owned" (domaniale) — only the "non-state" category appears on the map, even though the legend below lists both.</div><img src="https://data.geopf.fr/wms-v/ows?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.3.0&FORMAT=image/png&LAYER=FORETS.PUBLIQUES" style="max-width:260px;width:100%;display:block;margin:4px 0;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:4px;padding:4px;box-sizing:border-box" alt="Légende Forêts publiques"><div class="leg-src">IGN · ONF · Géoplateforme</div></div>',
   ant:'<div class="leg-block"><b class="leg-title">ANFR Antennas</b><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a4b8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a4b8c">2G</b> GSM — voice, SMS</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a6b5c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a6b5c">3G</b> UMTS — mobile data</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#b85c00">4G</b> LTE — broadband</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#991b1b">5G</b> NR — ultra-high-speed</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#6b7280">Infra</b> microwave links · TV · FM · PMR</div><div class="leg-row"><span style="display:inline-block;position:relative;width:12px;height:12px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:5px;top:0;width:2px;height:12px;background:#5f5e5a"></span><span style="position:absolute;top:5px;left:0;width:12px;height:2px;background:#5f5e5a"></span></span>Major radio/TV transmitter</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Operators: Orange · SFR · Bouygues · Free<br><span id="leg-ant-count">—</span> sites · Source: ANFR open data</div><div class="leg-src">ANFR · Supabase · SUP_SUPPORT 2026</div><div style="border-top:1px solid rgba(0,0,0,.08);padding-top:6px;margin-top:4px"><div style="font-family:var(--mono);font-size:9px;color:var(--tx3);margin-bottom:4px">OFFICIAL EMF MEASUREMENTS (diamonds) · legal limit = 28 V/m:</div><div style="display:flex;flex-wrap:wrap;gap:4px"><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#0f766e;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#0f766e">Low</b> &lt; 0.5 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#b85c00">Moderate</b> 0.5–2 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#991b1b">High</b> 2–5 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#5c0000;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#5c0000">Very high</b> 5–28 V/m</div><div class="leg" style="padding:2px 6px;background:#fff8e6;border-radius:20px;border:1.5px solid #ffd700"><span style="display:inline-block;width:8px;height:8px;background:#7c0000;border:1.5px solid #ffd700;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#7c0000">⚠ &gt;28 V/m</b> non-compliant</div></div></div></div>',
   emag:'<div class="leg-block"><b class="leg-title">Regional magnetic background</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Deep basement magnetic signature</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#dc2626;border-radius:2px"></span> Positive (granite, gabbro)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:8px;background:#2563eb;border-radius:2px"></span> Negative (limestone, schist)</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Deep regional background (~50-100km)</span></div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Not related to human activity · NOAA EMAG2v3</span></div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Resolution 2 arc-min (≈ 3.7 km) — worldwide grid, NOAA public domain</span></div><div class="leg-why">Reveals deep geological structure — unrelated to human activities.</div><div class="leg-src">Cagniard 1953 · Meyer et al. 2017</div></div>',
   crustal:'<div class="leg-block"><b class="leg-title">Reference anomalies (worldwide)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Five worldwide educational references</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#8E2F1F33;border:2px solid #8E2F1F;border-radius:50%"></span> Negative anomaly (crater, intrusion)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C2853333;border:2px solid #C28533;border-radius:50%"></span> Positive anomaly (BIF, iron ore deposit)</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">5 references · Bangui · Kursk · Vredefort · Ries · Chicxulub</span></div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Comparison panel in the top right when the layer is active</span></div><div class="leg-src">NOAA EMAG2v3 · academic publications</div></div>',
   res:'<div class="leg-block"><b class="leg-title">Electrical grid</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>HTA line 20kV</div><div class="leg-row"><span style="display:inline-block;width:14px;height:3px;background:#5c2000;vertical-align:middle;margin-right:4px"></span>HTB line 63-225kV</div><div class="leg-src">EDF SEI · Supabase · OSM</div></div>',
-  therm:'<div class="leg-block"><b class="leg-title">Thermal springs</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Surface observations, active fault markers</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0ea5e9;border:2px solid white;border-radius:50%;box-shadow:0 0 3px #0ea5e966;vertical-align:middle;margin-right:4px"></span>Active station — Baracci, Guagno-les-Bains, Pietrapola</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0ea5e9;border:2px solid white;border-radius:50%;box-shadow:0 0 3px #0ea5e966;vertical-align:middle;margin-right:4px"></span>Closed or informal — Guitera, Caldane</div><div class="leg-src">5 thermal springs recorded in Corsica.</div></div>',
   bt:'<div class="leg-block"><b class="leg-title">LV grid</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Street-level electrical distribution</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>Overhead BT</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>Underground BT</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 11</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Generation sites</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Corsican power grid generation plants</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydro dam</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Run-of-river hydro</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Wind</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogas</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Gas turbine (combustion turbine)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnection</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Size according to power output:</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
   con:'<div class="leg-block"><b class="leg-title">EM measurements</b><div class="leg-sub" style="font-size:10px;color:var(--tx-mica,#7B7770);margin:2px 0 4px">30 ANFR/EXEM sheets + citizen contributions</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Compliant &lt; 5 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Compliant 5–28 V/m</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#7c0000;transform:rotate(45deg);border:2px solid #C28533;vertical-align:middle;margin-right:4px"></span> Non-compliant &gt; 28 V/m (e.g. Monticello)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Detail per sheet by clicking the marker</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Low frequency 9 kHz–100 kHz</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#5c3a9b;border-radius:50%;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Citizen contribution (cluster)</div><div class="leg-src">ANFR/EXEM · Tellux crowdsourced</div></div>',
@@ -3494,8 +3523,8 @@ function updateLegendPanel(){
 // updateInlineLegendMobile — onglet Couches mobile (contrat CONTRAT_NAV_MOBILE_APP_2026-08-23.md
 // §2 : fusion .layers-accordion + #legende/#tellux-leg-panel, légende inline sous le bouton
 // plutôt que dans le panneau "?"). Appelée depuis showLegend(), même choke point que la Zone 1/2
-// desktop (tog()/togFailles()/togPostesSources() y passent tous) — couvre les 15 couches à
-// légende sans point d'accroche par bouton. Invisible >768px par construction CSS
+// desktop (tog()/togPostesSources() y passent tous) — couvre toutes les couches à légende
+// sans point d'accroche par bouton (nombre variable, cf. LEGEND_HTML). Invisible >768px par construction CSS
 // (.mlegend-inline{display:none} hors media query) : aucun check de largeur nécessaire ici,
 // même logique que .mobile-tabbar. N'affecte ni LEGEND_ACTIVE_CORE ni LEGEND_ACTIVE_CONTEXT
 // (Zone 1/2 desktop, #tellux-leg-panel/#tellux-legends-context, INCHANGÉES par ce diff).
@@ -3561,7 +3590,7 @@ function tog(id,cls,btn){
     if(id==='emag')document.getElementById('emag-op-row').style.display='flex';
     if(id==='hot'&&lHot.getLayers().length===0)buildHot();
     if(id==='hotrf'&&lHotRF.getLayers().length===0)buildHotRF();
-    if(id==='therm'&&lTherm.getLayers().length===0)loadSitesApp().then(buildThermLayer);
+    if(id==='foretdense'&&lForetDense.getLayers().length===0)loadForetDenseGrid().then(buildForetDenseLayer);
     if(id==='crustal'){if(lCrustal.getLayers().length===0)buildCrustalLayer();showCrustalGauge(true);}
     if(id==='openrad'&&lOpenRad.getLayers().length===0)loadOpenRad();
     // tour/indu/cast/pont : couches patrimoniales migrées vers patrimoine.html
@@ -7640,23 +7669,40 @@ async function loadChargeReseau(){
 }
 
 
-function buildThermLayer(){
-  lTherm.clearLayers();
-  THERMAL_SOURCES_CORSE.forEach(s => {
-    const icon = L.divIcon({
-      className: '',
-      html: '<div style="width:12px;height:12px;background:#0ea5e9;border:2px solid white;border-radius:50%;box-shadow:0 0 4px #0ea5e999"></div>',
-      iconSize: [12, 12],
-      iconAnchor: [6, 6]
-    });
-    L.marker([s.lat, s.lon], { icon, interactive: true })
-      .bindPopup('<b>' + s.nom + '</b><br><span style="font-size:12px;color:var(--ardoise-clair)">' + s.description + '</span>')
-      .addTo(lTherm);
-  });
-}
 // buildTourLayer / buildInduLayer / buildCastLayer / buildPontLayer migrés vers patrimoine.html
-// (Tours génoises, Mines, Châteaux médiévaux, Ponts génois). La couche thermalisme est
-// alimentée par THERMAL_SOURCES_CORSE (dataset autonome, lien EM : failles actives / géothermie).
+// (Tours génoises, Mines, Châteaux médiévaux, Ponts génois).
+// buildThermLayer() retirée le 2026-08-27 (brief "nettoyage Contexte naturel") — couche
+// visuelle migrée vers radon.html (off par défaut là-bas), qui en devient l'unique affichage.
+// ⚠️ NE PAS SUPPRIMER `let THERMAL_SOURCES_CORSE = [];` ni son assignation dans loadSitesApp()
+// (plus haut dans ce fichier) : même précédent que SITES_REMARQUABLES (cf. commentaire à sa
+// déclaration) — le loader partagé loadSitesApp() reste appelé pour peupler
+// POINTS_CHAUDS_RADIO/SITES_REMARQUABLES (boost calcGammaAmbient), THERMAL_SOURCES_CORSE n'est
+// plus qu'un sous-produit inutilisé de ce même fetch, pas une raison de complexifier le loader.
+
+// buildForetDenseLayer() — nouvelle (2026-08-27, brief "nettoyage Contexte naturel" point 5,
+// dette FORET-DENSE-LAYER-001). Convertit FORET_DENSE_PARTS (déjà chargé par
+// loadForetDenseGrid() pour le calcul RF, cf. plus haut — pas un second fetch séparé) en
+// MultiPolygon GeoJSON, rendu via L.canvas() (cf. commentaire à la déclaration de
+// lForetDense/_foretDenseCanvas). part.rings est déjà au format GeoJSON (array d'anneaux
+// [lon,lat], anneau extérieur puis trous éventuels) — reconstruire un Feature MultiPolygon
+// directement plutôt que de repasser par L.polygon (qui attend [lat,lon], ordre inverse —
+// éviter le risque d'inversion de coordonnées).
+function buildForetDenseLayer(){
+  lForetDense.clearLayers();
+  if(!FORET_DENSE_PARTS || FORET_DENSE_PARTS.length===0) return;
+  const geojson={
+    type:'Feature',
+    properties:{},
+    geometry:{
+      type:'MultiPolygon',
+      coordinates:FORET_DENSE_PARTS.map(function(part){return part.rings;})
+    }
+  };
+  L.geoJSON(geojson,{
+    renderer:_foretDenseCanvas,
+    style:{color:'#3F5B3A',weight:0.5,opacity:0.6,fillColor:'#3F5B3A',fillOpacity:0.35,interactive:false}
+  }).addTo(lForetDense);
+}
 
 function exportTerrainCSV(){
   if(!contribsDB||contribsDB.length===0){alert('Aucune contribution en base.');return;}
@@ -8661,54 +8707,16 @@ function startFromPrescription(instrument,unit){
   },100);
 }
 
-// ═══ FAILLES TECTONIQUES BRGM ═══
-let FAILLES_DATA=null,FAILLES_RENDERED=false;
-function _bearingFromOrient(orient){
-  if(/^N-S|^S-N/.test(orient))return 0;
-  if(/^NE-SW|^SW-NE/.test(orient))return 45;
-  if(/^ENE|^WSW|^OSO/.test(orient))return 67;
-  if(/^E-W|^W-E/.test(orient))return 90;
-  return 0;
-}
-async function loadFailles(){
-  if(FAILLES_DATA)return FAILLES_DATA;
-  const r=await fetch('./failles-corse.json');
-  FAILLES_DATA=await r.json();
-  return FAILLES_DATA;
-}
-function renderFailles(){
-  if(FAILLES_RENDERED)return;
-  FAILLES_RENDERED=true;
-  FAILLES_DATA.forEach(f=>{
-    const b=_bearingFromOrient(f.orient)*Math.PI/180;
-    const d=15;
-    const dlat=d/111*Math.cos(b);
-    const dlon=d/(111*Math.cos(f.lat*Math.PI/180))*Math.sin(b);
-    const isActive=f.type==='active';
-    const color=isActive?'#8E2F1F':'#C28533';
-    const opts=isActive
-      ?{color,weight:2,opacity:.85}
-      :{color,weight:1.5,opacity:.75,dashArray:'4,3'};
-    L.polyline([[f.lat-dlat,f.lon-dlon],[f.lat+dlat,f.lon+dlon]],opts)
-      .bindTooltip(f.nom+' — '+f.type+' ('+f.orient+') · '+f.src,{className:'faille-tooltip',sticky:true})
-      .addTo(lFailles);
-  });
-}
-async function togFailles(btn){
-  if(map.hasLayer(lFailles)){
-    map.removeLayer(lFailles);btn.className='lbtn';showLegend('failles',false);return;
-  }
-  try{
-    await loadFailles();
-    renderFailles();
-    lFailles.addTo(map);
-    btn.className='lbtn on-failles';
-    showLegend('failles',true);
-    info('⚡ Failles tectoniques — 8 failles BRGM Corte (actives + quaternaires)',null,5000);
-  }catch(e){
-    info('<span style="color:var(--danger)">Failles : erreur de chargement</span>',null,5000);
-  }
-}
+// ═══ FAILLES TECTONIQUES BRGM — couche visuelle retirée d'app.html le 2026-08-27 (brief
+// "nettoyage Contexte naturel") : migrée vers radon.html (#1056), qui en devient l'unique
+// affichage. Code de chargement/rendu (loadFailles()/renderFailles()/togFailles(), FAILLES_DATA,
+// _bearingFromOrient()) supprimé après vérification qu'aucun autre appelant ne l'utilisait
+// (grep exhaustif avant retrait, même discipline que le nettoyage du commentaire CORS périmé
+// du 2026-08-26). NE PAS CONFONDRE avec FAILLES_CORSE (const hardcodée plus bas dans ce
+// fichier) : source de calcul TOTALEMENT INDÉPENDANTE de ce qui vient d'être retiré, utilisée
+// par calcFaultProximity() (context.fault) et calcSubstrateContext() — aucun impact calcul,
+// vérifié par lecture directe avant ce retrait. ./failles-corse.json (le fichier fetché par le
+// code retiré) reste dans le repo, toujours utilisé par radon.html.
 
 // ═══ Rendu / toggle postes sources EDF ═══
 let _postesRendered = false;
@@ -9972,9 +9980,8 @@ function capCleanup(){
 ["cat_modele",".accordion-cat-header > span:nth-child(2)@0","","Modèle EM","Mudellu EM","EM model"],
 ["cat_anthropique",".accordion-cat-header > span:nth-child(2)@1","","Sources anthropiques","Fonti antropiche","Anthropogenic sources"],
 ["cat_naturel",".accordion-cat-header > span:nth-child(2)@2","","Contexte naturel","Cuntestu naturale","Natural context"],
-["subgroup_a",".subgroup-header@0","","Substrat magnétique","Sustratu magneticu","Magnetic substrate"],
-["subgroup_b",".subgroup-header@1","","Contexte territorial (géologie, hydro, forêts)","Cuntestu territuriale (geulugia, idrulugia, fureste)","Territorial context (geology, hydro, forests)"],
-["subgroup_c",".subgroup-header@2","","Sites documentaires","Siti ducumentari","Documentary sites"],
+["subgroup_a",".subgroup-header@0","","Substrat et paysage","Sustratu è paisaghju","Substrate and landscape"],
+["subgroup_b",".subgroup-header@1","","Repères et mesures externes","Puntelli è misure esterne","External references and measurements"],
 ["lyr_hot","#b-hot","","Champ magnétique composite (nT)","Campu magneticu cumpostu (nT)","Composite magnetic field (nT)"],
 ["lyr_hot_tt","#b-hot","title","Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. Estimation du modèle Tellux, pas une mesure.","Campu magneticu cumpostu — ELF 50 Hz (rete elettrica) + suscettibilità di u sustratu, espressu in nT. Stima di u mudellu Tellux, micca una misura.","Composite magnetic field — ELF 50 Hz (electrical grid) + substrate susceptibility, expressed in nT. Tellux model estimate, not a measurement."],
 ["lyr_hotrf","#b-hot-rf","","Champ électrique RF (V/m)","Campu elettricu RF (V/m)","RF electric field (V/m)"],
@@ -9991,12 +9998,10 @@ function capCleanup(){
 ["lyr_prod_tt","#b-prod","title","Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions","Centrale idrauliche, eoliane, diesel, TAC, biogas, intercunnessione","Hydro, wind, diesel, gas turbine, biogas plants, interconnections"],
 ["lyr_postes","#b-postes","","Postes sources EDF","Posti surgente EDF","EDF substations"],
 ["lyr_postes_tt","#b-postes","title","Postes sources EDF SEI (transformateurs HTB/HTA) — 21 postes OSM","Posti surgente EDF SEI (trasfurmatori HTB/HTA) — 21 posti OSM","EDF SEI substations (HTB/HTA transformers) — 21 OSM substations"],
-["lyr_failles","#b-failles","","Failles tectoniques","Faglie tettoniche","Tectonic faults"],
-["lyr_failles_tt","#b-failles","title","Failles tectoniques BRGM — 8 failles principales (actives + quaternaires)","Faglie tettoniche BRGM — 8 faglie principale (attive + quaternarie)","BRGM tectonic faults — 8 main faults (active + Quaternary)"],
 ["lyr_emag","#b-emag","","Fond magnétique régional","Fondu magneticu regiunale","Regional magnetic background"],
 ["lyr_emag_tt","#b-emag","title","Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse","Fondu magneticu regiunale NOAA EMAG2v3 — anumalie di u zoccalu prufondu corsu","NOAA EMAG2v3 regional magnetic background — deep basement anomalies of Corsica"],
-["lyr_therm","#b-therm","","Émergences thermales","Surgenti termali","Thermal springs"],
-["lyr_therm_tt","#b-therm","title","Émergences thermales — observations de surface, marqueurs de failles actives","Surgenti termali — osservazione di superficia, marcatori di faglie attive","Thermal springs — surface observations, active fault markers"],
+["lyr_foretdense","#b-foretdense","","Forêt dense (atténuation RF)","Fureste densa (attenuazione RF)","Dense forest (RF attenuation)"],
+["lyr_foretdense_tt","#b-foretdense","title","BD Forêt V2 IGN — couvert arboré dense (canopée >40%), source réelle de l'atténuation RF calculée au clic carte. Distincte de « Forêts publiques » (propriété foncière ONF).","BD Fureste V2 IGN — cupertura arburea densa (canopea >40%), fonte reale di l'attenuazione RF calculata à u cliccu carta. Distinta da « Fureste publiche » (pruprietà fundiaria ONF).","IGN BD Forêt V2 — dense tree cover (canopy >40%), the real source of RF attenuation computed on map click. Distinct from \"Public forests\" (ONF land ownership)."],
 ["lyr_hyd","#b-hyd","","Hydrographie","Idrugrafia","Hydrography"],
 ["lyr_hyd_tt","#b-hyd","title","Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct","Falde è corsi d'acqua sutterranei (BRGM REMNAPPE) — stratu visuale ; u calculu adopra un dataset distintu","Groundwater and underground watercourses (BRGM REMNAPPE) — visual layer; the calculation uses a separate dataset"],
 ["lyr_foret","#b-foret","","Forêts publiques","Fureste publiche","Public forests"],
