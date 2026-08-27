@@ -1959,15 +1959,18 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
            externes" (les 3 sont des rubriques de mesures/comparaisons externes au calcul composite
            affiché — aucune ne le module). 1er volet ouvert par défaut, 2nd replié — indépendant du
            repli du groupe "Contexte naturel" lui-même (déjà replié par défaut au niveau du groupe
-           top-niveau). Badges de statut par couche : mêmes 4 catégories partout dans ce groupe
-           (Module le calcul / Contexte / Hors calcul / Lien), cf. .layer-badge* plus haut. -->
+           top-niveau). Badges de statut par couche, cf. .layer-badge* plus haut : « Module le
+           calcul » (le toggle inclut/retire la couche du calcul — ex. Forêt dense), « Toujours
+           dans le calcul » (composante permanente que le toggle ne pilote pas, il n'affiche que
+           la couche — ex. Fond magnétique régional), « Calibration RF » (a servi une fois à
+           l'initialisation), « Contexte », « Hors calcul », « Lien ». -->
       <div class="subgroup">
         <div class="accordion-cat-header subgroup-toggle open" onclick="toggleAccordion(this)">
           <span class="accordion-cat-icon open">▶</span>
           <h5 class="subgroup-header subgroup-header-first">Substrat et paysage</h5>
         </div>
         <div class="accordion-cat-content subgroup-content open">
-          <p class="subgroup-text" title="Fond magnétique régional et forêt dense modulent le calcul Tellux (susceptibilité du socle, atténuation RF). Forêts publiques (ONF, propriété foncière) est un repère paysager, hors calcul.">Fond magnétique régional et forêt dense modulent le calcul — forêts publiques en repère seul.</p>
+          <p class="subgroup-text" title="Le fond magnétique régional (anomalie du socle) est inclus en permanence dans le calcul Tellux — le bouton n'affiche/masque que la couche visuelle, il ne pilote pas cette entrée. Pour la forêt dense, activer le bouton inclut l'atténuation RF de la canopée (ITU-R P.833-6) dans le calcul au clic carte ; le désactiver la retire.">Fond magnétique régional : toujours dans le calcul (le bouton n'affiche que la couche). Forêt dense : le bouton active l'atténuation RF.</p>
           <!-- Couche « Géologie BRGM » retirée de la carte publique le 2026-08-20 (décision Soleil :
                chaque couche vit dans l'app qui correspond à son domaine causal — la géologie est la
                source de lithologie du calcul radon, cf. getGeoType()/GEO_SUSC_GRID, INCHANGÉS). Déjà
@@ -1991,14 +1994,14 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
                uniquement dans #hdr-menu (menu sandwich, cf. commentaire à son ajout plus haut dans
                ce fichier), pour ne garder qu'un seul chemin de navigation au lieu de deux
                redondants. -->
-          <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Fond magnétique régional<span class="layer-badge layer-badge--calc">Module le calcul</span></button>
+          <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Fond magnétique régional<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span></button>
           <div class="mlegend-inline" id="mleg-emag"></div>
           <!-- Couche « Forêt dense » (b-foretdense) ajoutée le 2026-08-27 (brief "nettoyage Contexte
                naturel" point 5, dette FORET-DENSE-LAYER-001 close par ce diff) : jusqu'ici
                foret_dense_corse.geojson (BD Forêt V2, #1038) alimentait calcVegetationAttenuation()
                (RF, clic carte) sans aucune couche visible correspondante. Cf.
                buildForetDenseLayer()/lForetDense plus bas dans ce fichier. -->
-          <button class="lbtn" id="b-foretdense" data-domains="rf" title="BD Forêt V2 IGN — couvert arboré dense (canopée >40%), source réelle de l'atténuation RF calculée au clic carte (modèle ITU-R P.833-6)." onclick="tog('foretdense','on-foretdense',this)"><span class="sq" style="background:#3F5B3A;opacity:.6"></span>Forêt dense (atténuation RF)<span class="layer-badge layer-badge--calc">Module le calcul</span></button>
+          <button class="lbtn" id="b-foretdense" data-domains="rf" title="BD Forêt V2 IGN — couvert arboré dense (canopée >40%). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6) dans le calcul au clic carte ; le désactiver la retire." onclick="tog('foretdense','on-foretdense',this)"><span class="sq" style="background:#3F5B3A;opacity:.6"></span>Forêt dense (atténuation RF)<span class="layer-badge layer-badge--calc">Module le calcul</span></button>
           <div class="mlegend-inline" id="mleg-foretdense"></div>
           <!-- Couche « Forêts publiques » (b-foret, ONF via WMS IGN) retirée complètement le
                2026-08-27 (décision Soleil, brief court "la couche forêt publique n'est plus utile
@@ -5486,13 +5489,19 @@ function RF_field(lat, lon, applyVegetation){
       cell.forEach(a=>{
         const d=Math.max(50, dist(lat,lon,a.lat,a.lon)*1000);
         let contrib=30*(EIRP_BY_GEN[a.generation]||20)/(d*d);
-        // Atténuation végétation (ITU-R P.833-6) — voir garde applyVegetation ci-dessous : coûteuse
-        // (échantillonnage point-in-polygon par antenne), donc opt-in explicite, PAS appliquée par
-        // défaut (buildHotRF() appelle calcN_RF_calib()→RF_field() par cellule de heatmap, jusqu'à
-        // ~0,001° de pas au zoom max — mesuré : ~0,5ms/antenne en zone forestière, soit des dizaines
-        // de secondes cumulées sur une grille de heatmap dense — testé, pas supposé). Seul le calcul
-        // ponctuel (clic carte, calcAll) active applyVegetation=true — coût négligible sur 1 point.
-        if(applyVegetation && FORET_DENSE_PARTS){
+        // Atténuation végétation (ITU-R P.833-6) — double garde :
+        //  1. applyVegetation : coûteuse (échantillonnage point-in-polygon par antenne), donc
+        //     opt-in explicite, PAS appliquée par défaut (buildHotRF() appelle calcN_RF_calib()→
+        //     RF_field() par cellule de heatmap, jusqu'à ~0,001° de pas au zoom max — mesuré :
+        //     ~0,5ms/antenne en zone forestière, soit des dizaines de secondes cumulées sur une
+        //     grille dense — testé, pas supposé). Seul le calcul ponctuel (clic carte, calcAll)
+        //     active applyVegetation=true — coût négligible sur 1 point.
+        //  2. ACTIVE.foretdense : le bouton "Forêt dense (atténuation RF)" pilote réellement
+        //     l'inclusion de cette composante dans le calcul (badge "Module le calcul" honnête) —
+        //     Brief A 2026-08-27, même famille que le fix water*0.3 (#1025). Avant ce diff,
+        //     l'atténuation s'appliquait dès FORET_DENSE_PARTS chargé (au boot), le toggle
+        //     ne pilotant que la couche visuelle. Défaut = OFF (foretdense absent de ACTIVE).
+        if(applyVegetation && FORET_DENSE_PARTS && typeof ACTIVE!=='undefined' && ACTIVE.foretdense){
           const depth_m = estimateForestDepth(lat, lon, a.lat, a.lon);
           if(depth_m > 0){
             const veg = calcVegetationAttenuation(RF_FREQ_MHZ_BY_GEN[a.generation]||1800, depth_m);
@@ -10269,7 +10278,7 @@ function capCleanup(){
 ["lyr_emag","#b-emag","","Fond magnétique régional","Fondu magneticu regiunale","Regional magnetic background"],
 ["lyr_emag_tt","#b-emag","title","Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse","Fondu magneticu regiunale NOAA EMAG2v3 — anumalie di u zoccalu prufondu corsu","NOAA EMAG2v3 regional magnetic background — deep basement anomalies of Corsica"],
 ["lyr_foretdense","#b-foretdense","","Forêt dense (atténuation RF)","Fureste densa (attenuazione RF)","Dense forest (RF attenuation)"],
-["lyr_foretdense_tt","#b-foretdense","title","BD Forêt V2 IGN — couvert arboré dense (canopée >40%), source réelle de l'atténuation RF calculée au clic carte.","BD Fureste V2 IGN — cupertura arburea densa (canopea >40%), fonte reale di l'attenuazione RF calculata à u cliccu carta.","IGN BD Forêt V2 — dense tree cover (canopy >40%), the real source of RF attenuation computed on map click."],
+["lyr_foretdense_tt","#b-foretdense","title","BD Forêt V2 IGN — couvert arboré dense (canopée >40%). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6) dans le calcul au clic carte ; le désactiver la retire.","BD Fureste V2 IGN — cupertura arburea densa (canopea >40%). Attivà stu buttone include l'attenuazione RF di a canopea (mudellu ITU-R P.833-6) in u calculu à u cliccu carta ; disattivallu a caccia.","IGN BD Forêt V2 — dense tree cover (canopy >40%). Enabling this button includes canopy RF attenuation (ITU-R P.833-6 model) in the on-click map calculation; disabling it removes it."],
 ["lyr_hyd","#b-hyd","","Hydrographie","Idrugrafia","Hydrography"],
 ["lyr_hyd_tt","#b-hyd","title","Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct","Falde è corsi d'acqua sutterranei (BRGM REMNAPPE) — stratu visuale ; u calculu adopra un dataset distintu","Groundwater and underground watercourses (BRGM REMNAPPE) — visual layer; the calculation uses a separate dataset"],
 ["lyr_crustal","#b-crustal","","Anomalies de référence (mondiales & Corse)","Anumalie di riferenza (mundiale è corsa)","Reference anomalies (worldwide & Corsica)"],
