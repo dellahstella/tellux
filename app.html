@@ -2887,6 +2887,8 @@ var JS_STRINGS_EN = {
   crustal_rayon_prefix: "· radius ~",
   crustal_corse_scale_label: "Corsican site — local scale, not quantified",
   crustal_corse_source_label: "Source: BRGM · sites_app.json — outside the calculation",
+  crustal_corse_call_to_measure: "🔎 A documented but never measured anomaly — few sites of this kind are recorded in Corsica. A first field measurement would be a welcome scientific contribution.",
+  crustal_corse_measure_cta: "Contribute a measurement here →",
   crustal_gauge_title: "Local crustal anomaly",
   crustal_nt_centre_carte: "nT at map center",
   crustal_gauge_desc_prefix: "Deviation of the basement magnetic field (crustal anomaly) beneath the map center. Exploratory reference point — not integrated into the Tellux score; ",
@@ -3296,10 +3298,9 @@ const LEGEND_HTML={
   // panneau "?" avant ce diff (jamais dans LEGEND_CORE_IDS) — seulement en pastille flottante
   // Zone 2 sur la carte ; ce retrait élimine cette pastille. Le title= du bouton b-crustal
   // reste la description rapide (5 sites mondiaux quantifiés + 3 sites Corse non quantifiés).
-  // ⚠️ Chevauche PR #1062 (non mergée à l'écriture de ce diff) qui ajoutait une ligne d'appel
-  // à mesure à CETTE MÊME entrée — conflit git probable au merge, à résoudre en faveur du
-  // retrait (le contenu de cette ligne existe déjà dans le popup par marqueur ajouté par
-  // #1062, rien n'est perdu). Signalé à Soleil, pas résolu unilatéralement ici.
+  // Conflit avec #1062 (ligne d'appel à mesure ajoutée à cette même entrée) résolu en faveur
+  // du retrait au merge du 2026-08-27 — rien n'est perdu, ce texte existe déjà dans le popup
+  // par marqueur ajouté par #1062 (buildCrustalLayer() plus bas dans ce fichier).
   res:'<div class="leg-block"><b class="leg-title">Réseau électrique</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>Ligne HTA 20kV</div><div class="leg-row"><span style="display:inline-block;width:14px;height:3px;background:#5c2000;vertical-align:middle;margin-right:4px"></span>Ligne HTB 63-225kV</div><div class="leg-src">EDF SEI · Supabase · OSM</div></div>',
     bt:'<div class="leg-block"><b class="leg-title">Réseau BT</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Distribution électrique dans les rues</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>BT aérien</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>BT souterrain</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 11</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Sites de production</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Centrales du réseau électrique corse</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique barrage</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique fil de l&#39;eau</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogaz</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>TAC (turbine à combustion)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnexion</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Taille selon puissance :</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
@@ -4032,18 +4033,58 @@ function buildCrustalLayer(){
   // ci-dessus, donc buildCrustalLayer() ne serait pas rappelée automatiquement) ; même
   // tolérance de risque que POINTS_CHAUDS_RADIO/calcGammaAmbient (couche opt-in, jamais activée
   // par défaut, clic utilisateur quasi jamais dans les 1,5 premières secondes).
+  //
+  // Appel à mesure ajouté le 2026-08-27 (brief court, consultation chat) : les 3 sites n'ont
+  // aucune valeur nT mesurée (Farinole a une fourchette qualitative documentaire "dizaines à
+  // centaines de nT" DÉJÀ présente dans sa description note_ui, affichée telle quelle
+  // ci-dessous sans y toucher ; Albu/Nonza n'ont aucun chiffre du tout, même estimé).
+  // Principe non négociable (Soleil) : ne JAMAIS afficher de chiffre inventé — ce diff n'ajoute
+  // aucune valeur numérique, seulement un texte d'invitation + un bouton qui réutilise le flux
+  // de contribution EXISTANT (cf. startCrustalCorseMeasurement() plus bas), pas un nouveau
+  // pipeline. Distinction nocebo tranchée par Soleil après recadrage : le retrait du catalogue
+  // "Sites U/Th" (2026-08-19) portait sur l'angle radioactivité/exposition sanitaire non
+  // confirmée — une anomalie magnétique documentée par la géochimie mais non chiffrée n'a pas
+  // le même ressort psychologique (curiosité scientifique, pas peur d'exposition) : cadrage
+  // "découverte potentielle, peu de sites documentés en Corse, contribution bienvenue" jugé
+  // non-nocebo, décision Soleil.
   (SITES_REMARQUABLES||[]).filter(function(s){return s.categorie==='ophiolite';}).forEach(function(s){
     const iconHtml='<svg width="14" height="14" viewBox="0 0 14 14" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))"><polygon points="7,1 13,5.5 10.5,13 3.5,13 1,5.5" fill="#1F3A5F" stroke="#F5F0E7" stroke-width="1.5"/></svg>';
     const icon=L.divIcon({html:iconHtml,className:'',iconSize:[14,14],iconAnchor:[7,7]});
+    const safeNom=(s.nom||'').replace(/'/g,"\\'");
     L.marker([s.lat,s.lon],{icon,zIndexOffset:300}).bindPopup(
       '<div style="font-family:var(--font);min-width:220px">'+
       '<div style="font-family:var(--font-display);font-weight:600;font-size:13px;color:#1F3A5F;margin-bottom:4px">'+(s.nom||'')+'</div>'+
       '<div style="font-size:9px;color:var(--tx3);margin-bottom:4px">'+jt('crustal_corse_scale_label','Site Corse — échelle locale, non quantifié')+'</div>'+
       '<div style="font-size:10px;color:var(--ardoise-clair);line-height:1.45">'+(s.note_ui||'')+'</div>'+
+      '<div style="font-size:9px;color:#3F5B3A;margin-top:6px;padding:5px 7px;background:#eef3e9;border:1px solid #cfe0c9;border-radius:4px;line-height:1.4">'+jt('crustal_corse_call_to_measure','🔎 Anomalie documentée mais jamais mesurée — peu de sites de ce type sont recensés en Corse. Une première mesure de terrain serait une contribution scientifique bienvenue.')+'</div>'+
+      '<button type="button" onclick="startCrustalCorseMeasurement('+s.lat+','+s.lon+',\''+safeNom+'\')" style="margin-top:6px;width:100%;padding:6px 10px;border-radius:var(--r,6px);border:1px solid #3F5B3A;background:#3F5B3A;color:#F5F0E7;font-size:11px;font-family:inherit;cursor:pointer">'+jt('crustal_corse_measure_cta','Contribuer une mesure ici →')+'</button>'+
       '<div style="font-size:9px;color:#8b92a5;margin-top:6px;padding-top:4px;border-top:1px solid rgba(0,0,0,.08)">'+jt('crustal_corse_source_label','Source : BRGM · sites_app.json — hors calcul')+'</div>'+
       '</div>'
     ).addTo(lCrustal);
   });
+}
+
+// startCrustalCorseMeasurement() — CTA "Contribuer une mesure ici" dans les popups des 3 sites
+// ophiolitiques Corse (buildCrustalLayer() ci-dessus). Réutilise intégralement le flux de
+// contribution existant plutôt qu'un nouveau pipeline : PRESCRIPTION_METHODS contient déjà
+// 'mag_smartphone' (magnétomètre smartphone, unité nT) — exactement l'instrument pertinent
+// pour une anomalie magnétique documentée mais non mesurée. _pendingPrescription/
+// startContribFromFAB() sont le même mécanisme que "Prescription de mesure" (cf.
+// startFromPrescription() plus haut) : on pré-arme l'instrument, puis on arme le même clic-
+// pour-placer (le flux affiche déjà son propre message "Cliquez sur la carte pour placer votre
+// mesure." — pas besoin d'un second info() ici). setView() (pas flyTo()) recentre la carte
+// instantanément sur le site pour que ce clic suivant tombe naturellement à proximité — testé :
+// flyTo() (animé, requestAnimationFrame) ne s'exécute pas de façon fiable dans un onglet non
+// composité (repro en environnement de test), et cette app respecte déjà
+// prefers-reduced-motion ailleurs (cf. tlxReduceMotion() plus haut) — setView() est cohérent
+// avec cette discipline plutôt que d'ajouter une dépendance à l'animation pour un CTA qui doit
+// fonctionner de façon fiable. Le contributeur choisit son point exact au clic suivant,
+// cohérent avec le principe existant du flux (pas de placement automatique imposé).
+function startCrustalCorseMeasurement(lat,lon,nom){
+  map.closePopup();
+  map.setView([lat,lon],Math.max(map.getZoom(),15));
+  _pendingPrescription={instrument:'smartphone_mag',unit:'nT'};
+  startContribFromFAB();
 }
 
 // ═══ Jauge comparative : anomalie locale vs références mondiales ═══
