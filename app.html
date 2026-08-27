@@ -1362,8 +1362,22 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    testant cette Phase 1 en direct, cf. commentaire laissé à l'ancien emplacement). */
 @media(max-width:768px){
   #conditions-bar{bottom:var(--mobile-tabbar-h);}
-  .fab-mesure{bottom:calc(12px + var(--mobile-tabbar-h));}
-  .fab-menu{bottom:calc(64px + var(--mobile-tabbar-h));}
+  /* CORRECTION 2026-08-27 (bug #3 "le bandeau réagit mal au scroll" — repro Soleil : "soit ça
+     bouge pas, soit c'est la carte qui bouge", clic à des points différents). Cause réelle,
+     confirmée par elementFromPoint()+rects exacts, pas supposée : .fab-mesure (bouton rond
+     "+", z-index:1050) chevauchait ENTIÈREMENT .cbar-chevron (le chevron qui déplie/replie
+     #conditions-bar, à l'intérieur de #conditions-bar-toggle, z-index:999) — l'ancien décalage
+     ci-dessous ne compensait que la hauteur de la tabbar (--mobile-tabbar-h), jamais celle du
+     bandeau lui-même. Un tap sur le coin où le chevron aurait dû être atteignait le FAB à la
+     place (aucune réaction du bandeau) ; un tap juste à côté, hors de toute UI, atteignait la
+     carte Leaflet nue (qui pan normalement — perçu à tort comme "la carte qui bouge" alors que
+     c'est un comportement carte attendu, juste au mauvais endroit). --var(--conditions-bar-h)
+     mesurée en JS (setConditionsBarHeightVar(), cf. plus bas) plutôt qu'une valeur fixe : la
+     hauteur réelle du bandeau varie avec la longueur des libellés traduits (FR/CO/EN) et peut
+     passer sur 2 lignes si les 5 badges ne tiennent pas sur une — un chiffre en dur aurait
+     seulement déplacé le bug vers d'autres locales/tailles de police plutôt que le résoudre. */
+  .fab-mesure{bottom:calc(12px + var(--mobile-tabbar-h) + var(--conditions-bar-h, 66px));}
+  .fab-menu{bottom:calc(64px + var(--mobile-tabbar-h) + var(--conditions-bar-h, 66px));}
 }
 #conditions-bar-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:8px 14px;background:none;border:none;cursor:pointer;font:inherit;color:inherit;text-align:left;}
 #conditions-bar-toggle:hover{background:rgba(31,35,41,0.03);}
@@ -9075,6 +9089,35 @@ function toggleCondSection(id){
     else { details.removeAttribute('hidden'); }
   });
 })();
+
+// setConditionsBarHeightVar — bug #3 mobile "le bandeau réagit mal au scroll" (repro Soleil,
+// 2026-08-26/27) : .fab-mesure/.fab-menu doivent se décaler au-dessus de #conditions-bar EN
+// PLUS de la tabbar (cf. commentaire CSS détaillé, media query mobile plus haut — c'était
+// l'angle mort : seule la hauteur de la tabbar était compensée, jamais celle du bandeau,
+// donc le FAB recouvrait entièrement le chevron déplier/replier). Mesurée en JS plutôt que
+// posée en dur en CSS : la hauteur RÉELLE du bandeau replié dépend de la longueur des
+// libellés traduits des 5 badges (FR/CO/EN) et peut passer sur 2 lignes si les badges ne
+// tiennent pas sur une seule (flex-wrap) — variable selon la locale et la largeur d'écran,
+// pas une constante fiable. Remesurée à quelques points de contrôle plutôt qu'en continu
+// (MutationObserver aurait été plus réactif mais plus coûteux pour un ajustement de 1-2px
+// qui ne justifie pas une observation permanente) : au chargement, après un court délai
+// (les badges démarrent à "—" puis se peuplent de façon asynchrone via les divers loadXxx()
+// de ce fichier — la largeur du texte change une fois les vraies valeurs arrivées), et au
+// redimensionnement/changement d'orientation (debounce 150ms, même ordre de grandeur que
+// rebuildHotDebounced() déjà utilisé ailleurs dans ce fichier).
+function setConditionsBarHeightVar(){
+  const bar = document.getElementById('conditions-bar');
+  if(!bar) return;
+  document.documentElement.style.setProperty('--conditions-bar-h', bar.offsetHeight + 'px');
+}
+setConditionsBarHeightVar();
+setTimeout(setConditionsBarHeightVar, 2000);
+setTimeout(setConditionsBarHeightVar, 6000);
+let _cbarResizeDebounce=null;
+window.addEventListener('resize', function(){
+  clearTimeout(_cbarResizeDebounce);
+  _cbarResizeDebounce = setTimeout(setConditionsBarHeightVar, 150);
+});
 
 // Profil horaire type Corse (MW par heure, moyenne RTE 2020-2024)
 // Utilise par loadChargeReseau (fallback) + renderChargeSparkline.
