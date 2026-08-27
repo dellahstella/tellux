@@ -1161,7 +1161,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .accordion-cat-content.open{max-height:900px;padding:8px 4px;}
 .accordion-cat-content .lbtn{margin:0;}
 /* Header descriptif d'un accordéon (paragraphe d'ouverture, ex. Groupe 3 « Contexte naturel »). */
-.cat-header-text{margin:0 0 8px 0;font-size:11px;color:var(--tx3);font-style:italic;line-height:1.5;}
+/* .cat-header-text retirée le 2026-08-27 (brief "3 corrections UI menu EM") — dernier
+   utilisateur (paragraphe d'intro "Contexte naturel") retiré, redondant avec les badges
+   par couche. Règle CSS orpheline supprimée avec sa dernière utilisation. */
 /* Mini-header de sous-groupe thématique (4 volets, plus de préfixe lettré affiché depuis
    2026-08-26 — cf. commentaire détaillé plus bas), avec son texte descriptif. */
 .subgroup-header{margin:0;padding:0;font-family:var(--font);font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;}
@@ -1443,6 +1445,25 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
      la version desktop ci-dessus : 12+var(--mobile-tabbar-h)+52+12 = 76+var(--mobile-tabbar-h). */
   #legende{bottom:calc(76px + var(--mobile-tabbar-h));right:8px;}
   #legende-content{max-width:calc(100vw - 24px);font-size:11.5px;padding:12px 14px;}
+  /* ⚠️ DETTE OUVERTE — signalée mais PAS corrigée par ce diff (2026-08-27, brief "3
+     corrections UI menu EM") : Soleil veut garder #legende (pas le masquer sur mobile comme
+     un premier essai l'a fait puis défait dans cette même session) et le faire servir de
+     légende sélective par couche (certaines couches, ex. Forêt publique, n'ont pas besoin de
+     légende) — décision à prendre après consultation avec chat (autres facteurs à
+     considérer), pas tranchée ici. Deux constats factuels réunis pour cette discussion,
+     PAS agis dans ce diff :
+     1) Doublon de contenu confirmé : le panneau "?" affiche exactement legendHtmlFor('hot'|
+        'hotrf') (cf. updateLegendPanel() plus bas), soit le MÊME HTML que la légende inline
+        .mlegend-inline déjà visible sous chaque bouton dans l'onglet Couches sur mobile.
+     2) Chevauchement confirmé en repro live (getBoundingClientRect, 2026-08-27) : #legende
+        [331,640,36,36] et .fab-mesure [307,622,52,52] sur viewport 375×812 — overlap réel de
+        28×34px. Cause probable : bottom:calc(76px+var(--mobile-tabbar-h)) (ligne au-dessus)
+        suppose #conditions-bar replié, mais .fab-mesure (bottom:calc(12px+
+        var(--mobile-tabbar-h)+var(--conditions-bar-h,66px)) plus bas dans ce fichier) a été
+        remonté par #1055 pour dégager #conditions-bar déplié sans que cette règle-ci soit
+        resynchronisée. Fermeture améliorée (croix + Échap, cf. initLegendeOverlay() plus bas)
+        appliquée dans ce même diff — orthogonale à cette question de positionnement/contenu,
+        s'applique quelle que soit l'issue de la discussion ci-dessus. */
 }
 /* === fin Brief 46 === */
 /* === R&D rnd-001 — Accessibilité : respect de prefers-reduced-motion (WCAG 2.3.3 / RGAA 13.8) ===
@@ -1911,7 +1932,10 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <span>Contexte naturel</span>
     </div>
     <div class="accordion-cat-content">
-      <p class="cat-header-text">Substrat géologique et repères de contexte. Le fond magnétique régional et la forêt dense modulent le calcul Tellux (susceptibilité du socle, atténuation RF) ; les autres couches sont des repères paysagers ou des mesures/comparaisons externes, hors calcul — la distinction est explicitée pour chaque couche.</p>
+      <!-- Paragraphe d'intro .cat-header-text retiré le 2026-08-27 (brief "3 corrections UI
+           menu EM", décision Soleil) : redondant avec les badges par couche ("Module le
+           calcul"/"Contexte"/"Hors calcul") qui portent déjà cette information, plus
+           clairement et sans coût d'espace vertical dans un menu déjà contraint. -->
 
       <!-- Sous-accordéon à 2 volets — restructuré le 2026-08-27 (brief "nettoyage Contexte
            naturel") : la structure précédente à 4 volets (Substrat magnétique / Contexte
@@ -2013,10 +2037,23 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
                n'utilisait cette couche). -->
           <!-- b-con (« Mesures EM ») déplacé ici depuis GROUPE 1 "Modèle EM" le 2026-08-27 (brief
                "nettoyage Contexte naturel", décision Soleil) — id, onclick et logique JS
-               INCHANGÉS (cf. commentaire à son ancien emplacement). Badge "Hors calcul" ajouté :
-               affiche des mesures de comparaison (contributions + fiches certifiées), n'entre pas
-               dans le calcul composite, cohérent avec les 2 boutons voisins de ce sous-groupe. -->
-          <button class="lbtn on-con" id="b-con" data-domains="tous" title="Mesures EM — contributions citoyennes + 30 fiches ANFR/EXEM certifiées (2024-2026)" onclick="tog('con','on-con',this)"><span class="dot" style="background:#5c3a9b"></span>Mesures EM<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
+               INCHANGÉS (cf. commentaire à son ancien emplacement).
+               Badge CORRIGÉ le 2026-08-27 (brief "3 corrections UI menu EM") : "Hors calcul"
+               seul était FAUX pour une partie du contenu de ce toggle unique. Vérifié avant
+               correction — ce bouton active en parallèle 2 layer groups distincts (lCon +
+               lCert, cf. tog('con',...)/commentaire "Activé/désactivé en parallèle de lCon via
+               tog('con')" plus bas dans ce fichier) chargés depuis 2 sources différentes :
+               • lCon (contribsDB, Supabase) = contributions citoyennes — jamais lues par aucun
+                 calcul, "Hors calcul" reste exact pour cette partie.
+               • lCert (MESURES_CERTIFIEES, public/data/cartoradio_certified_corse.json) = les
+                 30 fiches ANFR/EXEM. Le MÊME fichier (chemin identique, vérifié) est fetché par
+                 calibrateRF() (plus bas dans ce fichier) pour dériver RF_CALIB_K, la constante
+                 de calibration utilisée par RF_field()/calcRF() — donc RÉELLEMENT utilisé par
+                 le calcul composite, une fois, pas "hors calcul". Nuance : calibration one-shot
+                 (constante globale dérivée à l'initialisation), pas une modulation par point à
+                 chaque clic comme "Fond magnétique régional" — d'où un badge distinct de
+                 "Module le calcul" plutôt qu'identique. -->
+          <button class="lbtn on-con" id="b-con" data-domains="tous" title="Mesures EM — contributions citoyennes (affichage seul, hors calcul) + 30 fiches ANFR/EXEM certifiées (ont servi à calibrer la constante k du modèle RF — calcul one-shot à l'initialisation, pas une modulation en direct par point)" onclick="tog('con','on-con',this)"><span class="dot" style="background:#5c3a9b"></span>Mesures EM<span class="layer-badge layer-badge--calc">Calibration RF</span><span class="layer-badge layer-badge--hors">Contributions hors calcul</span></button>
           <div class="mlegend-inline" id="mleg-con"></div>
           <!-- Couche « Sites U/Th à mesurer » retirée de la carte publique le 2026-08-19 (décision
                Soleil, risque nocebo A.4 sur un catalogue 100% documentaire/non mesuré) — contenu
@@ -2222,10 +2259,22 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <button id="legende-toggle" type="button" aria-label="Légende EM (couches actives)" aria-expanded="false">?</button>
   <div id="legende-content" role="region" aria-label="Légende EM">
     <section id="legende-em-section">
-      <h3 class="legende-section-title">Légende EM (couches actives)</h3>
-      <!-- #tellux-leg-panel : rempli dynamiquement par updateLegendPanel() — affiché seulement si une couche EM (Champ composite ou Mesures EM) est active. -->
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+        <h3 class="legende-section-title" style="margin:0">Légende EM (couches actives)</h3>
+        <!-- Bouton fermeture ajouté le 2026-08-27 (brief "3 corrections UI menu EM", décision
+             Soleil, "le fermer est peu aisé") : avant ce diff, seul un nouveau clic sur le
+             cercle "?" (36px, coin bas-droit) fermait le panneau — pas de croix dédiée, pas
+             d'Échap, pas de clic-extérieur. Cf. initLegendeOverlay() plus bas pour le
+             câblage (+ handler Échap ajouté au même endroit). -->
+        <button id="legende-close" type="button" aria-label="Fermer la légende" title="Fermer" style="flex-shrink:0;width:20px;height:20px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--tx3);font-size:12px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">&#10005;</button>
+      </div>
+      <!-- #tellux-leg-panel : rempli dynamiquement par updateLegendPanel() — affiché seulement
+           si une couche du Zone 1 "core" (LEGEND_CORE_IDS = {hot, hotrf}, soit Champ magnétique
+           composite ou Champ électrique RF) est active. Texte ci-dessous corrigé le 2026-08-27
+           (mentionnait "Mesures EM" par erreur — ce toggle n'a jamais fait partie de
+           LEGEND_CORE_IDS, cf. showLegend()/updateLegendPanel() plus bas dans ce fichier). -->
       <div id="tellux-leg-panel" style="display:none"></div>
-      <div id="legende-em-empty" style="font-size:11px;color:var(--tx3);font-style:italic">Activez « Champ magnétique composite » ou « Mesures EM » dans la sidebar pour afficher la légende.</div>
+      <div id="legende-em-empty" style="font-size:11px;color:var(--tx3);font-style:italic">Activez « Champ magnétique composite » ou « Champ électrique RF » dans la sidebar pour afficher la légende.</div>
     </section>
   </div>
 </aside>
@@ -3213,6 +3262,7 @@ const LEGEND_HTML={
     '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Détail par fiche au clic sur le marker</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Basse fréquence 9 kHz–100 kHz</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#5c3a9b;border-radius:50%;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Contribution citoyenne (cluster)</div>'+
+    '<div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#eef3e9;border:1px solid #cfe0c9;border-radius:4px;font-size:8.5px;color:#3F5B3A;line-height:1.4"><b>Fiches ANFR/EXEM (losanges) :</b> ont servi à calibrer la constante k du modèle RF (Champ électrique RF) — calcul one-shot à l\'initialisation. <b>Contributions citoyennes (cercles violets) :</b> affichage seul, hors calcul.</div>'+
     '<div class="leg-src">ANFR/EXEM · Tellux crowdsourcé</div>'+
     '</div>',
   openrad:'<div class="leg-block"><b class="leg-title">Gamma citoyen (OpenRadiation)</b>'+
@@ -3245,7 +3295,7 @@ const LEGEND_HTML_EN={
   res:'<div class="leg-block"><b class="leg-title">Electrical grid</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>HTA line 20kV</div><div class="leg-row"><span style="display:inline-block;width:14px;height:3px;background:#5c2000;vertical-align:middle;margin-right:4px"></span>HTB line 63-225kV</div><div class="leg-src">EDF SEI · Supabase · OSM</div></div>',
   bt:'<div class="leg-block"><b class="leg-title">LV grid</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Street-level electrical distribution</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>Overhead BT</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>Underground BT</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 11</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Generation sites</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Corsican power grid generation plants</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydro dam</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Run-of-river hydro</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Wind</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogas</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Gas turbine (combustion turbine)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnection</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Size according to power output:</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
-  con:'<div class="leg-block"><b class="leg-title">EM measurements</b><div class="leg-sub" style="font-size:10px;color:var(--tx-mica,#7B7770);margin:2px 0 4px">30 ANFR/EXEM sheets + citizen contributions</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Compliant &lt; 5 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Compliant 5–28 V/m</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#7c0000;transform:rotate(45deg);border:2px solid #C28533;vertical-align:middle;margin-right:4px"></span> Non-compliant &gt; 28 V/m (e.g. Monticello)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Detail per sheet by clicking the marker</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Low frequency 9 kHz–100 kHz</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#5c3a9b;border-radius:50%;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Citizen contribution (cluster)</div><div class="leg-src">ANFR/EXEM · Tellux crowdsourced</div></div>',
+  con:'<div class="leg-block"><b class="leg-title">EM measurements</b><div class="leg-sub" style="font-size:10px;color:var(--tx-mica,#7B7770);margin:2px 0 4px">30 ANFR/EXEM sheets + citizen contributions</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Compliant &lt; 5 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Compliant 5–28 V/m</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#7c0000;transform:rotate(45deg);border:2px solid #C28533;vertical-align:middle;margin-right:4px"></span> Non-compliant &gt; 28 V/m (e.g. Monticello)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Detail per sheet by clicking the marker</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Low frequency 9 kHz–100 kHz</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#5c3a9b;border-radius:50%;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Citizen contribution (cluster)</div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#eef3e9;border:1px solid #cfe0c9;border-radius:4px;font-size:8.5px;color:#3F5B3A;line-height:1.4"><b>ANFR/EXEM sheets (diamonds):</b> used to calibrate the RF model\'s k constant (RF electric field) — one-shot calculation at initialization. <b>Citizen contributions (purple dots):</b> display only, outside the calculation.</div><div class="leg-src">ANFR/EXEM · Tellux crowdsourced</div></div>',
   openrad:'<div class="leg-block"><b class="leg-title">Citizen gamma (OpenRadiation)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Ambient gamma/X dose rate · citizen measurements · Geiger tubes</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;opacity:0.55;vertical-align:middle;margin-right:4px"></span>Citizen measurement point (µSv/h)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4"><b>Gamma/X, not radon.</b> Independent display layer — not fed into the index or the gamma calculation.</div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#eef3f0;border:1px solid #cfe0da;border-radius:4px;font-size:8.5px;color:#2f5f54;line-height:1.4"><b>Indicative measurements, not certified.</b> Heterogeneous sensors. The dataset includes <b>continuous tracks</b> (a single walking session accounts for several hundred points) → displayed density <b>≠ number of measurement sites</b>.</div><div class="leg-src">OpenRadiation contributors — ODbL</div></div>',
   postesSources:'<div class="leg-block"><b class="leg-title">EDF SEI substations</b><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Substation &#x2264; 63 kV</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Substation &#x2265; 150 kV</div><div class="leg-why">HTB/HTA grid nodes — significant ELF 50 Hz field nearby.</div><div class="leg-src">EDF SEI · OSM · 21 substations</div></div>'
 
@@ -3530,7 +3580,11 @@ function updateLegendPanel(){
   const corePanel=document.getElementById('tellux-leg-panel');
   const emptyMsg=document.getElementById('legende-em-empty');
   if(corePanel){
-    const coreOrder=['hot','hotrf','con'];
+    // 'con' retiré de coreOrder le 2026-08-27 (brief "3 corrections UI menu EM") : entrée
+    // morte — LEGEND_CORE_IDS (déclaration plus haut) ne contient que {'hot','hotrf'}, donc
+    // 'con' ne pouvait de toute façon jamais apparaître dans LEGEND_ACTIVE_CORE (showLegend()
+    // n'y ajoute que les ids de LEGEND_CORE_IDS) — ce filtre ne changeait rien en pratique.
+    const coreOrder=['hot','hotrf'];
     const coreActive=coreOrder.filter(id=>LEGEND_ACTIVE_CORE.has(id)&&LEGEND_HTML[id]);
     if(!coreActive.length){
       corePanel.style.display='none';
@@ -9827,15 +9881,26 @@ function capCleanup(){
 (function initLegendeOverlay(){
   const overlay = document.getElementById('legende');
   const toggle = document.getElementById('legende-toggle');
+  const closeBtn = document.getElementById('legende-close');
   if (!overlay || !toggle) return;
   // Lot 4.3 (2026-06-29) : plus de persistance de l'état ouvert entre reloads
   // (la légende qui restait ouverte après rechargement surprenait). Démarre
   // toujours repliée ; le toggle ne vaut que pour la session courante.
   overlay.classList.add('collapsed');
   toggle.setAttribute('aria-expanded', 'false');
+  function closeLegende(){
+    overlay.classList.add('collapsed');
+    toggle.setAttribute('aria-expanded', 'false');
+  }
   toggle.addEventListener('click', () => {
     const willOpen = overlay.classList.toggle('collapsed') === false;
     toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+  });
+  // Fermeture croix + Échap ajoutées le 2026-08-27 (brief "3 corrections UI menu EM",
+  // "le fermer est peu aisé" — jusqu'ici, seul un second clic sur le cercle "?" fermait).
+  if (closeBtn) closeBtn.addEventListener('click', closeLegende);
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && !overlay.classList.contains('collapsed')) closeLegende();
   });
 })();
 /* === fin Brief 46 === */
@@ -10098,7 +10163,7 @@ function capCleanup(){
 ["lyr_hotrf","#b-hot-rf","","Champ électrique RF (V/m)","Campu elettricu RF (V/m)","RF electric field (V/m)"],
 ["lyr_hotrf_tt","#b-hot-rf","title","Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte.","Campu elettricu radiufrequenza (V/m) — mudellu Tellux — calibrazione interna nantu à 30 misure certificate ANFR/EXEM (propagazione da ~3000 antenne ANFR reale). Stima centrale d'ordine di grandezza (campu esternu ; sott'ivaluta i siti più esposti, sopravaluta l'internu di i fabbricati). Rilettura fisicu in corsu ; ùn rimpiazza micca una misura certificata. Riferimenti ICNIRP indicativi, micca soglia d'alerta.","Radiofrequency electric field (V/m) — Tellux model — internal calibration on 30 certified ANFR/EXEM measurements (propagation from ~3,000 actual ANFR antennas). Central order-of-magnitude estimate (outdoor field; underestimates highly exposed sites, overestimates indoor levels). Physicist review underway; does not replace a certified measurement. ICNIRP reference points are indicative, not an alert threshold."],
 ["lyr_con","#b-con","","Mesures EM","Misure EM","EM measurements"],
-["lyr_con_tt","#b-con","title","Mesures EM — contributions citoyennes + 30 fiches ANFR/EXEM certifiées (2024-2026)","Misure EM — cuntribuzione citatine + 30 schede ANFR/EXEM certificate (2024-2026)","EM measurements — citizen contributions + 30 certified ANFR/EXEM sheets (2024-2026)"],
+["lyr_con_tt","#b-con","title","Mesures EM — contributions citoyennes (affichage seul, hors calcul) + 30 fiches ANFR/EXEM certifiées (ont servi à calibrer la constante k du modèle RF — calcul one-shot à l'initialisation, pas une modulation en direct par point)","Misure EM — cuntribuzione citatine (affissu solu, fora di calculu) + 30 schede ANFR/EXEM certificate (anu servutu à calibrà a custante k di u mudellu RF — calculu una volta sola à l'iniziu, micca una mudulazione in direttu per puntu)","EM measurements — citizen contributions (display only, outside the calculation) + 30 certified ANFR/EXEM sheets (used to calibrate the RF model's k constant — one-shot calculation at initialization, not a live per-point modulation)"],
 ["lyr_ant","#b-ant","","Antennes ANFR + TDF","Antenne ANFR + TDF","ANFR + TDF antennas"],
 ["lyr_ant_tt","#b-ant","title","Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF","Antenne 2G/3G/4G/5G ANFR + emettitori broadcast TDF","2G/3G/4G/5G ANFR antennas + TDF broadcast transmitters"],
 ["lyr_res","#b-res","","Réseau HT","Reta HT","HV grid"],
