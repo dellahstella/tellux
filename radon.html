@@ -256,6 +256,10 @@ a{color:inherit;}
 .rd-legend{position:absolute;bottom:14px;left:14px;z-index:400;background:rgba(255,255,255,.95);border:1px solid var(--brume);border-radius:8px;padding:10px 14px;font-size:11px;line-height:1.6;max-width:260px;box-shadow:0 2px 10px rgba(0,0,0,.08);}
 .rd-legend-title{font-family:var(--ff);font-weight:600;font-size:12px;margin-bottom:4px;}
 .rd-legend-row{display:flex;align-items:center;gap:6px;margin-top:2px;}
+/* Tooltip failles tectoniques — ajouté le 2026-08-27 (brief "migration failles"), repris
+   d'app.html (.faille-tooltip) avec les tokens de couleur propres à cette page (--brume,
+   --mica au lieu de --pierre-ombre/--ardoise-clair, absents ici). */
+.faille-tooltip{font-family:var(--fm);font-size:10px;background:#fff;color:var(--mica);border:1px solid var(--brume);border-radius:6px;padding:4px 8px;line-height:1.5;box-shadow:0 2px 6px rgba(0,0,0,.12);}
 .rd-legend-swatch{width:12px;height:10px;border-radius:2px;display:inline-block;flex-shrink:0;}
 .rd-map-back{position:absolute;top:12px;right:12px;z-index:400;background:white;border:1px solid var(--brume);border-radius:6px;padding:7px 12px;font-size:11px;font-family:var(--fu);color:var(--tyrrh);text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.08);}
 /* Recherche commune — repositionnée sous la carte, ancien onglet "Ma commune"
@@ -355,7 +359,7 @@ a{color:inherit;}
   <!-- ONGLET 1 : CARTE -->
   <section class="mr-tab-panel active" data-panel="carte" role="tabpanel" id="carte">
     <h2 class="mr-section-h2" data-i18n-key="carte_h2">Carte du potentiel radon</h2>
-    <p class="mr-section-sub" data-i18n-key="carte_sub">Cinq couches, activables indépendamment : le zonage réglementaire ASNR, les dépôts de mesurage certifiés en établissements recevant du public, la géologie BRGM et les cavités souterraines comme repères de lecture, et les particules fines PM2,5 pour une lecture croisée de l'exposition. Pour les autres couches EM (magnétique, RF), voir <a href="app.html" data-i18n-key="carte_app_link">la cartographie EM</a>.</p>
+    <p class="mr-section-sub" data-i18n-key="carte_sub">Six couches, activables indépendamment : le zonage réglementaire ASNR, les dépôts de mesurage certifiés en établissements recevant du public, la géologie BRGM, les cavités souterraines et les failles tectoniques comme repères de lecture, et les particules fines PM2,5 pour une lecture croisée de l'exposition. Pour les autres couches EM (magnétique, RF), voir <a href="app.html" data-i18n-key="carte_app_link">la cartographie EM</a>.</p>
     <div class="rd-map-wrap">
       <div class="rd-map-sidebar">
         <div class="rd-map-sidebar-title" data-i18n-key="sidebar_title">Couches</div>
@@ -371,6 +375,18 @@ a{color:inherit;}
         <div class="rd-lbtn-hint" data-i18n-key="lyr_geo_hint">Granite, schiste, calcaire — repère de lecture, pas une couche radon en soi.</div>
         <button class="rd-lbtn" id="rd-b-cav" onclick="rdToggleCav(this)"><span class="sq" style="background:#5c3a9b"></span><span data-i18n-key="lyr_cav">Cavités souterraines</span></button>
         <div class="rd-lbtn-hint" data-i18n-key="lyr_cav_hint">Grottes, karst, mines (BRGM) — mécanisme d'accumulation possible du radon en sous-sol.</div>
+        <!-- Failles tectoniques — ajoutées le 2026-08-27 (brief "migration failles" : app.html
+             renvoyait vers cette page via "Voir le volet radon →" juste à côté du bouton
+             "Failles tectoniques", alors que radon.html n'avait aucune couche failles —
+             confirmé par grep avant cet ajout, pas supposé). Même source qu'app.html
+             (./failles-corse.json, 8 failles BRGM Corte — identique, pas une nouvelle
+             extraction) et même rendu (segment orienté par faille, plein pour "active",
+             pointillé pour "Quaternaire") — cf. rdLoadFailles()/rdRenderFailles() plus bas.
+             Reste dupliquée côté app.html pour l'instant (question ouverte, pas tranchée par
+             ce diff : cf. brief, section 2 — conserver le contexte visuel EM ou retirer
+             maintenant que radon.html porte la couche réelle). -->
+        <button class="rd-lbtn" id="rd-b-failles" onclick="rdToggleFailles(this)"><span class="sq" style="background:#8E2F1F"></span><span data-i18n-key="lyr_failles">Failles tectoniques</span></button>
+        <div class="rd-lbtn-hint" data-i18n-key="lyr_failles_hint">8 failles BRGM Corte (actives + quaternaires) — indicateur de contexte structurel, non intégré au calcul du potentiel radon.</div>
         <button class="rd-lbtn" id="rd-b-air" onclick="rdToggleAir(this)"><span class="sq" style="background:#6b8fb5"></span><span data-i18n-key="lyr_air">Particules fines PM2,5</span></button>
         <div class="rd-lbtn-hint" data-i18n-key="lyr_air_hint">Moyenne annuelle modélisée 2024 (Qualitair Corse). Mise en visualisation, pas un calcul Tellux.</div>
       </div>
@@ -760,6 +776,9 @@ a{color:inherit;}
     legend_radon_zone2: "Zone 2 — low potential, specific geological factors",
     legend_depot_below: "Below the 300 Bq/m³ marker",
     legend_depot_above: "Above the 300 Bq/m³ marker",
+    lyr_failles_map: "Tectonic faults (BRGM)",
+    legend_failles_active: "Active",
+    legend_failles_quaternaire: "Quaternary",
     radon_source_prefix: "Source: ",
     map_radon_loaded_prefix: "Radon zoning loaded — ",
     map_radon_loaded_suffix: " municipalities (zone 2 + zone 3)",
@@ -819,7 +838,7 @@ a{color:inherit;}
   // utilisable. Sans cette garde, une exception non interceptée à l'init de
   // la carte casserait tout le script (y compris les onglets et le moteur
   // de courrier), car ils partagent la même IIFE de haut niveau.
-  var rdMap = null, rdLRadon = null, rdLDepots = null, rdWmsGeo = null, rdWmsCav = null, rdLAir = null;
+  var rdMap = null, rdLRadon = null, rdLDepots = null, rdWmsGeo = null, rdWmsCav = null, rdLAir = null, rdLFailles = null;
   if (typeof L !== 'undefined') {
     try {
       rdMap = L.map('rd-leaflet-map', { zoomControl: true, minZoom: 7, maxZoom: 17 }).setView([42.15, 9.1], 8);
@@ -837,6 +856,12 @@ a{color:inherit;}
       // ailleurs, simple déplacement de couche, pas de nouvelle affirmation factuelle.
       rdWmsCav = L.tileLayer.wms('https://geoservices.brgm.fr/risques', { layers: 'CAVITE_LOCALISEE', format: 'image/png', transparent: true, opacity: 0.7, zIndex: 4 });
       rdLAir = L.tileLayer('https://tiles.arcgis.com/tiles/VQopoXNvUqHYZHjY/arcgis/rest/services/2024_PM25_MA_200M_AIRES_tif/MapServer/tile/{z}/{y}/{x}', { opacity: 0.6, minNativeZoom: 9, maxNativeZoom: 14, zIndex: 5, bounds: [[41.2, 8.4], [43.1, 9.7]], attribution: 'PM2,5 &copy; Qualitair Corse — ODbL 1.0 / CC BY-SA 2.0 FR' });
+      // Failles tectoniques — ajoutées le 2026-08-27 (brief "migration failles"), même source
+      // qu'app.html (./failles-corse.json), layerGroup vectoriel Tellux (pas une tuile WMS
+      // tierce comme geo/cav/air ci-dessus) : entrée de légende dédiée plus bas (couleurs
+      // Tellux-définies, contrairement à geo/cav/air qui n'en ont pas — cf. commentaire
+      // updateRdLegend()).
+      rdLFailles = L.layerGroup();
     } catch (e) {
       console.warn('[radon] initialisation de la carte Leaflet échouée :', e);
       rdMap = null;
@@ -1000,6 +1025,13 @@ a{color:inherit;}
         '<div class="rd-legend-row"><span class="rd-legend-swatch" style="background:#b85c00;border-radius:50%"></span>' + jt('legend_depot_above', 'Au-dessus du repère 300 Bq/m³') + '</div>'
       );
     }
+    if (rdMap.hasLayer(rdLFailles)) {
+      blocks.push(
+        '<div class="rd-legend-title" style="margin-top:' + (blocks.length ? '10px' : '0') + '">' + jt('lyr_failles_map', 'Failles tectoniques (BRGM)') + '</div>' +
+        '<div class="rd-legend-row"><span class="rd-legend-swatch" style="background:#8E2F1F"></span>' + jt('legend_failles_active', 'Active') + '</div>' +
+        '<div class="rd-legend-row"><span class="rd-legend-swatch" style="background:#C28533"></span>' + jt('legend_failles_quaternaire', 'Quaternaire') + '</div>'
+      );
+    }
     // Cavités souterraines / PM2,5 — retirées du légendage le 2026-08-21 (item 4) : ce sont des
     // tuiles WMS/raster tierces (BRGM, Qualitair) dont Tellux ne contrôle ni ne connaît le
     // barème de couleurs — rien à décoder ici (pas de swatch Tellux-défini à mettre en face
@@ -1038,6 +1070,45 @@ a{color:inherit;}
     if (!rdMap) return;
     if (rdMap.hasLayer(rdLAir)) { rdMap.removeLayer(rdLAir); btn.classList.remove('on'); updateRdLegend(); return; }
     rdLAir.addTo(rdMap); btn.classList.add('on'); updateRdLegend();
+  };
+  // Failles tectoniques — ajoutées le 2026-08-27 (brief "migration failles"). Chargement +
+  // rendu repris à l'identique d'app.html (même fichier source, même logique de segment
+  // orienté par bearing) plutôt que réinventé — seul le préfixe des noms change (rd*) pour
+  // respecter la convention de cette page.
+  var rdFaillesData = null, rdFaillesRendered = false;
+  function rdBearingFromOrient(orient){
+    if (/^N-S|^S-N/.test(orient)) return 0;
+    if (/^NE-SW|^SW-NE/.test(orient)) return 45;
+    if (/^ENE|^WSW|^OSO/.test(orient)) return 67;
+    if (/^E-W|^W-E/.test(orient)) return 90;
+    return 0;
+  }
+  function rdLoadFailles(){
+    if (rdFaillesData) return Promise.resolve(rdFaillesData);
+    return fetch('./failles-corse.json')
+      .then(function(r){ if (!r.ok) throw new Error('failles HTTP ' + r.status); return r.json(); })
+      .then(function(d){ rdFaillesData = d; return d; });
+  }
+  function rdRenderFailles(){
+    if (rdFaillesRendered) return;
+    rdFaillesRendered = true;
+    rdFaillesData.forEach(function(f){
+      var b = rdBearingFromOrient(f.orient) * Math.PI / 180;
+      var d = 15;
+      var dlat = d / 111 * Math.cos(b);
+      var dlon = d / (111 * Math.cos(f.lat * Math.PI / 180)) * Math.sin(b);
+      var isActive = f.type === 'active';
+      var color = isActive ? '#8E2F1F' : '#C28533';
+      var opts = isActive ? { color: color, weight: 2, opacity: .85 } : { color: color, weight: 1.5, opacity: .75, dashArray: '4,3' };
+      L.polyline([[f.lat - dlat, f.lon - dlon], [f.lat + dlat, f.lon + dlon]], opts)
+        .bindTooltip(f.nom + ' — ' + f.type + ' (' + f.orient + ') · ' + f.src, { className: 'faille-tooltip', sticky: true })
+        .addTo(rdLFailles);
+    });
+  }
+  window.rdToggleFailles = function(btn){
+    if (!rdMap) return;
+    if (rdMap.hasLayer(rdLFailles)) { rdMap.removeLayer(rdLFailles); btn.classList.remove('on'); updateRdLegend(); return; }
+    rdLoadFailles().then(function(){ rdRenderFailles(); rdLFailles.addTo(rdMap); btn.classList.add('on'); updateRdLegend(); });
   };
   // Exposé pour le slider d'opacité (attribut oninput inline dans le HTML)
   window.rdWmsGeo = rdWmsGeo;
@@ -1925,7 +1996,7 @@ function telluxGetEffectiveLang(){
     tab_carte: "Map",
     tab_courrier: "Take action",
     carte_h2: "Radon-potential map",
-    carte_sub: "Five layers, each togglable independently: the official ASNR zoning, certified measurement deposits in public-facing facilities, BRGM geology and underground cavities as reading aids, and fine particulate matter PM2.5 for a cross-exposure reading. For the other EM layers (magnetic, RF), see <a href=\"app.html\">the EM mapping</a>.",
+    carte_sub: "Six layers, each togglable independently: the official ASNR zoning, certified measurement deposits in public-facing facilities, BRGM geology, underground cavities and tectonic faults as reading aids, and fine particulate matter PM2.5 for a cross-exposure reading. For the other EM layers (magnetic, RF), see <a href=\"app.html\">the EM mapping</a>.",
     carte_app_link: "the EM mapping",
     sidebar_title: "Layers",
     lyr_radon: "Radon zoning (ASNR 2/3)",
@@ -1936,6 +2007,8 @@ function telluxGetEffectiveLang(){
     lyr_geo_hint: "Granite, schist, limestone — a reading aid, not a radon layer in itself.",
     lyr_cav: "Underground cavities",
     lyr_cav_hint: "Caves, karst, mines (BRGM) — a possible mechanism for radon accumulation underground.",
+    lyr_failles: "Tectonic faults",
+    lyr_failles_hint: "8 BRGM Corte faults (active + Quaternary) — structural context indicator, not integrated into the radon potential calculation.",
     lyr_air: "Fine particulate matter PM2.5",
     lyr_air_hint: "2024 modeled annual average (Qualitair Corse). Displayed for visualization, not a Tellux calculation.",
     carte_back_em: "← Full EM mapping",
