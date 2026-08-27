@@ -389,6 +389,19 @@ a{color:inherit;}
         <div class="rd-lbtn-hint" data-i18n-key="lyr_failles_hint">8 failles BRGM Corte (actives + quaternaires) — indicateur de contexte structurel, non intégré au calcul du potentiel radon.</div>
         <button class="rd-lbtn" id="rd-b-air" onclick="rdToggleAir(this)"><span class="sq" style="background:#6b8fb5"></span><span data-i18n-key="lyr_air">Particules fines PM2,5</span></button>
         <div class="rd-lbtn-hint" data-i18n-key="lyr_air_hint">Moyenne annuelle modélisée 2024 (Qualitair Corse). Mise en visualisation, pas un calcul Tellux.</div>
+        <!-- Émergences thermales — ajoutées le 2026-08-26/27 (brief "migration émergences",
+             suite de #1056 failles). Placée en dernier de la liste et OFF par défaut (aucun
+             toggle activé au chargement) — déprioritisée délibérément, PAS un simple repère
+             géographique documentaire au même titre que les autres couches ci-dessus : contrairement
+             aux failles (lien causal plausible via la perméabilité), aucun lien émergences
+             thermales → potentiel radon n'est aujourd'hui établi ni exploité par un calcul
+             Tellux, cf. hint. Vérification sismicité→radon (brief Cowork séparé) délibérément
+             PAS attendue pour cette migration — indépendante, une éventuelle activation future
+             du lien causal sera un chantier séparé. Même source qu'app.html
+             (public/data/sites_app.json, type source_thermale, 5 sites), même rendu (marqueur
+             + popup nom/description). -->
+        <button class="rd-lbtn" id="rd-b-therm" onclick="rdToggleTherm(this)"><span class="sq" style="background:#0ea5e9;border-radius:50%"></span><span data-i18n-key="lyr_therm">Émergences thermales</span></button>
+        <div class="rd-lbtn-hint" data-i18n-key="lyr_therm_hint">5 sites documentaires (Corse). Non exploitée dans le calcul actuel — réservée à une intégration future (recherche streaming potential / modèle plus fin), pas encore un facteur du potentiel radon affiché.</div>
       </div>
       <div class="rd-map">
         <div id="rd-leaflet-map" style="height:100%;width:100%;"></div>
@@ -779,6 +792,7 @@ a{color:inherit;}
     lyr_failles_map: "Tectonic faults (BRGM)",
     legend_failles_active: "Active",
     legend_failles_quaternaire: "Quaternary",
+    therm_popup_note: "Documentary reference — not used in the radon potential calculation.",
     radon_source_prefix: "Source: ",
     map_radon_loaded_prefix: "Radon zoning loaded — ",
     map_radon_loaded_suffix: " municipalities (zone 2 + zone 3)",
@@ -838,7 +852,7 @@ a{color:inherit;}
   // utilisable. Sans cette garde, une exception non interceptée à l'init de
   // la carte casserait tout le script (y compris les onglets et le moteur
   // de courrier), car ils partagent la même IIFE de haut niveau.
-  var rdMap = null, rdLRadon = null, rdLDepots = null, rdWmsGeo = null, rdWmsCav = null, rdLAir = null, rdLFailles = null;
+  var rdMap = null, rdLRadon = null, rdLDepots = null, rdWmsGeo = null, rdWmsCav = null, rdLAir = null, rdLFailles = null, rdLTherm = null;
   if (typeof L !== 'undefined') {
     try {
       rdMap = L.map('rd-leaflet-map', { zoomControl: true, minZoom: 7, maxZoom: 17 }).setView([42.15, 9.1], 8);
@@ -862,6 +876,11 @@ a{color:inherit;}
       // Tellux-définies, contrairement à geo/cav/air qui n'en ont pas — cf. commentaire
       // updateRdLegend()).
       rdLFailles = L.layerGroup();
+      // Émergences thermales — ajoutées le 2026-08-27 (brief "migration émergences"). LayerGroup
+      // vectoriel Tellux, comme rdLFailles — pas d'entrée de légende cependant (un seul type
+      // de marqueur, rien à décoder par couleur ; cf. rdToggleTherm() plus bas pour le détail
+      // du hint "non exploitée dans le calcul").
+      rdLTherm = L.layerGroup();
     } catch (e) {
       console.warn('[radon] initialisation de la carte Leaflet échouée :', e);
       rdMap = null;
@@ -1109,6 +1128,43 @@ a{color:inherit;}
     if (!rdMap) return;
     if (rdMap.hasLayer(rdLFailles)) { rdMap.removeLayer(rdLFailles); btn.classList.remove('on'); updateRdLegend(); return; }
     rdLoadFailles().then(function(){ rdRenderFailles(); rdLFailles.addTo(rdMap); btn.classList.add('on'); updateRdLegend(); });
+  };
+  // Émergences thermales — ajoutées le 2026-08-27 (brief "migration émergences"). Source
+  // partagée avec app.html (public/data/sites_app.json, 61 sites/3 types) : on ne récupère et
+  // filtre ici QUE le sous-ensemble source_thermale (5 sites), pas de duplication du loader
+  // complet côté EM (SITES_REMARQUABLES/POINTS_CHAUDS_RADIO n'ont pas leur place sur cette
+  // page radon-only). Rendu repris à l'identique d'app.html (buildThermLayer()) : marqueur
+  // rond + popup nom/description, rien de plus élaboré (délibéré, cf. hint sidebar : cette
+  // couche n'est pas mise en avant).
+  var rdThermData = null, rdThermRendered = false;
+  function rdLoadTherm(){
+    if (rdThermData) return Promise.resolve(rdThermData);
+    return fetch('public/data/sites_app.json', { signal: AbortSignal.timeout(5000) })
+      .then(function(r){ if (!r.ok) throw new Error('sites_app HTTP ' + r.status); return r.json(); })
+      .then(function(d){
+        rdThermData = (d.sites || []).filter(function(s){ return s.type === 'source_thermale'; });
+        return rdThermData;
+      });
+  }
+  function rdRenderTherm(){
+    if (rdThermRendered) return;
+    rdThermRendered = true;
+    rdThermData.forEach(function(s){
+      var icon = L.divIcon({
+        className: '',
+        html: '<div style="width:12px;height:12px;background:#0ea5e9;border:2px solid white;border-radius:50%;box-shadow:0 0 4px #0ea5e999"></div>',
+        iconSize: [12, 12],
+        iconAnchor: [6, 6]
+      });
+      L.marker([s.lat, s.lon], { icon: icon, interactive: true })
+        .bindPopup('<b>' + escapeHtml(s.nom) + '</b><br><span style="font-size:12px;color:var(--mica)">' + escapeHtml(s.description || '') + '</span><br><span style="font-size:10.5px;color:var(--mica);font-style:italic">' + jt('therm_popup_note', 'Repère documentaire — non exploité dans le calcul du potentiel radon.') + '</span>')
+        .addTo(rdLTherm);
+    });
+  }
+  window.rdToggleTherm = function(btn){
+    if (!rdMap) return;
+    if (rdMap.hasLayer(rdLTherm)) { rdMap.removeLayer(rdLTherm); btn.classList.remove('on'); return; }
+    rdLoadTherm().then(function(){ rdRenderTherm(); rdLTherm.addTo(rdMap); btn.classList.add('on'); });
   };
   // Exposé pour le slider d'opacité (attribut oninput inline dans le HTML)
   window.rdWmsGeo = rdWmsGeo;
@@ -2010,6 +2066,8 @@ function telluxGetEffectiveLang(){
     lyr_failles: "Tectonic faults",
     lyr_failles_hint: "8 BRGM Corte faults (active + Quaternary) — structural context indicator, not integrated into the radon potential calculation.",
     lyr_air: "Fine particulate matter PM2.5",
+    lyr_therm: "Thermal springs",
+    lyr_therm_hint: "5 documentary sites (Corsica). Not used in the current calculation — reserved for a possible future integration (streaming potential research / finer model), not yet a factor in the displayed radon potential.",
     lyr_air_hint: "2024 modeled annual average (Qualitair Corse). Displayed for visualization, not a Tellux calculation.",
     carte_back_em: "← Full EM mapping",
     commune_h2: "Useful information",
