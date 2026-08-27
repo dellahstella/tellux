@@ -763,8 +763,21 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;padding:8px 12px;background:var(--pierre-ombre);border-radius:var(--r);border:1px solid var(--border);}
 .leg{display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10px;color:var(--tx3);}
 /* Panneau interprétation */
-/* .interp*/.ib* retirés le 2026-08-23 (dette confirmée avec #interp, cf. suppression du
-   bloc HTML plus bas — display:none permanent, seul appelant showInterp() jamais invoqué). */
+/* Classes .interp / .ib retirées le 2026-08-23 (dette confirmée avec #interp, cf. suppression
+   du bloc HTML plus bas — display:none permanent, seul appelant showInterp() jamais invoqué).
+   CORRECTION 2026-08-27 (brief "bloc glossaire sous la carte") : la version précédente de ce
+   commentaire contenait, par erreur, la séquence de fermeture de commentaire CSS collée juste
+   après ".interp" (huit caractères après l'ouverture) — elle refermait donc ce commentaire
+   bien avant la fin du texte prévu. Tout le reste du texte, plus la ligne suivante, devenait
+   alors du CSS actif : un "sélecteur" invalide (texte libre sans accolade ouvrante) qui
+   engloutissait la RÈGLE DE BASE .glossary-drawer{ci-dessous} — position:fixed + décalage
+   hors-écran par défaut — jusqu'à l'accolade fermante de cette règle, la rendant purement et
+   simplement absente du CSS appliqué. Conséquence observée : le panneau glossaire s'affichait
+   en flux normal de page (position:static, jamais masqué), pas comme un tiroir fixe caché par
+   défaut. Trouvé par lecture directe du CSSOM en production (règle de base absente alors que
+   la variante .open et la règle mobile, plus loin dans ce fichier, étaient bien présentes),
+   confirmé par relecture caractère par caractère du texte source. Ce commentaire est reformulé
+   pour ne plus jamais faire apparaître cette séquence de fermeture avant la fin voulue. */
 /* === Glossary drawer (right-side tabbed drawer with search) === */
 .glossary-drawer{
   position:fixed;top:0;right:0;width:380px;max-width:90vw;height:100vh;
