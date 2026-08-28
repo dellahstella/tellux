@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<title data-i18n-key="page_title">Méthode, limites et transparence — Tellux</title>
+<meta name="description" data-i18n-key="meta_description" content="Document de référence Tellux : incertitudes, limites du modèle, sources de données, hypothèses scientifiques, tensions documentées, statuts épistémiques des couches, et procédure de signalement d'erreur.">
+<meta name="robots" content="index, follow">
+<link rel="icon" type="image/svg+xml" href="assets/logo/tellux_logo.svg">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/logo/favicon_512.png">
+<link rel="icon" type="image/png" sizes="128x128" href="assets/logo/favicon_128.png">
+<link rel="canonical" href="https://tellux.pages.dev/methode-limites-transparence.html">
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+
+<style>
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/fonts/fraunces/Fraunces-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/assets/fonts/fraunces/Fraunces-SemiBold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/fonts/ibm-plex-sans/IBMPlexSans-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/assets/fonts/ibm-plex-sans/IBMPlexSans-Medium.woff2') format('woff2');
+}
+
+:root {
+  --tx-ardoise: #1F2329;
+  --tx-pierre: #F5F0E7;
+  --tx-mica: #74706A;
+  --tx-brume: #E8E2D5;
+  --tx-maquis: #3F5B3A;
+  --tx-ocre: #C28533;
+  --tx-porphyre: #8E2F1F;
+  --tx-tyrrhenien: #1F3A5F;
+  --border: rgba(31, 35, 41, 0.10);
+  --font: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--tx-pierre);
+  color: var(--tx-ardoise);
+  padding: 48px 20px 80px;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+header.page-header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 24px;
+  margin-bottom: 40px;
+}
+
+header.page-header .back-link {
+  font-size: 13px;
+  color: var(--tx-tyrrhenien);
+  text-decoration: none;
+  letter-spacing: 0.01em;
+  display: inline-block;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+
+header.page-header .back-link:hover {
+  border-bottom-color: var(--tx-tyrrhenien);
+}
+
+.page-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* Sélecteur de langue — conteneur générique, prêt pour un futur état à 3
+   valeurs (FR/CO/EN, cf. I18N-CORSE-TOGGLE-001, non activé). Un pill par
+   langue disponible : aujourd'hui un seul (EN, flip FR⇄EN par JS), demain
+   un groupe de pills sans restructuration. */
+.lp-lang-switch {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.lp-lang-pill {
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  line-height: 1;
+  color: var(--tx-tyrrhenien);
+  background: rgba(194, 133, 51, 0.10);
+  border: 1px solid var(--tx-tyrrhenien);
+  border-radius: 999px;
+  padding: 5px 11px;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.lp-lang-pill:hover {
+  background: var(--tx-tyrrhenien);
+  color: var(--tx-pierre);
+}
+
+.lp-lang-pill:focus {
+  outline: 2px solid var(--tx-tyrrhenien);
+  outline-offset: 2px;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 32px;
+  letter-spacing: -0.015em;
+  color: var(--tx-ardoise);
+  margin-bottom: 8px;
+}
+
+header.page-header .subtitle {
+  font-size: 14px;
+  color: var(--tx-mica);
+  letter-spacing: 0.005em;
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  color: var(--tx-ardoise);
+  margin-top: 48px;
+  margin-bottom: 16px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--tx-ardoise);
+  margin-top: 28px;
+  margin-bottom: 10px;
+  letter-spacing: -0.005em;
+}
+
+h4 {
+  font-family: var(--font);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--tx-ardoise);
+  margin-top: 22px;
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+p {
+  font-size: 15px;
+  color: var(--tx-ardoise);
+  margin-bottom: 12px;
+}
+
+p.meta {
+  font-size: 13px;
+  color: var(--tx-mica);
+  font-style: italic;
+}
+
+ul,
+ol {
+  list-style: none;
+  margin-bottom: 12px;
+  padding-left: 0;
+}
+
+ul li,
+ol li {
+  font-size: 15px;
+  color: var(--tx-ardoise);
+  padding-left: 18px;
+  position: relative;
+  margin-bottom: 6px;
+}
+
+ul li::before {
+  content: "—";
+  position: absolute;
+  left: 0;
+  color: var(--tx-mica);
+}
+
+ol {
+  counter-reset: ol-counter;
+}
+
+ol li {
+  counter-increment: ol-counter;
+}
+
+ol li::before {
+  content: counter(ol-counter) ".";
+  position: absolute;
+  left: 0;
+  color: var(--tx-mica);
+  font-variant-numeric: tabular-nums;
+}
+
+a {
+  color: var(--tx-tyrrhenien);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(31, 58, 95, 0.3);
+  transition: border-color 0.15s;
+}
+
+a:hover {
+  border-bottom-color: var(--tx-tyrrhenien);
+}
+
+strong {
+  font-weight: 500;
+  color: var(--tx-ardoise);
+}
+
+em {
+  font-style: italic;
+  color: var(--tx-ardoise);
+}
+
+code {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  color: var(--tx-tyrrhenien);
+}
+
+pre {
+  background: var(--tx-brume);
+  padding: 14px 18px;
+  border-radius: 8px;
+  margin: 14px 0;
+  overflow-x: auto;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+pre code {
+  font-size: inherit;
+  color: var(--tx-ardoise);
+  white-space: pre;
+}
+
+blockquote {
+  border-left: 3px solid var(--tx-mica);
+  padding: 8px 16px;
+  margin: 16px 0;
+  background: var(--tx-brume);
+  border-radius: 0 6px 6px 0;
+  color: var(--tx-ardoise);
+  font-size: 14.5px;
+  font-style: italic;
+}
+
+blockquote p {
+  margin-bottom: 0;
+  font-size: 14.5px;
+}
+
+nav.toc {
+  background: var(--tx-brume);
+  padding: 18px 22px;
+  border-radius: 8px;
+  margin: 24px 0 32px;
+  font-size: 14px;
+}
+
+nav.toc h2 {
+  font-family: var(--font);
+  font-weight: 500;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tx-mica);
+  margin: 0 0 10px;
+  padding: 0;
+  border: none;
+}
+
+nav.toc ul {
+  margin-bottom: 0;
+}
+
+nav.toc ul li {
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+mjx-container[display="true"] {
+  margin: 14px 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+footer.page-footer {
+  margin-top: 64px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--tx-mica);
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+footer.page-footer a {
+  color: var(--tx-mica);
+  border-bottom-color: rgba(116, 112, 106, 0.3);
+}
+
+@media (max-width: 600px) {
+  body {
+    padding: 32px 16px 60px;
+  }
+  h1 {
+    font-size: 26px;
+  }
+  h2 {
+    font-size: 19px;
+  }
+  h3 {
+    font-size: 16px;
+  }
+  pre {
+    font-size: 12.5px;
+    padding: 12px 14px;
+  }
+  nav.toc {
+    padding: 14px 18px;
+  }
+}
+
+/* Tables de données — DA v2 */
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 13.5px;
+}
+table.data-table thead {
+  background: var(--tx-brume);
+}
+table.data-table th {
+  text-align: left;
+  font-family: var(--font);
+  font-weight: 500;
+  color: var(--tx-ardoise);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  letter-spacing: 0.01em;
+}
+table.data-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  color: var(--tx-ardoise);
+}
+table.data-table td code {
+  font-size: 12.5px;
+}
+.rappel-epistemique {
+  border-left: 3px solid var(--tx-maquis);
+  background: rgba(63, 91, 58, 0.06);
+  padding: 12px 16px;
+  border-radius: 0 6px 6px 0;
+  margin: 16px 0 24px;
+  font-size: 14px;
+}
+.pour-aller-plus-loin {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.pour-aller-plus-loin h2 {
+  border: none;
+  margin-top: 0;
+  font-size: 18px;
+}
+.meta-ref {
+  font-family: var(--font);
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--tx-mica);
+  letter-spacing: 0.01em;
+}
+li ul,
+li ol {
+  margin-top: 6px;
+  padding-left: 18px;
+}
+@media (max-width: 600px) {
+  table.data-table { font-size: 12.5px; }
+  table.data-table th, table.data-table td { padding: 8px 8px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="page-header">
+  <div class="page-header-top">
+    <a href="/" class="back-link" data-i18n-key="back_link">← Retour à l'accueil</a>
+    <div class="lp-lang-switch" role="group" aria-label="Langue">
+      <a href="?lang=en" hreflang="en" lang="en" id="lang-toggle-en" class="lp-lang-pill" title="View this page in English">EN</a>
+    </div>
+  </div>
+  <h1 data-i18n-key="header_h1">Méthode, limites et transparence</h1>
+  <p class="subtitle" data-i18n-key="header_subtitle">Document de référence — version v1 — 2026</p>
+</header>
+
+<nav class="toc" aria-label="Sommaire">
+  <h2 data-i18n-key="toc_h2">Sommaire</h2>
+  <ul>
+    <li><a href="#incertitudes" data-i18n-key="toc_incertitudes">1 — Les incertitudes documentées</a></li>
+    <li><a href="#sources-elf-reseau" data-i18n-key="toc_sources_elf_reseau">2 — Sources ELF : réseau électrique</a></li>
+    <li><a href="#variations-temporelles" data-i18n-key="toc_variations_temporelles">3 — Variations temporelles</a></li>
+    <li><a href="#limites" data-i18n-key="toc_limites">4 — Limites du modèle : quatre catégories</a></li>
+    <li><a href="#hypotheses-pilier-a" data-i18n-key="toc_hypotheses_pilier_a">5 — Hypothèses scientifiques : Pilier A</a></li>
+    <li><a href="#tensions" data-i18n-key="toc_tensions">6 — Tensions scientifiques documentées</a></li>
+    <li><a href="#sources-geomagnetiques" data-i18n-key="toc_sources_geomagnetiques">7 — Sources de données : géomagnétiques</a></li>
+    <li><a href="#sources-rf" data-i18n-key="toc_sources_rf">8 — Sources de données : radiofréquences et végétation</a></li>
+    <li><a href="#sources-ionisants" data-i18n-key="toc_sources_ionisants">9 — Sources de données : ionisants (gamma et radon)</a></li>
+    <li><a href="#statuts-epistemiques" data-i18n-key="toc_statuts_epistemiques">10 — Statuts épistémiques des couches</a></li>
+    <li><a href="#dettes-techniques" data-i18n-key="toc_dettes_techniques">11 — Dettes techniques documentées</a></li>
+    <li><a href="#references-citations" data-i18n-key="toc_references_citations">12 — Références scientifiques (pondérations)</a></li>
+    <li><a href="#mise-a-jour" data-i18n-key="toc_mise_a_jour">13 — Mise à jour des données</a></li>
+    <li><a href="#signalement-erreurs" data-i18n-key="toc_signalement_erreurs">14 — Signaler une erreur</a></li>
+  </ul>
+</nav>
+
+<section id="introduction">
+  <p data-i18n-key="intro_p1"><strong>En une phrase :</strong> Tellux distingue toujours ce qui est mesuré, ce qui est modélisé, et ce qui est hypothétique. Toutes les sources, les limites et les incertitudes sont documentées.</p>
+  <div class="rappel-epistemique">
+    <p data-i18n-key="rappel_epistemique"><strong>Rappel de la position épistémique :</strong> Tellux s'est donné trois règles (refus symétrique de l'alarmisme et de la trivialisation, position C documentée UNSCEAR 2012, distinction systématique des niveaux d'inférence) et écarte trois formulations (« deux réalités différentes », « les mesures ne s'additionnent pas », « naturel = bénin »). La présentation complète est dans la <a href="/cadre-scientifique.html#position-epistemique">page Cadre scientifique</a>.</p>
+  </div>
+</section>
+
+<section id="incertitudes">
+  <h2 data-i18n-key="s1_h2">1. Les incertitudes documentées <span class="meta-ref">(Doc 1 §5.2-5.3)</span></h2>
+  <table class="data-table">
+    <thead><tr><th data-i18n-key="s1_th1">Incertitude</th><th data-i18n-key="s1_th2">Impact</th><th data-i18n-key="s1_th3">Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td data-i18n-key="s1_r1c1">Courants HTA estimés à ±50 %</td><td data-i18n-key="s1_r1c2">Le modèle ELF peut diverger des mesures terrain.</td><td data-i18n-key="s1_r1c3">Documenté dans les infobulles.</td></tr>
+      <tr><td data-i18n-key="s1_r2c1">IGRF-14 et EMAG2v3 : résolution 3,7 km</td><td data-i18n-key="s1_r2c2">Les anomalies crustales &lt;5 km sont lissées.</td><td data-i18n-key="s1_r2c3">Documenté en transparence.</td></tr>
+      <tr><td data-i18n-key="s1_r3c1">Modèle RF en espace libre (Friis simplifié)</td><td data-i18n-key="s1_r3c2">Ignore les réflexions et diffractions.</td><td data-i18n-key="s1_r3c3">Acceptable pour un comparatif territorial.</td></tr>
+      <tr><td data-i18n-key="s1_r4c1">30 fiches ANFR/EXEM certifiées en Corse</td><td data-i18n-key="s1_r4c2">Couverture spatiale insuffisante pour validation locale.</td><td data-i18n-key="s1_r4c3">Appel à contributions citoyennes.</td></tr>
+      <tr><td data-i18n-key="s1_r5c1">Pas de campagne spectrogamma BRGM dédiée Corse</td><td data-i18n-key="s1_r5c2">Les concentrations U/Th/K reposent sur analogues régionaux.</td><td data-i18n-key="s1_r5c3">Dette technique RADIO-AERO-001.</td></tr>
+      <tr><td data-i18n-key="s1_r6c1">Absence de correction troposphérique</td><td data-i18n-key="s1_r6c2">Erreur de quelques dB en conditions de ducting.</td><td data-i18n-key="s1_r6c3">Mentionnée dans la méthode.</td></tr>
+      <tr><td data-i18n-key="s1_r7c1">Score global ±1 à 2 points sur 0-10</td><td data-i18n-key="s1_r7c2">Cumul des incertitudes.</td><td data-i18n-key="s1_r7c3">Le modèle est un comparatif relatif.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="sources-elf-reseau">
+  <h2 data-i18n-key="s2_h2">2. Sources ELF — réseau électrique <span class="meta-ref">(Doc 1 §3.2, §3.4.4)</span></h2>
+  <p data-i18n-key="s2_p1">Le champ ELF anthropique (50 Hz) est calculé à partir de trois types de sources, toutes en nanotesla (nT). Ces trois sources sont exclusivement ELF — aucune ne contribue au calcul RF (régimes physiques distincts, champ proche vs champ lointain rayonné).</p>
+
+  <h4 data-i18n-key="s2_h4_1">Lignes HTA/BT</h4>
+  <p data-i18n-key="s2_1_p1">Géométrie des lignes issue des données Enedis/RTE. Le champ est calculé par la <strong>loi de Biot-Savart</strong> segmentée, appliquée aux conducteurs filamentaires. Les courants utilisés sont des charges nominales, avec une incertitude estimée à ±50 % (les courants réels ne sont pas publiés en temps réel).</p>
+
+  <h4 data-i18n-key="s2_h4_2">Postes sources EDF (HTB/HTA)</h4>
+  <p data-i18n-key="s2_2_p1">Modélisés comme sources ponctuelles. Ordre de grandeur typique : <strong>~50 µT à 10 m</strong> (soit 50 000 nT), avec une décroissance en <strong>1/d³</strong> (plafonné). Cette contribution est localisée à proximité immédiate des postes et décroît rapidement avec la distance.</p>
+
+  <h4 data-i18n-key="s2_h4_3">Éoliennes</h4>
+  <p data-i18n-key="s2_3_p1">Contribution locale à la base du mât. Ordre de grandeur typique : <strong>~2 µT à 10 m</strong> (soit 2 000 nT) pour une machine de 2 MW, avec une décroissance en <strong>1/d²</strong> (plafonné). Les parcs éoliens insulaires (données EDF SEI) sont intégrés au modèle.</p>
+
+  <p data-i18n-key="s2_p2"><strong>Note sur le régime physique :</strong> Ces trois sources relèvent du champ proche magnétique (50 Hz). Elles sont calculées en nanotesla (nT) et affichées séparément dans le domaine ELF. Le domaine RF (antennes, faisceaux hertziens) est calculé en volt par mètre (V/m) et relève d'un régime physique distinct — les deux ne sont pas additionnés dans l'affichage public.</p>
+</section>
+
+<section id="variations-temporelles">
+  <h2 data-i18n-key="s3_h2">3. Variations temporelles (non intégrées au score principal)</h2>
+  <p data-i18n-key="s3_p1">Tellux documente les variations temporelles du champ géomagnétique et des basses fréquences, sans les intégrer au score principal (Doc 2 §1.2 axe C, Doc 2 §6.1) :</p>
+  <ul>
+    <li data-i18n-key="s3_li1"><strong>Campbell 1989</strong> — variations Sq (solaire-quotidiennes) du champ magnétique.</li>
+    <li data-i18n-key="s3_li2"><strong>Zhou, Williams, Boldi 2025</strong> — résonance de Schumann et variabilité climatique.</li>
+    <li data-i18n-key="s3_li3"><strong>Revue Atmosphere 2023</strong> — état de l'art sur les variations ELF.</li>
+    <li data-i18n-key="s3_li4"><strong>Nickolaenko, Hayakawa, Koloskov 2025</strong> — modulation solaire des résonances de Schumann (<em>Atmosphere</em> 16(6):648, <em>JASTP</em> 269:106465).</li>
+  </ul>
+  <p data-i18n-key="s3_p2">Ces variations sont affichées dans des onglets dédiés (ex. « Dix mille ans de champ géomagnétique » dans la section Culture scientifique) et peuvent être activées en mode Expertise.</p>
+</section>
+
+<section id="limites">
+  <h2 data-i18n-key="s4_h2">4. Limites du modèle — quatre catégories <span class="meta-ref">(Doc 1 §6)</span></h2>
+
+  <h3 data-i18n-key="s4_h3_1">4.1 — Limites architecturales</h3>
+  <ul>
+    <li data-i18n-key="s4_1_li1">Le modèle est un <strong>comparatif relatif</strong>, pas un diagnostic absolu.</li>
+    <li data-i18n-key="s4_1_li2">Le score d'un point n'a de sens que comparé à un autre point.</li>
+    <li data-i18n-key="s4_1_li3">Le modèle n'est pas un outil de conformité réglementaire (les seuils ICNIRP ne sont pas implémentés comme indicateurs).</li>
+    <li data-i18n-key="s4_1_li4">Le modèle n'est pas un outil sanitaire individuel.</li>
+  </ul>
+
+  <h3 data-i18n-key="s4_h3_2">4.2 — Limites de données</h3>
+  <ul>
+    <li data-i18n-key="s4_2_li1">Granularité IGRF-14 et EMAG2v3 (3,7 km).</li>
+    <li data-i18n-key="s4_2_li2">Courants HTA estimés (pas de données temps réel).</li>
+    <li data-i18n-key="s4_2_li3">30 fiches ANFR/EXEM seulement.</li>
+    <li data-i18n-key="s4_2_li4">Pas de campagne spectrogamma BRGM dédiée Corse (RADIO-AERO-001).</li>
+    <li data-i18n-key="s4_2_li5">Pas de campagne magnétotellurique systématique publiée à l'échelle de la Corse (RADIO-MT-001).</li>
+  </ul>
+
+  <h3 data-i18n-key="s4_h3_3">4.3 — Limites scientifiques</h3>
+  <ul>
+    <li data-i18n-key="s4_3_li1"><strong>Magnétoréception humaine</strong> : études fondatrices (Wang 2019, Chae 2022) mais réplication inter-laboratoires limitée ; Bartos 2023 critique la lecture maximaliste (Doc 1 §1.3).</li>
+    <li data-i18n-key="s4_3_li2"><strong>Pas de causalité démontrée pour signal ELF / leucémie infantile</strong> : classification IARC 2B (2002, maintenue 2024) ; SCHEER 2024 : « weak to moderate weight of evidence » (Doc 1 §6.3).</li>
+    <li data-i18n-key="s4_3_li3"><strong>Mécanismes VGCC/Pall</strong> : non retenus par ICNIRP 2020, SCHEER 2024, ANSES (Doc 1 §7.2).</li>
+  </ul>
+
+  <h3 data-i18n-key="s4_h3_4">4.4 — Limites territoriales</h3>
+  <ul>
+    <li data-i18n-key="s4_4_li1">Couverture radon : classement communal, pas d'activité bâti modélisée.</li>
+    <li data-i18n-key="s4_4_li2">Pas d'étude santé en zone habitée méditerranéenne sur ELF résidentiel (Doc 2 §8.4).</li>
+    <li data-i18n-key="s4_4_li3">Lacunes faune corse (chiroptères, Balbuzard, brebis corse) — Doc 2 §8.2.</li>
+    <li data-i18n-key="s4_4_li4">Lacunes flore et microbiome (pin laricio, chênaies, vignobles) — Doc 2 §8.3.</li>
+  </ul>
+</section>
+
+<section id="hypotheses-pilier-a">
+  <h2 data-i18n-key="s5_h2">5. Hypothèses scientifiques — Pilier A <span class="meta-ref">(Doc 2 §3)</span></h2>
+  <p data-i18n-key="s5_p1">Tellux a formalisé <strong>17 hypothèses scientifiques</strong> (Pilier A) qui guident le programme de recherche. Chaque hypothèse répond à cinq critères d'inclusion (Doc 2 §3.1) : formulation testable, variables mesurables, protocole identifiable, ancrage peer-reviewed, pertinence Corse.</p>
+  <p data-i18n-key="s5_p2"><strong>Extraits représentatifs :</strong></p>
+
+  <p data-i18n-key="s5_s1"><strong>S1 — Coïncidence anomalies géomagnétiques × sites anciens</strong> (Doc 2 §3.3). Les zones d'anomalie géomagnétique d'origine naturelle (EMAG2v3 + susceptibilité locale) coïncident-elles avec les sites patrimoniaux anciens plus fréquemment que ne le prédit un modèle nul ?</p>
+  <p data-i18n-key="s5_s3"><strong>S3 — Courants telluriques aux convergences faille × hydrographie</strong> (Doc 2 §3.3). Les zones de convergence entre failles actives BRGM et réseau hydrographique présentent-elles un Δ du champ magnétique statique ou sub-1 Hz statistiquement supérieur à celui de zones de référence géologiquement comparables ?</p>
+  <p data-i18n-key="s5_s8"><strong>S8 — Réponse adaptative ionisante et populations corses isolées</strong> (Doc 2 §3.3). Les populations corses isolées génétiquement, vivant sur substrat varisque à exposition radon chronique catégorie 3, présentent-elles une signature transcriptomique enrichie en gènes de réponse adaptative à l'ionisant ?</p>
+  <p data-i18n-key="s5_s13"><strong>S13 — Atténuation RF en forêt laricio corse comme site modèle shinrin-yoku</strong> (Doc 2 §3.3). Les forêts de pin laricio corse présentent-elles une atténuation RF mesurée conforme aux prédictions ITU-R P.833, et constituent-elles des sites candidats pour des études shinrin-yoku isolant la variable EM ?</p>
+  <p data-i18n-key="s5_s17"><strong>S17 — Validation/réfutation des « zones de stress géobio » par paramètres physiques mesurables</strong> (Doc 2 §3.3). Les zones identifiées par des praticiens géobiologiques comme « perturbées » ne présenteront pas, dans leur ensemble, de paramètres physiques mesurables statistiquement différents des zones « non perturbées » sous protocole double aveugle.</p>
+
+  <p data-i18n-key="s5_p3"><strong>Statut :</strong> S1, S2, S4, S5, S9, S11, S12, S14 sont <strong>testables immédiatement</strong> (Doc 2 §3.3). Les autres nécessitent des partenariats ou des campagnes de mesure spécifiques.</p>
+</section>
+
+<section id="tensions">
+  <h2 data-i18n-key="s6_h2">6. Tensions scientifiques documentées <span class="meta-ref">(Doc 2 §2)</span></h2>
+  <p data-i18n-key="s6_p1">Tellux documente <strong>13 tensions scientifiques ouvertes</strong> (T1 à T13). Une tension désigne un état du savoir où plusieurs positions, scientifiquement défendables et appuyées par de la littérature peer-reviewed, coexistent sans résolution canonique.</p>
+
+  <p data-i18n-key="s6_t1"><strong>T1 — Effets EM non thermiques : existence versus inexistence opératoire aux expositions ambiantes.</strong> Pôle A : études documentant des effets biologiques à intensités inférieures aux seuils thermiques (Yakymenko 2016, Sherrard 2018, Xu 2021). Pôle B : ICNIRP 2020, SCHEER 2024, méta-analyses Amoon-Kheifets 2022 (OR 1,01). <strong>Position Tellux :</strong> effets biologiques non thermiques réels à certaines intensités, effets sanitaires populationnels d'amplitude inférieure aux craintes initiales.</p>
+  <p data-i18n-key="s6_t3"><strong>T3 — Magnétoréception humaine : documentée versus non démontrée.</strong> Pôle A : Wang 2019 <em>eNeuro</em> (34 sujets), Chae 2022 <em>Sci Rep</em> (cryptochrome). Pôle B : aucune réplication inter-laboratoires indépendante complète ; Bartos 2023 critique de la lecture maximaliste. <strong>Position Tellux :</strong> sensibilité mesurable mais rare, substrat partiellement caractérisé, conditionnel explicite obligatoire.</p>
+  <p data-i18n-key="s6_t6"><strong>T6 — VGCC comme cible EM : Pall versus critiques biophysiques.</strong> Pôle A : Pall 2013. Pôle B : forces sub-kT au voltage-sensor à intensités ambiantes (Foster 2022). <strong>Position Tellux :</strong> mécanisme plausible à inscrire dans AOP, mais <strong>exclu du modèle de calcul Tellux pour les expositions résidentielles</strong> (Doc 1 §7.2).</p>
+  <p data-i18n-key="s6_t9"><strong>T9 — UNSCEAR 2012 — position C.</strong> La LNT reste valide comme cadre réglementaire de précaution ; la biologie aux basses doses peut localement dévier de la linéarité (adaptive response, bystander). <strong>Position Tellux :</strong> position C stricte, ni LNT sans nuance ni caducité de LNT.</p>
+  <p data-i18n-key="s6_t13"><strong>T13 — Électrohypersensibilité (EHS) : symptômes réels versus causalité directe par champ mesurable.</strong> Pôle A : cadre mécanistique Henshaw &amp; Philips 2024. Pôle B : Rubin 2010 (46 études : symptômes non prédits par l'exposition mesurée), Ledent 2025. <strong>Position Tellux :</strong> symptômes réels et invalidants reconnus ; lien causal direct par champ mesurable non établi en double aveugle ; refus de qualification individuelle.</p>
+</section>
+
+<section id="sources-geomagnetiques">
+  <h2 data-i18n-key="s7_h2">7. Sources de données — géomagnétiques <span class="meta-ref">(Doc 1 §3.1, §5.1)</span></h2>
+  <table class="data-table">
+    <thead><tr><th data-i18n-key="s7_th1">Source</th><th data-i18n-key="s7_th2">Description</th><th data-i18n-key="s7_th3">Résolution / Précision</th></tr></thead>
+    <tbody>
+      <tr><td data-i18n-key="s7_r1c1">IGRF-14 (IAGA/NOAA)</td><td data-i18n-key="s7_r1c2">Champ géomagnétique de référence (2025-2030)</td><td data-i18n-key="s7_r1c3">±50-100 nT, résolution ~50 km</td></tr>
+      <tr><td data-i18n-key="s7_r2c1">EMAG2v3 (NOAA/NCEI)</td><td data-i18n-key="s7_r2c2">Anomalies crustales mondiales (primaire)</td><td data-i18n-key="s7_r2c3">2 arc-min (~3,7 km)</td></tr>
+      <tr><td data-i18n-key="s7_r3c1">LCS1 (Lowes &amp; Constable 2015)</td><td data-i18n-key="s7_r3c2">Anomalies crustales (secours)</td><td data-i18n-key="s7_r3c3">0,5° × 0,5°</td></tr>
+      <tr><td data-i18n-key="s7_r4c1">INTERMAGNET</td><td data-i18n-key="s7_r4c2">Magnétomètres temps réel (DUR, EBR, CLF)</td><td data-i18n-key="s7_r4c3">Variable</td></tr>
+      <tr><td data-i18n-key="s7_r5c1">Dst/Kp (GFZ Potsdam)</td><td data-i18n-key="s7_r5c2">Indices de tempête géomagnétique</td><td data-i18n-key="s7_r5c3">1 heure</td></tr>
+    </tbody>
+  </table>
+  <p data-i18n-key="s7_p1"><strong>Note sur l'anomalie crustale :</strong> Tellux utilise <strong>EMAG2v3</strong> comme source primaire, et <strong>LCS1</strong> comme secours. Ces modèles sont publics et documentés (DOI 10.7289/V5H70CVX pour EMAG2v3, DOI 10.1093/gji/ggu451 pour LCS1).</p>
+</section>
+
+<section id="sources-rf">
+  <h2 data-i18n-key="s8_h2">8. Sources de données — radiofréquences et végétation <span class="meta-ref">(Doc 1 §3.3)</span></h2>
+  <table class="data-table">
+    <thead><tr><th data-i18n-key="s8_th1">Source</th><th data-i18n-key="s8_th2">Description</th><th data-i18n-key="s8_th3">Utilisation</th></tr></thead>
+    <tbody>
+      <tr><td data-i18n-key="s8_r1c1">ANFR Cartoradio</td><td data-i18n-key="s8_r1c2">Puissance et position des antennes (~974 supports en Corse)</td><td data-i18n-key="s8_r1c3">Données déclarées par les opérateurs</td></tr>
+      <tr><td data-i18n-key="s8_r2c1">BD Forêt V2 IGN</td><td data-i18n-key="s8_r2c2">Forêt dense de Corse (<code>foret_dense_corse.geojson</code>, ~2 880 polygones)</td><td data-i18n-key="s8_r2c3">Atténuation par végétation (ITU-R P.833-6)</td></tr>
+    </tbody>
+  </table>
+  <p data-i18n-key="s8_p1"><strong>Calibration :</strong> Le modèle RF est calibré sur les mesures certifiées <code>cartoradio_certified_corse.json</code> (points conformes en environnement extérieur public). Le facteur multiplicatif <code>k ≈ 0,361</code> est dérivé une fois au démarrage comme médiane du ratio mesuré/prédit. Validation croisée LOO-CV, IC 95 % par bootstrap : [0,186 ; 0,414]. Le facteur est constant sur tout le territoire.</p>
+  <p data-i18n-key="s8_p2"><strong>Note :</strong> La végétation est modélisée à partir de la <strong>BD Forêt V2 de l'IGN</strong>, source vectorielle locale. Ce n'est pas un raster mondial (ESA WorldCover, CORINE). Le modèle d'atténuation utilisé est le <strong>modèle simplifié historique ITU-R P.833-6 (2007)</strong> — version obsolète, en attente de migration vers P.833-10.</p>
+</section>
+
+<section id="sources-ionisants">
+  <h2 data-i18n-key="s9_h2">9. Sources de données — ionisants (gamma et radon) <span class="meta-ref">(Doc 1 §3.4, §5.1)</span></h2>
+  <table class="data-table">
+    <thead><tr><th data-i18n-key="s9_th1">Source</th><th data-i18n-key="s9_th2">Description</th><th data-i18n-key="s9_th3">Utilisation</th></tr></thead>
+    <tbody>
+      <tr><td data-i18n-key="s9_r1c1">IRSN</td><td data-i18n-key="s9_r1c2">Carte des débits de dose gamma</td><td data-i18n-key="s9_r1c3">Modèle régional</td></tr>
+      <tr><td data-i18n-key="s9_r2c1">ASNR</td><td data-i18n-key="s9_r2c2">Zonage radon (arrêté 2018)</td><td data-i18n-key="s9_r2c3">Classement communal (1-3)</td></tr>
+      <tr><td data-i18n-key="s9_r3c1">BRGM</td><td data-i18n-key="s9_r3c2">Géologie, cavités, failles (InfoTerre)</td><td data-i18n-key="s9_r3c3">Contexte géologique</td></tr>
+      <tr><td data-i18n-key="s9_r4c1">Puccini et al. 2014</td><td data-i18n-key="s9_r4c2">Spectrogamma in situ HPGe, 210 affleurements Corse-Sardaigne</td><td data-i18n-key="s9_r4c3">Calibration granitoïdes varisques</td></tr>
+    </tbody>
+  </table>
+  <p data-i18n-key="s9_p1"><strong>Référence Puccini et al. 2014</strong> : <em>Radiological characterization of granitoid outcrops and dimension stones of the Variscan Corsica-Sardinia Batholith</em>, Environmental Earth Sciences 71:393-405, DOI 10.1007/s12665-013-2442-8.</p>
+  <p data-i18n-key="s9_p2"><strong>Note :</strong> L'IRSN estime le débit de dose gamma terrestre naturel en Corse entre <strong>75 et 150 nSv/h</strong>, avec des dépassements documentés sur les granitoïdes les plus radioactifs (Doc 1 §3.5).</p>
+</section>
+
+<section id="statuts-epistemiques">
+  <h2 data-i18n-key="s10_h2">10. Statuts épistémiques des couches</h2>
+  <p data-i18n-key="s10_p1">Chaque couche affichée dans Tellux porte un statut (Doc 1 §2.4) :</p>
+  <table class="data-table">
+    <thead><tr><th data-i18n-key="s10_th1">Statut</th><th data-i18n-key="s10_th2">Signification</th><th data-i18n-key="s10_th3">Couches concernées</th></tr></thead>
+    <tbody>
+      <tr><td data-i18n-key="s10_r1c1">✅ Certifié</td><td data-i18n-key="s10_r1c2">Donnée validée par une source officielle</td><td data-i18n-key="s10_r1c3">Zonage radon, gamma IRSN, IGRF</td></tr>
+      <tr><td data-i18n-key="s10_r2c1">⚙️ Calculé</td><td data-i18n-key="s10_r2c2">Résultat du modèle Tellux, fondé sur des données solides</td><td data-i18n-key="s10_r2c3">RF, magnétique composite, ELF</td></tr>
+      <tr><td data-i18n-key="s10_r3c1">⚠️ Indicatif</td><td data-i18n-key="s10_r3c2">Donnée issue de capteurs hétérogènes, à confirmer</td><td data-i18n-key="s10_r3c3">Gamma citoyen (OpenRadiation)</td></tr>
+      <tr><td data-i18n-key="s10_r4c1">⏳ Attente</td><td data-i18n-key="s10_r4c2">Fonctionnalité prévue mais pas encore active</td><td data-i18n-key="s10_r4c3">Dépôts ERP, SECS</td></tr>
+      <tr><td data-i18n-key="s10_r5c1">🟡 Repère</td><td data-i18n-key="s10_r5c2">Couche contextuelle, hors calcul</td><td data-i18n-key="s10_r5c3">Géologie, failles, hydro, forêts</td></tr>
+      <tr><td data-i18n-key="s10_r6c1">🔵 Gelé</td><td data-i18n-key="s10_r6c2">Donnée intégrée mais avec une limitation connue</td><td data-i18n-key="s10_r6c3">EMAG2v3 (résolution), IGRF (gelé 5 ans)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="dettes-techniques">
+  <h2 data-i18n-key="s11_h2">11. Dettes techniques documentées <span class="meta-ref">(Doc 1 §6.4, §8.3)</span></h2>
+  <table class="data-table">
+    <thead><tr><th data-i18n-key="s11_th1">Problème</th><th data-i18n-key="s11_th2">Impact</th><th data-i18n-key="s11_th3">Statut</th></tr></thead>
+    <tbody>
+      <tr><td data-i18n-key="s11_r1c1">EMAG2v3 : résolution 2 arc-min</td><td data-i18n-key="s11_r1c2">Anomalies crustales &lt;5 km lissées</td><td data-i18n-key="s11_r1c3">Gelé</td></tr>
+      <tr><td data-i18n-key="s11_r2c1">LCS1 : non intégré comme secours actif</td><td data-i18n-key="s11_r2c2">Pas de comparaison indépendante</td><td data-i18n-key="s11_r2c3">En attente</td></tr>
+      <tr><td data-i18n-key="s11_r3c1">RF : espace libre sans correction troposphérique</td><td data-i18n-key="s11_r3c2">Erreur de quelques dB en conditions de ducting</td><td data-i18n-key="s11_r3c3">À améliorer</td></tr>
+      <tr><td data-i18n-key="s11_r4c1">Conductivité du sol : P.527-6 exposé mais non consommé</td><td data-i18n-key="s11_r4c2">Non utilisé dans le calcul RF</td><td data-i18n-key="s11_r4c3">En attente</td></tr>
+      <tr><td data-i18n-key="s11_r5c1">Végétation : P.833-6 (2007) obsolète</td><td data-i18n-key="s11_r5c2">Modèle simplifié historique</td><td data-i18n-key="s11_r5c3">Migration vers P.833-10 prévue</td></tr>
+      <tr><td data-i18n-key="s11_r6c1">SECS : non implémenté</td><td data-i18n-key="s11_r6c2">Pas de correction régionale des tempêtes</td><td data-i18n-key="s11_r6c3">En attente (réseau DUR+EBR+CLF identifié)</td></tr>
+      <tr><td data-i18n-key="s11_r7c1">Campagne spectrogamma BRGM dédiée Corse</td><td data-i18n-key="s11_r7c2">Lacune RADIO-AERO-001</td><td data-i18n-key="s11_r7c3">À financer</td></tr>
+      <tr><td data-i18n-key="s11_r8c1">Campagne magnétotellurique Corse</td><td data-i18n-key="s11_r8c2">Lacune RADIO-MT-001</td><td data-i18n-key="s11_r8c3">Protocole Q défini</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="references-citations">
+  <h2 data-i18n-key="s12_h2">12. Références scientifiques (pondérations 0,4 / 0,4 / 0,2)</h2>
+  <p data-i18n-key="s12_p1">L'indice pondéré public (Doc 1 §4.2) s'appuie sur :</p>
+  <ul>
+    <li data-i18n-key="s12_li1"><strong>Amoon-Kheifets 2022</strong> (<em>International Journal of Epidemiology</em> 51) — méta-analyse 34 études, OR 1,01 pour exposition ELF ≥0,4 µT.</li>
+    <li data-i18n-key="s12_li2"><strong>Brabant et al. 2022</strong> (<em>Environment International</em> 167) — OR 1,26 pour exposition ELF ≥0,4 µT.</li>
+    <li data-i18n-key="s12_li3"><strong>Avis SCHEER 2024</strong> (Commission européenne) — « weak to moderate weight of evidence » pour association ELF-leucémies.</li>
+    <li data-i18n-key="s12_li4"><strong>UNSCEAR 2012</strong> — position « C documentée » sur les basses doses (LNT vs hormesis).</li>
+    <li data-i18n-key="s12_li5"><strong>IRSN</strong> — gamma terrestre (75-150 nSv/h).</li>
+  </ul>
+</section>
+
+<section id="mise-a-jour">
+  <h2 data-i18n-key="s13_h2">13. Mise à jour des données <span class="meta-ref">(Doc 1 §5.4)</span></h2>
+  <table class="data-table">
+    <thead><tr><th data-i18n-key="s13_th1">Donnée</th><th data-i18n-key="s13_th2">Fréquence</th><th data-i18n-key="s13_th3">Source</th></tr></thead>
+    <tbody>
+      <tr><td data-i18n-key="s13_r1c1">IGRF</td><td data-i18n-key="s13_r1c2">Tous les 5 ans (prochaine : 2030)</td><td data-i18n-key="s13_r1c3">IUGG</td></tr>
+      <tr><td data-i18n-key="s13_r2c1">EMAG2v3 / LCS1</td><td data-i18n-key="s13_r2c2">Gelé (pas de mise à jour prévue)</td><td data-i18n-key="s13_r2c3">NOAA/NCEI</td></tr>
+      <tr><td data-i18n-key="s13_r3c1">INTERMAGNET</td><td data-i18n-key="s13_r3c2">Temps réel (1h)</td><td data-i18n-key="s13_r3c3">API GIN BGS</td></tr>
+      <tr><td data-i18n-key="s13_r4c1">Dst/Kp</td><td data-i18n-key="s13_r4c2">Temps réel (1h)</td><td data-i18n-key="s13_r4c3">GFZ Potsdam</td></tr>
+      <tr><td data-i18n-key="s13_r5c1">ANFR</td><td data-i18n-key="s13_r5c2">Mensuelle</td><td data-i18n-key="s13_r5c3">Cartoradio</td></tr>
+      <tr><td data-i18n-key="s13_r6c1">IRSN</td><td data-i18n-key="s13_r6c2">Annuelle</td><td data-i18n-key="s13_r6c3">IRSN</td></tr>
+      <tr><td data-i18n-key="s13_r7c1">ASNR / BRGM</td><td data-i18n-key="s13_r7c2">Continue</td><td data-i18n-key="s13_r7c3">ASNR, BRGM</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="signalement-erreurs">
+  <h2 data-i18n-key="s14_h2">14. Signaler une erreur</h2>
+  <p data-i18n-key="s14_p1">Toute erreur peut être signalée via :</p>
+  <ul>
+    <li data-i18n-key="s14_li1">Le bouton <strong>« Signaler une erreur »</strong> sur la carte.</li>
+    <li data-i18n-key="s14_li2">Le dépôt public (issues GitHub).</li>
+    <li data-i18n-key="s14_li3">L'email (mentionné dans le footer du site).</li>
+  </ul>
+  <p data-i18n-key="s14_p2">Les signalements sont examinés et traités aussi rapidement que possible. Le statut de chaque correction est mis à jour au fil de l'avancement.</p>
+</section>
+
+<section class="pour-aller-plus-loin">
+  <h2 data-i18n-key="papl_h2">Pour aller plus loin</h2>
+  <ul>
+    <li data-i18n-key="papl_li1"><a href="/cadre-scientifique.html">Cadre scientifique</a> — architecture et décisions du modèle.</li>
+    <li data-i18n-key="papl_li2"><a href="/guide-et-glossaire.html">Guide et glossaire</a> — comment lire les cartes.</li>
+  </ul>
+</section>
+
+</div>
+
+<footer class="page-footer">
+  <p data-i18n-key="footer_updated">Dernière mise à jour : août 2026</p>
+  <p><a href="/app.html" data-i18n-key="footer_app">Application carte</a> · <a href="/mairies.html" data-i18n-key="footer_mairies">Outils mairies</a> · <a href="/radon.html" data-i18n-key="footer_radon">Radon</a> · <a href="/#ressources" data-i18n-key="footer_ressources">Ressources</a>&nbsp;|&nbsp;<a href="/mentions-legales.html" data-i18n-key="footer_mentions_full">Mentions légales &amp; confidentialité</a> · <a href="/cadre-scientifique.html" data-i18n-key="footer_cadre">Cadre scientifique</a></p>
+</footer>
+
+<script>
+// ═══ Persistance du choix de langue (aligné cadre-scientifique.html) ═══
+function telluxGetStoredLang(){
+  try { var v = window.localStorage.getItem('tellux_lang'); return (v === 'en' || v === 'fr') ? v : null; }
+  catch (_e) { return null; }
+}
+function telluxGetEffectiveLang(){
+  var stored = telluxGetStoredLang();
+  if (stored) return stored;
+  try {
+    var p = new URLSearchParams(window.location.search);
+    if ((p.get('lang') || '').toLowerCase() === 'en') return 'en';
+  } catch (_e) {}
+  return 'fr';
+}
+(function(){
+  'use strict';
+  var t = document.getElementById('lang-toggle-en');
+  if (!t) return;
+  var params;
+  try { params = new URLSearchParams(window.location.search); }
+  catch (_e) { return; }
+  var inEN = telluxGetEffectiveLang() === 'en';
+  if (inEN) { params.delete('lang'); } else { params.set('lang', 'en'); }
+  var qs = params.toString();
+  t.setAttribute('href', window.location.pathname + (qs ? '?' + qs : '') + (window.location.hash || ''));
+  if (inEN) {
+    t.textContent = 'FR'; t.setAttribute('hreflang', 'fr'); t.setAttribute('lang', 'fr'); t.setAttribute('title', 'Retour au français');
+  } else {
+    t.textContent = 'EN'; t.setAttribute('hreflang', 'en'); t.setAttribute('lang', 'en'); t.setAttribute('title', 'View this page in English');
+  }
+  t.addEventListener('click', function(){
+    try { window.localStorage.setItem('tellux_lang', inEN ? 'fr' : 'en'); } catch (_e2) {}
+  });
+})();
+
+/* i18n EN — SCAFFOLDING EN PLACE, TRADUCTION NON LIVRÉE.
+   Chaque nœud de texte porte déjà son data-i18n-key ; EN_STRINGS est vide,
+   donc le toggle EN retombe proprement sur le FR (source de vérité).
+   La traduction intégrale FR→EN de cette page est une dette suivie :
+   I18N-DOC-PAGES-EN-001 (même statut que app.html, cf. ADR-058). */
+(function(){
+  'use strict';
+  if (telluxGetEffectiveLang() !== 'en') return;
+  var EN_STRINGS = {};
+  var applied = 0;
+  document.querySelectorAll('[data-i18n-key]').forEach(function(el){
+    var k = el.getAttribute('data-i18n-key');
+    if (Object.prototype.hasOwnProperty.call(EN_STRINGS, k)) { el.innerHTML = EN_STRINGS[k]; applied++; }
+  });
+  var m = document.querySelector('meta[name="description"][data-i18n-key]');
+  if (m && EN_STRINGS[m.getAttribute('data-i18n-key')]) m.setAttribute('content', EN_STRINGS[m.getAttribute('data-i18n-key')]);
+  if (EN_STRINGS.page_title) document.title = EN_STRINGS.page_title;
+  // applied === 0 tant que la traduction n'est pas livrée : comportement voulu (FR).
+})();
+</script>
+</body>
+</html>
