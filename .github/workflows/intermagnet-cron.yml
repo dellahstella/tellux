@@ -120,11 +120,14 @@ jobs:
           BRANCH="${{ steps.pr.outputs.branch }}"
           REPO="${{ github.repository }}"
 
+          # NB modele de statut GitHub : un run gate est `status=completed` +
+          # `conclusion=action_required` (PAS `status=action_required`). Une fois
+          # approuve : conclusion=null (en cours) puis success/failure.
           approve_wf () {
-            # $1 = fichier workflow ; approuve son run `action_required` sur la branche.
+            # $1 = fichier workflow ; approuve son run en attente d'approbation.
             gh run list --branch "$BRANCH" --workflow="$1" --limit 5 \
-              --json databaseId,status \
-              --jq '.[] | select(.status=="action_required") | .databaseId' 2>/dev/null \
+              --json databaseId,status,conclusion \
+              --jq '.[] | select(.status=="completed" and .conclusion=="action_required") | .databaseId' 2>/dev/null \
             | while read -r id; do
                 [ -n "$id" ] || continue
                 echo "Approbation $1 : run $id"
@@ -136,10 +139,14 @@ jobs:
           for i in $(seq 1 48); do   # 48 * 5s = 4 min max d'attente de materialisation
             approve_wf leak-guard.yml
             approve_wf validate-code.yml
-            st=$(gh run list --branch "$BRANCH" --workflow=leak-guard.yml --limit 1 \
-                 --json status --jq '.[0].status' 2>/dev/null || true)
-            # status != action_required (queued / in_progress / completed) = run approuve et lance
-            if [ -n "$st" ] && [ "$st" != "action_required" ]; then leak_ok=true; break; fi
+            row=$(gh run list --branch "$BRANCH" --workflow=leak-guard.yml --limit 1 \
+                  --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion)"' 2>/dev/null || true)
+            # "" / "null/null" = pas encore de run ; "completed/action_required" = gate non approuve ;
+            # tout le reste (in_progress/null, completed/success…) = run approuve et lance
+            case "$row" in
+              ""|"null/null"|"completed/action_required") : ;;
+              *) leak_ok=true; break ;;
+            esac
             sleep 5
           done
           if [ "$leak_ok" != "true" ]; then
