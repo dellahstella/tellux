@@ -104,46 +104,53 @@ jobs:
           echo "pr_number=$(basename "$PR_URL")" >> "$GITHUB_OUTPUT"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
-      - name: Approuver les workflows en attente sur la PR bot
+      - name: Approuver les workflows en attente, attendre les checks requis, merger
         # Voir le bloc « Piege GitHub » en tete de fichier. Les runs `pull_request`
         # de la PR bot (dont le check requis « Scan anti-fuite (lecture seule) »)
         # restent en `action_required` : on les approuve pour qu'ils s'executent en
         # contexte pull_request et entrent dans le statusCheckRollup de la PR.
-        if: steps.diff.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -e
-          BRANCH="${{ steps.pr.outputs.branch }}"
-          # Laisser GitHub enregistrer les runs action_required (latence ~5-20 s).
-          IDS=""
-          for i in $(seq 1 12); do
-            IDS=$(gh run list --branch "$BRANCH" --limit 20 --json databaseId,status \
-                  --jq '[.[] | select(.status=="action_required") | .databaseId] | .[]' 2>/dev/null || true)
-            [ -n "$IDS" ] && break
-            sleep 5
-          done
-          if [ -z "$IDS" ]; then
-            echo "::warning::Aucun run action_required trouve sur $BRANCH — le check requis Scan anti-fuite risque de manquer, PR laissee ouverte."
-            exit 0
-          fi
-          for id in $IDS; do
-            echo "Approbation du workflow run $id"
-            gh api --method POST "repos/${{ github.repository }}/actions/runs/$id/approve"
-          done
-
-      - name: Attendre les checks requis et merger
+        # GitHub materialise ces suites gatees avec une latence variable (jusqu'a
+        # ~4 min observees) → boucle d'approbation longue avant l'attente finale.
         if: steps.diff.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
           PR="${{ steps.pr.outputs.pr_number }}"
-          # --required --watch : attend uniquement les 2 checks requis (Cloudflare Pages +
-          # Scan anti-fuite), pas les informatifs (Axe §5.1 peut rester pending longtemps).
-          # Timeout 5 min avant abandon (PR laissee ouverte, pas de merge silencieux force).
+          BRANCH="${{ steps.pr.outputs.branch }}"
+          REPO="${{ github.repository }}"
+
+          approve_wf () {
+            # $1 = fichier workflow ; approuve son run `action_required` sur la branche.
+            gh run list --branch "$BRANCH" --workflow="$1" --limit 5 \
+              --json databaseId,status \
+              --jq '.[] | select(.status=="action_required") | .databaseId' 2>/dev/null \
+            | while read -r id; do
+                [ -n "$id" ] || continue
+                echo "Approbation $1 : run $id"
+                gh api --method POST "repos/$REPO/actions/runs/$id/approve" || true
+              done
+          }
+
+          leak_ok=false
+          for i in $(seq 1 48); do   # 48 * 5s = 4 min max d'attente de materialisation
+            approve_wf leak-guard.yml
+            approve_wf validate-code.yml
+            st=$(gh run list --branch "$BRANCH" --workflow=leak-guard.yml --limit 1 \
+                 --json status --jq '.[0].status' 2>/dev/null || true)
+            # status != action_required (queued / in_progress / completed) = run approuve et lance
+            if [ -n "$st" ] && [ "$st" != "action_required" ]; then leak_ok=true; break; fi
+            sleep 5
+          done
+          if [ "$leak_ok" != "true" ]; then
+            echo "::warning::Scan anti-fuite pas declenche sur PR #$PR apres 4 min — laissee ouverte (prochain cron reessaie)."
+            exit 0
+          fi
+
+          # Attente des 2 checks requis (Cloudflare Pages + Scan anti-fuite), pas les
+          # informatifs. Timeout 5 min avant abandon (PR laissee ouverte, pas de merge force).
           if timeout 300 gh pr checks "$PR" --required --watch --interval 15; then
             gh pr merge "$PR" --squash --delete-branch
           else
-            echo "::warning::Checks requis pas verts (echec ou timeout 5min) sur PR #$PR — laissee ouverte, pas mergee (prochain cycle cron reessaiera une nouvelle PR)."
+            echo "::warning::Checks requis pas verts (echec ou timeout) sur PR #$PR — laissee ouverte, pas mergee."
           fi
