@@ -248,7 +248,11 @@ a{color:inherit;}
 .rd-lbtn:hover{border-color:var(--mica);}
 .rd-lbtn.on{background:var(--pierre);border-color:var(--ocre);font-weight:500;}
 .rd-lbtn .sq{width:11px;height:11px;border-radius:2px;flex-shrink:0;display:inline-block;}
-.rd-lbtn-hint{font-size:10.5px;color:var(--mica);line-height:1.5;margin:-2px 0 12px 2px;}
+.rd-lbtn-hint{font-size:10.5px;color:var(--mica);line-height:1.5;margin:-2px 0 6px 2px;}
+.rd-lbtn-doc{font-size:10px;line-height:1.5;margin:0 0 12px 2px;}
+.rd-lbtn-doc a{color:var(--tyrrh);text-decoration:none;border-bottom:1px solid rgba(31,58,95,.3);}
+.rd-lbtn-doc a:hover{border-bottom-color:var(--tyrrh);}
+.rd-lbtn-doc.rd-lbtn-doc--note{color:var(--mica);font-style:italic;}
 .rd-op-row{display:flex;align-items:center;gap:8px;margin:-2px 0 14px 2px;padding-left:2px;}
 .rd-op-row input[type=range]{flex:1;}
 .rd-op-row span{font-family:var(--fm);font-size:10px;color:var(--mica);min-width:32px;text-align:right;}
@@ -365,16 +369,20 @@ a{color:inherit;}
         <div class="rd-map-sidebar-title" data-i18n-key="sidebar_title">Couches</div>
         <button class="rd-lbtn" id="rd-b-radon" onclick="rdToggleRadon(this)"><span class="sq" style="background:#C28533"></span><span data-i18n-key="lyr_radon">Zonage radon (ASNR 2/3)</span></button>
         <div class="rd-lbtn-hint" data-i18n-key="lyr_radon_hint">216 communes en zone 3, 37 en zone 2 — arrêté du 27 juin 2018.</div>
+        <div class="rd-lbtn-doc"><a href="/cadre-scientifique.html#radon" target="_blank" rel="noopener" data-i18n-key="rd_doc_radon">Le radon dans le modèle Tellux ↗</a></div>
         <button class="rd-lbtn" id="rd-b-depots" onclick="rdToggleDepots(this)"><span class="sq" style="background:#0f766e;transform:rotate(45deg)"></span><span data-i18n-key="lyr_depots">Dépôts radon ERP (certifié)</span></button>
         <div class="rd-lbtn-hint" data-i18n-key="lyr_depots_hint">Résultats de mesurage déposés par les communes, vérifiés par Tellux avant publication. Jamais fusionnés avec le zonage. Aucun dépôt publié à ce jour — <a href="#courrier" onclick="document.querySelector('.mr-tab[data-tab=&quot;courrier&quot;]').click();document.getElementById('rd-depot-form-section').scrollIntoView({behavior:'smooth'});return false;">soyez la première commune à en déposer un</a>.</div>
+        <div class="rd-lbtn-doc"><a href="/methode-limites-transparence.html#statuts-epistemiques" target="_blank" rel="noopener" data-i18n-key="rd_doc_depots">Statut des dépôts et des mesures ↗</a></div>
         <button class="rd-lbtn" id="rd-b-geo" onclick="rdToggleGeo(this)"><span class="sq" style="background:#1a6b5c"></span><span data-i18n-key="lyr_geo">Géologie BRGM</span></button>
         <div class="rd-op-row" id="rd-geo-op-row" hidden>
           <input type="range" min="0.1" max="1" step="0.05" value="0.35" oninput="rdWmsGeo.setOpacity(+this.value);document.getElementById('rd-geo-op-v').textContent=Math.round(this.value*100)+'%'">
           <span id="rd-geo-op-v">35%</span>
         </div>
         <div class="rd-lbtn-hint" data-i18n-key="lyr_geo_hint">Granite, schiste, calcaire — repère de lecture, pas une couche radon en soi.</div>
+        <div class="rd-lbtn-doc"><a href="/cadre-scientifique.html#gamma-ambiant" target="_blank" rel="noopener" data-i18n-key="rd_doc_geo">Géologie, potentiel radon et gamma terrestre ↗</a></div>
         <button class="rd-lbtn" id="rd-b-cav" onclick="rdToggleCav(this)"><span class="sq" style="background:#5c3a9b"></span><span data-i18n-key="lyr_cav">Cavités souterraines</span></button>
         <div class="rd-lbtn-hint" data-i18n-key="lyr_cav_hint">Grottes, karst, mines (BRGM) — mécanisme d'accumulation possible du radon en sous-sol.</div>
+        <div class="rd-lbtn-doc"><a href="/cadre-scientifique.html#radon" target="_blank" rel="noopener" data-i18n-key="rd_doc_cav">Le radon dans le modèle Tellux ↗</a></div>
         <!-- Failles tectoniques — ajoutées le 2026-08-27 (brief "migration failles" : app.html
              renvoyait vers cette page via "Voir le volet radon →" juste à côté du bouton
              "Failles tectoniques", alors que radon.html n'avait aucune couche failles —
@@ -387,8 +395,10 @@ a{color:inherit;}
              maintenant que radon.html porte la couche réelle). -->
         <button class="rd-lbtn" id="rd-b-failles" onclick="rdToggleFailles(this)"><span class="sq" style="background:#8E2F1F"></span><span data-i18n-key="lyr_failles">Failles tectoniques</span></button>
         <div class="rd-lbtn-hint" data-i18n-key="lyr_failles_hint">8 failles BRGM Corte (actives + quaternaires) — indicateur de contexte structurel, non intégré au calcul du potentiel radon.</div>
+        <div class="rd-lbtn-doc"><a href="/methode-limites-transparence.html#hypotheses-pilier-a" target="_blank" rel="noopener" data-i18n-key="rd_doc_failles">Failles × hydrographie (hypothèse S3) ↗</a></div>
         <button class="rd-lbtn" id="rd-b-air" onclick="rdToggleAir(this)"><span class="sq" style="background:#6b8fb5"></span><span data-i18n-key="lyr_air">Particules fines PM2,5</span></button>
         <div class="rd-lbtn-hint" data-i18n-key="lyr_air_hint">Moyenne annuelle modélisée 2024 (Qualitair Corse). Mise en visualisation, pas un calcul Tellux.</div>
+        <div class="rd-lbtn-doc rd-lbtn-doc--note" data-i18n-key="rd_doc_air">Lecture croisée air — hors du modèle EM/ionisant de Tellux.</div>
         <!-- Émergences thermales — ajoutées le 2026-08-26/27 (brief "migration émergences",
              suite de #1056 failles). Placée en dernier de la liste et OFF par défaut (aucun
              toggle activé au chargement) — déprioritisée délibérément, PAS un simple repère
@@ -402,6 +412,7 @@ a{color:inherit;}
              + popup nom/description). -->
         <button class="rd-lbtn" id="rd-b-therm" onclick="rdToggleTherm(this)"><span class="sq" style="background:#0ea5e9;border-radius:50%"></span><span data-i18n-key="lyr_therm">Émergences thermales</span></button>
         <div class="rd-lbtn-hint" data-i18n-key="lyr_therm_hint">5 sites documentaires (Corse). Non exploitée dans le calcul actuel — réservée à une intégration future (recherche streaming potential / modèle plus fin), pas encore un facteur du potentiel radon affiché.</div>
+        <div class="rd-lbtn-doc"><a href="/cadre-scientifique.html#radon" target="_blank" rel="noopener" data-i18n-key="rd_doc_therm">Le radon dans le modèle Tellux ↗</a></div>
       </div>
       <div class="rd-map">
         <div id="rd-leaflet-map" style="height:100%;width:100%;"></div>
@@ -2148,7 +2159,14 @@ function telluxGetEffectiveLang(){
     footer_link_mairies: "Municipal tools",
     footer_link_ressources: "Resources",
     footer_link_mentions: "Legal notice &amp; privacy",
-    footer_link_transparence: "Transparency"
+    footer_link_transparence: "Transparency",
+    rd_doc_radon: "Radon in the Tellux model ↗",
+    rd_doc_depots: "Status of deposits and measurements ↗",
+    rd_doc_geo: "Geology, radon potential and terrestrial gamma ↗",
+    rd_doc_cav: "Radon in the Tellux model ↗",
+    rd_doc_failles: "Faults × hydrography (hypothesis S3) ↗",
+    rd_doc_air: "Cross-referenced air data — outside the Tellux EM/ionising model.",
+    rd_doc_therm: "Radon in the Tellux model ↗"
   };
 
   document.querySelectorAll('[data-i18n-key]').forEach(function(el){
