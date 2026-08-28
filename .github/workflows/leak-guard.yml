@@ -151,7 +151,7 @@ jobs:
             gh issue create --title "[routine:leak-guard] Fuite doctrine potentielle sur surface publique" --label routine --body-file "$BODY"
           fi
 
-      - name: Gate bloquant (PR + workflow_dispatch — FUITE / CONFIG)
+      - name: Gate bloquant (PR uniquement — FUITE / CONFIG)
         # Rend le check MORDANT sur pull_request : échoue (merge bloqué) si findings.txt porte au
         # moins un finding de classe FUITE (fuite réelle : identité, modules confidentiels, corpus,
         # financement, SIRET…) ou CONFIG (scanner dégradé : secret absent, fichier sauté par le cap
@@ -161,15 +161,7 @@ jobs:
         # pédagogie (exception cité/réfuté) ou un edit de zone gelée légitime (process physicien).
         # Ne recopie JAMAIS la chaîne sensible : fichier:ligne + classe/label seulement.
         # Faux positif légitime → allowlister « chemin<TAB>label » dans leak_guard_allowlist.txt.
-        #
-        # workflow_dispatch ajouté 2026-08-28 (brief C1) : intermagnet-cron déclenche ce
-        # workflow en workflow_dispatch sur la branche de sa PR bot (les runs pull_request
-        # d'une PR ouverte par le GITHUB_TOKEN restent en action_required). Sans cette
-        # extension, le check requis « Scan anti-fuite » tournerait mais NE bloquerait pas
-        # sur ce chemin — on veut qu'il morde aussi là (le fichier data JSON du bot ne peut
-        # quasiment pas fuiter, mais un required check non mordant sur un chemin de merge
-        # automatique est un angle mort à ne pas laisser).
-        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'pull_request'
         run: |
           set -e
           if [ ! -f findings.txt ]; then
