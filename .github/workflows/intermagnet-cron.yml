@@ -16,7 +16,18 @@ name: intermagnet-cron
 # dediee, attend les 2 checks requis (Cloudflare Pages + Scan anti-fuite), puis
 # la merge lui-meme (squash) UNIQUEMENT s'ils passent. Aucun contournement de la
 # protection de branche, aucun secret/token special au-dela du GITHUB_TOKEN par
-# defaut (contents:write + pull-requests:write suffisent).
+# defaut (contents:write + pull-requests:write + actions:write suffisent).
+#
+# ⚠ Piege GitHub (diagnostic brief C1, 2026-08-28 — PR #1049/#1051/#1052/#1053/
+# #1064/#1069 restees ouvertes) : une PR ouverte via le GITHUB_TOKEN par un bot
+# ne declenche PAS automatiquement les workflows `pull_request` — ils restent en
+# `action_required` (approbation manuelle). Le check requis « Scan anti-fuite
+# (lecture seule) » ne demarrait donc jamais → `gh pr checks --watch` expirait a
+# 5 min → PR jamais mergee. (Cloudflare Pages, lui, tourne via son App GitHub
+# independante, non affecte.) Parade : on declenche le scan anti-fuite nous-memes
+# en `workflow_dispatch` (explicitement exempte de cette regle + du garde-fou
+# anti-recursion du GITHUB_TOKEN) sur la branche du PR — son check-run se rattache
+# au SHA de tete et satisfait la protection de branche, sans PAT ni bypass.
 #
 # Cadence : toutes les 30 minutes (aligne sur setInterval(loadAQU,...) cote
 # client). Declenchement manuel : Actions > intermagnet-cron > Run workflow.
@@ -33,6 +44,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      actions: write   # gh workflow run leak-guard.yml (declenchement du scan anti-fuite requis)
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -82,20 +94,56 @@ jobs:
             --body "Régénération automatique (workflow \`intermagnet-cron\`) — pas de contenu applicatif nouveau, uniquement les données du dernier cycle BGS GIN. Auto-merge après CI verte (2 checks requis).")
           echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
           echo "pr_number=$(basename "$PR_URL")" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
-      - name: Wait for required checks and merge
+      - name: Declencher le scan anti-fuite requis sur la branche du PR
+        # Voir le bloc « Piege GitHub » en tete de fichier : les runs `pull_request`
+        # ouverts par le GITHUB_TOKEN restent en `action_required`. `workflow_dispatch`
+        # est exempte de cette regle → on declenche le scan nous-memes ; son check-run
+        # « Scan anti-fuite (lecture seule) » se rattache au SHA de tete du PR.
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run leak-guard.yml --ref "${{ steps.pr.outputs.branch }}"
+
+      - name: Attendre les checks requis et merger
         if: steps.diff.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
           PR="${{ steps.pr.outputs.pr_number }}"
-          # --watch --required : attend uniquement les 2 checks requis (Cloudflare Pages +
-          # Scan anti-fuite), pas les informatifs (Axe §5.1 peut rester pending longtemps).
-          # Timeout via `timeout` : 5min max avant abandon (PR laissee ouverte, pas de merge
-          # silencieux force) — checks connus ~15-40s chacun (sessions manuelles precedentes).
-          if timeout 300 gh pr checks "$PR" --required --watch --interval 15; then
-            gh pr merge "$PR" --squash --delete-branch
-          else
-            echo "::warning::Checks requis pas verts (echec ou timeout 5min) sur PR #$PR — laissee ouverte, pas mergee (prochain cycle cron reessaiera une nouvelle PR)."
+          BRANCH="${{ steps.pr.outputs.branch }}"
+
+          # 1. Scan anti-fuite (declenche a l'etape precedente) : attendre qu'il
+          #    apparaisse (~5-15 s de latence de registration) puis qu'il se termine.
+          RUN_ID=""
+          for i in $(seq 1 18); do
+            RUN_ID=$(gh run list --workflow=leak-guard.yml --branch "$BRANCH" \
+                     --event workflow_dispatch --limit 1 --json databaseId \
+                     --jq '.[0].databaseId' 2>/dev/null || true)
+            [ -n "$RUN_ID" ] && break
+            sleep 5
+          done
+          if [ -z "$RUN_ID" ]; then
+            echo "::warning::Scan anti-fuite non declenche sur PR #$PR — laissee ouverte."
+            exit 0
           fi
+          if ! gh run watch "$RUN_ID" --exit-status --interval 15; then
+            echo "::warning::Scan anti-fuite non vert sur PR #$PR — laissee ouverte."
+            exit 0
+          fi
+
+          # 2. Cloudflare Pages (App GitHub independante, ~15-40 s) : `gh pr checks
+          #    --required` ne « voit » que celui-ci (le check dispatche n'est pas dans
+          #    le statusCheckRollup du PR, mais la protection de branche, elle, le voit
+          #    sur le SHA de tete). Timeout 4 min avant abandon.
+          if ! timeout 240 gh pr checks "$PR" --required --watch --interval 15; then
+            echo "::warning::Cloudflare Pages pas vert sur PR #$PR — laissee ouverte."
+            exit 0
+          fi
+
+          # 3. Merge squash. La protection de branche revalide elle-meme les 2 checks
+          #    requis sur le SHA de tete ; si l'un manque, `gh pr merge` echoue (pas de
+          #    --admin, pas de bypass) → PR laissee ouverte, prochain cron reessaie.
+          gh pr merge "$PR" --squash --delete-branch
