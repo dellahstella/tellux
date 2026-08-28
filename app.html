@@ -3136,16 +3136,21 @@ if (TLX_RM_QUERY && typeof TLX_RM_QUERY.addEventListener === 'function') {
 // Les tiles CartoDB swap d'URL au toggle dark via setUrl (pas de recréation du
 // layer — le control garde sa référence). IGN Plan / Ortho n'ont pas de variante
 // dark native : le toggle dark ne les affecte pas.
+// Fond CartoDB Positron — NON ajouté par défaut depuis le 2026-08-28 (bug « API key
+// required » signalé par Soleil : les tuiles anonymes basemaps.cartocdn.com sont un
+// service gratuit sans garantie, throttlé sous charge, et l'app n'avait aucun fallback).
+// Reste disponible dans le sélecteur (« Carte claire ») ; redeviendra le défaut si une
+// clé API CARTO est câblée (compte gratuit Soleil, cf. DIAGNOSTIC_ERSA_APIKEY_2026-08-28.md).
 const _tileBase=L.tileLayer(
   DARK ? 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png'
        : 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
   {attribution:'© CartoDB © OSM',maxZoom:18,zIndex:1,subdomains:'abcd'}
-).addTo(map);
+);
 const _tileLabels=L.tileLayer(
   DARK ? 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png'
        : 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',
   {zIndex:10,attribution:'',subdomains:'abcd'}
-).addTo(map);
+);
 
 // IGN Plan V2 — fond détaillé (Géoplateforme WMTS, aucune clé API requise)
 const _tileIGNPlan=L.tileLayer(
@@ -3153,17 +3158,19 @@ const _tileIGNPlan=L.tileLayer(
   {attribution:'Plan IGN V2 © IGN/Géoplateforme',maxNativeZoom:18,maxZoom:20,zIndex:1}
 );
 
-// IGN Orthophotos — vue satellite haute résolution (Géoplateforme WMTS)
+// IGN Orthophotos — vue satellite haute résolution (Géoplateforme WMTS, sans clé)
+// Fond PAR DÉFAUT depuis le 2026-08-28 (arbitrage Soleil : IGN Plan V2 jugé trop chargé
+// pour l'overlay des couches Tellux, CARTO en attente de clé API).
 const _tileIGNOrtho=L.tileLayer(
   'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
   {attribution:'Orthophotos © IGN/Géoplateforme',maxNativeZoom:19,maxZoom:20,zIndex:1}
-);
+).addTo(map);
 
-// Sélecteur de fond — 3 fonds disponibles, Carte claire actif par défaut
+// Sélecteur de fond — 3 fonds disponibles, IGN Ortho actif par défaut
 const _baseLayers={
-  'Carte claire':_tileBase,
+  'IGN Ortho':_tileIGNOrtho,
   'IGN Plan':_tileIGNPlan,
-  'IGN Ortho':_tileIGNOrtho
+  'Carte claire':_tileBase
 };
 L.control.layers(_baseLayers,null,{position:'topright',collapsed:true}).addTo(map);
 
