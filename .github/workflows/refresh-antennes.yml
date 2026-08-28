@@ -3,17 +3,35 @@ name: refresh-antennes
 # Refresh automatique de public/data/antennes_par_commune_corse.json.
 # Lit la table Supabase antennas_corse (colonne code_insee_commune, source
 # de verite depuis la resolution du ticket SUPABASE-COMMUNE-FIELD-001),
-# agrege par commune et operateur, ecrit le JSON. Si le JSON a change,
-# commit et push sur dev. Aucune action sur main.
+# agrege par commune et operateur, ecrit le JSON.
 #
 # Cadence : 1er de chaque mois a 04h UTC (cron '0 4 1 * *').
 # Declenchement manuel : Actions > refresh-antennes > Run workflow.
 #
 # Resolution du ticket ANTENNES-REFRESH-001 (Option 2 GitHub Actions).
-# Documentation operationnelle interne.
-#
 # Dependances runtime : stdlib Python uniquement (urllib.request, json,
-# pathlib). Pas de pip install. Script producteur : requests pas requis.
+# pathlib). Pas de pip install.
+#
+# ─────────────────────────────────────────────────────────────────────────
+# Retarget 2026-08-28 (brief C2, ferme #934) : ce workflow poussait sur
+# `dev`, branche supprimee par ADR-021 → l'etape « Checkout dev » echouait
+# a chaque run mensuel depuis le 2026-06-29 (runs 2026-07-01 et 2026-08-01
+# = failure, silencieux). Aligne desormais sur intermagnet-cron.yml
+# (pattern valide par le brief C1) : ouvre une PR depuis une branche dediee
+# vers `main`, approuve ses propres runs `pull_request` en attente pour que
+# le check REQUIS « Scan anti-fuite (lecture seule) » sorte de
+# `action_required` et entre dans le statusCheckRollup, attend les 2 checks
+# requis (Cloudflare Pages + Scan anti-fuite), merge en squash.
+#
+# ⚠ Piege GitHub (cf. brief C1) : une PR ouverte via le GITHUB_TOKEN par un
+# bot ne declenche pas automatiquement les workflows `pull_request` — ils
+# restent en `action_required`. Un run gate est `status=completed` +
+# `conclusion=action_required` (PAS `status=action_required`). Un
+# `workflow_dispatch` du meme workflow NE suffit PAS (check-run hors
+# statusCheckRollup, non accepte par la protection de branche). La parade
+# est d'APPROUVER les runs (POST /actions/runs/{id}/approve, actions:write).
+# Aucun PAT, aucun --admin, aucun bypass.
+# ─────────────────────────────────────────────────────────────────────────
 
 on:
   schedule:
@@ -22,24 +40,24 @@ on:
 
 jobs:
   refresh:
-    name: Regenerer le JSON antennes par commune
+    name: Regenerer le JSON antennes par commune et merger si les checks passent
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
+      actions: write   # POST /actions/runs/{id}/approve — debloque les checks requis de la PR bot
     steps:
-      - name: Checkout dev
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
-          ref: dev
-          # Necessaire pour que le push du bot puisse ecrire sur dev.
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
 
       - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Run build script
+      - name: Run build script (stdlib uniquement, pas de pip install)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -50,20 +68,24 @@ jobs:
         run: |
           if git diff --quiet -- public/data/antennes_par_commune_corse.json; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "Aucun changement detecte, skip du commit."
+            echo "Aucun changement detecte, skip."
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "Changement detecte :"
             git diff --stat -- public/data/antennes_par_commune_corse.json
           fi
 
-      - name: Commit and push if changed
+      - name: Open PR if changed
         if: steps.diff.outputs.changed == 'true'
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -e
+          BRANCH="data/refresh-antennes-$(date -u +%Y%m%d-%H%M%S)"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
           git add public/data/antennes_par_commune_corse.json
-          # Recupere les comptes depuis le JSON pour le message de commit
           COUNT_ANT=$(python -c "import json; d=json.load(open('public/data/antennes_par_commune_corse.json')); print(d['_meta']['n_antennes_placees'])")
           COUNT_COMM=$(python -c "import json; d=json.load(open('public/data/antennes_par_commune_corse.json')); print(d['_meta']['n_communes_avec_antenne'])")
           git commit -m "data: refresh mensuel antennes Corse ($COUNT_ANT antennes, $COUNT_COMM communes)
@@ -71,4 +93,67 @@ jobs:
           Regeneration automatique via workflow refresh-antennes.
           Source : table Supabase antennas_corse.code_insee_commune.
           Ticket : ANTENNES-REFRESH-001."
-          git push origin dev
+          git push origin "$BRANCH"
+          PR_URL=$(gh pr create --base main --head "$BRANCH" \
+            --title "data: refresh mensuel antennes Corse ($COUNT_ANT antennes, $COUNT_COMM communes)" \
+            --body "Régénération automatique (workflow \`refresh-antennes\`) — pas de contenu applicatif nouveau, uniquement l'agrégat mensuel des antennes ANFR depuis Supabase \`antennas_corse\`. Auto-merge après CI verte (2 checks requis).")
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$(basename "$PR_URL")" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Approuver les workflows en attente, attendre les checks requis, merger
+        # Copie de l'etape validee par le brief C1 (intermagnet-cron.yml). Les runs
+        # `pull_request` de la PR bot (dont le check requis « Scan anti-fuite (lecture
+        # seule) ») restent en `action_required` : on les approuve pour qu'ils
+        # s'executent en contexte pull_request et entrent dans le statusCheckRollup.
+        # GitHub materialise ces suites gatees avec une latence variable (~2-4 min).
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          PR="${{ steps.pr.outputs.pr_number }}"
+          BRANCH="${{ steps.pr.outputs.branch }}"
+          REPO="${{ github.repository }}"
+
+          # NB modele de statut GitHub : un run gate est `status=completed` +
+          # `conclusion=action_required` (PAS `status=action_required`). Une fois
+          # approuve : conclusion=null (en cours) puis success/failure.
+          approve_wf () {
+            # $1 = fichier workflow ; approuve son run en attente d'approbation.
+            gh run list --branch "$BRANCH" --workflow="$1" --limit 5 \
+              --json databaseId,status,conclusion \
+              --jq '.[] | select(.status=="completed" and .conclusion=="action_required") | .databaseId' 2>/dev/null \
+            | while read -r id; do
+                [ -n "$id" ] || continue
+                echo "Approbation $1 : run $id"
+                gh api --method POST "repos/$REPO/actions/runs/$id/approve" || true
+              done
+          }
+
+          leak_ok=false
+          for i in $(seq 1 48); do   # 48 * 5s = 4 min max d'attente de materialisation
+            approve_wf leak-guard.yml
+            approve_wf validate-code.yml
+            row=$(gh run list --branch "$BRANCH" --workflow=leak-guard.yml --limit 1 \
+                  --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion)"' 2>/dev/null || true)
+            # "" / "null/null" = pas encore de run ; "completed/action_required" = gate non approuve ;
+            # tout le reste (in_progress/null, completed/success…) = run approuve et lance
+            case "$row" in
+              ""|"null/null"|"completed/action_required") : ;;
+              *) leak_ok=true; break ;;
+            esac
+            sleep 5
+          done
+          if [ "$leak_ok" != "true" ]; then
+            echo "::warning::Scan anti-fuite pas declenche sur PR #$PR apres 4 min — laissee ouverte (prochain cron reessaie)."
+            exit 0
+          fi
+
+          # Attente des 2 checks requis (Cloudflare Pages + Scan anti-fuite), pas les
+          # informatifs. Timeout 5 min avant abandon (PR laissee ouverte, pas de merge force).
+          if timeout 300 gh pr checks "$PR" --required --watch --interval 15; then
+            gh pr merge "$PR" --squash --delete-branch
+          else
+            echo "::warning::Checks requis pas verts (echec ou timeout) sur PR #$PR — laissee ouverte, pas mergee."
+          fi
