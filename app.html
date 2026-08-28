@@ -1440,6 +1440,18 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 #legende-content .legende-section-title{font-family:var(--font-display,var(--font));font-size:11px;font-weight:600;color:var(--tx-mica,var(--tx3));margin:0 0 8px;letter-spacing:.06em;text-transform:uppercase;}
 #legende-content #conditions-panel{margin-bottom:0;}
 #legende-content #tellux-leg-panel{position:static;background:transparent!important;border:none!important;border-radius:0!important;box-shadow:none!important;padding:0!important;margin:0!important;max-width:none!important;max-height:none!important;overflow:visible!important;}
+/* Repères documentaires — brief "bouton ? contextuel" 2026-08-28 */
+#tellux-leg-docrefs{margin-top:10px;}
+#tellux-leg-docrefs.has-core{padding-top:10px;border-top:1px solid var(--border);}
+.leg-docref-title{font-family:var(--font-display,var(--font));font-size:10px;font-weight:600;color:var(--tx-mica,var(--tx3));margin:0 0 6px;letter-spacing:.06em;text-transform:uppercase;}
+.leg-docref-row{margin-bottom:7px;font-size:10.5px;line-height:1.45;}
+.leg-docref-row:last-child{margin-bottom:0;}
+.leg-docref-layer{display:block;color:var(--tx-ardoise);font-weight:500;}
+.leg-docref-link{display:inline-block;color:var(--tx-tyrrhenien,#1F3A5F);text-decoration:none;border-bottom:1px solid rgba(31,58,95,.3);margin-right:8px;}
+.leg-docref-link:hover{border-bottom-color:var(--tx-tyrrhenien,#1F3A5F);}
+.mleg-docref{margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.06);}
+[data-theme="dark"] .leg-docref-link{color:#9db8d8;border-bottom-color:rgba(157,184,216,.35);}
+[data-theme="dark"] .mleg-docref{border-top-color:rgba(255,255,255,.08);}
 [data-theme="dark"] #legende-toggle{background:rgba(26,29,37,0.92);color:var(--tx-pierre,#F5F0E7);}
 [data-theme="dark"] #legende-content{background:rgba(26,29,37,0.95);color:var(--tx-pierre,#F5F0E7);}
 @media (max-width:768px){
@@ -2292,7 +2304,11 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
            Anomalies mondiales en ont été explicitement exclues (triage Soleil, cf.
            LEGEND_CORE_IDS/LEGEND_HTML plus bas). -->
       <div id="tellux-leg-panel" style="display:none"></div>
-      <div id="legende-em-empty" style="font-size:11px;color:var(--tx3);font-style:italic">Activez une couche EM (Champ magnétique composite, Champ électrique RF, Mesures EM ou Fond magnétique régional) pour afficher sa légende.</div>
+      <!-- #tellux-leg-docrefs : renvois vers les pages doc publiques, rendu par updateLegendPanel()
+           pour TOUTE couche active portant une ancre (LAYER_DOC_ANCHORS) — brief "bouton ? contextuel"
+           2026-08-28. Indépendant de #tellux-leg-panel (qui ne montre que les 4 légendes couleur core). -->
+      <div id="tellux-leg-docrefs" style="display:none"></div>
+      <div id="legende-em-empty" style="font-size:11px;color:var(--tx3);font-style:italic">Activez une couche pour afficher sa légende et ses repères documentaires.</div>
     </section>
   </div>
 </aside>
@@ -2938,7 +2954,11 @@ var JS_STRINGS_EN = {
   myplace_radon_title: "Radon potential (regulatory zoning)",
   pill_radon_officiel: "Official — decree No. 2018-434",
   pill_radon_estime: "Estimate — local geology",
-  myplace_footer_note: "Estimates from the Tellux model — never an on-site measurement, never a diagnosis. For measured data: the \"+\" button (Field contribution) below, or the \"Request an ANFR measurement\" letter template on mairies.html."
+  myplace_footer_note: "Estimates from the Tellux model — never an on-site measurement, never a diagnosis. For measured data: the \"+\" button (Field contribution) below, or the \"Request an ANFR measurement\" letter template on mairies.html.",
+  docref_section_title: "Reference documentation",
+  docref_more: "Learn more",
+  docref_con_calib: "Role in RF calibration",
+  docref_con_status: "Status of citizen contributions"
 };
 function jt(key, fr){
   return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
@@ -3278,6 +3298,47 @@ const LEGEND_CORE_IDS=new Set(['hot','hotrf','con','emag']);
 const LEGEND_MAX_CONTEXT=3;
 const LEGEND_ACTIVE_CORE=new Set();
 const LEGEND_ACTIVE_CONTEXT=[];
+// Repères documentaires du panneau "?" (2026-08-28, brief "bouton ? contextuel") : au toggle
+// d'une couche, renvoi vers la section correspondante des pages doc publiques (table badge↔ancre
+// de _drafts/STRATEGIE_ANCRE_LEGENDE_2026-08-28.md §3, révisée post-fusion 5→3 : G1 comblé par
+// methode #sources-elf-reseau). Câblage pur — aucun texte scientifique nouveau, les libellés
+// sont génériques ("En savoir plus") ou repris d'un intitulé de section publié verbatim.
+// btnIdFor : la clé de légende ≠ l'id du bouton pour hotrf (b-hot-rf) et postesSources (b-postes).
+function btnIdFor(id){ return id==='hotrf'?'b-hot-rf':id==='postesSources'?'b-postes':'b-'+id; }
+const LEGEND_ACTIVE_DOCREFS=new Set();
+const LAYER_DOC_ANCHORS={
+  hot:        [{href:'/cadre-scientifique.html#objets-composites'}],
+  hotrf:      [{href:'/cadre-scientifique.html#radiofrequences'}],
+  emag:       [{href:'/cadre-scientifique.html#magnetique-statique'}],
+  foretdense: [{href:'/cadre-scientifique.html#radiofrequences'}],
+  crustal:    [{href:'/geomagnetisme.html'}],
+  con:        [{href:'/methode-limites-transparence.html#sources-rf',labelKey:'docref_con_calib',labelFr:'Rôle dans la calibration RF'},
+               {href:'/methode-limites-transparence.html#statuts-epistemiques',labelKey:'docref_con_status',labelFr:'Statut des contributions citoyennes'}],
+  ant:        [{href:'/cadre-scientifique.html#radiofrequences'}],
+  res:        [{href:'/cadre-scientifique.html#elf-anthropique'}],
+  bt:         [{href:'/cadre-scientifique.html#elf-anthropique'}],
+  prod:       [{href:'/cadre-scientifique.html#elf-anthropique'}],
+  postesSources:[{href:'/cadre-scientifique.html#elf-anthropique'}],
+  openrad:    [{href:'/cadre-scientifique.html#gamma-ambiant'}],
+  hyd:        [{href:'/methode-limites-transparence.html#hypotheses-pilier-a'}]
+};
+function docRefHtml(id){
+  const links=LAYER_DOC_ANCHORS[id];
+  if(!links||!links.length)return '';
+  const btn=document.getElementById(btnIdFor(id));
+  // Libellé = texte visible du bouton (nœuds texte directs uniquement : exclut l'icône .dot/.sq/.ln
+  // ET le badge .layer-badge, tous des <span>). Repli sur la 1re clause du title=.
+  let name=id;
+  if(btn){
+    const direct=[...btn.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim();
+    name=direct||(btn.title?btn.title.split(/[—–]/)[0].trim():id);
+  }
+  const a=links.map(function(l){
+    const label=l.labelKey?jt(l.labelKey,l.labelFr):jt('docref_more','En savoir plus');
+    return '<a href="'+l.href+'" target="_blank" rel="noopener" class="leg-docref-link">'+label+' ↗</a>';
+  }).join('');
+  return '<div class="leg-docref-row"><span class="leg-docref-layer">'+name+'</span>'+a+'</div>';
+}
 const LEGEND_HTML={
   hot:'<div class="leg-block"><b class="leg-title">Champ magnétique composite (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (réseau) + susceptibilité du substrat</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#8b92a5">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · susceptibilité BRGM</div></div>',
   hotrf:'<div class="leg-block"><b class="leg-title">Champ électrique RF (V/m)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofréquences — modèle Tellux (calibration interne)</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:2px"><span>plus faible</span><span>plus marqué ▸</span></div><div style="font-size:8px;color:#8b92a5;width:140px;margin-bottom:4px;line-height:1.3">Échelle <b>relative</b> au modèle RF interne (bins 0,40 · 0,55 · 0,85 · 1,5 V/m) — valeurs absolues faibles.</div><div class="leg-row" style="font-size:8.5px;color:#4a4f5e;line-height:1.35"><span style="display:inline-block;width:10px;height:8px;background:#3f007d;border-radius:2px;vertical-align:middle;margin-right:4px"></span><b style="color:#3f007d">&gt; 1,5 V/m</b> — hors échelle ambiante typique (~p99 du modèle) : zone à vérifier par mesure, pas un seuil sanitaire.</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #2171b5;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ Repère ICNIRP public : 28–61 V/m selon fréquence<br><span style="font-size:8px;color:#8b92a5">Repère indicatif — pas de seuil d\'alerte</span></div><div class="leg-row" style="margin-top:4px;padding-left:8px;border-left:2px solid #9ecae1;font-size:8.5px;color:#4a4f5e;line-height:1.45"><b>Repères de lecture</b> (ordres de grandeur mesurés, pas des seuils sanitaires) :<br>· médiane nationale ~0,4 V/m (campagnes de mesures ANFR)<br>· haut de l\'ambiant typique ~1,5 V/m<br>· « point atypique » ANFR : ≥ 9 V/m depuis le 01/01/2026 (6 V/m auparavant)<br>· limite réglementaire : 28–61 V/m selon fréquence (téléphonie mobile 36–61 V/m)</div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#fdf6e3;border:1px solid #e0d4b0;border-radius:4px;font-size:8.5px;color:#7a5a1e;line-height:1.4"><b>Modèle Tellux — calibration interne.</b> Propagation depuis ~3000 antennes ANFR, calée sur 30 mesures certifiées ANFR/EXEM. <b>Estimation centrale d\'ordre de grandeur</b> (dispersion x/÷~3,3) — champ EXTÉRIEUR : sous-estime les sites les plus exposés, surestime l\'intérieur des bâtiments (~12 dB) et les zones boisées/rurales. Relecture physicien en cours ; ne remplace pas une mesure certifiée.</div><div class="leg-src">Friis · ~3000 antennes ANFR · calibration interne extérieurs</div></div>',
@@ -3630,6 +3691,7 @@ function updateLegendPanel(){
   // L'ancien control Leaflet bottomright a été retiré ; le toggle "?" gère désormais l'affichage global.
   const corePanel=document.getElementById('tellux-leg-panel');
   const emptyMsg=document.getElementById('legende-em-empty');
+  let coreActive=[];
   if(corePanel){
     // 'con' et 'emag' réintégrées le 2026-08-27 (brief "Panneau '?' sélectif") — retirées plus
     // tôt le même jour (brief "3 corrections UI menu EM") parce que LEGEND_CORE_IDS ne les
@@ -3637,17 +3699,31 @@ function updateLegendPanel(){
     // maintenant (cf. déclaration LEGEND_CORE_IDS plus haut) : ordre d'affichage = Composite,
     // RF, Mesures EM, puis Fond magnétique régional (compacté à une ligne).
     const coreOrder=['hot','hotrf','con','emag'];
-    const coreActive=coreOrder.filter(id=>LEGEND_ACTIVE_CORE.has(id)&&LEGEND_HTML[id]);
+    coreActive=coreOrder.filter(id=>LEGEND_ACTIVE_CORE.has(id)&&LEGEND_HTML[id]);
     if(!coreActive.length){
       corePanel.style.display='none';
       corePanel.innerHTML='';
-      if(emptyMsg)emptyMsg.style.display='block';
     }else{
       corePanel.style.display='block';
       corePanel.innerHTML=coreActive.map((id,i)=>(i>0?'<div style="height:1px;background:rgba(0,0,0,.06);margin:8px 0"></div>':'')+legendHtmlFor(id)).join('');
-      if(emptyMsg)emptyMsg.style.display='none';
     }
   }
+  // Repères documentaires (2026-08-28) : rendus dans #tellux-leg-docrefs, pour TOUTE couche
+  // active portant une ancre (LAYER_DOC_ANCHORS) — core ou non, avec ou sans bloc de légende.
+  // Ordre = ordre des boutons dans le menu (LAYER_DOC_ANCHORS est déclaré dans cet ordre).
+  const docPanel=document.getElementById('tellux-leg-docrefs');
+  const docActive=Object.keys(LAYER_DOC_ANCHORS).filter(id=>LEGEND_ACTIVE_DOCREFS.has(id));
+  if(docPanel){
+    if(!docActive.length){
+      docPanel.style.display='none';
+      docPanel.innerHTML='';
+    }else{
+      docPanel.style.display='block';
+      docPanel.classList.toggle('has-core',coreActive.length>0);
+      docPanel.innerHTML='<div class="leg-docref-title">'+jt('docref_section_title','Repères documentaires')+'</div>'+docActive.map(docRefHtml).join('');
+    }
+  }
+  if(emptyMsg)emptyMsg.style.display=(coreActive.length||docActive.length)?'none':'block';
   // Zone 2 (context) : conteneur sous la carte, FIFO max 3, ordre chrono d'ajout (plus ancien a gauche).
   const ctxPanel=document.getElementById('tellux-legends-context');
   if(ctxPanel){
@@ -3679,10 +3755,15 @@ function updateLegendPanel(){
 function updateInlineLegendMobile(id,show){
   const el=document.getElementById('mleg-'+id);
   if(!el)return;
-  if(show&&LEGEND_HTML[id]){
-    const btn=document.getElementById('b-'+id);
+  const legHtml=(show&&LEGEND_HTML[id])?legendHtmlFor(id):'';
+  // Repère documentaire aussi sur mobile (l'onglet Couches est l'équivalent mobile du "?" —
+  // contrat CONTRAT_NAV_MOBILE_APP §2). Rendu même pour les couches sans bloc de légende
+  // (foret dense, anomalies mondiales) : le <details> ne portait alors rien avant ce diff.
+  const docHtml=(show&&LAYER_DOC_ANCHORS[id])?docRefHtml(id):'';
+  if(legHtml||docHtml){
+    const btn=document.getElementById(btnIdFor(id));
     const shortLabel=(btn&&btn.title)?btn.title.split(/[—–]/)[0].trim():'Légende';
-    el.innerHTML='<details class="mleg-details"><summary>'+shortLabel+'</summary>'+legendHtmlFor(id)+'</details>';
+    el.innerHTML='<details class="mleg-details"><summary>'+shortLabel+'</summary>'+legHtml+(docHtml?'<div class="mleg-docref">'+docHtml+'</div>':'')+'</details>';
     el.classList.add('active');
   }else{
     el.classList.remove('active');
@@ -3690,6 +3771,9 @@ function updateInlineLegendMobile(id,show){
   }
 }
 function showLegend(id,show){
+  if(LAYER_DOC_ANCHORS[id]){
+    if(show)LEGEND_ACTIVE_DOCREFS.add(id);else LEGEND_ACTIVE_DOCREFS.delete(id);
+  }
   if(LEGEND_CORE_IDS.has(id)){
     if(show)LEGEND_ACTIVE_CORE.add(id);else LEGEND_ACTIVE_CORE.delete(id);
   }else{
@@ -10331,7 +10415,7 @@ function capCleanup(){
 ["legende_toggle_aria","#legende-toggle","aria-label","Légende EM (couches actives)","Legenda EM (strati attivi)","EM legend (active layers)"],
 ["legende_content_aria","#legende-content","aria-label","Légende EM","Legenda EM","EM legend"],
 ["legende_title",".legende-section-title","","Légende EM (couches actives)","Legenda EM (strati attivi)","EM legend (active layers)"],
-["legende_empty","#legende-em-empty","","Activez une couche EM (Champ magnétique composite, Champ électrique RF, Mesures EM ou Fond magnétique régional) pour afficher sa légende.","Attivate un stratu EM (Campu magneticu cumpostu, Campu elettricu RF, Misure EM o Fondu magneticu regiunale) per affissà a so legenda.","Enable an EM layer (Composite magnetic field, RF electric field, EM measurements, or Regional magnetic background) to display its legend."],
+["legende_empty","#legende-em-empty","","Activez une couche pour afficher sa légende et ses repères documentaires.","Attivate un stratu per affissà a so legenda è i so riferimenti ducumentarii.","Enable a layer to display its legend and reference documentation."],
 ["legends_ctx_aria","#tellux-legends-context","aria-label","Légendes des couches contextuelles activées","Legende di i strati cuntestuali attivati","Legends of enabled contextual layers"],
 ["ms_naturel",".ms-l@0","","N naturel IGRF+LCS1","N naturale IGRF+LCS1","N natural IGRF+LCS1"],
 ["ms_composite",".ms-l@1","","N+H composite total","N+H cumpostu tutale","N+H total composite"],
