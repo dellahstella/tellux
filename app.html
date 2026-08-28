@@ -5073,6 +5073,7 @@ function calcMagneticELF_v1(lat, lon, chargeFactor) {
   // Contribution ∝ √(puissance_MW) / distance (courant ∝ √P à tension fixe)
   PROD_ELECTRIQUE.forEach(s => {
     if (s.puissance < 0.5) return;
+    if (s.type === 'Eolien') return; // dédup — parcs éoliens comptés via EOLIENNES_DATA (ODRE, coords fiables) ; les 3 entrées Eolien de PROD_ELECTRIQUE ont des coords inline divergentes 2-6 km
     const d = dist(lat, lon, s.lat, s.lon);
     const d_m = Math.max(100, d * 1000);
     const I_equiv = Math.sqrt(s.puissance) * 50; // estimation I∝√P
@@ -5209,6 +5210,7 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
   const MU0_OVER_2PI = 2e-7;
   PROD_ELECTRIQUE.forEach(s => {
     if (s.puissance < 0.5) return;
+    if (s.type === 'Eolien') return; // dédup — parcs éoliens comptés via EOLIENNES_DATA (ODRE, coords fiables) ; les 3 entrées Eolien de PROD_ELECTRIQUE ont des coords inline divergentes 2-6 km
     const d = dist(lat, lon, s.lat, s.lon);
     const d_m = Math.max(100, d * 1000);
     const I_equiv = Math.sqrt(s.puissance) * 50;
