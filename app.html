@@ -2905,6 +2905,7 @@ var JS_STRINGS_EN = {
   crustal_chicxulub_name: "Chicxulub (Yucatán)",
   crustal_chicxulub_desc: "180 km K-Pg crater — peripheral ring, end-Cretaceous impact.",
   crustal_rayon_prefix: "· radius ~",
+  crustal_amplitude_note: "Amplitude from the cited dedicated survey — EMAG2v3 (2 arc-min) shows an attenuated version. Scale reference, not “certified”.",
   crustal_corse_scale_label: "Corsican site — local scale, not quantified",
   crustal_corse_source_label: "Source: BRGM · sites_app.json — outside the calculation",
   crustal_corse_call_to_measure: "🔎 A documented but never measured anomaly — few sites of this kind are recorded in Corsica. A first field measurement would be a welcome scientific contribution.",
@@ -4030,22 +4031,28 @@ function calcLCS1(lat,lon){
 // ═══ Anomalies crustales mondiales — références EM (INTL-CRUSTAL-001) ═══
 // 5 anomalies magnétiques crustales documentées (cratères d'impact + gisement BIF).
 // Purement géologiques, aucun site humain.
-// Sources : NOAA EMAG2v3 (Meyer et al. 2017) + publications académiques indiquées.
+// ⚠️ Les valeurs nT ci-dessous proviennent des LEVÉS DÉDIÉS de la littérature citée (mesures
+// au sol / aéroportées basse altitude), PAS d'EMAG2v3 : à 2 arc-min et après continuation vers
+// le haut, EMAG2v3 n'en montre qu'une version atténuée (ex. Kursk : le service NOAA renvoie
+// ~+150 nT là où la littérature donne +3000). EMAG2v3 confirme la présence et la géométrie de
+// ces anomalies (elles sont grandes : 12 à 500 km de rayon), pas leur amplitude de crête.
+// Repères pédagogiques d'échelle — « vérifié contre source primaire académique », pas « certifié »
+// au sens strict du projet (réservé aux organismes officiels type IRSN/ASNR/IGRF).
 const CRUSTAL_REFS=[
   {id:'bangui',name:'Bangui (Centrafrique)',lat:4.4,lon:18.6,nT:-1000,radius_km:500,
-   type:'crustal_ring',source:'EMAG2v3 + Regan et al. 1975',
+   type:'crustal_ring',source:'Regan et al. 1975 (levé dédié)',
    desc:'Plus grande anomalie circulaire négative du globe — origine cratère ou intrusion crustale profonde.'},
   {id:'kursk',name:'Kursk (Russie)',lat:51.7,lon:36.2,nT:3000,radius_km:200,
-   type:'ore_body',source:'EMAG2v3 + Krutikhovskaya et al.',
+   type:'ore_body',source:'Krutikhovskaya et al. (levé dédié)',
    desc:'Anomalie positive crustale majeure — formation ferrifère rubanée (BIF), gradient magnétique extrême.'},
   {id:'vredefort',name:'Vredefort (Afrique du Sud)',lat:-27.0,lon:27.5,nT:-400,radius_km:90,
-   type:'impact_ring',source:'EMAG2v3 + Corner et al. 1990',
+   type:'impact_ring',source:'Corner et al. 1990 (levé dédié)',
    desc:'Plus grand cratère d\'impact connu — anneaux concentriques, granit choqué.'},
   {id:'ries',name:'Ries (Bavière)',lat:48.88,lon:10.62,nT:-200,radius_km:12,
-   type:'impact_ring',source:'EMAG2v3 + Pohl et al. 1977',
+   type:'impact_ring',source:'Pohl et al. 1977 (levé dédié)',
    desc:'Cratère d\'impact 24 km — contraste granit/sédiments, levés haute précision.'},
   {id:'chicxulub',name:'Chicxulub (Yucatán)',lat:21.3,lon:-89.5,nT:-300,radius_km:90,
-   type:'impact_ring',source:'EMAG2v3 + Pilkington et al. 1994',
+   type:'impact_ring',source:'Pilkington et al. 1994 (levé dédié)',
    desc:'Cratère K-Pg 180 km — anneau périphérique, impact fin Crétacé.'},
 ];
 
@@ -4123,7 +4130,7 @@ function buildCrustalLayer(){
       '<div style="margin:3px 0"><span style="font-family:var(--mono);font-size:11px;color:var(--ardoise-clair);font-weight:600">'+signStr+' nT</span>'+
       ' <span style="font-size:9px;color:var(--tx3)">'+jt('crustal_rayon_prefix','· rayon ~')+pt.radius_km+' km</span></div>'+
       '<div style="font-size:10px;color:var(--ardoise-clair);line-height:1.45;margin-top:5px">'+jt('crustal_'+pt.id+'_desc',pt.desc)+'</div>'+
-      '<div style="font-size:9px;color:#8b92a5;margin-top:6px;padding-top:4px;border-top:1px solid rgba(0,0,0,.08)">'+jt('crustal_type_label','Type&nbsp;: ')+pt.type.replace(/_/g,' ')+'<br>'+jt('crustal_source_label','Source&nbsp;: ')+pt.source+'</div>'+
+      '<div style="font-size:9px;color:#8b92a5;margin-top:6px;padding-top:4px;border-top:1px solid rgba(0,0,0,.08)">'+jt('crustal_type_label','Type&nbsp;: ')+pt.type.replace(/_/g,' ')+'<br>'+jt('crustal_source_label','Source&nbsp;: ')+pt.source+'<br>'+jt('crustal_amplitude_note','Amplitude d\'après le levé dédié cité — EMAG2v3 (2 arc-min) en montre une version atténuée. Repère d\'échelle, non « certifié ».')+'</div>'+
       '</div>'
     ).addTo(lCrustal);
   });
