@@ -704,7 +704,10 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     font-size:11px;
   }
 }
-.on-con{background:#f0e8ff!important;color:#5c3a9b!important;border-color:#9b72d4!important;font-weight:500;}
+/* .on-con scindée le 2026-08-29 (brief « exécution groupée », item C) : on-contrib garde le
+   violet historique (contributions citoyennes) ; on-cert = teal (mesures certifiées). */
+.on-contrib{background:#f0e8ff!important;color:#5c3a9b!important;border-color:#9b72d4!important;font-weight:500;}
+.on-cert{background:#e0f2f0!important;color:#0f766e!important;border-color:#5ab5a8!important;font-weight:500;}
 .add-btn{font-size:11px;padding:5px 14px;border-radius:var(--r);border:1px solid var(--maquis-clair);background:var(--maquis-pale);color:var(--acc);cursor:pointer;margin-left:auto;font-weight:500;}
 .add-btn:hover{background:var(--maquis-clair);color:#fff;}
 .op-row{display:none;align-items:center;gap:8px;font-size:11px;color:var(--tx3);margin-bottom:6px;font-family:var(--mono);}
@@ -936,7 +939,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 [data-theme="dark"] #tellux-leg-panel{scrollbar-color:rgba(245,240,231,0.2) transparent;}
 [data-theme="dark"] .on-ant{background:#1a2a3a!important;color:#5b9bd5!important;border-color:#2563eb!important;}
 [data-theme="dark"] .on-hot{background:#2a1a1a!important;color:#ef4444!important;border-color:#991b1b!important;}
-[data-theme="dark"] .on-con{background:#1a2a28!important;color:#3ec9ab!important;border-color:#2d9b87!important;}
+[data-theme="dark"] .on-contrib{background:#241a2a!important;color:#c9a3e0!important;border-color:#7d5aa0!important;}
+[data-theme="dark"] .on-cert{background:#1a2a28!important;color:#3ec9ab!important;border-color:#2d9b87!important;}
 /* Dark mode toggle */
 .theme-toggle{background:none;border:1px solid var(--border);border-radius:var(--r);padding:4px 8px;cursor:pointer;font-size:14px;line-height:1;color:var(--ardoise-clair);transition:all .2s;}
 .theme-toggle:hover{background:var(--pierre-ombre);}
@@ -1183,6 +1187,11 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .subgroup-toggle .accordion-cat-icon{width:11px;font-size:9px;}
 .subgroup-content{padding:0 2px;}
 .subgroup-content.open{padding:2px 2px 4px 2px;}
+/* Sous-sous-groupe (3e niveau — « Mesures citoyennes » dans « Repères et mesures externes »,
+   brief « exécution groupée » item C 2026-08-29). Léger retrait + filet gauche pour matérialiser
+   la hiérarchie ; toggleAccordion() reste générique. */
+.subgroup--nested{margin-left:8px;padding-left:6px;border-left:1px solid var(--border);}
+.subgroup--nested .subgroup-header{font-size:10px;}
 /* Badges de statut par couche (brief "Affichage EM" 2026-08-26) : catégorise en un
    coup d'œil le rôle de la couche vis-à-vis du calcul Tellux, sans dépendre du survol
    du title= (déjà présent sur chaque bouton, conservé tel quel pour le détail complet). */
@@ -1914,13 +1923,11 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <div class="mlegend-inline" id="mleg-hot"></div>
       <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)</button>
       <div class="mlegend-inline" id="mleg-hotrf"></div>
-      <!-- b-con (« Mesures EM ») déplacé vers GROUPE 3 "Contexte naturel" / sous-groupe "Repères et
-           mesures externes" le 2026-08-27 (brief "nettoyage Contexte naturel") — regroupé avec
-           Anomalies de référence (mondiales) et Gamma citoyen (OpenRadiation), décision Soleil :
-           les 3 sont des rubriques de mesures/repères externes au calcul composite affiché. id
-           "b-con", onclick="tog('con',...)" et toute la logique JS (_bcon, coreOrder, showLegend,
-           ACTIVE.con activé par défaut) restent INCHANGÉS — seul l'emplacement dans le DOM/menu
-           change. -->
+      <!-- L'ex-bouton unique b-con (« Mesures EM ») vit désormais dans GROUPE 3 « Contexte
+           naturel » / sous-groupe « Repères et mesures externes », SCINDÉ le 2026-08-29 (brief
+           « exécution groupée », item C) en b-cert (« Mesures certifiées ANFR/EXEM ») et
+           b-contrib (« Contributions smartphone », dans le sous-sous-groupe « Mesures
+           citoyennes »). -->
     </div>
   </div>
 
@@ -2049,7 +2056,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
           <h5 class="subgroup-header">Repères et mesures externes</h5>
         </div>
         <div class="accordion-cat-content subgroup-content">
-          <p class="subgroup-text" title="Mesures EM (contributions citoyennes + fiches ANFR/EXEM certifiées), Anomalies de référence mondiales (catalogue documentaire issu de la littérature) et Gamma citoyen (OpenRadiation) — 3 rubriques de mesures ou repères externes, regroupées ici. Aucune ne module le calcul composite Tellux affiché.">Mesures et repères externes — contributions citoyennes, fiches certifiées, catalogue de comparaison.</p>
+          <p class="subgroup-text" title="Mesures certifiées ANFR/EXEM, Anomalies de référence mondiales (catalogue documentaire issu de la littérature) et, dans le sous-groupe Mesures citoyennes, les couches non certifiées (Gamma citoyen OpenRadiation + Contributions smartphone). Aucune de ces couches ne module le calcul composite Tellux affiché ; les fiches certifiées ont servi une fois à calibrer la constante k du modèle RF.">Mesures et repères externes — fiches certifiées, catalogue de comparaison, mesures citoyennes.</p>
           <!-- Couche « Émergences thermales » (b-therm) retirée le 2026-08-27 (brief "nettoyage
                Contexte naturel") — migrée vers radon.html (#1056), off par défaut là-bas, qui en
                devient l'unique affichage. THERMAL_SOURCES_CORSE (peuplée par loadSitesApp(), même
@@ -2060,26 +2067,18 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
                cavités souterraines (grottes, karst, mines) sont un mécanisme d'accumulation possible
                du radon, elles vivent désormais sur radon.html plutôt qu'ici — aucun calcul Tellux
                n'utilisait cette couche). -->
-          <!-- b-con (« Mesures EM ») déplacé ici depuis GROUPE 1 "Modèle EM" le 2026-08-27 (brief
-               "nettoyage Contexte naturel", décision Soleil) — id, onclick et logique JS
-               INCHANGÉS (cf. commentaire à son ancien emplacement).
-               Badge CORRIGÉ le 2026-08-27 (brief "3 corrections UI menu EM") : "Hors calcul"
-               seul était FAUX pour une partie du contenu de ce toggle unique. Vérifié avant
-               correction — ce bouton active en parallèle 2 layer groups distincts (lCon +
-               lCert, cf. tog('con',...)/commentaire "Activé/désactivé en parallèle de lCon via
-               tog('con')" plus bas dans ce fichier) chargés depuis 2 sources différentes :
-               • lCon (contribsDB, Supabase) = contributions citoyennes — jamais lues par aucun
-                 calcul, "Hors calcul" reste exact pour cette partie.
-               • lCert (MESURES_CERTIFIEES, public/data/cartoradio_certified_corse.json) = les
-                 30 fiches ANFR/EXEM. Le MÊME fichier (chemin identique, vérifié) est fetché par
-                 calibrateRF() (plus bas dans ce fichier) pour dériver RF_CALIB_K, la constante
-                 de calibration utilisée par RF_field()/calcRF() — donc RÉELLEMENT utilisé par
-                 le calcul composite, une fois, pas "hors calcul". Nuance : calibration one-shot
-                 (constante globale dérivée à l'initialisation), pas une modulation par point à
-                 chaque clic comme "Fond magnétique régional" — d'où un badge distinct de
-                 "Module le calcul" plutôt qu'identique. -->
-          <button class="lbtn" id="b-con" data-domains="tous" title="Mesures EM — contributions citoyennes (affichage seul, hors calcul) + 30 fiches ANFR/EXEM certifiées (ont servi à calibrer la constante k du modèle RF — calcul one-shot à l'initialisation, pas une modulation en direct par point)" onclick="tog('con','on-con',this)"><span class="dot" style="background:#5c3a9b"></span>Mesures EM<span class="layer-badge layer-badge--calc">Calibration RF</span><span class="layer-badge layer-badge--hors">Contributions hors calcul</span></button>
-          <div class="mlegend-inline" id="mleg-con"></div>
+          <!-- SCISSION 2026-08-29 (brief « exécution groupée », item C) : l'ancien bouton unique
+               b-con (« Mesures EM ») activait EN PARALLÈLE deux jeux de données de nature et de
+               statut différents (lCon = contributions citoyennes / lCert = 30 fiches certifiées
+               ANFR/EXEM). Scindé en deux boutons :
+               • b-cert (ci-dessous) → lCert seul, badge « Calibration RF » seul. Le fichier
+                 public/data/cartoradio_certified_corse.json reste lu DIRECTEMENT par calibrateRF()
+                 au boot (fetch propre, indépendant de ce toggle — vérifié) : la scission ne touche
+                 QUE l'affichage.
+               • b-contrib → lCon seul, badge « Hors calcul » seul, dans le sous-groupe
+                 « Mesures citoyennes » (avec Gamma citoyen). -->
+          <button class="lbtn" id="b-cert" data-domains="rf" title="30 fiches de mesure certifiées ANFR/EXEM (2024–2026), extraites des PDF CartoRadio. Ont servi une fois à calibrer la constante k du modèle RF (calcul one-shot à l'initialisation, pas une modulation en direct par point). Affichées en losanges colorés selon la conformité (limite légale 28 V/m)." onclick="tog('cert','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Mesures certifiées (ANFR/EXEM)<span class="layer-badge layer-badge--calc">Calibration RF</span></button>
+          <div class="mlegend-inline" id="mleg-cert"></div>
           <!-- Couche « Sites U/Th à mesurer » retirée de la carte publique le 2026-08-19 (décision
                Soleil, risque nocebo A.4 sur un catalogue 100% documentaire/non mesuré) — contenu
                transposé en fiche documentaire sur cadre-scientifique.html. Le chargement des données
@@ -2104,8 +2103,26 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
                variables partagent juste le même loader, ce n'était pas la même chose. -->
           <button class="lbtn" id="b-crustal" data-domains="statique" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF), quantifiées (valeur nT, EMAG2v3 + littérature académique) — comparaison locale/mondiale. + 3 sites ophiolitiques corses (Albu, Nonza, Farinole) à anomalie magnétique documentée mais NON quantifiée (aucune mesure nT publiée) — échelle locale distincte, hors calcul." onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales &amp; Corse)<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
           <div class="mlegend-inline" id="mleg-crustal"></div>
-          <button class="lbtn" id="b-openrad" data-domains="ionisant" title="Mesures citoyennes de débit de dose gamma/X ambiant (OpenRadiation, tubes Geiger, µSv/h). Gamma/X, PAS radon. Couche d'affichage indépendante — non injectée dans l'indice ni le calcul gamma. Indicatives, capteurs hétérogènes, non certifiées ; inclut des traces (densité ≠ nombre de sites)." onclick="tog('openrad','on-openrad',this)"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Gamma citoyen (OpenRadiation)<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
-          <div class="mlegend-inline" id="mleg-openrad"></div>
+
+          <!-- Sous-sous-groupe « Mesures citoyennes » — brief « exécution groupée » item C, 2026-08-29.
+               Regroupe les deux couches non certifiées, affichage seul, hors du calcul : Gamma citoyen
+               (OpenRadiation, débit de dose γ/X) et Contributions smartphone (magnétomètre / signal
+               réseau des contributeurs Tellux). Les fiches certifiées ANFR/EXEM restent HORS de ce
+               sous-groupe (badge « Calibration RF », un cran au-dessus). 3e niveau d'accordéon :
+               toggleAccordion() est générique, .subgroup-content porte aussi .accordion-cat-content. -->
+          <div class="subgroup subgroup--nested">
+            <div class="accordion-cat-header subgroup-toggle" onclick="toggleAccordion(this)">
+              <span class="accordion-cat-icon">▶</span>
+              <h5 class="subgroup-header">Mesures citoyennes</h5>
+            </div>
+            <div class="accordion-cat-content subgroup-content">
+              <p class="subgroup-text" title="Mesures apportées par des contributeurs, sur capteurs hétérogènes non certifiés. Affichage seul : aucune n'entre dans le calcul composite ni dans les bornes de normalisation.">Non certifiées, capteurs hétérogènes — affichage seul, hors du calcul.</p>
+              <button class="lbtn" id="b-openrad" data-domains="ionisant" title="Mesures citoyennes de débit de dose gamma/X ambiant (OpenRadiation, tubes Geiger, µSv/h). Gamma/X, PAS radon. Couche d'affichage indépendante — non injectée dans l'indice ni le calcul gamma. Indicatives, capteurs hétérogènes, non certifiées ; inclut des traces (densité ≠ nombre de sites)." onclick="tog('openrad','on-openrad',this)"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Gamma citoyen (OpenRadiation)<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
+              <div class="mlegend-inline" id="mleg-openrad"></div>
+              <button class="lbtn" id="b-contrib" data-domains="statique rf" title="Contributions terrain des utilisateurs Tellux : magnétomètre smartphone (nT), signal réseau/WiFi (dBm), relevés au capteur externe. Cercles violets, en cluster. Affichage seul — jamais lues par aucun calcul." onclick="tog('contrib','on-contrib',this)"><span class="dot" style="background:#5c3a9b"></span>Contributions smartphone<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
+              <div class="mlegend-inline" id="mleg-contrib"></div>
+            </div>
+          </div>
           <!-- TODO backlog couches : Communes radon niveau 3 overlay (GeoJSON geometries à fournir), MNT altitude overlay -->
         </div>
       </div>
@@ -2669,9 +2686,10 @@ var JS_STRINGS_EN = {
   bt_truncated_suffix: " — zoom in for the full detail",
   bt_line_aerien: "Overhead BT line · EDF SEI",
   bt_line_souterrain: "Underground BT line · EDF SEI",
-  mesures_em_prefix: "EM measurements — ",
-  mesures_em_infix: " certified ANFR/EXEM sheets (2024–2026) · ",
-  mesures_em_suffix: " citizen contribution(s)",
+  cert_toast_prefix: "Certified measurements — ",
+  cert_toast_suffix: " ANFR/EXEM sheets (2024–2026).",
+  contrib_toast_prefix: "Smartphone contributions — ",
+  contrib_toast_suffix: " reading(s) · outside the calculation.",
   sites_remarq_prefix: "Substrate anomalies (serpentinite, magnetite) & Th-234 — ",
   sites_remarq_suffix: " sites · documentary data, in situ measurement required",
   cert_unavailable: "Certified sheets unavailable — try again shortly.",
@@ -3251,13 +3269,15 @@ const lPostesSources=L.layerGroup();
 // lSit/lSit2/lAlign/lEgl/lTour/lIndu/lCast/lPont : couches patrimoniales migrées vers patrimoine.html
 // anciennes couches supprimées — déplacées hors de ce fichier
 const lBT=L.layerGroup(),lAnt=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup(),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}),lHotRF=L.layerGroup().addTo(map),lGeom=L.layerGroup().addTo(map);
-// lCon (contributions citoyennes) n'est plus .addTo(map) à la déclaration depuis 2026-08-29
-// (item 2, con:false par défaut) — ajoutée/retirée uniquement par tog('con').
+// lCon (contributions citoyennes) n'est plus .addTo(map) à la déclaration depuis 2026-08-29 —
+// ajoutée/retirée uniquement par tog('contrib') (bouton « Contributions smartphone », ex-b-con).
 const lCrustal=L.layerGroup();
 // lAir (Particules fines PM2,5, Qualitair Corse) retirée le 2026-08-20, migrée sur radon.html
 // (co-exposition radon/particulaire — vit désormais aux côtés du zonage radon lui-même).
 // lCert : layer interne non-clusterisé pour les 30 fiches ANFR/EXEM certifiées.
-// Activé/désactivé en parallèle de lCon via tog('con') — bouton unique côté UI.
+// Activé/retiré par tog('cert') (bouton « Mesures certifiées (ANFR/EXEM) », ex-b-con — scission
+// 2026-08-29, item C). NB : le fichier certifié est lu séparément par calibrateRF() au boot,
+// indépendamment de ce toggle.
 const lCert=L.layerGroup();
 // OpenRadiation — mesures citoyennes gamma/X (debit de dose, uSv/h), ODbL. Couche d'AFFICHAGE
 // INDEPENDANTE : non injectee dans l'indice composite, ne recale NI le modele NI les bornes gamma
@@ -3275,7 +3295,9 @@ const lOpenRad=L.layerGroup();
 // mesuré nettement plus rapide à peindre en canvas qu'en SVG pour ce volume de géométrie.
 const _foretDenseCanvas=L.canvas({padding:0.5});
 const lForetDense=L.layerGroup();
-const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,con:lCon,foretdense:lForetDense,crustal:lCrustal,openrad:lOpenRad};
+// SCISSION 2026-08-29 (brief « exécution groupée », item C) : con → cert (lCert, fiches
+// certifiées ANFR/EXEM) + contrib (lCon, contributions citoyennes). Deux boutons, deux toggles.
+const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,cert:lCert,contrib:lCon,foretdense:lForetDense,crustal:lCrustal,openrad:lOpenRad};
 const WMS={hyd:wmsHyd,emag:wmsEmag};
 // hot:false/hotrf:true — modèle RF activé par défaut à la place du champ magnétique
 // composite (arbitrage Soleil 2026-08-23). Swap symétrique avec la déclaration lHot/lHotRF
@@ -3288,15 +3310,16 @@ const WMS={hyd:wmsHyd,emag:wmsEmag};
 // et fonctionnelle dès son 1er toggle — vérifié en live à l'ajout de b-foretdense), la
 // pré-déclaration à false n'était qu'une commodité de lecture, pas une dépendance structurelle —
 // aucune énumération de ACTIVE (Object.keys/for...in) ailleurs dans ce fichier.
-// con:false depuis 2026-08-29 (brief "simplification légendes RF/Composite + prod fixes",
-// item 2) — les contributions citoyennes ("Mesures smartphone") ne s'affichent plus au
-// chargement, opt-in via le bouton "Mesures EM". ⚠ ce toggle unique porte AUSSI les 30 fiches
-// certifiées ANFR/EXEM (lCert) : elles passent donc opt-in par le même geste. Split éventuel
-// (contributions dans un sous-menu dédié, certifiées restant visibles) = item 5 option (b),
-// non tranché.
-const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,res:false,prod:false,con:false,crustal:false,openrad:false};
+// cert / contrib (ex-con, scindé le 2026-08-29 — brief « exécution groupée », item C) tous deux
+// à false par défaut : état d'affichage inchangé par rapport à con:false (2026-08-29, item 2
+// de la simplification légendes). ⚠ Si Soleil veut les fiches certifiées visibles au chargement
+// maintenant qu'elles sont découplées des contributions → passer cert:true (le seul changement
+// nécessaire ; la calibration RF, elle, ne dépend pas de ce toggle — calibrateRF() lit le
+// fichier directement au boot).
+const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,res:false,prod:false,cert:false,contrib:false,crustal:false,openrad:false};
 
-// 'con' et 'emag' promues en Zone 1 "core" le 2026-08-27 (brief "Panneau '?' sélectif",
+// 'con' (scindé depuis en 'cert'+'contrib', 2026-08-29 item C) et 'emag' promues en Zone 1
+// "core" le 2026-08-27 (brief "Panneau '?' sélectif",
 // triage validé Soleil) : avant ce diff, tout ce qui n'était pas hot/hotrf tombait dans la
 // Zone 2 "context" (LEGEND_ACTIVE_CONTEXT), rendue en pastilles flottantes DIRECTEMENT SUR LA
 // CARTE (#tellux-legends-context) — pas dans le panneau "?" — c'était précisément la confusion
@@ -3311,7 +3334,7 @@ const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,res:f
 // pour elles, ni ici ni en pastille. Les autres couches (Antennes ANFR, Réseau HT/BT, Sites de
 // production, Postes sources, Gamma citoyen) restent INCHANGÉES (Zone 2 context, hors périmètre
 // de ce brief — triage limité aux couches explicitement validées).
-const LEGEND_CORE_IDS=new Set(['hot','hotrf','con','emag']);
+const LEGEND_CORE_IDS=new Set(['hot','hotrf','cert','contrib','emag']);
 const LEGEND_MAX_CONTEXT=3;
 const LEGEND_ACTIVE_CORE=new Set();
 const LEGEND_ACTIVE_CONTEXT=[];
@@ -3329,8 +3352,8 @@ const LAYER_DOC_ANCHORS={
   emag:       [{href:'/cadre-scientifique.html#magnetique-statique'}],
   foretdense: [{href:'/cadre-scientifique.html#radiofrequences'}],
   crustal:    [{href:'/geomagnetisme.html'}],
-  con:        [{href:'/methode-limites-transparence.html#sources-rf',labelKey:'docref_con_calib',labelFr:'Rôle dans la calibration RF'},
-               {href:'/methode-limites-transparence.html#statuts-epistemiques',labelKey:'docref_con_status',labelFr:'Statut des contributions citoyennes'}],
+  cert:       [{href:'/methode-limites-transparence.html#sources-rf',labelKey:'docref_con_calib',labelFr:'Rôle dans la calibration RF'}],
+  contrib:    [{href:'/methode-limites-transparence.html#statuts-epistemiques',labelKey:'docref_con_status',labelFr:'Statut des contributions citoyennes'}],
   ant:        [{href:'/cadre-scientifique.html#radiofrequences'}],
   // res/bt/prod/postesSources → catégorie corpus dédiée « Sources ELF — réseau électrique »
   // (methode-limites-transparence.html §2, ajoutée le 2026-08-28) : documente le modèle par
@@ -3391,15 +3414,21 @@ const LEGEND_HTML={
   res:'<div class="leg-block"><b class="leg-title">Réseau électrique</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>Ligne HTA 20kV</div><div class="leg-row"><span style="display:inline-block;width:14px;height:3px;background:#5c2000;vertical-align:middle;margin-right:4px"></span>Ligne HTB 63-225kV</div><div class="leg-src">EDF SEI · Supabase · OSM</div></div>',
     bt:'<div class="leg-block"><b class="leg-title">Réseau BT</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Distribution électrique dans les rues</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>BT aérien</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>BT souterrain</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 10</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Sites de production</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Centrales du réseau électrique corse</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique barrage</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique fil de l&#39;eau</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogaz</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>TAC (turbine à combustion)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnexion</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Taille selon puissance :</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
-  con:'<div class="leg-block"><b class="leg-title">Mesures EM</b>'+
-    '<div class="leg-sub" style="font-size:10px;color:var(--tx-mica,#7B7770);margin:2px 0 4px">30 fiches ANFR/EXEM + contributions citoyennes</div>'+
+  // con scindée le 2026-08-29 (brief « exécution groupée », item C) → cert + contrib.
+  cert:'<div class="leg-block"><b class="leg-title">Mesures certifiées (ANFR/EXEM)</b>'+
+    '<div class="leg-sub" style="font-size:10px;color:var(--tx-mica,#7B7770);margin:2px 0 4px">30 fiches 2024–2026 · losanges · limite légale 28 V/m</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Conforme &lt; 5 V/m</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Conforme 5–28 V/m</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#7c0000;transform:rotate(45deg);border:2px solid #C28533;vertical-align:middle;margin-right:4px"></span> Non conforme &gt; 28 V/m (ex. Monticello)</div>'+
-    '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Détail par fiche au clic sur le marker</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Basse fréquence 9 kHz–100 kHz</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#5c3a9b;border-radius:50%;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Contribution citoyenne (cluster)</div>'+
-    '<div class="leg-src">ANFR/EXEM · Tellux crowdsourcé</div>'+
+    '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Détail par fiche au clic sur le losange</div>'+
+    '<div class="leg-src">ANFR/EXEM · CartoRadio — ont calibré la constante k du modèle RF (one-shot)</div>'+
+    '</div>',
+  contrib:'<div class="leg-block"><b class="leg-title">Contributions smartphone</b>'+
+    '<div class="leg-sub" style="font-size:10px;color:var(--tx-mica,#7B7770);margin:2px 0 4px">Relevés terrain des contributeurs Tellux</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#5c3a9b;border-radius:50%;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Contribution citoyenne (cluster)</div>'+
+    '<div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Magnétomètre (nT), signal réseau/WiFi (dBm), capteur externe. <b>Affichage seul, hors du calcul.</b></div>'+
+    '<div class="leg-src">Tellux crowdsourcé · Supabase</div>'+
     '</div>',
   openrad:'<div class="leg-block"><b class="leg-title">Gamma citoyen (OpenRadiation)</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Débit de dose gamma/X ambiant · mesures citoyennes · tubes Geiger</div>'+
@@ -3429,7 +3458,8 @@ const LEGEND_HTML_EN={
   res:'<div class="leg-block"><b class="leg-title">Electrical grid</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>HTA line 20kV</div><div class="leg-row"><span style="display:inline-block;width:14px;height:3px;background:#5c2000;vertical-align:middle;margin-right:4px"></span>HTB line 63-225kV</div><div class="leg-src">EDF SEI · Supabase · OSM</div></div>',
   bt:'<div class="leg-block"><b class="leg-title">LV grid</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Street-level electrical distribution</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>Overhead BT</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>Underground BT</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 10</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Generation sites</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Corsican power grid generation plants</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydro dam</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Run-of-river hydro</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Wind</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogas</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Gas turbine (combustion turbine)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnection</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Size according to power output:</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
-  con:'<div class="leg-block"><b class="leg-title">EM measurements</b><div class="leg-sub" style="font-size:10px;color:var(--tx-mica,#7B7770);margin:2px 0 4px">30 ANFR/EXEM sheets + citizen contributions</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Compliant &lt; 5 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Compliant 5–28 V/m</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#7c0000;transform:rotate(45deg);border:2px solid #C28533;vertical-align:middle;margin-right:4px"></span> Non-compliant &gt; 28 V/m (e.g. Monticello)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Detail per sheet by clicking the marker</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Low frequency 9 kHz–100 kHz</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#5c3a9b;border-radius:50%;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Citizen contribution (cluster)</div><div class="leg-src">ANFR/EXEM · Tellux crowdsourced</div></div>',
+  cert:'<div class="leg-block"><b class="leg-title">Certified measurements (ANFR/EXEM)</b><div class="leg-sub" style="font-size:10px;color:var(--tx-mica,#7B7770);margin:2px 0 4px">30 sheets 2024–2026 · diamonds · legal limit 28 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Compliant &lt; 5 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Compliant 5–28 V/m</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#7c0000;transform:rotate(45deg);border:2px solid #C28533;vertical-align:middle;margin-right:4px"></span> Non-compliant &gt; 28 V/m (e.g. Monticello)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Low frequency 9 kHz–100 kHz</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Detail per sheet by clicking the diamond</div><div class="leg-src">ANFR/EXEM · CartoRadio — calibrated the RF model\'s k constant (one-shot)</div></div>',
+  contrib:'<div class="leg-block"><b class="leg-title">Smartphone contributions</b><div class="leg-sub" style="font-size:10px;color:var(--tx-mica,#7B7770);margin:2px 0 4px">Field readings from Tellux contributors</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#5c3a9b;border-radius:50%;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Citizen contribution (cluster)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Magnetometer (nT), network/WiFi signal (dBm), external sensor. <b>Display only, outside the calculation.</b></div><div class="leg-src">Tellux crowdsourced · Supabase</div></div>',
   openrad:'<div class="leg-block"><b class="leg-title">Citizen gamma (OpenRadiation)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Ambient gamma/X dose rate · citizen measurements · Geiger tubes</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;opacity:0.55;vertical-align:middle;margin-right:4px"></span>Citizen measurement point (µSv/h)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4"><b>Gamma/X, not radon.</b> Independent display layer — not fed into the index or the gamma calculation.</div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#eef3f0;border:1px solid #cfe0da;border-radius:4px;font-size:8.5px;color:#2f5f54;line-height:1.4"><b>Indicative measurements, not certified.</b> Heterogeneous sensors. The dataset includes <b>continuous tracks</b> (a single walking session accounts for several hundred points) → displayed density <b>≠ number of measurement sites</b>.</div><div class="leg-src">OpenRadiation contributors — ODbL</div></div>',
   postesSources:'<div class="leg-block"><b class="leg-title">EDF SEI substations</b><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Substation &#x2264; 63 kV</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Substation &#x2265; 150 kV</div><div class="leg-why">HTB/HTA grid nodes — significant ELF 50 Hz field nearby.</div><div class="leg-src">EDF SEI · OSM · 21 substations</div></div>'
 
@@ -3715,12 +3745,10 @@ function updateLegendPanel(){
   const emptyMsg=document.getElementById('legende-em-empty');
   let coreActive=[];
   if(corePanel){
-    // 'con' et 'emag' réintégrées le 2026-08-27 (brief "Panneau '?' sélectif") — retirées plus
-    // tôt le même jour (brief "3 corrections UI menu EM") parce que LEGEND_CORE_IDS ne les
-    // contenait pas encore à ce moment-là (entrée alors réellement morte). Elles y sont
-    // maintenant (cf. déclaration LEGEND_CORE_IDS plus haut) : ordre d'affichage = Composite,
-    // RF, Mesures EM, puis Fond magnétique régional (compacté à une ligne).
-    const coreOrder=['hot','hotrf','con','emag'];
+    // ordre d'affichage core = Composite, RF, Mesures certifiées, Contributions smartphone,
+    // Fond magnétique régional (compacté à une ligne). 'con' (2026-08-27, brief "Panneau '?'
+    // sélectif") a été scindé le 2026-08-29 (item C) en 'cert' + 'contrib', tous deux core.
+    const coreOrder=['hot','hotrf','cert','contrib','emag'];
     coreActive=coreOrder.filter(id=>LEGEND_ACTIVE_CORE.has(id)&&LEGEND_HTML[id]);
     if(!coreActive.length){
       corePanel.style.display='none';
@@ -3830,7 +3858,6 @@ function tog(id,cls,btn){
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='none';
     if(id==='emag')document.getElementById('emag-op-row').style.display='none';
     if(id==='crustal')showCrustalGauge(false);
-    if(id==='con'&&map.hasLayer(lCert))map.removeLayer(lCert); // Mesures EM : retirer lCert en parallele de lCon
     showLegend(id,false);
   }else{WMS[id]?map.addLayer(WMS[id]):map.addLayer(LAYERS[id]);ACTIVE[id]=true;if(btn)btn.classList.add(cls);
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='flex';
@@ -3845,15 +3872,18 @@ function tog(id,cls,btn){
     if(id==='prod'&&lProd.getLayers().length===0)loadProd();
     if(id==='bt'&&lBT.getLayers().length===0)loadBT();
     if(id==='ant'&&lAnt.getLayers().length===0)loadAnt();
-    if(id==='con'){
-      // Mesures EM : chargement + rendu des fiches certifiees ANFR/EXEM en parallele des contributions citoyennes
+    if(id==='cert'){
+      // Fiches certifiees ANFR/EXEM : chargement + rendu dans lCert (deja ajoute a la carte par
+      // map.addLayer(LAYERS.cert) ci-dessus ; _renderMesuresCertifiees le peuple).
       loadMesuresCertifiees().then(function(){
         _renderMesuresCertifiees();
-        lCert.addTo(map);
-        var nContrib=(typeof contribsDB!=='undefined')?contribsDB.length:0;
         var nCert=(MESURES_CERTIFIEES||[]).length;
-        info(jt('mesures_em_prefix', 'Mesures EM — ')+nCert+jt('mesures_em_infix', ' fiches ANFR/EXEM certifiées (2024–2026) · ')+nContrib+jt('mesures_em_suffix', ' contribution(s) citoyenne(s)'),null,5000);
+        info(jt('cert_toast_prefix','Mesures certifiées — ')+nCert+jt('cert_toast_suffix',' fiches ANFR/EXEM (2024–2026).'),null,4000);
       });
+    }
+    if(id==='contrib'){
+      var nC=(typeof contribsDB!=='undefined')?contribsDB.length:0;
+      info(jt('contrib_toast_prefix','Contributions smartphone — ')+nC+jt('contrib_toast_suffix',' relevé(s) · hors du calcul.'),null,4000);
     }
 
     // align/egl/intl : couches patrimoniales migrées vers patrimoine.html (intl : dette INTL-CRUSTAL-001)
@@ -7190,8 +7220,8 @@ async function loadDB(){
 function startContrib(){
   document.getElementById('cform').style.display='block';
   cformOverlayShow();
-  const _bcon=document.getElementById('b-con');
-  if(!ACTIVE.con){if(_bcon){tog('con','on-con',_bcon);}else{ACTIVE.con=true;map.addLayer(LAYERS.con);}}
+  const _bcontrib=document.getElementById('b-contrib');
+  if(!ACTIVE.contrib){if(_bcontrib){tog('contrib','on-contrib',_bcontrib);}else{ACTIVE.contrib=true;map.addLayer(LAYERS.contrib);}}
   // Initialiser l'etat du formulaire selon l'instrument selectionne par defaut
   if(typeof onInstrumentChange==='function')onInstrumentChange();
   info(jt('click_to_place_measurement', 'Cliquez sur la carte pour placer votre mesure.'),'warn');
@@ -8611,14 +8641,14 @@ loadChargeReseau().then(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}}).ca
 // pas du facteur de charge RTE (spécifique au domaine ELF/magnétique de buildHot()).
 buildHotRF();
 showLegend('hotrf',true);
-// con:false par défaut depuis 2026-08-29 (item 2) — pas de légende "Mesures EM" au boot ;
-// showLegend('con',...) est piloté par tog('con') au 1er clic sur le bouton.
+// cert:false / contrib:false par défaut (ex-con, scindé le 2026-08-29 item C) — pas de légende
+// au boot ; showLegend('cert'/'contrib',...) est piloté par tog() au 1er clic sur le bouton.
 // Démarrage : anomalies EM (couche RF + mesures terrain par défaut, cf. arbitrage 2026-08-23)
 let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.hotrf){lHotRF.clearLayers();buildHotRF();}},300);}
 map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
-setTimeout(()=>Promise.all([loadAnt(),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.con)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k)
+setTimeout(()=>Promise.all([loadAnt(),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.cert)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k)
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET DUR/EBR/CLF (nom loadAQU conservé, cf. commentaire fonction) — correction externe réelle niveau 1
 setTimeout(loadDst,5500); // Dst Kyoto via NOAA — correction externe niveau 2 (Sprint astro 2026-05-25)
@@ -8701,9 +8731,9 @@ function startContribFromFAB(){
     info('');
     return;
   }
-  // Open — activer la couche contributions sans la toggler deux fois
-  const btn=document.getElementById('b-con');
-  if(btn&&!ACTIVE.con){tog('con','on-con',btn);}
+  // Open — activer la couche contributions smartphone sans la toggler deux fois
+  const btn=document.getElementById('b-contrib');
+  if(btn&&!ACTIVE.contrib){tog('contrib','on-contrib',btn);}
   // Flux "placement avant formulaire" (2026-08-19) — remplace l'ancien ouvrir-le-
   // formulaire-immediatement : #cform reste masque tant qu'aucun point n'est place.
   // Sur mobile (sidebar/carte empilees), afficher le formulaire avant le placement
@@ -9196,7 +9226,8 @@ let SITES_REMARQUABLES = [];
 // Source : public/data/cartoradio_certified_corse.json (régénération 27 avril 2026, 30 fiches).
 // Coordonnées : positions exactes ANFR (precision_coord=exacte). Source : API publique cartoradio.fr (/api/v1/mesures, format=geojson).
 // Données métier (date, valeur_max_vm, conformité, services) : extraction Cowork OCR du 23 avril 2026 sur les 30 PDFs ANFR/EXEM.
-// Affichage unifié avec les contributions citoyennes sous le même bouton b-con ("Mesures EM").
+// Depuis le 2026-08-29 (item C) : bouton propre b-cert ("Mesures certifiées"), séparé des
+// contributions citoyennes (b-contrib). Ce loader/rendu ne concerne que les fiches certifiées.
 let MESURES_CERTIFIEES = [];
 let _certLoadPromise = null;
 let _certRendered = false;
@@ -10410,12 +10441,15 @@ function capCleanup(){
 ["cat_naturel",".accordion-cat-header > span:nth-child(2)@2","","Contexte naturel","Cuntestu naturale","Natural context"],
 ["subgroup_a",".subgroup-header@0","","Substrat et paysage","Sustratu è paisaghju","Substrate and landscape"],
 ["subgroup_b",".subgroup-header@1","","Repères et mesures externes","Puntelli è misure esterne","External references and measurements"],
+["subgroup_c",".subgroup-header@2","","Mesures citoyennes","Misure citadine","Citizen measurements"],
 ["lyr_hot","#b-hot","","Champ magnétique composite (nT)","Campu magneticu cumpostu (nT)","Composite magnetic field (nT)"],
 ["lyr_hot_tt","#b-hot","title","Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. Estimation du modèle Tellux, pas une mesure.","Campu magneticu cumpostu — ELF 50 Hz (rete elettrica) + suscettibilità di u sustratu, espressu in nT. Stima di u mudellu Tellux, micca una misura.","Composite magnetic field — ELF 50 Hz (electrical grid) + substrate susceptibility, expressed in nT. Tellux model estimate, not a measurement."],
 ["lyr_hotrf","#b-hot-rf","","Champ électrique RF (V/m)","Campu elettricu RF (V/m)","RF electric field (V/m)"],
 ["lyr_hotrf_tt","#b-hot-rf","title","Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte.","Campu elettricu radiufrequenza (V/m) — mudellu Tellux — calibrazione interna nantu à 30 misure certificate ANFR/EXEM (propagazione da ~3000 antenne ANFR reale). Stima centrale d'ordine di grandezza (campu esternu ; sott'ivaluta i siti più esposti, sopravaluta l'internu di i fabbricati). Rilettura fisicu in corsu ; ùn rimpiazza micca una misura certificata. Riferimenti ICNIRP indicativi, micca soglia d'alerta.","Radiofrequency electric field (V/m) — Tellux model — internal calibration on 30 certified ANFR/EXEM measurements (propagation from ~3,000 actual ANFR antennas). Central order-of-magnitude estimate (outdoor field; underestimates highly exposed sites, overestimates indoor levels). Physicist review underway; does not replace a certified measurement. ICNIRP reference points are indicative, not an alert threshold."],
-["lyr_con","#b-con","","Mesures EM","Misure EM","EM measurements"],
-["lyr_con_tt","#b-con","title","Mesures EM — contributions citoyennes (affichage seul, hors calcul) + 30 fiches ANFR/EXEM certifiées (ont servi à calibrer la constante k du modèle RF — calcul one-shot à l'initialisation, pas une modulation en direct par point)","Misure EM — cuntribuzione citatine (affissu solu, fora di calculu) + 30 schede ANFR/EXEM certificate (anu servutu à calibrà a custante k di u mudellu RF — calculu una volta sola à l'iniziu, micca una mudulazione in direttu per puntu)","EM measurements — citizen contributions (display only, outside the calculation) + 30 certified ANFR/EXEM sheets (used to calibrate the RF model's k constant — one-shot calculation at initialization, not a live per-point modulation)"],
+["lyr_cert","#b-cert","","Mesures certifiées (ANFR/EXEM)","Misure certificate (ANFR/EXEM)","Certified measurements (ANFR/EXEM)"],
+["lyr_cert_tt","#b-cert","title","30 fiches de mesure certifiées ANFR/EXEM (2024–2026), extraites des PDF CartoRadio. Ont servi une fois à calibrer la constante k du modèle RF (calcul one-shot à l'initialisation, pas une modulation en direct par point). Losanges colorés selon la conformité (limite légale 28 V/m).","30 schede di misura certificate ANFR/EXEM (2024–2026), estratte da i PDF CartoRadio. Anu servutu una volta à calibrà a custante k di u mudellu RF (calculu una volta sola à l'iniziu, micca una mudulazione in direttu per puntu). Rombi culuriti secondu a cunfurmità (limita legale 28 V/m).","30 certified ANFR/EXEM measurement sheets (2024–2026), extracted from CartoRadio PDFs. Used once to calibrate the RF model's k constant (one-shot calculation at initialization, not a live per-point modulation). Coloured diamonds by compliance (legal limit 28 V/m)."],
+["lyr_contrib","#b-contrib","","Contributions smartphone","Cuntribuzione smartphone","Smartphone contributions"],
+["lyr_contrib_tt","#b-contrib","title","Contributions terrain des utilisateurs Tellux : magnétomètre smartphone (nT), signal réseau/WiFi (dBm), relevés au capteur externe. Cercles violets, en cluster. Affichage seul — jamais lues par aucun calcul.","Cuntribuzione di terrenu di l'utilizatori Tellux : magnetometru smartphone (nT), signale reta/WiFi (dBm), rilievi à u sensore esternu. Cerchji viola, in cluster. Affissu solu — mai lette da nisun calculu.","Field contributions from Tellux users: smartphone magnetometer (nT), network/WiFi signal (dBm), external-sensor readings. Purple circles, clustered. Display only — never read by any calculation."],
 ["lyr_ant","#b-ant","","Antennes ANFR + TDF","Antenne ANFR + TDF","ANFR + TDF antennas"],
 ["lyr_ant_tt","#b-ant","title","Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF","Antenne 2G/3G/4G/5G ANFR + emettitori broadcast TDF","2G/3G/4G/5G ANFR antennas + TDF broadcast transmitters"],
 ["lyr_res","#b-res","","Réseau HT","Reta HT","HV grid"],
