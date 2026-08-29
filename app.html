@@ -3932,8 +3932,12 @@ const IGRF14_GRID=[
   [43.25,8.5,46950],[43.25,8.75,47000],[43.25,9.0,47060],[43.25,9.25,47110],[43.25,9.5,47160],[43.25,9.75,47200],
 ];
 
-// Grille LCS-1 révisée — anomalie crustale Corse (0.5° résolution)
-// Source : EMAG2v3 (Meyer et al. 2017) + BRGM carte aéromagnétique Corse
+// Grille LCS-1 révisée — anomalie crustale Corse.
+// Maille réelle : ~0,3° lat × 0,5° lon (lignes 41.3→43.1 par pas de ~0,3°, colonnes 8.5/9.0/9.5)
+// — 24 points pour toute l'île. Ne résout que les tendances régionales : les anomalies locales
+// fortes et documentées (ex. Monte Maggiore ~3000 nT, Nicollet) sont bien en deçà de sa
+// résolution et n'apparaissent PAS dans le calcul (cf. panneau « Anomalies de référence »).
+// Source : estimée à partir de EMAG2v3 (Meyer et al. 2017) + BRGM carte aéromagnétique Corse
 // INCLUT des anomalies NÉGATIVES : calcaire Bonifacio, schistes Cap Corse
 // Les anomalies sont relatives à l'IGRF (peuvent être + ou -)
 // Incertitude : ±20 nT (données aéromagnétiques continentales)
@@ -4020,10 +4024,14 @@ async function preloadEMAG2(){
 }
 
 function calcLCS1(lat,lon){
-  // Préférer EMAG2v3 si disponible
-  const key=Math.round(lat*30)+','+Math.round(lon*30);
-  if(EMAG2_CACHE[key]!==undefined) return EMAG2_CACHE[key];
-  // Fallback : grille LCS1 estimée
+  // Anomalie crustale = grille LCS1 estimée (24 points, ~0,3° lat × 0,5° lon), interpolée IDW.
+  // Le cache EMAG2_CACHE (peuplé au survol du panneau « Anomalies de référence », centre carte)
+  // n'est volontairement PAS lu ici : la doc publique affirme que l'affichage EMAG2v3 est
+  // « sans incidence sur le score » (cadre-scientifique.html #magnetique-statique,
+  // methode-limites-transparence.html #sources-geomagnetiques), et EMAG2v3 (2 arc-min +
+  // continuation vers le haut) donne de toute façon des valeurs moins fiables que la grille
+  // locale pour la Corse — diagnostic 2026-08-29 : le endpoint NOAA renvoie −48 nT au Monte
+  // Maggiore contre ~3000 nT réels (Nicollet). Chemin de fuite EMAG2_CACHE→score fermé 2026-08-29.
   return Math.round(interpIDW(LCS1_GRID,lat,lon));
 }
 
@@ -4683,7 +4691,7 @@ function calcMagneticStatic(lat, lon) {
   const lon_ = parseFloat(lon);
 
   const B_principal_nT        = igrfFallback(lat_, lon_);
-  const B_anomaly_nT          = calcLCS1(lat_, lon_);  // EMAG2v3 si chargé, LCS1 sinon
+  const B_anomaly_nT          = calcLCS1(lat_, lon_);  // anomalie crustale — grille LCS1 (cf. calcLCS1)
   const Sq_correction_nT      = calcSq(lat_);
   const external_correction_nT = calcExternalCorr(); // INTERMAGNET (DUR/EBR/CLF), Dst ou Kp fallback
   const B_total_nT            = B_principal_nT + B_anomaly_nT + Sq_correction_nT + external_correction_nT;
@@ -4710,7 +4718,7 @@ function calcMagneticStatic(lat, lon) {
     declination_deg,
     source: 'IGRF-14 (Alken et al. 2021) + EMAG2v3/LCS1 (Meyer et al. 2017 + BRGM) + Sq (Campbell 1989)',
     confidence: 'medium',
-    epistemic_note: 'Composante statique (DC) du champ géomagnétique. Distinct du champ ELF 50 Hz — exposés séparément en v2. Incertitude grille ±100 nT (interpolation IDW 0.25°).'
+    epistemic_note: 'Composante statique (DC) du champ géomagnétique. Distinct du champ ELF 50 Hz — exposés séparément en v2. Incertitude : IGRF-14 interpolé sur grille 0,25° (±50–100 nT) + anomalie crustale LCS1 sur grille ~0,3° lat × 0,5° lon, 24 points (±20 nT). La résolution EMAG2v3 (2 arc-min ≈ 3,7 km) est réservée à l\'affichage « Anomalies de référence », pas au calcul — les anomalies locales < 5 km (ex. Monte Maggiore) sont sous la résolution de ces grilles.'
   };
 }
 
