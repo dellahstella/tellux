@@ -2013,7 +2013,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
                foret_dense_corse.geojson (BD Forêt V2, #1038) alimentait calcVegetationAttenuation()
                (RF, clic carte) sans aucune couche visible correspondante. Cf.
                buildForetDenseLayer()/lForetDense plus bas dans ce fichier. -->
-          <button class="lbtn" id="b-foretdense" data-domains="rf" title="BD Forêt V2 IGN — couvert arboré dense (canopée >40%). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6) dans le calcul au clic carte ; le désactiver la retire." onclick="tog('foretdense','on-foretdense',this)"><span class="sq" style="background:#3F5B3A;opacity:.6"></span>Forêt dense (atténuation RF)<span class="layer-badge layer-badge--calc">Module le calcul</span></button>
+          <button class="lbtn" id="b-foretdense" data-domains="rf" title="BD Forêt V2 IGN — couvert arboré dense (canopée >40%). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6) dans le calcul au clic carte ; le désactiver la retire." onclick="tog('foretdense','on-foretdense',this)"><span class="sq" style="background:#0e7490"></span>Forêt dense (atténuation RF)<span class="layer-badge layer-badge--calc">Module le calcul</span></button>
           <div class="mlegend-inline" id="mleg-foretdense"></div>
           <!-- Couche « Forêts publiques » (b-foret, ONF via WMS IGN) retirée complètement le
                2026-08-27 (décision Soleil, brief court "la couche forêt publique n'est plus utile
@@ -3332,10 +3332,16 @@ const LAYER_DOC_ANCHORS={
   con:        [{href:'/methode-limites-transparence.html#sources-rf',labelKey:'docref_con_calib',labelFr:'Rôle dans la calibration RF'},
                {href:'/methode-limites-transparence.html#statuts-epistemiques',labelKey:'docref_con_status',labelFr:'Statut des contributions citoyennes'}],
   ant:        [{href:'/cadre-scientifique.html#radiofrequences'}],
-  res:        [{href:'/cadre-scientifique.html#elf-anthropique'}],
-  bt:         [{href:'/cadre-scientifique.html#elf-anthropique'}],
-  prod:       [{href:'/cadre-scientifique.html#elf-anthropique'}],
-  postesSources:[{href:'/cadre-scientifique.html#elf-anthropique'}],
+  // res/bt/prod/postesSources → catégorie corpus dédiée « Sources ELF — réseau électrique »
+  // (methode-limites-transparence.html §2, ajoutée le 2026-08-28) : documente le modèle par
+  // type de source (Biot-Savart segmenté pour les lignes, 1/d³ pour les postes, 1/d² pour les
+  // éoliennes), les données (Enedis/RTE, EDF SEI), les courants nominaux ±50 % — les
+  // particularités d'implémentation Tellux, pas seulement la physique générique (brief item 5,
+  // 2026-08-29). #elf-anthropique de cadre-scientifique.html reste l'explication amont du calcul.
+  res:        [{href:'/methode-limites-transparence.html#sources-elf-reseau'}],
+  bt:         [{href:'/methode-limites-transparence.html#sources-elf-reseau'}],
+  prod:       [{href:'/methode-limites-transparence.html#sources-elf-reseau'}],
+  postesSources:[{href:'/methode-limites-transparence.html#sources-elf-reseau'}],
   openrad:    [{href:'/cadre-scientifique.html#gamma-ambiant'}],
   hyd:        [{href:'/methode-limites-transparence.html#hypotheses-pilier-a'}]
 };
@@ -8096,9 +8102,14 @@ function buildForetDenseLayer(){
       coordinates:FORET_DENSE_PARTS.map(function(part){return part.rings;})
     }
   };
+  // Style revu 2026-08-29 (bug « invisible sur fond ortho ») : l'ancien vert maquis #3F5B3A à
+  // fillOpacity .35 + contour 0,5 px se confondait avec la végétation de l'orthophoto (vert sur
+  // vert). Contour cyan tireté (#0e7490, weight 2) + remplissage très léger — le cyan est absent
+  // de la palette naturelle de l'ortho ET des conventions cartographiques de l'IGN Plan (l'eau y
+  // est bleu franc, pas cyan), donc lisible sur les deux fonds. Testé en preview sur ortho + plan.
   L.geoJSON(geojson,{
     renderer:_foretDenseCanvas,
-    style:{color:'#3F5B3A',weight:0.5,opacity:0.6,fillColor:'#3F5B3A',fillOpacity:0.35,interactive:false}
+    style:{color:'#0e7490',weight:2,opacity:0.95,fillColor:'#0e7490',fillOpacity:0.08,dashArray:'5 3',interactive:false}
   }).addTo(lForetDense);
 }
 
