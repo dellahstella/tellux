@@ -1449,6 +1449,10 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 #legende-content .legende-section-title{font-family:var(--font-display,var(--font));font-size:11px;font-weight:600;color:var(--tx-mica,var(--tx3));margin:0 0 8px;letter-spacing:.06em;text-transform:uppercase;}
 #legende-content #conditions-panel{margin-bottom:0;}
 #legende-content #tellux-leg-panel{position:static;background:transparent!important;border:none!important;border-radius:0!important;box-shadow:none!important;padding:0!important;margin:0!important;max-width:none!important;max-height:none!important;overflow:visible!important;}
+/* Jauge crustale intégrée au panneau « ? » — brief « exécution groupée » item B, 2026-08-29.
+   Plus un contrôle Leaflet flottant (chevauchait le panneau). Rendue comme une section du « ? ». */
+#legende-content #crustal-gauge-panel{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+#legende-content #crustal-gauge-panel .cg-title{font-family:var(--font-display,var(--font));font-size:11px;font-weight:600;color:var(--tx-mica,var(--tx3));margin:0 0 6px;letter-spacing:.06em;text-transform:uppercase;}
 /* Repères documentaires — brief "bouton ? contextuel" 2026-08-28 */
 #tellux-leg-docrefs{margin-top:10px;}
 #tellux-leg-docrefs.has-core{padding-top:10px;border-top:1px solid var(--border);}
@@ -2321,6 +2325,16 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
            Anomalies mondiales en ont été explicitement exclues (triage Soleil, cf.
            LEGEND_CORE_IDS/LEGEND_HTML plus bas). -->
       <div id="tellux-leg-panel" style="display:none"></div>
+      <!-- #crustal-gauge-panel : jauge « Anomalie crustale locale ». Déplacée dans le panneau « ? »
+           le 2026-08-29 (brief « exécution groupée », item B). Était un contrôle Leaflet flottant
+           topright → chevauchait ce panneau. Un simple repositionnement dans un coin ne suffit
+           pas (la jauge fait ~350 px de haut, aucun coin n'est libre de ce gabarit sur écran
+           court — top-left entre alors en collision avec les pastilles Zone 2 bas-gauche).
+           Vivre DANS le « ? » élimine tout conflit de coin : c'est un repère de lecture pour la
+           couche « Anomalies de référence », sa place naturelle. Contrepartie assumée : visible
+           seulement quand le « ? » est ouvert (comme toute autre légende de couche). Rempli par
+           showCrustalGauge() / mis à jour par updateCrustalGauge() (moveend). -->
+      <div id="crustal-gauge-panel" style="display:none"></div>
       <!-- #tellux-leg-docrefs : renvois vers les pages doc publiques, rendu par updateLegendPanel()
            pour TOUTE couche active portant une ancre (LAYER_DOC_ANCHORS) — brief "bouton ? contextuel"
            2026-08-28. Indépendant de #tellux-leg-panel (qui ne montre que les 4 légendes couleur core). -->
@@ -3387,7 +3401,22 @@ function docRefHtml(id){
 }
 const LEGEND_HTML={
   hot:'<div class="leg-block"><b class="leg-title">Champ magnétique composite (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (réseau) + susceptibilité du substrat</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#8b92a5">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · susceptibilité BRGM</div></div>',
-  hotrf:'<div class="leg-block"><b class="leg-title">Champ électrique RF (V/m)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofréquences — modèle Tellux (calibration interne)</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:2px"><span>plus faible</span><span>plus marqué ▸</span></div><div style="font-size:8px;color:#8b92a5;width:140px;margin-bottom:4px;line-height:1.3">Échelle <b>relative</b> au modèle RF interne (bins 0,40 · 0,55 · 0,85 · 1,5 V/m) — valeurs absolues faibles.</div><div class="leg-row" style="font-size:8.5px;color:#4a4f5e;line-height:1.35"><span style="display:inline-block;width:10px;height:8px;background:#3f007d;border-radius:2px;vertical-align:middle;margin-right:4px"></span><b style="color:#3f007d">&gt; 1,5 V/m</b> — hors échelle ambiante typique (~p99 du modèle) : zone à vérifier par mesure, pas un seuil sanitaire.</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #2171b5;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ Repère ICNIRP public : 28–61 V/m selon fréquence<br><span style="font-size:8px;color:#8b92a5">Repère indicatif — pas de seuil d\'alerte</span></div><div class="leg-row" style="margin-top:4px;padding-left:8px;border-left:2px solid #9ecae1;font-size:8.5px;color:#4a4f5e;line-height:1.45"><b>Repères de lecture</b> (ordres de grandeur mesurés, pas des seuils sanitaires) :<br>· médiane nationale ~0,4 V/m (campagnes de mesures ANFR)<br>· haut de l\'ambiant typique ~1,5 V/m<br>· « point atypique » ANFR : ≥ 9 V/m depuis le 01/01/2026 (6 V/m auparavant)<br>· limite réglementaire : 28–61 V/m selon fréquence (téléphonie mobile 36–61 V/m)</div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#fdf6e3;border:1px solid #e0d4b0;border-radius:4px;font-size:8.5px;color:#7a5a1e;line-height:1.4"><b>Modèle Tellux — calibration interne.</b> Propagation depuis ~3000 antennes ANFR, calée sur 30 mesures certifiées ANFR/EXEM. <b>Estimation centrale d\'ordre de grandeur</b> (dispersion x/÷~3,3) — champ EXTÉRIEUR : sous-estime les sites les plus exposés, surestime l\'intérieur des bâtiments (~12 dB) et les zones boisées/rurales. Relecture physicien en cours ; ne remplace pas une mesure certifiée.</div><div class="leg-src">Friis · ~3000 antennes ANFR · calibration interne extérieurs</div></div>',
+  // hotrf allégée le 2026-08-29 (brief « exécution groupée », item A ; proposition
+  // _drafts/BRIEF_LEGENDES_RF_COMPOSITE_LIVRABLES_2026-08-29.md, texte validé Soleil au tour
+  // précédent). Passe de ~2 575 à ~700 car. : ne reste que le visuellement actionnable
+  // (gradient, échelle, bin violet, unité) + 1 phrase + le renvoi #radiofrequences (déjà câblé
+  // via LAYER_DOC_ANCHORS.hotrf, mis aussi en clair dans .leg-src). Le détail (dispersion
+  // x/÷3,3, biais intérieur ~12 dB, ICNIRP 28-61 V/m, médiane nationale, point atypique ANFR,
+  // relecture physicien) part sur cadre-scientifique.html#radiofrequences.
+  hotrf:'<div class="leg-block"><b class="leg-title">Champ électrique RF (V/m)</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofréquences — estimation extérieure, modèle Tellux</div>'+
+    '<div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:2px"><span>plus faible</span><span>plus marqué ▸</span></div>'+
+    '<div style="font-size:8px;color:#8b92a5;width:140px;margin-bottom:4px;line-height:1.3">Échelle <b>relative</b> au modèle (bins 0,40 · 0,55 · 0,85 · 1,5 V/m).</div>'+
+    '<div class="leg-row" style="font-size:8.5px;color:#4a4f5e;line-height:1.35"><span style="display:inline-block;width:10px;height:8px;background:#3f007d;border-radius:2px;vertical-align:middle;margin-right:4px"></span><b style="color:#3f007d">&gt; 1,5 V/m</b> — hors échelle ambiante typique : zone à vérifier par mesure, pas un seuil sanitaire.</div>'+
+    '<div class="leg-row" style="margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4">Estimation du champ radiofréquence <b>extérieur</b>, calée sur les antennes ANFR et des mesures certifiées. Ne remplace pas une mesure.</div>'+
+    '<div class="leg-src">Friis · ~3000 antennes ANFR · calibration interne — <a href="/cadre-scientifique.html#radiofrequences" target="_blank" rel="noopener" style="color:var(--maquis-clair)">modèle, calibration &amp; repères de lecture ↗</a></div>'+
+    '</div>',
   // Entrée 'foretdense' retirée le 2026-08-27 (brief "Panneau '?' sélectif", triage validé
   // Soleil) : état visuel unique (une seule teinte, pas d'échelle ni de catégories à
   // expliquer) — une légende n'apporte rien ici. Le title= du bouton b-foretdense reste la
@@ -3451,7 +3480,15 @@ const LEGEND_HTML={
 // INSTRUMENT_LABELS/CRUSTAL_REFS.
 const LEGEND_HTML_EN={
   hot:'<div class="leg-block"><b class="leg-title">Composite magnetic field (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (grid) + substrate susceptibility</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT: IARC class 2B documentary reference point.<br><span style="font-size:8px;color:#8b92a5">Not an alert threshold — see popup Details</span></div><div class="leg-src">Biot-Savart · EDF SEI · BRGM susceptibility</div></div>',
-  hotrf:'<div class="leg-block"><b class="leg-title">RF electric field (V/m)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofrequency — Tellux model (internal calibration)</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:2px"><span>weaker</span><span>more pronounced ▸</span></div><div style="font-size:8px;color:#8b92a5;width:140px;margin-bottom:4px;line-height:1.3">Scale <b>relative</b> to the internal RF model (bins 0.40 · 0.55 · 0.85 · 1.5 V/m) — low absolute values.</div><div class="leg-row" style="font-size:8.5px;color:#4a4f5e;line-height:1.35"><span style="display:inline-block;width:10px;height:8px;background:#3f007d;border-radius:2px;vertical-align:middle;margin-right:4px"></span><b style="color:#3f007d">&gt; 1.5 V/m</b> — outside the typical ambient range (~p99 of the model): an area to verify by measurement, not a health threshold.</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #2171b5;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ Public ICNIRP reference: 28–61 V/m depending on frequency.<br><span style="font-size:8px;color:#8b92a5">Indicative reference — not an alert threshold</span></div><div class="leg-row" style="margin-top:4px;padding-left:8px;border-left:2px solid #9ecae1;font-size:8.5px;color:#4a4f5e;line-height:1.45"><b>Reading reference points</b> (measured orders of magnitude, not health thresholds):<br>· national median ~0.4 V/m (ANFR measurement campaigns)<br>· top of the typical ambient range ~1.5 V/m<br>· ANFR "atypical point": ≥ 9 V/m since January 1, 2026 (6 V/m previously)<br>· regulatory limit: 28–61 V/m depending on frequency (mobile telephony 36–61 V/m)</div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#fdf6e3;border:1px solid #e0d4b0;border-radius:4px;font-size:8.5px;color:#7a5a1e;line-height:1.4"><b>Tellux model — internal calibration.</b> Propagation from ~3,000 ANFR antennas, anchored on 30 certified ANFR/EXEM measurements. <b>Central order-of-magnitude estimate</b> (dispersion x/÷~3.3) — OUTDOOR field: underestimates the most exposed sites, overestimates indoor levels (~12 dB) and wooded/rural areas. Physicist review underway; does not replace a certified measurement.</div><div class="leg-src">Friis · ~3,000 ANFR antennas · internal outdoor calibration</div></div>',
+  hotrf:'<div class="leg-block"><b class="leg-title">RF electric field (V/m)</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofrequency — outdoor estimate, Tellux model</div>'+
+    '<div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:2px"><span>weaker</span><span>more pronounced ▸</span></div>'+
+    '<div style="font-size:8px;color:#8b92a5;width:140px;margin-bottom:4px;line-height:1.3">Scale <b>relative</b> to the model (bins 0.40 · 0.55 · 0.85 · 1.5 V/m).</div>'+
+    '<div class="leg-row" style="font-size:8.5px;color:#4a4f5e;line-height:1.35"><span style="display:inline-block;width:10px;height:8px;background:#3f007d;border-radius:2px;vertical-align:middle;margin-right:4px"></span><b style="color:#3f007d">&gt; 1.5 V/m</b> — outside the typical ambient range: an area to verify by measurement, not a health threshold.</div>'+
+    '<div class="leg-row" style="margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><b>Outdoor</b> RF field estimate, anchored on ANFR antennas and certified measurements. Does not replace a measurement.</div>'+
+    '<div class="leg-src">Friis · ~3,000 ANFR antennas · internal calibration — <a href="/cadre-scientifique.html#radiofrequences" target="_blank" rel="noopener" style="color:var(--maquis-clair)">model, calibration &amp; reading references ↗</a></div>'+
+    '</div>',
   hyd:'<div class="leg-block"><b class="leg-title">Groundwater</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Groundwater near the surface — BRGM visual layer; the calculation uses a separate dataset</div><img src="https://geoservices.brgm.fr/risques?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.1.1&FORMAT=image/png&LAYER=REMNAPPE_FR" style="max-width:260px;width:100%;display:block;margin:4px 0;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:4px;padding:4px;box-sizing:border-box" alt="Groundwater rise legend (BRGM REMNAPPE_FR)"><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Legend served live by the BRGM server — replaces the previous static list (\"Outcropping / Sub-outcropping\"), which described a different classification than the one actually rendered.</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
   ant:'<div class="leg-block"><b class="leg-title">ANFR Antennas</b><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a4b8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a4b8c">2G</b> GSM — voice, SMS</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a6b5c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a6b5c">3G</b> UMTS — mobile data</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#b85c00">4G</b> LTE — broadband</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#991b1b">5G</b> NR — ultra-high-speed</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#6b7280">Infra</b> microwave links · TV · FM · PMR</div><div class="leg-row"><span style="display:inline-block;position:relative;width:12px;height:12px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:5px;top:0;width:2px;height:12px;background:#5f5e5a"></span><span style="position:absolute;top:5px;left:0;width:12px;height:2px;background:#5f5e5a"></span></span>Major radio/TV transmitter</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Operators: Orange · SFR · Bouygues · Free<br><span id="leg-ant-count">—</span> sites · Source: ANFR open data</div><div class="leg-src">ANFR · Supabase · SUP_SUPPORT 2026</div><div style="border-top:1px solid rgba(0,0,0,.08);padding-top:6px;margin-top:4px"><div style="font-family:var(--mono);font-size:9px;color:var(--tx3);margin-bottom:4px">OFFICIAL EMF MEASUREMENTS (diamonds) · legal limit = 28 V/m:</div><div style="display:flex;flex-wrap:wrap;gap:4px"><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#0f766e;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#0f766e">Low</b> &lt; 0.5 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#b85c00">Moderate</b> 0.5–2 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#991b1b">High</b> 2–5 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#5c0000;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#5c0000">Very high</b> 5–28 V/m</div><div class="leg" style="padding:2px 6px;background:#fff8e6;border-radius:20px;border:1.5px solid #ffd700"><span style="display:inline-block;width:8px;height:8px;background:#7c0000;border:1.5px solid #ffd700;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#7c0000">⚠ &gt;28 V/m</b> non-compliant</div></div></div></div>',
   emag:'<div class="leg-block"><b class="leg-title" style="font-size:11px">Regional magnetic background</b><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px"><span style="display:inline-block;width:8px;height:8px;background:#dc2626;border-radius:2px;vertical-align:middle;margin-right:2px"></span>Positive ·<span style="display:inline-block;width:8px;height:8px;background:#2563eb;border-radius:2px;vertical-align:middle;margin:0 2px 0 4px"></span>Negative — deep basement, unrelated to human activity (NOAA EMAG2v3)</div></div>',
@@ -4243,36 +4280,39 @@ function startCrustalCorseMeasurement(lat,lon,nom){
 }
 
 // ═══ Jauge comparative : anomalie locale vs références mondiales ═══
-// Contrôle Leaflet injecté à l'activation de la couche `crustal`, retiré à la désactivation.
-let _crustalGauge=null;
+// Rendue DANS le panneau « ? » (#crustal-gauge-panel, section de #legende-em-section) depuis le
+// 2026-08-29 (brief « exécution groupée », item B). Était un contrôle Leaflet flottant topright
+// qui chevauchait #legende (le « ? », bas-droite) de ~238×102 px dès que « ? » était déplié +
+// couche « Anomalies de référence » active (diagnostic _drafts/DIAGNOSTIC_ARCHITECTURE_LEGENDES
+// _2026-08-29.md §3). Un simple repositionnement dans un autre coin ne règle rien : la jauge
+// fait ~350 px de haut et aucun coin n'est libre de ce gabarit sur écran court (top-left entre
+// en collision avec les pastilles Zone 2 bas-gauche dès qu'une couche « context » est active en
+// plus de crustal — vérifié en preview, chevauchement 238×127 px à vh=680). L'intégrer au « ? »
+// supprime tout conflit de coin. Contrepartie assumée : la jauge n'est visible que « ? » ouvert,
+// comme n'importe quelle légende de couche. `updateCrustalGauge()` (moveend) est inchangée.
 let _crustalGaugeUpdater=null;
 
 function showCrustalGauge(show){
+  const d=document.getElementById('crustal-gauge-panel');
+  if(!d)return;
   if(show){
-    if(_crustalGauge)return;
-    _crustalGauge=L.control({position:'topright'});
-    _crustalGauge.onAdd=function(){
-      const d=L.DomUtil.create('div','tellux-crustal-gauge');
-      d.id='crustal-gauge-panel';
-      d.style.cssText='background:rgba(247,248,250,.97);border:1px solid rgba(0,0,0,.1);border-radius:10px;font-family:var(--font);font-size:11px;box-shadow:0 2px 10px rgba(0,0,0,.1);padding:10px 12px;width:240px;margin-top:10px';
-      d.innerHTML='<div style="font-family:var(--font-display);font-weight:600;font-size:12px;color:var(--ardoise);margin-bottom:6px">'+jt('crustal_gauge_title','Anomalie crustale locale')+'</div>'+
-        '<div id="crustal-local-v" style="font-family:var(--mono);font-size:16px;font-weight:600;color:var(--ardoise);margin-bottom:8px">—<span style="font-size:10px;color:var(--tx3);font-weight:400;margin-left:4px">'+jt('crustal_nt_centre_carte','nT au centre carte')+'</span></div>'+
-        '<div id="crustal-bars"></div>'+
-        '<div style="font-size:9px;color:var(--ardoise-clair);margin-top:8px;line-height:1.35">'+jt('crustal_gauge_desc_prefix','Écart du champ magnétique au socle (anomalie crustale) sous le centre de la carte. Repère exploratoire — non intégré au score Tellux ; ')+'<b>'+jt('crustal_gauge_desc_bold','cliquez sur la carte')+'</b>'+jt('crustal_gauge_desc_suffix'," pour l'analyse complète d'un point.")+'</div>'+
-        '<div style="font-size:9px;color:var(--tx3);margin-top:6px;font-style:italic;line-height:1.3">'+jt('crustal_gauge_footer','Échelle logarithmique · EMAG2v3 NOAA · 5 références crustales mondiales')+'</div>';
-      L.DomEvent.disableClickPropagation(d);
-      return d;
-    };
-    _crustalGauge.addTo(map);
+    if(_crustalGaugeUpdater)return;
+    d.innerHTML='<div class="cg-title">'+jt('crustal_gauge_title','Anomalie crustale locale')+'</div>'+
+      '<div id="crustal-local-v" style="font-family:var(--mono);font-size:16px;font-weight:600;color:var(--ardoise);margin-bottom:8px">—<span style="font-size:10px;color:var(--tx3);font-weight:400;margin-left:4px">'+jt('crustal_nt_centre_carte','nT au centre carte')+'</span></div>'+
+      '<div id="crustal-bars"></div>'+
+      '<div style="font-size:9px;color:var(--ardoise-clair);margin-top:8px;line-height:1.35">'+jt('crustal_gauge_desc_prefix','Écart du champ magnétique au socle (anomalie crustale) sous le centre de la carte. Repère exploratoire — non intégré au score Tellux ; ')+'<b>'+jt('crustal_gauge_desc_bold','cliquez sur la carte')+'</b>'+jt('crustal_gauge_desc_suffix'," pour l'analyse complète d'un point.")+'</div>'+
+      '<div style="font-size:9px;color:var(--tx3);margin-top:6px;font-style:italic;line-height:1.3">'+jt('crustal_gauge_footer','Échelle logarithmique · EMAG2v3 NOAA · 5 références crustales mondiales')+'</div>';
+    d.style.display='block';
     _crustalGaugeUpdater=()=>updateCrustalGauge();
     map.on('moveend',_crustalGaugeUpdater);
     updateCrustalGauge();
   }else{
-    if(!_crustalGauge)return;
+    if(!_crustalGaugeUpdater){d.style.display='none';d.innerHTML='';return;}
     map.off('moveend',_crustalGaugeUpdater);
-    map.removeControl(_crustalGauge);
-    _crustalGauge=null;
+    d.style.display='none';
+    d.innerHTML='';
     _crustalGaugeUpdater=null;
+    return;
   }
 }
 
