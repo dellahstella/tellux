@@ -1959,8 +1959,17 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <div class="mlegend-inline" id="mleg-ant"></div>
       <button class="lbtn" id="b-res" data-domains="elf" title="Lignes et postes électriques haute tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HT</button>
       <div class="mlegend-inline" id="mleg-res"></div>
+      <!-- Couche « Réseau BT » MASQUÉE EN PROD le 2026-08-29 (décision Soleil, brief « vérification
+           BT »). Motif : verdict RF confirmé — le réseau BT n'entre dans aucune fonction RF ; l'apport
+           au composite via le calcul ELF n'est pas encore chiffré et la couche visuelle (156 130
+           segments, chargement lourd) n'apporte pas assez pour rester en prod pour le moment.
+           Code MORT conservé pour restauration future : bouton ci-dessous, loadBT()/lBT/LAYERS.bt/
+           ACTIVE.bt, LEGEND_HTML.bt, LAYER_DOC_ANCHORS.bt, i18n lyr_bt/lyr_bt_tt — tous intacts.
+           Le terme BT du CALCUL ELF (loadBTLinesAsync / getBTSegmentsNear / USE_BT_SEGMENTS) reste
+           ACTIF et inchangé — masquer la couche ne le touche pas. Pour restaurer : décommenter.
       <button class="lbtn" id="b-bt" data-domains="elf" title="Réseau basse tension BT — EDF SEI · zoom ≥ 10" onclick="tog('bt','on-bt',this)"><span class="ln" style="background:#d97706"></span>Réseau BT</button>
       <div class="mlegend-inline" id="mleg-bt"></div>
+      -->
       <button class="lbtn" id="b-prod" data-domains="elf" title="Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions" onclick="tog('prod','on-prod',this)"><span class="sq" style="background:#1a5c8c"></span>Sites de production</button>
       <div class="mlegend-inline" id="mleg-prod"></div>
       <button class="lbtn" id="b-postes" data-domains="elf" title="Postes sources EDF SEI (transformateurs HTB/HTA) — 21 postes OSM" onclick="togPostesSources(this)"><span class="sq" style="background:#C28533;border:1px solid #3F5B3A"></span>Postes sources EDF</button>
@@ -2094,7 +2103,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
                  QUE l'affichage.
                • b-contrib → lCon seul, badge « Hors calcul » seul, dans le sous-groupe
                  « Mesures citoyennes » (avec Gamma citoyen). -->
-          <button class="lbtn" id="b-cert" data-domains="rf" title="30 fiches de mesure certifiées ANFR/EXEM (2024–2026), extraites des PDF CartoRadio. Ont servi une fois à calibrer la constante k du modèle RF (calcul one-shot à l'initialisation, pas une modulation en direct par point). Affichées en losanges colorés selon la conformité (limite légale 28 V/m)." onclick="tog('cert','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Mesures certifiées (ANFR/EXEM)<span class="layer-badge layer-badge--calc">Calibration RF</span></button>
+          <button class="lbtn on-cert" id="b-cert" data-domains="rf" title="30 fiches de mesure certifiées ANFR/EXEM (2024–2026), extraites des PDF CartoRadio. Ont servi une fois à calibrer la constante k du modèle RF (calcul one-shot à l'initialisation, pas une modulation en direct par point). Affichées en losanges colorés selon la conformité (limite légale 28 V/m)." onclick="tog('cert','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Mesures certifiées (ANFR/EXEM)<span class="layer-badge layer-badge--calc">Calibration RF</span></button>
           <div class="mlegend-inline" id="mleg-cert"></div>
           <!-- Couche « Sites U/Th à mesurer » retirée de la carte publique le 2026-08-19 (décision
                Soleil, risque nocebo A.4 sur un catalogue 100% documentaire/non mesuré) — contenu
@@ -3344,7 +3353,11 @@ const WMS={hyd:wmsHyd,emag:wmsEmag};
 // maintenant qu'elles sont découplées des contributions → passer cert:true (le seul changement
 // nécessaire ; la calibration RF, elle, ne dépend pas de ce toggle — calibrateRF() lit le
 // fichier directement au boot).
-const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,res:false,prod:false,cert:false,contrib:false,crustal:false,openrad:false};
+// cert:true au boot (décision Soleil 2026-08-29) — les mesures certifiées ANFR/EXEM sont visibles
+// au démarrage maintenant qu'elles sont découplées des contributions smartphone. bt:false + bouton
+// b-bt masqué en prod (cf. commentaire au bouton) : couche visuelle retirée temporairement, le
+// terme BT du calcul ELF (loadBTLinesAsync / USE_BT_SEGMENTS) reste actif et inchangé.
+const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,res:false,prod:false,cert:true,contrib:false,crustal:false,openrad:false};
 
 // 'con' (scindé depuis en 'cert'+'contrib', 2026-08-29 item C) et 'emag' promues en Zone 1
 // "core" le 2026-08-27 (brief "Panneau '?' sélectif",
@@ -8715,8 +8728,10 @@ loadChargeReseau().then(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}}).ca
 // pas du facteur de charge RTE (spécifique au domaine ELF/magnétique de buildHot()).
 buildHotRF();
 showLegend('hotrf',true);
-// cert:false / contrib:false par défaut (ex-con, scindé le 2026-08-29 item C) — pas de légende
-// au boot ; showLegend('cert'/'contrib',...) est piloté par tog() au 1er clic sur le bouton.
+// cert:true au boot (décision Soleil 2026-08-29) — mesures certifiées visibles + légende au
+// démarrage. lCert.addTo(map) est fait dans le Promise.all décalé ci-dessous (après
+// loadMesuresCertifiees). contrib:false — showLegend('contrib',...) piloté par tog() au 1er clic.
+showLegend('cert',true);
 // Démarrage : anomalies EM (couche RF + mesures terrain par défaut, cf. arbitrage 2026-08-23)
 let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.hotrf){lHotRF.clearLayers();buildHotRF();}},300);}
