@@ -1484,8 +1484,12 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .leg-docref-link{display:inline-block;color:var(--tx-tyrrhenien,#1F3A5F);text-decoration:none;border-bottom:1px solid rgba(31,58,95,.3);margin-right:8px;}
 .leg-docref-link:hover{border-bottom-color:var(--tx-tyrrhenien,#1F3A5F);}
 .mleg-docref{margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.06);}
+/* .leg-docref-row--compact (2026-08-30) : renvoi corpus nesté dans l'accordéon de sa propre
+   couche (#tellux-leg-panel) — même séparateur visuel que .mleg-docref, sans répéter le nom. */
+.leg-acc-body .leg-docref-row--compact{margin-top:6px;padding-top:6px;border-top:1px dashed rgba(0,0,0,.08);}
 [data-theme="dark"] .leg-docref-link{color:#9db8d8;border-bottom-color:rgba(157,184,216,.35);}
 [data-theme="dark"] .mleg-docref{border-top-color:rgba(255,255,255,.08);}
+[data-theme="dark"] .leg-acc-body .leg-docref-row--compact{border-top-color:rgba(255,255,255,.09);}
 [data-theme="dark"] #legende-toggle{background:rgba(26,29,37,0.92);color:var(--tx-pierre,#F5F0E7);}
 [data-theme="dark"] #legende-content{background:rgba(26,29,37,0.95);color:var(--tx-pierre,#F5F0E7);}
 @media (max-width:768px){
@@ -3447,9 +3451,19 @@ const LAYER_DOC_ANCHORS={
   openrad:    [{href:'/cadre-scientifique.html#gamma-ambiant'}],
   hyd:        [{href:'/methode-limites-transparence.html#hypotheses-pilier-a'}]
 };
-function docRefHtml(id){
+function docRefHtml(id,compact){
   const links=LAYER_DOC_ANCHORS[id];
   if(!links||!links.length)return '';
+  const a=links.map(function(l){
+    const label=l.labelKey?jt(l.labelKey,l.labelFr):jt('docref_more','En savoir plus');
+    return '<a href="'+l.href+'" target="_blank" rel="noopener" class="leg-docref-link">'+label+' ↗</a>';
+  }).join('');
+  // compact=true (2026-08-30, brief "légendes → corpus Phase 2" item 7) : le lien est nesté à
+  // l'intérieur du bloc/accordéon de sa propre couche (déjà nommée par le <summary> ou le
+  // shortLabel mobile juste au-dessus) — répéter le nom ici serait redondant. Utilisé par
+  // updateLegendPanel() (core) et updateInlineLegendMobile() ; la Zone 2/combinée (non-core,
+  // #tellux-leg-docrefs) garde le nom pour distinguer plusieurs couches regroupées.
+  if(compact)return '<div class="leg-docref-row leg-docref-row--compact">'+a+'</div>';
   const btn=document.getElementById(btnIdFor(id));
   // Libellé = texte visible du bouton (nœuds texte directs uniquement : exclut l'icône .dot/.sq/.ln
   // ET le badge .layer-badge, tous des <span>). Repli sur la 1re clause du title=.
@@ -3458,10 +3472,6 @@ function docRefHtml(id){
     const direct=[...btn.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim();
     name=direct||(btn.title?btn.title.split(/[—–]/)[0].trim():id);
   }
-  const a=links.map(function(l){
-    const label=l.labelKey?jt(l.labelKey,l.labelFr):jt('docref_more','En savoir plus');
-    return '<a href="'+l.href+'" target="_blank" rel="noopener" class="leg-docref-link">'+label+' ↗</a>';
-  }).join('');
   return '<div class="leg-docref-row"><span class="leg-docref-layer">'+name+'</span>'+a+'</div>';
 }
 const LEGEND_HTML={
@@ -3862,16 +3872,25 @@ function updateLegendPanel(){
       // (_legAccOpen) — le panneau « ? » redevient un index compact plutôt qu'un mur de texte.
       if(_legAccOpen&&!coreActive.includes(_legAccOpen))_legAccOpen=null;
       const accOpen=_legAccOpen||coreActive[coreActive.length-1];
+      // Repère corpus intégré dans l'accordéon de sa propre couche (2026-08-30, brief "légendes
+      // → corpus Phase 2" item 7) : plus besoin de descendre jusqu'au bloc "Repères documentaires"
+      // séparé pour une couche core — cohérence avec le mobile, qui le fait déjà nativement
+      // (updateInlineLegendMobile() met docHtml dans le même <details> que legHtml). Ce même id
+      // est retiré de docActive plus bas pour ne jamais l'afficher deux fois.
       corePanel.innerHTML=coreActive.map(id=>'<details class="leg-acc"'+(id===accOpen?' open':'')+'>'+
         '<summary class="leg-acc-sum">'+coreLegLabel(id)+'</summary>'+
-        '<div class="leg-acc-body">'+legendHtmlFor(id)+'</div></details>').join('');
+        // hotrf exclu : son .leg-src (LEGEND_HTML.hotrf) intègre déjà un lien vers ce même
+        // #radiofrequences ("modèle, calibration & repères de lecture ↗", 2026-08-29) — ajouter
+        // le docref générique en dessous doublerait le même lien dans le même accordéon.
+        '<div class="leg-acc-body">'+legendHtmlFor(id)+(LAYER_DOC_ANCHORS[id]&&id!=='hotrf'?docRefHtml(id,true):'')+'</div></details>').join('');
     }
   }
-  // Repères documentaires (2026-08-28) : rendus dans #tellux-leg-docrefs, pour TOUTE couche
-  // active portant une ancre (LAYER_DOC_ANCHORS) — core ou non, avec ou sans bloc de légende.
+  // Repères documentaires (2026-08-28) : rendus dans #tellux-leg-docrefs, pour toute couche NON
+  // core active portant une ancre (LAYER_DOC_ANCHORS) — les couches core l'affichent désormais
+  // dans leur propre accordéon ci-dessus (2026-08-30), exclues ici pour éviter le doublon.
   // Ordre = ordre des boutons dans le menu (LAYER_DOC_ANCHORS est déclaré dans cet ordre).
   const docPanel=document.getElementById('tellux-leg-docrefs');
-  const docActive=Object.keys(LAYER_DOC_ANCHORS).filter(id=>LEGEND_ACTIVE_DOCREFS.has(id));
+  const docActive=Object.keys(LAYER_DOC_ANCHORS).filter(id=>LEGEND_ACTIVE_DOCREFS.has(id)&&!LEGEND_CORE_IDS.has(id));
   if(docPanel){
     if(!docActive.length){
       docPanel.style.display='none';
@@ -3918,7 +3937,9 @@ function updateInlineLegendMobile(id,show){
   // Repère documentaire aussi sur mobile (l'onglet Couches est l'équivalent mobile du "?" —
   // contrat CONTRAT_NAV_MOBILE_APP §2). Rendu même pour les couches sans bloc de légende
   // (foret dense, anomalies mondiales) : le <details> ne portait alors rien avant ce diff.
-  const docHtml=(show&&LAYER_DOC_ANCHORS[id])?docRefHtml(id):'';
+  // hotrf exclu : même raison que côté desktop (updateLegendPanel()) — son .leg-src intègre déjà
+  // un lien vers #radiofrequences, le docref générique doublerait ce lien sous le même <details>.
+  const docHtml=(show&&LAYER_DOC_ANCHORS[id]&&id!=='hotrf')?docRefHtml(id,true):'';
   if(legHtml||docHtml){
     const btn=document.getElementById(btnIdFor(id));
     const shortLabel=(btn&&btn.title)?btn.title.split(/[—–]/)[0].trim():'Légende';
