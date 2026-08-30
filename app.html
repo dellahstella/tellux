@@ -639,7 +639,14 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .lbtn.on-perma{background:#dcfce7;color:#166534;border-color:#86efac;font-weight:500;}
 .lbtn.on-hypo{background:#e8eef8;color:var(--info);border-color:#6b8fd4;font-weight:500;}
 /* Etat actif partage (Option A — DA v2) pour couches sans variante dediee */
-.lbtn.on-emag,.lbtn.on-prod,.lbtn.on-crustal,.lbtn.on-foretdense{background:var(--tx-brume);color:var(--tx-maquis);border-color:var(--tx-maquis);}
+/* .on-postes ajoute le 2026-08-30 (bug signale : "Postes sources EDF" actif sans surbrillance,
+   contrairement a "Sites de production"/"Champ electrique RF"). Cause racine : togPostesSources()
+   (app.html) applique bien la classe `on-postes` au bouton depuis sa creation (commit 5aa9146,
+   2026-04-21), mais AUCUNE regle CSS `.on-postes` n'a jamais existe — la classe etait un no-op
+   visuel depuis le debut (pas une regression recente, verifie git blame). Rejoint le groupe
+   partage ci-dessus plutot qu'une couleur dediee, coherent avec le fait qu'aucune des 4 autres
+   couches de ce groupe n'a de teinte individuelle liee a son icone. */
+.lbtn.on-emag,.lbtn.on-prod,.lbtn.on-crustal,.lbtn.on-foretdense,.lbtn.on-postes{background:var(--tx-brume);color:var(--tx-maquis);border-color:var(--tx-maquis);}
 .layers{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;}
 .lbtn{font-size:10px;padding:3px 7px;border-radius:14px;border:1px solid var(--border);background:var(--bg);color:var(--ardoise-clair);cursor:pointer;display:inline-flex;align-items:center;gap:3px;transition:all .15s;white-space:nowrap;}
 /* margin-right explicite (2026-08-26, repro Soleil mobile x3 : icône chevauchant la 1re
@@ -2223,6 +2230,23 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   <span style="color:rgba(245,240,231,.65);font-style:italic">Usage exploratoire, aucune signification physique ni sanitaire. Pond&#233;rations provisoires.</span>
   <button onclick="closeExpertMode()" style="margin-left:auto;background:none;border:none;color:rgba(245,240,231,.7);cursor:pointer;font-size:12px;flex-shrink:0" aria-label="D&#233;sactiver le mode Expertise">&#10005;</button>
 </div>
+<!-- Bug signalé 2026-08-30 (mobile) : un utilisateur ayant activé "Fond magnétique régional" puis
+     tapé sur "Postes sources EDF" a vu le slider ci-dessous et l'a attribué à ce dernier clic.
+     Diagnostic (reproduit en preview, desktop 1280px + mobile 375px, onglet Couches ouvert) :
+     AUCUN code ne relie togPostesSources() à emag-op-row (grep exhaustif tog()/showLegend()/id
+     'emag' — la seule couche qui pilote #emag-op-row est 'emag' lui-même, ~L3956/3962/3972).
+     La cause réelle : #hyd-op-row/#emag-op-row sont positionnés ICI, juste au-dessus de #map,
+     donc TOUJOURS visibles en haut d'écran dès que leur couche est active — y compris pendant
+     que l'utilisateur tape une couche différente dans le tiroir "Couches" (bottom-sheet mobile,
+     52vh, cf. switchMobileTab()) qui laisse le haut d'écran visible en même temps. Le slider ne
+     "réapparaît" pas au clic sur "Postes sources EDF" : il n'a jamais disparu depuis le
+     précédent toggle "Fond magnétique régional", et sa position flottante non liée à un bouton
+     précis rend la coïncidence facile à mal interpréter. STRUCTUREL — pas un id mal référencé,
+     pas corrigé ici (règle du brief : pas de refonte du système de sous-menu mobile à cette
+     occasion). Piste si repris un jour : fermer automatiquement hyd-op-row/emag-op-row quand la
+     couche correspondante est désactivée (déjà fait, cf. showLegend) OU au changement d'onglet
+     mobile (switchMobileTab), OU ancrer visuellement le slider à son bouton plutôt qu'au-dessus
+     de la carte — chacune de ces pistes touche le système de sous-menu, à valider séparément. -->
 <div class="op-row" id="hyd-op-row"><span>Nappes</span><input type="range" min="0.1" max="1" step="0.05" value="0.55" oninput="wmsHyd.setOpacity(+this.value)"><span id="hyd-op-v">55%</span></div>
 <div class="op-row" id="emag-op-row"><span>Fond magnétique régional</span><input type="range" min="0.1" max="0.8" step="0.05" value="0.5" oninput="wmsEmag.setOpacity(+this.value)"><span id="emag-op-v">50%</span></div>
 <div id="map"></div>
