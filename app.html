@@ -2051,7 +2051,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
                foret_dense_corse.geojson (BD Forêt V2, #1038) alimentait calcVegetationAttenuation()
                (RF, clic carte) sans aucune couche visible correspondante. Cf.
                buildForetDenseLayer()/lForetDense plus bas dans ce fichier. -->
-          <button class="lbtn" id="b-foretdense" data-domains="rf" title="BD Forêt V2 IGN — couvert arboré dense (canopée >40%). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6) dans le calcul au clic carte ; le désactiver la retire." onclick="tog('foretdense','on-foretdense',this)"><span class="sq" style="background:#3a7d5c;border:1px solid #1b5e3f"></span>Forêt dense (atténuation RF)<span class="layer-badge layer-badge--calc">Module le calcul</span></button>
+          <button class="lbtn" id="b-foretdense" data-domains="rf" title="BD Forêt V2 IGN — forêt fermée à essence haute (chênes, hêtre, châtaignier, pins laricio/maritime, sapin…), hors classes de feuillus indifférenciés qui recouvrent surtout le maquis-forêt corse (~28 % de la Corse). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6) dans le calcul au clic carte ; le désactiver la retire." onclick="tog('foretdense','on-foretdense',this)"><span class="sq" style="background:#3a7d5c;border:1px solid #1b5e3f"></span>Forêt dense (atténuation RF)<span class="layer-badge layer-badge--calc">Module le calcul</span></button>
           <div class="mlegend-inline" id="mleg-foretdense"></div>
           <!-- Couche « Forêts publiques » (b-foret, ONF via WMS IGN) retirée complètement le
                2026-08-27 (décision Soleil, brief court "la couche forêt publique n'est plus utile
@@ -3334,7 +3334,7 @@ const lOpenRad=L.layerGroup();
 // carte uniquement — cf. #1038/#1039) sans AUCUNE couche visible correspondante, seule
 // "Forêts publiques" (ONF, propriété foncière, sans rapport avec le calcul) était affichée —
 // confusion possible entre les deux. Canvas renderer (L.canvas()) plutôt que le SVG par défaut
-// de Leaflet : ~2 880 polygones / ~122 000 sommets (cf. build_foret_dense_corse_geojson.py),
+// de Leaflet : ~5 680 parties / ~104 000 sommets (cf. build_foret_dense_corse_geojson.py, option C),
 // mesuré nettement plus rapide à peindre en canvas qu'en SVG pour ce volume de géométrie.
 const _foretDenseCanvas=L.canvas({padding:0.5});
 const lForetDense=L.layerGroup();
@@ -5934,14 +5934,14 @@ function calcVegetationAttenuation(f_MHz, d_m){
 }
 
 // ─── Géométrie forêt dense — chargement + lookup point-in-polygon optimisé ────
-// Le GeoJSON prétraité (~2 880 polygones, ~122 000 sommets au total après
-// simplification — cf. script pour pourquoi la simplification seule ne
-// suffisait pas) est trop volumineux pour un test point-in-polygon naïf répété
-// (dizaines d'antennes × potentiellement des milliers de cellules de heatmap).
-// Parade : bbox précalculée par PARTIE de polygone (2 880 bbox, comparaison
+// Le GeoJSON prétraité (~5 680 parties, ~104 000 sommets au total après
+// filtre option C + simplification 0,6 % — cf. script) est trop volumineux
+// pour un test point-in-polygon naïf répété (dizaines d'antennes ×
+// potentiellement des milliers de cellules de heatmap).
+// Parade : bbox précalculée par PARTIE de polygone (~5 680 bbox, comparaison
 // quasi gratuite) — le ray-casting coûteux ne s'exécute que sur les parties
 // dont la bbox contient effectivement le point testé (quasi toujours 0 ou 1
-// partie sur 2 880, les fragments de forêt étant géographiquement disjoints).
+// partie, les fragments de forêt étant géographiquement disjoints).
 // Même principe que ANFR_GRID (bucketing spatial) déjà utilisé dans ce fichier.
 let FORET_DENSE_PARTS = null; // [{bbox:[minLon,minLat,maxLon,maxLat], rings:[[ [lon,lat],... ], ...]}, ...]
 let FORET_DENSE_BBOX_GLOBAL = null; // [minLon,minLat,maxLon,maxLat] + marge — rejet rapide global
@@ -8231,11 +8231,12 @@ function buildForetDenseLayer(){
   // « eau ». Retour à un vert forêt : contour fin PLEIN (pas de dashArray → lecture « zone », pas
   // « objet linéaire ») + remplissage léger. Vert émeraude foncé #1b5e3f, distinct du vert-jaune de
   // la végétation ortho ET du bleu franc de l'eau (ortho + IGN Plan). À fort nombre de polygones
-  // (~2 880), la trame des contours fins compose une brume verte texturée sur les zones boisées —
+  // (~5 680), la trame des contours fins compose une brume verte texturée sur les zones boisées —
   // informatif, pas alarmant. Testé preview ortho + plan.
-  // NB couverture : cette couche = BD Forêt V2 « forêt fermée » (FF*, ≥ 40 % de couvert) ≈ 59 % de
-  // la Corse — fidèle à la source, pas une inflation du pipeline. Resserrement des classes en
-  // attente d'arbitrage Soleil (cf. _drafts/DIAGNOSTIC_FORET_DENSE_2026-08-30.md).
+  // NB couverture : cette couche = BD Forêt V2 « forêt fermée » filtrée « option C » (essences
+  // hautes identifiées, hors classes de feuillus indifférenciés) ≈ 28,5 % de la Corse (2026-08-30,
+  // décision Soleil ; avant : tous les FF* ≈ 59 %). Dette : distinction fine forêt-haute / maquis
+  // (cf. _drafts/DIAGNOSTIC_FORET_DENSE_2026-08-30.md + DETTES_TECHNIQUES).
   L.geoJSON(geojson,{
     renderer:_foretDenseCanvas,
     style:{color:'#1b5e3f',weight:0.8,opacity:0.6,fillColor:'#3a7d5c',fillOpacity:0.13,interactive:false}
@@ -10563,7 +10564,7 @@ function capCleanup(){
 ["lyr_emag","#b-emag","","Fond magnétique régional","Fondu magneticu regiunale","Regional magnetic background"],
 ["lyr_emag_tt","#b-emag","title","Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse","Fondu magneticu regiunale NOAA EMAG2v3 — anumalie di u zoccalu prufondu corsu","NOAA EMAG2v3 regional magnetic background — deep basement anomalies of Corsica"],
 ["lyr_foretdense","#b-foretdense","","Forêt dense (atténuation RF)","Fureste densa (attenuazione RF)","Dense forest (RF attenuation)"],
-["lyr_foretdense_tt","#b-foretdense","title","BD Forêt V2 IGN — couvert arboré dense (canopée >40%). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6) dans le calcul au clic carte ; le désactiver la retire.","BD Fureste V2 IGN — cupertura arburea densa (canopea >40%). Attivà stu buttone include l'attenuazione RF di a canopea (mudellu ITU-R P.833-6) in u calculu à u cliccu carta ; disattivallu a caccia.","IGN BD Forêt V2 — dense tree cover (canopy >40%). Enabling this button includes canopy RF attenuation (ITU-R P.833-6 model) in the on-click map calculation; disabling it removes it."],
+["lyr_foretdense_tt","#b-foretdense","title","BD Forêt V2 IGN — forêt fermée à essence haute (chênes, hêtre, châtaignier, pins laricio/maritime, sapin…), hors classes de feuillus indifférenciés qui recouvrent surtout le maquis-forêt corse (~28 % de la Corse). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6) dans le calcul au clic carte ; le désactiver la retire.","BD Fureste V2 IGN — fureste chjinta à essenza alta (querce, fau, castagnu, pini laricio/marittimu, abetu…), fora di e classi di latifogli indifferenziati chì cuprenu sopratuttu u machja-fureste corsu (~28 % di a Corsica). Attivà stu buttone include l'attenuazione RF di a canopea (mudellu ITU-R P.833-6) in u calculu à u cliccu carta ; disattivallu a caccia.","IGN BD Forêt V2 — closed forest of tall species (oaks, beech, chestnut, laricio/maritime pine, fir…), excluding undifferentiated broadleaf classes that mostly map to Corsican maquis-forest (~28% of Corsica). Enabling this button includes canopy RF attenuation (ITU-R P.833-6 model) in the on-click map calculation; disabling it removes it."],
 ["lyr_hyd","#b-hyd","","Hydrographie","Idrugrafia","Hydrography"],
 ["lyr_hyd_tt","#b-hyd","title","Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct","Falde è corsi d'acqua sutterranei (BRGM REMNAPPE) — stratu visuale ; u calculu adopra un dataset distintu","Groundwater and underground watercourses (BRGM REMNAPPE) — visual layer; the calculation uses a separate dataset"],
 ["lyr_crustal","#b-crustal","","Anomalies de référence (mondiales & Corse)","Anumalie di riferenza (mundiale è corsa)","Reference anomalies (worldwide & Corsica)"],
