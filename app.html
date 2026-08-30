@@ -1971,17 +1971,15 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
       <div class="mlegend-inline" id="mleg-ant"></div>
       <button class="lbtn" id="b-res" data-domains="elf" title="Lignes et postes électriques haute tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HT</button>
       <div class="mlegend-inline" id="mleg-res"></div>
-      <!-- Couche « Réseau BT » MASQUÉE EN PROD le 2026-08-29 (décision Soleil, brief « vérification
-           BT »). Motif : verdict RF confirmé — le réseau BT n'entre dans aucune fonction RF ; l'apport
-           au composite via le calcul ELF n'est pas encore chiffré et la couche visuelle (156 130
-           segments, chargement lourd) n'apporte pas assez pour rester en prod pour le moment.
-           Code MORT conservé pour restauration future : bouton ci-dessous, loadBT()/lBT/LAYERS.bt/
-           ACTIVE.bt, LEGEND_HTML.bt, LAYER_DOC_ANCHORS.bt, i18n lyr_bt/lyr_bt_tt — tous intacts.
-           Le terme BT du CALCUL ELF (loadBTLinesAsync / getBTSegmentsNear / USE_BT_SEGMENTS) reste
-           ACTIF et inchangé — masquer la couche ne le touche pas. Pour restaurer : décommenter.
+      <!-- Couche « Réseau BT » masquée en prod le 2026-08-29 (#1122, verdict RF : n'entre dans
+           aucune fonction RF), REMISE EN PROD le 2026-08-30 : le rendu statique (buildBTStaticLayer,
+           patron lForetDense, BT_MIN_ZOOM=10) a depuis été livré et vérifié stable à zoom large sur
+           l'île entière (littoral/vallées peuplées, pas de nappe écrasante) — la raison technique du
+           masquage (instabilité d'affichage) n'existe plus. Le terme BT du calcul ELF
+           (loadBTLinesAsync / getBTSegmentsNear / USE_BT_SEGMENTS) n'a jamais été affecté par ce
+           masquage, dans un sens comme dans l'autre. -->
       <button class="lbtn" id="b-bt" data-domains="elf" title="Réseau basse tension BT — EDF SEI · zoom ≥ 10" onclick="tog('bt','on-bt',this)"><span class="ln" style="background:#d97706"></span>Réseau BT</button>
       <div class="mlegend-inline" id="mleg-bt"></div>
-      -->
       <button class="lbtn" id="b-prod" data-domains="elf" title="Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions" onclick="tog('prod','on-prod',this)"><span class="sq" style="background:#1a5c8c"></span>Sites de production</button>
       <div class="mlegend-inline" id="mleg-prod"></div>
       <button class="lbtn" id="b-postes" data-domains="elf" title="Postes sources EDF SEI (transformateurs HTB/HTA) — 21 postes OSM" onclick="togPostesSources(this)"><span class="sq" style="background:#C28533;border:1px solid #3F5B3A"></span>Postes sources EDF</button>
@@ -3382,9 +3380,9 @@ const WMS={hyd:wmsHyd,emag:wmsEmag};
 // nécessaire ; la calibration RF, elle, ne dépend pas de ce toggle — calibrateRF() lit le
 // fichier directement au boot).
 // cert:true au boot (décision Soleil 2026-08-29) — les mesures certifiées ANFR/EXEM sont visibles
-// au démarrage maintenant qu'elles sont découplées des contributions smartphone. bt:false + bouton
-// b-bt masqué en prod (cf. commentaire au bouton) : couche visuelle retirée temporairement, le
-// terme BT du calcul ELF (loadBTLinesAsync / USE_BT_SEGMENTS) reste actif et inchangé.
+// au démarrage maintenant qu'elles sont découplées des contributions smartphone. bt:false = off par
+// défaut comme les autres couches non-core (ant/res/prod/...), remise en prod le 2026-08-30 (#1122
+// levé, cf. commentaire au bouton) : plus une exception, un layer standard qu'on active au clic.
 const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,res:false,prod:false,cert:true,contrib:false,crustal:false,openrad:false};
 
 // 'con' (scindé depuis en 'cert'+'contrib', 2026-08-29 item C) et 'emag' promues en Zone 1
@@ -8147,7 +8145,8 @@ async function loadReseau(){
 // Réseau BT — rendu statique (2026-08-30, brief "Option A couche BT statique", suite au
 // diagnostic _drafts/DIAGNOSTIC_BT_AFFICHAGE_STABILITE_2026-08-30.md, 4 questions arbitrées
 // par Soleil : GO Option A, zoom-gate conservé, perte tooltip acceptée, masquage prod #1122
-// NON levé). REMPLACE l'ancien fetch réseau par viewport (moveend/zoomend debounce + jeton de
+// levé le même jour une fois ce rendu vérifié stable — cf. commentaire au bouton b-bt).
+// REMPLACE l'ancien fetch réseau par viewport (moveend/zoomend debounce + jeton de
 // requête, instable au pan/dézoom — cf. historique dans DECISIONS.md/SUIVI_BRIEFS.md) par le
 // même patron que lForetDense (buildForetDenseLayer/_syncForetDenseZoom, cf. plus bas dans ce
 // fichier) : construction UNIQUE au chargement des données (loadBTLinesAsync, déjà appelée au
