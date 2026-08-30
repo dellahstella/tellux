@@ -1187,11 +1187,12 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .subgroup-toggle .accordion-cat-icon{width:11px;font-size:9px;}
 .subgroup-content{padding:0 2px;}
 .subgroup-content.open{padding:2px 2px 4px 2px;}
-/* Sous-sous-groupe (3e niveau — « Mesures citoyennes » dans « Repères et mesures externes »,
-   brief « exécution groupée » item C 2026-08-29). Léger retrait + filet gauche pour matérialiser
-   la hiérarchie ; toggleAccordion() reste générique. */
+/* .subgroup--nested (3e niveau d'accordéon) : introduit le 2026-08-29 (#1117) pour « Mesures
+   citoyennes », retiré le 2026-08-30 quand ce sous-sous-groupe a été dissous (Gamma citoyen muté,
+   Contributions smartphone remontées). Règles conservées, sans consommateur actuel — prêtes si un
+   3e niveau redevient nécessaire.
 .subgroup--nested{margin-left:8px;padding-left:6px;border-left:1px solid var(--border);}
-.subgroup--nested .subgroup-header{font-size:10px;}
+.subgroup--nested .subgroup-header{font-size:10px;} */
 /* Badges de statut par couche (brief "Affichage EM" 2026-08-26) : catégorise en un
    coup d'œil le rôle de la couche vis-à-vis du calcul Tellux, sans dépendre du survol
    du title= (déjà présent sur chaque bouton, conservé tel quel pour le détail complet). */
@@ -1913,7 +1914,11 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     <button class="domain-chip" data-domain-filter="statique" type="button" onclick="filterByDomain('statique')" title="Magnétique statique : géomagnétisme, anomalies crustales, susceptibilité lithologique">Statique</button>
     <button class="domain-chip" data-domain-filter="elf" type="button" onclick="filterByDomain('elf')" title="Magnétique basse fréquence ELF 50 Hz : lignes HT/BT, postes sources, production">ELF</button>
     <button class="domain-chip" data-domain-filter="rf" type="button" onclick="filterByDomain('rf')" title="Radiofréquences : antennes ANFR, émetteurs TDF">RF</button>
+    <!-- Chip « Ionisant » commenté le 2026-08-30 : sa seule couche (Gamma citoyen OpenRadiation,
+         data-domains="ionisant") a été mutée (destinée à radon.html). Sans couche cible, le filtre
+         vidait tout le menu. À restaurer si une couche ionisante revient dans app.html.
     <button class="domain-chip" data-domain-filter="ionisant" type="button" onclick="filterByDomain('ionisant')" title="Rayonnement ionisant : radon, sites U/Th">Ionisant</button>
+    -->
   </div>
 
   <!-- GROUPE 1 — MODÈLE EM (déplié par défaut) -->
@@ -2069,7 +2074,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
           <h5 class="subgroup-header">Repères et mesures externes</h5>
         </div>
         <div class="accordion-cat-content subgroup-content">
-          <p class="subgroup-text" title="Mesures certifiées ANFR/EXEM, Anomalies de référence mondiales (catalogue documentaire issu de la littérature) et, dans le sous-groupe Mesures citoyennes, les couches non certifiées (Gamma citoyen OpenRadiation + Contributions smartphone). Aucune de ces couches ne module le calcul composite Tellux affiché ; les fiches certifiées ont servi une fois à calibrer la constante k du modèle RF.">Mesures et repères externes — fiches certifiées, catalogue de comparaison, mesures citoyennes.</p>
+          <p class="subgroup-text" title="Mesures certifiées ANFR/EXEM, Anomalies de référence (catalogue documentaire issu de la littérature) et Contributions smartphone (non certifiées, capteurs hétérogènes). Aucune de ces couches ne module le calcul composite Tellux affiché ; les fiches certifiées ont servi une fois à calibrer la constante k du modèle RF.">Mesures et repères externes — fiches certifiées, catalogue de comparaison, contributions smartphone.</p>
           <!-- Couche « Émergences thermales » (b-therm) retirée le 2026-08-27 (brief "nettoyage
                Contexte naturel") — migrée vers radon.html (#1056), off par défaut là-bas, qui en
                devient l'unique affichage. THERMAL_SOURCES_CORSE (peuplée par loadSitesApp(), même
@@ -2088,8 +2093,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
                  public/data/cartoradio_certified_corse.json reste lu DIRECTEMENT par calibrateRF()
                  au boot (fetch propre, indépendant de ce toggle — vérifié) : la scission ne touche
                  QUE l'affichage.
-               • b-contrib → lCon seul, badge « Hors calcul » seul, dans le sous-groupe
-                 « Mesures citoyennes » (avec Gamma citoyen). -->
+               • b-contrib → lCon seul, badge « Hors calcul » seul. D'abord placé dans un
+                 sous-sous-groupe « Mesures citoyennes » (avec Gamma citoyen), remonté au niveau
+                 supérieur le 2026-08-30 quand Gamma citoyen a été muté (cf. plus bas). -->
           <button class="lbtn on-cert" id="b-cert" data-domains="rf" title="30 fiches de mesure certifiées ANFR/EXEM (2024–2026), extraites des PDF CartoRadio. Ont servi une fois à calibrer la constante k du modèle RF (calcul one-shot à l'initialisation, pas une modulation en direct par point). Affichées en losanges colorés selon la conformité (limite légale 28 V/m)." onclick="tog('cert','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Mesures certifiées (ANFR/EXEM)<span class="layer-badge layer-badge--calc">Calibration RF</span></button>
           <div class="mlegend-inline" id="mleg-cert"></div>
           <!-- Couche « Sites U/Th à mesurer » retirée de la carte publique le 2026-08-19 (décision
@@ -2117,25 +2123,25 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
           <button class="lbtn" id="b-crustal" data-domains="statique" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF), quantifiées (valeur nT, EMAG2v3 + littérature académique) — comparaison locale/mondiale. + 3 sites ophiolitiques corses (Albu, Nonza, Farinole) à anomalie magnétique documentée mais NON quantifiée (aucune mesure nT publiée) — échelle locale distincte, hors calcul." onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales &amp; Corse)<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
           <div class="mlegend-inline" id="mleg-crustal"></div>
 
-          <!-- Sous-sous-groupe « Mesures citoyennes » — brief « exécution groupée » item C, 2026-08-29.
-               Regroupe les deux couches non certifiées, affichage seul, hors du calcul : Gamma citoyen
-               (OpenRadiation, débit de dose γ/X) et Contributions smartphone (magnétomètre / signal
-               réseau des contributeurs Tellux). Les fiches certifiées ANFR/EXEM restent HORS de ce
-               sous-groupe (badge « Calibration RF », un cran au-dessus). 3e niveau d'accordéon :
-               toggleAccordion() est générique, .subgroup-content porte aussi .accordion-cat-content. -->
-          <div class="subgroup subgroup--nested">
-            <div class="accordion-cat-header subgroup-toggle" onclick="toggleAccordion(this)">
-              <span class="accordion-cat-icon">▶</span>
-              <h5 class="subgroup-header">Mesures citoyennes</h5>
-            </div>
-            <div class="accordion-cat-content subgroup-content">
-              <p class="subgroup-text" title="Mesures apportées par des contributeurs, sur capteurs hétérogènes non certifiés. Affichage seul : aucune n'entre dans le calcul composite ni dans les bornes de normalisation.">Non certifiées, capteurs hétérogènes — affichage seul, hors du calcul.</p>
-              <button class="lbtn" id="b-openrad" data-domains="ionisant" title="Mesures citoyennes de débit de dose gamma/X ambiant (OpenRadiation, tubes Geiger, µSv/h). Gamma/X, PAS radon. Couche d'affichage indépendante — non injectée dans l'indice ni le calcul gamma. Indicatives, capteurs hétérogènes, non certifiées ; inclut des traces (densité ≠ nombre de sites)." onclick="tog('openrad','on-openrad',this)"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Gamma citoyen (OpenRadiation)<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
-              <div class="mlegend-inline" id="mleg-openrad"></div>
-              <button class="lbtn" id="b-contrib" data-domains="statique rf" title="Contributions terrain des utilisateurs Tellux : magnétomètre smartphone (nT), signal réseau/WiFi (dBm), relevés au capteur externe. Cercles violets, en cluster. Affichage seul — jamais lues par aucun calcul." onclick="tog('contrib','on-contrib',this)"><span class="dot" style="background:#5c3a9b"></span>Contributions smartphone<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
-              <div class="mlegend-inline" id="mleg-contrib"></div>
-            </div>
-          </div>
+          <!-- Contributions smartphone — non certifiées, capteurs hétérogènes, affichage seul (hors calcul).
+               Remontée au niveau supérieur de « Repères et mesures externes » le 2026-08-30 (décision
+               Soleil) : le sous-sous-groupe « Mesures citoyennes » créé le 2026-08-29 (#1117) est dissous
+               car il ne restait qu'une couche. -->
+          <button class="lbtn" id="b-contrib" data-domains="statique rf" title="Contributions terrain des utilisateurs Tellux : magnétomètre smartphone (nT), signal réseau/WiFi (dBm), relevés au capteur externe. Cercles violets, en cluster. Affichage seul — jamais lues par aucun calcul." onclick="tog('contrib','on-contrib',this)"><span class="dot" style="background:#5c3a9b"></span>Contributions smartphone<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
+          <div class="mlegend-inline" id="mleg-contrib"></div>
+
+          <!-- Couche « Gamma citoyen (OpenRadiation) » (b-openrad) MUTÉE dans app.html le 2026-08-30
+               (décision Soleil) : destinée à radon.html plus tard (débit de dose γ/X ambiant, cohérent
+               avec le domaine radiologique de radon.html, pas avec la carte EM). Code MORT conservé pour
+               migration : lOpenRad / LAYERS.openrad / ACTIVE.openrad / LAYER_DOC_ANCHORS.openrad /
+               LEGEND_HTML.openrad / .on-openrad / loadOpenRad() / le handler tog('openrad') / i18n
+               openrad_* — tous intacts. Le fichier public/data/openradiation_gamma_corse.geojson reste
+               en place. Pour restaurer ici : décommenter le bouton ci-dessous. NB : b-openrad était la
+               seule couche du domaine « ionisant » → le chip de filtre « Ionisant » est aussi commenté
+               (cf. .domain-chips plus haut).
+          <button class="lbtn" id="b-openrad" data-domains="ionisant" title="Mesures citoyennes de débit de dose gamma/X ambiant (OpenRadiation, tubes Geiger, µSv/h). Gamma/X, PAS radon. Couche d'affichage indépendante — non injectée dans l'indice ni le calcul gamma. Indicatives, capteurs hétérogènes, non certifiées ; inclut des traces (densité ≠ nombre de sites)." onclick="tog('openrad','on-openrad',this)"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Gamma citoyen (OpenRadiation)<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
+          <div class="mlegend-inline" id="mleg-openrad"></div>
+          -->
           <!-- TODO backlog couches : Communes radon niveau 3 overlay (GeoJSON geometries à fournir), MNT altitude overlay -->
         </div>
       </div>
@@ -10489,14 +10495,13 @@ function capCleanup(){
 ["chip_statique_tt",".domain-chip[data-domain-filter='statique']","title","Magnétique statique : géomagnétisme, anomalies crustales, susceptibilité lithologique","Magneticu staticu : geomagnetismu, anumalie crustale, suscettibilità litulogica","Static magnetic: geomagnetism, crustal anomalies, lithological susceptibility"],
 ["chip_elf_tt",".domain-chip[data-domain-filter='elf']","title","Magnétique basse fréquence ELF 50 Hz : lignes HT/BT, postes sources, production","Magneticu à bassa frequenza ELF 50 Hz : linee HT/BT, posti surgente, pruduzzione","Low-frequency magnetic ELF 50 Hz: HT/BT lines, substations, generation"],
 ["chip_rf_tt",".domain-chip[data-domain-filter='rf']","title","Radiofréquences : antennes ANFR, émetteurs TDF","Radiofrequenze : antenne ANFR, emettitori TDF","Radiofrequency: ANFR antennas, TDF transmitters"],
-["chip_ionisant",".domain-chip[data-domain-filter='ionisant']","","Ionisant","Ionizante","Ionizing"],
-["chip_ionisant_tt",".domain-chip[data-domain-filter='ionisant']","title","Rayonnement ionisant : radon, sites U/Th","Radiazione ionizante : radon, siti U/Th","Ionizing radiation: radon, U/Th sites"],
+// chip_ionisant / chip_ionisant_tt retirés le 2026-08-30 (chip « Ionisant » commenté, cf. .domain-chips).
 ["cat_modele",".accordion-cat-header > span:nth-child(2)@0","","Modèle EM","Mudellu EM","EM model"],
 ["cat_anthropique",".accordion-cat-header > span:nth-child(2)@1","","Sources anthropiques","Fonti antropiche","Anthropogenic sources"],
 ["cat_naturel",".accordion-cat-header > span:nth-child(2)@2","","Contexte naturel","Cuntestu naturale","Natural context"],
 ["subgroup_a",".subgroup-header@0","","Substrat et paysage","Sustratu è paisaghju","Substrate and landscape"],
 ["subgroup_b",".subgroup-header@1","","Repères et mesures externes","Puntelli è misure esterne","External references and measurements"],
-["subgroup_c",".subgroup-header@2","","Mesures citoyennes","Misure citadine","Citizen measurements"],
+// subgroup_c (« Mesures citoyennes », .subgroup-header@2) retiré le 2026-08-30 — sous-sous-groupe dissous.
 ["lyr_hot","#b-hot","","Champ magnétique composite (nT)","Campu magneticu cumpostu (nT)","Composite magnetic field (nT)"],
 ["lyr_hot_tt","#b-hot","title","Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. Estimation du modèle Tellux, pas une mesure.","Campu magneticu cumpostu — ELF 50 Hz (rete elettrica) + suscettibilità di u sustratu, espressu in nT. Stima di u mudellu Tellux, micca una misura.","Composite magnetic field — ELF 50 Hz (electrical grid) + substrate susceptibility, expressed in nT. Tellux model estimate, not a measurement."],
 ["lyr_hotrf","#b-hot-rf","","Champ électrique RF (V/m)","Campu elettricu RF (V/m)","RF electric field (V/m)"],
