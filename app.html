@@ -3222,49 +3222,41 @@ if (TLX_RM_QUERY && typeof TLX_RM_QUERY.addEventListener === 'function') {
 // un bouton "recentrer sur la Corse" (control Leaflet topleft, sous le zoom) — la
 // carte reste pannable/zoomable librement, comme n'importe quelle carte Leaflet
 // standard sans bounds.
-// Fond unique : IGN Plan V2 — Géoplateforme (sans clé, depuis bascule 2024).
-// ═══ FONDS DE CARTE — 3 options (CartoDB clair par défaut + 2 IGN) ═══
-// CartoDB Positron (variante dark/light) : fond par défaut, sobre, laisse les
-// couches Tellux respirer. IGN Plan V2 et IGN Ortho sont proposés en alternative
-// via un L.control.layers en haut à droite de la carte.
-// Les tiles CartoDB swap d'URL au toggle dark via setUrl (pas de recréation du
-// layer — le control garde sa référence). IGN Plan / Ortho n'ont pas de variante
-// dark native : le toggle dark ne les affecte pas.
-// Fond CartoDB Positron — NON ajouté par défaut depuis le 2026-08-28 (bug « API key
-// required » signalé par Soleil : les tuiles anonymes basemaps.cartocdn.com sont un
-// service gratuit sans garantie, throttlé sous charge, et l'app n'avait aucun fallback).
-// Reste disponible dans le sélecteur (« Carte claire ») ; redeviendra le défaut si une
-// clé API CARTO est câblée (compte gratuit Soleil, cf. DIAGNOSTIC_ERSA_APIKEY_2026-08-28.md).
-const _tileBase=L.tileLayer(
-  DARK ? 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png'
-       : 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
-  {attribution:'© CartoDB © OSM',maxZoom:18,zIndex:1,subdomains:'abcd'}
-);
-const _tileLabels=L.tileLayer(
-  DARK ? 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png'
-       : 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',
-  {zIndex:10,attribution:'',subdomains:'abcd'}
-);
+// ═══ FONDS DE CARTE — 2 options (Esri Light Gray par défaut + IGN Plan fallback) ═══
+// Bascule du 2026-08-30 (arbitrage Soleil après évaluation comparative de 4 candidats
+// la même session — cf. SUIVI_BRIEFS.md 2026-08-30 « bascule définitive vers Esri »).
+// Esri World Light Gray Canvas : raster JPEG pur (Web Mercator), aucune dépendance JS
+// nouvelle, aucun défaut de rendu constaté aux zooms testés (jusqu'à z13, y compris la
+// zone Golfe de Sagone-Ajaccio où IGN Plan échoue, cf.
+// _drafts/DIAGNOSTIC_ESRI_LIGHTGRAY_2026-08-30.md). Réserve connue et acceptée : service
+// en statut Esri « mature support » (gelé depuis ~2021, pas de date de retrait annoncée)
+// — filet de secours déjà posé en dette privée BASEMAP-OPENFREEMAP-ALTERNATIVE-001 si ce
+// fond doit être remplacé un jour. Pas de variante dark native (raster fixe) : le toggle
+// dark ne l'affecte pas, comme IGN Plan.
+// CartoDB (« Carte claire ») retiré le 2026-08-30 : service anonyme confirmé cassé
+// (watermark « API key required » sur la quasi-totalité des tuiles fraîches depuis fin
+// août 2026, cf. _drafts/DIAGNOSTIC_CARTODB_APIKEY_2026-08-30.md) — pas de valeur à
+// garder un fond qui affiche un filigrane à l'utilisateur.
+// IGN Ortho retiré du sélecteur le 2026-08-30, remplacé comme défaut par Esri.
+const _tileEsriLightGray=L.tileLayer(
+  'https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+  {attribution:'Esri, HERE, Garmin, © OpenStreetMap contributors, and the GIS user community',maxNativeZoom:16,maxZoom:20,zIndex:1}
+).addTo(map);
 
-// IGN Plan V2 — fond détaillé (Géoplateforme WMTS, aucune clé API requise)
+// IGN Plan V2 — fond détaillé (Géoplateforme WMTS, aucune clé API requise). Fallback,
+// pas par défaut. Défaut de rendu localisé connu (trou blanc z9-z10, région Golfe de
+// Sagone-Ajaccio, cf. _drafts/DIAGNOSTIC_IGN_PLAN_DEFAUT_RENDU_2026-08-30.md) — gardé
+// quand même dans le sélecteur (arbitrage Soleil 2026-08-30) : alternative valable
+// ailleurs sur l'île, défaut circonscrit à une zone/zoom précis.
 const _tileIGNPlan=L.tileLayer(
   'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
   {attribution:'Plan IGN V2 © IGN/Géoplateforme',maxNativeZoom:18,maxZoom:20,zIndex:1}
 );
 
-// IGN Orthophotos — vue satellite haute résolution (Géoplateforme WMTS, sans clé)
-// Fond PAR DÉFAUT depuis le 2026-08-28 (arbitrage Soleil : IGN Plan V2 jugé trop chargé
-// pour l'overlay des couches Tellux, CARTO en attente de clé API).
-const _tileIGNOrtho=L.tileLayer(
-  'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
-  {attribution:'Orthophotos © IGN/Géoplateforme',maxNativeZoom:19,maxZoom:20,zIndex:1}
-).addTo(map);
-
-// Sélecteur de fond — 3 fonds disponibles, IGN Ortho actif par défaut
+// Sélecteur de fond — 2 fonds disponibles, Esri Light Gray actif par défaut
 const _baseLayers={
-  'IGN Ortho':_tileIGNOrtho,
-  'IGN Plan':_tileIGNPlan,
-  'Carte claire':_tileBase
+  'Esri Light Gray':_tileEsriLightGray,
+  'IGN Plan':_tileIGNPlan
 };
 L.control.layers(_baseLayers,null,{position:'topright',collapsed:true}).addTo(map);
 
@@ -3289,18 +3281,11 @@ L.control.layers(_baseLayers,null,{position:'topright',collapsed:true}).addTo(ma
   recenterCtl.addTo(map);
 })();
 
-// Labels CartoDB : actifs uniquement avec le fond Carte claire.
-// IGN Plan / Ortho ont leur propre toponymie intégrée.
 // _geoOpacityUserSet/GEO_OPACITY_DEFAULT/GEO_OPACITY_ORTHO/_setGeoOpacitySlider() et le bump
 // auto d'opacité sur fond IGN Ortho — retirés le 2026-08-20 avec wmsGeo (couche « Géologie
 // BRGM » migrée sur radon.html) : plus de couche geo sur cette carte à ajuster.
-map.on('baselayerchange',function(e){
-  if(e.layer===_tileBase){
-    if(_tileLabels&&!map.hasLayer(_tileLabels))map.addLayer(_tileLabels);
-  }else{
-    if(_tileLabels&&map.hasLayer(_tileLabels))map.removeLayer(_tileLabels);
-  }
-});
+// Handler baselayerchange (swap labels CartoDB) retiré le 2026-08-30 avec CartoDB —
+// Esri Light Gray et IGN Plan ont chacun leur toponymie native intégrée aux tuiles.
 const wmsHyd=L.tileLayer.wms('https://geoservices.brgm.fr/risques',{layers:'REMNAPPE_FR',format:'image/png',transparent:true,opacity:0.55,zIndex:3,maxNativeZoom:11});
 // wmsCav (Cavités) retirée le 2026-08-20, migrée sur radon.html.
 // wmsForet (Forêts publiques ONF via WMS Géoplateforme) retirée complètement le 2026-08-27
@@ -8706,22 +8691,15 @@ document.addEventListener('keydown', function(e){
 });
 try{if(!localStorage.getItem('tellux_disclaimer')){var d=document.getElementById('disclaimer-overlay');d.style.display='flex';d.setAttribute('aria-hidden','false');}}catch(e){var d=document.getElementById('disclaimer-overlay');d.style.display='flex';d.setAttribute('aria-hidden','false');}
 
-// Dark mode toggle — CartoDB a une variante dark native (fond + labels),
-// swap d'URL via setUrl sans recréer les layers (le control layers garde sa ref).
-// IGN Plan / Ortho n'ont pas de variante dark : ne rien changer côté IGN.
+// Dark mode toggle — ni Esri Light Gray ni IGN Plan n'ont de variante dark native
+// (rasters fixes) : le toggle ne touche plus le fond de carte depuis le retrait de
+// CartoDB le 2026-08-30 (qui avait fond+labels dark via setUrl). Reste utile pour le
+// chrome UI (panneaux, texte) piloté par data-theme.
 function toggleTheme(){
   DARK=!DARK;
   document.documentElement.setAttribute('data-theme',DARK?'dark':'');
   const _tt=document.getElementById('theme-toggle');if(_tt)_tt.textContent=DARK?'☀️':'🌙';
   try{localStorage.setItem('tellux_theme',DARK?'dark':'light');}catch(e){}
-  _tileBase.setUrl(
-    DARK ? 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png'
-         : 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
-  );
-  if(_tileLabels) _tileLabels.setUrl(
-    DARK ? 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png'
-         : 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png'
-  );
 }
 
 function toggleMethodology(){
