@@ -2729,6 +2729,7 @@ var JS_STRINGS_EN = {
   bt_line_aerien: "Overhead BT line · EDF SEI",
   bt_line_souterrain: "Underground BT line · EDF SEI",
   legende_generic: "Legend",
+  foretdense_zoom_hint: "Dense forest — layer shown from zoom 10 (too extensive at small scale); the calculation stays active.",
   cert_toast_prefix: "Certified measurements — ",
   cert_toast_suffix: " ANFR/EXEM sheets (2024–2026).",
   contrib_toast_prefix: "Smartphone contributions — ",
@@ -3338,6 +3339,12 @@ const lOpenRad=L.layerGroup();
 // mesuré nettement plus rapide à peindre en canvas qu'en SVG pour ce volume de géométrie.
 const _foretDenseCanvas=L.canvas({padding:0.5});
 const lForetDense=L.layerGroup();
+// Zoom-gate visuel (2026-08-30, décision Soleil) : même logique que le réseau BT — à petite
+// échelle la couche (~28,5 % de la Corse, 5 680 parties) sature la carte sans rien apprendre.
+// N'affecte QUE l'affichage : le calcul (calcVegetationAttenuation via ACTIVE.foretdense) reste
+// actif quel que soit le zoom. _syncForetDenseZoom() est défini près de buildForetDenseLayer().
+const FORET_DENSE_MIN_ZOOM=10;
+let _foretDenseZoomHintShown=false;
 // SCISSION 2026-08-29 (brief « exécution groupée », item C) : con → cert (lCert, fiches
 // certifiées ANFR/EXEM) + contrib (lCon, contributions citoyennes). Deux boutons, deux toggles.
 const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,cert:lCert,contrib:lCon,foretdense:lForetDense,crustal:lCrustal,openrad:lOpenRad};
@@ -3948,13 +3955,17 @@ function tog(id,cls,btn){
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='none';
     if(id==='emag')document.getElementById('emag-op-row').style.display='none';
     if(id==='crustal')showCrustalGauge(false);
+    if(id==='foretdense')_foretDenseZoomHintShown=false;
     showLegend(id,false);
   }else{WMS[id]?map.addLayer(WMS[id]):map.addLayer(LAYERS[id]);ACTIVE[id]=true;if(btn)btn.classList.add(cls);
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='flex';
     if(id==='emag')document.getElementById('emag-op-row').style.display='flex';
     if(id==='hot'&&lHot.getLayers().length===0)buildHot();
     if(id==='hotrf'&&lHotRF.getLayers().length===0)buildHotRF();
-    if(id==='foretdense'&&lForetDense.getLayers().length===0)loadForetDenseGrid().then(buildForetDenseLayer);
+    if(id==='foretdense'){
+      if(lForetDense.getLayers().length===0)loadForetDenseGrid().then(buildForetDenseLayer);
+      else _syncForetDenseZoom(true);
+    }
     if(id==='crustal'){if(lCrustal.getLayers().length===0)buildCrustalLayer();showCrustalGauge(true);}
     if(id==='openrad'&&lOpenRad.getLayers().length===0)loadOpenRad();
     // tour/indu/cast/pont : couches patrimoniales migrées vers patrimoine.html
@@ -8241,6 +8252,26 @@ function buildForetDenseLayer(){
     renderer:_foretDenseCanvas,
     style:{color:'#1b5e3f',weight:0.8,opacity:0.6,fillColor:'#3a7d5c',fillOpacity:0.13,interactive:false}
   }).addTo(lForetDense);
+  _syncForetDenseZoom(true);
+}
+// _syncForetDenseZoom(fromToggle) — applique le zoom-gate visuel de la couche forêt dense.
+// Ne touche jamais ACTIVE.foretdense (le bouton reste actif, le calcul aussi) : seule la
+// présence de lForetDense sur la carte est pilotée. fromToggle=true → toujours afficher
+// l'info si la couche est masquée par le zoom (feedback au clic sur le bouton) ;
+// sinon on ne la répète pas à chaque dézoom.
+function _syncForetDenseZoom(fromToggle){
+  if(typeof ACTIVE==='undefined'||!ACTIVE.foretdense)return;
+  const visible=map.getZoom()>=FORET_DENSE_MIN_ZOOM;
+  if(visible){
+    if(!map.hasLayer(lForetDense))map.addLayer(lForetDense);
+    _foretDenseZoomHintShown=false;
+  }else{
+    if(map.hasLayer(lForetDense))map.removeLayer(lForetDense);
+    if(fromToggle||!_foretDenseZoomHintShown){
+      info(jt('foretdense_zoom_hint','Forêt dense — couche visible à partir du zoom 10 (trop étendue à petite échelle) ; le calcul reste actif.'),null,4500);
+      _foretDenseZoomHintShown=true;
+    }
+  }
 }
 
 function exportTerrainCSV(){
@@ -8750,6 +8781,8 @@ let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.hotrf){lHotRF.clearLayers();buildHotRF();}},300);}
 map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
+// Zoom-gate visuel de la couche forêt dense (décision Soleil 2026-08-30) — cf. _syncForetDenseZoom.
+map.on('zoomend',function(){ _syncForetDenseZoom(false); });
 setTimeout(()=>Promise.all([loadAnt(),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.cert)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k)
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET DUR/EBR/CLF (nom loadAQU conservé, cf. commentaire fonction) — correction externe réelle niveau 1
