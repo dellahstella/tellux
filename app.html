@@ -1449,7 +1449,20 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 #legende-content > section + section{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
 #legende-content .legende-section-title{font-family:var(--font-display,var(--font));font-size:11px;font-weight:600;color:var(--tx-mica,var(--tx3));margin:0 0 8px;letter-spacing:.06em;text-transform:uppercase;}
 #legende-content #conditions-panel{margin-bottom:0;}
+#legende-content{overscroll-behavior:contain;}
 #legende-content #tellux-leg-panel{position:static;background:transparent!important;border:none!important;border-radius:0!important;box-shadow:none!important;padding:0!important;margin:0!important;max-width:none!important;max-height:none!important;overflow:visible!important;}
+/* Accordéon des légendes core (2026-08-29) : nom de couche = résumé cliquable style lien, déplie
+   le bloc + le renvoi corpus. Panneau « ? » = index compact, pas un mur de texte. */
+#legende-content .leg-acc{border-top:1px solid rgba(0,0,0,.07);}
+#legende-content .leg-acc:first-child{border-top:none;}
+#legende-content .leg-acc-sum{cursor:pointer;list-style:none;padding:7px 0;font-weight:600;font-size:11px;letter-spacing:.03em;color:var(--tx-maquis,#3F5B3A);display:flex;align-items:center;gap:6px;}
+#legende-content .leg-acc-sum::-webkit-details-marker{display:none;}
+#legende-content .leg-acc-sum::before{content:"\25B8";font-size:9px;color:var(--tx-mica,var(--tx3));transition:transform .15s;}
+#legende-content .leg-acc[open] .leg-acc-sum::before{transform:rotate(90deg);}
+#legende-content .leg-acc-sum:hover{color:var(--tx-ocre,#C28533);}
+#legende-content .leg-acc-body{padding:0 0 9px 15px;}
+[data-theme="dark"] #legende-content .leg-acc{border-top-color:rgba(255,255,255,.09);}
+[data-theme="dark"] #legende-content .leg-acc-sum{color:var(--maquis-clair,#8fb987);}
 /* Jauge crustale intégrée au panneau « ? » — brief « exécution groupée » item B, 2026-08-29.
    Plus un contrôle Leaflet flottant (chevauchait le panneau). Rendue comme une section du « ? ». */
 #legende-content #crustal-gauge-panel{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
@@ -2715,6 +2728,7 @@ var JS_STRINGS_EN = {
   bt_truncated_suffix: " — zoom in for the full detail",
   bt_line_aerien: "Overhead BT line · EDF SEI",
   bt_line_souterrain: "Underground BT line · EDF SEI",
+  legende_generic: "Legend",
   cert_toast_prefix: "Certified measurements — ",
   cert_toast_suffix: " ANFR/EXEM sheets (2024–2026).",
   contrib_toast_prefix: "Smartphone contributions — ",
@@ -3378,6 +3392,18 @@ const LEGEND_ACTIVE_CONTEXT=[];
 // sont génériques ("En savoir plus") ou repris d'un intitulé de section publié verbatim.
 // btnIdFor : la clé de légende ≠ l'id du bouton pour hotrf (b-hot-rf) et postesSources (b-postes).
 function btnIdFor(id){ return id==='hotrf'?'b-hot-rf':id==='postesSources'?'b-postes':'b-'+id; }
+// coreLegLabel : intitulé court d'une couche core = le libellé visible de son bouton menu
+// (badges retirés), pas une reformulation — même principe anti-drift que updateInlineLegendMobile.
+function coreLegLabel(id){
+  const btn=document.getElementById(btnIdFor(id));
+  if(!btn)return jt('legende_generic','Légende');
+  const c=btn.cloneNode(true);
+  c.querySelectorAll('.layer-badge').forEach(b=>b.remove());
+  return (c.textContent||'').trim()||jt('legende_generic','Légende');
+}
+// _legAccOpen : dernière couche core basculée « on » — ouverte d'office dans l'accordéon du « ? »
+// (les autres restent repliées : le panneau est un index cliquable, pas un mur de texte).
+let _legAccOpen=null;
 const LEGEND_ACTIVE_DOCREFS=new Set();
 const LAYER_DOC_ANCHORS={
   hot:        [{href:'/cadre-scientifique.html#objets-composites'}],
@@ -3811,7 +3837,14 @@ function updateLegendPanel(){
       corePanel.innerHTML='';
     }else{
       corePanel.style.display='block';
-      corePanel.innerHTML=coreActive.map((id,i)=>(i>0?'<div style="height:1px;background:rgba(0,0,0,.06);margin:8px 0"></div>':'')+legendHtmlFor(id)).join('');
+      // Accordéon (2026-08-29) : chaque couche core = son nom (résumé cliquable, style lien) qui
+      // déplie le bloc de légende + le renvoi corpus. Repli par défaut sauf la dernière basculée
+      // (_legAccOpen) — le panneau « ? » redevient un index compact plutôt qu'un mur de texte.
+      if(_legAccOpen&&!coreActive.includes(_legAccOpen))_legAccOpen=null;
+      const accOpen=_legAccOpen||coreActive[coreActive.length-1];
+      corePanel.innerHTML=coreActive.map(id=>'<details class="leg-acc"'+(id===accOpen?' open':'')+'>'+
+        '<summary class="leg-acc-sum">'+coreLegLabel(id)+'</summary>'+
+        '<div class="leg-acc-body">'+legendHtmlFor(id)+'</div></details>').join('');
     }
   }
   // Repères documentaires (2026-08-28) : rendus dans #tellux-leg-docrefs, pour TOUTE couche
@@ -3881,7 +3914,8 @@ function showLegend(id,show){
     if(show)LEGEND_ACTIVE_DOCREFS.add(id);else LEGEND_ACTIVE_DOCREFS.delete(id);
   }
   if(LEGEND_CORE_IDS.has(id)){
-    if(show)LEGEND_ACTIVE_CORE.add(id);else LEGEND_ACTIVE_CORE.delete(id);
+    if(show){LEGEND_ACTIVE_CORE.add(id);_legAccOpen=id;}
+    else{LEGEND_ACTIVE_CORE.delete(id);if(_legAccOpen===id)_legAccOpen=null;}
   }else{
     const idx=LEGEND_ACTIVE_CONTEXT.indexOf(id);
     if(show){
