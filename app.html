@@ -2051,7 +2051,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
                foret_dense_corse.geojson (BD Forêt V2, #1038) alimentait calcVegetationAttenuation()
                (RF, clic carte) sans aucune couche visible correspondante. Cf.
                buildForetDenseLayer()/lForetDense plus bas dans ce fichier. -->
-          <button class="lbtn" id="b-foretdense" data-domains="rf" title="BD Forêt V2 IGN — couvert arboré dense (canopée >40%). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6) dans le calcul au clic carte ; le désactiver la retire." onclick="tog('foretdense','on-foretdense',this)"><span class="sq" style="background:#0e7490"></span>Forêt dense (atténuation RF)<span class="layer-badge layer-badge--calc">Module le calcul</span></button>
+          <button class="lbtn" id="b-foretdense" data-domains="rf" title="BD Forêt V2 IGN — couvert arboré dense (canopée >40%). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6) dans le calcul au clic carte ; le désactiver la retire." onclick="tog('foretdense','on-foretdense',this)"><span class="sq" style="background:#3a7d5c;border:1px solid #1b5e3f"></span>Forêt dense (atténuation RF)<span class="layer-badge layer-badge--calc">Module le calcul</span></button>
           <div class="mlegend-inline" id="mleg-foretdense"></div>
           <!-- Couche « Forêts publiques » (b-foret, ONF via WMS IGN) retirée complètement le
                2026-08-27 (décision Soleil, brief court "la couche forêt publique n'est plus utile
@@ -8225,14 +8225,20 @@ function buildForetDenseLayer(){
       coordinates:FORET_DENSE_PARTS.map(function(part){return part.rings;})
     }
   };
-  // Style revu 2026-08-29 (bug « invisible sur fond ortho ») : l'ancien vert maquis #3F5B3A à
-  // fillOpacity .35 + contour 0,5 px se confondait avec la végétation de l'orthophoto (vert sur
-  // vert). Contour cyan tireté (#0e7490, weight 2) + remplissage très léger — le cyan est absent
-  // de la palette naturelle de l'ortho ET des conventions cartographiques de l'IGN Plan (l'eau y
-  // est bleu franc, pas cyan), donc lisible sur les deux fonds. Testé en preview sur ortho + plan.
+  // Style revu 2026-08-30 (brief Soleil : « ressemble à des cours d'eau à zoom large »). Le contour
+  // CYAN TIRETÉ du 2026-08-29 (#1114, choisi pour être lisible sur ortho + IGN Plan) se lisait comme
+  // un réseau hydrographique — le tireté = convention « ligne / cours d'eau », le cyan = convention
+  // « eau ». Retour à un vert forêt : contour fin PLEIN (pas de dashArray → lecture « zone », pas
+  // « objet linéaire ») + remplissage léger. Vert émeraude foncé #1b5e3f, distinct du vert-jaune de
+  // la végétation ortho ET du bleu franc de l'eau (ortho + IGN Plan). À fort nombre de polygones
+  // (~2 880), la trame des contours fins compose une brume verte texturée sur les zones boisées —
+  // informatif, pas alarmant. Testé preview ortho + plan.
+  // NB couverture : cette couche = BD Forêt V2 « forêt fermée » (FF*, ≥ 40 % de couvert) ≈ 59 % de
+  // la Corse — fidèle à la source, pas une inflation du pipeline. Resserrement des classes en
+  // attente d'arbitrage Soleil (cf. _drafts/DIAGNOSTIC_FORET_DENSE_2026-08-30.md).
   L.geoJSON(geojson,{
     renderer:_foretDenseCanvas,
-    style:{color:'#0e7490',weight:2,opacity:0.95,fillColor:'#0e7490',fillOpacity:0.08,dashArray:'5 3',interactive:false}
+    style:{color:'#1b5e3f',weight:0.8,opacity:0.6,fillColor:'#3a7d5c',fillOpacity:0.13,interactive:false}
   }).addTo(lForetDense);
 }
 
