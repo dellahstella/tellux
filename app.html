@@ -2747,8 +2747,14 @@ var JS_STRINGS_EN = {
   reseau_osm_prefix: "OSM grid: ",
   reseau_osm_suffix: " lines",
   hta_indisponible: "HTA: unavailable",
-  bt_zoom_hint: "Zoom in to see the BT grid (zoom ≥ 10)",
+  bt_zoom_hint: "BT grid — layer shown from zoom 10 (too dense at small scale); the calculation stays active.",
   bt_loading: "Loading BT grid…",
+  bt_indisponible: "BT: unavailable",
+  // bt_truncated_suffix / bt_line_aerien / bt_line_souterrain : orphelines depuis le passage au
+  // rendu statique (2026-08-30, brief "Option A couche BT statique") — l'ancien fetch par
+  // viewport et son tooltip par segment ont été retirés (cf. buildBTStaticLayer). Conservées sans
+  // suppression (pas de nettoyage non demandé, A.6/A.5bis) ; à retirer dans un futur ménage i18n
+  // explicitement briefé si elles restent inutilisées.
   bt_truncated_suffix: " — zoom in for the full detail",
   bt_line_aerien: "Overhead BT line · EDF SEI",
   bt_line_souterrain: "Underground BT line · EDF SEI",
@@ -3980,6 +3986,7 @@ function tog(id,cls,btn){
     if(id==='emag')document.getElementById('emag-op-row').style.display='none';
     if(id==='crustal')showCrustalGauge(false);
     if(id==='foretdense')_foretDenseZoomHintShown=false;
+    if(id==='bt')_btZoomHintShown=false;
     showLegend(id,false);
   }else{WMS[id]?map.addLayer(WMS[id]):map.addLayer(LAYERS[id]);ACTIVE[id]=true;if(btn)btn.classList.add(cls);
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='flex';
@@ -3995,7 +4002,10 @@ function tog(id,cls,btn){
     // tour/indu/cast/pont : couches patrimoniales migrées vers patrimoine.html
     if(id==='res'&&lRes.getLayers().length===0)loadReseau();
     if(id==='prod'&&lProd.getLayers().length===0)loadProd();
-    if(id==='bt'&&lBT.getLayers().length===0)loadBT();
+    if(id==='bt'){
+      if(lBT.getLayers().length===0)loadBT();
+      else _syncBTZoom(true);
+    }
     if(id==='ant'&&lAnt.getLayers().length===0)loadAnt();
     if(id==='cert'){
       // Fiches certifiees ANFR/EXEM : chargement + rendu dans lCert (deja ajoute a la carte par
@@ -4949,6 +4959,11 @@ let SEGMENT_GRID = null;
 // Grille BT (chargement asynchrone, dette BT-ELF-001)
 let BT_SEGMENTS_DATA = null;
 let BT_SEGMENT_GRID  = null;
+// BT_LINES_RAW : lignes brutes groupées (pts + type), distinctes de BT_SEGMENTS_DATA
+// (aplatissement en segments élémentaires pour le calcul, cf. buildBTSegmentGrid). BT_LINES_RAW
+// sert UNIQUEMENT au rendu visuel statique (buildBTStaticLayer, couche lBT) — les deux structures
+// coexistent à dessein (2026-08-30, brief "Option A couche BT statique").
+let BT_LINES_RAW = null;
 
 function tileKey(lat, lon) {
   return Math.floor(lat / TILE_SIZE_DEG) + ',' + Math.floor(lon / TILE_SIZE_DEG);
@@ -5097,42 +5112,52 @@ function getBTSegmentsNear(lat, lon) {
 
 // Chargement asynchrone bt_lines sur bbox Corse complète (Option C)
 // Non bloquant : les clics avant la fin retournent HTA + BT_ZONES proxy uniquement.
-let _btLinesCalcLoading = false;
-async function loadBTLinesAsync() {
-  if (_btLinesCalcLoading || BT_SEGMENTS_DATA) return;
-  _btLinesCalcLoading = true;
-  try {
-    console.log('[Tellux] Chargement asynchrone bt_lines (calcul ELF)...');
-    const t0 = performance.now();
-    // Bbox Corse complète — colonnes clat/clon indexées dans bt_lines
-    const base = SB_URL + '/rest/v1/bt_lines?select=pts'
-      + '&clat=gte.41.3&clat=lte.43.1&clon=gte.8.5&clon=lte.9.7';
-    let all = [], offset = 0;
-    const PAGE = 1000;
-    while (true) {
-      const r = await fetch(base + '&order=id&limit=' + PAGE + '&offset=' + offset,
-        { headers: { apikey: SB_KEY, 'Authorization': 'Bearer ' + SB_KEY,
-                     'Range': offset + '-' + (offset + PAGE - 1), 'Range-Unit': 'items' } });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const page = await r.json();
-      if (!Array.isArray(page) || page.length === 0) break;
-      all = all.concat(page);
-      if (page.length < PAGE) break;
-      offset += PAGE;
+// Promesse partagée (2026-08-30, brief "Option A couche BT statique") : le boot déclenche ce
+// chargement en fire-and-forget (setTimeout(loadBTLinesAsync,200), x2, cf. préchargement HTA) ;
+// loadBT() (rendu visuel) a maintenant besoin d'ATTENDRE la même donnée de façon fiable si
+// l'utilisateur active la couche avant la fin du chargement boot. Remplace l'ancien garde booléen
+// (qui renvoyait undefined sans rien à attendre) par une promesse mise en cache et réutilisée par
+// tout appelant, boot ou toggle, sans jamais déclencher un second fetch réseau.
+let _btLinesPromise = null;
+function loadBTLinesAsync() {
+  if (_btLinesPromise) return _btLinesPromise;
+  if (BT_SEGMENTS_DATA) return Promise.resolve();
+  _btLinesPromise = (async () => {
+    try {
+      console.log('[Tellux] Chargement asynchrone bt_lines (calcul ELF)...');
+      const t0 = performance.now();
+      // Bbox Corse complète — colonnes clat/clon indexées dans bt_lines
+      // ,type conservé (2026-08-30) : sert au rendu statique aérien/souterrain (buildBTStaticLayer),
+      // sans requête séparée — les deux besoins (calcul + rendu) partagent désormais ce seul fetch.
+      const base = SB_URL + '/rest/v1/bt_lines?select=pts,type'
+        + '&clat=gte.41.3&clat=lte.43.1&clon=gte.8.5&clon=lte.9.7';
+      let all = [], offset = 0;
+      const PAGE = 1000;
+      while (true) {
+        const r = await fetch(base + '&order=id&limit=' + PAGE + '&offset=' + offset,
+          { headers: { apikey: SB_KEY, 'Authorization': 'Bearer ' + SB_KEY,
+                       'Range': offset + '-' + (offset + PAGE - 1), 'Range-Unit': 'items' } });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const page = await r.json();
+        if (!Array.isArray(page) || page.length === 0) break;
+        all = all.concat(page);
+        if (page.length < PAGE) break;
+        offset += PAGE;
+      }
+      if (all.length === 0) {
+        console.warn('[Tellux] bt_lines calcul : 0 lignes reçues (RLS ou bbox vide)');
+        return;
+      }
+      BT_LINES_RAW = all;
+      buildBTSegmentGrid(all);
+      const elapsed = performance.now() - t0;
+      console.log('[Tellux] bt_lines calcul pret : ' + BT_SEGMENTS_DATA.length
+        + ' segments en ' + elapsed.toFixed(0) + ' ms');
+    } catch (e) {
+      console.warn('[Tellux] loadBTLinesAsync echec : ' + e.message);
     }
-    if (all.length === 0) {
-      console.warn('[Tellux] bt_lines calcul : 0 lignes reçues (RLS ou bbox vide)');
-      return;
-    }
-    buildBTSegmentGrid(all);
-    const elapsed = performance.now() - t0;
-    console.log('[Tellux] bt_lines calcul pret : ' + BT_SEGMENTS_DATA.length
-      + ' segments en ' + elapsed.toFixed(0) + ' ms');
-  } catch (e) {
-    console.warn('[Tellux] loadBTLinesAsync echec : ' + e.message);
-  } finally {
-    _btLinesCalcLoading = false;
-  }
+  })();
+  return _btLinesPromise;
 }
 
 // ============================================================
@@ -8097,99 +8122,83 @@ async function loadReseau(){
 }
 
 
-// Réseau BT — chargement lazy par bbox, zoom ≥ 10 (abaissé de 12 → 11 session 2026-08-19,
-// puis 11 → 10 session 2026-08-29 — item Soleil récurrent « BT n'apparaît qu'à fort zoom »).
-// ⚠ Le seuil n'est PAS une bride UI arbitraire : bt_lines = 156 130 segments (Corse entière,
-// ~18/km²), et Supabase plafonne toute requête à 1000 lignes (db-max-rows, non contournable
-// par &limit). Avant ce diff, la couche affichait donc au mieux 1000 segments par viewport,
-// silencieusement tronqués dès qu'une zone dense en contenait plus. Le passage 11 → 10
-// s'accompagne de : (1) pagination par offset dans loadBT (plafond BT_MAX_SEGMENTS=8000,
-// statut "zoomer pour le détail complet" si atteint), (2) rendu canvas (_btCanvas, comme
-// lForetDense) au lieu du SVG Leaflet par défaut. Deux bugs distincts corrigés :
-// 1) clignotement au pan — lBT.clearLayers() partait AVANT le fetch, donc la couche restait
-//    vide pendant tout l'aller-retour réseau à chaque moveend/zoomend. Le clear est désormais
-//    différé après réception des données (les anciens segments restent visibles pendant le
-//    chargement, remplacés d'un coup une fois les nouveaux prêts).
-// 2) requêtes non-idempotentes en rafale pendant un pan continu — pas de debounce, et une
-//    réponse lente pouvait écraser une réponse plus récente déjà affichée (race). Ajout d'un
-//    debounce 350 ms + jeton de requête (seule la dernière requête lancée peut peindre lBT).
-// NB : à distinguer de loadBTLinesAsync() (~L.4054) — fonction SŒUR mais de portée différente :
-// celle-ci alimente le calcul ELF (grille Biot-Savart, tout le territoire, cache permanent),
-// PAS un doublon mort. loadBT() ici ne sert QUE le rendu visuel viewport par viewport.
-let _btLoaded=false;
-let _btMoveTimer=null;
-let _btReqToken=0;
+// Réseau BT — rendu statique (2026-08-30, brief "Option A couche BT statique", suite au
+// diagnostic _drafts/DIAGNOSTIC_BT_AFFICHAGE_STABILITE_2026-08-30.md, 4 questions arbitrées
+// par Soleil : GO Option A, zoom-gate conservé, perte tooltip acceptée, masquage prod #1122
+// NON levé). REMPLACE l'ancien fetch réseau par viewport (moveend/zoomend debounce + jeton de
+// requête, instable au pan/dézoom — cf. historique dans DECISIONS.md/SUIVI_BRIEFS.md) par le
+// même patron que lForetDense (buildForetDenseLayer/_syncForetDenseZoom, cf. plus bas dans ce
+// fichier) : construction UNIQUE au chargement des données (loadBTLinesAsync, déjà appelée au
+// boot pour le calcul ELF — aucun second fetch), rendu canvas dédié, interactive:false, zoom-gate
+// visuel seul (jamais de re-fetch). NB : à distinguer de loadBTLinesAsync() — fonction SŒUR mais
+// de portée différente : celle-ci alimente le calcul ELF (grille Biot-Savart, cache permanent) ;
+// loadBT()/buildBTStaticLayer() ici ne servent QUE le rendu visuel, construit une fois pour toute
+// la Corse (pas de notion de viewport).
 const _btCanvas=L.canvas({padding:0.5});
+const BT_MIN_ZOOM=10;
+let _btZoomHintShown=false;
+// buildBTStaticLayer() — construit 2 features GeoJSON MultiLineString (aérien/souterrain) à
+// partir de BT_LINES_RAW (pts groupés par ligne + type, préservés par loadBTLinesAsync — distinct
+// de BT_SEGMENTS_DATA qui aplatit en segments élémentaires pour le calcul). Un seul appel à
+// L.geoJSON(...).addTo(lBT) par type, comme buildForetDenseLayer avec FORET_DENSE_PARTS : la
+// distinction visuelle aérien(trait plein)/souterrain(tireté) remplace l'ancien tooltip par
+// segment (perdu, cf. arbitrage Soleil) — reprise dans la légende statique LEGEND_HTML.bt
+// (trait plein = aérien, tireté = souterrain, déjà en place, aucun changement nécessaire ici).
+function buildBTStaticLayer(){
+  lBT.clearLayers();
+  if(!BT_LINES_RAW || BT_LINES_RAW.length===0) return;
+  const coordsAerien=[], coordsSouterrain=[];
+  BT_LINES_RAW.forEach(function(row){
+    const pts=row.pts;
+    if(!pts||pts.length<2)return;
+    // GeoJSON = [lon,lat] ; pts stocké [lat,lon] (comme partout ailleurs dans ce fichier) → inversion.
+    const coords=pts.map(function(p){return [p[1],p[0]];});
+    if(row.type==='aerien')coordsAerien.push(coords);
+    else coordsSouterrain.push(coords);
+  });
+  if(coordsAerien.length){
+    L.geoJSON({type:'Feature',properties:{},geometry:{type:'MultiLineString',coordinates:coordsAerien}},{
+      renderer:_btCanvas,style:{color:'#d97706',weight:1.2,opacity:0.65,interactive:false}
+    }).addTo(lBT);
+  }
+  if(coordsSouterrain.length){
+    L.geoJSON({type:'Feature',properties:{},geometry:{type:'MultiLineString',coordinates:coordsSouterrain}},{
+      renderer:_btCanvas,style:{color:'#92400e',weight:1.2,opacity:0.65,dashArray:'3 2',interactive:false}
+    }).addTo(lBT);
+  }
+  console.log('✅ BT (statique) : '+coordsAerien.length+' lignes aériennes, '+coordsSouterrain.length+' souterraines');
+  _syncBTZoom(true);
+}
+// loadBT() — point d'entrée appelé par tog('bt') au 1er toggle (cf. plus bas). Attend la donnée
+// partagée avec le calcul ELF (await loadBTLinesAsync() — promesse mise en cache, ne redéclenche
+// jamais de fetch si déjà chargée ou en cours via le boot) puis construit la couche une fois.
 async function loadBT(){
-  const zoom=map.getZoom();
-  if(zoom<10){
-    setStatus(jt('bt_zoom_hint', 'Zoomer pour voir le réseau BT (zoom ≥ 10)'));
-    setTimeout(()=>setStatus(''),3000);
+  setStatus(jt('bt_loading', 'Chargement réseau BT…'));
+  await loadBTLinesAsync();
+  if(!BT_LINES_RAW || BT_LINES_RAW.length===0){
+    setStatus(jt('bt_indisponible','Réseau BT — données indisponibles.'));
     return;
   }
-  setStatus(jt('bt_loading', 'Chargement réseau BT…'));
-  const b=map.getBounds();
-  const s=b.getSouth().toFixed(4),n=b.getNorth().toFixed(4);
-  const w=b.getWest().toFixed(4),e=b.getEast().toFixed(4);
-  const myToken=++_btReqToken;
-  try{
-    const baseUrl=SB_URL+'/rest/v1/bt_lines?select=pts,type'+
-      '&clat=gte.'+s+'&clat=lte.'+n+
-      '&clon=gte.'+w+'&clon=lte.'+e;
-    // Supabase impose db-max-rows = 1000 (plafond serveur, NON contournable par &limit —
-    // vérifié 2026-08-29). bt_lines = 156 130 segments ; un viewport zoom 10 en zone dense
-    // dépasse largement 1000. Sans pagination, la couche affichait donc un sous-ensemble
-    // silencieusement tronqué à 1000. Pagination par pages de 1000 (offset), plafonnée à
-    // BT_MAX_SEGMENTS pour borner charge réseau + rendu (canvas _btCanvas au-delà).
-    const BT_PAGE=1000, BT_MAX_SEGMENTS=8000;
-    let rows=[], _btTruncated=false;
-    for(let off=0; off<BT_MAX_SEGMENTS; off+=BT_PAGE){
-      const r=await fetch(baseUrl+'&limit='+BT_PAGE+'&offset='+off,{headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}});
-      if(!r.ok)throw new Error('HTTP '+r.status+' — RLS? Exécuter bt_rls_fix.sql');
-      if(myToken!==_btReqToken)return; // pan/zoom plus récent lancé entre-temps — abandon
-      const page=await r.json();
-      if(!Array.isArray(page))throw new Error('Réponse: '+JSON.stringify(page).slice(0,80));
-      rows=rows.concat(page);
-      if(page.length<BT_PAGE)break;           // dernière page atteinte
-      if(off+BT_PAGE>=BT_MAX_SEGMENTS)_btTruncated=true; // plafond atteint, encore des données
+  buildBTStaticLayer();
+  setStatus('BT: '+BT_LINES_RAW.length+' lignes');
+}
+// _syncBTZoom(fromToggle) — zoom-gate visuel seul (jamais de re-fetch, cf. brief). Même logique
+// que _syncForetDenseZoom : ACTIVE.bt n'est jamais touché (le calcul ELF reste actif quel que
+// soit le zoom), seule la présence de lBT sur la carte est pilotée.
+function _syncBTZoom(fromToggle){
+  if(typeof ACTIVE==='undefined'||!ACTIVE.bt)return;
+  const visible=map.getZoom()>=BT_MIN_ZOOM;
+  if(visible){
+    if(!map.hasLayer(lBT))map.addLayer(lBT);
+    _btZoomHintShown=false;
+  }else{
+    if(map.hasLayer(lBT))map.removeLayer(lBT);
+    if(fromToggle||!_btZoomHintShown){
+      info(jt('bt_zoom_hint','Réseau BT — couche visible à partir du zoom 10 (trop dense à petite échelle) ; le calcul reste actif.'),null,4500);
+      _btZoomHintShown=true;
     }
-    // Requête périmée (une plus récente a été lancée entre-temps par un pan/zoom suivant) — on
-    // n'écrase pas l'affichage courant avec une réponse potentiellement obsolète.
-    if(myToken!==_btReqToken)return;
-    const fresh=L.layerGroup();
-    let n_drawn=0;
-    rows.forEach(row=>{
-      const pts=row.pts;
-      if(!pts||pts.length<2)return;
-      const isAerien=row.type==='aerien';
-      L.polyline(pts,{
-        renderer:_btCanvas,
-        color:isAerien?'#d97706':'#92400e',
-        weight:1.2,opacity:0.65,
-        dashArray:isAerien?null:'3 2'
-      }).bindTooltip(isAerien ? jt('bt_line_aerien', 'Ligne BT aérienne · EDF SEI') : jt('bt_line_souterrain', 'Ligne BT souterraine · EDF SEI'),{sticky:true})
-        .addTo(fresh);
-      n_drawn++;
-    });
-    // Swap atomique : clear + repeuplement dans le même tick, aucune frame avec lBT vide.
-    lBT.clearLayers();
-    fresh.eachLayer(l=>l.addTo(lBT));
-    console.log('✅ BT: '+n_drawn+' segments zoom '+zoom+(_btTruncated?' (tronqué à '+BT_MAX_SEGMENTS+')':''));
-    setStatus('BT: '+n_drawn+' segments'+(_btTruncated?jt('bt_truncated_suffix',' — zoomer pour le détail complet'):''));
-    _btLoaded=true;
-  }catch(e){
-    if(myToken!==_btReqToken)return; // requête périmée annulée/dépassée par une suivante, erreur non pertinente
-    console.error('loadBT:',e.message);
-    setStatus('BT: '+e.message);
   }
 }
-// Debounce 350 ms sur moveend/zoomend — évite une requête par micro-mouvement pendant un
-// pan continu ; le jeton _btReqToken ci-dessus couvre le résidu de course même sous debounce.
-map.on('moveend zoomend',()=>{
-  if(!ACTIVE.bt)return;
-  if(_btMoveTimer)clearTimeout(_btMoveTimer);
-  _btMoveTimer=setTimeout(()=>{ if(ACTIVE.bt&&map.getZoom()>=10) loadBT(); },350);
-});
 
 // Charge réseau Corse — sources par ordre de priorité :
 // 1. RTE eco2mix (CORS-friendly, données Corse réelles)
@@ -8807,6 +8816,7 @@ map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
 // Zoom-gate visuel de la couche forêt dense (décision Soleil 2026-08-30) — cf. _syncForetDenseZoom.
 map.on('zoomend',function(){ _syncForetDenseZoom(false); });
+map.on('zoomend',function(){ _syncBTZoom(false); });
 setTimeout(()=>Promise.all([loadAnt(),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.cert)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k)
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET DUR/EBR/CLF (nom loadAQU conservé, cf. commentaire fonction) — correction externe réelle niveau 1
