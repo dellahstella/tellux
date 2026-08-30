@@ -817,6 +817,9 @@ table.data-table td {
     <dt id="term-calibration-figure-8">Calibration figure-8</dt>
     <dd>Procédure de calibration d'un magnétomètre smartphone consistant à faire tourner le téléphone selon un mouvement en huit dans les trois axes pendant 30 secondes, avant la mesure. Compense les biais de zéro accumulés. Voir <a href="#mesure-smartphone">Section 4.1</a> pour la procédure complète.</dd>
 
+    <dt id="term-calibration-interne">Calibration interne</dt>
+    <dd>Facteur multiplicatif <code>k</code> appliqué uniformément au champ radiofréquence prédit par le modèle Tellux, dérivé une fois au démarrage comme médiane du ratio mesure/prédiction sur les fiches ANFR/EXEM certifiées (valeur courante <code>k ≈ 0,361</code>). À ne pas confondre avec la <a class="xref" href="#term-calibration-figure-8">cf. Calibration figure-8</a>, qui concerne le magnétomètre d'un smartphone contributeur, pas le modèle. Détail de la méthode (validation croisée LOO-CV, intervalle de confiance) dans <a href="/cadre-scientifique.html#radiofrequences">Cadre scientifique</a> et <a href="/methode-limites-transparence.html#sources-rf">Méthode, limites et transparence</a>.</dd>
+
     <dt id="term-cartoradio">CartoRadio</dt>
     <dd>Base publique de l'<a class="xref" href="#term-anfr-agence-nationale-des-frequences">cf. ANFR</a> recensant les sites d'émission radioélectrique en France et les mesures certifiées d'exposition réalisées selon le protocole EXEM. Tellux mobilise CartoRadio pour la couche radiofréquence et a redistribué 30 fiches de mesures certifiées corses en JSON structuré. <a href="https://www.cartoradio.fr/" target="_blank" rel="noopener">cartoradio.fr</a></dd>
 
@@ -826,11 +829,20 @@ table.data-table td {
     <dt id="term-champ-geomagnetique">Champ géomagnétique</dt>
     <dd>Champ magnétique terrestre engendré principalement par les courants au sein du noyau externe liquide de la Terre, complété par des contributions crustales et externes (ionosphère, magnétosphère). En Corse, l'intensité totale est de l'ordre de 46 microteslas (46 000 nanoteslas). <a class="xref" href="#term-igrf-international-geomagnetic-reference-field">cf. IGRF</a>, <a class="xref" href="#term-anomalie-crustale">cf. Anomalie crustale</a>.</dd>
 
+    <dt id="term-champ-lointain">Champ lointain</dt>
+    <dd>Région de l'espace, au-delà d'une distance de l'ordre de quelques longueurs d'onde de l'antenne émettrice, où le champ électromagnétique rayonné se comporte comme une onde plane : les composantes électrique et magnétique sont en phase, leur rapport est constant (impédance du vide, 377 ohms), et la densité de puissance décroît selon le carré de la distance. C'est le régime dans lequel s'applique l'équation de <a class="xref" href="#term-friis-equation-de">cf. Friis</a>, utilisée par Tellux pour le calcul du champ radiofréquence. <a class="xref" href="#term-champ-proche">cf. Champ proche</a>.</dd>
+
+    <dt id="term-champ-proche">Champ proche</dt>
+    <dd>Région de l'espace, à proximité immédiate d'une source électromagnétique, où les champs électrique et magnétique ne se comportent pas encore comme une onde plane rayonnée : leur rapport n'est pas constant et leur décroissance avec la distance est plus complexe qu'une simple loi en carré inverse. Le champ magnétique à 50 hertz produit par les lignes électriques, modélisé par Tellux via la <a class="xref" href="#term-biot-savart-loi-de">cf. loi de Biot-Savart</a>, relève du champ proche magnétique — un régime physique distinct du champ radiofréquence rayonné, les deux ne sont pas additionnés dans l'affichage public. <a class="xref" href="#term-champ-lointain">cf. Champ lointain</a>.</dd>
+
     <dt id="term-composante-cosmique">Composante cosmique</dt>
     <dd>Contribution du rayonnement cosmique au débit de dose gamma ambiant. Elle augmente avec l'altitude selon une approximation exponentielle : Tellux utilise la formule <code>35 × exp(altitude/1500)</code> en nanosieverts par heure (altitude en mètres), calibrée sur l'ordre de grandeur au niveau de la mer en latitude tempérée publié par le <a class="xref" href="#term-ncrp-national-council-on-radiation-protection-and-measurements">cf. NCRP</a> (Report 94, 1987) et cohérente avec Bouville &amp; Lowder (1988). La hauteur d'échelle de 1500 m, conventionnellement retenue pour la cartographie territoriale, reste sous examen par relecture méthodologique externe.</dd>
 
     <dt id="term-composite-mode-expertise">Composite (mode Expertise)</dt>
     <dd>Grandeur adimensionnelle entre 0 et 1, calculée par pondération min-max normalisée des trois régimes magnétique ELF, RF et ionisant. N'a pas de signification physique directe. Les pondérations sont gelées en attente de relecture méthodologique externe, signalées par un losange ◆ dans l'interface. Cf. <a href="/cadre-scientifique.html#mode-expertise">Cadre scientifique</a>.</dd>
+
+    <dt id="term-conductivite-du-sol">Conductivité du sol</dt>
+    <dd>Aptitude du sol à conduire le courant électrique, exprimée en siemens par mètre (S/m). C'est un paramètre d'entrée de la recommandation <a class="xref" href="#term-itu-r-p-527-electrical-characteristics-of-the-surface-of-the-earth">cf. ITU-R P.527</a>, qui modélise l'effet du sol sur la propagation radiofréquence en espace dégagé (onde de sol, réflexions). Tellux calcule une valeur de conductivité effective à partir de la texture du sol (proportions de sable et d'argile, densité apparente) fournie par la grille <strong>SoilGrids v2.0</strong> (ISRIC, résolution ~5,5 km sur la Corse — Poggio et al. 2021, <em>SOIL</em> 7, 217-240, CC-BY 4.0). Cette valeur est actuellement calculée et exposée mais <strong>non injectée dans le calcul du champ radiofréquence affiché</strong> — cf. <a href="/methode-limites-transparence.html#dettes-techniques">dettes techniques</a>.</dd>
 
     <dt id="term-conseil-d-etat-arrets-du-26-octobre-2011">Conseil d'État (arrêts du 26 octobre 2011)</dt>
     <dd>Trois arrêts (Saint-Denis, Pennes-Mirabeau, Bordeaux) qui établissent que la compétence sanitaire en matière d'antennes radioélectriques relève de l'État (ministre, ARCEP, ANFR), non du maire. Un maire ne peut donc pas adopter d'arrêté municipal interdisant les antennes près des écoles au nom de la santé publique.</dd>
@@ -905,7 +917,10 @@ table.data-table td {
     <dd>Bouton flottant d'action (<em>floating action button</em>) présent dans l'application <a href="/app.html">app.html</a> de Tellux. Il permet à un utilisateur d'enregistrer une <a class="xref" href="#term-contribution-terrain">cf. Contribution terrain</a> au point géographique sélectionné, en quelques étapes guidées.</dd>
 
     <dt id="term-faisceau-hertzien">Faisceau hertzien</dt>
-    <dd>Liaison radioélectrique fixe point à point dans les bandes micro-ondes, utilisée pour les transmissions télécoms entre antennes-relais et entre stations de télévision. Les faisceaux hertziens sont recensés dans <a class="xref" href="#term-cartoradio">cf. CartoRadio</a> et contribuent à la couche RF de Tellux selon un modèle de décroissance linéaire à courte distance.</dd>
+    <dd>Liaison radioélectrique fixe point à point dans les bandes micro-ondes, utilisée pour les transmissions télécoms entre antennes-relais et entre stations de télévision. Les faisceaux hertziens individuels ne sont pas géolocalisés par une source publique exploitable à l'échelle de la Corse : Tellux modélise leur contribution par une <strong>liste de 16 points topographiques</strong> (cols et crêtes, où ces liaisons se concentrent en pratique), déduits de la topographie et calés sur le total agrégé publié par <a class="xref" href="#term-cartoradio">cf. CartoRadio</a> (558 faisceaux hertziens recensés en Corse, toutes zones confondues) — <strong>pas des positions individuelles réelles de liaisons</strong>. À distinguer de la <a class="xref" href="#term-tdf-telediffusion-publique">cf. TDF</a>, dont les émetteurs sont, eux, individuellement géolocalisés avec une puissance estimée par site. Contribution décroissante par paliers avec la distance, nulle au-delà de 4 km d'un point.</dd>
+
+    <dt id="term-friis-equation-de">Friis (équation de)</dt>
+    <dd>Formule de télécommunications qui relie la puissance reçue par une antenne à la puissance émise par une autre, en fonction de leurs gains, de la longueur d'onde et de la distance qui les sépare, dans l'hypothèse d'un <a class="xref" href="#term-champ-lointain">cf. champ lointain</a> et d'un espace libre sans obstacle. Tellux utilise une version simplifiée de cette équation pour estimer la densité de puissance radiofréquence à partir des puissances déclarées par les opérateurs à l'<a class="xref" href="#term-anfr-agence-nationale-des-frequences">cf. ANFR</a>, corrigée par un facteur de <a class="xref" href="#term-calibration-interne">cf. calibration interne</a>.</dd>
   </dl>
 
   <h3 class="letter" id="letter-g">G</h3>
@@ -989,6 +1004,12 @@ table.data-table td {
     <span id="term-irsn" class="term-short-anchor" aria-hidden="true"></span>
     <dt id="term-irsn-institut-de-radioprotection-et-de-surete-nucleaire">IRSN — Institut de Radioprotection et de Sûreté Nucléaire</dt>
     <dd>Établissement public français de radioprotection et de sûreté nucléaire, dissous au 1ᵉʳ janvier 2025 par fusion avec l'Autorité de sûreté nucléaire pour former l'<a class="xref" href="#term-asnr-autorite-de-surete-nucleaire-et-de-radioprotection">cf. ASNR</a> (loi n° 2024-450 du 21 mai 2024). La cartographie radon de référence reste connue sous l'appellation « cartographie IRSN 2018 » par millésime, et continue d'être citée en tant que telle par sa date.</dd>
+
+    <dt id="term-itu-r-p-527-electrical-characteristics-of-the-surface-of-the-earth">ITU-R P.527 — Electrical characteristics of the surface of the Earth</dt>
+    <dd>Recommandation de l'Union internationale des télécommunications qui fournit des méthodes d'estimation de la permittivité et de la <a class="xref" href="#term-conductivite-du-sol">cf. conductivité du sol</a> selon le type de terrain, utile pour modéliser l'effet du sol sur la propagation radiofréquence. Non consommée dans le calcul du champ radiofréquence de Tellux à ce jour — cf. <a href="/methode-limites-transparence.html#dettes-techniques">dettes techniques</a>. <a href="https://www.itu.int/rec/R-REC-P.527/en" target="_blank" rel="noopener">itu.int</a></dd>
+
+    <dt id="term-itu-r-p-833-attenuation-in-vegetation">ITU-R P.833 — Attenuation in vegetation</dt>
+    <dd>Recommandation de l'Union internationale des télécommunications qui modélise l'atténuation d'un signal radiofréquence traversant de la végétation. Tellux utilise la version simplifiée historique <strong>P.833-6 (2007)</strong> pour estimer l'atténuation par la <a class="xref" href="#term-bd-foret-v2-ign">cf. BD Forêt V2 IGN</a> — version obsolète, en attente de migration vers la version en vigueur P.833-10. <a href="https://www.itu.int/rec/R-REC-P.833/en" target="_blank" rel="noopener">itu.int</a></dd>
   </dl>
 
   <h3 class="letter" id="letter-k">K</h3>
