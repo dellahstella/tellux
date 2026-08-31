@@ -19,21 +19,22 @@ name: contrast-panels
 # CE CHECK EST BLOQUANT, DÈS SA CRÉATION
 # --------------------------------------
 # Contrairement à eval-app-rubric (Phase A informative), celui-ci bloque tout
-# de suite, parce qu'il est calé sur un CLIQUET et non sur un idéal :
-#   • mesure du 2026-08-31, thème unique : 4 « critique » (ratio < 3,0) + 26 « aa »
-#   • plafonds ci-dessous = ces valeurs exactes → le check est VERT aujourd'hui
-#   • il ne devient rouge que si un chiffre AUGMENTE, c'est-à-dire sur une
-#     régression introduite par la PR en cours
-# Déterminisme revérifié après le passage en thème unique : 2 exécutions locales
-# successives → 30 violations et 101 nœuds strictement identiques.
+# de suite, parce qu'il est calé sur un CLIQUET et non sur un idéal.
+# Historique des plafonds, pour comprendre une régression future :
+#   • 2026-08-31 (création)         : 19 critique + 49 aa (deux thèmes)
+#   • 2026-08-31 (retrait mode sombre) : 4 critique + 26 aa (thème unique —
+#     les 15+23 disparues n'étaient PAS corrigées, leur surface a cessé d'exister)
+#   • 2026-08-31 (correctifs contraste) : 0 + 0 — les 30 restantes ont cette
+#     fois été CORRIGÉES (--tx3 diverge de --tx-mica racine gelée, fallbacks
+#     CSS qui ne se déclenchaient jamais réparés, 3 hex assombris sur leurs
+#     seuls usages textuels)
+# Déterminisme vérifié à chaque palier avant promotion du plafond.
 #
 # LES PLAFONDS NE REMONTENT JAMAIS
 # --------------------------------
 # Si ce check tombe, la réponse est de corriger le contraste, PAS d'augmenter
 # le plafond. Les seuls commits légitimes sur ces deux nombres les font
-# DESCENDRE, au fur et à mesure que la dette est résorbée (chantier « palette
-# sombre réelle », à ouvrir séparément — cf. le rapport de la sonde B, qui
-# liste les tokens identiques en clair et en sombre).
+# DESCENDRE. À 0/0, il n'y a plus qu'une direction possible : rester à 0/0.
 
 on:
   pull_request:
@@ -77,21 +78,23 @@ jobs:
         working-directory: tests/blindage-harness
         env:
           # ═══ CLIQUETS — ne jamais remonter, voir l'en-tête de ce fichier ═══
-          # Re-dérivés le 2026-08-31 après le RETRAIT DU MODE SOMBRE : la mesure
-          # ne porte plus que sur le thème unique et servi. Anciennes valeurs
-          # 19/49 (deux thèmes cumulés) — les 15 critiques et 23 AA qui les
-          # complétaient étaient dans le thème sombre, disparu avec lui. Ce n'est
-          # PAS un relâchement : aucune violation n'a été rendue tolérable, leur
-          # surface a cessé d'exister.
-          CONTRAST_MAX_CRITIQUE: '4'
-          CONTRAST_MAX_AA: '26'
+          # 0/0 depuis le 2026-08-31 (dette A11Y-CONTRAST-APP-PANELS-002 résorbée, pas
+          # seulement recalibrée) : les 30 violations restantes après le retrait du mode
+          # sombre (4 critique + 26 AA, thème clair) ont été CORRIGÉES — --tx3 diverge de
+          # --tx-mica (racine gelée intacte), .leg-src + 5 titres à fallback CSS
+          # "var(--tx-mica,var(--tx3))" qui ne se déclenchait jamais (--tx-mica toujours
+          # défini) corrigés, 3 hex codés en dur (#8b92a5/#6b7280/#b85c00) assombris sur
+          # leurs SEULS usages textuels — jamais sur les swatches/couleurs de carte qui
+          # partagent le même hex par signification. Plus aucune marge : la moindre
+          # régression fait tomber le check.
+          CONTRAST_MAX_CRITIQUE: '0'
+          CONTRAST_MAX_AA: '0'
           # Plancher de couverture — les cliquets sont des MAJORANTS : si les panneaux ne se
           # peuplaient pas (Supabase KO, boot trop lent, sélecteur renommé), le compte de
           # violations tomberait à 0 et le check passerait sans rien avoir testé. Référence
-          # locale : 204 nœuds. Volontairement bas pour tolérer une couche absente en CI, assez
-          # haut pour qu'un DOM vide soit détecté. Ramené de 80 à 40 avec le
-          # passage en thème unique : 204 nœuds mesurés en deux thèmes, 101 en un
-          # seul (dont −1 sur l'en-tête, qui a perdu le bouton de bascule).
+          # locale : 100 nœuds (101 avant le retrait du libellé "Tellux" de l'en-tête,
+          # #1152). Volontairement bas pour tolérer une couche absente en CI, assez haut
+          # pour qu'un DOM vide soit détecté.
           CONTRAST_MIN_NOEUDS: '40'
         run: |
           set +e
