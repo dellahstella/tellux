@@ -83,11 +83,21 @@
   --fm:var(--mono);
   color-scheme:light;
 }
-/* Dark mode désactivé — light only forcé */
-[data-theme="dark"]{
-  --tx:var(--tx-ardoise);
-  --bg:var(--tx-pierre);
-}
+/* Mode sombre RETIRÉ le 2026-08-31 (arbitrage Soleil, Cran C).
+   Motif : le thème sombre s'appliquait au chrome UI mais PAS au fond de carte
+   (Esri World Light Gray Canvas, raster clair fixe) — incohérence visible, et
+   sans issue tant que le fond reste ce raster. Il était par ailleurs servi
+   automatiquement via un repli `prefers-color-scheme: dark`, donc imposé à tout
+   visiteur dont l'OS est en sombre, sans qu'il l'ait demandé.
+   Une désactivation PARTIELLE avait été tentée auparavant : ce bloc de tokens
+   avait été neutralisé (il redéfinissait --tx/--bg avec les valeurs de :root,
+   soit un no-op), mais les 24 correctifs `[data-theme="dark"] X{…}` et toute la
+   chaîne JS (bouton, bascule, persistance, repli media-query) étaient restés en
+   place — d'où un mode sombre toujours atteignable et à moitié stylé. Le retrait
+   est ici complet : plus aucun sélecteur `[data-theme]`, plus aucune lecture de
+   `localStorage.tellux_theme`. Une clé résiduelle chez un visiteur n'est plus
+   lue par personne et reste donc sans effet.
+   Ne pas réintroduire de thème sombre sans traiter d'abord le fond de carte. */
 
 /* === Tellux v6 design — header & UI === */
 .hdr{display:flex;align-items:center;gap:14px;padding:14px 4px 14px;border-bottom:1px solid var(--border);margin-bottom:14px;}
@@ -506,6 +516,14 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .logo-mark img{width:36px;height:36px;border-radius:6px;display:block;}
 .logo-text{font-size:16px;font-weight:500;letter-spacing:.02em;}
 .hdr-tagline{display:none;}
+/* « Tellux » masqué sur mobile seulement (2026-08-31, allègement de la barre d'en-tête).
+   Masquage responsive et NON retrait pur, délibérément : sur cette barre la tagline est déjà
+   masquée (règle juste au-dessus), donc supprimer le mot laisserait l'en-tête sans aucun
+   texte — le logo seul est un glyphe « T », il ne nomme pas la marque. Sur desktop la place
+   ne manque pas et le nom porte l'identité ; c'est sur mobile que la largeur se paie. */
+@media (max-width:768px){
+  .logo-text{display:none;}
+}
 .hdr-menu-toggle{flex-shrink:0;width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:var(--pierre-ombre);color:var(--tx-ardoise);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;margin-left:4px;}
 .hdr-menu-toggle:hover{background:var(--tx-brume);}
 /* #hdr-menu réutilise .hdr-actions/.hdr-btn tels quels (mêmes classes, même markup) ;
@@ -927,30 +945,13 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .rgpd-row{display:flex;align-items:flex-start;gap:8px;margin-top:8px;margin-bottom:4px;}
 .rgpd-row input[type=checkbox]{margin-top:2px;flex-shrink:0;}
 .rgpd-row label{font-size:11px;color:var(--ardoise-clair);line-height:1.4;cursor:pointer;}
-/* Dark mode overrides */
-[data-theme="dark"] .disclaimer-box{background:#1a1d25;color:#e4e7ef;}
-[data-theme="dark"] .disclaimer-box h2{color:#e4e7ef;}
-[data-theme="dark"] .disclaimer-box p{color:#a0a7b8;}
-[data-theme="dark"] .leg-title{color:#e4e7ef!important;}
 /* dark-mode .sim-type-btn purgé 2026-06-03 (module déplacé hors de ce fichier) */
-[data-theme="dark"] .mat-chip{background:var(--pierre-ombre)!important;color:var(--ardoise-clair)!important;border-color:var(--border)!important;}
-[data-theme="dark"] #tellux-leg-panel{background:rgba(26,29,37,.97)!important;border-color:rgba(255,255,255,.08)!important;}
 /* Scrollbar discrète quand le contenu du panneau légende dépasse max-height */
 #tellux-leg-panel::-webkit-scrollbar{width:6px;}
 #tellux-leg-panel::-webkit-scrollbar-track{background:transparent;}
 #tellux-leg-panel::-webkit-scrollbar-thumb{background:rgba(95,94,90,0.25);border-radius:3px;}
 #tellux-leg-panel::-webkit-scrollbar-thumb:hover{background:rgba(95,94,90,0.4);}
 #tellux-leg-panel{scrollbar-width:thin;scrollbar-color:rgba(95,94,90,0.25) transparent;}
-[data-theme="dark"] #tellux-leg-panel::-webkit-scrollbar-thumb{background:rgba(245,240,231,0.2);}
-[data-theme="dark"] #tellux-leg-panel::-webkit-scrollbar-thumb:hover{background:rgba(245,240,231,0.35);}
-[data-theme="dark"] #tellux-leg-panel{scrollbar-color:rgba(245,240,231,0.2) transparent;}
-[data-theme="dark"] .on-ant{background:#1a2a3a!important;color:#5b9bd5!important;border-color:#2563eb!important;}
-[data-theme="dark"] .on-hot{background:#2a1a1a!important;color:#ef4444!important;border-color:#991b1b!important;}
-[data-theme="dark"] .on-contrib{background:#241a2a!important;color:#c9a3e0!important;border-color:#7d5aa0!important;}
-[data-theme="dark"] .on-cert{background:#1a2a28!important;color:#3ec9ab!important;border-color:#2d9b87!important;}
-/* Dark mode toggle */
-.theme-toggle{background:none;border:1px solid var(--border);border-radius:var(--r);padding:4px 8px;cursor:pointer;font-size:14px;line-height:1;color:var(--ardoise-clair);transition:all .2s;}
-.theme-toggle:hover{background:var(--pierre-ombre);}
 /* Mobile responsive */
 @media(max-width:768px){
   .pbar{grid-template-columns:repeat(2,1fr);gap:4px;}
@@ -1161,7 +1162,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   .mlegend-inline .mleg-details[open] summary::before{transform:rotate(90deg);}
   .mlegend-inline .mleg-details .leg-block{padding:0 0 10px;}
 }
-[data-theme="dark"] .mlegend-inline.active{background:rgba(255,255,255,.04);}
 .layers-accordion{display:flex;flex-direction:column;gap:4px;}
 .accordion-cat{background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:all .2s;flex-shrink:0;}
 .accordion-cat-header{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;background:var(--pierre-ombre);font-weight:500;font-size:12px;color:var(--ardoise-clair);user-select:none;transition:all .2s;}
@@ -1469,8 +1469,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 #legende-content .leg-acc[open] .leg-acc-sum::before{transform:rotate(90deg);}
 #legende-content .leg-acc-sum:hover{color:var(--tx-ocre,#C28533);}
 #legende-content .leg-acc-body{padding:0 0 9px 15px;}
-[data-theme="dark"] #legende-content .leg-acc{border-top-color:rgba(255,255,255,.09);}
-[data-theme="dark"] #legende-content .leg-acc-sum{color:var(--maquis-clair,#8fb987);}
 /* ═══ Jauge crustale — panneau flottant bas-gauche (Phase 2 « anomalies polygonales », 2026-08-31)
    Troisième et dernière position de cette jauge, cette fois mesurée plutôt que supposée :
      · avant le 2026-08-29 : contrôle Leaflet topright → chevauchait #legende (le « ? »)
@@ -1515,25 +1513,11 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
 #crustal-gauge-panel .cg-more[open]>summary::before{transform:rotate(90deg);}
 #crustal-gauge-panel .cg-more>summary:hover{color:var(--tx-ocre,#C28533);}
 #crustal-gauge-panel .cg-more-body{padding-top:7px;}
-/* Mode sombre — les contenus de la jauge sont générés en JS avec des styles INLINE qui
-   référencent --ardoise / --ardoise-clair / --tx3 / --pierre-ombre. Ces variables ne sont pas
-   thématisées : en sombre, la valeur principale sortait en #1F2329 sur fond #1A1D25, soit un
-   contraste de 1,07 — illisible (mesuré). Le défaut préexistait (même rendu quand la jauge
-   vivait dans le panneau « ? », qui a le même fond sombre) mais il n'était pas tenable sur un
-   panneau désormais posé en évidence sur la carte.
-   Corrigé en redéfinissant ces variables LOCALEMENT sur le panneau, plutôt qu'en réécrivant les
-   styles inline un par un côté JS : les mêmes chaînes HTML servent aux deux thèmes, et la
-   correction ne peut pas fuir hors de ce panneau. --pierre-ombre sert ici de fond de piste aux
-   barres (le fond du panneau, lui, est fixé explicitement juste en dessous). */
-[data-theme="dark"] #crustal-gauge-panel{
-  --ardoise:#F5F0E7;
-  --ardoise-clair:#CFC9BE;
-  --tx3:#9A948C;
-  --pierre-ombre:rgba(255,255,255,.12);
-  background:rgba(26,29,37,0.95);color:var(--tx-pierre,#F5F0E7);
-}
-[data-theme="dark"] #crustal-gauge-panel .cg-more{border-top-color:rgba(255,255,255,.09);}
-[data-theme="dark"] #crustal-gauge-panel .cg-more>summary{color:var(--maquis-clair,#8fb987);}
+/* Correctif de contraste en mode sombre retiré avec le mode sombre lui-même (2026-08-31).
+   Il redéfinissait --ardoise / --ardoise-clair / --tx3 / --pierre-ombre localement sur ce
+   panneau, parce que les contenus de la jauge sont générés en JS avec des styles INLINE qui
+   référencent ces tokens. Ce point reste vrai et vaut d'être connu : ces variables ne sont
+   PAS thématisées, donc tout futur thème alternatif buterait à nouveau dessus. */
 /* Mobile — la colonne gauche n'existe plus (tabbar + FAB + Zone 2 pleine largeur). Le panneau
    passe donc en bandeau bas, empilé AU-DESSUS de la Zone 2 quand elle est présente, comme sur
    desktop mais en vertical. Hauteurs choisies pour rester sous la pile de zoom (y=200) même sur
@@ -1562,11 +1546,6 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
 /* .leg-docref-row--compact (2026-08-30) : renvoi corpus nesté dans l'accordéon de sa propre
    couche (#tellux-leg-panel) — même séparateur visuel que .mleg-docref, sans répéter le nom. */
 .leg-acc-body .leg-docref-row--compact{margin-top:6px;padding-top:6px;border-top:1px dashed rgba(0,0,0,.08);}
-[data-theme="dark"] .leg-docref-link{color:#9db8d8;border-bottom-color:rgba(157,184,216,.35);}
-[data-theme="dark"] .mleg-docref{border-top-color:rgba(255,255,255,.08);}
-[data-theme="dark"] .leg-acc-body .leg-docref-row--compact{border-top-color:rgba(255,255,255,.09);}
-[data-theme="dark"] #legende-toggle{background:rgba(26,29,37,0.92);color:var(--tx-pierre,#F5F0E7);}
-[data-theme="dark"] #legende-content{background:rgba(26,29,37,0.95);color:var(--tx-pierre,#F5F0E7);}
 @media (max-width:768px){
   /* Sprint app-ui-polish (mai 2026) — bottom mobile pensé pour dégager #conditions-bar
      collapsed. Seuil élargi de 600px à 768px (repro Soleil 2026-08-23) pour matcher le
@@ -1664,8 +1643,13 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
     <span class="logo-text">Tellux</span>
     <div class="hdr-tagline"><em>Révéler l'invisible</em> · Corse</div>
   </div>
+  <!-- #sb-status-dot : PORTE UNE INFORMATION, ne pas retirer en allégeant l'en-tête.
+       Trois états pilotés par le JS (pending ocre / ok vert / error porphyre) qui rendent
+       visible l'état de la connexion Supabase — d'où viennent antennes, mesures certifiées
+       et contributions. Sans lui, une base injoignable devient une carte silencieusement
+       incomplète. Recopié aussi en badge `#badge-sb-dot` par syncBadges(). -->
   <span id="sb-status-dot" class="status-dot status-dot--pending" title="Supabase connexion en cours…" aria-label="Statut Supabase"></span>
-  <button id="theme-toggle" class="theme-toggle" onclick="toggleTheme()" title="Basculer thème clair / sombre" aria-label="Basculer thème clair / sombre">🌙</button>
+  <!-- #theme-toggle retiré le 2026-08-31 avec le mode sombre (arbitrage Soleil). -->
   <button id="hdr-menu-toggle" class="hdr-menu-toggle" type="button" onclick="toggleHdrMenu()" aria-haspopup="true" aria-expanded="false" aria-controls="hdr-menu" aria-label="Menu Tellux" title="Menu">☰</button>
 </div>
 <div class="hdr-actions" id="hdr-menu" aria-hidden="true">
@@ -2748,8 +2732,6 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
 const SB_URL='https://knckulwghgfrxmbweada.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtuY2t1bHdnaGdmcnhtYndlYWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NTAxMzQsImV4cCI6MjA4OTIyNjEzNH0.Cu9dvxFyn-5pbOP65gowCEQvRti74CLnlNYf92jebis';
 
-let DARK=(function(){try{const s=localStorage.getItem('tellux_theme');if(s)return s==='dark';return matchMedia('(prefers-color-scheme:dark)').matches;}catch(e){return matchMedia('(prefers-color-scheme:dark)').matches;}})();
-if(DARK)document.documentElement.setAttribute('data-theme','dark');
 
 // ═══════════════════════════════════════════════════════════════
 // i18n des chaînes JS-rendues (I18N-ANGLAIS-001, volet A — 2026-08-15)
@@ -9006,17 +8988,6 @@ document.addEventListener('keydown', function(e){
 });
 try{if(!localStorage.getItem('tellux_disclaimer')){var d=document.getElementById('disclaimer-overlay');d.style.display='flex';d.setAttribute('aria-hidden','false');}}catch(e){var d=document.getElementById('disclaimer-overlay');d.style.display='flex';d.setAttribute('aria-hidden','false');}
 
-// Dark mode toggle — ni Esri Light Gray ni IGN Plan n'ont de variante dark native
-// (rasters fixes) : le toggle ne touche plus le fond de carte depuis le retrait de
-// CartoDB le 2026-08-30 (qui avait fond+labels dark via setUrl). Reste utile pour le
-// chrome UI (panneaux, texte) piloté par data-theme.
-function toggleTheme(){
-  DARK=!DARK;
-  document.documentElement.setAttribute('data-theme',DARK?'dark':'');
-  const _tt=document.getElementById('theme-toggle');if(_tt)_tt.textContent=DARK?'☀️':'🌙';
-  try{localStorage.setItem('tellux_theme',DARK?'dark':'light');}catch(e){}
-}
-
 function toggleMethodology(){
   // #methodology-panel converti en modal centré (passage plein écran, brief Soleil
   // 2026-08-20) — 'flex' au lieu de 'block' pour permettre le centrage via
@@ -9118,12 +9089,6 @@ function toggleLayersSheetExpand(){
   var willExpand = !accordion.classList.contains('expanded');
   accordion.classList.toggle('expanded', willExpand);
   if(handle) handle.setAttribute('aria-expanded', String(willExpand));
-}
-
-// Init toggle icon — IGN Plan V2 unique, pas de swap de tuiles nécessaire.
-if(DARK){
-  const _tt2=document.getElementById('theme-toggle');if(_tt2)_tt2.textContent='☀️';
-  document.documentElement.setAttribute('data-theme','dark');
 }
 
 // Guard: loadNOAA/loadCEM may be absent post-v8 cleanup — ne pas bloquer le reste du chaînage init

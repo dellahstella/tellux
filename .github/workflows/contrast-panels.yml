@@ -4,29 +4,28 @@ name: contrast-panels
 #
 # POURQUOI CE CHECK EXISTE
 # ------------------------
-# Le mode sombre d'app.html n'est pas une inversion de palette : le bloc
-# `[data-theme="dark"]{ --tx:…; --bg:…; }` redéfinit ses deux tokens avec des
-# valeurs identiques à `:root` (no-op), et tout le sombre repose sur ~24
-# correctifs manuels par sélecteur. Tout nouveau composant qui utilise
-# --ardoise / --ardoise-clair / --tx3 / --pierre-ombre s'affiche donc en
-# couleurs claires sur fond sombre jusqu'à ce qu'on écrive le correctif
-# suivant à la main.
+# Les panneaux flottants du chrome carte sont peuplés en JS avec des styles
+# INLINE référençant des tokens de design : rien ne garantit qu'un couple
+# texte/fond y reste lisible, ces chaînes échappant à toute revue de feuille
+# de style.
 #
 # Cas réel (PR #1148, 2026-08-31) : la jauge crustale sortait sa valeur
 # principale à un contraste de 1,07 — invisible. Repéré à l'œil, par chance.
 # Ce check remplace la chance par une mesure.
 #
+# Depuis le retrait du mode sombre (2026-08-31), la mesure porte sur le thème
+# unique servi en production.
+#
 # CE CHECK EST BLOQUANT, DÈS SA CRÉATION
 # --------------------------------------
 # Contrairement à eval-app-rubric (Phase A informative), celui-ci bloque tout
 # de suite, parce qu'il est calé sur un CLIQUET et non sur un idéal :
-#   • mesure du 2026-08-31 : 19 « critique » (ratio < 3,0) + 49 « aa »
+#   • mesure du 2026-08-31, thème unique : 4 « critique » (ratio < 3,0) + 26 « aa »
 #   • plafonds ci-dessous = ces valeurs exactes → le check est VERT aujourd'hui
 #   • il ne devient rouge que si un chiffre AUGMENTE, c'est-à-dire sur une
 #     régression introduite par la PR en cours
-# Déterminisme vérifié avant promotion : 2 exécutions locales successives →
-# 68 violations et 204 nœuds strictement identiques. Pas de wobble à absorber,
-# donc pas de raison de passer par une phase informative.
+# Déterminisme revérifié après le passage en thème unique : 2 exécutions locales
+# successives → 30 violations et 101 nœuds strictement identiques.
 #
 # LES PLAFONDS NE REMONTENT JAMAIS
 # --------------------------------
@@ -51,7 +50,7 @@ permissions:
 
 jobs:
   contrast:
-    name: Contraste panneaux (clair + sombre)
+    name: Contraste panneaux (thème unique)
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -78,15 +77,22 @@ jobs:
         working-directory: tests/blindage-harness
         env:
           # ═══ CLIQUETS — ne jamais remonter, voir l'en-tête de ce fichier ═══
-          # Baseline mesurée le 2026-08-31 sur main (a9a37d9).
-          CONTRAST_MAX_CRITIQUE: '19'
-          CONTRAST_MAX_AA: '49'
+          # Re-dérivés le 2026-08-31 après le RETRAIT DU MODE SOMBRE : la mesure
+          # ne porte plus que sur le thème unique et servi. Anciennes valeurs
+          # 19/49 (deux thèmes cumulés) — les 15 critiques et 23 AA qui les
+          # complétaient étaient dans le thème sombre, disparu avec lui. Ce n'est
+          # PAS un relâchement : aucune violation n'a été rendue tolérable, leur
+          # surface a cessé d'exister.
+          CONTRAST_MAX_CRITIQUE: '4'
+          CONTRAST_MAX_AA: '26'
           # Plancher de couverture — les cliquets sont des MAJORANTS : si les panneaux ne se
           # peuplaient pas (Supabase KO, boot trop lent, sélecteur renommé), le compte de
           # violations tomberait à 0 et le check passerait sans rien avoir testé. Référence
           # locale : 204 nœuds. Volontairement bas pour tolérer une couche absente en CI, assez
-          # haut pour qu'un DOM vide soit détecté.
-          CONTRAST_MIN_NOEUDS: '80'
+          # haut pour qu'un DOM vide soit détecté. Ramené de 80 à 40 avec le
+          # passage en thème unique : 204 nœuds mesurés en deux thèmes, 101 en un
+          # seul (dont −1 sur l'en-tête, qui a perdu le bouton de bascule).
+          CONTRAST_MIN_NOEUDS: '40'
         run: |
           set +e
           node contrast-panels.mjs > contrast-result.json
@@ -99,7 +105,7 @@ jobs:
           NOEUDS=$(jq -r '.resume.noeuds_mesures' contrast-result.json)
           PANS=$(jq -r '.resume.panneaux_mesures' contrast-result.json)
           {
-            echo "## Contraste des panneaux flottants — clair + sombre"
+            echo "## Contraste des panneaux flottants"
             echo ""
             if [ "$EXIT" = "0" ]; then
               echo "### ✅ Aucune régression"
@@ -115,26 +121,16 @@ jobs:
             echo "| AA (sous le seuil WCAG applicable) | $AA | $PAA |"
             echo ""
             PNOE=$(jq -r '.resume.plancher_noeuds' contrast-result.json)
-            echo "_$NOEUDS nœuds de texte mesurés (plancher $PNOE) sur $PANS panneaux, dans les deux thèmes._"
+            echo "_$NOEUDS nœuds de texte mesurés (plancher $PNOE) sur $PANS panneaux._"
             echo ""
             if [ "$EXIT" != "0" ]; then
               echo "#### Violations critiques"
               echo ""
-              echo '| Thème | Panneau | Ratio | Couleur | Fond effectif | Texte |'
-              echo '|---|---|---|---|---|---|'
-              jq -r '.violations_critiques[] | "| \(.theme) | \(.panel) | \(.ratio) | `\(.couleur)` | `\(.fond_effectif)` | \(.texte) |"' contrast-result.json | head -25
+              echo '| Panneau | Ratio | Couleur | Fond effectif | Texte |'
+              echo '|---|---|---|---|---|'
+              jq -r '.violations_critiques[] | "| \(.panel) | \(.ratio) | `\(.couleur)` | `\(.fond_effectif)` | \(.texte) |"' contrast-result.json | head -25
               echo ""
             fi
-            echo "<details><summary>Dette de thématisation (informatif)</summary>"
-            echo ""
-            echo "Tokens dont la valeur est **identique** en clair et en sombre :"
-            echo ""
-            jq -r '.resume.tokens_identiques_clair_sombre[] | "- `\(.)`"' contrast-result.json
-            echo ""
-            echo "Tant que ces tokens ne sont pas thématisés, chaque nouveau composant qui les"
-            echo "utilise doit recevoir son propre correctif \`[data-theme=\"dark\"]\`."
-            echo ""
-            echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"
           exit $EXIT
 
