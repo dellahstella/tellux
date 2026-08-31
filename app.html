@@ -105,7 +105,6 @@
 .hdr .logo-mark:hover{opacity:0.85;}
 .hdr .logo-mark img{width:52px;height:52px;border-radius:6px;}
 .hdr-title{display:flex;flex-direction:column;gap:2px;}
-.logo-text{font-family:var(--font-display);font-size:22px;font-weight:600;letter-spacing:-0.015em;color:var(--tx-ardoise);}
 .logo-ver{font-family:var(--mono);font-size:10px;color:var(--tx-mica);background:var(--tx-brume);padding:2px 7px;border-radius:20px;margin-left:6px;vertical-align:middle;}
 .hdr-tagline{font-family:var(--font-display);font-size:12px;color:var(--tx-mica);margin-top:1px;letter-spacing:0.005em;}
 .hdr-tagline em{font-style:italic;}
@@ -514,16 +513,12 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .logo-mark{width:36px;height:36px;border-radius:8px;background:var(--acc);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .logo-mark svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;}
 .logo-mark img{width:36px;height:36px;border-radius:6px;display:block;}
-.logo-text{font-size:16px;font-weight:500;letter-spacing:.02em;}
+/* .logo-text retiré du markup le 2026-08-31 (décision Soleil : « le logo suffit »), qui
+   remplace le masquage mobile-seul décidé la veille dans la même PR #1151 — cette
+   session-ci l'a jugé insuffisant, retrait complet plutôt que responsive. Règle CSS
+   dédiée supprimée avec lui (plus aucun élément ne porte cette classe). .hdr-tagline
+   reste display:none : décision antérieure et distincte, non rouverte ici. */
 .hdr-tagline{display:none;}
-/* « Tellux » masqué sur mobile seulement (2026-08-31, allègement de la barre d'en-tête).
-   Masquage responsive et NON retrait pur, délibérément : sur cette barre la tagline est déjà
-   masquée (règle juste au-dessus), donc supprimer le mot laisserait l'en-tête sans aucun
-   texte — le logo seul est un glyphe « T », il ne nomme pas la marque. Sur desktop la place
-   ne manque pas et le nom porte l'identité ; c'est sur mobile que la largeur se paie. */
-@media (max-width:768px){
-  .logo-text{display:none;}
-}
 .hdr-menu-toggle{flex-shrink:0;width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:var(--pierre-ombre);color:var(--tx-ardoise);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;margin-left:4px;}
 .hdr-menu-toggle:hover{background:var(--tx-brume);}
 /* #hdr-menu réutilise .hdr-actions/.hdr-btn tels quels (mêmes classes, même markup) ;
@@ -1633,14 +1628,24 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
      de l'ancien .hdr-actions vivent maintenant dans #hdr-menu (tiroir replié par défaut,
      ouvert via #hdr-menu-toggle). Markup interne des boutons/liens strictement inchangé
      (mêmes onclick/href/title) — préserve les sélecteurs i18n JT_TABLE ".hdr-actions ..."
-     sans modification. -->
-<div class="hdr">
+     sans modification.
+     <div> → <header> le 2026-08-31 (revue accessibilité PR #1151) : ce bloc n'est descendant
+     d'aucun autre landmark (main/article/aside/nav/section) — il précède <main id="main"> dans
+     le flux — donc <header> y prend le rôle ARIA implicite « banner » sans qu'il faille l'écrire
+     (redondant sur un <header> top-level). Aucune collision : les 2 autres <header> du fichier
+     sont dans des modales role="dialog", sectioning content, donc SANS rôle banner implicite.
+     Tous les sélecteurs existants ciblent la classe .hdr, aucun le tag — changement de balise
+     seul, aucun CSS/JS à toucher. Zéro effet visuel. -->
+<header class="hdr">
   <a href="/" class="hdr-back-btn" id="hdr-back-btn" title="Retour à l'accueil Tellux" aria-label="Retour à l'accueil Tellux">←</a>
   <a href="/" class="logo-mark" id="tx-logo" title="Tellux — Révéler l'invisible" aria-label="Retour à l'accueil Tellux" style="text-decoration:none">
     <img src="assets/logo/tellux_logo.svg" alt="Tellux — Révéler l'invisible" width="52" height="52">
   </a>
+  <!-- .logo-text (« Tellux ») retiré le 2026-08-31, décision Soleil : le logo suffit. Le lien
+       #tx-logo juste au-dessus porte déjà title/aria-label "Tellux — Révéler l'invisible" /
+       "Retour à l'accueil Tellux" — le nom reste annoncé aux lecteurs d'écran, il disparaît
+       seulement à l'affichage. .hdr-tagline reste tel quel (déjà display:none, non concerné). -->
   <div class="hdr-title">
-    <span class="logo-text">Tellux</span>
     <div class="hdr-tagline"><em>Révéler l'invisible</em> · Corse</div>
   </div>
   <!-- #sb-status-dot : PORTE UNE INFORMATION, ne pas retirer en allégeant l'en-tête.
@@ -1651,7 +1656,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
   <span id="sb-status-dot" class="status-dot status-dot--pending" title="Supabase connexion en cours…" aria-label="Statut Supabase"></span>
   <!-- #theme-toggle retiré le 2026-08-31 avec le mode sombre (arbitrage Soleil). -->
   <button id="hdr-menu-toggle" class="hdr-menu-toggle" type="button" onclick="toggleHdrMenu()" aria-haspopup="true" aria-expanded="false" aria-controls="hdr-menu" aria-label="Menu Tellux" title="Menu">☰</button>
-</div>
+</header>
 <div class="hdr-actions" id="hdr-menu" aria-hidden="true">
     <button class="hdr-btn" onclick="toggleMethodology()" title="Méthodologie & sources">Méthodologie</button>
     <button class="hdr-btn" onclick="openGlossaryDrawer()" title="Glossaire & guides pratiques">Comprendre les termes</button>
