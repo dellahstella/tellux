@@ -3167,9 +3167,9 @@ var JS_STRINGS_EN = {
   // commentaire à updateInlineLegendMobile().
   leg_group_anthropique: "Human-made sources",
   mleg_sub_hot: "Tellux model combining the electrical grid and substrate, in nT — not a measurement.",
-  mleg_sub_hotrf: "Tellux model calibrated on certified ANFR/EXEM measurements — order-of-magnitude estimate, not a measurement.",
+  mleg_sub_hotrf: "Tellux model, internally calibrated against certified ANFR/EXEM measurements — order-of-magnitude estimate, not a measurement.",
   mleg_sub_emag: "Deep Corsican basement anomalies (NOAA EMAG2v3) — always included in the calculation.",
-  mleg_sub_foretdense: "Closed-canopy forest (IGN BD Forêt V2) — the button toggles RF attenuation in the calculation.",
+  mleg_sub_foretdense: "Tall-canopy species (IGN BD Forêt V2), excluding scrub-forest mosaic — attenuates RF at map click when enabled (not the heatmap).",
   mleg_sub_crustal: "Reference magnetic anomalies, global and Corsican — documentary comparison, outside the calculation.",
   mleg_sub_cert: "30 certified measurement records (2024–2026) — used once to calibrate the RF model.",
   mleg_sub_contrib: "Citizen smartphone measurements, uncertified — display only, outside the calculation.",
@@ -3599,9 +3599,22 @@ const LAYER_DOC_ANCHORS={
 // updateInlineLegendMobile() ne peut de toute façon jamais être appelée avec show=true pour elles.
 const LAYER_SUBTITLE_FR={
   hot:  'Modèle Tellux combinant réseau électrique et substrat, en nT — pas une mesure.',
-  hotrf:'Modèle Tellux calibré sur mesures certifiées ANFR/EXEM — estimation d’ordre de grandeur, pas une mesure.',
+  hotrf:'Modèle Tellux, calibration interne sur mesures certifiées ANFR/EXEM — estimation d’ordre de grandeur, pas une mesure.',
   emag: 'Anomalies du socle profond corse (NOAA EMAG2v3) — toujours incluses dans le calcul.',
-  foretdense:'Forêt fermée (BD Forêt V2 IGN) — le bouton module l’atténuation RF du calcul.',
+  // foretdense (2026-08-31, revue Soleil PR #1155) : reformulé après vérification RF_field()
+  // (app.html ~L6229, garde applyVegetation && FORET_DENSE_PARTS && ACTIVE.foretdense) — le
+  // toggle module bien le calcul détaillé (popup/Expert/CSV, confirmé PR #1068 table de vérif :
+  // 0,156→0,05 V/m en forêt), PAS la heatmap (buildHotRF/calcN_RF_calib n'y passent jamais,
+  // ni calibrateRF()). D'où la précision "au clic carte... pas la carte de chaleur" — ni plus
+  // ni moins que ce que le code fait réellement. "hors maquis-forêt" remplace "forêt fermée"
+  // seule : le filtre "option C" (PR #1129) exclut déjà les feuillus indifférenciés, dire
+  // "forêt fermée" tout court aurait repris la définition BD Forêt V2 brute (~59% de la Corse,
+  // rejetée justement pour ce motif). Point distinct non résolu par cette reformulation,
+  // signalé séparément à Soleil : RF_CALIB_K (calibrateRF()) est dérivé SANS applyVegetation
+  // sur les 30 points certifiés — risque de double-comptage si un point calibré était en forêt
+  // réelle, jamais examiné par PR #1068 ni par la dette privée RF-FOREST-TERRAIN-PLACEHOLDER-001
+  // (elle-même à jour ni sur l'état du code ni sur ce PR).
+  foretdense:'Essences hautes (BD Forêt V2 IGN), hors maquis-forêt — atténue le RF au clic carte quand activé (pas la carte de chaleur).',
   crustal:'Anomalies magnétiques de référence, mondiales et corses — comparaison documentaire, hors calcul.',
   cert: '30 fiches de mesure certifiées (2024–2026) — ont servi une fois à calibrer le modèle RF.',
   contrib:'Mesures citoyennes au smartphone, non certifiées — affichage seul, hors calcul.',
