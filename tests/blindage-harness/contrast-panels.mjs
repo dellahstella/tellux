@@ -5,21 +5,29 @@
 //
 // POURQUOI CE SCRIPT EXISTE
 // -------------------------
-// Le mode sombre d'app.html n'est PAS une inversion de palette. Le bloc
-// `[data-theme="dark"]{ --tx:…; --bg:…; }` redéfinit ses deux tokens avec des
-// valeurs STRICTEMENT IDENTIQUES à celles de `:root` — c'est un no-op. Tout le
-// mode sombre repose sur ~24 correctifs manuels `[data-theme="dark"] X{…}`.
-// Conséquence : tout composant qui utilise --ardoise / --ardoise-clair / --tx3
-// / --pierre-ombre s'affiche en couleurs CLAIRES sur fond sombre, jusqu'à ce
-// que quelqu'un écrive le correctif suivant à la main.
+// Les panneaux flottants du chrome carte sont peuplés en JS avec des styles
+// INLINE qui référencent des tokens de design (--ardoise, --ardoise-clair,
+// --tx3, --pierre-ombre). Rien ne garantit qu'un couple texte/fond y reste
+// lisible : ce sont des chaînes HTML assemblées à la main, hors de toute revue
+// de feuille de style, et posées au-dessus d'un fond de carte.
 //
-// Cas réel (2026-08-31, PR #1148) : la jauge crustale, dont les contenus sont
-// générés en JS avec des styles INLINE référençant ces tokens, sortait sa
-// valeur principale en #1F2329 sur fond #1A1D25 — contraste 1,07. Invisible.
-// Le défaut préexistait et n'a été vu que parce qu'un humain a regardé.
+// Cas réel (2026-08-31, PR #1148) : la jauge crustale sortait sa valeur
+// principale à un contraste de 1,07 — invisible. Le défaut préexistait et n'a
+// été vu que parce qu'un humain a regardé au bon moment.
 //
 // Ce script transforme ce mode d'échec « invisible jusqu'à ce qu'on regarde »
 // en échec mesuré et reproductible.
+//
+// THÈME UNIQUE DEPUIS LE 2026-08-31
+// ---------------------------------
+// Ce script mesurait initialement DEUX thèmes (clair + sombre). Le mode sombre
+// d'app.html a été retiré le 2026-08-31 (arbitrage Soleil, Cran C : il stylait
+// le chrome UI mais pas le fond de carte, raster clair fixe). La mesure porte
+// donc désormais sur le thème unique et servi. La sonde de parité des tokens
+// clair/sombre a disparu avec lui — elle n'avait plus d'objet.
+// ⚠️ Les tokens ci-dessus ne sont toujours PAS thématisés : si un thème
+// alternatif revient un jour, ce script devra rebasculer en multi-thèmes et les
+// cliquets être re-dérivés. C'est la seule raison de rouvrir ce fichier.
 //
 // POURQUOI PAS axe-core
 // ---------------------
@@ -33,21 +41,16 @@
 //
 // CE QUE FAIT CE SCRIPT À LA PLACE
 // --------------------------------
-// Sonde A — CONTRASTE EFFECTIF (bloquante). Pour chaque panneau de la liste
-//   PANELS, dans les deux thèmes : parcourt les éléments porteurs de texte
-//   visible, résout l'arrière-plan effectif en compositant les fonds des
-//   ancêtres (alpha compris) jusqu'à opacité 1, et calcule le ratio WCAG 2.1.
+// Sonde CONTRASTE EFFECTIF (bloquante). Pour chaque panneau de la liste PANELS :
+//   parcourt les éléments porteurs de texte visible, résout l'arrière-plan
+//   effectif en compositant les fonds des ancêtres (alpha compris) jusqu'à
+//   opacité 1, et calcule le ratio WCAG 2.1.
 //   Seuils : 4,5:1 en texte normal, 3:1 en grand texte (>= 24 px, ou >= 18,66 px
 //   gras) — définition WCAG, pas un seuil maison.
 //   Si la pile d'ancêtres n'atteint jamais l'opacité 1 (cas du panneau posé sur
-//   la carte), on composite sur BASE_TONE, déclaré par thème ci-dessous. Le
-//   champ `base_fallback_used` du rapport dit exactement quels nœuds sont
-//   concernés, pour que l'approximation reste auditable.
-//
-// Sonde B — PARITÉ DES TOKENS (informative). Liste les tokens de design dont
-//   la valeur calculée est IDENTIQUE en clair et en sombre. Ne fait pas
-//   échouer : c'est l'inventaire de la dette, pour que le prochain qui ouvre
-//   le sujet n'ait pas à la re-dériver.
+//   la carte), on composite sur BASE_TONE. Le champ `base_fallback_used` du
+//   rapport dit exactement quels nœuds sont concernés, pour que l'approximation
+//   reste auditable.
 //
 // SORTIE : JSON sur stdout. Exit 0 si aucune violation, 2 sinon.
 //
@@ -90,15 +93,9 @@ const PANELS = [
 const LAYER_BUTTONS = ['b-crustal', 'b-ant', 'b-res'];
 
 // Fond de repli quand la pile d'ancêtres n'atteint jamais l'opacité 1 (panneau
-// posé sur le canvas Leaflet). Valeurs prises sur le fond réellement rendu :
-// Esri Light Gray en clair, et la teinte du panneau lui-même en sombre.
-const BASE_TONE = { light: [245, 240, 231], dark: [26, 29, 37] };
-
-// Tokens dont la parité clair/sombre est inventoriée par la sonde B.
-const TOKENS_AUDITES = [
-  '--tx', '--bg', '--tx3', '--ardoise', '--ardoise-clair',
-  '--pierre-ombre', '--mica', '--border', '--tx-ardoise', '--tx-pierre',
-];
+// posé sur le canvas Leaflet). Valeur prise sur le fond réellement rendu (Esri
+// World Light Gray Canvas).
+const BASE_TONE = [245, 240, 231];
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -232,25 +229,6 @@ const PROBE_CONTRAST = function ([panels, baseTone]) {
   return results;
 };
 
-// ─── Sonde B — parité des tokens ───────────────────────────────────────────
-const PROBE_TOKENS = function (noms) {
-  const lire = () => {
-    const cs = getComputedStyle(document.documentElement);
-    const out = {};
-    for (const n of noms) out[n] = cs.getPropertyValue(n).trim();
-    return out;
-  };
-  const avant = document.documentElement.getAttribute('data-theme');
-  document.documentElement.removeAttribute('data-theme');
-  const clair = lire();
-  document.documentElement.setAttribute('data-theme', 'dark');
-  const sombre = lire();
-  if (avant) document.documentElement.setAttribute('data-theme', avant);
-  else document.documentElement.removeAttribute('data-theme');
-  const identiques = noms.filter((n) => clair[n] && clair[n] === sombre[n]);
-  return { clair, sombre, identiques };
-};
-
 // ─── Orchestration ─────────────────────────────────────────────────────────
 
 async function main() {
@@ -267,7 +245,7 @@ async function main() {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
 
-  const rapport = { url: appUrl, themes: {}, tokens: null };
+  const rapport = { url: appUrl, panneaux: null };
 
   try {
     await page.goto(appUrl, { waitUntil: 'domcontentloaded', timeout: BOOT_TIMEOUT_MS });
@@ -296,32 +274,21 @@ async function main() {
     });
     await page.waitForTimeout(1200);
 
-    rapport.tokens = await page.evaluate(PROBE_TOKENS, TOKENS_AUDITES);
-
-    for (const theme of ['light', 'dark']) {
-      await page.evaluate((t) => {
-        if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-        else document.documentElement.removeAttribute('data-theme');
-      }, theme);
-      await page.waitForTimeout(800);
-      // Playwright sérialise PROBE_CONTRAST et l'exécute dans la page — même
-      // convention que les autres harnais du dossier (sondes déclarées en
-      // haut de fichier, appelées via page.evaluate).
-      rapport.themes[theme] = await page.evaluate(
-        PROBE_CONTRAST,
-        [PANELS, BASE_TONE[theme]],
-      );
-    }
+    // Mesure unique : app.html n'a plus qu'un thème depuis le 2026-08-31. Aucun
+    // attribut `data-theme` n'est posé ni retiré ici — la page est mesurée telle
+    // qu'un visiteur la reçoit.
+    // Playwright sérialise PROBE_CONTRAST et l'exécute dans la page — même
+    // convention que les autres harnais du dossier (sondes déclarées en haut de
+    // fichier, appelées via page.evaluate).
+    rapport.panneaux = await page.evaluate(PROBE_CONTRAST, [PANELS, BASE_TONE]);
   } finally {
     await browser.close();
     if (server) server.close();
   }
 
   const violations = [];
-  for (const [theme, panneaux] of Object.entries(rapport.themes)) {
-    for (const p of panneaux) {
-      for (const v of (p.violations || [])) violations.push({ theme, panel: p.panel, ...v });
-    }
+  for (const p of rapport.panneaux) {
+    for (const v of (p.violations || [])) violations.push({ panel: p.panel, ...v });
   }
 
   // ─── Cliquet (ratchet) ───────────────────────────────────────────────────
@@ -342,7 +309,7 @@ async function main() {
   const critiques = violations.filter((v) => v.ratio < 3.0);
   const aa = violations.filter((v) => v.ratio >= 3.0);
 
-  const noeudsMesures = Object.values(rapport.themes).flat().reduce((s, p) => s + (p.noeuds || 0), 0);
+  const noeudsMesures = rapport.panneaux.reduce((s, p) => s + (p.noeuds || 0), 0);
 
   const depassements = [];
   // Plancher de couverture — AVANT les cliquets, et pour la même raison qu'axe-core a été
@@ -375,16 +342,12 @@ async function main() {
       plafond_aa: MAX_AA,
       plancher_noeuds: MIN_NOEUDS,
       depassements,
-      panneaux_mesures: (rapport.themes.light || []).filter((p) => p.etat === 'mesuré').length,
+      panneaux_mesures: rapport.panneaux.filter((p) => p.etat === 'mesuré').length,
       noeuds_mesures: noeudsMesures,
-      // Sonde B : tokens dont la valeur est identique en clair et en sombre.
-      // Informatif — c'est l'inventaire de la dette de thématisation.
-      tokens_identiques_clair_sombre: rapport.tokens.identiques,
     },
     violations_critiques: critiques,
     violations_aa: aa,
-    detail: rapport.themes,
-    tokens: rapport.tokens,
+    detail: rapport.panneaux,
   };
   process.stdout.write(JSON.stringify(sortie, null, 2) + '\n');
   process.exitCode = depassements.length > 0 ? 2 : 0;
