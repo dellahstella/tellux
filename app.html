@@ -5935,6 +5935,10 @@ function loadSitesApp() {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const d = await r.json();
       const sites = d.sites || [];
+      // Contrôle des champs AVANT adaptation : signale toute clé de la donnée qui n'est ni
+      // exposée ni explicitement écartée — sinon elle serait perdue en silence (cf. le bloc
+      // de commentaires sur adaptSiteEMFromApp).
+      auditChampsSitesApp(sites);
       SITES_REMARQUABLES = sites.filter(s => s.type === 'site_em').map(adaptSiteEMFromApp);
       POINTS_CHAUDS_RADIO = sites.filter(s => s.type === 'site_uth').map(adaptSiteUthFromApp);
       THERMAL_SOURCES_CORSE = sites.filter(s => s.type === 'source_thermale');
@@ -5944,6 +5948,69 @@ function loadSitesApp() {
     }
   })();
   return _sitesAppPromise;
+}
+// ═══ Adaptateurs sites_app.json → objets runtime ═══
+//
+// Ces adaptateurs sont des LISTES BLANCHES, et c'est VOULU : ils gardent hors de l'objet runtime
+// tout ce qui relève de la provenance et de l'audit (gps_audit_note, gps_lock_reason,
+// sources_originales…). Prose interne, utile au corpus, sans objet dans l'UI — et qu'on ne veut
+// pas voir apparaître par accident dans un popup un jour où quelqu'un fera une boucle générique
+// sur les champs d'un site.
+//
+// LE PROBLÈME N'EST DONC PAS LE FILTRE, C'EST SON SILENCE. Ajouter un champ à sites_app.json et
+// oublier de l'ajouter ici ne produit aucune erreur : le champ disparaît, et on ne s'en aperçoit
+// qu'en constatant que la fonctionnalité ne marche pas. C'est arrivé le 2026-08-31 avec
+// `geometrie` (emprise du Monte Maggiore) — rattrapé avant merge, par chance.
+//
+// D'où les deux listes ci-dessous. Tout champ présent dans la donnée et absent des DEUX listes
+// déclenche un avertissement console au chargement, une seule fois. La contrepartie utile : en
+// lisant ce bloc on sait exactement ce qui est délibérément écarté, sans avoir à le déduire.
+//
+// AJOUT D'UN CHAMP → le déclarer dans `_EXPOSES` (s'il doit atteindre l'UI, et le recopier dans
+// l'adaptateur) ou dans `_IGNORES` (s'il reste interne). Jamais nulle part : c'est le cas que
+// l'avertissement attrape.
+const SITE_EM_EXPOSES = ['slug', 'nom', 'lat', 'lon', 'categorie', 'precision_coord', 'description', 'geometrie'];
+const SITE_UTH_EXPOSES = ['slug', 'nom', 'lat', 'lon', 'precision_coord', 'description'];
+// Champs volontairement NON exposés au runtime — provenance, audit GPS, tri éditorial.
+const SITE_IGNORES = [
+  'type', 'properties',                                        // structurels (properties lu à part)
+  'commune_nom', 'commune_insee',                              // pas affichés aujourd'hui
+  'gps_source', 'gps_audit', 'gps_audit_note',                 // traçabilité GPS
+  'gps_locked', 'gps_lock_reason', 'gps_status',               // gel de coordonnée
+  'priorite', 'phase_publication', 'sources_originales',       // tri éditorial interne
+  'notes',                                                     // notes de corpus
+];
+// Même découpage au niveau `properties.*` : ces trois clés-là sont réellement lues (par
+// adaptSiteUthFromApp), le reste est documentaire et reste dans le fichier de données.
+const SITE_PROPS_EXPOSES = ['dose_gamma_estimee_nSv_h', 'rayon_influence_m', 'statut_mesure'];
+const SITE_PROPS_IGNORES = [
+  'signature_em', 'impact_modele', 'historique', 'statut_actuel', 'source_principale',
+  'type_specifique', 'mecanisme_physique',
+];
+// Contrôle exécuté une fois au chargement. Volontairement un warn et non une exception : un
+// champ inconnu n'est pas une raison de casser le boot de la carte, seulement de le dire.
+function auditChampsSitesApp(sites) {
+  const connus = {
+    site_em: new Set([...SITE_EM_EXPOSES, ...SITE_IGNORES]),
+    site_uth: new Set([...SITE_UTH_EXPOSES, ...SITE_IGNORES, 'categorie']),
+  };
+  const inconnus = new Set();
+  for (const s of sites) {
+    const ref = connus[s.type];
+    if (!ref) continue; // source_thermale = passe-plat intégral, pas de liste blanche à tenir
+    for (const k of Object.keys(s)) if (!ref.has(k)) inconnus.add(s.type + '.' + k);
+    for (const k of Object.keys(s.properties || {})) {
+      if (!SITE_PROPS_EXPOSES.includes(k) && !SITE_PROPS_IGNORES.includes(k)) {
+        inconnus.add(s.type + '.properties.' + k);
+      }
+    }
+  }
+  if (inconnus.size) {
+    console.warn('[Tellux] sites_app.json — champ(s) non déclaré(s), donc PERDUS par les adaptateurs : '
+      + Array.from(inconnus).sort().join(', ')
+      + ' — cf. SITE_*_EXPOSES / SITE_IGNORES dans app.html.');
+  }
+  return Array.from(inconnus);
 }
 function adaptSiteEMFromApp(s) {
   // `geometrie` transmis tel quel (ajouté 2026-08-31) : sans ça, l'emprise du Monte Maggiore
