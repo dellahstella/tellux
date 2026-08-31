@@ -292,14 +292,15 @@ async function main() {
   }
 
   // ─── Cliquet (ratchet) ───────────────────────────────────────────────────
-  // app.html porte AUJOURD'HUI une dette de contraste antérieure à ce script
-  // (cf. le no-op du bloc [data-theme="dark"] documenté en tête de fichier).
-  // Un check qui échoue dès son premier jour serait ignoré en une semaine.
-  // On le rend donc utile immédiatement sans exiger la refonte de palette :
-  // les plafonds ci-dessous sont calés sur la mesure du jour, et le check
-  // tombe dès qu'un chiffre AUGMENTE. Ce sont des cliquets — ils ne doivent
-  // JAMAIS être remontés pour faire passer une PR ; la seule direction
-  // autorisée est vers le bas, au fur et à mesure des corrections.
+  // À sa création (2026-08-31), app.html portait une dette de contraste
+  // antérieure à ce script — le check ne pouvait pas partir à 0/0 sans échouer
+  // dès son premier jour, ce qui l'aurait fait ignorer en une semaine. Les
+  // plafonds étaient donc calés sur la mesure du jour, revus à la baisse au
+  // fil des corrections. Résorbée le même jour (dette A11Y-CONTRAST-APP-PANELS-002
+  // fermée) : les valeurs par défaut sont maintenant 0/0 (cf. MAX_CRITIQUE/MAX_AA
+  // ci-dessous). Le mécanisme de cliquet reste le garde-fou permanent contre
+  // toute régression — ces plafonds ne doivent JAMAIS être remontés pour faire
+  // passer une PR ; la seule direction autorisée est vers le bas.
   //
   //   critique = ratio < 3,0  → texte illisible ou quasi (le cas de la jauge
   //                             crustale corrigé le 2026-08-31 était à 1,07)
