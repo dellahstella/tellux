@@ -1013,8 +1013,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .map-wrap .layers-accordion.open{transform:translateX(0);}
 /* Complément à l'inventaire z-index ci-dessus (repro Soleil 2026-08-23) : l'inventaire de
    2026 ne couvrait que les éléments custom de ce fichier, pas les controls Leaflet natifs
-   (topright/topleft/bottomright/bottomleft — zoom, switch de fond, gauge crustale
-   #crustal-gauge-panel, #delta-hover), dont le CSS bundlé fixe .leaflet-top/.leaflet-bottom
+   (topright/topleft/bottomright/bottomleft — zoom, switch de fond, jauge crustale de l'époque
+   [#crustal-gauge-panel n'est PLUS un contrôle Leaflet depuis le 2026-08-29, cf. son CSS],
+   #delta-hover), dont le CSS bundlé fixe .leaflet-top/.leaflet-bottom
    à z-index:1000. Sous 1100 (cette accordéon), donc recouverts quand le tiroir est ouvert —
    confirmé en repro : gauge crustale invisible sous l'accordéon ouvert, desktop et mobile.
    Remonté ci-dessous à 1150 (juste au-dessus de l'accordéon, toujours sous #about-modal/2000
@@ -1470,10 +1471,84 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 #legende-content .leg-acc-body{padding:0 0 9px 15px;}
 [data-theme="dark"] #legende-content .leg-acc{border-top-color:rgba(255,255,255,.09);}
 [data-theme="dark"] #legende-content .leg-acc-sum{color:var(--maquis-clair,#8fb987);}
-/* Jauge crustale intégrée au panneau « ? » — brief « exécution groupée » item B, 2026-08-29.
-   Plus un contrôle Leaflet flottant (chevauchait le panneau). Rendue comme une section du « ? ». */
-#legende-content #crustal-gauge-panel{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
-#legende-content #crustal-gauge-panel .cg-title{font-family:var(--font-display,var(--font));font-size:11px;font-weight:600;color:var(--tx-mica,var(--tx3));margin:0 0 6px;letter-spacing:.06em;text-transform:uppercase;}
+/* ═══ Jauge crustale — panneau flottant bas-gauche (Phase 2 « anomalies polygonales », 2026-08-31)
+   Troisième et dernière position de cette jauge, cette fois mesurée plutôt que supposée :
+     · avant le 2026-08-29 : contrôle Leaflet topright → chevauchait #legende (le « ? »)
+     · 2026-08-29 → 2026-08-31 : section du panneau « ? » — plus de chevauchement, mais la jauge
+       n'était plus visible qu'une fois le « ? » déplié
+     · maintenant : panneau autonome en bas-gauche, rendu possible par la version compacte
+   Ce qui a débloqué la chose, c'est la réduction du gabarit (347 px → ~230 px : descriptif, pied
+   et références de contexte repliés dans un <details>), pas un gain d'espace : la Zone 2 fait
+   toujours ~180 px de haut. Cf. showCrustalGauge().
+   Géométrie de la colonne gauche, mesurée sur 5 viewports :
+     plafond = 200 px (bas de la pile de contrôles Leaflet : zoom +/− puis « recentrer »)
+     plancher = Zone 2 quand elle est là (bottom 60 + 180 de haut = 240), sinon #conditions-bar (40)
+   D'où les deux max-height. `overflow-y:auto` est le garde-fou : même à une hauteur d'écran non
+   testée, le panneau se met à défiler au lieu de déborder sur la Zone 2.
+   z-index 1000 = celui de #tellux-legends-context et de #legende (symétrie voulue) : en cas de
+   contact, l'ordre DOM donne la priorité à la Zone 2, qui est le contenu le plus dense. */
+#crustal-gauge-panel{
+  display:none;
+  position:fixed;
+  left:12px;
+  top:200px;
+  z-index:1000;
+  width:250px;
+  max-width:calc(100vw - 24px);
+  max-height:calc(100vh - 260px);
+  overflow-y:auto;
+  padding:10px 12px;
+  background:var(--pierre-ombre);
+  border:1px solid var(--border);
+  border-radius:var(--r2);
+  box-shadow:0 4px 16px rgba(31,35,41,0.12);
+  font-family:var(--font);
+}
+body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
+#crustal-gauge-panel .cg-title{font-family:var(--font-display,var(--font));font-size:11px;font-weight:600;color:var(--tx-mica,var(--tx3));margin:0 0 6px;letter-spacing:.06em;text-transform:uppercase;}
+/* Repli du secondaire — même grammaire que .leg-acc du panneau « ? » (chevron ▸ qui pivote),
+   pour que l'utilisateur reconnaisse le geste d'un panneau à l'autre. */
+#crustal-gauge-panel .cg-more{margin-top:8px;padding-top:7px;border-top:1px solid rgba(0,0,0,.08);}
+#crustal-gauge-panel .cg-more>summary{cursor:pointer;list-style:none;font-size:9.5px;font-weight:600;letter-spacing:.03em;color:var(--tx-maquis,#3F5B3A);display:flex;align-items:center;gap:5px;}
+#crustal-gauge-panel .cg-more>summary::-webkit-details-marker{display:none;}
+#crustal-gauge-panel .cg-more>summary::before{content:"\25B8";font-size:8px;color:var(--tx-mica,var(--tx3));transition:transform .15s;}
+#crustal-gauge-panel .cg-more[open]>summary::before{transform:rotate(90deg);}
+#crustal-gauge-panel .cg-more>summary:hover{color:var(--tx-ocre,#C28533);}
+#crustal-gauge-panel .cg-more-body{padding-top:7px;}
+/* Mode sombre — les contenus de la jauge sont générés en JS avec des styles INLINE qui
+   référencent --ardoise / --ardoise-clair / --tx3 / --pierre-ombre. Ces variables ne sont pas
+   thématisées : en sombre, la valeur principale sortait en #1F2329 sur fond #1A1D25, soit un
+   contraste de 1,07 — illisible (mesuré). Le défaut préexistait (même rendu quand la jauge
+   vivait dans le panneau « ? », qui a le même fond sombre) mais il n'était pas tenable sur un
+   panneau désormais posé en évidence sur la carte.
+   Corrigé en redéfinissant ces variables LOCALEMENT sur le panneau, plutôt qu'en réécrivant les
+   styles inline un par un côté JS : les mêmes chaînes HTML servent aux deux thèmes, et la
+   correction ne peut pas fuir hors de ce panneau. --pierre-ombre sert ici de fond de piste aux
+   barres (le fond du panneau, lui, est fixé explicitement juste en dessous). */
+[data-theme="dark"] #crustal-gauge-panel{
+  --ardoise:#F5F0E7;
+  --ardoise-clair:#CFC9BE;
+  --tx3:#9A948C;
+  --pierre-ombre:rgba(255,255,255,.12);
+  background:rgba(26,29,37,0.95);color:var(--tx-pierre,#F5F0E7);
+}
+[data-theme="dark"] #crustal-gauge-panel .cg-more{border-top-color:rgba(255,255,255,.09);}
+[data-theme="dark"] #crustal-gauge-panel .cg-more>summary{color:var(--maquis-clair,#8fb987);}
+/* Mobile — la colonne gauche n'existe plus (tabbar + FAB + Zone 2 pleine largeur). Le panneau
+   passe donc en bandeau bas, empilé AU-DESSUS de la Zone 2 quand elle est présente, comme sur
+   desktop mais en vertical. Hauteurs choisies pour rester sous la pile de zoom (y=200) même sur
+   un écran de 667 px de haut. */
+@media (max-width:768px){
+  #crustal-gauge-panel{
+    left:8px;right:8px;width:auto;
+    top:auto;bottom:68px;
+    max-height:26vh;
+  }
+  body.has-ctx-legends #crustal-gauge-panel{
+    bottom:calc(68px + 35vh);
+    max-height:24vh;
+  }
+}
 /* Repères documentaires — brief "bouton ? contextuel" 2026-08-28 */
 #tellux-leg-docrefs{margin-top:10px;}
 #tellux-leg-docrefs.has-core{padding-top:10px;border-top:1px solid var(--border);}
@@ -2379,16 +2454,10 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
            Anomalies mondiales en ont été explicitement exclues (triage Soleil, cf.
            LEGEND_CORE_IDS/LEGEND_HTML plus bas). -->
       <div id="tellux-leg-panel" style="display:none"></div>
-      <!-- #crustal-gauge-panel : jauge « Anomalie crustale locale ». Déplacée dans le panneau « ? »
-           le 2026-08-29 (brief « exécution groupée », item B). Était un contrôle Leaflet flottant
-           topright → chevauchait ce panneau. Un simple repositionnement dans un coin ne suffit
-           pas (la jauge fait ~350 px de haut, aucun coin n'est libre de ce gabarit sur écran
-           court — top-left entre alors en collision avec les pastilles Zone 2 bas-gauche).
-           Vivre DANS le « ? » élimine tout conflit de coin : c'est un repère de lecture pour la
-           couche « Anomalies de référence », sa place naturelle. Contrepartie assumée : visible
-           seulement quand le « ? » est ouvert (comme toute autre légende de couche). Rempli par
-           showCrustalGauge() / mis à jour par updateCrustalGauge() (moveend). -->
-      <div id="crustal-gauge-panel" style="display:none"></div>
+      <!-- #crustal-gauge-panel a quitté ce panneau le 2026-08-31 (Phase 2 « anomalies polygonales ») :
+           il est de nouveau un panneau flottant autonome, en bas-gauche — voir sa nouvelle position
+           juste avant #tellux-legends-context, plus bas dans ce fichier. Historique du va-et-vient
+           documenté sur showCrustalGauge(). -->
       <!-- #tellux-leg-docrefs : renvois vers les pages doc publiques, rendu par updateLegendPanel()
            pour TOUTE couche active portant une ancre (LAYER_DOC_ANCHORS) — brief "bouton ? contextuel"
            2026-08-28. Indépendant de #tellux-leg-panel (qui ne montre que les 4 légendes couleur core). -->
@@ -2989,22 +3058,27 @@ var JS_STRINGS_EN = {
   rdepot_norme_label: "Standard:",
   rdepot_precision_note: "⚠ Certified point-in-time measurement, not extrapolable over time or space; does not constitute a territorial diagnosis.",
   crustal_bangui_name: "Bangui (Central African Republic)",
-  crustal_bangui_desc: "Largest negative circular anomaly on the globe — crater or deep crustal intrusion origin.",
+  crustal_bangui_desc: "Largest negative anomaly on the globe — crater or deep crustal intrusion origin. An ellipse of about 1000 × 700 km, covering most of the Central African Republic.",
+  crustal_bangui_footprint_source: "Published ellipse ~700 × 1000 km (Antoine et al. 1999); long-axis orientation inferred from the E-W/NE-SW trend of the constituent anomalies (Njiteu Tchoukeu et al.). Schematic envelope, not a measured outline.",
   crustal_kursk_name: "Kursk (Russia)",
-  crustal_kursk_desc: "Major positive crustal anomaly — banded iron formation (BIF), extreme magnetic gradient.",
+  crustal_kursk_desc: "Major positive crustal anomaly — banded iron formation (BIF), extreme magnetic gradient. A NW-SE elongated belt of about 120,000 km².",
+  crustal_kursk_footprint_source: "Area anchored on the published ~120,000 km² of the iron-ore field (Kursk-Belgorod-Voronezh); axes derived from a 200 km width and a NW-SE elongation (Savko et al. 2022). Schematic envelope, not a measured outline.",
   crustal_vredefort_name: "Vredefort (South Africa)",
-  crustal_vredefort_desc: "Largest known impact crater — concentric rings, shocked granite.",
+  crustal_vredefort_desc: "Largest known impact crater — concentric rings, shocked granite. The original structure is 250-300 km across; the preserved central dome is only 90 km.",
   crustal_ries_name: "Ries (Bavaria)",
   crustal_ries_desc: "24 km impact crater — granite/sediment contrast, high-precision surveys.",
   crustal_chicxulub_name: "Chicxulub (Yucatán)",
   crustal_chicxulub_desc: "180 km K-Pg crater — peripheral ring, end-Cretaceous impact.",
   crustal_rayon_prefix: "· radius ~",
+  crustal_ellipse_prefix: "· ellipse ~",
+  crustal_footprint_label: "Extent:&nbsp;",
   crustal_amplitude_note: "Amplitude from the cited dedicated survey — EMAG2v3 (2 arc-min) shows an attenuated version. Scale reference, not “certified”.",
   crustal_corse_scale_label: "Corsican site — local scale, not quantified",
   crustal_corse_source_label: "Source: BRGM · sites_app.json — outside the calculation",
   crustal_corse_call_to_measure: "🔎 A documented but never measured anomaly — few sites of this kind are recorded in Corsica. A first field measurement would be a welcome scientific contribution.",
   crustal_corse_measure_cta: "Contribute a measurement here →",
   crustal_gauge_title: "Local crustal anomaly",
+  crustal_gauge_more: "Context and method",
   crustal_nt_centre_carte: "nT at map center",
   crustal_gauge_desc_prefix: "Deviation of the basement magnetic field (crustal anomaly) beneath the map center. Exploratory reference point — not integrated into the Tellux score; ",
   crustal_gauge_desc_bold: "click on the map",
@@ -3913,6 +3987,12 @@ function updateLegendPanel(){
       ctxPanel.style.display='flex';
       ctxPanel.innerHTML=ctxActive.map(id=>'<div class="legend-context-pill" data-legend-id="'+id+'">'+legendHtmlFor(id)+'</div>').join('');
     }
+    // Marqueur de place occupée en bas-gauche (2026-08-31). #crustal-gauge-panel flotte dans la
+    // même colonne et doit connaître son plancher : la Zone 2 occupe une bande de hauteur
+    // CONSTANTE (~180 px desktop, quel que soit le nombre de pastilles — elle s'élargit
+    // horizontalement, pas verticalement, mesuré). Une classe sur <body> suffit à basculer la
+    // max-height du panneau, plutôt que de recalculer une position en JS à chaque resize.
+    document.body.classList.toggle('has-ctx-legends',!!ctxActive.length);
   }
 }
 // updateInlineLegendMobile — onglet Couches mobile (contrat CONTRAT_NAV_MOBILE_APP_2026-08-23.md
@@ -4223,16 +4303,83 @@ function calcLCS1(lat,lon){
 // ces anomalies (elles sont grandes : 12 à 500 km de rayon), pas leur amplitude de crête.
 // Repères pédagogiques d'échelle — « vérifié contre source primaire académique », pas « certifié »
 // au sens strict du projet (réservé aux organismes officiels type IRSN/ASNR/IGRF).
+//
+// ═══ EMPRISES — deux régimes distincts, ne pas les confondre (chantier 2026-08-31) ═══
+//
+// `radius_km` → cercle. `footprint` (optionnel) → forme non circulaire. Le rendu lit `footprint`
+// s'il existe et retombe sur `radius_km` sinon : aucune entrée n'est cassée par l'ajout, et
+// `radius_km` reste renseigné partout comme valeur de repli.
+//
+// Le diagnostic Phase 1 (_drafts/DIAGNOSTIC_ANOMALIES_POLYGONALES_2026-08-31.md) a établi que la
+// conversion en polygone ne se justifie QUE là où la forme documentée n'est pas circulaire —
+// 2 sites sur 5. Pour un cratère d'impact, le cercle EST la géométrie publiée : le remplacer par
+// un contour tracé à la main ajouterait de la fausse précision. Ries et Chicxulub restent donc
+// des cercles, délibérément, et n'ont pas de `footprint`.
+//
+//   E1 — emprise publiée, circulaire (cercle, trait plein) : Ries, Chicxulub, Vredefort
+//   E2 — dimensions publiées, forme non circulaire (ellipse dérivée, trait TIRETÉ) : Kursk, Bangui
+//
+// Le trait tireté signale « emprise dérivée de dimensions publiées », par opposition au trait
+// plein d'un contour directement sourcé — même grammaire visuelle que l'emprise du Monte Maggiore
+// côté Corse (cf. buildCrustalLayer() plus bas).
+//
+// ⚠️ Une ellipse E2 n'est PAS un contour mesuré : c'est une enveloppe schématique construite à
+// partir de nombres publiés (surface, axes, orientation). Les axes exacts d'une anomalie crustale
+// de cette taille ne sont pas publiés sous forme de géométrie ; ce qui est sourcé est indiqué
+// site par site ci-dessous, et le popup le dit à l'utilisateur.
 const CRUSTAL_REFS=[
+  // Bangui — ellipse E2. Axes sourcés : « roughly elliptical, about 700 km × 1000 km » et « short
+  // axis diameter of about 550 km » (Antoine, Reimold & Tessema 1999, « The Bangui Magnetic Anomaly
+  // Revisited », 62nd Meteoritical Society Meeting, abstract 5087 — lu en source primaire). Les deux
+  // chiffres de petit axe publiés diffèrent (700 km vs 550 km) ; on retient 700 km, cohérent avec le
+  // couple 700 × 1000 explicitement donné comme la forme de l'ellipse. Demi-axes 500 × 350 km.
+  // Orientation : le grand axe n'est pas publié comme tel. Retenu ENE-OSO ≈ E-O d'après l'analyse
+  // gravi-magnétique récente qui décrit la BMA comme « a coalescence of several anomalies that trend
+  // E-W and roughly NE-SW » (Njiteu Tchoukeu et al., J. African Earth Sciences), et cohérent avec
+  // « covers most of the country » (la RCA est elle-même allongée E-O). ⚠️ C'est l'élément le moins
+  // solide de cette entrée — les 3 segments de l'anomalie (deux lobes positifs au nord et au sud
+  // d'un large négatif central) sont eux empilés N-S. Centre = Bangui, la ville qui lui a donné son
+  // nom (Regan & Marsh 1982, JGR 87(B2):1107).
   {id:'bangui',name:'Bangui (Centrafrique)',lat:4.4,lon:18.6,nT:-1000,radius_km:500,
+   footprint:{type:'ellipse',semi_major_km:500,semi_minor_km:350,azimuth_deg:90,evidence:'derivee'},
+   footprint_source:'Ellipse publiée ~700 × 1000 km (Antoine et al. 1999) ; orientation du grand axe d\'après le tracé E-O/NE-SO des anomalies constitutives (Njiteu Tchoukeu et al.). Enveloppe schématique, pas un contour mesuré.',
    type:'crustal_ring',source:'Regan et al. 1975 (levé dédié)',
-   desc:'Plus grande anomalie circulaire négative du globe — origine cratère ou intrusion crustale profonde.'},
-  {id:'kursk',name:'Kursk (Russie)',lat:51.7,lon:36.2,nT:3000,radius_km:200,
+   desc:'Plus grande anomalie négative du globe — origine cratère ou intrusion crustale profonde. Ellipse d\'environ 1000 × 700 km, couvrant l\'essentiel de la Centrafrique.'},
+  // Kursk — ellipse E2, et RECALAGE de coordonnée. L'ancien point (51,7 / 36,2) était la VILLE de
+  // Koursk, à ~114 km au nord-ouest du centre de l'anomalie. Nouveau centre 51°15'13"N 37°40'10"E
+  // = 51,254 / 37,669 (coordonnée de référence de l'anomalie). Invisible sur un cercle de 200 km,
+  // le décalage se serait vu dès le passage à une forme allongée.
+  // Surface sourcée : les minerais « are spread over an area estimated at 120 000 km² », sur les
+  // oblasts de Koursk, Belgorod et Voronej. Orientation NO-SE : la KMA est décrite comme une
+  // ceinture allongée, et les formations ferrifères du mégabloc de Koursk sont décrites en « narrow
+  // linear zones of the southeast-northwest strike » (Savko et al. 2022, Lithology and Mineral
+  // Resources 57:290-298, DOI 10.1134/S002449022204006X).
+  // Demi-axes : petit axe fixé à 100 km (largeur 200 km, milieu de la fourchette 150-250 km
+  // rapportée), grand axe déduit pour retomber sur la surface publiée — 120 000/(π × 100) = 382 km,
+  // soit ~764 km de long, dans la fourchette 600-850 km rapportée. ⚠️ Construction explicite, pas
+  // un contour publié : c'est la surface qui est ancrée, les axes en sont dérivés.
+  // Vérifié : le service NOAA ne donne PAS l'amplitude de crête (~+150 nT contre +3000 dans la
+  // littérature) — nT inchangé, il vient toujours du levé dédié cité, pas d'une grille.
+  {id:'kursk',name:'Kursk (Russie)',lat:51.254,lon:37.669,nT:3000,radius_km:200,
+   footprint:{type:'ellipse',semi_major_km:382,semi_minor_km:100,azimuth_deg:135,evidence:'derivee'},
+   footprint_source:'Surface ancrée sur les ~120 000 km² publiés du champ ferrifère (Koursk-Belgorod-Voronej) ; axes dérivés d\'une largeur de 200 km et d\'un allongement NO-SE (Savko et al. 2022). Enveloppe schématique, pas un contour mesuré.',
    type:'ore_body',source:'Krutikhovskaya et al. (levé dédié)',
-   desc:'Anomalie positive crustale majeure — formation ferrifère rubanée (BIF), gradient magnétique extrême.'},
-  {id:'vredefort',name:'Vredefort (Afrique du Sud)',lat:-27.0,lon:27.5,nT:-400,radius_km:90,
+   desc:'Anomalie positive crustale majeure — formation ferrifère rubanée (BIF), gradient magnétique extrême. Ceinture allongée NO-SE d\'environ 120 000 km².'},
+  // Vredefort — CORRECTION de rayon (2026-08-31). L'ancien `radius_km:90` traçait un cercle de
+  // 180 km de diamètre, qui ne correspondait à AUCUN des deux chiffres publiés : le dôme préservé
+  // fait 90 km de DIAMÈTRE (donc rayon 45) et le cratère d'origine 250-300 km de diamètre (rayon
+  // 125-150). Très probablement le diamètre du dôme saisi comme rayon.
+  // Retenu : le CRATÈRE D'ORIGINE, rayon 137 km (milieu de 250-300 km de diamètre) — c'est ce que
+  // décrit le `desc` de cette entrée (« anneaux concentriques »), et c'est l'objet dont parle le
+  // levé aéromagnétique cité (Corner et al. 1990). Reste un cercle : la structure est circulaire,
+  // aucun contour polygonal d'impact n'est publié (la référence de fait, Earth Impact Database,
+  // ne donne que centre + diamètre).
+  {id:'vredefort',name:'Vredefort (Afrique du Sud)',lat:-27.0,lon:27.5,nT:-400,radius_km:137,
    type:'impact_ring',source:'Corner et al. 1990 (levé dédié)',
-   desc:'Plus grand cratère d\'impact connu — anneaux concentriques, granit choqué.'},
+   desc:'Plus grand cratère d\'impact connu — anneaux concentriques, granit choqué. Structure d\'origine 250-300 km de diamètre ; le dôme préservé au centre n\'en fait plus que 90.'},
+  // Ries et Chicxulub — INCHANGÉS, délibérément. `radius_km` y est déjà exactement le rayon du
+  // cratère publié (24 km et 180 km de diamètre) : le cercle est la géométrie publiée, pas une
+  // approximation à améliorer. Pas de `footprint` — ne pas en ajouter.
   {id:'ries',name:'Ries (Bavière)',lat:48.88,lon:10.62,nT:-200,radius_km:12,
    type:'impact_ring',source:'Pohl et al. 1977 (levé dédié)',
    desc:'Cratère d\'impact 24 km — contraste granit/sédiments, levés haute précision.'},
@@ -4240,6 +4387,29 @@ const CRUSTAL_REFS=[
    type:'impact_ring',source:'Pilkington et al. 1994 (levé dédié)',
    desc:'Cratère K-Pg 180 km — anneau périphérique, impact fin Crétacé.'},
 ];
+
+// ═══ Emprises non circulaires — géométrie ═══
+// Point de destination géodésique (sphère, R=6371 km) : indispensable ici, l'approximation plane
+// « 1° ≈ 111 km » déforme visiblement une ellipse de 760 km de long, et les deux sites concernés
+// sont à des latitudes très différentes (Bangui 4°N, Kursk 51°N).
+function geoDestPoint(lat,lon,bearingDeg,distKm){
+  const R=6371,d=distKm/R,br=bearingDeg*Math.PI/180;
+  const p1=lat*Math.PI/180,l1=lon*Math.PI/180;
+  const p2=Math.asin(Math.sin(p1)*Math.cos(d)+Math.cos(p1)*Math.sin(d)*Math.cos(br));
+  const l2=l1+Math.atan2(Math.sin(br)*Math.sin(d)*Math.cos(p1),Math.cos(d)-Math.sin(p1)*Math.sin(p2));
+  return [p2*180/Math.PI,((l2*180/Math.PI+540)%360)-180];
+}
+// Ellipse → anneau de points lat/lon. `azimuth_deg` = azimut du GRAND axe (0 = nord, sens horaire).
+function ellipseLatLngs(lat,lon,aKm,bKm,azDeg,n){
+  n=n||72;
+  const pts=[];
+  for(let i=0;i<n;i++){
+    const t=2*Math.PI*i/n;
+    const x=aKm*Math.cos(t),y=bKm*Math.sin(t);           // x le long du grand axe
+    pts.push(geoDestPoint(lat,lon,azDeg+Math.atan2(y,x)*180/Math.PI,Math.hypot(x,y)));
+  }
+  return pts;
+}
 
 // ═══ Couche Leaflet : anomalies crustales mondiales + sites ophiolitiques Corse ═══
 // Réintégration 2026-08-27 (brief "Réintégrer Anomalies de substrat (Corse) dans Anomalies
@@ -4296,16 +4466,31 @@ function buildCrustalLayer(){
   lCrustal.clearLayers();
   CRUSTAL_REFS.forEach(pt=>{
     const col=pt.nT>0?'#C28533':'#8E2F1F'; // Ocre pour positives (Kursk), Porphyre pour négatives
-    // Cercle d'emprise
-    L.circle([pt.lat,pt.lon],{
-      radius:pt.radius_km*1000,
-      color:col,weight:1.5,opacity:0.55,
-      fillColor:col,fillOpacity:0.08,interactive:false
-    }).addTo(lCrustal);
+    // Emprise — `footprint` (forme dérivée, trait tireté) s'il existe, sinon cercle publié
+    // (trait plein). Cf. le bloc « EMPRISES — deux régimes distincts » sur CRUSTAL_REFS.
+    const empStyle={color:col,weight:1.5,opacity:0.55,fillColor:col,fillOpacity:0.08,interactive:false};
+    if(pt.footprint&&pt.footprint.type==='ellipse'){
+      const f=pt.footprint;
+      L.polygon(ellipseLatLngs(pt.lat,pt.lon,f.semi_major_km,f.semi_minor_km,f.azimuth_deg),
+        Object.assign({},empStyle,{dashArray:'5,4'})).addTo(lCrustal);
+    }else{
+      L.circle([pt.lat,pt.lon],Object.assign({},empStyle,{radius:pt.radius_km*1000})).addTo(lCrustal);
+    }
     // Marqueur central
     const iconHtml='<div style="width:12px;height:12px;background:'+col+'33;border:2.5px solid '+col+';border-radius:50%;box-shadow:0 0 6px '+col+'66"></div>';
     const icon=L.divIcon({html:iconHtml,className:'',iconSize:[12,12],iconAnchor:[6,6]});
     const signStr=pt.nT>0?'+'+pt.nT:pt.nT;
+    // Ligne de dimension — accordée à l'emprise réellement tracée : « rayon ~ X km » pour un
+    // cercle publié, « ellipse ~ L × l km » pour une forme dérivée. Laisser « rayon » sur un site
+    // rendu en ellipse aurait été faux dans le texte comme à l'écran.
+    const dimHtml=(pt.footprint&&pt.footprint.type==='ellipse')
+      ? jt('crustal_ellipse_prefix','· ellipse ~')+Math.round(pt.footprint.semi_major_km*2)+' × '+Math.round(pt.footprint.semi_minor_km*2)+' km'
+      : jt('crustal_rayon_prefix','· rayon ~')+pt.radius_km+' km';
+    // Note d'emprise — n'apparaît que pour les formes dérivées. Dit explicitement à l'utilisateur
+    // que le tracé est une enveloppe construite sur des chiffres publiés, pas un contour mesuré.
+    const fpHtml=pt.footprint_source
+      ? '<br>'+jt('crustal_footprint_label','Emprise&nbsp;: ')+jt('crustal_'+pt.id+'_footprint_source',pt.footprint_source)
+      : '';
     // Résolution lazy — CRUSTAL_REFS reste en FR au niveau module (même
     // piège que INSTRUMENT_LABELS), jt() résolu ici au rendu (forEach appelé
     // depuis buildCrustalLayer(), après DOMContentLoaded), clés par pt.id.
@@ -4313,9 +4498,9 @@ function buildCrustalLayer(){
       '<div style="font-family:var(--font);min-width:220px">'+
       '<div style="font-family:var(--font-display);font-weight:600;font-size:13px;color:'+col+';margin-bottom:4px">'+jt('crustal_'+pt.id+'_name',pt.name)+'</div>'+
       '<div style="margin:3px 0"><span style="font-family:var(--mono);font-size:11px;color:var(--ardoise-clair);font-weight:600">'+signStr+' nT</span>'+
-      ' <span style="font-size:9px;color:var(--tx3)">'+jt('crustal_rayon_prefix','· rayon ~')+pt.radius_km+' km</span></div>'+
+      ' <span style="font-size:9px;color:var(--tx3)">'+dimHtml+'</span></div>'+
       '<div style="font-size:10px;color:var(--ardoise-clair);line-height:1.45;margin-top:5px">'+jt('crustal_'+pt.id+'_desc',pt.desc)+'</div>'+
-      '<div style="font-size:9px;color:#8b92a5;margin-top:6px;padding-top:4px;border-top:1px solid rgba(0,0,0,.08)">'+jt('crustal_type_label','Type&nbsp;: ')+pt.type.replace(/_/g,' ')+'<br>'+jt('crustal_source_label','Source&nbsp;: ')+pt.source+'<br>'+jt('crustal_amplitude_note','Amplitude d\'après le levé dédié cité — EMAG2v3 (2 arc-min) en montre une version atténuée. Repère d\'échelle, non « certifié ».')+'</div>'+
+      '<div style="font-size:9px;color:#8b92a5;margin-top:6px;padding-top:4px;border-top:1px solid rgba(0,0,0,.08)">'+jt('crustal_type_label','Type&nbsp;: ')+pt.type.replace(/_/g,' ')+'<br>'+jt('crustal_source_label','Source&nbsp;: ')+pt.source+fpHtml+'<br>'+jt('crustal_amplitude_note','Amplitude d\'après le levé dédié cité — EMAG2v3 (2 arc-min) en montre une version atténuée. Repère d\'échelle, non « certifié ».')+'</div>'+
       '</div>'
     ).addTo(lCrustal);
   });
@@ -4342,14 +4527,35 @@ function buildCrustalLayer(){
   // "découverte potentielle, peu de sites documentés en Corse, contribution bienvenue" jugé
   // non-nocebo, décision Soleil.
   (SITES_REMARQUABLES||[]).filter(function(s){return s.categorie==='ophiolite';}).forEach(function(s){
+    // Emprise du site — n'existe que pour les sites qui en ont une réellement dérivable
+    // (aujourd'hui : Monte Maggiore seul ; Albu/Nonza/Farinole n'ont AUCUN contour sourcé et
+    // restent délibérément des marqueurs nus, cf. `rayon_m: 0` dans sites_app.json).
+    // Trait TIRETÉ, comme les ellipses E2 mondiales : signale « emprise dérivée », par opposition
+    // au trait plein d'un contour publié tel quel. Couleur = bleu tyrrhénien de la catégorie
+    // ophiolite (identité visuelle du pentagone), pas l'ocre/porphyre des anomalies quantifiées —
+    // ces sites n'ont aucune valeur nT et ne doivent pas se lire comme s'ils en avaient une.
+    if(s.geometrie&&s.geometrie.type==='Polygon'&&Array.isArray(s.geometrie.coordinates)){
+      const ring=(s.geometrie.coordinates[0]||[]).map(function(c){return [c[1],c[0]];}); // [lon,lat] → [lat,lon]
+      if(ring.length>2){
+        L.polygon(ring,{color:'#1F3A5F',weight:1.5,opacity:0.7,dashArray:'5,4',
+          fillColor:'#1F3A5F',fillOpacity:0.10,interactive:false}).addTo(lCrustal);
+      }
+    }
     const iconHtml='<svg width="14" height="14" viewBox="0 0 14 14" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))"><polygon points="7,1 13,5.5 10.5,13 3.5,13 1,5.5" fill="#1F3A5F" stroke="#F5F0E7" stroke-width="1.5"/></svg>';
     const icon=L.divIcon({html:iconHtml,className:'',iconSize:[14,14],iconAnchor:[7,7]});
     const safeNom=(s.nom||'').replace(/'/g,"\\'");
+    // Libellé d'emprise — texte public, volontairement générique sur la provenance de la donnée
+    // (« cartographie géologique BRGM 1/50 000 »). Le détail technique de la couche source vit dans
+    // sites_app.json (champ `source_technique`), jamais dans ce libellé affiché.
+    const geoHtml=(s.geometrie&&s.geometrie.libelle_public)
+      ? '<div style="font-size:9px;color:var(--tx3);margin-top:5px;padding:4px 6px;background:rgba(31,58,95,.06);border-left:2px dashed #1F3A5F;line-height:1.4">'+s.geometrie.libelle_public+'</div>'
+      : '';
     L.marker([s.lat,s.lon],{icon,zIndexOffset:300}).bindPopup(
       '<div style="font-family:var(--font);min-width:220px">'+
       '<div style="font-family:var(--font-display);font-weight:600;font-size:13px;color:#1F3A5F;margin-bottom:4px">'+(s.nom||'')+'</div>'+
       '<div style="font-size:9px;color:var(--tx3);margin-bottom:4px">'+jt('crustal_corse_scale_label','Site Corse — échelle locale, non quantifié')+'</div>'+
       '<div style="font-size:10px;color:var(--ardoise-clair);line-height:1.45">'+(s.note_ui||'')+'</div>'+
+      geoHtml+
       '<div style="font-size:9px;color:#3F5B3A;margin-top:6px;padding:5px 7px;background:#eef3e9;border:1px solid #cfe0c9;border-radius:4px;line-height:1.4">'+jt('crustal_corse_call_to_measure','🔎 Anomalie documentée mais jamais mesurée — peu de sites de ce type sont recensés en Corse. Une première mesure de terrain serait une contribution scientifique bienvenue.')+'</div>'+
       '<button type="button" onclick="startCrustalCorseMeasurement('+s.lat+','+s.lon+',\''+safeNom+'\')" style="margin-top:6px;width:100%;padding:6px 10px;border-radius:var(--r,6px);border:1px solid #3F5B3A;background:#3F5B3A;color:#F5F0E7;font-size:11px;font-family:inherit;cursor:pointer">'+jt('crustal_corse_measure_cta','Contribuer une mesure ici →')+'</button>'+
       '<div style="font-size:9px;color:#8b92a5;margin-top:6px;padding-top:4px;border-top:1px solid rgba(0,0,0,.08)">'+jt('crustal_corse_source_label','Source : BRGM · sites_app.json — hors calcul')+'</div>'+
@@ -4382,16 +4588,22 @@ function startCrustalCorseMeasurement(lat,lon,nom){
 }
 
 // ═══ Jauge comparative : anomalie locale vs références mondiales ═══
-// Rendue DANS le panneau « ? » (#crustal-gauge-panel, section de #legende-em-section) depuis le
-// 2026-08-29 (brief « exécution groupée », item B). Était un contrôle Leaflet flottant topright
-// qui chevauchait #legende (le « ? », bas-droite) de ~238×102 px dès que « ? » était déplié +
-// couche « Anomalies de référence » active (diagnostic _drafts/DIAGNOSTIC_ARCHITECTURE_LEGENDES
-// _2026-08-29.md §3). Un simple repositionnement dans un autre coin ne règle rien : la jauge
-// fait ~350 px de haut et aucun coin n'est libre de ce gabarit sur écran court (top-left entre
-// en collision avec les pastilles Zone 2 bas-gauche dès qu'une couche « context » est active en
-// plus de crustal — vérifié en preview, chevauchement 238×127 px à vh=680). L'intégrer au « ? »
-// supprime tout conflit de coin. Contrepartie assumée : la jauge n'est visible que « ? » ouvert,
-// comme n'importe quelle légende de couche. `updateCrustalGauge()` (moveend) est inchangée.
+// Historique de position, pour ne pas refaire le tour :
+//   · à l'origine : contrôle Leaflet topright → chevauchait #legende (le « ? », bas-droite) de
+//     ~238×102 px dès que « ? » était déplié + couche « Anomalies de référence » active
+//     (diagnostic _drafts/DIAGNOSTIC_ARCHITECTURE_LEGENDES_2026-08-29.md §3)
+//   · 2026-08-29 (item B) : rapatriée DANS le « ? ». Plus de chevauchement, mais la jauge n'était
+//     plus visible qu'une fois le « ? » déplié — contrepartie alors assumée.
+//   · 2026-08-31 (Phase 2 « anomalies polygonales ») : de nouveau autonome, en bas-gauche.
+//
+// Ce qui a rendu la troisième position tenable n'est PAS un gain d'espace — le diagnostic Phase 1
+// a mesuré que la Zone 2 bas-gauche fait toujours 180 px de haut, constants pour 1, 2 ou 3
+// pastilles (elle s'élargit horizontalement). C'est la RÉDUCTION DU GABARIT : le descriptif, le
+// pied et les références de contexte (IGRF / Kp9 / Sq) passent dans un <details> replié, ce qui
+// fait tomber la jauge de 347 px à ~230 px — sous les 240 px libres à vh 680 avec la Zone 2
+// active. Rien n'est supprimé, tout reste à un clic.
+// Le repli est fermé par défaut : la lecture principale (valeur locale + barres comparatives)
+// tient sans interaction, le reste est de la note de bas de page.
 let _crustalGaugeUpdater=null;
 
 function showCrustalGauge(show){
@@ -4402,8 +4614,12 @@ function showCrustalGauge(show){
     d.innerHTML='<div class="cg-title">'+jt('crustal_gauge_title','Anomalie crustale locale')+'</div>'+
       '<div id="crustal-local-v" style="font-family:var(--mono);font-size:16px;font-weight:600;color:var(--ardoise);margin-bottom:8px">—<span style="font-size:10px;color:var(--tx3);font-weight:400;margin-left:4px">'+jt('crustal_nt_centre_carte','nT au centre carte')+'</span></div>'+
       '<div id="crustal-bars"></div>'+
+      '<details class="cg-more"><summary>'+jt('crustal_gauge_more','Contexte et méthode')+'</summary>'+
+      '<div class="cg-more-body">'+
+      '<div id="crustal-ctx-bars"></div>'+
       '<div style="font-size:9px;color:var(--ardoise-clair);margin-top:8px;line-height:1.35">'+jt('crustal_gauge_desc_prefix','Écart du champ magnétique au socle (anomalie crustale) sous le centre de la carte. Repère exploratoire — non intégré au score Tellux ; ')+'<b>'+jt('crustal_gauge_desc_bold','cliquez sur la carte')+'</b>'+jt('crustal_gauge_desc_suffix'," pour l'analyse complète d'un point.")+'</div>'+
-      '<div style="font-size:9px;color:var(--tx3);margin-top:6px;font-style:italic;line-height:1.3">'+jt('crustal_gauge_footer','Échelle logarithmique · EMAG2v3 NOAA · 5 références crustales mondiales')+'</div>';
+      '<div style="font-size:9px;color:var(--tx3);margin-top:6px;font-style:italic;line-height:1.3">'+jt('crustal_gauge_footer','Échelle logarithmique · EMAG2v3 NOAA · 5 références crustales mondiales')+'</div>'+
+      '</div></details>';
     d.style.display='block';
     _crustalGaugeUpdater=()=>updateCrustalGauge();
     map.on('moveend',_crustalGaugeUpdater);
@@ -4476,12 +4692,19 @@ async function updateCrustalGauge(){
       '<div style="width:48px;text-align:right;font-family:var(--mono);font-size:9px;font-weight:600;color:var(--ardoise)">'+sign+localV+' nT</div>'+
       '</div>';
   }
-  // Références de contexte
-  html+='<div style="font-size:9px;color:var(--tx3);font-style:italic;margin-top:8px;padding-top:6px;border-top:1px solid rgba(0,0,0,.1)">'+jt('crustal_ref_contexte','Références de contexte (nT)')+'</div>';
+  barsEl.innerHTML=html;
+  // Références de contexte — rendues dans le <details> replié depuis le 2026-08-31 (version
+  // compacte du panneau), plus dans #crustal-bars. Les 3 lignes IGRF / Kp9 / Sq pèsent 42 px, et
+  // ce sont des repères d'échelle, pas la lecture principale. `logMax` reste celui calculé
+  // ci-dessus : les barres du repli restent à la MÊME échelle logarithmique que celles du haut,
+  // sans quoi la comparaison visuelle entre les deux blocs serait fausse.
+  const ctxEl=document.getElementById('crustal-ctx-bars');
+  if(!ctxEl)return;
+  let ctxHtml='<div style="font-size:9px;color:var(--tx3);font-style:italic;margin-bottom:5px">'+jt('crustal_ref_contexte','Références de contexte (nT)')+'</div>';
   CONTEXT_REFS.forEach(r=>{
     const pct=Math.max(2,(Math.log10(Math.max(Math.abs(r.nT),1))/logMax)*100);
     const sign=r.nT>0?'+':'';
-    html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px" title="'+r.desc+'">'+
+    ctxHtml+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px" title="'+r.desc+'">'+
       '<div style="width:72px;font-size:9px;color:var(--ardoise-clair);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+r.name.split(' (')[0]+'</div>'+
       '<div style="flex:1;height:6px;background:var(--pierre-ombre);border-radius:3px;position:relative">'+
       '<div style="width:'+pct+'%;height:100%;background:#3F5B3A;border-radius:3px"></div>'+
@@ -4489,7 +4712,7 @@ async function updateCrustalGauge(){
       '<div style="width:48px;text-align:right;font-family:var(--mono);font-size:9px;color:var(--ardoise-clair)">'+sign+r.nT+' nT</div>'+
       '</div>';
   });
-  barsEl.innerHTML=html;
+  ctxEl.innerHTML=ctxHtml;
 }
 function igrfFallback(lat,lon){ return Math.round(interpIDW(IGRF14_GRID,lat,lon)); }
 
@@ -5720,7 +5943,9 @@ function loadSitesApp() {
   return _sitesAppPromise;
 }
 function adaptSiteEMFromApp(s) {
-  return { slug: s.slug, nom: s.nom, lat: s.lat, lon: s.lon, categorie: s.categorie || 'geologique', precision_coord: s.precision_coord || 'documentaire', note_ui: s.description || '' };
+  // `geometrie` transmis tel quel (ajouté 2026-08-31) : sans ça, l'emprise du Monte Maggiore
+  // serait silencieusement perdue ici, cet adaptateur ne recopiant que les champs listés.
+  return { slug: s.slug, nom: s.nom, lat: s.lat, lon: s.lon, categorie: s.categorie || 'geologique', precision_coord: s.precision_coord || 'documentaire', note_ui: s.description || '', geometrie: s.geometrie || null };
 }
 function adaptSiteUthFromApp(s) {
   const p = s.properties || {};
@@ -10393,6 +10618,14 @@ function capCleanup(){
 /* === fin Brief 46 === */
 </script>
 
+<!-- #crustal-gauge-panel — jauge « Anomalie crustale locale », panneau flottant bas-gauche.
+     Placé ici, en frère de #tellux-legends-context et dernier enfant de <main> (même
+     raisonnement que #lightning-warn et que la Zone 2 elle-même : position:fixed, donc pas
+     descendant d'un .map-col positionné). Son plafond vertical est la pile de contrôles Leaflet
+     haut-gauche (zoom + recentrer, qui s'arrête à y = 200) ; son plancher est la Zone 2 quand
+     elle est là, la barre de conditions sinon — d'où les deux max-height du CSS.
+     Rempli par showCrustalGauge(), mis à jour par updateCrustalGauge() (moveend). -->
+<div id="crustal-gauge-panel" style="display:none"></div>
 <div id="tellux-legends-context" aria-label="Légendes des couches contextuelles activées"></div>
 </main>
 
