@@ -1,0 +1,147 @@
+name: contrast-panels
+
+# Garde-fou contraste des panneaux flottants d'app.html.
+#
+# POURQUOI CE CHECK EXISTE
+# ------------------------
+# Le mode sombre d'app.html n'est pas une inversion de palette : le bloc
+# `[data-theme="dark"]{ --tx:…; --bg:…; }` redéfinit ses deux tokens avec des
+# valeurs identiques à `:root` (no-op), et tout le sombre repose sur ~24
+# correctifs manuels par sélecteur. Tout nouveau composant qui utilise
+# --ardoise / --ardoise-clair / --tx3 / --pierre-ombre s'affiche donc en
+# couleurs claires sur fond sombre jusqu'à ce qu'on écrive le correctif
+# suivant à la main.
+#
+# Cas réel (PR #1148, 2026-08-31) : la jauge crustale sortait sa valeur
+# principale à un contraste de 1,07 — invisible. Repéré à l'œil, par chance.
+# Ce check remplace la chance par une mesure.
+#
+# CE CHECK EST BLOQUANT, DÈS SA CRÉATION
+# --------------------------------------
+# Contrairement à eval-app-rubric (Phase A informative), celui-ci bloque tout
+# de suite, parce qu'il est calé sur un CLIQUET et non sur un idéal :
+#   • mesure du 2026-08-31 : 19 « critique » (ratio < 3,0) + 49 « aa »
+#   • plafonds ci-dessous = ces valeurs exactes → le check est VERT aujourd'hui
+#   • il ne devient rouge que si un chiffre AUGMENTE, c'est-à-dire sur une
+#     régression introduite par la PR en cours
+# Déterminisme vérifié avant promotion : 2 exécutions locales successives →
+# 68 violations et 204 nœuds strictement identiques. Pas de wobble à absorber,
+# donc pas de raison de passer par une phase informative.
+#
+# LES PLAFONDS NE REMONTENT JAMAIS
+# --------------------------------
+# Si ce check tombe, la réponse est de corriger le contraste, PAS d'augmenter
+# le plafond. Les seuls commits légitimes sur ces deux nombres les font
+# DESCENDRE, au fur et à mesure que la dette est résorbée (chantier « palette
+# sombre réelle », à ouvrir séparément — cf. le rapport de la sonde B, qui
+# liste les tokens identiques en clair et en sombre).
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'app.html'
+      - 'tests/blindage-harness/contrast-panels.mjs'
+      - '.github/workflows/contrast-panels.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contrast:
+    name: Contraste panneaux (clair + sombre)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: tests/blindage-harness/package-lock.json
+
+      - name: Install npm deps (tests/blindage-harness)
+        working-directory: tests/blindage-harness
+        run: npm ci
+
+      - name: Install Chromium for Playwright
+        working-directory: tests/blindage-harness
+        run: npx playwright install --with-deps chromium
+
+      - name: Run contrast-panels
+        id: contrast
+        working-directory: tests/blindage-harness
+        env:
+          # ═══ CLIQUETS — ne jamais remonter, voir l'en-tête de ce fichier ═══
+          # Baseline mesurée le 2026-08-31 sur main (a9a37d9).
+          CONTRAST_MAX_CRITIQUE: '19'
+          CONTRAST_MAX_AA: '49'
+          # Plancher de couverture — les cliquets sont des MAJORANTS : si les panneaux ne se
+          # peuplaient pas (Supabase KO, boot trop lent, sélecteur renommé), le compte de
+          # violations tomberait à 0 et le check passerait sans rien avoir testé. Référence
+          # locale : 204 nœuds. Volontairement bas pour tolérer une couche absente en CI, assez
+          # haut pour qu'un DOM vide soit détecté.
+          CONTRAST_MIN_NOEUDS: '80'
+        run: |
+          set +e
+          node contrast-panels.mjs > contrast-result.json
+          EXIT=$?
+          echo "exit_code=$EXIT" >> "$GITHUB_OUTPUT"
+          CRIT=$(jq -r '.resume.critique' contrast-result.json)
+          AA=$(jq -r '.resume.aa' contrast-result.json)
+          PCRIT=$(jq -r '.resume.plafond_critique' contrast-result.json)
+          PAA=$(jq -r '.resume.plafond_aa' contrast-result.json)
+          NOEUDS=$(jq -r '.resume.noeuds_mesures' contrast-result.json)
+          PANS=$(jq -r '.resume.panneaux_mesures' contrast-result.json)
+          {
+            echo "## Contraste des panneaux flottants — clair + sombre"
+            echo ""
+            if [ "$EXIT" = "0" ]; then
+              echo "### ✅ Aucune régression"
+            else
+              echo "### ❌ Régression de contraste"
+              echo ""
+              echo "> Corriger le contraste. **Ne pas remonter les plafonds** pour faire passer la PR."
+            fi
+            echo ""
+            echo "| Tranche | Mesuré | Plafond |"
+            echo "|---|---|---|"
+            echo "| Critique (ratio < 3,0 — illisible) | $CRIT | $PCRIT |"
+            echo "| AA (sous le seuil WCAG applicable) | $AA | $PAA |"
+            echo ""
+            PNOE=$(jq -r '.resume.plancher_noeuds' contrast-result.json)
+            echo "_$NOEUDS nœuds de texte mesurés (plancher $PNOE) sur $PANS panneaux, dans les deux thèmes._"
+            echo ""
+            if [ "$EXIT" != "0" ]; then
+              echo "#### Violations critiques"
+              echo ""
+              echo '| Thème | Panneau | Ratio | Couleur | Fond effectif | Texte |'
+              echo '|---|---|---|---|---|---|'
+              jq -r '.violations_critiques[] | "| \(.theme) | \(.panel) | \(.ratio) | `\(.couleur)` | `\(.fond_effectif)` | \(.texte) |"' contrast-result.json | head -25
+              echo ""
+            fi
+            echo "<details><summary>Dette de thématisation (informatif)</summary>"
+            echo ""
+            echo "Tokens dont la valeur est **identique** en clair et en sombre :"
+            echo ""
+            jq -r '.resume.tokens_identiques_clair_sombre[] | "- `\(.)`"' contrast-result.json
+            echo ""
+            echo "Tant que ces tokens ne sont pas thématisés, chaque nouveau composant qui les"
+            echo "utilise doit recevoir son propre correctif \`[data-theme=\"dark\"]\`."
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $EXIT
+
+      - name: Upload rapport JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contrast-result
+          path: tests/blindage-harness/contrast-result.json
+          retention-days: 14
