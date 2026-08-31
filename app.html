@@ -1161,7 +1161,14 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
     background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r);
     font-size:11px;overflow:hidden;
   }
+  /* .mleg-subtitle (2026-08-31, brief "clôture chantier légende") : sous-titre descriptif +
+     lien corpus, TOUJOURS visible (pas nesté dans .mleg-details ci-dessous) — remplace, à ce
+     breakpoint, ce que le panneau "?" donnait sans clic supplémentaire (cf. #legende plus bas,
+     retiré ici). .leg-docref-link (généraliste, définie plus haut) est réutilisée telle quelle. */
+  .mlegend-inline .mleg-subtitle{padding:10px 0 8px;font-size:11px;line-height:1.45;color:var(--tx-ardoise);}
+  .mlegend-inline .mleg-subtitle .leg-docref-row{margin:4px 0 0;font-size:10.5px;}
   .mlegend-inline .mleg-details{padding:0;}
+  .mlegend-inline .mleg-subtitle+.mleg-details summary{border-top:1px solid rgba(0,0,0,.06);}
   .mlegend-inline .mleg-details summary{
     padding:10px 0;cursor:pointer;font-weight:600;color:var(--acc);
     list-style:none;display:flex;align-items:center;gap:6px;
@@ -1471,6 +1478,16 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    rendaient --tx-mica (#74706A, gelé) et contournaient de fait le correctif --tx3 ci-dessus,
    d'où les 4 dernières violations mesurées après ce même correctif. */
 #legende-content .legende-section-title{font-family:var(--font-display,var(--font));font-size:11px;font-weight:600;color:var(--tx3);margin:0 0 8px;letter-spacing:.06em;text-transform:uppercase;}
+/* .leg-group-title (2026-08-31, brief "clôture chantier légende") : sous-titre de groupe (ex.
+   "Sources anthropiques") nesté DANS #tellux-leg-panel, entre deux blocs de couches core — même
+   traitement visuel que le séparateur "#legende-content > section + section" (cf. plus haut),
+   appliqué ici à un <h4> plutôt qu'à une frontière de <section>. Override de margin-top (0 sur
+   .legende-section-title de base) : même spécificité, gagne par ordre de source. La règle
+   suivante retire la bordure du 1er .leg-acc du groupe 2 : sans elle, il en récupérait une en
+   plus de border-top du titre lorsque le groupe 1 est vide (le <h4> devient alors le vrai
+   premier enfant, le .leg-acc suivant n'est donc plus :first-child). */
+#legende-content .leg-group-title{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+#legende-content .leg-group-title+.leg-acc{border-top:none;}
 #legende-content #conditions-panel{margin-bottom:0;}
 #legende-content{overscroll-behavior:contain;}
 #legende-content #tellux-leg-panel{position:static;background:transparent!important;border:none!important;border-radius:0!important;box-shadow:none!important;padding:0!important;margin:0!important;max-width:none!important;max-height:none!important;overflow:visible!important;}
@@ -1557,9 +1574,13 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
 .leg-docref-layer{display:block;color:var(--tx-ardoise);font-weight:500;}
 .leg-docref-link{display:inline-block;color:var(--tx-tyrrhenien,#1F3A5F);text-decoration:none;border-bottom:1px solid rgba(31,58,95,.3);margin-right:8px;}
 .leg-docref-link:hover{border-bottom-color:var(--tx-tyrrhenien,#1F3A5F);}
-.mleg-docref{margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.06);}
+/* .mleg-docref RETIRÉE le 2026-08-31 (brief "clôture chantier légende") : dernier point
+   d'usage supprimé par le même diff dans updateInlineLegendMobile() — le docref mobile vit
+   désormais dans .mleg-subtitle (cf. plus haut dans ce fichier), plus dans un conteneur à
+   part sous le <details>. Orpheline sinon ; retirée plutôt que laissée morte. */
 /* .leg-docref-row--compact (2026-08-30) : renvoi corpus nesté dans l'accordéon de sa propre
-   couche (#tellux-leg-panel) — même séparateur visuel que .mleg-docref, sans répéter le nom. */
+   couche (#tellux-leg-panel) — même séparateur visuel que .mleg-subtitle ci-dessus (ex-
+   .mleg-docref), sans répéter le nom. */
 .leg-acc-body .leg-docref-row--compact{margin-top:6px;padding-top:6px;border-top:1px dashed rgba(0,0,0,.08);}
 @media (max-width:768px){
   /* Sprint app-ui-polish (mai 2026) — bottom mobile pensé pour dégager #conditions-bar
@@ -1572,27 +1593,30 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
      dans cette bande (confirmé en repro). Recalculée pour dégager .fab-mesure mobile
      (bottom:calc(12px + var(--mobile-tabbar-h)), 52px de haut) avec la même marge 12px que
      la version desktop ci-dessus : 12+var(--mobile-tabbar-h)+52+12 = 76+var(--mobile-tabbar-h). */
-  #legende{bottom:calc(76px + var(--mobile-tabbar-h));right:8px;}
-  #legende-content{max-width:calc(100vw - 24px);font-size:11.5px;padding:12px 14px;}
-  /* ⚠️ DETTE OUVERTE — signalée mais PAS corrigée par ce diff (2026-08-27, brief "3
-     corrections UI menu EM") : Soleil veut garder #legende (pas le masquer sur mobile comme
-     un premier essai l'a fait puis défait dans cette même session) et le faire servir de
-     légende sélective par couche (certaines couches, ex. Forêt publique, n'ont pas besoin de
-     légende) — décision à prendre après consultation avec chat (autres facteurs à
-     considérer), pas tranchée ici. Deux constats factuels réunis pour cette discussion,
-     PAS agis dans ce diff :
-     1) Doublon de contenu confirmé : le panneau "?" affiche exactement legendHtmlFor('hot'|
-        'hotrf') (cf. updateLegendPanel() plus bas), soit le MÊME HTML que la légende inline
-        .mlegend-inline déjà visible sous chaque bouton dans l'onglet Couches sur mobile.
-     2) Chevauchement confirmé en repro live (getBoundingClientRect, 2026-08-27) : #legende
-        [331,640,36,36] et .fab-mesure [307,622,52,52] sur viewport 375×812 — overlap réel de
-        28×34px. Cause probable : bottom:calc(76px+var(--mobile-tabbar-h)) (ligne au-dessus)
-        suppose #conditions-bar replié, mais .fab-mesure (bottom:calc(12px+
-        var(--mobile-tabbar-h)+var(--conditions-bar-h,66px)) plus bas dans ce fichier) a été
-        remonté par #1055 pour dégager #conditions-bar déplié sans que cette règle-ci soit
-        resynchronisée. Fermeture améliorée (croix + Échap, cf. initLegendeOverlay() plus bas)
-        appliquée dans ce même diff — orthogonale à cette question de positionnement/contenu,
-        s'applique quelle que soit l'issue de la discussion ci-dessus. */
+  /* DETTE OUVERTE 2026-08-27 (brief "3 corrections UI menu EM") REFERMÉE ICI le 2026-08-31
+     (brief "clôture chantier légende") — décision prise dans le sens du retrait, pas du
+     repositionnement. Les 2 constats factuels de l'époque, revérifiés en direct avant ce
+     diff (getBoundingClientRect, viewport 375×812) :
+     1) Doublon de contenu confirmé alors, requalifié ici : le panneau "?" affichait déjà
+        exactement legendHtmlFor(id), même source que .mlegend-inline (cf. updateLegendPanel()/
+        updateInlineLegendMobile() plus bas) — mais le <summary> mobile n'était pas un doublon
+        au sens strict (title= n'est pas lu au toucher, seulement au survol desktop). Résolu
+        par un mécanisme différent de "masquer" ou "garder tel quel" : .mlegend-inline gagne un
+        sous-titre TOUJOURS visible (.mleg-subtitle, cf. CSS plus haut + updateInlineLegendMobile())
+        qui reprend le rôle documentaire de "?" sans nécessiter son maintien à ce breakpoint.
+     2) Chevauchement RECONFIRMÉ, quasi inchangé (28×35px ce jour vs 28×34px en 2026-08-27,
+        même cause : bottom:calc(76px+var(--mobile-tabbar-h)) suppose #conditions-bar replié,
+        jamais resynchronisé avec .fab-mesure qui, lui, en tient compte) — les correctifs UI
+        mobile survenus dans l'intervalle (mobile-tabbar, seuil 768px, etc.) n'ont pas touché
+        cette resynchronisation précise. z-index .fab-mesure(1050) > #legende(1000) : la zone
+        de recouvrement absorbe le clic, ~76 % de la cible ronde de 36px est concernée.
+        #legende est donc RETIRÉ à ce breakpoint —
+        pas repositionné : le doublon de contenu (constat 1) rendait la correction de position
+        insuffisante à elle seule (l'aurait rendu cliquable pour un contenu déjà dupliqué
+        ailleurs). #legende-content (règles ≥768px) est inchangé ; aucune classe ni sélecteur
+        n'est retiré ailleurs — un retour en arrière n'a qu'à supprimer la ligne display:none
+        ci-dessous et restaurer le bottom/right calc() précédent (historique git). */
+  #legende{display:none;}
 }
 /* === fin Brief 46 === */
 /* === R&D rnd-001 — Accessibilité : respect de prefers-reduced-motion (WCAG 2.3.3 / RGAA 13.8) ===
@@ -3135,7 +3159,25 @@ var JS_STRINGS_EN = {
   docref_section_title: "Reference documentation",
   docref_more: "Learn more",
   docref_con_calib: "Role in RF calibration",
-  docref_con_status: "Status of citizen contributions"
+  docref_con_status: "Status of citizen contributions",
+
+  // Brief "clôture chantier légende" (2026-08-31) — titre de groupe "?" desktop +
+  // sous-titres descriptifs .mleg-subtitle mobile (cf. LAYER_SUBTITLE_FR, plus bas dans ce
+  // fichier). Résolus via jt('mleg_sub_'+id, ...) — clé construite dynamiquement, cf.
+  // commentaire à updateInlineLegendMobile().
+  leg_group_anthropique: "Human-made sources",
+  mleg_sub_hot: "Tellux model combining the electrical grid and substrate, in nT — not a measurement.",
+  mleg_sub_hotrf: "Tellux model calibrated on certified ANFR/EXEM measurements — order-of-magnitude estimate, not a measurement.",
+  mleg_sub_emag: "Deep Corsican basement anomalies (NOAA EMAG2v3) — always included in the calculation.",
+  mleg_sub_foretdense: "Closed-canopy forest (IGN BD Forêt V2) — the button toggles RF attenuation in the calculation.",
+  mleg_sub_crustal: "Reference magnetic anomalies, global and Corsican — documentary comparison, outside the calculation.",
+  mleg_sub_cert: "30 certified measurement records (2024–2026) — used once to calibrate the RF model.",
+  mleg_sub_contrib: "Citizen smartphone measurements, uncertified — display only, outside the calculation.",
+  mleg_sub_ant: "2G-to-5G mobile antennas and broadcast transmitters — ANFR open data.",
+  mleg_sub_res: "50 Hz high-voltage lines — EDF SEI, OSM.",
+  mleg_sub_bt: "Low-voltage street distribution — EDF SEI, visible from zoom level 10.",
+  mleg_sub_prod: "Power stations of the Corsican grid — hydro, wind, thermal.",
+  mleg_sub_postesSources: "21 HV/MV transformer substations — EDF SEI, OSM data."
 };
 function jt(key, fr){
   return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
@@ -3486,7 +3528,21 @@ const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,res:f
 // pour elles, ni ici ni en pastille. Les autres couches (Antennes ANFR, Réseau HT/BT, Sites de
 // production, Postes sources, Gamma citoyen) restent INCHANGÉES (Zone 2 context, hors périmètre
 // de ce brief — triage limité aux couches explicitement validées).
-const LEGEND_CORE_IDS=new Set(['hot','hotrf','cert','contrib','emag']);
+//
+// EXTENSION 2026-08-31 (brief "clôture chantier légende") — le périmètre volontairement laissé
+// de côté ci-dessus est repris ici : ant/res/bt/postesSources/prod (GROUPE 2 "Sources
+// anthropiques" du menu Couches, regroupement déjà existant côté toggle depuis le 2026-08-27,
+// jamais répercuté côté légende) rejoignent le core. Motif concret, pas seulement de confort :
+// en Zone 2 (LEGEND_ACTIVE_CONTEXT, FIFO LEGEND_MAX_CONTEXT=3), activer plus de 3 couches
+// anthropiques faisait perdre SILENCIEUSEMENT la légende complète (pas le docref, qui lui reste
+// dans #tellux-leg-docrefs, non borné) de la plus ancienne — reproduit en direct le 2026-08-31
+// (ant évincé dès l'activation d'une 4e couche non-core). Contraire à la règle "aucune
+// information n'est inatteignable". Rendu séparé en 2 groupes dans updateLegendPanel() (cf.
+// plus bas, coreOrder/anthroOrder) : le comportement des 5 couches déjà core n'est pas modifié,
+// seul un second bloc "Sources anthropiques" s'ajoute. Gamma citoyen (openrad) reste hors
+// périmètre : couche mutée/inatteignable depuis le 2026-08-30 (cf. commentaire au bouton),
+// rien à promouvoir tant qu'elle n'est pas réactivée.
+const LEGEND_CORE_IDS=new Set(['hot','hotrf','cert','contrib','emag','ant','res','bt','prod','postesSources']);
 const LEGEND_MAX_CONTEXT=3;
 const LEGEND_ACTIVE_CORE=new Set();
 const LEGEND_ACTIVE_CONTEXT=[];
@@ -3531,6 +3587,29 @@ const LAYER_DOC_ANCHORS={
   postesSources:[{href:'/methode-limites-transparence.html#sources-elf-reseau'}],
   openrad:    [{href:'/cadre-scientifique.html#gamma-ambiant'}],
   hyd:        [{href:'/methode-limites-transparence.html#hypotheses-pilier-a'}]
+};
+// LAYER_SUBTITLE_FR (2026-08-31, brief "clôture chantier légende") — sous-titre descriptif
+// court (1 phrase), affiché TOUJOURS visible dans l'onglet Couches mobile, au-dessus du détail
+// technique repliable (cf. updateInlineLegendMobile()). Rôle : remplacer, sur mobile, ce que le
+// panneau "?" (retiré de ce breakpoint par ce même diff, cf. CSS #legende) donnait à voir sans
+// clic supplémentaire. Condensé depuis des sources déjà publiées ailleurs dans ce fichier
+// (title= du bouton, LEGEND_HTML[id]) — aucune affirmation neuve, aucun chiffre recalculé.
+// Seules les 12 couches réellement joignables (bouton non commenté) ont une entrée ; openrad/hyd
+// (couches mutées/réservées, cf. LAYER_DOC_ANCHORS ci-dessus) n'ont pas de bouton vivant —
+// updateInlineLegendMobile() ne peut de toute façon jamais être appelée avec show=true pour elles.
+const LAYER_SUBTITLE_FR={
+  hot:  'Modèle Tellux combinant réseau électrique et substrat, en nT — pas une mesure.',
+  hotrf:'Modèle Tellux calibré sur mesures certifiées ANFR/EXEM — estimation d’ordre de grandeur, pas une mesure.',
+  emag: 'Anomalies du socle profond corse (NOAA EMAG2v3) — toujours incluses dans le calcul.',
+  foretdense:'Forêt fermée (BD Forêt V2 IGN) — le bouton module l’atténuation RF du calcul.',
+  crustal:'Anomalies magnétiques de référence, mondiales et corses — comparaison documentaire, hors calcul.',
+  cert: '30 fiches de mesure certifiées (2024–2026) — ont servi une fois à calibrer le modèle RF.',
+  contrib:'Mesures citoyennes au smartphone, non certifiées — affichage seul, hors calcul.',
+  ant:  'Antennes mobiles 2G à 5G et émetteurs broadcast — source ANFR open data.',
+  res:  'Lignes haute tension 50 Hz — EDF SEI, OSM.',
+  bt:   'Distribution basse tension dans les rues — EDF SEI, visible à partir du zoom 10.',
+  prod: 'Centrales du réseau électrique corse — hydraulique, éolien, thermique.',
+  postesSources:'21 postes de transformation HTB/HTA — EDF SEI, données OSM.'
 };
 function docRefHtml(id,compact){
   const links=LAYER_DOC_ANCHORS[id];
@@ -3952,7 +4031,13 @@ function updateLegendPanel(){
     // Fond magnétique régional (compacté à une ligne). 'con' (2026-08-27, brief "Panneau '?'
     // sélectif") a été scindé le 2026-08-29 (item C) en 'cert' + 'contrib', tous deux core.
     const coreOrder=['hot','hotrf','cert','contrib','emag'];
-    coreActive=coreOrder.filter(id=>LEGEND_ACTIVE_CORE.has(id)&&LEGEND_HTML[id]);
+    // Groupe 2 — Sources anthropiques (2026-08-31, cf. commentaire daté à LEGEND_CORE_IDS) :
+    // même ordre que GROUPE 2 du menu Couches. Rendu dans un bloc séparé, sous son propre
+    // intitulé — jamais fusionné avec coreOrder ci-dessus, dont le comportement ne change pas.
+    const anthroOrder=['ant','res','bt','prod','postesSources'];
+    const group1Active=coreOrder.filter(id=>LEGEND_ACTIVE_CORE.has(id)&&LEGEND_HTML[id]);
+    const group2Active=anthroOrder.filter(id=>LEGEND_ACTIVE_CORE.has(id)&&LEGEND_HTML[id]);
+    coreActive=group1Active.concat(group2Active);
     if(!coreActive.length){
       corePanel.style.display='none';
       corePanel.innerHTML='';
@@ -3968,12 +4053,19 @@ function updateLegendPanel(){
       // séparé pour une couche core — cohérence avec le mobile, qui le fait déjà nativement
       // (updateInlineLegendMobile() met docHtml dans le même <details> que legHtml). Ce même id
       // est retiré de docActive plus bas pour ne jamais l'afficher deux fois.
-      corePanel.innerHTML=coreActive.map(id=>'<details class="leg-acc"'+(id===accOpen?' open':'')+'>'+
+      const accHtml=ids=>ids.map(id=>'<details class="leg-acc"'+(id===accOpen?' open':'')+'>'+
         '<summary class="leg-acc-sum">'+coreLegLabel(id)+'</summary>'+
         // hotrf exclu : son .leg-src (LEGEND_HTML.hotrf) intègre déjà un lien vers ce même
         // #radiofrequences ("modèle, calibration & repères de lecture ↗", 2026-08-29) — ajouter
         // le docref générique en dessous doublerait le même lien dans le même accordéon.
         '<div class="leg-acc-body">'+legendHtmlFor(id)+(LAYER_DOC_ANCHORS[id]&&id!=='hotrf'?docRefHtml(id,true):'')+'</div></details>').join('');
+      // Titre de groupe 2 (2026-08-31) : seulement si au moins une couche anthropique est
+      // active — jamais un intitulé vide. h4, pas h3 (déjà pris par le titre du panneau,
+      // #legende .legende-section-title) : hiérarchie de titres correcte, même classe CSS
+      // réutilisée (générique, ne cible pas la balise) + modificateur .leg-group-title pour le
+      // séparateur (cf. CSS).
+      corePanel.innerHTML=accHtml(group1Active)+
+        (group2Active.length?'<h4 class="legende-section-title leg-group-title">'+jt('leg_group_anthropique','Sources anthropiques')+'</h4>'+accHtml(group2Active):'');
     }
   }
   // Repères documentaires (2026-08-28) : rendus dans #tellux-leg-docrefs, pour toute couche NON
@@ -4037,10 +4129,20 @@ function updateInlineLegendMobile(id,show){
   // hotrf exclu : même raison que côté desktop (updateLegendPanel()) — son .leg-src intègre déjà
   // un lien vers #radiofrequences, le docref générique doublerait ce lien sous le même <details>.
   const docHtml=(show&&LAYER_DOC_ANCHORS[id]&&id!=='hotrf')?docRefHtml(id,true):'';
-  if(legHtml||docHtml){
+  // Sous-titre toujours visible (2026-08-31, brief "clôture chantier légende") : le panneau "?"
+  // est retiré à ce breakpoint par ce même diff (cf. CSS #legende) — l'onglet Couches mobile en
+  // reprend le rôle documentaire sans exiger de clic supplémentaire (règle "aucune information
+  // n'est inatteignable"). Contenu = LAYER_SUBTITLE_FR[id] (phrase condensée depuis title=/
+  // LEGEND_HTML, jamais une affirmation neuve) + le même docHtml que ci-dessus, réutilisé une
+  // seule fois ici plutôt que dans le <details> — pas de lien dupliqué entre les deux. jt()
+  // résolu ici, au rendu réel (piège de timing documenté en tête de fichier respecté : ni
+  // LAYER_SUBTITLE_FR ni JS_STRINGS_EN ne sont évalués via jt() au chargement du script).
+  const subFr=(show&&LAYER_SUBTITLE_FR[id])?jt('mleg_sub_'+id,LAYER_SUBTITLE_FR[id]):'';
+  const subHtml=(subFr||docHtml)?'<div class="mleg-subtitle">'+subFr+docHtml+'</div>':'';
+  if(legHtml||subHtml){
     const btn=document.getElementById(btnIdFor(id));
     const shortLabel=(btn&&btn.title)?btn.title.split(/[—–]/)[0].trim():'Légende';
-    el.innerHTML='<details class="mleg-details"><summary>'+shortLabel+'</summary>'+legHtml+(docHtml?'<div class="mleg-docref">'+docHtml+'</div>':'')+'</details>';
+    el.innerHTML=subHtml+(legHtml?'<details class="mleg-details"><summary>'+shortLabel+'</summary>'+legHtml+'</details>':'');
     el.classList.add('active');
   }else{
     el.classList.remove('active');
