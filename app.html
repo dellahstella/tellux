@@ -2172,7 +2172,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
                uniquement dans #hdr-menu (menu sandwich, cf. commentaire à son ajout plus haut dans
                ce fichier), pour ne garder qu'un seul chemin de navigation au lieu de deux
                redondants. -->
-          <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Fond magnétique régional<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span></button>
+          <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#AD22BE"></span>Fond magnétique régional<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span></button>
           <div class="mlegend-inline" id="mleg-emag"></div>
           <!-- Couche « Forêt dense » (b-foretdense) ajoutée le 2026-08-27 (brief "nettoyage Contexte
                naturel" point 5, dette FORET-DENSE-LAYER-001 close par ce diff) : jusqu'ici
@@ -7500,7 +7500,14 @@ map.on('click',async e=>{
   const phColor=perturbHumain<=1?'#3F5B3A':perturbHumain<=2?'#5A7D4E':perturbHumain<=3?'#C28533':'#8E2F1F';
   const anEmoji=activNat>=4?'\u26a1':activNat>=2?'\ud83e\udea8':'\u25cb';
   const anLabel=activNat>=4?jt('an_label_tres_actif','Tr\u00e8s actif'):activNat>=2?jt('an_label_actif','Actif'):jt('an_label_neutre','Neutre');
-  const anColor=activNat>=4?'#d97706':activNat>=2?'#92400e':'#9ca3af';
+  // Lot 2 bis (2026-09-01) : la branche neutre passe de #9ca3af (2,24 — classe CRITIQUE) à
+  // #626774 (4,98), le gris tertiaire du popup. Elle habille le SCORE PRINCIPAL en 14 px gras,
+  // le chiffre le plus lu du popup, et n'apparaissait dans aucune mesure : le harnais ne clique
+  // qu'un point, donc n'exerce qu'une branche. Repro directe : cliquer 42,55/9,45 affiche « ○ 0/5 »
+  // à 2,24. Ce gris n'est PAS le dégradé sémantique — celui-ci est l'orange #d97706 / le brun
+  // #92400e, et il reste inchangé, réservé au lot 3 avec l'Ocre (échelles à traiter d'ensemble,
+  // pas par branche). Le gris est l'état « neutre / rien à signaler », hors échelle.
+  const anColor=activNat>=4?'#d97706':activNat>=2?'#92400e':'#626774';
   const itVerdict=perturbHumain<=1&&activNat>=3?jt('it_verdict_calme_actif','Profil notable \u2014 faible perturbation de surface, forte activit\u00e9 magn\u00e9tique en profondeur'):
     perturbHumain<=1&&activNat<=1?jt('it_verdict_calme_neutre','Zone naturelle pr\u00e9serv\u00e9e \u2014 calme, neutre g\u00e9ologiquement'):
     perturbHumain<=1?jt('it_verdict_zone_calme','Zone calme \u2014 id\u00e9ale pour mesure de r\u00e9f\u00e9rence'):
@@ -7544,9 +7551,15 @@ map.on('click',async e=>{
   //     verdict d'implantation, ligne substrat, titre « Radon (potentiel) »). #4a4f5e est déjà
   //     dans ce fichier (.leg-row, valeur gamma d'avant #1164).
   //   • #c026d3  ->  #AD22BE (4,93) — le « C±n » crustal de la ligne Δ. Seul hex réellement neuf,
-  //     assombrissement de 10 % à teinte conservée. Le swatch EMAG du menu Couches garde #c026d3 :
-  //     couleur de signification partagée avec le rendu carte, pas un choix typographique — même
-  //     distinction que #1153 (dictionnaire GC, swatches).
+  //     assombrissement de 10 % à teinte conservée. ⚠️ Le swatch EMAG du menu Couches (b-emag) est
+  //     assombri À L'IDENTIQUE, contrairement à la règle « on ne touche pas aux swatches » de
+  //     #1153 — délibérément : cette règle protège les couleurs partagées avec le RENDU CARTE, or
+  //     EMAG ne se rend PAS en magenta. Sa propre légende (LEGEND_HTML.emag) le dit — #dc2626 pour
+  //     le positif, #2563eb pour le négatif. #c026d3 n'existait qu'à deux endroits, tous deux de
+  //     l'UI : ce swatch et ce texte. Les assombrir ensemble préserve exactement leur
+  //     correspondance visuelle sans toucher à aucune couleur de signification cartographique.
+  //     Le dictionnaire GC des marqueurs ANFR, lui, garde #6b7280 : celui-là rend bien sur la
+  //     carte, et la règle de #1153 s'y applique pleinement.
   //
   // ⚠️ NON corrigés ici, et NON vus par le harnais : six ÉTATS CONDITIONNELS de ce popup échouent
   // aussi, mais un point de test n'exerce qu'une branche à la fois — « 18 » est donc un plancher,
