@@ -80,12 +80,31 @@ const APP_URL_OVERRIDE = process.env.APP_URL;
 // semi-transparent, tokens non thématisés). Le contenu long des pages
 // documentaires est hors périmètre : il est en CSS statique et n'a pas de
 // mode sombre du tout.
+//
+// ÉLARGISSEMENT DU 2026-09-01 (dette A11Y-CONTRAST-APP-PANELS-002, volet 3)
+// ------------------------------------------------------------------------
+// Les 5 panneaux d'origine laissaient un ANGLE MORT : `#expert-panel` portait
+// trois violations de classe critique (2,59:1) qu'aucun check ne voyait, et le
+// cliquet à 0/0 se lisait comme « plus rien nulle part ». Découvert en marge de
+// la PR #1164, en mesurant à la main. Cinq surfaces sont ajoutées ici, dont le
+// POPUP AU CLIC — probablement la surface la plus vue de l'application, et
+// jamais mesurée jusqu'à ce jour.
+//
+// `requis: true` = surface dont l'absence fait ÉCHOUER le check. Sans ce
+// marqueur, ajouter un panneau qui ne s'ouvre jamais donnerait un faux vert :
+// zéro nœud mesuré, zéro violation, check content. Même raisonnement que le
+// plancher de couverture plus bas, mais par surface au lieu du total.
 const PANELS = [
   { sel: '#crustal-gauge-panel', nom: 'Jauge crustale' },
   { sel: '#tellux-legends-context', nom: 'Légendes contextuelles (Zone 2)' },
   { sel: '#legende', nom: 'Panneau « ? »' },
   { sel: '#conditions-bar', nom: 'Barre de conditions' },
   { sel: '.hdr', nom: 'En-tête' },
+  { sel: '.leaflet-popup-content', nom: 'Popup au clic (carte)', requis: true },
+  { sel: '#expert-panel', nom: 'Panneau Expertise', requis: true },
+  { sel: '#expert-bandeau', nom: 'Bandeau Expertise', requis: true },
+  { sel: '#myplace-modal', nom: 'Modale « Mon lieu »', requis: true },
+  { sel: '#cform', nom: 'Contribution terrain', requis: true },
 ];
 
 // Couches à activer pour que les panneaux existent réellement dans le DOM.
@@ -274,6 +293,58 @@ async function main() {
     });
     await page.waitForTimeout(1200);
 
+    // ─── Ouverture des 5 surfaces ajoutées le 2026-09-01 ────────────────────
+    // L'ORDRE COMPTE et n'est pas cosmétique :
+    //   • le popup au clic AVANT la contribution terrain — `startContribFromFAB()`
+    //     arme un handler sur le prochain clic carte ; l'inverse ferait consommer
+    //     le clic par le placement de mesure, et le popup ne s'ouvrirait jamais ;
+    //   • la contribution EN DERNIER — elle pose un overlay et arme la carte.
+    // On pilote l'UI réelle partout où c'est possible (clic carte, ouverture du
+    // formulaire par son propre flux). Seule exception : « Mon lieu », dont le
+    // chemin UI passe par la géolocalisation ou une recherche d'adresse réseau —
+    // on appelle donc sa fonction de rendu avec un résultat de calcul réel, ce
+    // qui produit exactement le DOM que rend la production.
+    await page.evaluate(async () => {
+      const dodo = (ms) => new Promise((r) => setTimeout(r, ms));
+      // Fermer la modale de bienvenue par son VRAI bouton — la masquer au
+      // style.display fausse toute géométrie ultérieure (piège éprouvé).
+      const acc = Array.from(document.querySelectorAll('button'))
+        .find((b) => /Accéder à la carte|the map/i.test((b.textContent || '').trim()));
+      if (acc) acc.click();
+      await dodo(400);
+
+      // 1) Popup au clic
+      if (typeof map !== 'undefined' && map && typeof L !== 'undefined') {
+        map.fire('click', { latlng: L.latLng(42.00, 9.05) });
+      }
+      await dodo(3000);
+
+      // 2) Mode Expertise — panneau + bandeau. activateExpertMode() court-circuite
+      //    la modale de consentement, qui n'est pas l'objet de la mesure.
+      if (typeof activateExpertMode === 'function') activateExpertMode();
+      await dodo(500);
+
+      // 3) Modale « Mon lieu », peuplée avec un calcul réel
+      if (typeof openMyPlaceModal === 'function') openMyPlaceModal();
+      if (typeof myPlaceRenderSummary === 'function' && typeof calcAll_v2 === 'function') {
+        myPlaceRenderSummary({
+          lat: 42.00, lon: 9.05, v2: calcAll_v2(42.00, 9.05),
+          commune_info: { nom: 'Bastelica' }, n500: 3, n1000: 9,
+          hta: { known: true, distance_m: 820 },
+        });
+      }
+      await dodo(400);
+
+      // 4) Contribution terrain — flux réel : armement puis clic de placement
+      if (typeof startContribFromFAB === 'function') startContribFromFAB();
+      await dodo(300);
+      if (typeof map !== 'undefined' && map && typeof L !== 'undefined') {
+        map.fire('click', { latlng: L.latLng(42.01, 9.06) });
+      }
+      await dodo(1500);
+    });
+    await page.waitForTimeout(1500);
+
     // Mesure unique : app.html n'a plus qu'un thème depuis le 2026-08-31. Aucun
     // attribut `data-theme` n'est posé ni retiré ici — la page est mesurée telle
     // qu'un visiteur la reçoit.
@@ -313,13 +384,30 @@ async function main() {
   const noeudsMesures = rapport.panneaux.reduce((s, p) => s + (p.noeuds || 0), 0);
 
   const depassements = [];
+  // Surfaces requises — ajoutées avec l'élargissement du 2026-09-01. Une surface
+  // déclarée `requis` qui ne se mesure pas (absente, masquée, ou vide de texte)
+  // fait échouer le check. Sans ça, un sélecteur renommé ou un flux d'ouverture
+  // cassé rendrait la surface invisible au contrôle SANS rien signaler : zéro
+  // nœud, zéro violation, vert. C'est exactement le mode d'échec qui a laissé
+  // `#expert-panel` hors mesure jusqu'au 2026-09-01 — on ne le rejoue pas.
+  const surfacesRequises = PANELS.filter((p) => p.requis).map((p) => p.nom);
+  for (const nom of surfacesRequises) {
+    const p = rapport.panneaux.find((x) => x.panel === nom);
+    if (!p || p.etat !== 'mesuré' || !p.noeuds) {
+      depassements.push(`surface requise non mesurée : « ${nom} » (état : ${p ? p.etat : 'introuvable'}`
+        + `${p && p.etat === 'mesuré' ? ', 0 nœud' : ''}) — son flux d'ouverture ne fonctionne plus,`
+        + ' le résultat n\'est pas exploitable');
+    }
+  }
   // Plancher de couverture — AVANT les cliquets, et pour la même raison qu'axe-core a été
   // écarté : un check qui ne mesure rien passe au vert et rassure à tort. Les cliquets sont des
   // MAJORANTS ; si les panneaux ne se peuplaient pas (Supabase indisponible en CI, boot trop
   // lent, sélecteur renommé), le compte de violations tomberait à zéro et le check passerait
   // en n'ayant rien testé. Ce plancher rend ce scénario bruyant.
-  // Référence : 204 nœuds mesurés en local le 2026-08-31, sur 5 panneaux × 2 thèmes.
-  const MIN_NOEUDS = Number(process.env.CONTRAST_MIN_NOEUDS ?? 50);
+  // Référence : 204 nœuds mesurés en local le 2026-08-31, sur 5 panneaux × 2 thèmes ;
+  // 100 après le retrait du mode sombre ; 192 depuis l'élargissement du 2026-09-01
+  // (10 panneaux déclarés, 9 mesurés — Zone 2 reste masquée sans couche contextuelle).
+  const MIN_NOEUDS = Number(process.env.CONTRAST_MIN_NOEUDS ?? 75);
   if (noeudsMesures < MIN_NOEUDS) {
     depassements.push(`couverture insuffisante : ${noeudsMesures} nœuds mesurés < plancher ${MIN_NOEUDS}`
       + ' — les panneaux ne se sont probablement pas peuplés, le résultat n\'est pas exploitable');

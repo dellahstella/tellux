@@ -87,15 +87,27 @@ jobs:
           # leurs SEULS usages textuels — jamais sur les swatches/couleurs de carte qui
           # partagent le même hex par signification. Plus aucune marge : la moindre
           # régression fait tomber le check.
+          #
+          # ⚠️ 2026-09-01 — LES CLIQUETS RESTENT À 0/0 ALORS QUE LA MESURE EN COMPTE 28.
+          # C'est délibéré. L'élargissement du périmètre (5 surfaces ajoutées, cf. PANELS
+          # dans contrast-panels.mjs) révèle 28 violations préexistantes — 21 critique,
+          # 7 AA — jamais mesurées jusqu'ici. La règle du cliquet interdit de remonter les
+          # plafonds pour absorber un élargissement : ce check est donc VOLONTAIREMENT
+          # ROUGE tant que l'arbitrage n'a pas tranché ce qui se corrige et ce qui se
+          # consigne. Ne pas "réparer" ce rouge en touchant aux deux nombres ci-dessous.
           CONTRAST_MAX_CRITIQUE: '0'
           CONTRAST_MAX_AA: '0'
           # Plancher de couverture — les cliquets sont des MAJORANTS : si les panneaux ne se
           # peuplaient pas (Supabase KO, boot trop lent, sélecteur renommé), le compte de
-          # violations tomberait à 0 et le check passerait sans rien avoir testé. Référence
-          # locale : 100 nœuds (101 avant le retrait du libellé "Tellux" de l'en-tête,
-          # #1152). Volontairement bas pour tolérer une couche absente en CI, assez haut
-          # pour qu'un DOM vide soit détecté.
-          CONTRAST_MIN_NOEUDS: '40'
+          # violations tomberait à 0 et le check passerait sans rien avoir testé.
+          # Référence locale 2026-08-31 : 100 nœuds sur 5 panneaux, plancher 40 (~40 %).
+          # Référence locale 2026-09-01 : 192 nœuds sur 10 panneaux (9 mesurés, Zone 2
+          # masquée sans couche contextuelle active) → plancher porté à 75, même proportion.
+          # Sans cette remontée, l'élargissement pourrait passer au vert en ne mesurant rien
+          # de plus que les 5 surfaces d'origine. Complété, depuis le même élargissement, par
+          # un contrôle PAR SURFACE dans le script (`requis: true`) : une surface ajoutée qui
+          # ne s'ouvre plus fait échouer le check au lieu de disparaître en silence.
+          CONTRAST_MIN_NOEUDS: '75'
         run: |
           set +e
           node contrast-panels.mjs > contrast-result.json
