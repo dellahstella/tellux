@@ -2172,7 +2172,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
                uniquement dans #hdr-menu (menu sandwich, cf. commentaire à son ajout plus haut dans
                ce fichier), pour ne garder qu'un seul chemin de navigation au lieu de deux
                redondants. -->
-          <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#c026d3"></span>Fond magnétique régional<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span></button>
+          <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#AD22BE"></span>Fond magnétique régional<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span></button>
           <div class="mlegend-inline" id="mleg-emag"></div>
           <!-- Couche « Forêt dense » (b-foretdense) ajoutée le 2026-08-27 (brief "nettoyage Contexte
                naturel" point 5, dette FORET-DENSE-LAYER-001 close par ce diff) : jusqu'ici
@@ -7500,7 +7500,14 @@ map.on('click',async e=>{
   const phColor=perturbHumain<=1?'#3F5B3A':perturbHumain<=2?'#5A7D4E':perturbHumain<=3?'#C28533':'#8E2F1F';
   const anEmoji=activNat>=4?'\u26a1':activNat>=2?'\ud83e\udea8':'\u25cb';
   const anLabel=activNat>=4?jt('an_label_tres_actif','Tr\u00e8s actif'):activNat>=2?jt('an_label_actif','Actif'):jt('an_label_neutre','Neutre');
-  const anColor=activNat>=4?'#d97706':activNat>=2?'#92400e':'#9ca3af';
+  // Lot 2 bis (2026-09-01) : la branche neutre passe de #9ca3af (2,24 — classe CRITIQUE) à
+  // #626774 (4,98), le gris tertiaire du popup. Elle habille le SCORE PRINCIPAL en 14 px gras,
+  // le chiffre le plus lu du popup, et n'apparaissait dans aucune mesure : le harnais ne clique
+  // qu'un point, donc n'exerce qu'une branche. Repro directe : cliquer 42,55/9,45 affiche « ○ 0/5 »
+  // à 2,24. Ce gris n'est PAS le dégradé sémantique — celui-ci est l'orange #d97706 / le brun
+  // #92400e, et il reste inchangé, réservé au lot 3 avec l'Ocre (échelles à traiter d'ensemble,
+  // pas par branche). Le gris est l'état « neutre / rien à signaler », hors échelle.
+  const anColor=activNat>=4?'#d97706':activNat>=2?'#92400e':'#626774';
   const itVerdict=perturbHumain<=1&&activNat>=3?jt('it_verdict_calme_actif','Profil notable \u2014 faible perturbation de surface, forte activit\u00e9 magn\u00e9tique en profondeur'):
     perturbHumain<=1&&activNat<=1?jt('it_verdict_calme_neutre','Zone naturelle pr\u00e9serv\u00e9e \u2014 calme, neutre g\u00e9ologiquement'):
     perturbHumain<=1?jt('it_verdict_zone_calme','Zone calme \u2014 id\u00e9ale pour mesure de r\u00e9f\u00e9rence'):
@@ -7528,8 +7535,44 @@ map.on('click',async e=>{
 
   // POPUP — Niveau 1 (simple) + Niveau 2 (technique au survol)
   const deltaStr=delta!==null?(delta>0?'+':'')+delta+' nT':'\u2014';
+  // CONTRASTE — lot 2 du volet 3 de A11Y-CONTRAST-APP-PANELS-002 (2026-09-01).
+  // Le popup au clic est probablement la surface la plus vue de l'application et n'avait JAMAIS
+  // été mesurée : resté hors du périmètre de contrast-panels jusqu'au 2026-09-01. Mesure à son
+  // entrée : 18 violations sur 33 nœuds, dont 12 de classe critique. Ce n'étaient pas 18 défauts
+  // mais CINQ COULEURS, toutes de la même famille de gris-bleus, toutes sous le seuil :
+  //   #b0b5c0 (1,81) · #9ca3af (2,24 x3) · #8b92a5 (2,74 x8) · #c026d3 (4,15) · #6b7280 (4,26 x5)
+  // Corrigées ici et dans v2SectionHTML, sur leurs SEULS usages textuels du popup :
+  //   • #b0b5c0 / #9ca3af / #8b92a5  ->  #626774 (4,98) — texte tertiaire (sources, notes, points
+  //     de confiance, pied de bloc ionisant, ligne Δ). #626774 n'est pas une couleur neuve : c'est
+  //     exactement la variante que #1153 avait dérivée de #8b92a5 pour .leg-src, ici réemployée.
+  //     Les trois gris fusionnent en un seul : au-dessus de 4,5 sur ce fond, la plage disponible
+  //     ne permet plus trois niveaux distinguables — la hiérarchie se réduit honnêtement à deux.
+  //   • #6b7280  ->  #4a4f5e (7,20) — texte secondaire (libellés « Perturbation »/« Naturel »,
+  //     verdict d'implantation, ligne substrat, titre « Radon (potentiel) »). #4a4f5e est déjà
+  //     dans ce fichier (.leg-row, valeur gamma d'avant #1164).
+  //   • #c026d3  ->  #AD22BE (4,93) — le « C±n » crustal de la ligne Δ. Seul hex réellement neuf,
+  //     assombrissement de 10 % à teinte conservée. ⚠️ Le swatch EMAG du menu Couches (b-emag) est
+  //     assombri À L'IDENTIQUE, contrairement à la règle « on ne touche pas aux swatches » de
+  //     #1153 — délibérément : cette règle protège les couleurs partagées avec le RENDU CARTE, or
+  //     EMAG ne se rend PAS en magenta. Sa propre légende (LEGEND_HTML.emag) le dit — #dc2626 pour
+  //     le positif, #2563eb pour le négatif. #c026d3 n'existait qu'à deux endroits, tous deux de
+  //     l'UI : ce swatch et ce texte. Les assombrir ensemble préserve exactement leur
+  //     correspondance visuelle sans toucher à aucune couleur de signification cartographique.
+  //     Le dictionnaire GC des marqueurs ANFR, lui, garde #6b7280 : celui-là rend bien sur la
+  //     carte, et la règle de #1153 s'y applique pleinement.
+  //
+  // ⚠️ NON corrigés ici, et NON vus par le harnais : six ÉTATS CONDITIONNELS de ce popup échouent
+  // aussi, mais un point de test n'exerce qu'une branche à la fois — « 18 » est donc un plancher,
+  // pas un total. Mesurés à la main : phColor #5A7D4E (4,13) et #C28533 (2,76), anColor #d97706
+  // (2,81) et #9ca3af (2,24), deltaCol #C28533 (2,76), radonColor #C28533 (2,76). Trois sont
+  // l'Ocre en usage textuel, explicitement réservé au lot 3 ; les trois autres sont des couleurs
+  // d'ÉCHELLE sémantique (score d'activité naturelle) dont la modification est un choix de
+  // palette, pas une correction mécanique. Tous restent lisibles quoique sous le seuil : la règle
+  // du lot 1 (invisible = se corrige, sous le seuil mais lisible = s'arbitre) les range du côté
+  // de l'arbitrage.
+  //
   // Couleur Δ — palette neutre (sans rouge saturé)
-  const deltaCol=delta===null?'#8b92a5':Math.abs(delta)<50?'#3F5B3A':Math.abs(delta)<200?'#C28533':'#8E2F1F';
+  const deltaCol=delta===null?'#626774':Math.abs(delta)<50?'#3F5B3A':Math.abs(delta)<200?'#C28533':'#8E2F1F';
   // Barre susceptibilité magnétique — normalisée sur 60 nT (max grille GEO_SUSC_GRID)
   const suscPct=Math.min(100,Math.max(0,Math.round((susc_nT+5)/65*100)));
   const piezoBar=susc_nT>5?'<div style="height:3px;background:linear-gradient(90deg,#C28533 '+suscPct+'%,#e5e7eb '+suscPct+'%);border-radius:2px;margin:3px 0" title="Susceptibilité magnétique locale : '+susc_nT+' nT ('+geoType+')"></div>':'';
@@ -7565,24 +7608,24 @@ map.on('click',async e=>{
       '<div style="font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">'+jt('v2_title_statique','Champ statique géomagnétique')+'</div>'+
       '<div style="display:flex;align-items:center;gap:4px;margin-bottom:1px">'+
         '<span style="font-size:12px;font-weight:700;color:#1F3A5F">'+static_nT+' nT</span>'+
-        '<span style="font-size:9px;color:#8b92a5" title="'+jt('v2_conf_statique','Confiance : moyen — IGRF-14 + LCS1/EMAG2v3, ±100 nT')+'">●●○</span>'+
+        '<span style="font-size:9px;color:#626774" title="'+jt('v2_conf_statique','Confiance : moyen — IGRF-14 + LCS1/EMAG2v3, ±100 nT')+'">●●○</span>'+
       '</div>'+
-      '<div style="font-size:8px;color:#8b92a5">IGRF-14 · LCS1/EMAG2v3 · Sq · '+corrLabel+'</div>'+
+      '<div style="font-size:8px;color:#626774">IGRF-14 · LCS1/EMAG2v3 · Sq · '+corrLabel+'</div>'+
       // ── ELF 50 Hz ──
       '<div style="margin-top:3px;font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">'+jt('v2_title_elf','ELF anthropique 50 Hz')+'</div>'+
       '<div style="display:flex;align-items:center;gap:4px;margin-bottom:1px">'+
         '<span style="font-size:12px;font-weight:700;color:#8A5E22">'+elf_nT+' nT</span>'+
-        '<span style="font-size:9px;color:#8b92a5" title="'+jt('v2_conf_elf','Confiance : moyen — modélisation Biot-Savart, ±50%')+'">●●○</span>'+
+        '<span style="font-size:9px;color:#626774" title="'+jt('v2_conf_elf','Confiance : moyen — modélisation Biot-Savart, ±50%')+'">●●○</span>'+
       '</div>'+
-      '<div style="font-size:8px;color:#8b92a5">'+elfContribs+'</div>'+
+      '<div style="font-size:8px;color:#626774">'+elfContribs+'</div>'+
       elfIARCnote+
       // ── RF ──
       '<div style="margin-top:3px;font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">'+jt('v2_title_rf','Radiofréquence (FH + fond)')+'</div>'+
       '<div style="display:flex;align-items:center;gap:4px">'+
         '<span style="font-size:12px;font-weight:700;color:#8E2F1F">'+rf_uWm2+' µW/m²</span>'+
-        '<span style="font-size:9px;color:#8b92a5" title="'+jt('v2_conf_rf','Confiance : moyen — FH_POINTS + fond CartoRadio')+'">●●○</span>'+
+        '<span style="font-size:9px;color:#626774" title="'+jt('v2_conf_rf','Confiance : moyen — FH_POINTS + fond CartoRadio')+'">●●○</span>'+
       '</div>'+
-      '<div style="font-size:8px;color:#8b92a5;font-style:italic">'+jt('rf_icnirp_note','ICNIRP : ≈ 4 500 000 µW/m² (repère documentaire)')+'</div>'+
+      '<div style="font-size:8px;color:#626774;font-style:italic">'+jt('rf_icnirp_note','ICNIRP : ≈ 4 500 000 µW/m² (repère documentaire)')+'</div>'+
       // ── Ionisant ──
       // Colonne Gamma retirée le 2026-09-01 (décision Soleil) : le gamma reste un proxy interne
       // du calcul (domaine ionisant, composante I de l'indice composite) mais n'est plus exposé
@@ -7597,10 +7640,10 @@ map.on('click',async e=>{
         '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+
           // Radon
           '<div>'+
-            '<div style="font-size:8px;color:#6b7280;margin-bottom:1px">'+jt('v2_title_radon','Radon (potentiel)')+'</div>'+
+            '<div style="font-size:8px;color:#4a4f5e;margin-bottom:1px">'+jt('v2_title_radon','Radon (potentiel)')+'</div>'+
             '<div style="display:flex;align-items:center;gap:3px">'+
               '<span style="font-size:11px;font-weight:700;color:'+radonColor+'">Classe '+radon_class+'/3</span>'+
-              '<span style="font-size:9px;color:#8b92a5" title="'+jt('v2_conf_radon','Confiance : haut — classement officiel (arrêté du 27 juin 2018) ou estimation lithologique (cartographie radon 2018 — IRSN, désormais ASNR)')+'">●●●</span>'+
+              '<span style="font-size:9px;color:#626774" title="'+jt('v2_conf_radon','Confiance : haut — classement officiel (arrêté du 27 juin 2018) ou estimation lithologique (cartographie radon 2018 — IRSN, désormais ASNR)')+'">●●●</span>'+
             '</div>'+
             '<div style="font-size:8px;color:'+radonColor+'">'+radonLabel+' · '+radon_range[0]+'–'+radon_range[1]+' Bq/m³</div>'+
             (radon_source_is_official
@@ -7612,7 +7655,7 @@ map.on('click',async e=>{
         // 2026-09-01 avec la colonne Gamma : c'était un repère de lecture pour une valeur
         // qui n'est plus affichée. Le repère radon (300 Bq/m³) reste, il porte sur la seule
         // grandeur encore exposée dans ce bloc.
-        '<div style="font-size:7.5px;color:#9ca3af;font-style:italic">'+jt('v2_footer_reperes','Niveau de référence radon : 300 Bq/m³ (art. R. 1333-28 CSP)')+'</div>'+
+        '<div style="font-size:7.5px;color:#626774;font-style:italic">'+jt('v2_footer_reperes','Niveau de référence radon : 300 Bq/m³ (art. R. 1333-28 CSP)')+'</div>'+
       '</div>'+
     '</div>';
   calcPopup.setContent(
@@ -7622,29 +7665,29 @@ map.on('click',async e=>{
       '<div style="font-weight:700;font-size:14px;color:'+phColor+'">'+phEmoji+' '+perturbHumain+'/5</div>'+
       '<div style="font-weight:700;font-size:14px;color:'+anColor+'">'+anEmoji+' '+activNat+'/5</div>'+
     '</div>'+
-    '<div style="display:flex;gap:8px;font-size:9px;color:#6b7280;margin-bottom:2px"><span>'+jt('popup_sub_perturbation','Perturbation')+'</span><span>'+jt('popup_sub_naturel','Naturel')+'</span></div>'+
+    '<div style="display:flex;gap:8px;font-size:9px;color:#4a4f5e;margin-bottom:2px"><span>'+jt('popup_sub_perturbation','Perturbation')+'</span><span>'+jt('popup_sub_naturel','Naturel')+'</span></div>'+
     // Ligne 2 : verdict en clair
     '<div style="font-size:10px;color:#4a4f5e;margin:2px 0">'+itVerdict+'</div>'+
     // Ligne 2b : recommandation implantation
-    '<div style="font-size:9px;color:#6b7280;margin:1px 0">'+implanEmoji+' '+implanTip+'</div>'+
+    '<div style="font-size:9px;color:#4a4f5e;margin:1px 0">'+implanEmoji+' '+implanTip+'</div>'+
     // Ligne 2c : substrat + lien CartoRadio ciblé sur ce point — migré depuis l'INFO BAR
     // #info (retirée le 2026-08-23, repro Soleil : bandeau persistant, sans bouton ✕,
     // faisait doublon avec le contenu déjà présent dans ce popup — cf. lignes ci-dessus).
-    '<div style="font-size:9px;color:#6b7280;margin:1px 0">'+solLabel+' · '+geoType+' · <a href="https://www.cartoradio.fr/#/cartographie/point/'+lat.toFixed(5)+'/'+lng.toFixed(5)+'" target="_blank" style="color:var(--maquis-clair)">'+jt('link_cartoradio','CartoRadio ↗')+'</a></div>'+
+    '<div style="font-size:9px;color:#4a4f5e;margin:1px 0">'+solLabel+' · '+geoType+' · <a href="https://www.cartoradio.fr/#/cartographie/point/'+lat.toFixed(5)+'/'+lng.toFixed(5)+'" target="_blank" style="color:var(--maquis-clair)">'+jt('link_cartoradio','CartoRadio ↗')+'</a></div>'+
     // Barre piézo visuelle
     piezoBar+
     // Section domaines v2 (niveau B)
     v2SectionHTML+
     // Ligne 3 : résumé technique compact
-    '<div style="font-size:9px;color:#9ca3af;margin-top:3px;border-top:1px solid #e5e7eb;padding-top:3px">'+
+    '<div style="font-size:9px;color:#626774;margin-top:3px;border-top:1px solid #e5e7eb;padding-top:3px">'+
       '\u0394 <span style="color:'+deltaCol+'">'+deltaStr+'</span>'+
-      ' \u00b7 <span style="color:#c026d3">C'+(crustal>0?'+':'')+crustal+'</span>'+
+      ' \u00b7 <span style="color:#AD22BE">C'+(crustal>0?'+':'')+crustal+'</span>'+
       ' \u00b7 <span style="color:#3F5B3A">L'+(geo>0?'+':'')+geo+'</span>'+
       ' \u00b7 H+'+human+
       (nRFcalib>0.01?' \u00b7 RF '+nRFcalib.toFixed(1)+'V/m':'')+
       (typeof altitude_m==='number' && isFinite(altitude_m)?' \u00b7 <span title="Altitude IGN RGE Alti ~1 m">Alt '+altitude_m+' m</span>':'')+
     '</div>'+
-    '<div style="font-size:8px;color:#b0b5c0;margin-top:2px;font-style:italic">'+jt('popup_footer_source','Source : Biot-Savart EDF SEI · CartoRadio ANFR · Modèle Tellux')+'</div>'+
+    '<div style="font-size:8px;color:#626774;margin-top:2px;font-style:italic">'+jt('popup_footer_source','Source : Biot-Savart EDF SEI · CartoRadio ANFR · Modèle Tellux')+'</div>'+
     '</div>'
   );
   // Sprint complement app-ui-polish (mai 2026) — Item A fix autoPan effective.
