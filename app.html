@@ -9242,6 +9242,46 @@ document.addEventListener('keydown', function(e){
 // désormais visible sur mobile aussi (cf. CSS). Ferme #hdr-menu par précaution au changement
 // d'onglet (cas : hamburger ouvert puis tap sur un onglet) — pas une régression du mécanisme
 // d'exemption tabbar/clic-extérieur ci-dessus, qui reste utile pour tout autre séquence.
+// _couchesSheetPanPx / syncCouchesSheetMapPan (2026-09-01, brief "occlusion carte mobile
+// panneau Couches") — repro confirmée avant correction (mesure directe, viewport 375×812,
+// panneau par défaut) : #layers-accordion couvre de y≈330 à y≈752, soit 422px — le centre
+// géographique (rendu au centre du container PLEINE hauteur, #map ne rétrécit jamais : le
+// panneau flotte par-dessus, cf. commentaire invalidateSize() de toggleLayersPanel() desktop,
+// "sans effet aujourd'hui puisque #map reste plein écran sous le tiroir") se retrouve donc
+// visuellement sous le panneau. Confirmé en capture (Corse coupée à mi-hauteur).
+// Approche : panBy(), pas un padding Leaflet — l'API ne propose pas de padding persistant
+// hors fitBounds ponctuel (écarté, cf. règle "ne pas déplacer le centre ni forcer un
+// fitBounds"). Décale le RENDU de la moitié de la hauteur RÉELLEMENT mesurée du panneau
+// (getBoundingClientRect() à chaque appel, jamais une constante comme "52vh") — s'adapte
+// donc de lui-même si cette hauteur change un jour, y compris via .expanded (cf. dette
+// signalée au digest : la bascule .expanded ne change aujourd'hui rien à la hauteur rendue,
+// bug distinct, non traité ici, hors périmètre de ce brief). Inversion exacte à la
+// fermeture : on repan du même delta stocké, jamais un recalcul indépendant qui pourrait
+// diverger d'un pixel et laisser un delta résiduel.
+let _couchesSheetPanPx = 0;
+function syncCouchesSheetMapPan(){
+  if(typeof map==='undefined' || !map) return;
+  if(!window.matchMedia('(max-width:768px)').matches){
+    // Desktop : panneau latéral (#layers-accordion position:fixed;right:0, ne couvre jamais
+    // la carte verticalement), jamais concerné — mais si un pan mobile résiduel traînait
+    // (ex. redimensionnement fenêtre sous le seuil pendant que le panneau était ouvert), on
+    // l'annule pour ne jamais laisser la carte décalée sans raison hors mobile.
+    if(_couchesSheetPanPx !== 0){ map.panBy([0,-_couchesSheetPanPx],{animate:false}); _couchesSheetPanPx=0; }
+    return;
+  }
+  const accordion = document.getElementById('layers-accordion');
+  const isOpen = !!(accordion && accordion.classList.contains('open'));
+  const targetPan = isOpen ? Math.round(accordion.getBoundingClientRect().height/2) : 0;
+  const delta = targetPan - _couchesSheetPanPx;
+  if(delta !== 0){
+    // panBy([0,+delta]) déplace le RENDU vers le haut de |delta| px (vérifié empiriquement :
+    // le signe opposé décale le contenu vers le bas, donc hors du panneau — testé, pas supposé,
+    // cf. digest). {animate:false} : décalage immédiat, pas de recentrage animé (règle du brief).
+    map.panBy([0,delta],{animate:false});
+    _couchesSheetPanPx = targetPan;
+  }
+}
+
 function switchMobileTab(tab){
   var accordion = document.getElementById('layers-accordion');
   var layersBtn = document.getElementById('layers-toggle');
@@ -9257,6 +9297,10 @@ function switchMobileTab(tab){
     }
     setTimeout(function(){
       try{ if(window.map && typeof window.map.invalidateSize==='function') window.map.invalidateSize(); }catch(e){}
+      // Après la fin de transition transform (.3s, cf. CSS) : mesure la hauteur réellement
+      // rendue du panneau et décale la carte en conséquence (cf. commentaire à
+      // syncCouchesSheetMapPan plus haut). Idempotent à la fermeture (targetPan devient 0).
+      try{ syncCouchesSheetMapPan(); }catch(e){}
     }, 300);
   }
   document.querySelectorAll('.mtab-btn').forEach(function(btn){
@@ -9278,6 +9322,9 @@ function toggleLayersSheetExpand(){
   var willExpand = !accordion.classList.contains('expanded');
   accordion.classList.toggle('expanded', willExpand);
   if(handle) handle.setAttribute('aria-expanded', String(willExpand));
+  // Resynchronise le décalage carte sur la nouvelle hauteur (cf. syncCouchesSheetMapPan) —
+  // .25s pour la transition height (CSS), plus courte que les .3s de transform ci-dessus.
+  setTimeout(function(){ try{ syncCouchesSheetMapPan(); }catch(e){} }, 250);
 }
 
 // Guard: loadNOAA/loadCEM may be absent post-v8 cleanup — ne pas bloquer le reste du chaînage init
