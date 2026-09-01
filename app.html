@@ -2295,7 +2295,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
   <div id="expert-panel">
     <div style="font-family:var(--mono);font-size:10px;color:#C28533;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">&#9881; Indice composite</div>
     <div style="background:var(--tx-pierre);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:14px;font-family:var(--font);font-size:12px;color:var(--tx-ardoise);line-height:1.5">
-      Le mode Expertise permet d'ajuster la pondération des 4 domaines physiques et d'exporter les valeurs détaillées par point. Il est destiné aux utilisateurs qui souhaitent reproduire ou auditer le calcul composite. Les pondérations par défaut sont gelées dans la documentation du projet.
+      Le mode Expertise permet d'ajuster la pondération des domaines magnétique et radiofréquence et d'exporter les valeurs détaillées par point. Il est destiné aux utilisateurs qui souhaitent reproduire ou auditer le calcul composite. Les pondérations par défaut sont gelées dans la documentation du projet.
     </div>
     <div style="margin-bottom:10px">
       <div id="expert-index-val">&#x2014;</div>
@@ -2311,9 +2311,20 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
       <input type="range" id="sl-wRF" min="0" max="1" step="0.05" value="0.40" oninput="onExpertSlider()">
       <span class="sv" id="v-wRF">0.40</span>
     </div>
+    <!-- Curseur w_I remplacé par une ligne en lecture seule le 2026-09-01 (décision Soleil,
+         correctif de #1164) : depuis le retrait de l'affichage gamma, la valeur de la composante
+         ionisante n'est plus visible nulle part dans l'application. Laisser un curseur permettait
+         de pondérer une grandeur illisible — défaut d'étiquetage introduit par la PR elle-même.
+         Le POIDS ne bouge pas : 0,20 est toujours passé à computeExpertComposite(), qui est
+         inchangé, et l'indice reste défini sur trois composantes (GELÉ-001a intact). Vérifié
+         avant retrait : aucune normalisation à somme constante dans ce fichier (l'indice est une
+         somme pondérée brute, les curseurs sont indépendants), donc retirer celui-ci ne modifie
+         en rien le comportement de w_M et w_RF. La valeur reste alimentée depuis
+         EXPERT_WEIGHTS_DEFAULT.I par onExpertSlider(), pour qu'affichage et calcul ne puissent
+         pas diverger. -->
     <div class="expert-slider-row">
       <label>w_I</label>
-      <input type="range" id="sl-wI" min="0" max="1" step="0.05" value="0.20" oninput="onExpertSlider()">
+      <span id="xp-wi-note" style="flex:1;font-family:var(--mono);font-size:10px;color:var(--tx3);font-style:italic">composante ionisante — calculée, non affichée ici</span>
       <span class="sv" id="v-wI">0.20</span>
     </div>
     <div style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:8px;line-height:1.4">&#9670; Pond&#233;rations provisoires en attente de validation m&#233;thodologique par un physicien tiers.</div>
@@ -6768,7 +6779,7 @@ const EXPERT_WEIGHTS_DEFAULT = { M: 0.4, RF: 0.4, I: 0.2 }; // GELÉ-001a
 // et ~1 % sature (hotspots) → composante RF discriminante. w_RF INCHANGÉ (gelé). ELF/GAMMA inchangés.
 // Provisoire/documenté (ADR-027/028, relecture physicien en cours).
 const EXPERT_BOUNDS_DEFAULT  = { ELF_nT: [0, 1000], RF_uW_m2: [0, 1500], GAMMA_nSv_h: [50, 250] };
-const EXPERT_EPISTEMIC_NOTE  = 'Indice composite conventionnel, sans signification physique ni sanitaire directe. Composante RF = modèle Tellux, calibration interne sur mesures certifiées ANFR/EXEM extérieures — estimation centrale, non un majorant : elle sous-estime les points les plus exposés (dynamique comprimée, dispersion typique x/÷3,3) et représente le champ extérieur (surestime l\'intérieur des bâtiments ~12 dB). Correction de pente testée et écartée (ne généralise pas, n=29) ; redressement physique (directivité antennes) en conception, sous condition de validation. Pondérations (w_M/w_RF/w_I) et bornes de normalisation provisoires et documentées. Relecture physicien en cours. Usage exploratoire pour comparer la composition du paysage physique entre zones. Source : AUDIT_TELLUX_NIVEAU3 §5.';
+const EXPERT_EPISTEMIC_NOTE  = 'Indice composite conventionnel, sans signification physique ni sanitaire directe. Composante RF = modèle Tellux, calibration interne sur mesures certifiées ANFR/EXEM extérieures — estimation centrale, non un majorant : elle sous-estime les points les plus exposés (dynamique comprimée, dispersion typique x/÷3,3) et représente le champ extérieur (surestime l\'intérieur des bâtiments ~12 dB). Correction de pente testée et écartée (ne généralise pas, n=29) ; redressement physique (directivité antennes) en conception, sous condition de validation. Pondérations (w_M/w_RF/w_I) et bornes de normalisation provisoires et documentées. Relecture physicien en cours. Usage exploratoire pour comparer la composition du paysage physique entre zones. Source : AUDIT_TELLUX_NIVEAU3 §5. Depuis le 2026-09-01, la composante ionisante (gamma, pondérée à 0,20) n\'est plus affichée dans l\'application : elle reste calculée, pondérée et exportée dans ce fichier, mais sa valeur n\'apparaît dans aucune interface — le présent export et la console sont les seuls endroits où elle est lisible.';
 
 function computeExpertComposite(v2, weights, bounds) {
   weights = weights || EXPERT_WEIGHTS_DEFAULT;
@@ -8846,10 +8857,14 @@ function closeExpertMode() {
   document.getElementById('expert-bandeau').classList.remove('visible');
 }
 
+// w_I n'a plus de curseur depuis le 2026-09-01 (cf. commentaire au bloc #expert-panel) : les
+// cinq points de lecture de #sl-wI de ce fichier lisent désormais EXPERT_WEIGHTS_DEFAULT.I,
+// source unique. Le poids reste 0,20 et computeExpertComposite() reçoit toujours ses trois
+// composantes — aucun changement de l'indice, GELÉ-001a intact.
 function updateExpertBandeau() {
   var wM  = parseFloat(document.getElementById('sl-wM').value);
   var wRF = parseFloat(document.getElementById('sl-wRF').value);
-  var wI  = parseFloat(document.getElementById('sl-wI').value);
+  var wI  = EXPERT_WEIGHTS_DEFAULT.I;
   var bw  = document.getElementById('expert-bandeau-weights');
   if (bw) bw.textContent = 'w_M=' + wM.toFixed(2) + ' w_RF=' + wRF.toFixed(2) + ' w_I=' + wI.toFixed(2);
 }
@@ -8857,10 +8872,11 @@ function updateExpertBandeau() {
 function onExpertSlider() {
   var wM  = parseFloat(document.getElementById('sl-wM').value);
   var wRF = parseFloat(document.getElementById('sl-wRF').value);
-  var wI  = parseFloat(document.getElementById('sl-wI').value);
   document.getElementById('v-wM').textContent  = wM.toFixed(2);
   document.getElementById('v-wRF').textContent = wRF.toFixed(2);
-  document.getElementById('v-wI').textContent  = wI.toFixed(2);
+  // #v-wI n'est plus piloté par un curseur : réécrit depuis la constante à chaque passage, pour
+  // qu'un changement de EXPERT_WEIGHTS_DEFAULT.I ne puisse pas laisser un « 0.20 » périmé à l'écran.
+  document.getElementById('v-wI').textContent  = EXPERT_WEIGHTS_DEFAULT.I.toFixed(2);
   updateExpertBandeau();
   clearTimeout(_expertThrottle);
   _expertThrottle = setTimeout(refreshExpertComposite, 300);
@@ -8869,15 +8885,14 @@ function onExpertSlider() {
 function resetExpertSliders() {
   document.getElementById('sl-wM').value  = EXPERT_WEIGHTS_DEFAULT.M;
   document.getElementById('sl-wRF').value = EXPERT_WEIGHTS_DEFAULT.RF;
-  document.getElementById('sl-wI').value  = EXPERT_WEIGHTS_DEFAULT.I;
-  onExpertSlider();
+  onExpertSlider(); // w_I : rien à réinitialiser, il n'a jamais quitté EXPERT_WEIGHTS_DEFAULT.I
 }
 
 function refreshExpertComposite() {
   if (!_expertLastResult) return;
   var wM  = parseFloat(document.getElementById('sl-wM').value);
   var wRF = parseFloat(document.getElementById('sl-wRF').value);
-  var wI  = parseFloat(document.getElementById('sl-wI').value);
+  var wI  = EXPERT_WEIGHTS_DEFAULT.I;
   var comp = computeExpertComposite(_expertLastResult, { M: wM, RF: wRF, I: wI });
   var el = document.getElementById('expert-index-val');
   if (el) el.textContent = comp.index.toFixed(3);
@@ -8893,7 +8908,7 @@ function exportExpertCSV() {
   }
   var wM  = parseFloat(document.getElementById('sl-wM').value);
   var wRF = parseFloat(document.getElementById('sl-wRF').value);
-  var wI  = parseFloat(document.getElementById('sl-wI').value);
+  var wI  = EXPERT_WEIGHTS_DEFAULT.I;
   var v2   = _expertLastResult;
   var comp = computeExpertComposite(v2, { M: wM, RF: wRF, I: wI });
   var ts   = new Date().toISOString();
@@ -11165,6 +11180,10 @@ function capCleanup(){
 ["btn_share","button[onclick='shareURL()'] span@1","","Partager la vue","Sparte a vista","Share the view"],
 ["xp_header","#expert-panel div[style*='uppercase']@0","","⚙ Indice composite","⚙ Indice cumpostu","⚙ Composite index"],
 ["xp_lastpoint","#expert-index-val ~ div","","sur le dernier point analysé ◆","nant'à l'ultimu puntu analizatu ◆","for the last point analyzed ◆"],
+// xp_wi_note (2026-09-01) : ligne en lecture seule qui a remplacé le curseur w_I. « Ionizante »
+// reprend la graphie corse déjà employée par les clés chip_ionisant/chip_ionisant_tt, retirées
+// le 2026-08-30 — pas une traduction neuve.
+["xp_wi_note","#xp-wi-note","","composante ionisante — calculée, non affichée ici","cumpunente ionizante — calculata, micca affissata quì","ionizing component — computed, not displayed here"],
 ["xp_stats","#expert-panel div[style*='uppercase']@1","","Statistiques du modèle","Statistiche di u mudellu","Model statistics"],
 ["xp_anfr_loading","#anfr-count","","chargement…","caricamentu…","loading…"],
 ["xp_reset","#expert-panel button[onclick='resetExpertSliders()']","","Réinitialiser","Rimette à zeru","Reset"],
