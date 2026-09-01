@@ -2339,10 +2339,20 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
       <span class="sv" id="v-wI">0.20</span>
     </div>
     <div style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:8px;line-height:1.4">&#9670; Pond&#233;rations provisoires en attente de validation m&#233;thodologique par un physicien tiers.</div>
-    <div style="border-top:1px solid rgba(245,240,231,.15);padding-top:8px;margin-bottom:8px">
-      <div style="font-family:var(--mono);font-size:9px;color:rgba(245,240,231,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Statistiques du mod&#232;le</div>
-      <div style="font-family:var(--mono);font-size:11px;color:rgba(245,240,231,.8)">&#128225; <span id="anfr-count">chargement&#8230;</span></div>
-      <div style="font-family:var(--mono);font-size:11px;color:rgba(245,240,231,.8);margin-top:4px">&#128346; Écart IGRF/WMM : <span id="igrf-wmm-diff" style="color:rgba(245,240,231,.5)">—</span> <span style="font-size:9px;opacity:.7">nT</span></div>
+    <!-- Bloc « Statistiques du modèle » — contraste corrigé le 2026-09-01. Il était INVISIBLE en
+         production : ses couleurs rgba(245,240,231,…) sont des tons clairs prévus pour un fond
+         SOMBRE, restés sur #expert-panel dont le fond est --pierre-ombre (clair). Mesures avant
+         correction : 1,03 pour le titre (.5) et 1,05 pour les deux lignes (.8) — du texte à ce
+         ratio n'est pas peu lisible, il est absent. Même mode d'échec que la jauge crustale à
+         1,07 corrigée par #1148 : reste de mode sombre non nettoyé lors de son retrait.
+         Remplacements alignés sur ce que le panneau utilise déjà ailleurs, pas sur des valeurs
+         neuves : var(--tx3) pour le libellé de section (4,66), var(--ardoise-clair) pour les
+         deux lignes de valeurs — le même token que les libellés w_M/w_RF (8,36) — et
+         var(--border) pour le filet, qui à rgba(…,.15) ne se voyait pas non plus. -->
+    <div style="border-top:1px solid var(--border);padding-top:8px;margin-bottom:8px">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Statistiques du mod&#232;le</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--ardoise-clair)">&#128225; <span id="anfr-count">chargement&#8230;</span></div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--ardoise-clair);margin-top:4px">&#128346; Écart IGRF/WMM : <span id="igrf-wmm-diff" style="color:var(--tx3)">—</span> <span style="font-size:9px;opacity:.7">nT</span></div>
     </div>
     <div style="display:flex;gap:4px;flex-wrap:wrap">
       <button onclick="resetExpertSliders()" style="font-size:10px;padding:4px 10px;border-radius:var(--r);border:1px solid var(--border);background:var(--pierre-ombre);color:var(--ardoise-clair);cursor:pointer">R&#233;initialiser</button>
@@ -3241,12 +3251,22 @@ function updateIgrfWmmDiff(lat, lon) {
   const igrf = (typeof igrfFallback === 'function') ? igrfFallback(lat, lon) : null;
   if (wmm == null || igrf == null) {
     el.textContent = '—';
-    el.style.color = 'rgba(245,240,231,.5)';
+    el.style.color = 'var(--tx3)'; // était rgba(245,240,231,.5) — 1,03 sur le fond clair du panneau
     return;
   }
   const diff = Math.abs(igrf - wmm);
   el.textContent = diff.toFixed(0);
-  el.style.color = diff > 500 ? '#e8a69a' : (diff > 100 ? '#C28533' : 'rgba(245,240,231,.85)');
+  // Contraste corrigé le 2026-09-01 (même correctif que le bloc « Statistiques du modèle » dans
+  // le markup — cette fonction en repeint une valeur, il aurait été vain de corriger l'un sans
+  // l'autre). Deux des trois états étaient INVISIBLES sur le fond clair de #expert-panel :
+  //   • '#e8a69a' (écart > 500 nT) mesuré à 1,68 — l'état d'alerte, celui qu'on a le plus besoin
+  //     de lire, était le moins lisible. Remplacé par le Porphyre #8E2F1F (6,74), déjà la couleur
+  //     d'alerte du fichier (radon classe 3, anomalies négatives) : intention conservée.
+  //   • 'rgba(245,240,231,.85)' (état neutre) mesuré à 1,06 → var(--ardoise-clair) (8,36).
+  // ⚠️ '#C28533' (écart > 100 nT) est LAISSÉ TEL QUEL à 2,59 — c'est l'autre défaut, l'Ocre en
+  // usage textuel sur fond clair, qui relève du lot en arbitrage et pas de ce correctif-ci. La
+  // substitution #8A5E22 déjà validée en #1165 le résoudrait, mais ce n'est pas décidé.
+  el.style.color = diff > 500 ? '#8E2F1F' : (diff > 100 ? '#C28533' : 'var(--ardoise-clair)');
   el.title = 'IGRF-14 = ' + igrf + ' nT · WMM 2025 = ' + wmm + ' nT · écart |Δ| = ' + diff.toFixed(0) + ' nT';
 }
 let curKp='—',curBz='—',curDensity='—',curFlux='—';
