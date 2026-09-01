@@ -111,6 +111,39 @@ const PANELS = [
 // Sans ça le script vérifierait des conteneurs vides et passerait à tort.
 const LAYER_BUTTONS = ['b-crustal', 'b-ant', 'b-res'];
 
+// ─── Points de clic du popup (2026-09-01) ──────────────────────────────────
+// POURQUOI PLUSIEURS POINTS
+// Le popup colore plusieurs de ses éléments par TERNAIRE sur la valeur calculée
+// au point cliqué (score de perturbation, score d'activité naturelle, écart Δ,
+// classe radon). Un seul clic n'exerce donc QU'UNE branche de chaque couleur :
+// le compte de violations dépend de l'endroit où l'on clique, et un « 0 » sur un
+// point ne dit rien des autres. Constaté en direct le 2026-09-01 — deux
+// coordonnées corses ordinaires faisaient apparaître, sur le SCORE PRINCIPAL en
+// 14 px gras, des violations que le point de test ne montrait pas.
+// C'est la même famille de défaut que l'angle mort qui a motivé l'élargissement :
+// le check ne mesure que ce qu'il exerce.
+//
+// CHOIX DES POINTS — chacun a été retenu parce qu'il exerce une branche que les
+// autres ne couvrent pas ; ce n'est pas un échantillon au hasard :
+//   42,00/9,05  perturbation 5/5 · activité 3/5 · radon classe 3
+//   41,60/9,28  perturbation 2/5  (branche #5A7D4E)
+//   42,55/9,45  activité 0/5      (branche neutre)
+//   42,70/9,40  radon classe 2    (branche Ocre)
+// ⚠️ BRANCHES ENCORE NON EXERCÉES, à documenter plutôt qu'à laisser croire à une
+// couverture complète : perturbation 1/5 et 3/5, activité 4/5, et les branches de
+// deltaCol (qui exigent une contribution terrain à moins de 500 m du point).
+// Coût mesuré (2026-09-01, local) : script à 1 point ~21 s -> à 4 points ~31 s,
+// soit ~+3,3 s par point ajouté. Round-trip Playwright par point (clic + attente
+// POPUP_WAIT_MS + sonde), pas la sonde elle-même. Déterminisme vérifié (2 runs
+// consécutifs -> même décompte 12 critique + 5 AA).
+const POPUP_POINTS = [
+  [42.00, 9.05],
+  [41.60, 9.28],
+  [42.55, 9.45],
+  [42.70, 9.40],
+];
+const POPUP_WAIT_MS = Number(process.env.CONTRAST_POPUP_WAIT_MS) || 2600;
+
 // Fond de repli quand la pile d'ancêtres n'atteint jamais l'opacité 1 (panneau
 // posé sur le canvas Leaflet). Valeur prise sur le fond réellement rendu (Esri
 // World Light Gray Canvas).
@@ -264,7 +297,9 @@ async function main() {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
 
-  const rapport = { url: appUrl, panneaux: null };
+  const rapport = { url: appUrl, panneaux: null, popup_par_point: null };
+  const POPUP_PANEL = PANELS.find((p) => p.sel === '.leaflet-popup-content');
+  const scansPopup = [];
 
   try {
     await page.goto(appUrl, { waitUntil: 'domcontentloaded', timeout: BOOT_TIMEOUT_MS });
@@ -312,12 +347,25 @@ async function main() {
         .find((b) => /Accéder à la carte|the map/i.test((b.textContent || '').trim()));
       if (acc) acc.click();
       await dodo(400);
+    });
 
-      // 1) Popup au clic
-      if (typeof map !== 'undefined' && map && typeof L !== 'undefined') {
-        map.fire('click', { latlng: L.latLng(42.00, 9.05) });
-      }
-      await dodo(3000);
+    // 1) Popup au clic — MESURÉ SUR PLUSIEURS POINTS (2026-09-01, cf. POPUP_POINTS).
+    // Une seule mesure ne testait qu'une branche de chaque couleur conditionnelle.
+    // Ce passage a lieu AVANT l'ouverture de la contribution terrain, qui arme un
+    // handler sur le prochain clic carte et détournerait ces clics.
+    for (const [lat, lon] of POPUP_POINTS) {
+      await page.evaluate(([la, lo]) => {
+        if (typeof map !== 'undefined' && map && typeof L !== 'undefined') {
+          map.fire('click', { latlng: L.latLng(la, lo) });
+        }
+      }, [lat, lon]);
+      await page.waitForTimeout(POPUP_WAIT_MS);
+      const r = await page.evaluate(PROBE_CONTRAST, [[POPUP_PANEL], BASE_TONE]);
+      scansPopup.push({ point: `${lat},${lon}`, ...r[0] });
+    }
+
+    await page.evaluate(async () => {
+      const dodo = (ms) => new Promise((r) => setTimeout(r, ms));
 
       // 2) Mode Expertise — panneau + bandeau. activateExpertMode() court-circuite
       //    la modale de consentement, qui n'est pas l'objet de la mesure.
@@ -336,6 +384,13 @@ async function main() {
       await dodo(400);
 
       // 4) Contribution terrain — flux réel : armement puis clic de placement
+      // ⚠️ TROUVAILLE (2026-09-01) : ce clic déclenche AUSSI le handler normal
+      // d'ouverture du popup, en plus du placement de mesure — comportement de
+      // PRODUCTION vérifié en direct (map.on('click',…) accumule les handlers,
+      // Leaflet ne les rend pas mutuellement exclusifs), pas un artefact de ce
+      // script. Le popup mesuré par le probe final serait donc celui de CE point
+      // (42.01/9.06), un 5e point non documenté — d'où la reconstruction de
+      // l'entrée popup ci-dessous à partir des seuls points de POPUP_POINTS.
       if (typeof startContribFromFAB === 'function') startContribFromFAB();
       await dodo(300);
       if (typeof map !== 'undefined' && map && typeof L !== 'undefined') {
@@ -351,11 +406,50 @@ async function main() {
     // Playwright sérialise PROBE_CONTRAST et l'exécute dans la page — même
     // convention que les autres harnais du dossier (sondes déclarées en haut de
     // fichier, appelées via page.evaluate).
-    rapport.panneaux = await page.evaluate(PROBE_CONTRAST, [PANELS, BASE_TONE]);
+    //
+    // Le popup EST EXCLU de cet appel : à ce stade, la contribution terrain (étape
+    // 4 ci-dessus) l'a rouvert à un point non documenté (cf. son commentaire). Le
+    // mesurer ici donnerait un résultat qui dépend d'un effet de bord, pas d'un
+    // choix. L'entrée popup est reconstruite juste après, uniquement à partir des
+    // POPUP_POINTS mesurés en amont, sur ces points-là et aucun autre.
+    const panelsSansPopup = PANELS.filter((p) => p !== POPUP_PANEL);
+    rapport.panneaux = await page.evaluate(PROBE_CONTRAST, [panelsSansPopup, BASE_TONE]);
+
+    // ─── Reconstruction de l'entrée popup à partir de scansPopup ────────────
+    // noeuds = celui du PREMIER point (POPUP_POINTS[0]) : c'est le point historique
+    // du check à un seul point, ce qui garde le nombre comparable aux mesures
+    // passées. violations = UNION dédupliquée sur (couleur, taille) — cf. le
+    // commentaire de POPUP_POINTS : le texte est exclu de la clé exprès, pour
+    // compter un DÉFAUT une fois même s'il apparaît sur plusieurs points.
+    if (POPUP_PANEL) {
+      const premier = scansPopup[0] || { noeuds: 0, violations: [] };
+      const vues = new Set();
+      const violationsUnion = [];
+      for (const s of scansPopup) {
+        for (const v of (s.violations || [])) {
+          const cle = `${v.couleur}|${v.px}`;
+          if (vues.has(cle)) continue;
+          vues.add(cle);
+          violationsUnion.push({ ...v, vu_au_point: s.point });
+        }
+      }
+      rapport.panneaux.push({
+        panel: POPUP_PANEL.nom, sel: POPUP_PANEL.sel, etat: 'mesuré',
+        noeuds: premier.noeuds || 0, points_mesures: scansPopup.length,
+        violations: violationsUnion,
+      });
+    }
   } finally {
     await browser.close();
     if (server) server.close();
   }
+
+  // Décompte par point, publié tel quel dans le rapport pour audit — l'entrée
+  // popup elle-même a déjà été reconstruite plus haut (cf. le bloc juste avant
+  // `finally`), à partir de ces mêmes scans et d'aucun autre.
+  rapport.popup_par_point = scansPopup.map((s) => ({
+    point: s.point, noeuds: s.noeuds || 0, violations: (s.violations || []).length,
+  }));
 
   const violations = [];
   for (const p of rapport.panneaux) {
@@ -436,6 +530,7 @@ async function main() {
     },
     violations_critiques: critiques,
     violations_aa: aa,
+    popup_par_point: rapport.popup_par_point,
     detail: rapport.panneaux,
   };
   process.stdout.write(JSON.stringify(sortie, null, 2) + '\n');
