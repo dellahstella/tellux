@@ -2295,7 +2295,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
   <div id="expert-panel">
     <div style="font-family:var(--mono);font-size:10px;color:#C28533;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">&#9881; Indice composite</div>
     <div style="background:var(--tx-pierre);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:14px;font-family:var(--font);font-size:12px;color:var(--tx-ardoise);line-height:1.5">
-      Le mode Expertise permet d'ajuster la pondération des 4 domaines physiques et d'exporter les valeurs détaillées par point. Il est destiné aux utilisateurs qui souhaitent reproduire ou auditer le calcul composite. Les pondérations par défaut sont gelées dans la documentation du projet.
+      Le mode Expertise permet d'ajuster la pondération des domaines magnétique et radiofréquence et d'exporter les valeurs détaillées par point. Il est destiné aux utilisateurs qui souhaitent reproduire ou auditer le calcul composite. Les pondérations par défaut sont gelées dans la documentation du projet.
     </div>
     <div style="margin-bottom:10px">
       <div id="expert-index-val">&#x2014;</div>
@@ -2311,9 +2311,20 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
       <input type="range" id="sl-wRF" min="0" max="1" step="0.05" value="0.40" oninput="onExpertSlider()">
       <span class="sv" id="v-wRF">0.40</span>
     </div>
+    <!-- Curseur w_I remplacé par une ligne en lecture seule le 2026-09-01 (décision Soleil,
+         correctif de #1164) : depuis le retrait de l'affichage gamma, la valeur de la composante
+         ionisante n'est plus visible nulle part dans l'application. Laisser un curseur permettait
+         de pondérer une grandeur illisible — défaut d'étiquetage introduit par la PR elle-même.
+         Le POIDS ne bouge pas : 0,20 est toujours passé à computeExpertComposite(), qui est
+         inchangé, et l'indice reste défini sur trois composantes (GELÉ-001a intact). Vérifié
+         avant retrait : aucune normalisation à somme constante dans ce fichier (l'indice est une
+         somme pondérée brute, les curseurs sont indépendants), donc retirer celui-ci ne modifie
+         en rien le comportement de w_M et w_RF. La valeur reste alimentée depuis
+         EXPERT_WEIGHTS_DEFAULT.I par onExpertSlider(), pour qu'affichage et calcul ne puissent
+         pas diverger. -->
     <div class="expert-slider-row">
       <label>w_I</label>
-      <input type="range" id="sl-wI" min="0" max="1" step="0.05" value="0.20" oninput="onExpertSlider()">
+      <span id="xp-wi-note" style="flex:1;font-family:var(--mono);font-size:10px;color:var(--tx3);font-style:italic">composante ionisante — calculée, non affichée ici</span>
       <span class="sv" id="v-wI">0.20</span>
     </div>
     <div style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:8px;line-height:1.4">&#9670; Pond&#233;rations provisoires en attente de validation m&#233;thodologique par un physicien tiers.</div>
@@ -2946,7 +2957,7 @@ var JS_STRINGS_EN = {
   v2_conf_radon: "Confidence: high — official classification (order of June 27, 2018) or lithological estimate (2018 radon mapping — IRSN, now ASNR)",
   radon_commune_z3: "Municipality classified zone 3 (order of June 27, 2018)",
   radon_commune_z3_sep: ": ",
-  v2_footer_reperes: "Natural background in Corsica: 75–150 nSv/h · Radon reference level: 300 Bq/m³ (Art. R. 1333-28 CSP)",
+  v2_footer_reperes: "Radon reference level: 300 Bq/m³ (Art. R. 1333-28 CSP)",
   popup_sub_perturbation: "Disturbance",
   popup_sub_naturel: "Natural",
   popup_footer_source: "Source: Biot-Savart EDF SEI · CartoRadio ANFR · Tellux model",
@@ -6768,7 +6779,7 @@ const EXPERT_WEIGHTS_DEFAULT = { M: 0.4, RF: 0.4, I: 0.2 }; // GELÉ-001a
 // et ~1 % sature (hotspots) → composante RF discriminante. w_RF INCHANGÉ (gelé). ELF/GAMMA inchangés.
 // Provisoire/documenté (ADR-027/028, relecture physicien en cours).
 const EXPERT_BOUNDS_DEFAULT  = { ELF_nT: [0, 1000], RF_uW_m2: [0, 1500], GAMMA_nSv_h: [50, 250] };
-const EXPERT_EPISTEMIC_NOTE  = 'Indice composite conventionnel, sans signification physique ni sanitaire directe. Composante RF = modèle Tellux, calibration interne sur mesures certifiées ANFR/EXEM extérieures — estimation centrale, non un majorant : elle sous-estime les points les plus exposés (dynamique comprimée, dispersion typique x/÷3,3) et représente le champ extérieur (surestime l\'intérieur des bâtiments ~12 dB). Correction de pente testée et écartée (ne généralise pas, n=29) ; redressement physique (directivité antennes) en conception, sous condition de validation. Pondérations (w_M/w_RF/w_I) et bornes de normalisation provisoires et documentées. Relecture physicien en cours. Usage exploratoire pour comparer la composition du paysage physique entre zones. Source : AUDIT_TELLUX_NIVEAU3 §5.';
+const EXPERT_EPISTEMIC_NOTE  = 'Indice composite conventionnel, sans signification physique ni sanitaire directe. Composante RF = modèle Tellux, calibration interne sur mesures certifiées ANFR/EXEM extérieures — estimation centrale, non un majorant : elle sous-estime les points les plus exposés (dynamique comprimée, dispersion typique x/÷3,3) et représente le champ extérieur (surestime l\'intérieur des bâtiments ~12 dB). Correction de pente testée et écartée (ne généralise pas, n=29) ; redressement physique (directivité antennes) en conception, sous condition de validation. Pondérations (w_M/w_RF/w_I) et bornes de normalisation provisoires et documentées. Relecture physicien en cours. Usage exploratoire pour comparer la composition du paysage physique entre zones. Source : AUDIT_TELLUX_NIVEAU3 §5. Depuis le 2026-09-01, la composante ionisante (gamma, pondérée à 0,20) n\'est plus affichée dans l\'application : elle reste calculée, pondérée et exportée dans ce fichier, mais sa valeur n\'apparaît dans aucune interface — le présent export et la console sont les seuls endroits où elle est lisible.';
 
 function computeExpertComposite(v2, weights, bounds) {
   weights = weights || EXPERT_WEIGHTS_DEFAULT;
@@ -7406,32 +7417,18 @@ map.on('click',async e=>{
   const elf_nT    = v2.domains.magnetic.elf.B_total_nT;
   const static_nT = v2.domains.magnetic.static.B_total_nT;
   const rf_uWm2   = v2.domains.rf.S_total_uW_m2;
+  // gamma_nSvh reste calculé et lu ici : il alimente _geoLastPoint (plus bas) et l'export CSV
+  // expert passe par v2 directement. Le RENDU gamma du popup a été retiré le 2026-09-01
+  // (décision Soleil, brief « retrait de l'affichage du gamma ») — la chaîne de calcul est
+  // intacte, seule la surface publique disparaît. Ce qui a été supprimé ici : gammaTerrestre,
+  // gammaLabel, gammaBadgeTitle/Icon/Color (badge 3 états ancré/extrapolé/en cours),
+  // gammaConfDots/Text (points de confiance) et gammaDetailLine (ligne « X nGy/h terrestre
+  // (plage lithotype …) + Y nSv/h cosmique »). Tous étaient des dérivés d'affichage : aucun
+  // n'était lu par un calcul. Les clés i18n correspondantes (gamma_label_*, gamma_badge_*,
+  // gamma_conf_*, gamma_reperes_tooltip) sont CONSERVÉES telles quelles pour le portage vers
+  // radon.html — même patron que la couche b-openrad mutée le 2026-08-30 (code mort gardé
+  // pour migration, cf. son commentaire dans le menu Couches).
   const gamma_nSvh    = v2.domains.ionizing.gamma.dose_rate_nSv_h;
-  const gammaTerrestre = v2.domains.ionizing.gamma.components; // { terrestrial_nGy_h, terrestrial_status, terrestrial_range_nGy_h, terrestrial_label, ... }
-  // Libellé/badge popup gamma — dépend du statut terrestre du lithotype au point cliqué
-  // (ancré = batholite varisque mesuré ; extrapolé = analogue Ligurie alpine ; sinon
-  // cosmique seule, comportement inchangé). Cf. GAMMA_TERRESTRE_PAR_LITHOTYPE.
-  const gammaLabel = gammaTerrestre.terrestrial_status ? jt('gamma_label_terrestre','dose gamma ambiante (cosmique + terrestre)') : jt('gamma_label_cosmique','dose cosmique au sol');
-  const gammaBadgeTitle = gammaTerrestre.terrestrial_status === 'ancre'
-    ? jt('gamma_badge_ancre','Ancré — terrestre mesuré sur le batholite varisque corse (Verdoya 1998), coefficients Verdoya 2009 relus par physicien tiers')
-    : gammaTerrestre.terrestrial_status === 'extrapole'
-      ? jt('gamma_badge_extrapole','Extrapolé — Corse alpine non mesurée, valeur portée par analogue Ligurie (Verdoya 2009), incertitude large')
-      : jt('gamma_badge_encours','En cours — cosmique seule ; composante terrestre non déployée pour ce lithotype (aucune source quantifiée)');
-  const gammaBadgeIcon = gammaTerrestre.terrestrial_status === 'ancre' ? '●' : gammaTerrestre.terrestrial_status === 'extrapole' ? '◐' : '◆';
-  const gammaBadgeColor = gammaTerrestre.terrestrial_status === 'ancre' ? '#5b7c4f'
-    : gammaTerrestre.terrestrial_status === 'extrapole' ? '#b3541e'
-    : '#C28533'; // non-couvert : ambre inchangé (comportement pré-existant, cosmique seule)
-  const gammaConfDots = gammaTerrestre.terrestrial_status === 'ancre' ? '●●○' : '●○○';
-  const gammaConfText = gammaTerrestre.terrestrial_status === 'ancre'
-    ? jt('gamma_conf_ancre','moyenne — terrestre ancré + cosmique paramétrique')
-    : gammaTerrestre.terrestrial_status === 'extrapole'
-      ? jt('gamma_conf_extrapole','faible — cosmique paramétrique + terrestre extrapolé')
-      : jt('gamma_conf_encours','faible — cosmique paramétrique, composante terrestre non disponible pour ce lithotype');
-  const gammaDetailLine = gammaTerrestre.terrestrial_status
-    ? '<div style="font-size:7.5px;color:#8b92a5;margin-top:1px">'+gammaTerrestre.terrestrial_nGy_h+' nGy/h terrestre'+
-      (gammaTerrestre.terrestrial_range_nGy_h ? ' (plage lithotype '+gammaTerrestre.terrestrial_range_nGy_h[0]+'–'+gammaTerrestre.terrestrial_range_nGy_h[1]+' nGy/h)' : '')+
-      ' + '+v2.domains.ionizing.gamma.components.cosmic_nSv_h+' nSv/h cosmique</div>'
-    : '';
   const radon_class   = v2.domains.ionizing.radon.class;
   const radon_range   = v2.domains.ionizing.radon.activity_estimate_Bq_m3;
   const radon_official = v2.domains.ionizing.radon.official_classification; // {matched_by, nom, code_insee} ou null
@@ -7556,22 +7553,19 @@ map.on('click',async e=>{
       '</div>'+
       '<div style="font-size:8px;color:#8b92a5;font-style:italic">'+jt('rf_icnirp_note','ICNIRP : ≈ 4 500 000 µW/m² (repère documentaire)')+'</div>'+
       // ── Ionisant ──
+      // Colonne Gamma retirée le 2026-09-01 (décision Soleil) : le gamma reste un proxy interne
+      // du calcul (domaine ionisant, composante I de l'indice composite) mais n'est plus exposé
+      // en surface publique ici — les couches gamma sont destinées à radon.html, chantier séparé.
+      // L'intitulé « Domaine ionisant » est CONSERVÉ tel quel : le radon EST un ionisant, et le
+      // domaine continue d'exister dans le modèle (deux membres, dont un seul affiché). Le
+      // renommer en « Radon » laisserait entendre que le domaine ionisant se réduit au radon,
+      // ce qui serait faux. Le bloc n'a plus qu'une colonne : la séparation verticale
+      // (border-left) qui distinguait Radon de Gamma est retirée avec elle.
       '<div style="margin-top:3px;border-top:1px dashed #e5e7eb;padding-top:3px">'+
         '<div style="font-size:9px;font-weight:600;color:#1F2329;margin-bottom:2px">'+jt('v2_title_ionisant','Domaine ionisant')+'</div>'+
         '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+
-          // Gamma
-          '<div>'+
-            '<div style="font-size:8px;color:#6b7280;margin-bottom:1px">'+gammaLabel+'</div>'+
-            '<div style="display:flex;align-items:center;gap:3px">'+
-              '<span style="font-size:11px;font-weight:700;color:#4a4f5e">'+gamma_nSvh+' nSv/h</span>'+
-              '<span style="font-size:9px;color:'+gammaBadgeColor+'" title="'+gammaBadgeTitle+'">'+gammaBadgeIcon+'</span>'+
-              '<span style="font-size:9px;color:#8b92a5" title="'+jt('v2_conf_prefix','Confiance : ')+gammaConfText+'">'+gammaConfDots+'</span>'+
-              '<span style="font-size:9px;color:#8b92a5;cursor:help" title="'+jt('gamma_reperes_tooltip','Repères (hors modèle Tellux) : moyenne mondiale ~59 nGy/h de dose absorbée dans l\'air, rayonnement gamma terrestre extérieur (UNSCEAR 2000) ; granites typiquement ~70–200 nGy/h. Unités distinctes : nGy/h = dose absorbée dans l\'air (grandeur physique des modèles) ; nSv/h = équivalent de dose ambiant (grandeur affichée par les balises Téléray ASNR) — conversion ≈ ×1,2 pour le gamma, ne pas comparer directement.')+'">ⓘ</span>'+
-            '</div>'+
-            gammaDetailLine+
-          '</div>'+
           // Radon
-          '<div style="border-left:1px solid #e5e7eb;padding-left:6px">'+
+          '<div>'+
             '<div style="font-size:8px;color:#6b7280;margin-bottom:1px">'+jt('v2_title_radon','Radon (potentiel)')+'</div>'+
             '<div style="display:flex;align-items:center;gap:3px">'+
               '<span style="font-size:11px;font-weight:700;color:'+radonColor+'">Classe '+radon_class+'/3</span>'+
@@ -7583,7 +7577,11 @@ map.on('click',async e=>{
               : '')+
           '</div>'+
         '</div>'+
-        '<div style="font-size:7.5px;color:#9ca3af;font-style:italic">'+jt('v2_footer_reperes','Fond naturel Corse : 75–150 nSv/h · Niveau de référence radon : 300 Bq/m³ (art. R. 1333-28 CSP)')+'</div>'+
+        // Le repère « Fond naturel Corse : 75–150 nSv/h » a été retiré de cette ligne le
+        // 2026-09-01 avec la colonne Gamma : c'était un repère de lecture pour une valeur
+        // qui n'est plus affichée. Le repère radon (300 Bq/m³) reste, il porte sur la seule
+        // grandeur encore exposée dans ce bloc.
+        '<div style="font-size:7.5px;color:#9ca3af;font-style:italic">'+jt('v2_footer_reperes','Niveau de référence radon : 300 Bq/m³ (art. R. 1333-28 CSP)')+'</div>'+
       '</div>'+
     '</div>';
   calcPopup.setContent(
@@ -8859,10 +8857,14 @@ function closeExpertMode() {
   document.getElementById('expert-bandeau').classList.remove('visible');
 }
 
+// w_I n'a plus de curseur depuis le 2026-09-01 (cf. commentaire au bloc #expert-panel) : les
+// cinq points de lecture de #sl-wI de ce fichier lisent désormais EXPERT_WEIGHTS_DEFAULT.I,
+// source unique. Le poids reste 0,20 et computeExpertComposite() reçoit toujours ses trois
+// composantes — aucun changement de l'indice, GELÉ-001a intact.
 function updateExpertBandeau() {
   var wM  = parseFloat(document.getElementById('sl-wM').value);
   var wRF = parseFloat(document.getElementById('sl-wRF').value);
-  var wI  = parseFloat(document.getElementById('sl-wI').value);
+  var wI  = EXPERT_WEIGHTS_DEFAULT.I;
   var bw  = document.getElementById('expert-bandeau-weights');
   if (bw) bw.textContent = 'w_M=' + wM.toFixed(2) + ' w_RF=' + wRF.toFixed(2) + ' w_I=' + wI.toFixed(2);
 }
@@ -8870,10 +8872,11 @@ function updateExpertBandeau() {
 function onExpertSlider() {
   var wM  = parseFloat(document.getElementById('sl-wM').value);
   var wRF = parseFloat(document.getElementById('sl-wRF').value);
-  var wI  = parseFloat(document.getElementById('sl-wI').value);
   document.getElementById('v-wM').textContent  = wM.toFixed(2);
   document.getElementById('v-wRF').textContent = wRF.toFixed(2);
-  document.getElementById('v-wI').textContent  = wI.toFixed(2);
+  // #v-wI n'est plus piloté par un curseur : réécrit depuis la constante à chaque passage, pour
+  // qu'un changement de EXPERT_WEIGHTS_DEFAULT.I ne puisse pas laisser un « 0.20 » périmé à l'écran.
+  document.getElementById('v-wI').textContent  = EXPERT_WEIGHTS_DEFAULT.I.toFixed(2);
   updateExpertBandeau();
   clearTimeout(_expertThrottle);
   _expertThrottle = setTimeout(refreshExpertComposite, 300);
@@ -8882,15 +8885,14 @@ function onExpertSlider() {
 function resetExpertSliders() {
   document.getElementById('sl-wM').value  = EXPERT_WEIGHTS_DEFAULT.M;
   document.getElementById('sl-wRF').value = EXPERT_WEIGHTS_DEFAULT.RF;
-  document.getElementById('sl-wI').value  = EXPERT_WEIGHTS_DEFAULT.I;
-  onExpertSlider();
+  onExpertSlider(); // w_I : rien à réinitialiser, il n'a jamais quitté EXPERT_WEIGHTS_DEFAULT.I
 }
 
 function refreshExpertComposite() {
   if (!_expertLastResult) return;
   var wM  = parseFloat(document.getElementById('sl-wM').value);
   var wRF = parseFloat(document.getElementById('sl-wRF').value);
-  var wI  = parseFloat(document.getElementById('sl-wI').value);
+  var wI  = EXPERT_WEIGHTS_DEFAULT.I;
   var comp = computeExpertComposite(_expertLastResult, { M: wM, RF: wRF, I: wI });
   var el = document.getElementById('expert-index-val');
   if (el) el.textContent = comp.index.toFixed(3);
@@ -8906,7 +8908,7 @@ function exportExpertCSV() {
   }
   var wM  = parseFloat(document.getElementById('sl-wM').value);
   var wRF = parseFloat(document.getElementById('sl-wRF').value);
-  var wI  = parseFloat(document.getElementById('sl-wI').value);
+  var wI  = EXPERT_WEIGHTS_DEFAULT.I;
   var v2   = _expertLastResult;
   var comp = computeExpertComposite(v2, { M: wM, RF: wRF, I: wI });
   var ts   = new Date().toISOString();
@@ -9673,15 +9675,12 @@ function myPlaceRenderSummary(d){
   var champHtml=escapeHtml(champLvl)+' <span style="color:var(--tx3)">('+Math.round(v2.domains.magnetic.elf.B_total_nT)+' nT, composante liée aux lignes/antennes proches)</span>';
   var champRow=myPlaceRow(jt('myplace_champ_title','Champ électromagnétique combiné (ordre de grandeur)'),champHtml,jt('pill_estime','Estimation modélisée'),'estime');
 
-  // Gamma — mêmes libellés de statut que la popup carte (ancré/extrapolé/en cours)
-  var gammaC=v2.domains.ionizing.gamma.components||{};
-  var gammaVal=v2.domains.ionizing.gamma.dose_rate_nSv_h;
-  var gammaPill=gammaC.terrestrial_status==='ancre'?jt('pill_gamma_ancre','Ancré — terrestre mesuré (batholite corse)')
-    :gammaC.terrestrial_status==='extrapole'?jt('pill_gamma_extrapole','Extrapolé — analogue régional')
-    :jt('pill_gamma_encours','Cosmique seule — terrestre non disponible ici');
-  var gammaTone=gammaC.terrestrial_status==='ancre'?'officiel':gammaC.terrestrial_status==='extrapole'?'estime':'modelise';
-  var gammaHtml=(gammaVal!=null?Math.round(gammaVal*10)/10+' nSv/h':jt('myplace_gamma_unavailable','indisponible pour ce point'));
-  var gammaRow=myPlaceRow(jt('myplace_gamma_title','Dose gamma ambiante (ordre de grandeur)'),gammaHtml,gammaPill,gammaTone);
+  // Ligne « Dose gamma ambiante (ordre de grandeur) » retirée le 2026-09-01, en même temps que
+  // la colonne Gamma du popup carte (décision Soleil) : ce panneau était la SECONDE surface
+  // publique du gamma dans ce fichier, en plus du popup — elle n'était pas nommée dans le
+  // brief, retirée par cohérence avec l'objectif (« retirer l'affichage du gamma d'app.html »),
+  // signalée au digest. Clés i18n myplace_gamma_* / pill_gamma_* conservées pour le portage
+  // vers radon.html. Le calcul est intact : v2.domains.ionizing.gamma reste peuplé.
 
   // Radon — zonage réglementaire officiel vs estimation lithologique, jamais mêlés
   var radon=v2.domains.ionizing.radon||{};
@@ -9690,7 +9689,7 @@ function myPlaceRenderSummary(d){
   var radonPill=radonOfficial?jt('pill_radon_officiel','Officiel — décret n° 2018-434'):jt('pill_radon_estime','Estimation — géologie locale');
   var radonRow=myPlaceRow(jt('myplace_radon_title','Potentiel radon (zonage réglementaire)'),radonHtml,radonPill,radonOfficial?'officiel':'estime');
 
-  body.innerHTML=headerHtml+antRow+htaRow+champRow+gammaRow+radonRow+
+  body.innerHTML=headerHtml+antRow+htaRow+champRow+radonRow+
     '<p style="font-size:10.5px;color:var(--tx3);line-height:1.5;margin:14px 0 0;padding-top:12px;border-top:1px solid var(--border)">'+
     escapeHtml(jt('myplace_footer_note','Estimations issues du modèle Tellux — jamais une mesure sur place, jamais un diagnostic. Pour une donnée mesurée : bouton « + » (Contribution terrain) ci-dessous, ou le modèle de courrier « Faire mesurer l\'exposition » sur mairies.html.'))+
     '</p>';
@@ -11181,6 +11180,10 @@ function capCleanup(){
 ["btn_share","button[onclick='shareURL()'] span@1","","Partager la vue","Sparte a vista","Share the view"],
 ["xp_header","#expert-panel div[style*='uppercase']@0","","⚙ Indice composite","⚙ Indice cumpostu","⚙ Composite index"],
 ["xp_lastpoint","#expert-index-val ~ div","","sur le dernier point analysé ◆","nant'à l'ultimu puntu analizatu ◆","for the last point analyzed ◆"],
+// xp_wi_note (2026-09-01) : ligne en lecture seule qui a remplacé le curseur w_I. « Ionizante »
+// reprend la graphie corse déjà employée par les clés chip_ionisant/chip_ionisant_tt, retirées
+// le 2026-08-30 — pas une traduction neuve.
+["xp_wi_note","#xp-wi-note","","composante ionisante — calculée, non affichée ici","cumpunente ionizante — calculata, micca affissata quì","ionizing component — computed, not displayed here"],
 ["xp_stats","#expert-panel div[style*='uppercase']@1","","Statistiques du modèle","Statistiche di u mudellu","Model statistics"],
 ["xp_anfr_loading","#anfr-count","","chargement…","caricamentu…","loading…"],
 ["xp_reset","#expert-panel button[onclick='resetExpertSliders()']","","Réinitialiser","Rimette à zeru","Reset"],
