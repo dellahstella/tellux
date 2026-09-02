@@ -8189,40 +8189,88 @@ async function loadAnt(){try{
 
 // ── NOAA SWPC — vent solaire + Kp + Bz + flux proton ──
 // Restauré post-v8 (régression cleanup). Alimente panneau Kp/Bz/densité/flux + calibration externe.
-async function loadNOAA(){try{
-  const[r1,r2,r3,r4]=await Promise.all([
-    fetch('https://services.swpc.noaa.gov/products/solar-wind/plasma-7-day.json'),
-    fetch('https://services.swpc.noaa.gov/products/solar-wind/mag-7-day.json'),
-    fetch('https://services.swpc.noaa.gov/json/planetary_k_index_1m.json'),
-    fetch('https://services.swpc.noaa.gov/json/goes/primary/integral-protons-1-day.json')
-  ]);
-  const[d1,d2,d3,d4]=await Promise.all([r1.json(),r2.json(),r3.json(),r4.json()]);
-  const pl=d1[d1.length-1],mg=d2[d2.length-1],kp=d3[d3.length-1];
-  const density=parseFloat(pl[1]),bz=parseFloat(mg[3]),kpv=parseFloat(kp.kp_index||kp.estimated_kp||0);
-  const flux=parseFloat(d4[d4.length-1]?.flux||d4[d4.length-1]?.['>=10MeV']||0);
-  curKp=kpv.toFixed(1);curBz=bz.toFixed(1);curDensity=density.toFixed(1);curFlux=flux;
-  try{if(typeof _apiStore==='function')_apiStore('noaa',{kp:curKp,bz:curBz,d:curDensity,f:curFlux});}catch(e){}
+//
+// Découplé 2026-09-03 (brief P, option A, arbitrage Soleil GO explicite). AVANT : les 4 fetch
+// étaient groupés dans un seul Promise.all — dès qu'UNE source échouait (r1.json()/r2.json() sur
+// un corps d'erreur non-JSON), TOUT le bloc avortait avant que curKp soit jamais assigné, même si
+// les 3 autres sources répondaient correctement. Constat en direct (2026-09-02, dette privée
+// NOAA-SWPC-URLS-DEAD-001) : solar-wind/plasma-7-day.json et solar-wind/mag-7-day.json sont en
+// 404 (répertoire NOAA entier disparu) alors que json/planetary_k_index_1m.json — la SEULE des 4
+// sources réellement consommée par calcExternalCorr(), niveau 3 — répond 200, jamais atteint.
+// Chaque source a désormais son propre try/catch : une source morte laisse SON SEUL affichage
+// aux tirets par défaut, sans empêcher les 3 autres (dont Kp) de se peupler. Aucun nouvel
+// endpoint : planetary_k_index_1m.json et goes/.../integral-protons-1-day.json restent les URLs
+// déjà vivantes — option B (réécrire le format plasma/mag vers json/rtsw/rtsw_*_1m.json, radicalement
+// différent, tableau d'objets vs tableau+en-tête) explicitement écartée pour l'instant, cf. dette.
+async function loadNOAA(){
   const col=(v,lo,hi)=>v<lo?'var(--acc)':v<hi?'var(--warn)':'var(--danger)';
   const _set=(id,txt,color)=>{const el=document.getElementById(id);if(el){el.textContent=txt;if(color)el.style.color=color;}};
-  _set('sw-d',density.toFixed(1)+' p/cm³',col(density,5,15));
-  _set('sw-ds','vitesse: '+Math.round(parseFloat(pl[2]))+' km/s');
-  _set('sw-bz',bz.toFixed(1)+' nT',bz>0?'var(--acc)':bz>-5?'var(--warn)':'var(--danger)');
-  _set('bz-s',bz>0?'nord protecteur':bz>-5?'légèrement sud':'sud perturbateur');
-  _set('sw-p',flux.toExponential(1),col(flux,10,100));
-  _set('p-s',flux<10?'calme':flux<100?'élevé':'éruption');
-  _set('kp-v',Math.round(kpv*10)/10,col(kpv,2,5));
-  _set('kp-s',kpv<2?'calme':kpv<4?'actif':kpv<6?'tempête mineure':'tempête majeure');
-  // Dst (tempêtes anneau de courant) — optionnel
+
+  // Plasma (densité + vitesse) — affichage seul, aucun calcul ne le consomme (grep exhaustif,
+  // cf. brief P). Source morte en pratique au 2026-09 (404) : échec silencieux, tirets conservés.
   try{
-    const rd=await fetch('https://services.swpc.noaa.gov/products/kyoto-dst.json');
-    const dd=await rd.json();
-    const dst=parseFloat(dd[dd.length-1]?.[1]);
-    if(!isNaN(dst)){
-      const dstInfo=dst>-20?' · Dst calme':dst>-50?` · Dst ${dst}nT modéré`:` · Dst ${dst}nT ⚠ tempête`;
-      _set('kp-s',(kpv<2?'calme':kpv<4?'actif':kpv<6?'tempête mineure':'tempête majeure')+dstInfo);
-    }
-  }catch(e){}
-}catch(e){console.error('❌ loadNOAA erreur:',e.message);}}
+    const r1=await fetch('https://services.swpc.noaa.gov/products/solar-wind/plasma-7-day.json');
+    const d1=await r1.json();
+    const pl=d1[d1.length-1];
+    const density=parseFloat(pl[1]);
+    curDensity=density.toFixed(1);
+    _set('sw-d',density.toFixed(1)+' p/cm³',col(density,5,15));
+    _set('sw-ds','vitesse: '+Math.round(parseFloat(pl[2]))+' km/s');
+  }catch(e){console.error('❌ loadNOAA plasma erreur:',e.message);}
+
+  // Bz (champ magnétique interplanétaire) — affichage seul. Même source morte que plasma.
+  let bz;
+  try{
+    const r2=await fetch('https://services.swpc.noaa.gov/products/solar-wind/mag-7-day.json');
+    const d2=await r2.json();
+    const mg=d2[d2.length-1];
+    bz=parseFloat(mg[3]);
+    curBz=bz.toFixed(1);
+    _set('sw-bz',bz.toFixed(1)+' nT',bz>0?'var(--acc)':bz>-5?'var(--warn)':'var(--danger)');
+    _set('bz-s',bz>0?'nord protecteur':bz>-5?'légèrement sud':'sud perturbateur');
+  }catch(e){console.error('❌ loadNOAA mag erreur:',e.message);}
+
+  // Flux protons — affichage seul. Source vivante, indépendante des deux ci-dessus.
+  try{
+    const r4=await fetch('https://services.swpc.noaa.gov/json/goes/primary/integral-protons-1-day.json');
+    const d4=await r4.json();
+    const flux=parseFloat(d4[d4.length-1]?.flux||d4[d4.length-1]?.['>=10MeV']||0);
+    curFlux=flux;
+    _set('sw-p',flux.toExponential(1),col(flux,10,100));
+    _set('p-s',flux<10?'calme':flux<100?'élevé':'éruption');
+  }catch(e){console.error('❌ loadNOAA protons erreur:',e.message);}
+
+  // Kp — LA source réellement consommée par calcExternalCorr() (niveau 3, curKp). Vivante,
+  // indépendante des 3 ci-dessus : c'est précisément le découplage que ce fix apporte.
+  let kpv;
+  try{
+    const r3=await fetch('https://services.swpc.noaa.gov/json/planetary_k_index_1m.json');
+    const d3=await r3.json();
+    const kp=d3[d3.length-1];
+    kpv=parseFloat(kp.kp_index||kp.estimated_kp||0);
+    curKp=kpv.toFixed(1);
+    _set('kp-v',Math.round(kpv*10)/10,col(kpv,2,5));
+    _set('kp-s',kpv<2?'calme':kpv<4?'actif':kpv<6?'tempête mineure':'tempête majeure');
+  }catch(e){console.error('❌ loadNOAA kp erreur:',e.message);}
+
+  try{if(typeof _apiStore==='function')_apiStore('noaa',{kp:curKp,bz:curBz,d:curDensity,f:curFlux});}catch(e){}
+
+  // Dst (tempêtes anneau de courant) — enrichit uniquement le sous-texte kp-s ci-dessus, jamais
+  // lu ailleurs (calcExternalCorr() lit curDst via loadDst(), fetch séparé et déjà indépendant
+  // de loadNOAA() avant ce fix). Gardé optionnel, gaté sur kpv réellement résolu : inutile
+  // d'aller chercher le Dst pour enrichir un libellé kp-s qui n'existe pas si Kp a échoué.
+  if(typeof kpv==='number' && !isNaN(kpv)){
+    try{
+      const rd=await fetch('https://services.swpc.noaa.gov/products/kyoto-dst.json');
+      const dd=await rd.json();
+      const dst=parseFloat(dd[dd.length-1]?.[1]);
+      if(!isNaN(dst)){
+        const dstInfo=dst>-20?' · Dst calme':dst>-50?` · Dst ${dst}nT modéré`:` · Dst ${dst}nT ⚠ tempête`;
+        _set('kp-s',(kpv<2?'calme':kpv<4?'actif':kpv<6?'tempête mineure':'tempête majeure')+dstInfo);
+      }
+    }catch(e){}
+  }
+}
 
 function updateSupabaseStatusDot(state,contribCount){
   const dot=document.getElementById('sb-status-dot');
