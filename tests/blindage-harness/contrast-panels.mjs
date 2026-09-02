@@ -80,17 +80,94 @@ const APP_URL_OVERRIDE = process.env.APP_URL;
 // semi-transparent, tokens non thématisés). Le contenu long des pages
 // documentaires est hors périmètre : il est en CSS statique et n'a pas de
 // mode sombre du tout.
+//
+// ÉLARGISSEMENT DU 2026-09-01 (dette A11Y-CONTRAST-APP-PANELS-002, volet 3)
+// ------------------------------------------------------------------------
+// Les 5 panneaux d'origine laissaient un ANGLE MORT : `#expert-panel` portait
+// trois violations de classe critique (2,59:1) qu'aucun check ne voyait, et le
+// cliquet à 0/0 se lisait comme « plus rien nulle part ». Découvert en marge de
+// la PR #1164, en mesurant à la main. Cinq surfaces sont ajoutées ici, dont le
+// POPUP AU CLIC — probablement la surface la plus vue de l'application, et
+// jamais mesurée jusqu'à ce jour.
+//
+// `requis: true` = surface dont l'absence fait ÉCHOUER le check. Sans ce
+// marqueur, ajouter un panneau qui ne s'ouvre jamais donnerait un faux vert :
+// zéro nœud mesuré, zéro violation, check content. Même raisonnement que le
+// plancher de couverture plus bas, mais par surface au lieu du total.
 const PANELS = [
   { sel: '#crustal-gauge-panel', nom: 'Jauge crustale' },
   { sel: '#tellux-legends-context', nom: 'Légendes contextuelles (Zone 2)' },
   { sel: '#legende', nom: 'Panneau « ? »' },
   { sel: '#conditions-bar', nom: 'Barre de conditions' },
   { sel: '.hdr', nom: 'En-tête' },
+  // min_noeuds (2026-09-02) : `requis: true` seul ne protège que contre ZÉRO nœud. Trouvé en CI
+  // le jour même de la clôture : le popau a rendu 1 SEUL nœud sur son premier point (démarrage à
+  // froid), et `!p.noeuds` (1 est truthy) l'aurait laissé passer sans broncher si le max sur les
+  // 4 points avait aussi été dégradé partout — corrigé côté mesure (cf. plus bas, noeuds = max
+  // des 4 points), mais un plancher PAR SURFACE ferme le trou pour de bon : un rendu qui tourne
+  // très en dessous de son plein effectif connu échoue, même s'il n'est pas littéralement vide.
+  // Seuils = ~50-70% du plein effectif mesuré à plusieurs reprises le 2026-09-02, marge pour la
+  // variation naturelle du contenu conditionnel sans laisser passer un rendu clairement dégradé.
+  { sel: '.leaflet-popup-content', nom: 'Popup au clic (carte)', requis: true, min_noeuds: 15 },
+  { sel: '#expert-panel', nom: 'Panneau Expertise', requis: true, min_noeuds: 12 },
+  { sel: '#expert-bandeau', nom: 'Bandeau Expertise', requis: true, min_noeuds: 4 },
+  { sel: '#myplace-modal', nom: 'Modale « Mon lieu »', requis: true, min_noeuds: 6 },
+  { sel: '#cform', nom: 'Contribution terrain', requis: true, min_noeuds: 8 },
 ];
 
 // Couches à activer pour que les panneaux existent réellement dans le DOM.
 // Sans ça le script vérifierait des conteneurs vides et passerait à tort.
 const LAYER_BUTTONS = ['b-crustal', 'b-ant', 'b-res'];
+
+// ─── Points de clic du popup (2026-09-01) ──────────────────────────────────
+// POURQUOI PLUSIEURS POINTS
+// Le popup colore plusieurs de ses éléments par TERNAIRE sur la valeur calculée
+// au point cliqué (score de perturbation, score d'activité naturelle, écart Δ,
+// classe radon). Un seul clic n'exerce donc QU'UNE branche de chaque couleur :
+// le compte de violations dépend de l'endroit où l'on clique, et un « 0 » sur un
+// point ne dit rien des autres. Constaté en direct le 2026-09-01 — deux
+// coordonnées corses ordinaires faisaient apparaître, sur le SCORE PRINCIPAL en
+// 14 px gras, des violations que le point de test ne montrait pas.
+// C'est la même famille de défaut que l'angle mort qui a motivé l'élargissement :
+// le check ne mesure que ce qu'il exerce.
+//
+// CHOIX DES POINTS — chacun a été retenu parce qu'il exerce, à la date de sa mesure, une branche
+// que les autres ne couvrent pas sur AU MOINS un des deux scores (perturbation, activité) ; ce
+// n'est pas un échantillon au hasard. Revérifié en direct le 2026-09-02 (clôture du chantier,
+// après le retrait du radon) — colonnes = score affiché / couleur RENDUE, pas déduites :
+//   42,00/9,05  perturbation 5/5 (#8E2F1F porphyre) · activité 3/5 (#92400e brun)
+//   41,60/9,28  perturbation 3/5 (#8A5E22 ocre — la branche corrigée par le lot 3)
+//   42,55/9,45  perturbation 5/5 (dup. pt1) · activité 0/5 (#626774 neutre)
+//   42,70/9,40  perturbation 1/5 (#3F5B3A vert, fusionné avec le niveau 2 depuis le lot 3)
+//               · activité 0/5 (dup. pt3)
+// Ce point 42,70/9,40 a perdu sa justification d'origine ("radon classe 2, branche Ocre") : la
+// classe radon a disparu du popup avec le retrait du radon (#1172), qui a aussi fait fusionner
+// les niveaux 1 et 2 de la perturbation en une seule couleur (#1175) — la branche qu'il ciblait
+// n'existe donc plus SOUS CETTE FORME. Gardé quand même, PAS retiré sans discussion (réduire
+// l'échantillonnage silencieusement est précisément le mode d'échec documenté par ce chantier) :
+// c'est aujourd'hui le SEUL point des quatre à produire une perturbation de niveau 1 — utile si
+// la fusion des niveaux 1/2 est un jour reconsidérée, et son activité à 0/5 sert de doublon de
+// confirmation pour la branche neutre plutôt que d'apporter une couverture propre. Une
+// justification plus modeste que l'originale, mais réelle — pas inventée pour combler le vide.
+// ⚠️ Les scores exacts par point dépendent de facteurs live (proximité HTA, correction Kp quand
+// NOAA répond) et peuvent glisser d'une session à l'autre sans que la MESURE DE CONTRASTE (qui ne
+// dépend que de la couleur rendue contre le fond, pas du chiffre exact) en soit affectée — vérifié
+// stable sur 2 mesures consécutives le 2026-09-02, mais à revérifier si ce fichier est rouvert
+// après un changement des seuils de branche (perturbHumain/activNat) ou du jeu de données HTA.
+// ⚠️ BRANCHES ENCORE NON EXERCÉES, à documenter plutôt qu'à laisser croire à une couverture
+// complète : activité 4/5, et toutes les branches de deltaCol (vert/ocre/porphyre — les 4 points
+// rendent tous "—", aucun n'a de contribution terrain assez proche pour produire un delta réel).
+// Coût mesuré (2026-09-01, local) : script à 1 point ~21 s -> à 4 points ~31 s,
+// soit ~+3,3 s par point ajouté. Round-trip Playwright par point (clic + attente
+// POPUP_WAIT_MS + sonde), pas la sonde elle-même. Déterminisme vérifié (2 runs
+// consécutifs -> même décompte 12 critique + 5 AA).
+const POPUP_POINTS = [
+  [42.00, 9.05],
+  [41.60, 9.28],
+  [42.55, 9.45],
+  [42.70, 9.40],
+];
+const POPUP_WAIT_MS = Number(process.env.CONTRAST_POPUP_WAIT_MS) || 2600;
 
 // Fond de repli quand la pile d'ancêtres n'atteint jamais l'opacité 1 (panneau
 // posé sur le canvas Leaflet). Valeur prise sur le fond réellement rendu (Esri
@@ -245,7 +322,9 @@ async function main() {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
 
-  const rapport = { url: appUrl, panneaux: null };
+  const rapport = { url: appUrl, panneaux: null, popup_par_point: null };
+  const POPUP_PANEL = PANELS.find((p) => p.sel === '.leaflet-popup-content');
+  const scansPopup = [];
 
   try {
     await page.goto(appUrl, { waitUntil: 'domcontentloaded', timeout: BOOT_TIMEOUT_MS });
@@ -274,17 +353,148 @@ async function main() {
     });
     await page.waitForTimeout(1200);
 
+    // ─── Ouverture des 5 surfaces ajoutées le 2026-09-01 ────────────────────
+    // L'ORDRE COMPTE et n'est pas cosmétique :
+    //   • le popup au clic AVANT la contribution terrain — `startContribFromFAB()`
+    //     arme un handler sur le prochain clic carte ; l'inverse ferait consommer
+    //     le clic par le placement de mesure, et le popup ne s'ouvrirait jamais ;
+    //   • la contribution EN DERNIER — elle pose un overlay et arme la carte.
+    // On pilote l'UI réelle partout où c'est possible (clic carte, ouverture du
+    // formulaire par son propre flux). Seule exception : « Mon lieu », dont le
+    // chemin UI passe par la géolocalisation ou une recherche d'adresse réseau —
+    // on appelle donc sa fonction de rendu avec un résultat de calcul réel, ce
+    // qui produit exactement le DOM que rend la production.
+    await page.evaluate(async () => {
+      const dodo = (ms) => new Promise((r) => setTimeout(r, ms));
+      // Fermer la modale de bienvenue par son VRAI bouton — la masquer au
+      // style.display fausse toute géométrie ultérieure (piège éprouvé).
+      const acc = Array.from(document.querySelectorAll('button'))
+        .find((b) => /Accéder à la carte|the map/i.test((b.textContent || '').trim()));
+      if (acc) acc.click();
+      await dodo(400);
+    });
+
+    // 1) Popup au clic — MESURÉ SUR PLUSIEURS POINTS (2026-09-01, cf. POPUP_POINTS).
+    // Une seule mesure ne testait qu'une branche de chaque couleur conditionnelle.
+    // Ce passage a lieu AVANT l'ouverture de la contribution terrain, qui arme un
+    // handler sur le prochain clic carte et détournerait ces clics.
+    for (let i = 0; i < POPUP_POINTS.length; i++) {
+      const [lat, lon] = POPUP_POINTS[i];
+      await page.evaluate(([la, lo]) => {
+        if (typeof map !== 'undefined' && map && typeof L !== 'undefined') {
+          map.fire('click', { latlng: L.latLng(la, lo) });
+        }
+      }, [lat, lon]);
+      // Marge supplémentaire sur le PREMIER point (2026-09-02) : c'est le tout premier popup
+      // jamais ouvert sur la page, juste après boot + modale + boutons de couches — trouvé en CI
+      // rendu à 1 seul nœud (contre 26-27 pour les points 2-4) sur un runner visiblement plus
+      // lent/froid que ce script ne l'anticipait. Les points suivants n'ont pas ce problème : la
+      // page a déjà eu le temps de finir son travail de fond pendant leur propre clic précédent.
+      const wait = i === 0 ? POPUP_WAIT_MS + 1500 : POPUP_WAIT_MS;
+      await page.waitForTimeout(wait);
+      const r = await page.evaluate(PROBE_CONTRAST, [[POPUP_PANEL], BASE_TONE]);
+      scansPopup.push({ point: `${lat},${lon}`, ...r[0] });
+    }
+
+    await page.evaluate(async () => {
+      const dodo = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      // 2) Mode Expertise — panneau + bandeau. activateExpertMode() court-circuite
+      //    la modale de consentement, qui n'est pas l'objet de la mesure.
+      if (typeof activateExpertMode === 'function') activateExpertMode();
+      await dodo(500);
+
+      // 3) Modale « Mon lieu », peuplée avec un calcul réel
+      if (typeof openMyPlaceModal === 'function') openMyPlaceModal();
+      if (typeof myPlaceRenderSummary === 'function' && typeof calcAll_v2 === 'function') {
+        myPlaceRenderSummary({
+          lat: 42.00, lon: 9.05, v2: calcAll_v2(42.00, 9.05),
+          commune_info: { nom: 'Bastelica' }, n500: 3, n1000: 9,
+          hta: { known: true, distance_m: 820 },
+        });
+      }
+      await dodo(400);
+
+      // 4) Contribution terrain — flux réel : armement puis clic de placement
+      // ⚠️ TROUVAILLE (2026-09-01) : ce clic déclenche AUSSI le handler normal
+      // d'ouverture du popup, en plus du placement de mesure — comportement de
+      // PRODUCTION vérifié en direct (map.on('click',…) accumule les handlers,
+      // Leaflet ne les rend pas mutuellement exclusifs), pas un artefact de ce
+      // script. Le popup mesuré par le probe final serait donc celui de CE point
+      // (42.01/9.06), un 5e point non documenté — d'où la reconstruction de
+      // l'entrée popup ci-dessous à partir des seuls points de POPUP_POINTS.
+      if (typeof startContribFromFAB === 'function') startContribFromFAB();
+      await dodo(300);
+      if (typeof map !== 'undefined' && map && typeof L !== 'undefined') {
+        map.fire('click', { latlng: L.latLng(42.01, 9.06) });
+      }
+      await dodo(1500);
+    });
+    await page.waitForTimeout(1500);
+
     // Mesure unique : app.html n'a plus qu'un thème depuis le 2026-08-31. Aucun
     // attribut `data-theme` n'est posé ni retiré ici — la page est mesurée telle
     // qu'un visiteur la reçoit.
     // Playwright sérialise PROBE_CONTRAST et l'exécute dans la page — même
     // convention que les autres harnais du dossier (sondes déclarées en haut de
     // fichier, appelées via page.evaluate).
-    rapport.panneaux = await page.evaluate(PROBE_CONTRAST, [PANELS, BASE_TONE]);
+    //
+    // Le popup EST EXCLU de cet appel : à ce stade, la contribution terrain (étape
+    // 4 ci-dessus) l'a rouvert à un point non documenté (cf. son commentaire). Le
+    // mesurer ici donnerait un résultat qui dépend d'un effet de bord, pas d'un
+    // choix. L'entrée popup est reconstruite juste après, uniquement à partir des
+    // POPUP_POINTS mesurés en amont, sur ces points-là et aucun autre.
+    const panelsSansPopup = PANELS.filter((p) => p !== POPUP_PANEL);
+    rapport.panneaux = await page.evaluate(PROBE_CONTRAST, [panelsSansPopup, BASE_TONE]);
+
+    // ─── Reconstruction de l'entrée popup à partir de scansPopup ────────────
+    // noeuds = celui du PREMIER point (POPUP_POINTS[0]) : c'est le point historique
+    // du check à un seul point, ce qui garde le nombre comparable aux mesures
+    // passées. violations = UNION dédupliquée sur (couleur, taille) — cf. le
+    // commentaire de POPUP_POINTS : le texte est exclu de la clé exprès, pour
+    // compter un DÉFAUT une fois même s'il apparaît sur plusieurs points.
+    if (POPUP_PANEL) {
+      // noeuds = MAXIMUM sur les 4 points, pas le premier (2026-09-02, trouvé en clôturant ce
+      // chantier : un run CI réel a rendu le POINT 1 à 1 seul nœud — démarrage à froid, premier
+      // popup jamais ouvert sur la page, juste après boot + clic modale + boutons de couches —
+      // pendant que les points 2 à 4 rendaient normalement 26-27 nœuds chacun. Les VIOLATIONS
+      // restaient fiables (unifiées sur les 4 points, un point dégradé n'en cache aucune), mais
+      // le nombre de nœuds rapporté — utilisé par le plancher de couverture — serait tombé à 1,
+      // masquant une vraie mesure derrière un chiffre d'échec de démarrage. C'est exactement le
+      // mode d'échec que ce plancher existe pour attraper, retourné contre lui-même par un choix
+      // de conception trop naïf ("le premier point suffit"). Le maximum répond à la question que
+      // le plancher pose réellement : au moins un rendu complet a-t-il eu lieu ? — sans se laisser
+      // fausser par un point isolé lent à charger.
+      const noeudsCandidats = scansPopup.map((s) => s.noeuds || 0);
+      const noeudsRetenu = noeudsCandidats.length ? Math.max(...noeudsCandidats) : 0;
+      const vues = new Set();
+      const violationsUnion = [];
+      for (const s of scansPopup) {
+        for (const v of (s.violations || [])) {
+          const cle = `${v.couleur}|${v.px}`;
+          if (vues.has(cle)) continue;
+          vues.add(cle);
+          violationsUnion.push({ ...v, vu_au_point: s.point });
+        }
+      }
+      rapport.panneaux.push({
+        panel: POPUP_PANEL.nom, sel: POPUP_PANEL.sel, etat: 'mesuré',
+        noeuds: noeudsRetenu, points_mesures: scansPopup.length,
+        noeuds_par_point: noeudsCandidats,
+        violations: violationsUnion,
+      });
+    }
   } finally {
     await browser.close();
     if (server) server.close();
   }
+
+  // Décompte par point, publié tel quel dans le rapport pour audit — l'entrée
+  // popup elle-même a déjà été reconstruite plus haut (cf. le bloc juste avant
+  // `finally`), à partir de ces mêmes scans et d'aucun autre.
+  rapport.popup_par_point = scansPopup.map((s) => ({
+    point: s.point, noeuds: s.noeuds || 0, violations: (s.violations || []).length,
+  }));
 
   const violations = [];
   for (const p of rapport.panneaux) {
@@ -313,13 +523,33 @@ async function main() {
   const noeudsMesures = rapport.panneaux.reduce((s, p) => s + (p.noeuds || 0), 0);
 
   const depassements = [];
+  // Surfaces requises — ajoutées avec l'élargissement du 2026-09-01. Une surface
+  // déclarée `requis` qui ne se mesure pas (absente, masquée, ou vide de texte)
+  // fait échouer le check. Sans ça, un sélecteur renommé ou un flux d'ouverture
+  // cassé rendrait la surface invisible au contrôle SANS rien signaler : zéro
+  // nœud, zéro violation, vert. C'est exactement le mode d'échec qui a laissé
+  // `#expert-panel` hors mesure jusqu'au 2026-09-01 — on ne le rejoue pas.
+  const surfacesRequises = PANELS.filter((p) => p.requis);
+  for (const panel of surfacesRequises) {
+    const nom = panel.nom;
+    const seuil = panel.min_noeuds ?? 1;
+    const p = rapport.panneaux.find((x) => x.panel === nom);
+    const noeuds = p && p.etat === 'mesuré' ? (p.noeuds || 0) : 0;
+    if (!p || p.etat !== 'mesuré' || noeuds < seuil) {
+      depassements.push(`surface requise sous son plancher : « ${nom} » (état : ${p ? p.etat : 'introuvable'}`
+        + `${p && p.etat === 'mesuré' ? `, ${noeuds} nœud(s) < ${seuil}` : ''}) — son flux d'ouverture`
+        + ' ne fonctionne plus ou rend un état dégradé, le résultat n\'est pas exploitable');
+    }
+  }
   // Plancher de couverture — AVANT les cliquets, et pour la même raison qu'axe-core a été
   // écarté : un check qui ne mesure rien passe au vert et rassure à tort. Les cliquets sont des
   // MAJORANTS ; si les panneaux ne se peuplaient pas (Supabase indisponible en CI, boot trop
   // lent, sélecteur renommé), le compte de violations tomberait à zéro et le check passerait
   // en n'ayant rien testé. Ce plancher rend ce scénario bruyant.
-  // Référence : 204 nœuds mesurés en local le 2026-08-31, sur 5 panneaux × 2 thèmes.
-  const MIN_NOEUDS = Number(process.env.CONTRAST_MIN_NOEUDS ?? 50);
+  // Référence : 204 nœuds mesurés en local le 2026-08-31, sur 5 panneaux × 2 thèmes ;
+  // 100 après le retrait du mode sombre ; 192 depuis l'élargissement du 2026-09-01
+  // (10 panneaux déclarés, 9 mesurés — Zone 2 reste masquée sans couche contextuelle).
+  const MIN_NOEUDS = Number(process.env.CONTRAST_MIN_NOEUDS ?? 75);
   if (noeudsMesures < MIN_NOEUDS) {
     depassements.push(`couverture insuffisante : ${noeudsMesures} nœuds mesurés < plancher ${MIN_NOEUDS}`
       + ' — les panneaux ne se sont probablement pas peuplés, le résultat n\'est pas exploitable');
@@ -348,6 +578,7 @@ async function main() {
     },
     violations_critiques: critiques,
     violations_aa: aa,
+    popup_par_point: rapport.popup_par_point,
     detail: rapport.panneaux,
   };
   process.stdout.write(JSON.stringify(sortie, null, 2) + '\n');
