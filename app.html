@@ -10085,21 +10085,42 @@ const CERT_COMMUNE_CENTRES = {
 // dispersion aide seulement à voir qu'il y a plusieurs fiches, elle ne pointe vers rien
 // de précis. Laissée active ; le clustering du brief D la rendra de toute façon
 // redondante pour le résidentiel (un cluster par commune).
+// Correctif 2026-09-02 (constat revue indépendante, avant merge #1179/#1180) : la version
+// initiale de cette fonction n'agrégeait QUE lat/lon — insuffisant. site_nom (nom de voie exact
+// pour les 8 fiches résidentielles d'origine), adresse_complete (adresse postale complète, avec
+// nom de résidence pour plusieurs des 77 fiches issues de l'ingestion — ex. « Résidence les
+// Palmiers ») et note (réitère parfois l'adresse en texte libre) exposaient tous une adresse de
+// domicile précise malgré la coordonnée déplacée — exactement le risque que l'agrégation devait
+// éliminer. Les trois sont maintenant vidés ici, au même endroit que la coordonnée, pour que
+// TOUT consommateur (rendu carte, popup, téléchargement, hook debug) hérite automatiquement de
+// la protection sans avoir à y penser séparément à chaque nouveau point d'accès à ces données.
+//
+// Fail-closed sur l'invariant vie privée : une fiche résidentielle dont la commune est absente
+// de CERT_COMMUNE_CENTRES est désormais EXCLUE du tableau retourné (rendu et téléchargement),
+// pas seulement signalée par un avertissement console — celui-ci n'est surveillé par personne en
+// production, et laisser passer une coordonnée exacte de domicile n'est jamais acceptable même
+// dans un cas limite non couvert par la table.
 function _certAggregateResidentialCoords(mesures) {
-  let nAggregated = 0, nMissingCentre = 0;
-  mesures.forEach(function(m) {
-    if (m.type_environnement !== 'residentiel') return;
+  let nAggregated = 0, nExcluded = 0;
+  const kept = mesures.filter(function(m) {
+    if (m.type_environnement !== 'residentiel') return true;
     const c = CERT_COMMUNE_CENTRES[m.commune];
-    if (!c) { nMissingCentre++; return; }
+    if (!c) {
+      nExcluded++;
+      console.warn('[Tellux] Fiche résidentielle #' + m.id + ' (' + m.commune + ') exclue — aucun centroïde communal connu, coordonnée exacte non exposée. À corriger (étendre CERT_COMMUNE_CENTRES) avant tout élargissement du corpus.');
+      return false;
+    }
     m.lat = c.lat;
     m.lon = c.lon;
     m._coord_aggregated_commune = true;
+    m.site_nom = null;
+    m.adresse_complete = null;
+    m.note = null;
     nAggregated++;
+    return true;
   });
-  if (nMissingCentre > 0) {
-    console.warn('[Tellux] ' + nMissingCentre + ' fiche(s) résidentielle(s) sans centroïde communal connu — coordonnée exacte laissée telle quelle, à corriger avant tout élargissement.');
-  }
-  console.log('[Tellux] Mesures certifiées — ' + nAggregated + ' fiche(s) résidentielle(s) agrégée(s) au centroïde communal.');
+  console.log('[Tellux] Mesures certifiées — ' + nAggregated + ' fiche(s) résidentielle(s) agrégée(s) au centroïde communal (coordonnée + identifiants textuels)' + (nExcluded > 0 ? ' · ' + nExcluded + ' exclue(s) faute de centroïde connu' : '') + '.');
+  return kept;
 }
 // Depuis le 2026-08-29 (item C) : bouton propre b-cert ("Mesures certifiées"), séparé des
 // contributions citoyennes (b-contrib). Ce loader/rendu ne concerne que les fiches certifiées.
@@ -10117,7 +10138,7 @@ function loadMesuresCertifiees() {
       const d = await r.json();
       MESURES_CERTIFIEES = d.mesures || [];
       console.log('[Tellux] Mesures certifiees chargees : ' + MESURES_CERTIFIEES.length);
-      _certAggregateResidentialCoords(MESURES_CERTIFIEES);
+      MESURES_CERTIFIEES = _certAggregateResidentialCoords(MESURES_CERTIFIEES);
       const blk = document.getElementById('cert-download-block');
       if (blk && MESURES_CERTIFIEES.length > 0) blk.style.display = 'block';
     } catch (e) {
@@ -10140,7 +10161,7 @@ function downloadCertifiedJSON() {
     generated_at: new Date().toISOString(),
     n_mesures: MESURES_CERTIFIEES.length,
     note_precision: 'Coordonnées = positions exactes ANFR (precision_coord=exacte), récupérées via l’API publique cartoradio.fr le 27/04/2026 — SAUF les fiches en environnement résidentiel (mesure au domicile d’un particulier), agrégées au centroïde de leur commune (voir champ type_environnement et _coord_aggregated_commune par fiche).',
-    source_originale: 'ANFR/EXEM — PDFs CartoRadio 2024-2026, extraits par l\u2019équipe Tellux (PyMuPDF + OCR Tesseract)',
+    source_originale: 'ANFR/EXEM — 30 fiches d’origine (2024-2026) extraites des PDFs CartoRadio par l’équipe Tellux (PyMuPDF + OCR Tesseract) ; 206 fiches supplémentaires (2002-2023) via l’API CartoRadio par fiche (/api/v1/mesures/{id}, JSON structuré, sans OCR)',
     licence: 'Données publiques ANFR (Licence Ouverte 2.0). Compilation Tellux sous CC-BY 4.0.',
     mesures: MESURES_CERTIFIEES
   };
@@ -10222,7 +10243,16 @@ function _certFormatPopup(m) {
   const noteHtml = m.note
     ? '<div class="cert-popup-note">' + m.note + '</div>'
     : '';
-  return '<div class="cert-popup-header">' + m.site_nom + '</div>'
+  // site_nom absent (résidentiel, vidé par _certAggregateResidentialCoords — ou déjà null à la
+  // source pour la plupart des 129 fiches extérieur public issues de l'ingestion élargie) :
+  // repli sur la commune plutôt que d'afficher "null" en toutes lettres (constat revue
+  // indépendante 2026-09-02). Le libellé de repli distingue résidentiel/extérieur — jamais
+  // "résidentiel" pour une fiche qui ne l'est pas.
+  const headerFallback = m.type_environnement === 'residentiel'
+    ? jt('cert_header_fallback_resid_prefix','Mesure résidentielle — ') + m.commune
+    : m.commune;
+  const headerText = m.site_nom || headerFallback;
+  return '<div class="cert-popup-header">' + headerText + '</div>'
     + '<div style="font-size:11px;color:var(--tx-mica,#7B7770);margin-bottom:4px">' + m.commune + ' (' + m.departement + ')</div>'
     + badgeHtml
     + valeurHtml
