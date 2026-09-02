@@ -1774,7 +1774,17 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
       <h4 style="margin-top:14px;font-size:13px;color:var(--tx)">Contributions &amp; contact</h4>
       <p>Les mesures terrain peuvent être soumises via le bouton « + Mesure » sur la carte. Retours d'usage, propositions d'étude et partenariats institutionnels sont les bienvenus. Déploiement : <a href="https://tellux.pages.dev/" target="_blank" style="color:var(--tx-tyrrhenien)">tellux.pages.dev ↗</a></p>
 
-      <p style="font-size:10px;color:var(--tx3);margin-top:12px;border-top:1px solid var(--border);padding-top:8px">Modèle composite documenté en interne. Les pondérations de l'indice composite (mode Expertise) sont provisoires, en attente de relecture par un physicien tiers.</p>
+      <!-- Réécrit le 2026-09-03 (brief Q — mode Expertise masqué, décision Soleil) : l'ancien
+           texte disait « (mode Expertise) » comme si ce mode restait un point d'entrée
+           accessible, ce qui n'est plus le cas depuis ce commit (bouton #btn-expert masqué,
+           chemin URL &e=1 neutralisé, cf. leurs commentaires respectifs). L'indice composite
+           reste calculé/exporté (brique interne, GELÉ-001a intact) — seul son statut de
+           fonctionnalité publique change ici. Lien ajouté vers cadre-scientifique.html#mode-
+           expertise (étape 4 du brief : explicitation dans le corpus plutôt que dans
+           l'interface — section vérifiée avant de poser ce lien : formule/pondérations 0,4/0,4/
+           0,2/bornes [0,1000]/[0,1500]/[50,250] de §8 correspondent exactement à
+           EXPERT_WEIGHTS_DEFAULT/EXPERT_BOUNDS_DEFAULT en vigueur, pas un état antérieur). -->
+      <p style="font-size:10px;color:var(--tx3);margin-top:12px;border-top:1px solid var(--border);padding-top:8px">Un indice composite interne (non affiché dans l'interface) sert de brique de comparaison entre zones. Ses pondérations, provisoires et en attente de relecture par un physicien tiers, sont documentées dans la <a href="cadre-scientifique.html#mode-expertise" target="_blank" rel="noopener" style="color:var(--acc);text-decoration:underline">démarche scientifique ↗</a>.</p>
     </div>
   </div>
 </div>
@@ -2311,9 +2321,25 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
   <!-- Séparateur + Outils EM (experts, partager) — module déplacé hors de ce fichier -->
   <div style="height:1px;background:var(--border);margin:6px 4px 4px"></div>
   <div style="padding:0 4px 8px;display:flex;flex-direction:column;gap:3px">
+    <!-- Bouton « Outils experts » masqué le 2026-09-03 (brief Q, décision Soleil : « Arbitrage
+         mode Expertise : masqué » — le composite disparaît de toute surface publique, un seul
+         régime). Masqué, PAS supprimé : même patron que le retrait du bouton Hydrographie
+         (#b-hyd, 2026-08-27, cf. commentaire à sa déclaration plus haut dans ce fichier) —
+         conservée en dette RÉSERVÉE, réactivable par un futur brief en dé-commentant le bloc
+         ci-dessous, sans reconstruction. openExpertMode()/activateExpertMode()/
+         computeExpertComposite()/exportExpertCSV() restent INTACTS et pleinement fonctionnels
+         (appelables depuis la console) — seul CE point d'entrée UI disparaît. Le second point
+         d'entrée (URL hash &e=1) est neutralisé séparément, cf. commentaire à
+         applyHashToMap()/buildShareHash() plus bas dans ce fichier — sans ce second correctif,
+         masquer seulement ce bouton n'aurait rien fermé (un lien partagé avant ce commit
+         réactivait le panneau complet en contournant totalement ce bouton).
+         Entrées i18n JT_TABLE ["btn_expert_aria","btn_expert"] visant #btn-expert laissées
+         telles quelles : sans élément DOM à cibler tant que ce bloc reste commenté, elles ne
+         s'appliquent simplement à rien (aucune erreur) — même traitement que #b-hyd.
     <button id="btn-expert" onclick="openExpertMode()" style="font-size:11px;padding:6px 10px;border-radius:var(--r);border:1px solid var(--border);background:var(--pierre-ombre);color:var(--ardoise-clair);cursor:pointer;text-align:left;display:flex;align-items:center;gap:6px" aria-label="Outils experts">
       <span>&#9881;</span><span>Outils experts</span><span style="margin-left:auto;font-size:9px;color:var(--tx3);font-family:var(--mono)">BETA</span>
     </button>
+    -->
     <button onclick="shareURL()" style="font-size:11px;padding:5px 10px;border-radius:var(--r);border:1px solid var(--border);background:var(--pierre-ombre);color:var(--ardoise-clair);cursor:pointer;text-align:left;display:flex;align-items:center;gap:6px" aria-label="Partager la vue">
       <span>&#128279;</span><span>Partager la vue</span>
     </button>
@@ -9505,8 +9531,14 @@ function exportExpertCSV() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// PARTAGE URL HASH — format #/z=Z&c=LAT,LNG&m=DOM[&e=1] (Tâche 4.7)
+// PARTAGE URL HASH — format #/z=Z&c=LAT,LNG&m=DOM[&e=1 hérité, plus écrit] (Tâche 4.7)
 // ════════════════════════════════════════════════════════════════════════════
+// &e=1 retiré de l'écriture le 2026-09-03 (brief Q — mode Expertise masqué, décision Soleil) :
+// republier ce paramètre dans un lien fraîchement généré aurait continué à annoncer une
+// fonctionnalité qui n'a plus de point d'entrée UI. Le PARSEUR (applyHashToMap() plus bas)
+// reste volontairement tolérant à un &e=1 hérité d'un lien partagé AVANT ce commit — il ne
+// doit ni planter ni réactiver le panneau, juste ignorer ce fragment (dégradation propre,
+// cf. commentaire à applyHashToMap()).
 function buildShareHash() {
   if (typeof map === 'undefined' || !map) return '';
   var z   = map.getZoom();
@@ -9515,7 +9547,6 @@ function buildShareHash() {
   var lng = c.lng.toFixed(5);
   var m   = 'all';
   var hash = '#/z=' + z + '&c=' + lat + ',' + lng + '&m=' + m;
-  if (_expertActive) hash += '&e=1';
   return hash;
 }
 
@@ -9559,9 +9590,18 @@ function applyHashToMap() {
       }
     }
   }
-  if (params.e === '1') {
-    setTimeout(function() { openExpertMode(); }, 600);
-  }
+  // &e=1 n'est plus honoré depuis le 2026-09-03 (brief Q — mode Expertise masqué, décision
+  // Soleil). AVANT ce commit, un lien partagé pendant que le mode Expertise était actif
+  // réactivait automatiquement le panneau composite complet (modal de consentement, bandeau,
+  // indice, curseurs, export CSV) — un chemin d'accès entièrement indépendant du bouton
+  // #btn-expert lui-même masqué au même commit (cf. son propre commentaire plus haut dans ce
+  // fichier). Sans ce second correctif, masquer seulement le bouton n'aurait rien fermé.
+  // Dégradation propre exigée par le brief (« pas afficher un mode fantôme ou casser ») : un
+  // lien ancien portant &e=1 continue de restaurer correctement zoom/centre (params.z/params.c
+  // ci-dessus, logique inchangée), le fragment &e=1 est simplement ignoré — pas d'erreur, pas
+  // de réactivation. openExpertMode()/activateExpertMode() restent appelables depuis la
+  // console (brique conservée), seuls les DEUX points d'entrée UI/URL sont fermés.
+  if (params.e === '1') { /* volontairement no-op — cf. commentaire ci-dessus */ }
 }
 
 window.addEventListener('hashchange', function() { applyHashToMap(); });
