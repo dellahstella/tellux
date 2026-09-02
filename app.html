@@ -2877,6 +2877,8 @@ var JS_STRINGS_EN = {
   cond_heure_pleine_prefix: "Peak hours (×",
   cond_heure_creuse_prefix: "Off-peak hours (×",
   cond_charge_normale_prefix: "Normal load (×",
+  cond_reseau_suffix_rte: " · RTE)",
+  cond_reseau_suffix_estime: " · estimated)",
 
   // §D — module Capteurs appareil (séquence complète)
   cap_disabled_tab_toast: "Available with the Tellux app (coming soon).",
@@ -2978,6 +2980,9 @@ var JS_STRINGS_EN = {
   corr_kp_calme: "Kp calm, no correction",
   corr_kp_prefix: "Kp correction = ",
   corr_kp_suffix: " nT (NOAA SWPC)",
+  corr_dst_calme: "Dst calm, no correction",
+  corr_dst_prefix: "Dst correction = ",
+  corr_dst_suffix: " nT (Kyoto WDC via NOAA)",
   corr_indisponible: "external correction unavailable",
   v2_title_statique: "Static geomagnetic field",
   v2_conf_statique: "Confidence: medium — IGRF-14 + LCS1/EMAG2v3, ±100 nT",
@@ -3286,6 +3291,13 @@ function updateIgrfWmmDiff(lat, lon) {
 let curKp='—',curBz='—',curDensity='—',curFlux='—';
 let meteoData={pression:null,humidite:null,temp:null,precip:0,vent:0};
 let lightningNearby=0,chargeFacteur=1.0;
+// chargeFactorSource — provenance de chargeFacteur (2026-09-02, brief N, cf. brief K) :
+// 'estime' par défaut (valeur initiale ci-dessus = modèle horaire, jamais RTE avant le
+// premier appel de loadChargeReseau()) ; posé à 'RTE'/'estime' par loadChargeReseau()
+// elle-même à chaque cycle. Champ de PROVENANCE uniquement — chargeFacteur/htFactor ne
+// changent pas de valeur ni de plage [0.4,2.2], seule leur origine devient lisible par
+// tout consommateur (#cond-summary-reseau, chargeFactorApplied exporté).
+let chargeFactorSource='estime';
 const sessionId='sx_'+Date.now().toString(36);
 
 function sbH(){return{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};}
@@ -5779,6 +5791,13 @@ function calcBiotSavartSegmentVec(segLat1, segLon1, segLat2, segLon2, obsLat, ob
 function calcMagneticELF_v1(lat, lon, chargeFactor) {
   const htFactor = (chargeFactor !== undefined) ? chargeFactor
                  : (typeof chargeFacteur !== 'undefined' ? chargeFacteur : 1.0);
+  // Provenance (2026-09-02, brief N) : miroir exact de la dérivation de htFactor
+  // ci-dessus — 'parametre' si un appelant a explicitement passé chargeFactor
+  // (ex. runELFRegressionTest, valeur fixe de test), sinon la provenance réelle
+  // de la valeur globale (RTE/estimé, posée par loadChargeReseau()). Champ de
+  // provenance seul — htFactor ne change pas.
+  const htFactorSource = (chargeFactor !== undefined) ? 'parametre'
+                 : (typeof chargeFactorSource !== 'undefined' ? chargeFactorSource : 'estime');
   const MU0_OVER_2PI = 2e-7; // µ0/(2π) en T·m/A
   let B_total_nT = 0;
   const contributions = [];
@@ -5878,7 +5897,8 @@ function calcMagneticELF_v1(lat, lon, chargeFactor) {
     note_IARC: 'Rappel documentaire : IARC classe 2B pour ELF >= 0,3-0,4 µT (300-400 nT) chronique résidentiel, association statistique leucémies infantiles.',
     source: 'Biot-Savart sur lignes HTA EDF SEI + PROD_ELECTRIQUE + BT_ZONES + postes sources + éoliennes',
     confidence: 'medium',
-    chargeFactorApplied: htFactor
+    chargeFactorApplied: htFactor,
+    chargeFactorSource: htFactorSource
   };
 }
 
@@ -5900,6 +5920,13 @@ function calcMagneticELF_v1(lat, lon, chargeFactor) {
 function calcMagneticELF_v2(lat, lon, chargeFactor) {
   const htFactor = (chargeFactor !== undefined) ? chargeFactor
                  : (typeof chargeFacteur !== 'undefined' ? chargeFacteur : 1.0);
+  // Provenance (2026-09-02, brief N) : miroir exact de la dérivation de htFactor
+  // ci-dessus — 'parametre' si un appelant a explicitement passé chargeFactor
+  // (ex. runELFRegressionTest, valeur fixe de test), sinon la provenance réelle
+  // de la valeur globale (RTE/estimé, posée par loadChargeReseau()). Champ de
+  // provenance seul — htFactor ne change pas.
+  const htFactorSource = (chargeFactor !== undefined) ? 'parametre'
+                 : (typeof chargeFactorSource !== 'undefined' ? chargeFactorSource : 'estime');
   if (!SEGMENT_GRID || !HTA_SEGMENTS_DATA) {
     return calcMagneticELF_v1(lat, lon, chargeFactor);
   }
@@ -6038,6 +6065,7 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
     source: 'Biot-Savart vectoriel 2D — ' + HTA_SEGMENTS_DATA.length + ' seg HTA + BT densité de zone (' + btSrc + ') + PROD_ELECTRIQUE + postes + éoliennes',
     confidence: 'medium',
     chargeFactorApplied: htFactor,
+    chargeFactorSource: htFactorSource,
     version: 'v2.7',
     n_hta_contributing: nHtaContrib,
     n_bt_contributing: nBtContrib
@@ -7705,18 +7733,36 @@ map.on('click',async e=>{
   // même ce retrait, pas une régression introduite ici.
 
   // Label dynamique correction externe (honnêteté scientifique — audit 2026-04-22)
-  // La branche INTERMAGNET (DUR/EBR/CLF) est inatteignable en prod (CORS BGS, header
-  // Access-Control-Allow-Origin absent — vérifié en direct 2026-08-26) — s'activera
-  // automatiquement si un proxy CORS est ajouté côté serveur (hors périmètre ici).
+  // La branche INTERMAGNET (DUR/EBR/CLF) EST atteignable en prod depuis PR #1036
+  // (2026-08-26) : plus de fetch navigateur direct vers BGS GIN (CORS bloquant,
+  // constat d'origine de ce commentaire) — un job GitHub Actions
+  // (scripts/fetch_intermagnet.py) l'interroge côté serveur et écrit un fichier
+  // statique same-origin (public/data/intermagnet_latest.json), lu par
+  // loadINTERMAGNETObservatory(). Commentaire corrigé 2026-09-02 (brief N) : la
+  // phrase précédente décrivait l'architecture pré-#1036, jamais réamendée depuis.
+  //
+  // Correctif 2026-09-02 (brief N, cf. issue #905/brief K) : ce label re-dérivait sa
+  // propre logique de branchement (aquExternalCorr puis curKp), sautant le niveau 2
+  // (Dst) — un correctif Dst réellement appliqué (calcExternalCorr() l'a choisi et
+  // retourné) pouvait donc s'afficher comme « indisponible ». Lit désormais
+  // window._extCorrSource, posé par calcExternalCorr() elle-même à chaque niveau
+  // (INTERMAGNET/Dst/Kp) — une seule source de vérité, plus de risque de divergence
+  // entre ce qui est calculé et ce qui est affiché.
   const corrLabel = (() => {
     const corr = calcExternalCorr();
-    if (aquExternalCorr !== null) return jt('corr_intermagnet_prefix','correction ')+(window._intermagnetSource||'INTERMAGNET')+jt('corr_intermagnet_kp_suffix',' + Kp (')+(corr>=0?'+':'')+corr+jt('corr_aqu_kp_suffix',' nT)');
-    if (!isNaN(parseFloat(curKp))) {
+    const src = window._extCorrSource;
+    if (src === 'INTERMAGNET') return jt('corr_intermagnet_prefix','correction ')+(window._intermagnetSource||'INTERMAGNET')+jt('corr_intermagnet_kp_suffix',' + Kp (')+(corr>=0?'+':'')+corr+jt('corr_aqu_kp_suffix',' nT)');
+    if (src === 'Dst') {
+      return corr === 0
+        ? jt('corr_dst_calme','Dst calme, pas de correction')
+        : jt('corr_dst_prefix','correction Dst = ')+(corr>=0?'+':'')+corr+jt('corr_dst_suffix',' nT (Kyoto WDC via NOAA)');
+    }
+    if (src === 'Kp') {
       return corr === 0
         ? jt('corr_kp_calme','Kp calme, pas de correction')
         : jt('corr_kp_prefix','correction Kp = ')+(corr>=0?'+':'')+corr+jt('corr_kp_suffix',' nT (NOAA SWPC)');
     }
-    return jt('corr_indisponible','correction externe indisponible');
+    return jt('corr_indisponible','correction externe indisponible'); // défensif — calcExternalCorr() pose toujours _extCorrSource, ce cas ne devrait plus jamais survenir
   })();
 
   const v2SectionHTML=
@@ -8903,6 +8949,7 @@ async function loadChargeReseau(){
   const coefSaison=mois>=5&&mois<=8?0.75:mois>=11||mois<=1?1.35:1.0; // été/hiver
   const consoEstimee=Math.round(PROFIL_HORAIRE[h]*coefSaison);
   chargeFacteur=Math.max(0.4,Math.min(2.2,consoEstimee/230));
+  chargeFactorSource='estime'; // par défaut ; repose à 'RTE' seulement si le fetch réussit ci-dessous — remis à 'estime' à chaque cycle pour ne pas rester figé sur un succès précédent si RTE échoue au cycle suivant
 
   try{
     // RTE eco2mix API — production par région (Corse = région insulaire)
@@ -8914,6 +8961,7 @@ async function loadChargeReseau(){
     if(d?.short_term?.[0]?.values?.[0]?.value){
       const conso=d.short_term[0].values[0].value;
       chargeFacteur=Math.max(0.4,Math.min(2.2,conso/230));
+      chargeFactorSource='RTE';
       document.getElementById('res-charge').textContent=`${Math.round(conso)} MW · ×${chargeFacteur.toFixed(2)} (RTE)`;
       document.getElementById('res-charge').style.color=chargeFacteur>1.3?'var(--danger)':chargeFacteur<0.7?'var(--acc)':'var(--ardoise-clair)';
       return;
@@ -10671,14 +10719,21 @@ function updateCondSummaries(){
   const resEl = document.getElementById('cond-summary-reseau');
   if(resEl){
     const cf = (typeof chargeFacteur !== 'undefined') ? chargeFacteur : 1.0;
+    // Provenance (2026-09-02, brief N, cf. brief K) : #res-charge distinguait déjà
+    // RTE/estimé, pas ce résumé — même valeur cf, même code couleur, texte propagé
+    // depuis chargeFactorSource (posé par loadChargeReseau()). Aucun changement de cf
+    // ni de la plage [0.4,2.2] — seule la provenance devient lisible ici aussi.
+    const cfSrc = (typeof chargeFactorSource !== 'undefined' && chargeFactorSource === 'RTE')
+      ? jt('cond_reseau_suffix_rte', ' · RTE)')
+      : jt('cond_reseau_suffix_estime', ' · estimé)');
     if(cf > 1.15){
-      resEl.textContent = jt('cond_heure_pleine_prefix', 'Heure pleine (×') + cf.toFixed(2) + ')';
+      resEl.textContent = jt('cond_heure_pleine_prefix', 'Heure pleine (×') + cf.toFixed(2) + cfSrc;
       resEl.style.color = 'var(--warn)';
     } else if(cf < 0.85){
-      resEl.textContent = jt('cond_heure_creuse_prefix', 'Heure creuse (×') + cf.toFixed(2) + ')';
+      resEl.textContent = jt('cond_heure_creuse_prefix', 'Heure creuse (×') + cf.toFixed(2) + cfSrc;
       resEl.style.color = 'var(--acc)';
     } else {
-      resEl.textContent = jt('cond_charge_normale_prefix', 'Charge normale (×') + cf.toFixed(2) + ')';
+      resEl.textContent = jt('cond_charge_normale_prefix', 'Charge normale (×') + cf.toFixed(2) + cfSrc;
       resEl.style.color = 'var(--ardoise-clair)';
     }
   }
