@@ -28,7 +28,27 @@ name: contrast-panels
 #     fois été CORRIGÉES (--tx3 diverge de --tx-mica racine gelée, fallbacks
 #     CSS qui ne se déclenchaient jamais réparés, 3 hex assombris sur leurs
 #     seuls usages textuels)
-# Déterminisme vérifié à chaque palier avant promotion du plafond.
+#   • 2026-09-01 (élargissement à 10 panneaux, dont le popup au clic) : révèle
+#     28 violations préexistantes, JAMAIS mesurées avant ce jour — cliquets
+#     laissés à 0/0 pendant toute leur résorption (check volontairement rouge),
+#     jamais desserrés pour absorber l'élargissement
+#   • 2026-09-02 (clôture) : les 28 résorbées (lots 1/2/2bis/3) -> 0 + 0 CONFIRMÉ
+#     sur la mesure réelle du périmètre élargi, pas seulement hérité par défaut
+# Déterminisme vérifié à chaque palier avant promotion du plafond — y compris
+# celui-ci : 2 runs consécutifs identiques avant la clôture du 2026-09-02.
+#
+# CE QUE CE CHECK COUVRE, ET CE QU'IL NE COUVRE TOUJOURS PAS (2026-09-02)
+# ------------------------------------------------------------------------
+# Couvre : 10 panneaux déclarés (9 mesurables sans couche contextuelle active —
+# Zone 2 reste masquée sinon), le popup au clic sur 4 points distincts (pas 1),
+# un contrôle par surface qui fait échouer le check si une surface requise ne
+# se peuple plus. Ne couvre PAS : le popup au placement d'une contribution
+# terrain (dette distincte, POPUP-REOPEN-DURING-CONTRIB-PLACEMENT-001, pas un
+# problème de contraste) ; les branches de `deltaCol` (vert/ocre/porphyre) —
+# aucun des 4 points n'a de contribution terrain assez proche pour produire un
+# delta réel, elles ne sont donc jamais exercées ; le mode Expertise dans une
+# langue autre que FR (jamais testé sous ?lang=en/co) ; tout contenu qui
+# n'existe que sur mobile (ce harnais tourne en viewport desktop fixe).
 #
 # LES PLAFONDS NE REMONTENT JAMAIS
 # --------------------------------
@@ -88,25 +108,31 @@ jobs:
           # partagent le même hex par signification. Plus aucune marge : la moindre
           # régression fait tomber le check.
           #
-          # ⚠️ 2026-09-01 — LES CLIQUETS RESTENT À 0/0 ALORS QUE LA MESURE EN COMPTE 28.
-          # C'est délibéré. L'élargissement du périmètre (5 surfaces ajoutées, cf. PANELS
-          # dans contrast-panels.mjs) révèle 28 violations préexistantes — 21 critique,
-          # 7 AA — jamais mesurées jusqu'ici. La règle du cliquet interdit de remonter les
-          # plafonds pour absorber un élargissement : ce check est donc VOLONTAIREMENT
-          # ROUGE tant que l'arbitrage n'a pas tranché ce qui se corrige et ce qui se
-          # consigne. Ne pas "réparer" ce rouge en touchant aux deux nombres ci-dessous.
+          # 2026-09-01 — L'ÉLARGISSEMENT DU PÉRIMÈTRE (5 surfaces ajoutées, cf. PANELS dans
+          # contrast-panels.mjs, dont le POPUP au clic — probablement la surface la plus vue de
+          # l'app, jamais mesurée avant ce jour) a révélé 28 violations préexistantes — 21
+          # critique, 7 AA. Les cliquets sont RESTÉS à 0/0 pendant toute la résorption : la règle
+          # interdit de les remonter pour absorber un élargissement, donc le check est resté
+          # VOLONTAIREMENT ROUGE le temps que chaque violation soit triée (corrigée ou groupée
+          # dans un lot arbitré), jamais que le plafond soit desserré pour le faire taire.
+          # 2026-09-02 — CLÔTURE : les 28 ont toutes été traitées (lots 1/2/2bis/3, PR #1165,
+          # #1167, #1168, #1173, #1175 — cf. dette privée A11Y-CONTRAST-APP-PANELS-002 pour le
+          # détail par lot). Cliquets confirmés à 0/0 SUR LA MESURE RÉELLE, pas laissés à 0/0 par
+          # défaut : déterminisme vérifié sur 2 runs consécutifs avant cette clôture.
           CONTRAST_MAX_CRITIQUE: '0'
           CONTRAST_MAX_AA: '0'
           # Plancher de couverture — les cliquets sont des MAJORANTS : si les panneaux ne se
           # peuplaient pas (Supabase KO, boot trop lent, sélecteur renommé), le compte de
           # violations tomberait à 0 et le check passerait sans rien avoir testé.
-          # Référence locale 2026-08-31 : 100 nœuds sur 5 panneaux, plancher 40 (~40 %).
-          # Référence locale 2026-09-01 : 192 nœuds sur 10 panneaux (9 mesurés, Zone 2
-          # masquée sans couche contextuelle active) → plancher porté à 75, même proportion.
-          # Sans cette remontée, l'élargissement pourrait passer au vert en ne mesurant rien
-          # de plus que les 5 surfaces d'origine. Complété, depuis le même élargissement, par
-          # un contrôle PAR SURFACE dans le script (`requis: true`) : une surface ajoutée qui
-          # ne s'ouvre plus fait échouer le check au lieu de disparaître en silence.
+          # Historique : 100 nœuds/5 panneaux (2026-08-31, plancher 40, ~40 %) -> 192 nœuds/10
+          # panneaux déclarés, 9 mesurés (2026-09-01, élargissement, plancher porté à 75, même
+          # proportion) -> 186 nœuds (2026-09-02, après le retrait du radon #1172, qui a retiré
+          # des nœuds du popup et de « Mon lieu » — plancher 75 INCHANGÉ, encore très largement
+          # tenu). Sans cette remontée du 09-01, l'élargissement aurait pu passer au vert en ne
+          # mesurant rien de plus que les 5 surfaces d'origine. Complété par un contrôle PAR
+          # SURFACE dans le script (`requis: true`) : une surface ajoutée qui ne s'ouvre plus fait
+          # échouer le check au lieu de disparaître en silence — protège CE que le plancher global
+          # ne peut pas voir (une surface qui tombe à zéro pendant qu'une autre grossit).
           CONTRAST_MIN_NOEUDS: '75'
         run: |
           set +e

@@ -123,15 +123,32 @@ const LAYER_BUTTONS = ['b-crustal', 'b-ant', 'b-res'];
 // C'est la même famille de défaut que l'angle mort qui a motivé l'élargissement :
 // le check ne mesure que ce qu'il exerce.
 //
-// CHOIX DES POINTS — chacun a été retenu parce qu'il exerce une branche que les
-// autres ne couvrent pas ; ce n'est pas un échantillon au hasard :
-//   42,00/9,05  perturbation 5/5 · activité 3/5 · radon classe 3
-//   41,60/9,28  perturbation 2/5  (branche #5A7D4E)
-//   42,55/9,45  activité 0/5      (branche neutre)
-//   42,70/9,40  radon classe 2    (branche Ocre)
-// ⚠️ BRANCHES ENCORE NON EXERCÉES, à documenter plutôt qu'à laisser croire à une
-// couverture complète : perturbation 1/5 et 3/5, activité 4/5, et les branches de
-// deltaCol (qui exigent une contribution terrain à moins de 500 m du point).
+// CHOIX DES POINTS — chacun a été retenu parce qu'il exerce, à la date de sa mesure, une branche
+// que les autres ne couvrent pas sur AU MOINS un des deux scores (perturbation, activité) ; ce
+// n'est pas un échantillon au hasard. Revérifié en direct le 2026-09-02 (clôture du chantier,
+// après le retrait du radon) — colonnes = score affiché / couleur RENDUE, pas déduites :
+//   42,00/9,05  perturbation 5/5 (#8E2F1F porphyre) · activité 3/5 (#92400e brun)
+//   41,60/9,28  perturbation 3/5 (#8A5E22 ocre — la branche corrigée par le lot 3)
+//   42,55/9,45  perturbation 5/5 (dup. pt1) · activité 0/5 (#626774 neutre)
+//   42,70/9,40  perturbation 1/5 (#3F5B3A vert, fusionné avec le niveau 2 depuis le lot 3)
+//               · activité 0/5 (dup. pt3)
+// Ce point 42,70/9,40 a perdu sa justification d'origine ("radon classe 2, branche Ocre") : la
+// classe radon a disparu du popup avec le retrait du radon (#1172), qui a aussi fait fusionner
+// les niveaux 1 et 2 de la perturbation en une seule couleur (#1175) — la branche qu'il ciblait
+// n'existe donc plus SOUS CETTE FORME. Gardé quand même, PAS retiré sans discussion (réduire
+// l'échantillonnage silencieusement est précisément le mode d'échec documenté par ce chantier) :
+// c'est aujourd'hui le SEUL point des quatre à produire une perturbation de niveau 1 — utile si
+// la fusion des niveaux 1/2 est un jour reconsidérée, et son activité à 0/5 sert de doublon de
+// confirmation pour la branche neutre plutôt que d'apporter une couverture propre. Une
+// justification plus modeste que l'originale, mais réelle — pas inventée pour combler le vide.
+// ⚠️ Les scores exacts par point dépendent de facteurs live (proximité HTA, correction Kp quand
+// NOAA répond) et peuvent glisser d'une session à l'autre sans que la MESURE DE CONTRASTE (qui ne
+// dépend que de la couleur rendue contre le fond, pas du chiffre exact) en soit affectée — vérifié
+// stable sur 2 mesures consécutives le 2026-09-02, mais à revérifier si ce fichier est rouvert
+// après un changement des seuils de branche (perturbHumain/activNat) ou du jeu de données HTA.
+// ⚠️ BRANCHES ENCORE NON EXERCÉES, à documenter plutôt qu'à laisser croire à une couverture
+// complète : activité 4/5, et toutes les branches de deltaCol (vert/ocre/porphyre — les 4 points
+// rendent tous "—", aucun n'a de contribution terrain assez proche pour produire un delta réel).
 // Coût mesuré (2026-09-01, local) : script à 1 point ~21 s -> à 4 points ~31 s,
 // soit ~+3,3 s par point ajouté. Round-trip Playwright par point (clic + attente
 // POPUP_WAIT_MS + sonde), pas la sonde elle-même. Déterminisme vérifié (2 runs
