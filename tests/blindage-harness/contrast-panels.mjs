@@ -100,11 +100,19 @@ const PANELS = [
   { sel: '#legende', nom: 'Panneau « ? »' },
   { sel: '#conditions-bar', nom: 'Barre de conditions' },
   { sel: '.hdr', nom: 'En-tête' },
-  { sel: '.leaflet-popup-content', nom: 'Popup au clic (carte)', requis: true },
-  { sel: '#expert-panel', nom: 'Panneau Expertise', requis: true },
-  { sel: '#expert-bandeau', nom: 'Bandeau Expertise', requis: true },
-  { sel: '#myplace-modal', nom: 'Modale « Mon lieu »', requis: true },
-  { sel: '#cform', nom: 'Contribution terrain', requis: true },
+  // min_noeuds (2026-09-02) : `requis: true` seul ne protège que contre ZÉRO nœud. Trouvé en CI
+  // le jour même de la clôture : le popau a rendu 1 SEUL nœud sur son premier point (démarrage à
+  // froid), et `!p.noeuds` (1 est truthy) l'aurait laissé passer sans broncher si le max sur les
+  // 4 points avait aussi été dégradé partout — corrigé côté mesure (cf. plus bas, noeuds = max
+  // des 4 points), mais un plancher PAR SURFACE ferme le trou pour de bon : un rendu qui tourne
+  // très en dessous de son plein effectif connu échoue, même s'il n'est pas littéralement vide.
+  // Seuils = ~50-70% du plein effectif mesuré à plusieurs reprises le 2026-09-02, marge pour la
+  // variation naturelle du contenu conditionnel sans laisser passer un rendu clairement dégradé.
+  { sel: '.leaflet-popup-content', nom: 'Popup au clic (carte)', requis: true, min_noeuds: 15 },
+  { sel: '#expert-panel', nom: 'Panneau Expertise', requis: true, min_noeuds: 12 },
+  { sel: '#expert-bandeau', nom: 'Bandeau Expertise', requis: true, min_noeuds: 4 },
+  { sel: '#myplace-modal', nom: 'Modale « Mon lieu »', requis: true, min_noeuds: 6 },
+  { sel: '#cform', nom: 'Contribution terrain', requis: true, min_noeuds: 8 },
 ];
 
 // Couches à activer pour que les panneaux existent réellement dans le DOM.
@@ -370,13 +378,20 @@ async function main() {
     // Une seule mesure ne testait qu'une branche de chaque couleur conditionnelle.
     // Ce passage a lieu AVANT l'ouverture de la contribution terrain, qui arme un
     // handler sur le prochain clic carte et détournerait ces clics.
-    for (const [lat, lon] of POPUP_POINTS) {
+    for (let i = 0; i < POPUP_POINTS.length; i++) {
+      const [lat, lon] = POPUP_POINTS[i];
       await page.evaluate(([la, lo]) => {
         if (typeof map !== 'undefined' && map && typeof L !== 'undefined') {
           map.fire('click', { latlng: L.latLng(la, lo) });
         }
       }, [lat, lon]);
-      await page.waitForTimeout(POPUP_WAIT_MS);
+      // Marge supplémentaire sur le PREMIER point (2026-09-02) : c'est le tout premier popup
+      // jamais ouvert sur la page, juste après boot + modale + boutons de couches — trouvé en CI
+      // rendu à 1 seul nœud (contre 26-27 pour les points 2-4) sur un runner visiblement plus
+      // lent/froid que ce script ne l'anticipait. Les points suivants n'ont pas ce problème : la
+      // page a déjà eu le temps de finir son travail de fond pendant leur propre clic précédent.
+      const wait = i === 0 ? POPUP_WAIT_MS + 1500 : POPUP_WAIT_MS;
+      await page.waitForTimeout(wait);
       const r = await page.evaluate(PROBE_CONTRAST, [[POPUP_PANEL], BASE_TONE]);
       scansPopup.push({ point: `${lat},${lon}`, ...r[0] });
     }
@@ -439,7 +454,19 @@ async function main() {
     // commentaire de POPUP_POINTS : le texte est exclu de la clé exprès, pour
     // compter un DÉFAUT une fois même s'il apparaît sur plusieurs points.
     if (POPUP_PANEL) {
-      const premier = scansPopup[0] || { noeuds: 0, violations: [] };
+      // noeuds = MAXIMUM sur les 4 points, pas le premier (2026-09-02, trouvé en clôturant ce
+      // chantier : un run CI réel a rendu le POINT 1 à 1 seul nœud — démarrage à froid, premier
+      // popup jamais ouvert sur la page, juste après boot + clic modale + boutons de couches —
+      // pendant que les points 2 à 4 rendaient normalement 26-27 nœuds chacun. Les VIOLATIONS
+      // restaient fiables (unifiées sur les 4 points, un point dégradé n'en cache aucune), mais
+      // le nombre de nœuds rapporté — utilisé par le plancher de couverture — serait tombé à 1,
+      // masquant une vraie mesure derrière un chiffre d'échec de démarrage. C'est exactement le
+      // mode d'échec que ce plancher existe pour attraper, retourné contre lui-même par un choix
+      // de conception trop naïf ("le premier point suffit"). Le maximum répond à la question que
+      // le plancher pose réellement : au moins un rendu complet a-t-il eu lieu ? — sans se laisser
+      // fausser par un point isolé lent à charger.
+      const noeudsCandidats = scansPopup.map((s) => s.noeuds || 0);
+      const noeudsRetenu = noeudsCandidats.length ? Math.max(...noeudsCandidats) : 0;
       const vues = new Set();
       const violationsUnion = [];
       for (const s of scansPopup) {
@@ -452,7 +479,8 @@ async function main() {
       }
       rapport.panneaux.push({
         panel: POPUP_PANEL.nom, sel: POPUP_PANEL.sel, etat: 'mesuré',
-        noeuds: premier.noeuds || 0, points_mesures: scansPopup.length,
+        noeuds: noeudsRetenu, points_mesures: scansPopup.length,
+        noeuds_par_point: noeudsCandidats,
         violations: violationsUnion,
       });
     }
@@ -501,13 +529,16 @@ async function main() {
   // cassé rendrait la surface invisible au contrôle SANS rien signaler : zéro
   // nœud, zéro violation, vert. C'est exactement le mode d'échec qui a laissé
   // `#expert-panel` hors mesure jusqu'au 2026-09-01 — on ne le rejoue pas.
-  const surfacesRequises = PANELS.filter((p) => p.requis).map((p) => p.nom);
-  for (const nom of surfacesRequises) {
+  const surfacesRequises = PANELS.filter((p) => p.requis);
+  for (const panel of surfacesRequises) {
+    const nom = panel.nom;
+    const seuil = panel.min_noeuds ?? 1;
     const p = rapport.panneaux.find((x) => x.panel === nom);
-    if (!p || p.etat !== 'mesuré' || !p.noeuds) {
-      depassements.push(`surface requise non mesurée : « ${nom} » (état : ${p ? p.etat : 'introuvable'}`
-        + `${p && p.etat === 'mesuré' ? ', 0 nœud' : ''}) — son flux d'ouverture ne fonctionne plus,`
-        + ' le résultat n\'est pas exploitable');
+    const noeuds = p && p.etat === 'mesuré' ? (p.noeuds || 0) : 0;
+    if (!p || p.etat !== 'mesuré' || noeuds < seuil) {
+      depassements.push(`surface requise sous son plancher : « ${nom} » (état : ${p ? p.etat : 'introuvable'}`
+        + `${p && p.etat === 'mesuré' ? `, ${noeuds} nœud(s) < ${seuil}` : ''}) — son flux d'ouverture`
+        + ' ne fonctionne plus ou rend un état dégradé, le résultat n\'est pas exploitable');
     }
   }
   // Plancher de couverture — AVANT les cliquets, et pour la même raison qu'axe-core a été
