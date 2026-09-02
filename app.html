@@ -10038,6 +10038,69 @@ let SITES_REMARQUABLES = [];
 // Source : public/data/cartoradio_certified_corse.json (régénération 27 avril 2026, 30 fiches).
 // Coordonnées : positions exactes ANFR (precision_coord=exacte). Source : API publique cartoradio.fr (/api/v1/mesures, format=geojson).
 // Données métier (date, valeur_max_vm, conformité, services) : extraction Cowork OCR du 23 avril 2026 sur les 30 PDFs ANFR/EXEM.
+//
+// ── Correctif 2026-09-02 (brief « D0 ») : agrégation résidentielle ──────────────────
+// Constat : le popup (cert_precision_note) et .mpanel-title affirment depuis toujours
+// « centroïde communal », alors que la régénération du 27 avril 2026 (voir
+// cartoradio-coords-regeneration-phase2.md, privé) a remplacé TOUTES les coordonnées
+// par des positions exactes ANFR — texte jamais réamendé après ce changement, pour les
+// 30 fiches. Sur les 8 fiches en type_environnement==='residentiel' (mesure au domicile
+// d'un particulier), l'écart texte/donnée pose un vrai problème de vie privée : la carte
+// affichait — et le bouton de téléchargement livrait — une adresse précise en la
+// présentant comme anonymisée. Ce correctif aligne la donnée sur le texte pour ces 8
+// fiches SEULEMENT (les 22 extérieur public gardent leurs coordonnées exactes, texte
+// inchangé pour elles aussi — écart résiduel connu, signalé, pas résolu ici, hors
+// périmètre du brief D0).
+//
+// Source du centroïde : PAS un centroïde des points de mesure (aurait dérivé avec le
+// nombre de fiches par commune). Champ "centre" officiel de chaque commune, API
+// geo.api.gouv.fr (IGN AdminExpress, Etalab 2.0) — même source déjà utilisée ailleurs
+// dans ce repo (scripts/build_patrimoine_polygons_v3.py). Récupéré le 2026-09-02 pour
+// les 5 communes concernées par les 8 fiches résidentielles actuelles :
+//   GET https://geo.api.gouv.fr/communes/{code_insee}?fields=centre,nom,code
+// Ne couvre QUE ces 5 communes — un futur élargissement (brief « D », 77 fiches
+// résidentielles supplémentaires côté #1176) devra étendre cette table, pas la
+// recalculer autrement.
+const CERT_COMMUNE_CENTRES = {
+  'Ajaccio': { lat: 41.9228, lon: 8.7058 },  // INSEE 2A004
+  'Arbori':  { lat: 42.1230, lon: 8.7958 },  // INSEE 2A019
+  'Bastia':  { lat: 42.6861, lon: 9.4240 },  // INSEE 2B033
+  'Calvi':   { lat: 42.5498, lon: 8.7611 },  // INSEE 2B050
+  'Zonza':   { lat: 41.7145, lon: 9.2719 },  // INSEE 2A362
+};
+// Applique l'agrégation aux fiches résidentielles d'un tableau MESURES_CERTIFIEES déjà
+// chargé, EN PLACE et EN MÉMOIRE UNIQUEMENT — public/data/cartoradio_certified_corse.json
+// sur disque n'est jamais modifié (les coordonnées exactes y restent, seule la copie
+// affichée/téléchargée est aggrégée). calibrateRF() lit ce fichier séparément et exclut
+// déjà le résidentiel de son pool (type_environnement!=='exterieur_public') — cette
+// fonction n'a donc aucun effet sur la calibration RF, vérifié en direct (k/n_used
+// inchangés).
+//
+// Dispersion anti-empilement (_certOffsetPositions, existant) : les 3 fiches Ajaccio
+// tombent maintenant sur EXACTEMENT le même point (le centre communal) et seront
+// dispersées en cercle de 18 m par le mécanisme déjà en place, sans changement de code.
+// Examiné avant de la laisser active : le point de référence est le centre officiel de
+// la commune (un repère public, pas une adresse), donc un petit cercle de marqueurs
+// autour de lui ne peut pas se lire comme la position de logements distincts — la
+// dispersion aide seulement à voir qu'il y a plusieurs fiches, elle ne pointe vers rien
+// de précis. Laissée active ; le clustering du brief D la rendra de toute façon
+// redondante pour le résidentiel (un cluster par commune).
+function _certAggregateResidentialCoords(mesures) {
+  let nAggregated = 0, nMissingCentre = 0;
+  mesures.forEach(function(m) {
+    if (m.type_environnement !== 'residentiel') return;
+    const c = CERT_COMMUNE_CENTRES[m.commune];
+    if (!c) { nMissingCentre++; return; }
+    m.lat = c.lat;
+    m.lon = c.lon;
+    m._coord_aggregated_commune = true;
+    nAggregated++;
+  });
+  if (nMissingCentre > 0) {
+    console.warn('[Tellux] ' + nMissingCentre + ' fiche(s) résidentielle(s) sans centroïde communal connu — coordonnée exacte laissée telle quelle, à corriger avant tout élargissement.');
+  }
+  console.log('[Tellux] Mesures certifiées — ' + nAggregated + ' fiche(s) résidentielle(s) agrégée(s) au centroïde communal.');
+}
 // Depuis le 2026-08-29 (item C) : bouton propre b-cert ("Mesures certifiées"), séparé des
 // contributions citoyennes (b-contrib). Ce loader/rendu ne concerne que les fiches certifiées.
 let MESURES_CERTIFIEES = [];
@@ -10054,6 +10117,7 @@ function loadMesuresCertifiees() {
       const d = await r.json();
       MESURES_CERTIFIEES = d.mesures || [];
       console.log('[Tellux] Mesures certifiees chargees : ' + MESURES_CERTIFIEES.length);
+      _certAggregateResidentialCoords(MESURES_CERTIFIEES);
       const blk = document.getElementById('cert-download-block');
       if (blk && MESURES_CERTIFIEES.length > 0) blk.style.display = 'block';
     } catch (e) {
@@ -10075,7 +10139,7 @@ function downloadCertifiedJSON() {
     source: 'Tellux Corse — https://tellux.pages.dev',
     generated_at: new Date().toISOString(),
     n_mesures: MESURES_CERTIFIEES.length,
-    note_precision: 'Coordonnées = positions exactes ANFR (precision_coord=exacte), récupérées via l’API publique cartoradio.fr le 27/04/2026.',
+    note_precision: 'Coordonnées = positions exactes ANFR (precision_coord=exacte), récupérées via l’API publique cartoradio.fr le 27/04/2026 — SAUF les fiches en environnement résidentiel (mesure au domicile d’un particulier), agrégées au centroïde de leur commune (voir champ type_environnement et _coord_aggregated_commune par fiche).',
     source_originale: 'ANFR/EXEM — PDFs CartoRadio 2024-2026, extraits par l\u2019équipe Tellux (PyMuPDF + OCR Tesseract)',
     licence: 'Données publiques ANFR (Licence Ouverte 2.0). Compilation Tellux sous CC-BY 4.0.',
     mesures: MESURES_CERTIFIEES
