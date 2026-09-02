@@ -1380,7 +1380,10 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    est une couleur de signification et non un choix typographique. Même distinction que les trois
    hex traités par #1153. */
 .expert-slider-row span.sv{min-width:30px;text-align:right;font-family:var(--mono);color:#8A5E22;font-size:10px;}
-#expert-index-val{font-size:22px;font-weight:700;font-family:var(--mono);color:#C28533;line-height:1;}
+/* #C28533 -> #8A5E22 le 2026-09-02 (dette A11Y-CONTRAST-APP-PANELS-002, volet 3, lot 3 phase A) :
+   ratio 2,59 (22px gras, seuil 3 = grand texte WCAG) -> 4,99. Substitution déjà validée en #1165
+   (spans .sv du même panneau), réemployée ici — pas une couleur neuve. */
+#expert-index-val{font-size:22px;font-weight:700;font-family:var(--mono);color:#8A5E22;line-height:1;}
 /* === fin Phase 3 === */
 /* === UI avancée — chips de filtre par domaine + badges temps réel (sprint feat/ui-avancee-domaines-badges, mai 2026) === */
 .domain-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--pierre-ombre);font-size:11px;}
@@ -2304,7 +2307,9 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
 
   <!-- Sous-panneau Expertise (visible quand mode actif) -->
   <div id="expert-panel">
-    <div style="font-family:var(--mono);font-size:10px;color:#C28533;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">&#9881; Indice composite</div>
+    <!-- #C28533 -> #8A5E22 le 2026-09-02 (lot 3 phase A) : ratio 2,59 -> 4,99, même substitution
+         que #expert-index-val et les spans .sv (#1165) du même panneau. -->
+    <div style="font-family:var(--mono);font-size:10px;color:#8A5E22;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">&#9881; Indice composite</div>
     <div style="background:var(--tx-pierre);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:14px;font-family:var(--font);font-size:12px;color:var(--tx-ardoise);line-height:1.5">
       Le mode Expertise permet d'ajuster la pondération des domaines magnétique et radiofréquence et d'exporter les valeurs détaillées par point. Il est destiné aux utilisateurs qui souhaitent reproduire ou auditer le calcul composite. Les pondérations par défaut sont gelées dans la documentation du projet.
     </div>
@@ -2551,8 +2556,12 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
   <div class="cform-title">Contribution terrain</div>
 
   <!-- Avertissement épistémique N0 -->
+  <!-- span ℹ : color:var(--warn) -> #8A5E22 le 2026-09-02 (lot 3 phase A), ratio 2,59 -> 4,99.
+       --warn (= --tx-ocre, ligne ~74) est un token PARTAGÉ par des dizaines d'usages dans ce
+       fichier, textuels et non textuels (ex. border-left ci-dessous) — on ne le retouche PAS,
+       on recolore CE seul span, comme les autres substitutions de ce lot. -->
   <div id="contrib-epistemic-note" style="font-size:11px;color:var(--ardoise-clair);background:var(--pierre-ombre);border-left:2px solid var(--warn);padding:7px 10px;margin-bottom:10px;border-radius:var(--r);line-height:1.45">
-    <span style="color:var(--warn);font-weight:600">&#8505;</span> Contribution terrain &mdash; donn&#xe9;es &#xe0; valeur indicative, non certifi&#xe9;es.
+    <span style="color:#8A5E22;font-weight:600">&#8505;</span> Contribution terrain &mdash; donn&#xe9;es &#xe0; valeur indicative, non certifi&#xe9;es.
   </div>
 
   <!-- Indicateur d'etape — discret, pas de gros stepper graphique -->
@@ -3263,10 +3272,9 @@ function updateIgrfWmmDiff(lat, lon) {
   //     de lire, était le moins lisible. Remplacé par le Porphyre #8E2F1F (6,74), déjà la couleur
   //     d'alerte du fichier (radon classe 3, anomalies négatives) : intention conservée.
   //   • 'rgba(245,240,231,.85)' (état neutre) mesuré à 1,06 → var(--ardoise-clair) (8,36).
-  // ⚠️ '#C28533' (écart > 100 nT) est LAISSÉ TEL QUEL à 2,59 — c'est l'autre défaut, l'Ocre en
-  // usage textuel sur fond clair, qui relève du lot en arbitrage et pas de ce correctif-ci. La
-  // substitution #8A5E22 déjà validée en #1165 le résoudrait, mais ce n'est pas décidé.
-  el.style.color = diff > 500 ? '#8E2F1F' : (diff > 100 ? '#C28533' : 'var(--ardoise-clair)');
+  // '#C28533' (écart > 100 nT) -> '#8A5E22' le 2026-09-02 (lot 3 phase A) : ratio 2,59 -> 4,99,
+  // même substitution que #expert-index-val et les spans .sv (#1165) ci-dessus, décidée cette fois.
+  el.style.color = diff > 500 ? '#8E2F1F' : (diff > 100 ? '#8A5E22' : 'var(--ardoise-clair)');
   el.title = 'IGRF-14 = ' + igrf + ' nT · WMM 2025 = ' + wmm + ' nT · écart |Δ| = ' + diff.toFixed(0) + ' nT';
 }
 let curKp='—',curBz='—',curDensity='—',curFlux='—';
