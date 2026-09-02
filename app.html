@@ -2402,6 +2402,14 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
      de la carte — chacune de ces pistes touche le système de sous-menu, à valider séparément. -->
 <div class="op-row" id="hyd-op-row"><span>Nappes</span><input type="range" min="0.1" max="1" step="0.05" value="0.55" oninput="_setLayerOpacityAndLabel(wmsHyd,+this.value,'hyd-op-v')"><span id="hyd-op-v">55%</span></div>
 <div class="op-row" id="emag-op-row"><span>Fond magnétique régional</span><input type="range" min="0.1" max="0.8" step="0.05" value="0.25" oninput="_setLayerOpacityAndLabel(wmsEmag,+this.value,'emag-op-v')"><span id="emag-op-v">25%</span></div>
+<!-- foretdense-op-row (brief E, 2026-09-02) : même patron, même helper partagé (_setLayerOpacityAndLabel,
+     #1181) que hyd-op-row/emag-op-row ci-dessus — non dupliqué, juste rebranché. lForetDense n'a pas de
+     setOpacity() natif (L.geoJSON = FeatureGroup de Path, pas un layer raster) : un shim est posé sur
+     l'instance par buildForetDenseLayer() pour que ce même appel générique fonctionne sans toucher au
+     helper. Défaut 0,6 : reprend tel quel l'opacité de contour déjà approuvée le 2026-08-30 (Soleil,
+     « brume verte texturée, informatif pas alarmant ») — pas de nouveau choix silencieux, juste rendu
+     ajustable depuis ce défaut. -->
+<div class="op-row" id="foretdense-op-row"><span>Forêt dense</span><input type="range" min="0" max="1" step="0.05" value="0.6" oninput="_setLayerOpacityAndLabel(lForetDense,+this.value,'foretdense-op-v')"><span id="foretdense-op-v">60%</span></div>
 <div id="map"></div>
 
 <!-- Item 1 — Barre conditions permanente (post STOP A validation Soleil).
@@ -3561,8 +3569,37 @@ const lOpenRad=L.layerGroup();
 // confusion possible entre les deux. Canvas renderer (L.canvas()) plutôt que le SVG par défaut
 // de Leaflet : ~5 680 parties / ~104 000 sommets (cf. build_foret_dense_corse_geojson.py, option C),
 // mesuré nettement plus rapide à peindre en canvas qu'en SVG pour ce volume de géométrie.
+// Empilement des fonds, vérifié en direct (brief E, 2026-09-02), pas supposé — deux constats
+// qui ne se pilotent PAS de la même façon :
+//  1. wmsHyd (Nappes, WMS) rend dans le pane tilePane (CSS z-index 200) ; wmsEmag (image) et ce
+//     canvas rendent tous deux dans overlayPane (400). tilePane < overlayPane < markerPane (600,
+//     toutes les couches de données : mesures, antennes...) — les fonds restent donc TOUJOURS
+//     sous les données, par construction du système de panes Leaflet, quel que soit le zIndex
+//     numérique donné à chacun.
+//  2. L'option zIndex de L.canvas() ci-dessous N'A AUCUN EFFET : le CSS propre de Leaflet impose
+//     `.leaflet-overlay-pane canvas{z-index:100!important}` — donc ce canvas rend TOUJOURS
+//     au-dessus de wmsEmag (image, zIndex:2 réellement appliqué) au sein d'overlayPane, quelle
+//     que soit la valeur passée ici. Testé (zIndex:3 posé, CSS réel resté à 100 — confirmé par
+//     lecture du container en direct) : ce n'est pas un choix de conception, c'est une
+//     contrainte de la plateforme, documentée telle quelle plutôt que masquée par une option qui
+//     n'agit pas. Ordre réel, du bas vers le haut : Nappes < EMAG < Forêt dense < données.
 const _foretDenseCanvas=L.canvas({padding:0.5});
 const lForetDense=L.layerGroup();
+// setOpacity() posé sur lForetDense (brief E) : L.layerGroup()/L.geoJSON() n'ont pas de
+// setOpacity() natif (contrairement à wmsEmag/wmsHyd, des layers raster) — ce shim fait
+// fonctionner le même appel générique _setLayerOpacityAndLabel(lForetDense, value, id) sans
+// toucher au helper partagé de #1181. Délègue à setStyle() sur le(s) layer(s) enfant(s)
+// courant(s) plutôt que de garder une référence séparée : reste correct même si
+// buildForetDenseLayer() reconstruit son contenu plus tard. `value` pilote l'opacité de
+// CONTOUR (convention Leaflet Path standard) ; le remplissage suit à un ratio fixe (0,13/0,6 —
+// celui déjà approuvé le 2026-08-30) pour garder la même allure visuelle à toute position du
+// curseur, pas juste au défaut.
+lForetDense.setOpacity = function(value){
+  const FILL_RATIO = 0.13 / 0.6;
+  this.eachLayer(function(child){
+    if (typeof child.setStyle === 'function') child.setStyle({opacity:value, fillOpacity:value*FILL_RATIO});
+  });
+};
 // Zoom-gate visuel (2026-08-30, décision Soleil) : même logique que le réseau BT — à petite
 // échelle la couche (~28,5 % de la Corse, 5 680 parties) sature la carte sans rien apprendre.
 // N'affecte QUE l'affichage : le calcul (calcVegetationAttenuation via ACTIVE.foretdense) reste
@@ -4302,7 +4339,7 @@ function tog(id,cls,btn){
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='none';
     if(id==='emag')document.getElementById('emag-op-row').style.display='none';
     if(id==='crustal')showCrustalGauge(false);
-    if(id==='foretdense')_foretDenseZoomHintShown=false;
+    if(id==='foretdense'){_foretDenseZoomHintShown=false;document.getElementById('foretdense-op-row').style.display='none';}
     if(id==='bt')_btZoomHintShown=false;
     showLegend(id,false);
   }else{WMS[id]?map.addLayer(WMS[id]):map.addLayer(LAYERS[id]);ACTIVE[id]=true;if(btn)btn.classList.add(cls);
@@ -4311,6 +4348,7 @@ function tog(id,cls,btn){
     if(id==='hot'&&lHot.getLayers().length===0)buildHot();
     if(id==='hotrf'&&lHotRF.getLayers().length===0)buildHotRF();
     if(id==='foretdense'){
+      document.getElementById('foretdense-op-row').style.display='flex';
       if(lForetDense.getLayers().length===0)loadForetDenseGrid().then(buildForetDenseLayer);
       else _syncForetDenseZoom(true);
     }
@@ -8906,17 +8944,20 @@ function buildForetDenseLayer(){
   // CYAN TIRETÉ du 2026-08-29 (#1114, choisi pour être lisible sur ortho + IGN Plan) se lisait comme
   // un réseau hydrographique — le tireté = convention « ligne / cours d'eau », le cyan = convention
   // « eau ». Retour à un vert forêt : contour fin PLEIN (pas de dashArray → lecture « zone », pas
-  // « objet linéaire ») + remplissage léger. Vert émeraude foncé #1b5e3f, distinct du vert-jaune de
-  // la végétation ortho ET du bleu franc de l'eau (ortho + IGN Plan). À fort nombre de polygones
-  // (~5 680), la trame des contours fins compose une brume verte texturée sur les zones boisées —
-  // informatif, pas alarmant. Testé preview ortho + plan.
+  // « objet linéaire ») + remplissage léger. À fort nombre de polygones (~5 680), la trame des
+  // contours fins compose une brume verte texturée sur les zones boisées — informatif, pas alarmant.
+  // Testé preview ortho + plan.
+  // Couleur reprise en Maquis DA v2 #3F5B3A le 2026-09-02 (brief E) — remplace #1b5e3f/#3a7d5c
+  // (verts ad hoc du 2026-08-30, hors palette). Opacité de contour/remplissage (0,6/0,13,
+  // ratio conservé) désormais pilotée par le curseur #foretdense-op-row (défaut = ces mêmes
+  // valeurs, cf. lForetDense.setOpacity ci-dessus) plutôt que figée en dur ici.
   // NB couverture : cette couche = BD Forêt V2 « forêt fermée » filtrée « option C » (essences
   // hautes identifiées, hors classes de feuillus indifférenciés) ≈ 28,5 % de la Corse (2026-08-30,
   // décision Soleil ; avant : tous les FF* ≈ 59 %). Dette : distinction fine forêt-haute / maquis
   // (cf. _drafts/DIAGNOSTIC_FORET_DENSE_2026-08-30.md + DETTES_TECHNIQUES).
   L.geoJSON(geojson,{
     renderer:_foretDenseCanvas,
-    style:{color:'#1b5e3f',weight:0.8,opacity:0.6,fillColor:'#3a7d5c',fillOpacity:0.13,interactive:false}
+    style:{color:'#3F5B3A',weight:0.8,opacity:0.6,fillColor:'#3F5B3A',fillOpacity:0.13,interactive:false}
   }).addTo(lForetDense);
   _syncForetDenseZoom(true);
 }
@@ -11319,6 +11360,7 @@ function capCleanup(){
 ["bandeau_close_aria","#expert-bandeau button","aria-label","Désactiver le mode Expertise","Disattivà u modu Espertu","Turn off Expert mode"],
 ["op_hyd","#hyd-op-row > span:first-child","","Nappes","Falde","Groundwater"],
 ["op_emag","#emag-op-row > span:first-child","","Fond magnétique régional","Fondu magneticu regiunale","Regional magnetic background"],
+["op_foretdense","#foretdense-op-row > span:first-child","","Forêt dense","Fureste densa","Dense forest"],
 ["cbar_aria","#conditions-bar","aria-label","Conditions live et indicateurs temps réel","Cundizione live è indicatori in tempu reale","Live conditions and real-time indicators"],
 ["cbar_toggle_aria","#conditions-bar-toggle","aria-label","Déplier les détails conditions","Sviluppà i ditagli cundizione","Expand condition details"],
 ["cbar_summary_aria","#conditions-bar-summary","aria-label","Indicateurs temps réel résumé","Indicatori in tempu reale riassuntu","Real-time indicators summary"],
