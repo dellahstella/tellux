@@ -2093,7 +2093,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
       <span>Sources anthropiques</span>
     </div>
     <div class="accordion-cat-content">
-      <button class="lbtn" id="b-ant" data-domains="rf" title="Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR + TDF</button>
+      <button class="lbtn on-ant" id="b-ant" data-domains="rf" title="Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR + TDF</button>
       <div class="mlegend-inline" id="mleg-ant"></div>
       <button class="lbtn" id="b-res" data-domains="elf" title="Lignes et postes électriques haute tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HT</button>
       <div class="mlegend-inline" id="mleg-res"></div>
@@ -2240,7 +2240,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
                • b-contrib → lCon seul, badge « Hors calcul » seul. D'abord placé dans un
                  sous-sous-groupe « Mesures citoyennes » (avec Gamma citoyen), remonté au niveau
                  supérieur le 2026-08-30 quand Gamma citoyen a été muté (cf. plus bas). -->
-          <button class="lbtn on-cert" id="b-cert" data-domains="rf" title="236 fiches de mesure certifiées ANFR/EXEM (2002–2026), extraites des PDF CartoRadio ou de l'API CartoRadio. 21 ont servi à calibrer la constante k du modèle RF (calcul one-shot à l'initialisation, pas une modulation en direct par point). Losanges = extérieur public (position exacte) ; cercles = résidentiel (centroïde communal), colorés selon la conformité (limite légale 28 V/m)." onclick="tog('cert','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Mesures certifiées (ANFR/EXEM)<span class="layer-badge layer-badge--calc">Calibration RF</span></button>
+          <button class="lbtn" id="b-cert" data-domains="rf" title="236 fiches de mesure certifiées ANFR/EXEM (2002–2026), extraites des PDF CartoRadio ou de l'API CartoRadio. 21 ont servi à calibrer la constante k du modèle RF (calcul one-shot à l'initialisation, pas une modulation en direct par point). Losanges = extérieur public (position exacte) ; cercles = résidentiel (centroïde communal), colorés selon la conformité (limite légale 28 V/m)." onclick="tog('cert','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Mesures certifiées (ANFR/EXEM)<span class="layer-badge layer-badge--calc">Calibration RF</span></button>
           <div class="mlegend-inline" id="mleg-cert"></div>
           <!-- Couche « Sites U/Th à mesurer » retirée de la carte publique le 2026-08-19 (décision
                Soleil, risque nocebo A.4 sur un catalogue 100% documentaire/non mesuré) — contenu
@@ -3633,7 +3633,11 @@ const WMS={hyd:wmsHyd,emag:wmsEmag};
 // au démarrage maintenant qu'elles sont découplées des contributions smartphone. bt:false = off par
 // défaut comme les autres couches non-core (ant/res/prod/...), remise en prod le 2026-08-30 (#1122
 // levé, cf. commentaire au bouton) : plus une exception, un layer standard qu'on active au clic.
-const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,res:false,prod:false,cert:true,contrib:false,crustal:false,openrad:false};
+// ant:true / cert:false au boot (décision Soleil 2026-09-02, remplace l'arbitrage du 2026-08-29
+// ci-dessus) : les antennes ANFR + TDF s'affichent par défaut à la place des mesures certifiées,
+// en complément de la grille RF (hotrf, déjà true). Mesures certifiées toujours chargées et
+// disponibles au clic (bouton b-cert), simplement plus affichées au premier rendu.
+const ACTIVE={bt:false,ant:true,hyd:false,emag:false,hot:false,hotrf:true,res:false,prod:false,cert:false,contrib:false,crustal:false,openrad:false};
 
 // 'con' (scindé depuis en 'cert'+'contrib', 2026-08-29 item C) et 'emag' promues en Zone 1
 // "core" le 2026-08-27 (brief "Panneau '?' sélectif",
@@ -9517,10 +9521,14 @@ loadChargeReseau().then(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}}).ca
 // pas du facteur de charge RTE (spécifique au domaine ELF/magnétique de buildHot()).
 buildHotRF();
 showLegend('hotrf',true);
-// cert:true au boot (décision Soleil 2026-08-29) — mesures certifiées visibles + légende au
-// démarrage. lCert.addTo(map) est fait dans le Promise.all décalé ci-dessous (après
-// loadMesuresCertifiees). contrib:false — showLegend('contrib',...) piloté par tog() au 1er clic.
-showLegend('cert',true);
+// ant:true au boot (décision Soleil 2026-09-02, remplace cert:true du 2026-08-29 ci-dessus en
+// commentaire) — antennes ANFR + TDF visibles + légende au démarrage, en complément de la
+// grille RF (hotrf). lAnt.addTo(map) est fait dans le Promise.all décalé ci-dessous (après
+// loadAnt(), même pattern que l'ex-lCert.addTo(map) après loadMesuresCertifiees()). Mesures
+// certifiées (cert) toujours chargées au boot (calibrateRF() en dépend), simplement plus
+// affichées ni légendées par défaut — cert:false, showLegend('cert',...) désormais piloté par
+// tog() au 1er clic comme contrib:false l'était déjà.
+showLegend('ant',true);
 // Démarrage : anomalies EM (couche RF + mesures terrain par défaut, cf. arbitrage 2026-08-23)
 let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.hotrf){lHotRF.clearLayers();buildHotRF();}},300);}
@@ -9529,7 +9537,7 @@ map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
 // Zoom-gate visuel de la couche forêt dense (décision Soleil 2026-08-30) — cf. _syncForetDenseZoom.
 map.on('zoomend',function(){ _syncForetDenseZoom(false); });
 map.on('zoomend',function(){ _syncBTZoom(false); });
-setTimeout(()=>Promise.all([loadAnt(),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.cert)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k)
+setTimeout(()=>Promise.all([loadAnt().then(function(){if(ACTIVE.ant)lAnt.addTo(map);}),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.cert)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k). ant:true au boot (2026-09-02) : lAnt.addTo(map) conditionné à ACTIVE.ant, même pattern que lCert ci-après.
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET DUR/EBR/CLF (nom loadAQU conservé, cf. commentaire fonction) — correction externe réelle niveau 1
 setTimeout(loadDst,5500); // Dst Kyoto via NOAA — correction externe niveau 2 (Sprint astro 2026-05-25)
