@@ -673,7 +673,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    visuel depuis le debut (pas une regression recente, verifie git blame). Rejoint le groupe
    partage ci-dessus plutot qu'une couleur dediee, coherent avec le fait qu'aucune des 4 autres
    couches de ce groupe n'a de teinte individuelle liee a son icone. */
-.lbtn.on-emag,.lbtn.on-prod,.lbtn.on-crustal,.lbtn.on-foretdense,.lbtn.on-postes{background:var(--tx-brume);color:var(--tx-maquis);border-color:var(--tx-maquis);}
+.lbtn.on-emag,.lbtn.on-prod,.lbtn.on-crustal,.lbtn.on-foretdense,.lbtn.on-postes,.lbtn.on-foretouverte,.lbtn.on-landemaquis{background:var(--tx-brume);color:var(--tx-maquis);border-color:var(--tx-maquis);}
 .layers{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;}
 .lbtn{font-size:10px;padding:3px 7px;border-radius:14px;border:1px solid var(--border);background:var(--bg);color:var(--ardoise-clair);cursor:pointer;display:inline-flex;align-items:center;gap:3px;transition:all .15s;white-space:nowrap;}
 /* margin-right explicite (2026-08-26, repro Soleil mobile x3 : icône chevauchant la 1re
@@ -2184,6 +2184,20 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
                buildForetDenseLayer()/lForetDense plus bas dans ce fichier. -->
           <button class="lbtn" id="b-foretdense" data-domains="rf" title="BD Forêt V2 IGN — forêt fermée à essence haute (chênes, hêtre, châtaignier, pins laricio/maritime, sapin…), hors classes de feuillus indifférenciés qui recouvrent surtout le maquis-forêt corse (~28 % de la Corse). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6) dans le calcul au clic carte ; le désactiver la retire." onclick="tog('foretdense','on-foretdense',this)"><span class="sq" style="background:#3a7d5c;border:1px solid #1b5e3f"></span>Forêt dense (atténuation RF)<span class="layer-badge layer-badge--calc">Module le calcul</span></button>
           <div class="mlegend-inline" id="mleg-foretdense"></div>
+          <!-- Couches « Forêt ouverte » et « Lande/maquis » (b-foretouverte, b-landemaquis) ajoutées
+               le 2026-09-02 (brief F, couches contextuelles hors calcul). Même source que Forêt dense
+               (BD Forêt V2 IGN, cf. scripts/build_foret_ouverte_lande_corse_geojson.py) mais CODE_TFV
+               différent (FO1/FO2/FO3 et LA4 — codes cités depuis la nomenclature officielle IGN,
+               DC_BDFORET_v2.pdf §4.1.2/4.1.3, pas déduits par analogie). Contrairement à
+               b-foretdense : n'alimentent AUCUN calcul (badge --context, pas --calc), et sont
+               mutuellement exclusives entre elles ET avec Forêt dense au sein du groupe végétation
+               (VEG_GROUP, cf. tog()) — une seule couche de couvert visible à la fois, comme les
+               fonds de carte. Millésime 2016-2017 rendu visible directement dans le libellé du
+               bouton (pas seulement dans les métadonnées du GeoJSON), cf. brief F étape 8. -->
+          <button class="lbtn" id="b-foretouverte" data-domains="visuel" title="BD Forêt V2 IGN — forêt ouverte (couvert arboré 10-40 %, feuillus FO1/conifères FO2/mélange FO3 — codes nomenclature IGN §4.1.2). Couche de contexte, millésimes 2016 (2B) / 2017 (2A) — incendies possibles depuis, ne pas lire comme un état actuel. N'entre dans AUCUN calcul (contrairement à Forêt dense) ; une seule couche de végétation affichée à la fois." onclick="tog('foretouverte','on-foretouverte',this)"><span class="sq" style="background:#4F7048;border:1px solid #3F5B3A"></span>Forêt ouverte (2016-2017)<span class="layer-badge layer-badge--context">Contexte</span></button>
+          <div class="mlegend-inline" id="mleg-foretouverte"></div>
+          <button class="lbtn" id="b-landemaquis" data-domains="visuel" title="BD Forêt V2 IGN — lande (bruyères, genêts, ajoncs ; garrigues et maquis non boisés — code LA4, nomenclature IGN §4.1.2). Couche de contexte, millésimes 2016 (2B) / 2017 (2A) — incendies possibles depuis, ne pas lire comme un état actuel. N'entre dans AUCUN calcul (contrairement à Forêt dense) ; une seule couche de végétation affichée à la fois." onclick="tog('landemaquis','on-landemaquis',this)"><span class="sq" style="background:#C28533;border:1px solid #8E6423"></span>Lande / maquis (2016-2017)<span class="layer-badge layer-badge--context">Contexte</span></button>
+          <div class="mlegend-inline" id="mleg-landemaquis"></div>
           <!-- Couche « Forêts publiques » (b-foret, ONF via WMS IGN) retirée complètement le
                2026-08-27 (décision Soleil, brief court "la couche forêt publique n'est plus utile
                dans app") — devenue redondante une fois « Forêt dense » (ci-dessus) affichée et
@@ -2410,6 +2424,12 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
      « brume verte texturée, informatif pas alarmant ») — pas de nouveau choix silencieux, juste rendu
      ajustable depuis ce défaut. -->
 <div class="op-row" id="foretdense-op-row"><span>Forêt dense</span><input type="range" min="0" max="1" step="0.05" value="0.6" oninput="_setLayerOpacityAndLabel(lForetDense,+this.value,'foretdense-op-v')"><span id="foretdense-op-v">60%</span></div>
+<!-- foretouverte-op-row / landemaquis-op-row (brief F, 2026-09-02) : même patron que
+     foretdense-op-row ci-dessus — même helper partagé (#1181), non réimplémenté. Défaut 0,6,
+     identique à Forêt dense pour une cohérence visuelle au sein du groupe végétation (les trois
+     couches ne sont jamais visibles simultanément, cf. exclusivité dans tog()). -->
+<div class="op-row" id="foretouverte-op-row"><span>Forêt ouverte</span><input type="range" min="0" max="1" step="0.05" value="0.6" oninput="_setLayerOpacityAndLabel(lForetOuverte,+this.value,'foretouverte-op-v')"><span id="foretouverte-op-v">60%</span></div>
+<div class="op-row" id="landemaquis-op-row"><span>Lande / maquis</span><input type="range" min="0" max="1" step="0.05" value="0.6" oninput="_setLayerOpacityAndLabel(lLandeMaquis,+this.value,'landemaquis-op-v')"><span id="landemaquis-op-v">60%</span></div>
 <div id="map"></div>
 
 <!-- Item 1 — Barre conditions permanente (post STOP A validation Soleil).
@@ -2926,6 +2946,8 @@ var JS_STRINGS_EN = {
   bt_line_souterrain: "Underground BT line · EDF SEI",
   legende_generic: "Legend",
   foretdense_zoom_hint: "Dense forest — layer shown from zoom 10 (too extensive at small scale); the calculation stays active.",
+  foretouverte_zoom_hint: "Open forest — layer shown from zoom 10 (too extensive at small scale); context layer, outside the calculation.",
+  landemaquis_zoom_hint: "Heathland / scrub — layer shown from zoom 10 (too extensive at small scale); context layer, outside the calculation.",
   cert_toast_prefix: "Certified measurements — ",
   cert_toast_suffix: " ANFR/EXEM sheets (2002–2026).",
   contrib_toast_prefix: "Smartphone contributions — ",
@@ -3668,9 +3690,52 @@ lForetDense.setOpacity = function(value){
 // actif quel que soit le zoom. _syncForetDenseZoom() est défini près de buildForetDenseLayer().
 const FORET_DENSE_MIN_ZOOM=10;
 let _foretDenseZoomHintShown=false;
+// lForetOuverte / lLandeMaquis (brief F, 2026-09-02) — couches contextuelles hors calcul,
+// mêmes source/format que lForetDense (BD Forêt V2 IGN, cf.
+// scripts/build_foret_ouverte_lande_corse_geojson.py) mais CODE_TFV différent et AUCUNE
+// consommation par calcVegetationAttenuation() ni par aucun autre calcul — display only.
+// Canvas dédié par couche (même rationale zIndex que _foretDenseCanvas ci-dessus : sans effet
+// sur l'ordre réel, documenté pour ne pas être re-découvert). setOpacity() shim + repaint forcé
+// (_update()) posés directement ici dès la création — le bug de repaint manquant, trouvé et
+// corrigé en clôturant le brief E sur lForetDense (cf. commentaire ci-dessus), est évité par
+// construction plutôt que redécouvert sur ces deux couches.
+const _foretOuverteCanvas=L.canvas({padding:0.5});
+const lForetOuverte=L.layerGroup();
+lForetOuverte.setOpacity = function(value){
+  const FILL_RATIO = 0.13 / 0.6;
+  this.eachLayer(function(child){
+    if (typeof child.setStyle === 'function') child.setStyle({opacity:value, fillOpacity:value*FILL_RATIO});
+  });
+  if (typeof _foretOuverteCanvas !== 'undefined' && typeof _foretOuverteCanvas._update === 'function') {
+    _foretOuverteCanvas._update();
+  }
+};
+const _landeMaquisCanvas=L.canvas({padding:0.5});
+const lLandeMaquis=L.layerGroup();
+lLandeMaquis.setOpacity = function(value){
+  const FILL_RATIO = 0.13 / 0.6;
+  this.eachLayer(function(child){
+    if (typeof child.setStyle === 'function') child.setStyle({opacity:value, fillOpacity:value*FILL_RATIO});
+  });
+  if (typeof _landeMaquisCanvas !== 'undefined' && typeof _landeMaquisCanvas._update === 'function') {
+    _landeMaquisCanvas._update();
+  }
+};
+// Zoom-gate visuel, même rationale que FORET_DENSE_MIN_ZOOM (les deux couches ont davantage de
+// parties que la forêt dense — 10 180 et 8 076 respectivement, cf. mesure de surface au brief F —
+// donc au moins autant de raison de saturer la carte à petite échelle). N'affecte que
+// l'affichage : ces couches ne pilotent aucun calcul de toute façon.
+const FORET_OUVERTE_MIN_ZOOM=10;
+let _foretOuverteZoomHintShown=false;
+const LANDE_MAQUIS_MIN_ZOOM=10;
+let _landeMaquisZoomHintShown=false;
+// Exclusivité groupe végétation (brief F, étape 6) : une seule couche de couvert visible à la
+// fois, comme les fonds de carte — trois calques superposés produiraient des teintes composites
+// illisibles. Lu par tog() ci-dessous ; ne concerne QUE ces trois id, aucune autre couche.
+const VEG_GROUP=['foretdense','foretouverte','landemaquis'];
 // SCISSION 2026-08-29 (brief « exécution groupée », item C) : con → cert (lCert, fiches
 // certifiées ANFR/EXEM) + contrib (lCon, contributions citoyennes). Deux boutons, deux toggles.
-const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,cert:lCert,contrib:lCon,foretdense:lForetDense,crustal:lCrustal,openrad:lOpenRad};
+const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,cert:lCert,contrib:lCon,foretdense:lForetDense,foretouverte:lForetOuverte,landemaquis:lLandeMaquis,crustal:lCrustal,openrad:lOpenRad};
 const WMS={hyd:wmsHyd,emag:wmsEmag};
 // hot:false/hotrf:true — modèle RF activé par défaut à la place du champ magnétique
 // composite (arbitrage Soleil 2026-08-23). Swap symétrique avec la déclaration lHot/lHotRF
@@ -3818,6 +3883,10 @@ const LAYER_SUBTITLE_FR={
   // réelle, jamais examiné par PR #1068 ni par la dette privée RF-FOREST-TERRAIN-PLACEHOLDER-001
   // (elle-même à jour ni sur l'état du code ni sur ce PR).
   foretdense:'Essences hautes (BD Forêt V2 IGN), hors maquis-forêt — atténue le RF au clic carte quand activé (pas la carte de chaleur).',
+  // foretouverte/landemaquis (brief F, 2026-09-02) : « hors calcul » explicite ici, même formule
+  // que crustal/contrib ci-dessous — pas seulement un badge, l'infobulle mobile le dit aussi.
+  foretouverte:'BD Forêt V2 IGN, couvert 10-40 % — millésimes 2016-2017. Contexte seul, hors calcul.',
+  landemaquis:'BD Forêt V2 IGN, landes et maquis non boisés — millésimes 2016-2017. Contexte seul, hors calcul.',
   crustal:'Anomalies magnétiques de référence, mondiales et corses — comparaison documentaire, hors calcul.',
   cert: '236 fiches de mesure certifiées (2002–2026) — 21 ont servi à calibrer le modèle RF.',
   contrib:'Mesures citoyennes au smartphone, non certifiées — affichage seul, hors calcul.',
@@ -4392,6 +4461,26 @@ function tog(id,cls,btn){
   // Guard : couche migrée hors de ce fichier
   // ou référence cassée — sortie silencieuse pour éviter map.addLayer(undefined).
   if(!LAYERS[id]&&!WMS[id])return;
+  // Exclusivité groupe végétation (brief F, 2026-09-02, étape 6) : activer une couche du groupe
+  // désactive au préalable les autres membres actifs — même mécanique que le OFF manuel plus
+  // bas, appliquée ici aux autres membres pour ne jamais superposer deux couches de couvert
+  // (« comme les fonds de carte »). VEG_GROUP déclaré près de LAYERS plus haut dans ce fichier ;
+  // n'affecte que ses 3 membres, no-op pour tout autre id.
+  if(VEG_GROUP.indexOf(id)!==-1 && !ACTIVE[id]){
+    VEG_GROUP.forEach(function(other){
+      if(other===id || !ACTIVE[other]) return;
+      map.removeLayer(LAYERS[other]);
+      ACTIVE[other]=false;
+      var ob=document.getElementById('b-'+other);
+      if(ob) ob.className='lbtn';
+      if(other==='foretdense')_foretDenseZoomHintShown=false;
+      if(other==='foretouverte')_foretOuverteZoomHintShown=false;
+      if(other==='landemaquis')_landeMaquisZoomHintShown=false;
+      var orow=document.getElementById(other+'-op-row');
+      if(orow) orow.style.display='none';
+      showLegend(other,false);
+    });
+  }
   // Auto-fermeture ≤600px retirée (dette confirmée, trouvée en testant PR #1029) : seuil
   // hérité d'avant la tabbar mobile (Phase 1, contrat CONTRAT_NAV_MOBILE_APP_2026-08-23.md),
   // distinct du standard 768px désormais utilisé partout ailleurs (.mobile-tabbar/.fab-mesure/
@@ -4407,6 +4496,8 @@ function tog(id,cls,btn){
     if(id==='emag')document.getElementById('emag-op-row').style.display='none';
     if(id==='crustal')showCrustalGauge(false);
     if(id==='foretdense'){_foretDenseZoomHintShown=false;document.getElementById('foretdense-op-row').style.display='none';}
+    if(id==='foretouverte'){_foretOuverteZoomHintShown=false;document.getElementById('foretouverte-op-row').style.display='none';}
+    if(id==='landemaquis'){_landeMaquisZoomHintShown=false;document.getElementById('landemaquis-op-row').style.display='none';}
     if(id==='bt')_btZoomHintShown=false;
     showLegend(id,false);
   }else{WMS[id]?map.addLayer(WMS[id]):map.addLayer(LAYERS[id]);ACTIVE[id]=true;if(btn)btn.classList.add(cls);
@@ -4418,6 +4509,16 @@ function tog(id,cls,btn){
       document.getElementById('foretdense-op-row').style.display='flex';
       if(lForetDense.getLayers().length===0)loadForetDenseGrid().then(buildForetDenseLayer);
       else _syncForetDenseZoom(true);
+    }
+    if(id==='foretouverte'){
+      document.getElementById('foretouverte-op-row').style.display='flex';
+      if(lForetOuverte.getLayers().length===0)loadForetOuverte();
+      else _syncForetOuverteZoom(true);
+    }
+    if(id==='landemaquis'){
+      document.getElementById('landemaquis-op-row').style.display='flex';
+      if(lLandeMaquis.getLayers().length===0)loadLandeMaquis();
+      else _syncLandeMaquisZoom(true);
     }
     if(id==='crustal'){if(lCrustal.getLayers().length===0)buildCrustalLayer();showCrustalGauge(true);}
     if(id==='openrad'&&lOpenRad.getLayers().length===0)loadOpenRad();
@@ -9096,6 +9197,72 @@ function _syncForetDenseZoom(fromToggle){
   }
 }
 
+// buildForetOuverteLayer() / buildLandeMaquisLayer() — brief F (2026-09-02), couches
+// contextuelles hors calcul. Contrairement à buildForetDenseLayer() : pas de parsing vers un
+// tableau PARTS dédié (FORET_DENSE_PARTS n'existe que pour servir isPointInForest(), un besoin
+// de calcul) — geojson brut passé directement à L.geoJSON(), ces couches n'étant jamais lues
+// par aucune fonction de calcul. Style : mêmes epaisseur/ratio contour-remplissage que
+// buildForetDenseLayer (cohérence visuelle du groupe), teintes DA v2 différenciées
+// (--maquis-clair #4F7048 / --tx-ocre #C28533, palette existante, aucune couleur neuve).
+function loadForetOuverte(){
+  return fetch('public/data/foret_ouverte_corse.geojson', {signal: AbortSignal.timeout(8000)})
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(geojson){ buildForetOuverteLayer(geojson); })
+    .catch(function(e){ console.warn('[Tellux] foret_ouverte_corse.geojson indisponible : '+e.message); });
+}
+function buildForetOuverteLayer(geojson){
+  lForetOuverte.clearLayers();
+  if(!geojson || !geojson.features || !geojson.features.length) return;
+  L.geoJSON(geojson,{
+    renderer:_foretOuverteCanvas,
+    style:{color:'#4F7048',weight:0.8,opacity:0.6,fillColor:'#4F7048',fillOpacity:0.13,interactive:false}
+  }).addTo(lForetOuverte);
+  _syncForetOuverteZoom(true);
+}
+function _syncForetOuverteZoom(fromToggle){
+  if(typeof ACTIVE==='undefined'||!ACTIVE.foretouverte)return;
+  const visible=map.getZoom()>=FORET_OUVERTE_MIN_ZOOM;
+  if(visible){
+    if(!map.hasLayer(lForetOuverte))map.addLayer(lForetOuverte);
+    _foretOuverteZoomHintShown=false;
+  }else{
+    if(map.hasLayer(lForetOuverte))map.removeLayer(lForetOuverte);
+    if(fromToggle||!_foretOuverteZoomHintShown){
+      info(jt('foretouverte_zoom_hint','Forêt ouverte — couche visible à partir du zoom 10 (trop étendue à petite échelle) ; couche de contexte, hors calcul.'),null,4500);
+      _foretOuverteZoomHintShown=true;
+    }
+  }
+}
+function loadLandeMaquis(){
+  return fetch('public/data/lande_maquis_corse.geojson', {signal: AbortSignal.timeout(8000)})
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(geojson){ buildLandeMaquisLayer(geojson); })
+    .catch(function(e){ console.warn('[Tellux] lande_maquis_corse.geojson indisponible : '+e.message); });
+}
+function buildLandeMaquisLayer(geojson){
+  lLandeMaquis.clearLayers();
+  if(!geojson || !geojson.features || !geojson.features.length) return;
+  L.geoJSON(geojson,{
+    renderer:_landeMaquisCanvas,
+    style:{color:'#C28533',weight:0.8,opacity:0.6,fillColor:'#C28533',fillOpacity:0.13,interactive:false}
+  }).addTo(lLandeMaquis);
+  _syncLandeMaquisZoom(true);
+}
+function _syncLandeMaquisZoom(fromToggle){
+  if(typeof ACTIVE==='undefined'||!ACTIVE.landemaquis)return;
+  const visible=map.getZoom()>=LANDE_MAQUIS_MIN_ZOOM;
+  if(visible){
+    if(!map.hasLayer(lLandeMaquis))map.addLayer(lLandeMaquis);
+    _landeMaquisZoomHintShown=false;
+  }else{
+    if(map.hasLayer(lLandeMaquis))map.removeLayer(lLandeMaquis);
+    if(fromToggle||!_landeMaquisZoomHintShown){
+      info(jt('landemaquis_zoom_hint','Lande / maquis — couche visible à partir du zoom 10 (trop étendue à petite échelle) ; couche de contexte, hors calcul.'),null,4500);
+      _landeMaquisZoomHintShown=true;
+    }
+  }
+}
+
 function exportTerrainCSV(){
   if(!contribsDB||contribsDB.length===0){alert('Aucune contribution en base.');return;}
   const header='lat,lon,type,valeur,unite,note,igrf_nt,score_anomalie,kp,bz,created_at';
@@ -9637,6 +9804,10 @@ map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
 // Zoom-gate visuel de la couche forêt dense (décision Soleil 2026-08-30) — cf. _syncForetDenseZoom.
 map.on('zoomend',function(){ _syncForetDenseZoom(false); });
 map.on('zoomend',function(){ _syncBTZoom(false); });
+// Zoom-gate visuel forêt ouverte / lande-maquis (brief F, 2026-09-02) — même rationale que
+// forêt dense ci-dessus, cf. _syncForetOuverteZoom/_syncLandeMaquisZoom.
+map.on('zoomend',function(){ _syncForetOuverteZoom(false); });
+map.on('zoomend',function(){ _syncLandeMaquisZoom(false); });
 setTimeout(()=>Promise.all([loadAnt().then(function(){if(ACTIVE.ant)lAnt.addTo(map);}),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.cert)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k). ant:true au boot (2026-09-02) : lAnt.addTo(map) conditionné à ACTIVE.ant, même pattern que lCert ci-après.
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET DUR/EBR/CLF (nom loadAQU conservé, cf. commentaire fonction) — correction externe réelle niveau 1
@@ -11596,6 +11767,10 @@ function capCleanup(){
 ["lyr_emag_tt","#b-emag","title","Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse","Fondu magneticu regiunale NOAA EMAG2v3 — anumalie di u zoccalu prufondu corsu","NOAA EMAG2v3 regional magnetic background — deep basement anomalies of Corsica"],
 ["lyr_foretdense","#b-foretdense","","Forêt dense (atténuation RF)","Fureste densa (attenuazione RF)","Dense forest (RF attenuation)"],
 ["lyr_foretdense_tt","#b-foretdense","title","BD Forêt V2 IGN — forêt fermée à essence haute (chênes, hêtre, châtaignier, pins laricio/maritime, sapin…), hors classes de feuillus indifférenciés qui recouvrent surtout le maquis-forêt corse (~28 % de la Corse). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6) dans le calcul au clic carte ; le désactiver la retire.","BD Fureste V2 IGN — fureste chjinta à essenza alta (querce, fau, castagnu, pini laricio/marittimu, abetu…), fora di e classi di latifogli indifferenziati chì cuprenu sopratuttu u machja-fureste corsu (~28 % di a Corsica). Attivà stu buttone include l'attenuazione RF di a canopea (mudellu ITU-R P.833-6) in u calculu à u cliccu carta ; disattivallu a caccia.","IGN BD Forêt V2 — closed forest of tall species (oaks, beech, chestnut, laricio/maritime pine, fir…), excluding undifferentiated broadleaf classes that mostly map to Corsican maquis-forest (~28% of Corsica). Enabling this button includes canopy RF attenuation (ITU-R P.833-6 model) in the on-click map calculation; disabling it removes it."],
+["lyr_foretouverte","#b-foretouverte","","Forêt ouverte (2016-2017)","Fureste aperta (2016-2017)","Open forest (2016-2017)"],
+["lyr_foretouverte_tt","#b-foretouverte","title","BD Forêt V2 IGN — forêt ouverte (couvert arboré 10-40 %, feuillus FO1/conifères FO2/mélange FO3 — codes nomenclature IGN §4.1.2). Couche de contexte, millésimes 2016 (2B) / 2017 (2A) — incendies possibles depuis, ne pas lire comme un état actuel. N'entre dans AUCUN calcul (contrairement à Forêt dense) ; une seule couche de végétation affichée à la fois.","BD Fureste V2 IGN — fureste aperta (cupertura arburata 10-40 %, latifogli FO1/cunifere FO2/mischju FO3 — codici nomenclatura IGN §4.1.2). Stratu di cuntestu, millesimi 2016 (2B) / 2017 (2A) — pussibuli scindi dapoi, ùn hè da leghje micca cum'è un statu attuale. Ùn entre in NISUN calculu (à u cuntrariu di a Fureste densa) ; una sola stratu di vegetazione affissata à u listessu tempu.","IGN BD Forêt V2 — open forest (canopy cover 10-40%, broadleaf FO1/conifer FO2/mixed FO3 — IGN nomenclature codes §4.1.2). Context layer, vintages 2016 (2B) / 2017 (2A) — wildfires possible since; not to be read as a current state. Enters NO calculation (unlike Dense forest); only one vegetation layer shown at a time."],
+["lyr_landemaquis","#b-landemaquis","","Lande / maquis (2016-2017)","Landa / machja (2016-2017)","Heathland / scrub (2016-2017)"],
+["lyr_landemaquis_tt","#b-landemaquis","title","BD Forêt V2 IGN — lande (bruyères, genêts, ajoncs ; garrigues et maquis non boisés — code LA4, nomenclature IGN §4.1.2). Couche de contexte, millésimes 2016 (2B) / 2017 (2A) — incendies possibles depuis, ne pas lire comme un état actuel. N'entre dans AUCUN calcul (contrairement à Forêt dense) ; une seule couche de végétation affichée à la fois.","BD Fureste V2 IGN — landa (brughere, genestre, spini ; garriche è machje micca imbuscate — codice LA4, nomenclatura IGN §4.1.2). Stratu di cuntestu, millesimi 2016 (2B) / 2017 (2A) — pussibuli scindi dapoi, ùn hè da leghje micca cum'è un statu attuale. Ùn entre in NISUN calculu (à u cuntrariu di a Fureste densa) ; una sola stratu di vegetazione affissata à u listessu tempu.","IGN BD Forêt V2 — heathland (heather, broom, gorse; unwooded garrigue and scrub/maquis — code LA4, IGN nomenclature §4.1.2). Context layer, vintages 2016 (2B) / 2017 (2A) — wildfires possible since; not to be read as a current state. Enters NO calculation (unlike Dense forest); only one vegetation layer shown at a time."],
 ["lyr_hyd","#b-hyd","","Hydrographie","Idrugrafia","Hydrography"],
 ["lyr_hyd_tt","#b-hyd","title","Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct","Falde è corsi d'acqua sutterranei (BRGM REMNAPPE) — stratu visuale ; u calculu adopra un dataset distintu","Groundwater and underground watercourses (BRGM REMNAPPE) — visual layer; the calculation uses a separate dataset"],
 ["lyr_crustal","#b-crustal","","Anomalies de référence (mondiales & Corse)","Anumalie di riferenza (mundiale è corsa)","Reference anomalies (worldwide & Corsica)"],
@@ -11620,6 +11795,8 @@ function capCleanup(){
 ["op_hyd","#hyd-op-row > span:first-child","","Nappes","Falde","Groundwater"],
 ["op_emag","#emag-op-row > span:first-child","","Fond magnétique régional","Fondu magneticu regiunale","Regional magnetic background"],
 ["op_foretdense","#foretdense-op-row > span:first-child","","Forêt dense","Fureste densa","Dense forest"],
+["op_foretouverte","#foretouverte-op-row > span:first-child","","Forêt ouverte","Fureste aperta","Open forest"],
+["op_landemaquis","#landemaquis-op-row > span:first-child","","Lande / maquis","Landa / machja","Heathland / scrub"],
 ["cbar_aria","#conditions-bar","aria-label","Conditions live et indicateurs temps réel","Cundizione live è indicatori in tempu reale","Live conditions and real-time indicators"],
 ["cbar_toggle_aria","#conditions-bar-toggle","aria-label","Déplier les détails conditions","Sviluppà i ditagli cundizione","Expand condition details"],
 ["cbar_summary_aria","#conditions-bar-summary","aria-label","Indicateurs temps réel résumé","Indicatori in tempu reale riassuntu","Real-time indicators summary"],
