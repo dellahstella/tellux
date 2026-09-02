@@ -515,6 +515,22 @@ if(document.readyState === 'loading'){
         svg.appendChild(pts);
         el.appendChild(svg);
         requestAnimationFrame(() => svg.classList.add('in'));
+        /* Correctif robustesse (2026-09-02, brief N) : le rAF ci-dessus ne se déclenche
+           pas tant que document.visibilityState !== 'visible' (comportement navigateur
+           standard, pas un bug applicatif) — un visiteur ouvrant le lien en onglet
+           d'arrière-plan (clic milieu, Ctrl+clic, target=_blank — mode d'ouverture
+           courant, notamment depuis un mail ou un document) verrait le hero rester
+           invisible indéfiniment, sans rattrapage au retour au premier plan. Écouteur
+           complémentaire, pas un remplacement du rAF : dès la première visibilité
+           réelle, rejoue l'ajout de la classe (classList.add est idempotent, sans effet
+           si déjà posée par le rAF) puis se retire. Aucune modification visuelle. */
+        function onFirstVisible(){
+          if(document.visibilityState === 'visible'){
+            svg.classList.add('in');
+            document.removeEventListener('visibilitychange', onFirstVisible);
+          }
+        }
+        document.addEventListener('visibilitychange', onFirstVisible);
       })
       .catch(() => {});
   }

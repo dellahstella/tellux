@@ -6,16 +6,21 @@ name: R5 — Garde-fou doctrine anti-fuite
 # pas seulement les 9 .html déployés — le scanner dérive sa surface de `git ls-files` (gitignored
 # exclu de facto), filtrée par extension + garde-fous (data/binaires exclus, cap taille, auto-exclusion
 # des fichiers du garde-fou). Motivation : un .md tracké (NOTE_METHODE_CO.md) a échappé au scan .html
-# le 2026-06-29 (fix manuel #893). 3 classes de fuite doctrine v4 :
+# le 2026-06-29 (fix manuel #893). 4 classes de fuite doctrine v4 (PERSO ajoutée 2026-09-02,
+# brief I) :
 #   - FUITE       : raison sociale (secret LEAK_TERMS_REGEX), FEDER/ANR/OS1.2/candidature,
 #                   corpus privé, axes, SARL/SASU, SIRET espacé.
+#   - PERSO       : données personnelles (adresse postale, coordonnées de domicile) — motifs
+#                   structurels de fiche d'adresse, scanne aussi scripts/*.json et
+#                   public/data/*.json (exclus des autres classes, une donnée peut fuiter).
 #   - PROSCRIT    : formulations interdites (exception étroite « cité/réfuté »).
 #   - GELÉ (DIFF) : modification des blocs EXPERT_*_DEFAULT / calcGammaAmbient / NCRP 94 dans app.html.
 #
 # DÉTECTE et SIGNALE (ouvre/maj une issue). Sur cron/push = ALERT-ONLY (ne casse pas le build).
-# Sur PULL_REQUEST = GATE BLOQUANT (step « Gate bloquant ») : un finding de classe FUITE (fuite réelle)
-# ou CONFIG (scanner dégradé — secret absent, fichier sauté par le cap de taille, régex invalide,
-# grep en échec, scan interrompu, surface vide) fait ÉCHOUER le check → merge bloqué
+# Sur PULL_REQUEST = GATE BLOQUANT (step « Gate bloquant ») : un finding de classe FUITE (fuite
+# réelle), PERSO (donnée personnelle) ou CONFIG (scanner dégradé — secret absent, fichier sauté
+# par le cap de taille, régex invalide, grep en échec, scan interrompu, surface vide) fait
+# ÉCHOUER le check → merge bloqué
 # (fail-closed : un scan requis n'est jamais silencieusement aveugle NI partiel — durci 2026-07-10). PROSCRIT / GELÉ restent
 # NON bloquants (signalés) même sur PR : éviter de geler main sur de la pédagogie (exception cité/réfuté)
 # ou un edit de zone gelée légitime (process physicien). Le scanner reste exit 0 (détecteur) ; le blocage
@@ -139,7 +144,7 @@ jobs:
             awk -F'\t' '$2!="META"' findings.txt
             echo '```'
             echo ""
-            echo "Classes : **FUITE** (financement/identité/corpus) · **PROSCRIT** (formulation interdite) · **GELE** (bloc gelé modifié → relecture physicien)."
+            echo "Classes : **FUITE** (financement/identité/corpus) · **PERSO** (donnée personnelle — bloquant sur PR) · **PROSCRIT** (formulation interdite) · **GELE** (bloc gelé modifié → relecture physicien)."
             echo "Faux positif ? → ajouter \`fichier<TAB>label\` à \`.github/scripts/leak_guard_allowlist.txt\`."
             echo ""
             echo "> Alert-only (le build n'est pas cassé). Correction d'un contenu public = Cran C, décision Soleil."
@@ -151,12 +156,14 @@ jobs:
             gh issue create --title "[routine:leak-guard] Fuite doctrine potentielle sur surface publique" --label routine --body-file "$BODY"
           fi
 
-      - name: Gate bloquant (PR uniquement — FUITE / CONFIG)
+      - name: Gate bloquant (PR uniquement — FUITE / PERSO / CONFIG)
         # Rend le check MORDANT sur pull_request : échoue (merge bloqué) si findings.txt porte au
         # moins un finding de classe FUITE (fuite réelle : identité, modules confidentiels, corpus,
-        # financement, SIRET…) ou CONFIG (scanner dégradé : secret absent, fichier sauté par le cap
-        # de taille, régex invalide, grep en échec, scan interrompu, surface vide, findings.txt
-        # absent → fail-closed, un scan requis n'est jamais silencieusement aveugle ni partiel).
+        # financement, SIRET…), PERSO (donnée personnelle — adresse, coordonnée de domicile ;
+        # brief I, 2026-09-02, motivé par #903 : « alert-only non trié ne protège de rien ») ou
+        # CONFIG (scanner dégradé : secret absent, fichier sauté par le cap de taille, régex
+        # invalide, grep en échec, scan interrompu, surface vide, findings.txt absent →
+        # fail-closed, un scan requis n'est jamais silencieusement aveugle ni partiel).
         # PROSCRIT / GELÉ NON bloquants (déjà signalés en issue) : évite de geler main sur de la
         # pédagogie (exception cité/réfuté) ou un edit de zone gelée légitime (process physicien).
         # Ne recopie JAMAIS la chaîne sensible : fichier:ligne + classe/label seulement.
@@ -175,10 +182,10 @@ jobs:
             echo "::error::Garde-fou anti-fuite : sentinelle de fin de scan ABSENTE (scanner jamais exécuté ou tué avant son trap). Fail-closed."
             exit 1
           fi
-          if awk -F'\t' '$2=="FUITE"||$2=="CONFIG"{c++} END{exit (c>0)?0:1}' findings.txt; then
-            echo "::error::Garde-fou anti-fuite : marqueur BLOQUANT détecté (classe FUITE/CONFIG). Merge bloqué."
+          if awk -F'\t' '$2=="FUITE"||$2=="PERSO"||$2=="CONFIG"{c++} END{exit (c>0)?0:1}' findings.txt; then
+            echo "::error::Garde-fou anti-fuite : marqueur BLOQUANT détecté (classe FUITE/PERSO/CONFIG). Merge bloqué."
             echo "Emplacements bloquants (la chaîne sensible n'est jamais recopiée) :"
-            awk -F'\t' '$2=="FUITE"||$2=="CONFIG"{print "  "$1"  ["$2"/"$3"]"}' findings.txt
+            awk -F'\t' '$2=="FUITE"||$2=="PERSO"||$2=="CONFIG"{print "  "$1"  ["$2"/"$3"]"}' findings.txt
             echo ""
             echo "→ Fuite réelle : retirer la mention (contenu public = Cran C, décision Soleil)."
             echo "→ Faux positif légitime : allowlister « chemin<TAB>label » dans .github/scripts/leak_guard_allowlist.txt."

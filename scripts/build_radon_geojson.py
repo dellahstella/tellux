@@ -85,7 +85,7 @@ def get_radon_resource_url():
 
     raise RuntimeError(
         "Aucun fichier exploitable trouvé dans le dataset data.gouv.fr.\n"
-        "Vérifiez manuellement : https://www.data.gouv.fr/datasets/zonage-en-potentiel-radon"
+        f"Vérifiez manuellement : https://www.data.gouv.fr/datasets/{DATAGOUV_DATASET_ID}/"
     )
 
 

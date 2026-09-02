@@ -620,6 +620,7 @@ li ol {
     </tbody>
   </table>
   <p data-i18n-key="s8_p1"><strong>Calibration :</strong> Le modèle RF est calibré sur les mesures certifiées <code>cartoradio_certified_corse.json</code> (points conformes en environnement extérieur public). Le facteur multiplicatif <code>k ≈ 0,361</code> est dérivé une fois au démarrage comme médiane du ratio mesuré/prédit. Validation croisée LOO-CV, IC 95 % par bootstrap : [0,186 ; 0,414]. Le facteur est constant sur tout le territoire.</p>
+  <p data-i18n-key="s8_p1b"><strong>Note :</strong> Les points de mesure ayant servi à dériver <code>k</code> sont pour l'essentiel situés hors des zones urbaines denses de Corse. Le modèle ne modélise pas séparément l'atténuation par le bâti (murs, structures). Cette composante n'étant pas prise en compte, son effet serait de faire surestimer, plutôt que sous-estimer, le champ RF réel en milieu urbain dense. Cette possibilité n'est aujourd'hui ni quantifiée ni corrigée ; elle est mentionnée ici pour la transparence sur la portée réelle de la calibration.</p>
   <p data-i18n-key="s8_p2"><strong>Note :</strong> La végétation est modélisée à partir de la <strong>BD Forêt V2 de l'IGN</strong>, source vectorielle locale. Ce n'est pas un raster mondial (ESA WorldCover, CORINE). Le modèle d'atténuation utilisé est le <strong>modèle simplifié historique ITU-R P.833-6 (2007)</strong> — version obsolète, en attente de migration vers P.833-10.</p>
 </section>
 
@@ -770,7 +771,14 @@ function telluxGetEffectiveLang(){
 (function(){
   'use strict';
   if (telluxGetEffectiveLang() !== 'en') return;
-  var EN_STRINGS = {};
+  // s8_p1b (2026-09-02) : seule clé peuplée pour l'instant — le reste de la page suit
+  // I18N-DOC-PAGES-EN-001 (traduction FR->EN non livrée, dette suivie, EN_STRINGS vide par
+  // ailleurs). Traduction fournie ici parce que c'est un contenu neuf ajouté aujourd'hui, pas
+  // une reprise de la dette existante — ne pas la considérer comme un début de résolution de
+  // I18N-DOC-PAGES-EN-001, qui reste entière pour tout le reste de la page.
+  var EN_STRINGS = {
+    s8_p1b: '<strong>Note:</strong> The measurement points used to derive <code>k</code> are for the most part located outside Corsica’s dense urban areas. The model does not separately model attenuation from built structures (walls, buildings). As this component is not accounted for, its effect would be to overestimate, rather than underestimate, the real RF field in dense urban areas. This possibility is neither quantified nor corrected today; it is mentioned here for transparency about the actual scope of the calibration.'
+  };
   var applied = 0;
   document.querySelectorAll('[data-i18n-key]').forEach(function(el){
     var k = el.getAttribute('data-i18n-key');
