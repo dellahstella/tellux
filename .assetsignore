@@ -4,3 +4,30 @@
 # tel quel via son extension absente).
 *.md
 *.txt
+
+# Brief M3 (2026-09-02) — réduction du paquet déployé (754 fichiers/337 Mo,
+# timeout de build Cloudflare à 20 min, cf. brief M2). Exclusion du DÉPLOIEMENT
+# uniquement : aucun fichier supprimé, aucun changement de tracking git — les
+# originaux restent dans le dépôt, juste absents du paquet servi par Cloudflare.
+#
+# Originaux PNG patrimoine (288 Mo, 127 fichiers) : jamais servis. Vérifié par
+# lecture exhaustive du code (pas supposé) — les 9 points d'appel de
+# _illustrationUrl() dans patrimoine.html (l. 951, 1071, 1328, 1350, 1351, 2452,
+# 2597, 3063, 3238), couvrant les 4 sources de chemin distinctes (champs JSON
+# `visuel`/`illustration`/`illustration_path` + carte codée en dur
+# DOYENNE_ILLUSTRATIONS), retirent systématiquement l'extension .png et la
+# remplacent par une variante .webp avant tout usage en <img src>/.src. Le
+# chemin .png n'est qu'une clé de nommage dans les données, jamais une
+# ressource récupérée. Confirmé : aucune des 10 pages servies du dépôt
+# (index.html, app.html, mairies.html, radon.html, etc.) ne référence ce
+# dossier — seul patrimoine.html le fait, via les 4 sources ci-dessus.
+docs/assets/visuels/*.png
+
+# Variante _full.webp (28 Mo, 127 fichiers) : jamais demandée non plus.
+# Vérifié : sur les 9 points d'appel de _illustrationUrl() listés ci-dessus,
+# chacun passe un littéral 'thumb' ou 'medium' comme argument de taille —
+# jamais 'full', jamais une variable susceptible de valoir 'full' au runtime.
+# Le commentaire du code source ("full : zoom plein cadre (réservé futur)",
+# patrimoine.html l. 621) est exact — fonctionnalité non construite, pas un
+# résidu périmé comme d'autres commentaires trouvés aujourd'hui.
+docs/assets/visuels/*_full.webp
