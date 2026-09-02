@@ -51,14 +51,13 @@ Albertacce, Algajola, Aregno, Asco, Avapessa, Barbaggio, Bastia, Belgodère, Cal
 |---|---|
 | **Jeu de données** | Zonage en potentiel radon |
 | **Producteur** | IRSN (Autorité désormais ASNR) |
-| **URL data.gouv.fr** | https://www.data.gouv.fr/datasets/zonage-en-potentiel-radon |
+| **URL data.gouv.fr** | https://www.data.gouv.fr/datasets/zonage-en-potentiel-radon-2/ (corrigée 2026-09-02, brief L/#928 : l'URL d'origine sans « -2 » renvoie 404) |
 | **Format disponible** | Shapefile (.shp/.zip), possiblement GeoJSON ou CSV |
 | **Licence** | Licence Ouverte 2.0 — Etalab (redistribution libre avec mention de source) |
 | **Texte réglementaire** | Arrêté du 27 juin 2018 — https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000037131346/ |
 | **Dernière MAJ connue** | 2018 (entrée en vigueur du classement) |
 | **Granularité** | Commune (code INSEE) |
 
-Jeu de données alternatif : https://www.data.gouv.fr/datasets/zonage-en-potentiel-radon-2/  
 Portail géographique : https://geo.data.gouv.fr/en/datasets/aa6a9538f1556efba4a58be33ecd84e79cd40c52  
 API Géorisques (consultation par commune) : https://www.georisques.gouv.fr/minformer-sur-un-risque/radon
 
@@ -195,7 +194,7 @@ fetch('public/data/radon_zones_corse.geojson')
 ## 8. Références
 
 - Arrêté du 27 juin 2018 portant délimitation des zones à potentiel radon du territoire français. Légifrance. https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000037131346/
-- IRSN. Zonage en potentiel radon. data.gouv.fr. https://www.data.gouv.fr/datasets/zonage-en-potentiel-radon
+- IRSN. Zonage en potentiel radon. data.gouv.fr. https://www.data.gouv.fr/datasets/zonage-en-potentiel-radon-2/
 - ASNR. Connaître le potentiel radon de ma commune. https://recherche-expertise.asnr.fr/savoir-comprendre/environnement/connaitre-potentiel-radon-ma-commune
 - Géorisques. Radon. https://www.georisques.gouv.fr/minformer-sur-un-risque/radon
 - CDG 2B. Fiche risque radon. https://www.cdg2b.com/wp-content/uploads/2020/10/14-risque-radon.pdf
