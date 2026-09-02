@@ -127,7 +127,7 @@ Ordre d'attaque pour obtenir la liste exhaustive :
 | Arrêté 27/06/2018 | https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000037131346/ | BLOQUÉ | Référence |
 | Article 1 arrêté | https://www.legifrance.gouv.fr/jorf/article_jo/JORFARTI000037131352 | BLOQUÉ | Référence |
 | Dataset IRSN | https://www.data.gouv.fr/datasets/connaitre-le-potentiel-radon-de-ma-commune | BLOQUÉ | Référence |
-| Zonage potentiel radon | https://www.data.gouv.fr/datasets/zonage-en-potentiel-radon | BLOQUÉ | Référence |
+| Zonage potentiel radon | https://www.data.gouv.fr/datasets/zonage-en-potentiel-radon-2/ | OK | Référence (URL corrigée 2026-09-02, brief L/#928 : l'originale renvoie 404, remplacée par le jeu alternatif déjà documenté ci-dessous dans radon_zones_corse_notes.md) |
 | ASNR cartographie | https://recherche-expertise.asnr.fr/savoir-comprendre/environnement/connaitre-potentiel-radon-ma-commune | BLOQUÉ | Référence |
 | BRGM cartographie Corse | https://www.corse.developpement-durable.gouv.fr/IMG/pdf/Carto_Radon_BRGM_-_RP-50200-FR.pdf | Indirect | Cité en recherche web |
 | Plaquette info radon Corse | https://www.corse.developpement-durable.gouv.fr/IMG/pdf/Plaquette_d_information_sur_le_radon_en_Corse.pdf | Indirect | Cité en recherche web |
