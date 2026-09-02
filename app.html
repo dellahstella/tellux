@@ -7514,7 +7514,20 @@ map.on('click',async e=>{
   const phEmoji=perturbHumain<=1?'\ud83d\udfe2':perturbHumain<=2?'\ud83d\udfe1':perturbHumain<=3?'\ud83d\udfe0':'\ud83d\udd34';
   const phLabel=perturbHumain<=1?jt('ph_label_tres_calme','Tr\u00e8s calme'):perturbHumain<=2?jt('ph_label_calme','Calme'):perturbHumain<=3?jt('ph_label_modere','Mod\u00e9r\u00e9'):jt('ph_label_perturbe','Perturb\u00e9');
   // Palette conforme §0.6 : sans rouge saturé ni vert saturé (pas de connotation danger/sécurité)
-  const phColor=perturbHumain<=1?'#3F5B3A':perturbHumain<=2?'#5A7D4E':perturbHumain<=3?'#C28533':'#8E2F1F';
+  // phColor — lot 3 phase B (2026-09-02, dette A11Y-CONTRAST-APP-PANELS-002). Deux des 4 niveaux
+  // échouaient sur le fond popup (rgb(245,240,231)) : #5A7D4E (vert moyen, perturb<=2) à 4,13 —
+  // sous AA — et #C28533 (ocre, perturb<=3) à 2,76 — classe critique. Hypothèse de redondance
+  // vérifiée EXHAUSTIVEMENT avant d'agir (seul site de rendu de phColor dans tout le fichier,
+  // grep à l'appui) : phEmoji (🟢🟡🟠🔴, 4 glyphes distincts) ET le chiffre exact perturbHumain/5
+  // accompagnent TOUJOURS la couleur — celle-ci n'est jamais le seul canal. Fusion retenue :
+  // vert_fonce et vert_moyen deviennent UN seul vert (#3F5B3A, 6,68) — la tentative de sauver
+  // vert_moyen en l'assombrissant le rapprochait mécaniquement de vert_fonce (mutuel 1,25-1,37
+  // selon la variante testée, contre 1,62 avant correction) sans gain d'information puisque
+  // l'emoji distingue déjà les deux niveaux. Ocre -> #8A5E22 (4,99 sur ce fond), réemploi de la
+  // même substitution que #1165/#1167/#1173 — une seule "ocre-texte" dans tout le fichier.
+  // Porphyre inchangé (7,18). Résultat : 4 niveaux sémantiques (glyphe+chiffre), 3 couleurs.
+  // Vérifié par rendu visuel avant d'écrire ce commentaire (mockup temporaire, jamais commité).
+  const phColor=perturbHumain<=1?'#3F5B3A':perturbHumain<=2?'#3F5B3A':perturbHumain<=3?'#8A5E22':'#8E2F1F';
   const anEmoji=activNat>=4?'\u26a1':activNat>=2?'\ud83e\udea8':'\u25cb';
   const anLabel=activNat>=4?jt('an_label_tres_actif','Tr\u00e8s actif'):activNat>=2?jt('an_label_actif','Actif'):jt('an_label_neutre','Neutre');
   // Lot 2 bis (2026-09-01) : la branche neutre passe de #9ca3af (2,24 — classe CRITIQUE) à
@@ -7589,7 +7602,16 @@ map.on('click',async e=>{
   // de l'arbitrage.
   //
   // Couleur Δ — palette neutre (sans rouge saturé)
-  const deltaCol=delta===null?'#626774':Math.abs(delta)<50?'#3F5B3A':Math.abs(delta)<200?'#C28533':'#8E2F1F';
+  // deltaCol — lot 3 phase B (2026-09-02). Seul le niveau ocre (#C28533, |Δ|<200) échouait
+  // (2,76, critique) ; neutre/vert/porphyre passent déjà (4,98/6,68/7,18). Hypothèse de
+  // redondance vérifiée EXHAUSTIVEMENT (seul site de rendu de deltaCol dans tout le fichier) —
+  // et ELLE NE TIENT PAS ici : deltaStr n'est qu'un chiffre signé brut ("+54 nT"), AUCUN glyphe
+  // ne l'accompagne, contrairement à phColor/anColor. La couleur reste donc un canal réel.
+  // Conséquence directe : PAS de fusion de niveaux ici, contrairement à phColor — les 4 niveaux
+  // (neutre/vert/ocre/porphyre) restent distincts, seul l'ocre est corrigé, en réemployant
+  // #8A5E22 (4,99 sur ce fond) — la même substitution que partout ailleurs dans ce fichier,
+  // pas une couleur choisie pour ce cas précis.
+  const deltaCol=delta===null?'#626774':Math.abs(delta)<50?'#3F5B3A':Math.abs(delta)<200?'#8A5E22':'#8E2F1F';
   // Barre susceptibilité magnétique — normalisée sur 60 nT (max grille GEO_SUSC_GRID)
   const suscPct=Math.min(100,Math.max(0,Math.round((susc_nT+5)/65*100)));
   const piezoBar=susc_nT>5?'<div style="height:3px;background:linear-gradient(90deg,#C28533 '+suscPct+'%,#e5e7eb '+suscPct+'%);border-radius:2px;margin:3px 0" title="Susceptibilité magnétique locale : '+susc_nT+' nT ('+geoType+')"></div>':'';
