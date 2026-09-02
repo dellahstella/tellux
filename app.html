@@ -6653,8 +6653,15 @@ async function calibrateRF(){
     const d=await r.json(); const mes=d.mesures||[];
     RF_CALIB_K=1; // IDEMPOTENCE : calibrer sur le champ BRUT (E_pred non calibré, indépendant
                   // d'un k antérieur). Bloc synchrone jusqu'au RF_CALIB_K=k_med (aucun await → pas de fenêtre).
-    const ratios=[]; const resRatios=[]; let nNC=0,nOOR=0,nIndoor=0; const bandE2={};
+    const ratios=[]; const resRatios=[]; let nNC=0,nOOR=0,nIndoor=0,nIneligible=0; const bandE2={};
     mes.forEach(m=>{
+      // GARDE-FOU (2026-09-02, ingestion élargie Cartoradio) : calib_eligible===false exclut EN
+      // PREMIER, avant tout autre filtre. Absence du champ (les 30 fiches d'origine, jamais
+      // retouchées) reste équivalente à éligible — comportement strictement inchangé pour elles.
+      // Les fiches ingérées le 2026-09-02 (206, cf. carto_ingest_elargi.cjs) portent toutes ce
+      // marqueur à false : leur éligibilité au pool de calibration est un arbitrage GELÉ-001b
+      // distinct, non tranché ici. Cf. dette privée CARTORADIO-REFRESH-001.
+      if(m.calib_eligible===false){ nIneligible++; return; }
       if(m.conforme===false){ nNC++; return; }                 // exclut l'aberrant non conforme
       const meas=m.valeur_max_vm; if(meas==null||m.lat==null||m.lon==null) return;
       const Epred=RF_field(m.lat,m.lon).E_total_V_m;            // k=1 forcé ci-dessus → champ brut
@@ -6683,8 +6690,13 @@ async function calibrateRF(){
     const medArr=a=>{const t=a.slice().sort((x,y)=>x-y);return t.length?(t.length%2?t[(t.length-1)/2]:(t[t.length/2-1]+t[t.length/2])/2):null;};
     const k_res=medArr(resRatios);
     const pen_dB=(k_res&&k_res>0)?+(20*Math.log10(k_med/k_res)).toFixed(1):null;
-    RF_CALIB_STATS={k_med:+k_med.toFixed(3),k_geo:+k_geo.toFixed(3),disp_geo:+disp_geo.toFixed(2),iqr:[+q(0.25).toFixed(3),+q(0.75).toFixed(3)],n_used:ratios.length,n_excl_nonconf:nNC,n_excl_oor:nOOR,n_excl_indoor:nIndoor,k_res:k_res!=null?+k_res.toFixed(3):null,pen_dB,n_total:mes.length,bands};
-    console.log('[Tellux] calibration RF : k='+k_med.toFixed(3)+' (méd) / '+k_geo.toFixed(3)+' (géo) · dispersion ×÷'+disp_geo.toFixed(2)+' · IQR ['+q(0.25).toFixed(2)+'–'+q(0.75).toFixed(2)+'] · n='+ratios.length+'/'+mes.length+' (exclus : '+nNC+' non-conf, '+nOOR+' hors-portée, '+nIndoor+' résidentiel) · pénétration intérieur ≈'+(pen_dB!=null?pen_dB:'?')+' dB');
+    // n_total reste le corpus PRIS EN COMPTE pour la calibration (fiches calib_eligible !== false)
+    // — inchangé à 30 après l'ingestion élargie du 2026-09-02, puisque les 206 nouvelles sont
+    // toutes exclues en amont (nIneligible). n_fichier_total expose la taille brute du fichier
+    // (236) séparément, pour audit, sans changer la signification d'aucun champ préexistant.
+    const nCalibCorpus=mes.length-nIneligible;
+    RF_CALIB_STATS={k_med:+k_med.toFixed(3),k_geo:+k_geo.toFixed(3),disp_geo:+disp_geo.toFixed(2),iqr:[+q(0.25).toFixed(3),+q(0.75).toFixed(3)],n_used:ratios.length,n_excl_nonconf:nNC,n_excl_oor:nOOR,n_excl_indoor:nIndoor,n_excl_ineligible:nIneligible,k_res:k_res!=null?+k_res.toFixed(3):null,pen_dB,n_total:nCalibCorpus,n_fichier_total:mes.length,bands};
+    console.log('[Tellux] calibration RF : k='+k_med.toFixed(3)+' (méd) / '+k_geo.toFixed(3)+' (géo) · dispersion ×÷'+disp_geo.toFixed(2)+' · IQR ['+q(0.25).toFixed(2)+'–'+q(0.75).toFixed(2)+'] · n='+ratios.length+'/'+nCalibCorpus+(nIneligible?' (+'+nIneligible+' hors pool, fichier='+mes.length+')':'')+' (exclus : '+nNC+' non-conf, '+nOOR+' hors-portée, '+nIndoor+' résidentiel) · pénétration intérieur ≈'+(pen_dB!=null?pen_dB:'?')+' dB');
     if(disp_geo>5) console.warn('[Tellux] calibration RF : dispersion large (×÷'+disp_geo.toFixed(1)+') — k médian = compromis central, incertitude locale élevée (constat qualité modèle, non masqué).');
     if(typeof ACTIVE!=='undefined'&&ACTIVE.hotrf&&typeof lHotRF!=='undefined'&&typeof buildHotRF==='function'){ lHotRF.clearLayers(); buildHotRF(); }
   }catch(e){ console.warn('[Tellux] calibration RF échec : '+e.message+' — k reste 1'); }
