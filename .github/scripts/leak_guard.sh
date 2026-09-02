@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# R5 — Garde-fou doctrine anti-fuite (scanner présence FUITE + PROSCRIT).
+# R5 — Garde-fou doctrine anti-fuite (scanner présence FUITE + PROSCRIT + PERSO).
 #
 # DÉTECTE et SIGNALE uniquement. N'écrit, ne corrige, ne supprime rien.
 # TOUJOURS exit 0 (alert-only : ne casse jamais le build ; le workflow lit la sortie, pas le code retour).
+# EXCEPTION PERSO (brief I, 2026-09-02, #903 : « alert-only non trié ne protège de rien ») : la
+# classe PERSO (données personnelles — adresses, coordonnées de domicile) est BLOQUANTE au gate
+# PR, comme FUITE/CONFIG déjà — le scanner reste toujours exit 0 (détecteur), c'est le step
+# « Gate bloquant » du workflow qui lit sa sortie et bloque sur ces 3 classes précises.
 # FAIL-LOUD (durci 2026-07-10, audit) : toute dégradation du scan lui-même (fichier sauté par le
 # cap de taille, régex invalide, grep en échec, scan interrompu avant la fin, secret absent) émet
 # un finding CONFIG — bloquant au gate PR. Un scan requis n'est jamais silencieusement partiel.
@@ -87,6 +91,30 @@ list_files() {
 RAW_LIST="$(list_files)"
 FILES="$(printf '%s\n' "$RAW_LIST" | awk -F'\t' '$1=="F"{print $2}')"
 
+# Surface dédiée à la classe PERSO (brief I, 2026-09-02) : scripts/*.json et public/data/*.json.
+# public/data/* est exclu de $FILES ci-dessus (list_files()) pour les classes FUITE/PROSCRIT —
+# volumes de données, pas de la prose, jamais scannés pour ces motifs-là. La classe PERSO a besoin
+# d'y regarder précisément : c'est là qu'a été trouvée (2026-09-02) l'adresse d'une mesure
+# résidentielle (public/data/cartoradio_certified_corse.json), servie telle quelle par le site —
+# un fichier de données PEUT porter une fuite qu'une prose ne porterait jamais, et inversement.
+# scripts/*.json n'a besoin d'aucun ajout : jamais exclu de $FILES, déjà couvert.
+list_perso_files() {
+  git ls-files -z -- 'scripts/*.json' 'public/data/*.json' 2>/dev/null | while IFS= read -r -d '' f; do
+    case "$f" in
+      .github/scripts/leak_guard*) continue ;;
+    esac
+    local sz
+    sz=$(wc -c < "$f" 2>/dev/null || echo 0)
+    if [ "${sz:-0}" -gt "$SIZE_CAP" ]; then
+      printf 'CAP\t%s\t%s\n' "$f" "$sz"
+      continue
+    fi
+    printf 'F\t%s\n' "$f"
+  done
+}
+RAW_PERSO_LIST="$(list_perso_files)"
+PERSO_FILES="$(printf '%s\n' "$RAW_PERSO_LIST" | awk -F'\t' '$1=="F"{print $2}')"
+
 # CLASSE <TAB> LABEL <TAB> REGEX (ERE) <TAB> FLAGS (-i ou vide)
 RULES=$(cat <<'RULESEOF'
 FUITE	forme_sarl	\bSARL\b
@@ -115,8 +143,8 @@ is_cited_refuted() { # line — vrai si le passage est cité (guillemets) ou exp
   printf '%s' "$1" | grep -qE '«|»|inexacte|vectoriel|contenai|formulation'
 }
 
-scan_rule() { # class label regex flags
-  local cls="$1" label="$2" rx="$3" flags="$4" f m n line out rc
+scan_rule() { # class label regex flags [filelist=$FILES]
+  local cls="$1" label="$2" rx="$3" flags="$4" filelist="${5:-$FILES}" f m n line out rc
   # Fail-loud régex (audit 2026-07-10) : une ERE invalide faisait échouer grep en silence
   # (2>/dev/null, code retour perdu) → classe entière non scannée SANS signal. Pré-validation
   # sur /dev/null : 1 = régex valide sans match, ≥ 2 = régex invalide → finding CONFIG
@@ -126,7 +154,7 @@ scan_rule() { # class label regex flags
     printf '%s\t%s\t%s\n' "(config)" "CONFIG" "regex_invalide_${label}"
     return 0
   fi
-  for f in $FILES; do
+  for f in $filelist; do
     [ -f "$f" ] || continue
     is_allowed "$f" "$label" && continue
     out=$(grep -nE $flags -- "$rx" "$f" 2>/dev/null); rc=$?
@@ -165,6 +193,57 @@ while IFS=$'\t' read -r cls label rx flags; do
   [ -z "${cls:-}" ] && continue
   scan_rule "$cls" "$label" "$rx" "${flags:-}"
 done <<< "$RULES"
+
+# Fail-loud skip-par-cap pour la surface PERSO (même discipline que $FILES plus haut) : un
+# scripts/*.json ou public/data/*.json au-dessus du cap de taille n'est jamais sauté en silence.
+printf '%s\n' "$RAW_PERSO_LIST" | awk -F'\t' '$1=="CAP"{print $2 "\t" $3}' | while IFS=$'\t' read -r f sz; do
+  [ -z "$f" ] && continue
+  is_allowed "$f" "cap_taille" && continue
+  printf '%s\t%s\t%s\n' "$f" "CONFIG" "saute_cap_taille_${sz}o_NON_SCANNE_perso"
+done
+
+# Classe PERSO (brief I, 2026-09-02) — BLOQUANTE au gate PR (cf. en-tête).
+#
+# PAS un grep ligne à ligne, DÉLIBÉRÉMENT : un motif nu sur "adresse_complete"/"voie"/
+# "code_postal" matche AUSSI les fiches extérieur public de public/data/cartoradio_certified_corse.json
+# (151/236, adresse de mesure sur la voie publique — légitime, pas une fuite) — testé, constaté
+# en écrivant cette règle : un grep nu aurait bloqué CE FICHIER PRODUCTION en permanence, sur du
+# contenu attendu. Détection par CO-OCCURRENCE dans le même enregistrement plutôt : « champ
+# d'adresse » + « marqueur résidentiel », l'un sans l'autre n'est pas une fuite. Chaque
+# enregistrement JSON est délimité par sa clé d'identifiant ("id":/"numero":, les deux schémas
+# rencontrés le 2026-09-02) — pas un vrai parseur JSON, une segmentation par ligne-marqueur
+# suffisante pour ce format (un enregistrement par bloc, jamais imbriqué).
+# Coordonnées GPS (« >3 décimales hors couche de référence ») délibérément absentes : testé
+# mentalement contre les couches géo légitimes du repo (antennes ANFR, radon, patrimoine — toutes
+# précises par nature), écarté comme trop bruyant pour rester exploitable. Non implémentée plutôt
+# que livrée peu fiable — cf. dette CARTORADIO-INGESTION-PERSO-CONVENTION-001 (registre privé).
+# Vérifié avant merge (pas supposé) sur les deux fichiers réels de l'incident (copies hors dépôt) :
+# 8/8 puis 77/77 détectés sur les versions AVANT correctif ; 0/0 sur la version corrigée.
+scan_perso_coocurrence() { # label field_regex context_regex filelist
+  local label="$1" field_rx="$2" ctx_rx="$3" filelist="$4" f
+  for f in $filelist; do
+    [ -f "$f" ] || continue
+    is_allowed "$f" "$label" && continue
+    awk -v FRX="$field_rx" -v CRX="$ctx_rx" -v FIL="$f" -v LBL="$label" '
+      function flush() {
+        if (buf != "" && buf ~ CRX && buf ~ FRX) {
+          print FIL ":" startline "\tPERSO\t" LBL
+        }
+      }
+      /"(id|numero)"[ \t]*:/ { flush(); buf=""; startline=NR }
+      { buf = buf "\n" $0 }
+      END { flush() }
+    ' "$f"
+  done
+}
+scan_perso_coocurrence "adresse_voie_residentiel" \
+  '"(adresse_complete|voie)"[ \t]*:[ \t]*"[^"]' \
+  '"type_environnement"[ \t]*:[ \t]*"residentiel"|"environnement"[ \t]*:[ \t]*"Lieu d.habitation"' \
+  "$PERSO_FILES"
+scan_perso_coocurrence "code_postal_residentiel" \
+  '"code_postal"[ \t]*:[ \t]*"[0-9]{5}"' \
+  '"type_environnement"[ \t]*:[ \t]*"residentiel"|"environnement"[ \t]*:[ \t]*"Lieu d.habitation"' \
+  "$PERSO_FILES"
 
 if [ -n "${LEAK_TERMS_REGEX:-}" ]; then
   scan_rule "FUITE" "raison_sociale" "$LEAK_TERMS_REGEX" "-i"
