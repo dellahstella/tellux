@@ -3650,6 +3650,17 @@ lForetDense.setOpacity = function(value){
   this.eachLayer(function(child){
     if (typeof child.setStyle === 'function') child.setStyle({opacity:value, fillOpacity:value*FILL_RATIO});
   });
+  // Repaint forcé (2026-09-02, trouvé en vérifiant le brief E) : setStyle() met bien à jour
+  // les options du layer (confirmé en direct), mais le renderer canvas DÉDIÉ de cette couche
+  // (_foretDenseCanvas, séparé du renderer par défaut pour la raison zIndex documentée plus
+  // bas) ne redessine pas tout seul suite à un setStyle() — seul un pan/zoom (qui force une
+  // passe complète) le fait. Sans ce repaint explicite, le curseur mettait à jour le
+  // pourcentage affiché mais laissait la couche visuellement figée à son ancienne opacité
+  // jusqu'au prochain déplacement de carte. Vérifié en direct : _redraw()/_update() du
+  // renderer force le repaint immédiatement, setStyle()/_updateStyle() seuls ne suffisent pas.
+  if (typeof _foretDenseCanvas !== 'undefined' && typeof _foretDenseCanvas._update === 'function') {
+    _foretDenseCanvas._update();
+  }
 };
 // Zoom-gate visuel (2026-08-30, décision Soleil) : même logique que le réseau BT — à petite
 // échelle la couche (~28,5 % de la Corse, 5 680 parties) sature la carte sans rien apprendre.
