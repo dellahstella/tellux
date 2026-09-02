@@ -3004,9 +3004,9 @@ var JS_STRINGS_EN = {
   radon_modere: "Moderate",
   radon_faible: "Low",
   corr_aqu_kp_prefix: "AQU + Kp correction (", // dette : clé résiduelle non appelée depuis 2026-08-26 (station AQU retirée, cf. loadINTERMAGNETObservatory), conservée pour ne pas casser un éventuel appel externe
-  corr_aqu_kp_suffix: " nT)",
+  corr_aqu_kp_suffix: " nT, INTERMAGNET)", // renommage de contenu conservé (brief P, 2026-09-02) : retrait du terme Kp, jamais consommé par cette branche — cf. commentaire à l'appel, app.html ~L7904
   corr_intermagnet_prefix: "correction ",
-  corr_intermagnet_kp_suffix: " + Kp (",
+  corr_intermagnet_kp_suffix: " (", // idem — "+ Kp" retiré (brief P) : le niveau INTERMAGNET ne lit jamais Kp
   corr_kp_calme: "Kp calm, no correction",
   corr_kp_prefix: "Kp correction = ",
   corr_kp_suffix: " nT (NOAA SWPC)",
@@ -7898,10 +7898,20 @@ map.on('click',async e=>{
   // window._extCorrSource, posé par calcExternalCorr() elle-même à chaque niveau
   // (INTERMAGNET/Dst/Kp) — une seule source de vérité, plus de risque de divergence
   // entre ce qui est calculé et ce qui est affiché.
+  //
+  // Correctif 2026-09-02 (brief P, cf. #928) : la branche INTERMAGNET affichait
+  // « + Kp » en suffixe alors que le niveau 1 (calcExternalCorr(), ligne ~5434)
+  // retourne aquExternalCorr DIRECTEMENT — un delta INTERMAGNET brut
+  // (public/data/intermagnet_latest.json, cf. loadINTERMAGNETObservatory()), sans
+  // aucun terme Kp. Confirmé en direct sur prod le 2026-09-02 : curKp valait '—'
+  // (jamais peuplé, cf. loadNOAA()/2 URL NOAA 404 empoisonnant son Promise.all —
+  // dette NOAA-SWPC-URLS-DEAD-001) pendant que le popup affichait littéralement
+  // « correction DUR + Kp (+2 nT) ». Suffixe retiré, pas remplacé par un terme Kp
+  // réel : la branche INTERMAGNET ne consomme jamais Kp, quel que soit son état.
   const corrLabel = (() => {
     const corr = calcExternalCorr();
     const src = window._extCorrSource;
-    if (src === 'INTERMAGNET') return jt('corr_intermagnet_prefix','correction ')+(window._intermagnetSource||'INTERMAGNET')+jt('corr_intermagnet_kp_suffix',' + Kp (')+(corr>=0?'+':'')+corr+jt('corr_aqu_kp_suffix',' nT)');
+    if (src === 'INTERMAGNET') return jt('corr_intermagnet_prefix','correction ')+(window._intermagnetSource||'INTERMAGNET')+jt('corr_intermagnet_kp_suffix',' (')+(corr>=0?'+':'')+corr+jt('corr_aqu_kp_suffix',' nT, INTERMAGNET)');
     if (src === 'Dst') {
       return corr === 0
         ? jt('corr_dst_calme','Dst calme, pas de correction')
