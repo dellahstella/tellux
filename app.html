@@ -9204,11 +9204,25 @@ function _syncForetDenseZoom(fromToggle){
 // par aucune fonction de calcul. Style : mêmes epaisseur/ratio contour-remplissage que
 // buildForetDenseLayer (cohérence visuelle du groupe), teintes DA v2 différenciées
 // (--maquis-clair #4F7048 / --tx-ocre #C28533, palette existante, aucune couleur neuve).
+// _foretOuverteLoadPromise (fix revue brief F, 2026-09-02) : dédoublonne les fetch concurrents.
+// Trouvé en auditant la fluidité de l'exclusivité de groupe (Soleil : « l'aller-retour de bascule
+// doit rester fluide ») — sans ce garde, alterner rapidement foretouverte⇄landemaquis avant que le
+// tout premier fetch (~1,8 Mo) soit résolu relançait un fetch+parse+build concurrent à chaque clic
+// (le seul garde existant, lForetOuverte.getLayers().length===0, ne devient faux qu'à la RÉSOLUTION
+// du fetch, pas à son lancement). Conséquence en cascade : double travail CPU/réseau synchrone
+// pendant l'exacte fenêtre où l'utilisateur clique vite, et un rebuild tardif pouvait écraser une
+// opacité déjà personnalisée par le style par défaut codé en dur de buildForetOuverteLayer().
+// Le simple test getLayers().length===0 au site d'appel (tog()) reste inchangé et suffisant une
+// fois ce cache posé : un appel concurrent renvoie la MÊME promesse en vol au lieu d'en relancer une.
+let _foretOuverteLoadPromise = null;
 function loadForetOuverte(){
-  return fetch('public/data/foret_ouverte_corse.geojson', {signal: AbortSignal.timeout(8000)})
+  if (_foretOuverteLoadPromise) return _foretOuverteLoadPromise;
+  _foretOuverteLoadPromise = fetch('public/data/foret_ouverte_corse.geojson', {signal: AbortSignal.timeout(8000)})
     .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(geojson){ buildForetOuverteLayer(geojson); })
-    .catch(function(e){ console.warn('[Tellux] foret_ouverte_corse.geojson indisponible : '+e.message); });
+    .catch(function(e){ console.warn('[Tellux] foret_ouverte_corse.geojson indisponible : '+e.message); })
+    .finally(function(){ _foretOuverteLoadPromise = null; });
+  return _foretOuverteLoadPromise;
 }
 function buildForetOuverteLayer(geojson){
   lForetOuverte.clearLayers();
@@ -9233,11 +9247,16 @@ function _syncForetOuverteZoom(fromToggle){
     }
   }
 }
+// _landeMaquisLoadPromise : même fix, même rationale que _foretOuverteLoadPromise ci-dessus.
+let _landeMaquisLoadPromise = null;
 function loadLandeMaquis(){
-  return fetch('public/data/lande_maquis_corse.geojson', {signal: AbortSignal.timeout(8000)})
+  if (_landeMaquisLoadPromise) return _landeMaquisLoadPromise;
+  _landeMaquisLoadPromise = fetch('public/data/lande_maquis_corse.geojson', {signal: AbortSignal.timeout(8000)})
     .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(geojson){ buildLandeMaquisLayer(geojson); })
-    .catch(function(e){ console.warn('[Tellux] lande_maquis_corse.geojson indisponible : '+e.message); });
+    .catch(function(e){ console.warn('[Tellux] lande_maquis_corse.geojson indisponible : '+e.message); })
+    .finally(function(){ _landeMaquisLoadPromise = null; });
+  return _landeMaquisLoadPromise;
 }
 function buildLandeMaquisLayer(geojson){
   lLandeMaquis.clearLayers();
