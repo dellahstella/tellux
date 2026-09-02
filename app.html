@@ -3351,7 +3351,15 @@ async function fetchAltitudeIGN(lat, lon) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
     const z = d && d.elevations && d.elevations[0] && d.elevations[0].z;
-    if (typeof z === 'number' && isFinite(z)) {
+    // z > -1000 && z < 5000 le 2026-09-02 (brief "retrait radon", capture prod du 02/09 :
+    // popup affichant "Alt -99999 m") : le service IGN rend -99999 comme SENTINELLE "pas de
+    // donnée à ce point" (offshore, trou de couverture) — une valeur NUMÉRIQUE FINIE, donc
+    // `isFinite(z)` seul la laissait passer telle quelle, rendue comme si c'était une vraie
+    // altitude. Bornes larges mais couvrant toute la Corse (sommet Monte Cinto ~2706 m, aucun
+    // point sous le niveau de la mer) : rejettent -99999 sans risquer de rejeter une altitude
+    // réelle. En cas de rejet, retombe sur `null` — déjà géré en aval (typeof/isFinite au point
+    // d'affichage) comme une absence, pas comme un zéro.
+    if (typeof z === 'number' && isFinite(z) && z > -1000 && z < 5000) {
       ALTITUDE_CACHE[key] = Math.round(z);
       return ALTITUDE_CACHE[key];
     }
@@ -7460,10 +7468,11 @@ map.on('click',async e=>{
   // radon.html — même patron que la couche b-openrad mutée le 2026-08-30 (code mort gardé
   // pour migration, cf. son commentaire dans le menu Couches).
   const gamma_nSvh    = v2.domains.ionizing.gamma.dose_rate_nSv_h;
+  // radon_class reste lu ici : alimente encore _geoLastPoint (plus bas) et l'export CSV expert
+  // (via v2.domains.ionizing.radon directement, pas via cette const — mais gardée pour
+  // _geoLastPoint). radon_range/radon_official/radon_source_is_official RETIRÉES le 2026-09-02
+  // (retrait du bloc "Domaine ionisant") : plus aucun consommateur après ce retrait.
   const radon_class   = v2.domains.ionizing.radon.class;
-  const radon_range   = v2.domains.ionizing.radon.activity_estimate_Bq_m3;
-  const radon_official = v2.domains.ionizing.radon.official_classification; // {matched_by, nom, code_insee} ou null
-  const radon_source_is_official = v2.domains.ionizing.radon.class_source === 'official_decree_2018_434';
   const geoType=getGeoType(lat,lng);
   const crustal=calcLCS1(lat,lng);
   // Susceptibilité magnétique du substrat (issue de v2)
@@ -7582,10 +7591,13 @@ map.on('click',async e=>{
   const elfIARCnote=elf_nT>=300
     ? '<div style="border-left:2px solid #C28533;padding-left:5px;margin-top:3px;font-size:8px;color:#8A5E22;font-style:italic">'+jt('elf_iarc_note','Repère documentaire : IARC classe 2B pour ELF ≥ 300 nT chronique résidentiel — pas de seuil d\'alerte, signal statistique.')+'</div>'
     : '';
-  // Radon class — couleur et pictogramme
-  const radonColor = radon_class===3?'#8E2F1F':radon_class===2?'#C28533':'#3F5B3A';
-  const radonConf  = radon_class===3?'●●●':radon_class===2?'●●○':'●●●'; // conf toujours high sur classe lithologique
-  const radonLabel = radon_class===3?jt('radon_eleve','Élevé'):radon_class===2?jt('radon_modere','Modéré'):jt('radon_faible','Faible');
+  // radonColor/radonConf/radonLabel — SUPPRIMÉES le 2026-09-02 (retrait du bloc "Domaine
+  // ionisant", cf. commentaire plus bas) : leur seul consommateur était ce bloc, elles seraient
+  // devenues du code mort en le laissant en place. Ne servaient PAS l'export CSV expert, qui lit
+  // v2.domains.ionizing.radon directement (rad.class/rad.confidence/rad.activity_estimate_Bq_m3)
+  // — ce module n'a donc besoin d'aucune d'elles. Au passage, constaté que radonConf n'était de
+  // toute façon jamais interpolée dans le template retiré (qui codait "●●●" en dur) : mort avant
+  // même ce retrait, pas une régression introduite ici.
 
   // Label dynamique correction externe (honnêteté scientifique — audit 2026-04-22)
   // La branche INTERMAGNET (DUR/EBR/CLF) est inatteignable en prod (CORS BGS, header
@@ -7626,37 +7638,29 @@ map.on('click',async e=>{
         '<span style="font-size:9px;color:#626774" title="'+jt('v2_conf_rf','Confiance : moyen — FH_POINTS + fond CartoRadio')+'">●●○</span>'+
       '</div>'+
       '<div style="font-size:8px;color:#626774;font-style:italic">'+jt('rf_icnirp_note','ICNIRP : ≈ 4 500 000 µW/m² (repère documentaire)')+'</div>'+
-      // ── Ionisant ──
-      // Colonne Gamma retirée le 2026-09-01 (décision Soleil) : le gamma reste un proxy interne
-      // du calcul (domaine ionisant, composante I de l'indice composite) mais n'est plus exposé
-      // en surface publique ici — les couches gamma sont destinées à radon.html, chantier séparé.
-      // L'intitulé « Domaine ionisant » est CONSERVÉ tel quel : le radon EST un ionisant, et le
-      // domaine continue d'exister dans le modèle (deux membres, dont un seul affiché). Le
-      // renommer en « Radon » laisserait entendre que le domaine ionisant se réduit au radon,
-      // ce qui serait faux. Le bloc n'a plus qu'une colonne : la séparation verticale
-      // (border-left) qui distinguait Radon de Gamma est retirée avec elle.
-      '<div style="margin-top:3px;border-top:1px dashed #e5e7eb;padding-top:3px">'+
-        '<div style="font-size:9px;font-weight:600;color:#1F2329;margin-bottom:2px">'+jt('v2_title_ionisant','Domaine ionisant')+'</div>'+
-        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+
-          // Radon
-          '<div>'+
-            '<div style="font-size:8px;color:#4a4f5e;margin-bottom:1px">'+jt('v2_title_radon','Radon (potentiel)')+'</div>'+
-            '<div style="display:flex;align-items:center;gap:3px">'+
-              '<span style="font-size:11px;font-weight:700;color:'+radonColor+'">Classe '+radon_class+'/3</span>'+
-              '<span style="font-size:9px;color:#626774" title="'+jt('v2_conf_radon','Confiance : haut — classement officiel (arrêté du 27 juin 2018) ou estimation lithologique (cartographie radon 2018 — IRSN, désormais ASNR)')+'">●●●</span>'+
-            '</div>'+
-            '<div style="font-size:8px;color:'+radonColor+'">'+radonLabel+' · '+radon_range[0]+'–'+radon_range[1]+' Bq/m³</div>'+
-            (radon_source_is_official
-              ? '<div style="font-size:8px;color:'+radonColor+';margin-top:1px;font-style:italic">'+jt('radon_commune_z3','Commune classée zone 3 (arrêté du 27 juin 2018)')+(radon_official&&radon_official.nom?jt('radon_commune_z3_sep',' : ')+radon_official.nom:'')+'</div>'
-              : '')+
-          '</div>'+
-        '</div>'+
-        // Le repère « Fond naturel Corse : 75–150 nSv/h » a été retiré de cette ligne le
-        // 2026-09-01 avec la colonne Gamma : c'était un repère de lecture pour une valeur
-        // qui n'est plus affichée. Le repère radon (300 Bq/m³) reste, il porte sur la seule
-        // grandeur encore exposée dans ce bloc.
-        '<div style="font-size:7.5px;color:#626774;font-style:italic">'+jt('v2_footer_reperes','Niveau de référence radon : 300 Bq/m³ (art. R. 1333-28 CSP)')+'</div>'+
-      '</div>'+
+      // ── Ionisant : bloc entier retiré le 2026-09-02 (décision Soleil, brief "retrait radon") ──
+      // Le domaine ionisant du popup ne comptait plus qu'un membre affiché (radon) depuis le
+      // retrait du gamma le 2026-09-01 (#1164) — la colonne Gamma était déjà partie, seul
+      // l'intitulé « Domaine ionisant » restait, conservé À L'ÉPOQUE parce que le domaine
+      // gardait un membre. Ce n'est plus le cas : le radon rejoint le gamma, même raisonnement
+      // (carte EM, pas une carte par grandeur physique quelconque — architecture par régime
+      // d'effet). app.html devient strictement EM non-ionisant.
+      // Prémisse vérifiée avant retrait : computeExpertComposite() (plus haut dans ce fichier)
+      // ne lit que v2.domains.magnetic.elf, v2.domains.rf et v2.domains.ionizing.GAMMA — jamais
+      // v2.domains.ionizing.radon. Le radon n'a jamais alimenté l'indice composite, aucun poids,
+      // aucune borne. Pas de GELÉ-001a ici, contrairement au gamma.
+      // Calcul CONSERVÉ (décision Soleil, cohérent avec le traitement du gamma, sans coût) :
+      // calcRadonPotential() et les 3 lignes radon_* de l'export CSV expert (plus bas, qui lit
+      // v2.domains.ionizing.radon directement) restent inchangés. Les variables locales de mise
+      // en forme (radonColor/radonConf/radonLabel), elles, n'avaient plus d'autre consommateur
+      // que ce bloc — supprimées avec lui, cf. leur ancien site de déclaration plus haut.
+      // Seconde surface retirée dans la même PR : la ligne radonRow du panneau « Mon lieu »,
+      // même patron que gamma_row un jour plus tôt.
+      // 13 clés i18n orphelines par ce retrait (v2_title_ionisant, v2_title_radon, v2_conf_radon,
+      // radon_commune_z3(+_sep), v2_footer_reperes, radon_eleve/modere/faible,
+      // myplace_radon_classe_prefix, myplace_radon_title, pill_radon_officiel/estime) —
+      // CONSERVÉES pour le portage vers radon.html, même traitement que myplace_gamma_*/
+      // pill_gamma_* (#1164).
     '</div>';
   calcPopup.setContent(
     '<div style="font-family:var(--font);min-width:180px">'+
@@ -9756,14 +9760,13 @@ function myPlaceRenderSummary(d){
   // signalée au digest. Clés i18n myplace_gamma_* / pill_gamma_* conservées pour le portage
   // vers radon.html. Le calcul est intact : v2.domains.ionizing.gamma reste peuplé.
 
-  // Radon — zonage réglementaire officiel vs estimation lithologique, jamais mêlés
-  var radon=v2.domains.ionizing.radon||{};
-  var radonOfficial=radon.class_source==='official_decree_2018_434';
-  var radonHtml=jt('myplace_radon_classe_prefix','Zone à potentiel radon : classe ')+(radon.class!=null?radon.class:'—')+(radon.activity_estimate_Bq_m3?' <span style="color:var(--tx3)">(estimation '+radon.activity_estimate_Bq_m3[0]+'–'+radon.activity_estimate_Bq_m3[1]+' Bq/m³)</span>':'');
-  var radonPill=radonOfficial?jt('pill_radon_officiel','Officiel — décret n° 2018-434'):jt('pill_radon_estime','Estimation — géologie locale');
-  var radonRow=myPlaceRow(jt('myplace_radon_title','Potentiel radon (zonage réglementaire)'),radonHtml,radonPill,radonOfficial?'officiel':'estime');
+  // Ligne « Potentiel radon (zonage réglementaire) » retirée le 2026-09-02, même retrait que le
+  // gamma un jour plus tôt (commentaire ci-dessus) et pour le même raisonnement (décision
+  // Soleil, brief "retrait radon") : le radon rejoint le gamma hors d'app.html. Clés i18n
+  // myplace_radon_* / pill_radon_* conservées pour le portage vers radon.html. Le calcul reste
+  // intact : v2.domains.ionizing.radon reste peuplé, lu par l'export CSV expert plus bas.
 
-  body.innerHTML=headerHtml+antRow+htaRow+champRow+radonRow+
+  body.innerHTML=headerHtml+antRow+htaRow+champRow+
     '<p style="font-size:10.5px;color:var(--tx3);line-height:1.5;margin:14px 0 0;padding-top:12px;border-top:1px solid var(--border)">'+
     escapeHtml(jt('myplace_footer_note','Estimations issues du modèle Tellux — jamais une mesure sur place, jamais un diagnostic. Pour une donnée mesurée : bouton « + » (Contribution terrain) ci-dessous, ou le modèle de courrier « Faire mesurer l\'exposition » sur mairies.html.'))+
     '</p>';
