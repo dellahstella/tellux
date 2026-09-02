@@ -2400,8 +2400,8 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
      couche correspondante est désactivée (déjà fait, cf. showLegend) OU au changement d'onglet
      mobile (switchMobileTab), OU ancrer visuellement le slider à son bouton plutôt qu'au-dessus
      de la carte — chacune de ces pistes touche le système de sous-menu, à valider séparément. -->
-<div class="op-row" id="hyd-op-row"><span>Nappes</span><input type="range" min="0.1" max="1" step="0.05" value="0.55" oninput="wmsHyd.setOpacity(+this.value)"><span id="hyd-op-v">55%</span></div>
-<div class="op-row" id="emag-op-row"><span>Fond magnétique régional</span><input type="range" min="0.1" max="0.8" step="0.05" value="0.5" oninput="wmsEmag.setOpacity(+this.value)"><span id="emag-op-v">50%</span></div>
+<div class="op-row" id="hyd-op-row"><span>Nappes</span><input type="range" min="0.1" max="1" step="0.05" value="0.55" oninput="_setLayerOpacityAndLabel(wmsHyd,+this.value,'hyd-op-v')"><span id="hyd-op-v">55%</span></div>
+<div class="op-row" id="emag-op-row"><span>Fond magnétique régional</span><input type="range" min="0.1" max="0.8" step="0.05" value="0.25" oninput="_setLayerOpacityAndLabel(wmsEmag,+this.value,'emag-op-v')"><span id="emag-op-v">25%</span></div>
 <div id="map"></div>
 
 <!-- Item 1 — Barre conditions permanente (post STOP A validation Soleil).
@@ -3482,6 +3482,19 @@ L.control.layers(_baseLayers,null,{position:'topright',collapsed:true}).addTo(ma
 // BRGM » migrée sur radon.html) : plus de couche geo sur cette carte à ajuster.
 // Handler baselayerchange (swap labels CartoDB) retiré le 2026-08-30 avec CartoDB —
 // Esri Light Gray et IGN Plan ont chacun leur toponymie native intégrée aux tuiles.
+// _setLayerOpacityAndLabel() — correctif 2026-09-02 (constat Soleil : le pourcentage affiché
+// restait figé quelle que soit la position du curseur). Chaîne complète vérifiée avant fix :
+// événement du curseur -> oninput -> layer.setOpacity() s'exécutait bien (l'opacité RÉELLE de
+// la couche changeait, confirmé en direct via wmsEmag.options.opacity) -> mais rien ne
+// réécrivait jamais le <span id="…-op-v"> : la rupture était là, pas avant. Même défaut sur les
+// DEUX sliders d'opacité existants (Nappes ET Fond magnétique régional — grep exhaustif
+// `class="op-row"` : aucun autre) — mécanisme partagé, corrigé une seule fois ici plutôt que
+// par curseur individuel.
+function _setLayerOpacityAndLabel(layer, value, labelId){
+  layer.setOpacity(value);
+  const el=document.getElementById(labelId);
+  if(el)el.textContent=Math.round(value*100)+'%';
+}
 const wmsHyd=L.tileLayer.wms('https://geoservices.brgm.fr/risques',{layers:'REMNAPPE_FR',format:'image/png',transparent:true,opacity:0.55,zIndex:3,maxNativeZoom:11});
 // wmsCav (Cavités) retirée le 2026-08-20, migrée sur radon.html.
 // wmsForet (Forêts publiques ONF via WMS Géoplateforme) retirée complètement le 2026-08-27
@@ -3500,7 +3513,7 @@ const wmsHyd=L.tileLayer.wms('https://geoservices.brgm.fr/risques',{layers:'REMN
 const wmsEmag=L.imageOverlay(
   'https://gis.ngdc.noaa.gov/arcgis/rest/services/EMAG2v3/ImageServer/exportImage?bbox=8.5,41.3,9.65,43.1&bboxSR=4326&imageSR=4326&size=512,800&format=png32&renderingRule={"rasterFunction":"EMAG2_Color_Scale"}&f=image',
   [[41.3,8.5],[43.1,9.65]],
-  {opacity:0.5,zIndex:2,attribution:'EMAG2v3 NOAA/NCEI · Meyer et al. 2017'}
+  {opacity:0.25,zIndex:2,attribution:'EMAG2v3 NOAA/NCEI · Meyer et al. 2017'} // défaut porté de 0.5 à 0.25 le 2026-09-02 (brief Soleil), doit rester synchrone avec value= et le libellé initial de #emag-op-row
 );
 // Visibilité d'échec (repro Soleil 2026-08-23 : couche invisible même à opacité max).
 // Investigué avant tout fix : bbox/renderingRule/endpoint tous corrects (rasterFunction
