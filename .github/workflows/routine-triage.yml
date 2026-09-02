@@ -1,0 +1,141 @@
+name: Circuit de triage — issues routine
+
+# Brief O (2026-09-02), étape 5-6. Constat motivant : 4 issues `routine` ouvertes du 1er au
+# 6 juillet, aucune fermée avant le 2026-09-02 (triage brief L) — un label `routine` sans
+# échéance ne se trie pas tout seul, il s'accumule. Même famille de défaillance que #903
+# (alert-only non trié = ne protège/n'informe de rien), par le bout « personne ne relit ».
+#
+# MÉCANISME (déclaratif, pas correctif — ne ferme, ne rouvre, ne modifie AUCUN contenu, ne
+# touche à aucun calcul) :
+#   1. Liste toutes les issues ouvertes portant le label `routine`.
+#   2. Calcule leur âge (aujourd'hui − date de création). Seuil par défaut : 14 jours
+#      (DEADLINE_DAYS ci-dessous), overridable via workflow_dispatch pour test (étape 6 du
+#      brief : vérifier le déclenchement sans attendre 14 jours réels).
+#   3. Toute issue au-delà du seuil et pas déjà étiquetée reçoit le label `routine-en-retard`
+#      + UN commentaire (idempotent : pas de spam quotidien — le label présent = déjà signalé).
+#   4. Un ISSUE DE ROLLUP unique, toujours tenu à jour (jamais recréé — cherché par titre exact,
+#      même patron que leak-guard.yml), liste la totalité des routine en retard À CE JOUR. C'est
+#      la « remontée en tête du prochain digest de session » : une session Claude Code reprenant
+#      ce repo peut la retrouver par `gh issue list --label triage-rollup --state open` sans
+#      recalculer les âges elle-même. Si zéro routine en retard, le rollup est mis à jour pour
+#      le dire explicitement (jamais silencieusement absent — même discipline fail-loud que le
+#      garde-fou anti-fuite : « rien à signaler » doit être un état écrit, pas déduit du silence).
+#
+# CE QUE CE WORKFLOW NE FAIT PAS : il ne ferme aucune issue, ne décide d'aucun arbitrage, ne
+# remplace pas la lecture humaine/Claude — il rend l'attente coûteuse-à-ignorer plutôt que
+# silencieuse. La proposition (hors du périmètre technique de ce fichier, à family Soleil) est
+# qu'une session Claude Code démarrant sur ce repo vérifie ce rollup en début de travail
+# substantiel — un pointeur d'une ligne dans CLAUDE.md local rendrait ça systématique, mais
+# CLAUDE.md n'est pas modifié par cet agent (carve-out Cran C : réécriture des instructions
+# projet, Code propose, ne s'auto-adopte jamais).
+
+on:
+  schedule:
+    - cron: '45 6 * * *'   # quotidien 06:45 UTC — décalé des autres routines (lundi 07-08 UTC, smoke-test 06:17)
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Seuil de retard en jours (test : 0 pour forcer la détection immédiate)"
+        required: false
+        default: '14'
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  DEADLINE_DAYS: ${{ github.event.inputs.days || '14' }}
+  ROLLUP_TITLE: "[triage] Digest routine en retard (>14j)"
+
+jobs:
+  triage:
+    name: Triage routine (>${{ github.event.inputs.days || '14' }}j)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Lister les issues routine ouvertes et calculer leur âge
+        id: scan
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          NOW_EPOCH=$(date -u +%s)
+          DEADLINE_SEC=$(( DEADLINE_DAYS * 86400 ))
+          gh issue list --state open --label routine --limit 200 \
+            --json number,title,createdAt,labels \
+            --jq '.[] | [.number, .createdAt, .title, ([.labels[].name] | join(","))] | @tsv' \
+            > routine_issues.tsv
+
+          OVERDUE=""
+          NEWLY_FLAGGED=""
+          while IFS=$'\t' read -r num created title labelnames; do
+            [ -z "${num:-}" ] && continue
+            created_epoch=$(date -u -d "$created" +%s 2>/dev/null || echo 0)
+            [ "$created_epoch" -eq 0 ] && continue
+            age_sec=$(( NOW_EPOCH - created_epoch ))
+            if [ "$age_sec" -ge "$DEADLINE_SEC" ]; then
+              age_days=$(( age_sec / 86400 ))
+              OVERDUE="${OVERDUE}#${num} (${age_days}j) — ${title}\n"
+              case ",${labelnames}," in
+                *,routine-en-retard,*) : ;;   # déjà signalée — pas de re-commentaire (idempotence)
+                *) NEWLY_FLAGGED="${NEWLY_FLAGGED}${num}\n" ;;
+              esac
+            fi
+          done < routine_issues.tsv
+
+          printf '%b' "$OVERDUE" > overdue.txt
+          printf '%b' "$NEWLY_FLAGGED" > newly_flagged.txt
+          COUNT_OVERDUE=$(grep -c '^#' overdue.txt || true)
+          [ -z "$COUNT_OVERDUE" ] && COUNT_OVERDUE=0
+          printf 'count_overdue=%s\n' "$COUNT_OVERDUE" >> "$GITHUB_OUTPUT"
+          echo "Seuil : ${DEADLINE_DAYS}j — $COUNT_OVERDUE issue(s) routine en retard."
+
+      - name: Étiqueter + commenter les issues nouvellement en retard
+        if: steps.scan.outputs.count_overdue != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          gh label create routine-en-retard --color d93f0b --description "Routine ouverte au-delà du délai de triage (14j)" --force >/dev/null 2>&1 || true
+          if [ -s newly_flagged.txt ]; then
+            while IFS= read -r num; do
+              [ -z "$num" ] && continue
+              gh issue edit "$num" --add-label routine-en-retard >/dev/null 2>&1 || true
+              gh issue comment "$num" --body "Cette issue \`routine\` dépasse le délai de triage (${DEADLINE_DAYS} jours) sans clôture. Remontée dans le digest de triage : voir l'issue de rollup \`${ROLLUP_TITLE}\`. Cf. brief O (2026-09-02) — un \`routine\` sans échéance ne se trie pas tout seul." >/dev/null 2>&1 || true
+            done < newly_flagged.txt
+          fi
+
+      - name: Mettre à jour le rollup de digest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          gh label create triage-rollup --color 5319e7 --description "Digest automatique des routine en retard (émis par ce workflow)" --force >/dev/null 2>&1 || true
+          BODY=$(mktemp)
+          {
+            echo "Digest automatique — issues \`routine\` ouvertes depuis plus de **${DEADLINE_DAYS} jours**."
+            echo ""
+            echo "- Généré : \`${{ github.event_name }}\` · Run : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo ""
+            if [ -s overdue.txt ]; then
+              echo "Routine en retard (${{ steps.scan.outputs.count_overdue }}) :"
+              echo ""
+              while IFS= read -r line; do
+                [ -z "$line" ] && continue
+                echo "- $line"
+              done < overdue.txt
+            else
+              echo "**Aucune routine en retard actuellement.** (état écrit explicitement — silence ≠ absence de vérification)"
+            fi
+            echo ""
+            echo "> Pointeur de reprise de session : une session Claude Code démarrant un travail substantiel sur ce repo peut retrouver cette issue via \`gh issue list --label triage-rollup --state open\`. Ce workflow ne ferme, ne rouvre ni n'arbitre rien — il rend le retard visible, le tri reste humain (Soleil) ou Claude sur brief explicite."
+          } > "$BODY"
+          EXISTING=$(gh issue list --state open --label triage-rollup --search "in:title \"${ROLLUP_TITLE}\"" --json number --jq '.[0].number' 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body-file "$BODY"
+            # Body de l'issue elle-même remis à jour aussi (pas seulement un fil de commentaires
+            # qui grossit sans fin) : l'état COURANT doit être lisible sans dérouler l'historique.
+            gh issue edit "$EXISTING" --body-file "$BODY" >/dev/null 2>&1 || true
+          else
+            gh issue create --title "$ROLLUP_TITLE" --label "triage-rollup,routine" --body-file "$BODY"
+          fi

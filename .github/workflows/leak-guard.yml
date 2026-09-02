@@ -7,28 +7,59 @@ name: R5 — Garde-fou doctrine anti-fuite
 # exclu de facto), filtrée par extension + garde-fous (data/binaires exclus, cap taille, auto-exclusion
 # des fichiers du garde-fou). Motivation : un .md tracké (NOTE_METHODE_CO.md) a échappé au scan .html
 # le 2026-06-29 (fix manuel #893). 4 classes de fuite doctrine v4 (PERSO ajoutée 2026-09-02,
-# brief I) :
+# brief I ; GELÉ rendu bloquant 2026-09-02, brief O) :
 #   - FUITE       : raison sociale (secret LEAK_TERMS_REGEX), FEDER/ANR/OS1.2/candidature,
 #                   corpus privé, axes, SARL/SASU, SIRET espacé.
 #   - PERSO       : données personnelles (adresse postale, coordonnées de domicile) — motifs
 #                   structurels de fiche d'adresse, scanne aussi scripts/*.json et
 #                   public/data/*.json (exclus des autres classes, une donnée peut fuiter).
 #   - PROSCRIT    : formulations interdites (exception étroite « cité/réfuté »).
-#   - GELÉ (DIFF) : modification des blocs EXPERT_*_DEFAULT / calcGammaAmbient / NCRP 94 dans app.html.
+#   - GELÉ (DIFF) : modification d'une des 5 zones gelées nommées d'app.html (EXPERT_WEIGHTS_
+#                   DEFAULT/EXPERT_EPISTEMIC_NOTE = GELÉ-001a, EXPERT_BOUNDS_DEFAULT = GELÉ-001b,
+#                   GAMMA_TERRESTRE_PAR_LITHOTYPE/CONVERSION_NGY_TO_NSV = NCRP-001), détectée par
+#                   EXTRACTION + COMPARAISON de contenu (.github/scripts/gele_zone_diff.sh),
+#                   PAS par grep nu sur le diff (brief O, 2026-09-02 — l'ancienne implémentation
+#                   comptait toute ligne du diff CONTENANT le nom d'une constante gelée n'importe
+#                   où dans le fichier, y compris dans des dizaines de commentaires/références
+#                   sans rapport ; testé et éliminé, cf. le script pour le détail et les 3 cas de
+#                   test : PR #901 correctement détectée, PR #1068 toujours non détectée — gap de
+#                   PÉRIMÈTRE documenté, pas d'imprécision — et un edit de commentaire synthétique
+#                   correctement ignoré).
 #
 # DÉTECTE et SIGNALE (ouvre/maj une issue). Sur cron/push = ALERT-ONLY (ne casse pas le build).
 # Sur PULL_REQUEST = GATE BLOQUANT (step « Gate bloquant ») : un finding de classe FUITE (fuite
-# réelle), PERSO (donnée personnelle) ou CONFIG (scanner dégradé — secret absent, fichier sauté
-# par le cap de taille, régex invalide, grep en échec, scan interrompu, surface vide) fait
-# ÉCHOUER le check → merge bloqué
-# (fail-closed : un scan requis n'est jamais silencieusement aveugle NI partiel — durci 2026-07-10). PROSCRIT / GELÉ restent
-# NON bloquants (signalés) même sur PR : éviter de geler main sur de la pédagogie (exception cité/réfuté)
-# ou un edit de zone gelée légitime (process physicien). Le scanner reste exit 0 (détecteur) ; le blocage
-# est un step de gate lisant sa sortie. Ni l'issue ni le gate ne recopient la chaîne sensible (emplacement
-# + classe seulement). Marqueurs sensibles NON en clair ici : raison sociale = secret LEAK_TERMS_REGEX,
+# réelle), PERSO (donnée personnelle), GELÉ (zone gelée modifiée, depuis le 2026-09-02 — brief O)
+# ou CONFIG (scanner dégradé — secret absent, fichier sauté par le cap de taille, régex invalide,
+# grep en échec, scan interrompu, surface vide) fait ÉCHOUER le check → merge bloqué
+# (fail-closed : un scan requis n'est jamais silencieusement aveugle NI partiel — durci 2026-07-10).
+# Seul PROSCRIT reste NON bloquant (signalé) sur PR : éviter de geler main sur de la pédagogie
+# (exception cité/réfuté). Le scanner reste exit 0 (détecteur) ; le blocage est un step de gate
+# lisant sa sortie. Ni l'issue ni le gate ne recopient la chaîne sensible (emplacement + classe
+# seulement). Marqueurs sensibles NON en clair ici : raison sociale = secret LEAK_TERMS_REGEX,
 # modules confidentiels = secret LEAK_CONFIDENTIAL_REGEX ; absent → classe sautée + finding CONFIG.
-# Allowlist par chemin : .github/scripts/leak_guard_allowlist.txt (« chemin<TAB>label »).
+# Allowlist par chemin : .github/scripts/leak_guard_allowlist.txt (« chemin<TAB>label ») — pour
+# les FAUX POSITIFS (le scanner s'est trompé), PAS pour débloquer une modification de zone gelée
+# réelle et légitime (cf. « CHEMIN DE DÉBLOCAGE GELÉ » ci-dessous, un cas structurellement différent).
 # Activation depuis main (défaut) pour le cron ; aussi sur push/PR touchant une surface texte.
+#
+# ─── CHEMIN DE DÉBLOCAGE GELÉ (brief O, 2026-09-02) ──────────────────────────────────────────
+# Un finding GELÉ correctement détecté n'est PAS une erreur du scanner à corriger (contrairement
+# à un faux positif FUITE/PERSO, qui s'allowliste) : c'est un changement RÉEL d'une zone gelée,
+# qui reste Cran C par construction (CLAUDE.md local : « aucune nouvelle autorisation d'auto-
+# merge », « recalage en zone gelée ≠ jamais mécanique »). Code (cet agent) n'a et n'aura jamais
+# le droit de merger malgré ce check, avec ou sans `--admin` (règle personnelle, pas seulement
+# CI) — le déblocage n'est PAS technique, il est humain :
+#   1. Soleil relit le contenu du changement (le gate ne recopie jamais la valeur elle-même —
+#      lire le diff de la PR directement).
+#   2. Arbitrage consigné au registre privé (DETTES_TECHNIQUES.md / ADR selon la nature du
+#      changement — cf. précédent PR #901, retrouvé après coup faute d'avoir été relié à
+#      l'issue : nommer explicitement le numéro de PR dans l'entrée d'arbitrage évite de
+#      revivre cette recherche).
+#   3. Soleil (SEULE identité avec les droits admin du repo) merge malgré le check rouge via
+#      « Merge without waiting for requirements to be met » (UI GitHub) ou `gh pr merge --admin` —
+#      jamais Code. Sans ce chemin documenté, la première PR légitimement bloquée produirait un
+#      contournement ad hoc et le garde-fou serait mort (même impasse que #903, par l'autre bout,
+#      cf. contexte du brief O).
 
 on:
   schedule:
@@ -78,7 +109,19 @@ jobs:
           cat warn.txt || true
           exit 0
 
-      - name: Diff zones gelées (GELÉ-001 / NCRP-001) sur app.html
+      - name: Diff zones gelées (GELÉ-001a/b / NCRP-001) sur app.html
+        # RÉÉCRIT le 2026-09-02 (brief O) : remplace le grep-nu sur diff (comptait toute ligne
+        # +/- CONTENANT le nom d'une constante gelée n'importe où dans le fichier — y compris des
+        # dizaines de commentaires/références sans rapport, vérifié par grep direct avant ce
+        # changement) par une extraction+comparaison de contenu, ancrée par déclaration plutôt
+        # que par numéro de ligne (.github/scripts/gele_zone_diff.sh). Une mention du nom hors de
+        # sa propre déclaration ne matche plus rien — testé contre PR #901 (2 zones réellement
+        # modifiées, correctement identifiées) et un cas synthétique d'édit de commentaire
+        # mentionnant "NCRP" (0 finding, contre 2 faux positifs avec l'ancien grep).
+        # GAP CONNU (dette CLASSIFICATION-ZONE-GELEE-PR1068-001, cf. script pour le détail) : le
+        # périmètre actuel (5 zones nommées) ne couvre pas le gating ACTIVE.foretdense/
+        # calcVegetationAttenuation() dans RF_field() — un gap de PÉRIMÈTRE (classification
+        # doctrine, décision Soleil), pas une imprécision de ce détecteur.
         if: github.event_name == 'pull_request' || github.event_name == 'push'
         run: |
           set +e
@@ -92,12 +135,7 @@ jobs:
             echo "Pas de base de diff exploitable — contrôle zones gelées sauté."
             exit 0
           fi
-          HITS=$(git diff "$BASE" "$HEAD" -- app.html \
-                 | grep -E '^[-+]' | grep -vE '^(\+\+\+|---)' \
-                 | grep -cE 'EXPERT_WEIGHTS_DEFAULT|EXPERT_BOUNDS_DEFAULT|EXPERT_EPISTEMIC_NOTE|calcGammaAmbient|NCRP')
-          if [ "${HITS:-0}" -gt 0 ]; then
-            echo "app.html:diff	GELE	zone_gelee_modifiee(${HITS}_lignes)" >> findings.txt
-          fi
+          bash .github/scripts/gele_zone_diff.sh "$BASE" "$HEAD" app.html >> findings.txt
           exit 0
 
       - name: Résumé
@@ -144,10 +182,10 @@ jobs:
             awk -F'\t' '$2!="META"' findings.txt
             echo '```'
             echo ""
-            echo "Classes : **FUITE** (financement/identité/corpus) · **PERSO** (donnée personnelle — bloquant sur PR) · **PROSCRIT** (formulation interdite) · **GELE** (bloc gelé modifié → relecture physicien)."
-            echo "Faux positif ? → ajouter \`fichier<TAB>label\` à \`.github/scripts/leak_guard_allowlist.txt\`."
+            echo "Classes : **FUITE** (financement/identité/corpus — bloquant sur PR) · **PERSO** (donnée personnelle — bloquant sur PR) · **PROSCRIT** (formulation interdite) · **GELE** (zone gelée modifiée — bloquant sur PR depuis le 2026-09-02, brief O ; relecture physicien/arbitrage Soleil requis, chemin de déblocage documenté dans .github/workflows/leak-guard.yml)."
+            echo "Faux positif ? → ajouter \`fichier<TAB>label\` à \`.github/scripts/leak_guard_allowlist.txt\` (FUITE/PERSO/PROSCRIT uniquement — PAS pour un GELE réel, cf. « chemin de déblocage » ci-dessus)."
             echo ""
-            echo "> Alert-only (le build n'est pas cassé). Correction d'un contenu public = Cran C, décision Soleil."
+            echo "> Sur cron/push : alert-only (le build n'est pas cassé). Sur PR : FUITE/PERSO/GELE/CONFIG bloquent le merge (cf. workflow)."
           } > "$BODY"
           EXISTING=$(gh issue list --state open --label routine --search "in:title [routine:leak-guard]" --json number --jq '.[0].number' 2>/dev/null || true)
           if [ -n "$EXISTING" ]; then
@@ -156,18 +194,25 @@ jobs:
             gh issue create --title "[routine:leak-guard] Fuite doctrine potentielle sur surface publique" --label routine --body-file "$BODY"
           fi
 
-      - name: Gate bloquant (PR uniquement — FUITE / PERSO / CONFIG)
+      - name: Gate bloquant (PR uniquement — FUITE / PERSO / GELE / CONFIG)
         # Rend le check MORDANT sur pull_request : échoue (merge bloqué) si findings.txt porte au
         # moins un finding de classe FUITE (fuite réelle : identité, modules confidentiels, corpus,
         # financement, SIRET…), PERSO (donnée personnelle — adresse, coordonnée de domicile ;
-        # brief I, 2026-09-02, motivé par #903 : « alert-only non trié ne protège de rien ») ou
-        # CONFIG (scanner dégradé : secret absent, fichier sauté par le cap de taille, régex
-        # invalide, grep en échec, scan interrompu, surface vide, findings.txt absent →
-        # fail-closed, un scan requis n'est jamais silencieusement aveugle ni partiel).
-        # PROSCRIT / GELÉ NON bloquants (déjà signalés en issue) : évite de geler main sur de la
-        # pédagogie (exception cité/réfuté) ou un edit de zone gelée légitime (process physicien).
+        # brief I, 2026-09-02, motivé par #903 : « alert-only non trié ne protège de rien »),
+        # GELE (zone gelée modifiée — brief O, 2026-09-02, motivé par le même #903 : alert-only
+        # ignoré deux mois sur PR #901, ET par la dette CLASSIFICATION-ZONE-GELEE-PR1068-001 :
+        # « le garde-fou ne fonctionne dans aucune direction ». Détection par extraction+
+        # comparaison des 5 zones nommées, PAS par grep nu — cf. gele_zone_diff.sh) ou CONFIG
+        # (scanner dégradé : secret absent, fichier sauté par le cap de taille, régex invalide,
+        # grep en échec, scan interrompu, surface vide, findings.txt absent → fail-closed, un
+        # scan requis n'est jamais silencieusement aveugle ni partiel).
+        # Seul PROSCRIT reste NON bloquant (déjà signalé en issue) : évite de geler main sur de la
+        # pédagogie (exception cité/réfuté).
         # Ne recopie JAMAIS la chaîne sensible : fichier:ligne + classe/label seulement.
-        # Faux positif légitime → allowlister « chemin<TAB>label » dans leak_guard_allowlist.txt.
+        # Faux positif légitime (FUITE/PERSO/PROSCRIT) → allowlister « chemin<TAB>label » dans
+        # leak_guard_allowlist.txt. Un GELE réel n'est PAS un faux positif à allowlister — cf.
+        # « CHEMIN DE DÉBLOCAGE GELÉ » en tête de ce fichier (arbitrage Soleil, merge admin, jamais
+        # Code).
         if: github.event_name == 'pull_request'
         run: |
           set -e
@@ -182,14 +227,18 @@ jobs:
             echo "::error::Garde-fou anti-fuite : sentinelle de fin de scan ABSENTE (scanner jamais exécuté ou tué avant son trap). Fail-closed."
             exit 1
           fi
-          if awk -F'\t' '$2=="FUITE"||$2=="PERSO"||$2=="CONFIG"{c++} END{exit (c>0)?0:1}' findings.txt; then
-            echo "::error::Garde-fou anti-fuite : marqueur BLOQUANT détecté (classe FUITE/PERSO/CONFIG). Merge bloqué."
+          if awk -F'\t' '$2=="FUITE"||$2=="PERSO"||$2=="GELE"||$2=="CONFIG"{c++} END{exit (c>0)?0:1}' findings.txt; then
+            echo "::error::Garde-fou anti-fuite : marqueur BLOQUANT détecté (classe FUITE/PERSO/GELE/CONFIG). Merge bloqué."
             echo "Emplacements bloquants (la chaîne sensible n'est jamais recopiée) :"
-            awk -F'\t' '$2=="FUITE"||$2=="PERSO"||$2=="CONFIG"{print "  "$1"  ["$2"/"$3"]"}' findings.txt
+            awk -F'\t' '$2=="FUITE"||$2=="PERSO"||$2=="GELE"||$2=="CONFIG"{print "  "$1"  ["$2"/"$3"]"}' findings.txt
             echo ""
-            echo "→ Fuite réelle : retirer la mention (contenu public = Cran C, décision Soleil)."
-            echo "→ Faux positif légitime : allowlister « chemin<TAB>label » dans .github/scripts/leak_guard_allowlist.txt."
+            echo "→ Fuite réelle (FUITE/PERSO) : retirer la mention (contenu public = Cran C, décision Soleil)."
+            echo "→ Faux positif FUITE/PERSO/PROSCRIT : allowlister « chemin<TAB>label » dans .github/scripts/leak_guard_allowlist.txt."
+            echo "→ GELE (zone gelée modifiée) : ce n'est PAS un faux positif à allowlister — un finding GELE correctement"
+            echo "  détecté est un changement réel, qui reste Cran C. Chemin de déblocage : cf. « CHEMIN DE DÉBLOCAGE GELÉ »"
+            echo "  en tête de .github/workflows/leak-guard.yml — arbitrage Soleil consigné au registre privé, puis merge"
+            echo "  admin par Soleil (jamais par Code, avec ou sans --admin)."
             echo "→ CONFIG : configurer le secret manquant (LEAK_TERMS_REGEX / LEAK_CONFIDENTIAL_REGEX)."
             exit 1
           fi
-          echo "Gate anti-fuite : aucun marqueur bloquant (FUITE/CONFIG). OK."
+          echo "Gate anti-fuite : aucun marqueur bloquant (FUITE/PERSO/GELE/CONFIG). OK."
