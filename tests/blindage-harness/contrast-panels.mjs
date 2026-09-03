@@ -169,6 +169,97 @@ const POPUP_POINTS = [
 ];
 const POPUP_WAIT_MS = Number(process.env.CONTRAST_POPUP_WAIT_MS) || 2600;
 
+// ─── Balayage déterministe des branches de #conditions-bar (2026-09-03, brief U) ────────────
+// POURQUOI
+// La barre de conditions colore ses puces par TERNAIRE sur des valeurs LIVE (Kp NOAA, Dst Kyoto,
+// charge RTE, orage/ducting Open-Meteo). Le check ne mesurait donc que la branche que l'activité
+// géomagnétique du moment voulait bien lui montrer. Deux conséquences, constatées et non
+// théoriques :
+//   • ANGLE MORT DURABLE — la branche `--warn` du badge Kp (2 <= Kp < 5) n'a JAMAIS été exercée
+//     tant que curKp restait à « — » (Promise.all all-or-nothing de loadNOAA, corrigé le
+//     2026-09-03 par le brief P/#1198). Le jour où le Kp s'est peuplé, la violation est apparue
+//     — préexistante, jamais mesurée, à 2,91 (sous le seuil critique de 3,0).
+//   • CHECK NON DÉTERMINISTE — la même PR #1204 a eu un run ROUGE (Kp 2, branche ocre) puis des
+//     runs VERTS (Kp < 2, branche verte) sans qu'une ligne ne change. Un check dont la couleur
+//     dépend du Soleil ne protège rien : il est vert la plupart du temps et rouge au hasard.
+//
+// COMMENT
+// Un stub de `fetch` posé AVANT le boot (addInitScript), INERTE tant que `__telluxCondFixture`
+// vaut null — la passe principale ci-dessous mesure donc toujours la page telle qu'elle est
+// servie, réseau réel compris, exactement comme avant. Après cette passe, on renseigne la
+// fixture puis on RÉ-INVOQUE les vraies fonctions de production (loadNOAA, loadDst,
+// loadLightning, loadMeteo, loadChargeReseau, updateCondSummaries, syncBadges) : aucune logique
+// de branche n'est réimplémentée ici, donc rien à faire dériver le jour où un seuil change.
+// Ce qui est balayé est la SURFACE DÉJÀ AU PÉRIMÈTRE (#conditions-bar dans son état de
+// production, replié) — ce n'est pas un élargissement, c'est la couverture des branches d'une
+// surface qui y était déjà.
+//
+// CE QUE ÇA NE COUVRE TOUJOURS PAS
+// `#conditions-bar-details` (le tiroir déplié) reste hors mesure : replié en production, il est
+// en display:none et walk() ne le voit pas. Il porte 16 violations préexistantes MESURÉES le
+// 2026-09-03 — 15 de la famille --tx-mica (#74706A à 4,33 sur --tx-pierre : .cond-key ×10,
+// légende de sparkline ×3, .ci-tier ×2) + 1 de --tx3 sur --bg3 (« (JSON) » à 4,37) — toutes
+// indépendantes des branches de couleur (présentes jusque dans le scénario « calme »). Les
+// intégrer ici ferait tomber le check sur une dette d'une AUTRE famille, dont la remédiation
+// touche un token gelé (A11Y-CONTRAST-001) : lot séparé, à arbitrer, pas à mélanger.
+const COND_SCENARIOS = [
+  // Chaque scénario est choisi pour exercer des branches que les autres ne couvrent pas.
+  // Colonnes = entrées brutes servies aux vrais loaders, pas des couleurs attendues.
+  { nom: 'calme',   kp: 1.2, bz: 3.0,  dens: 2.0,  flux: 3,   dst: -10, ducting: false, orageProb: 5,  orage: false, conso: 120 },
+  { nom: 'modéré',  kp: 3.4, bz: -2.0, dens: 8.0,  flux: 40,  dst: -40, ducting: true,  orageProb: 35, orage: false, conso: 280 },
+  { nom: 'actif',   kp: 4.5, bz: -2.0, dens: 8.0,  flux: 40,  dst: -40, ducting: true,  orageProb: 35, orage: false, conso: 280 },
+  { nom: 'tempête', kp: 7.5, bz: -9.0, dens: 22.0, flux: 500, dst: -80, ducting: false, orageProb: 80, orage: true,  conso: 340 },
+];
+// Plancher par scénario — même raison que `min_noeuds` sur les surfaces requises : un scénario
+// qui ne rend plus rien doit ÉCHOUER, pas rapporter zéro violation. 10 = l'effectif réel de la
+// barre repliée (5 puces × clé/valeur), mesuré le 2026-09-03.
+const COND_MIN_NOEUDS = 10;
+
+// Stub de fetch — posé au boot, silencieux tant qu'aucune fixture n'est armée.
+const INSTALL_COND_FIXTURE = function () {
+  window.__telluxCondFixture = null;
+  const F = {
+    plasma: (s) => [['time_tag', 'density', 'speed', 'temperature'],
+                    ['2026-09-03 12:00:00.000', String(s.dens), '450', '100000']],
+    mag: (s) => [['time_tag', 'bx', 'by', 'bz'],
+                 ['2026-09-03 12:00:00.000', '1', '1', String(s.bz)]],
+    protons: (s) => [{ time_tag: '2026-09-03T12:00:00Z', flux: s.flux, energy: '>=10 MeV' }],
+    kp: (s) => [{ time_tag: '2026-09-03T12:00:00Z', kp_index: s.kp, estimated_kp: s.kp }],
+    dst: (s) => [{ time_tag: '2026-09-03T12:00:00Z', dst: String(s.dst) }],
+    rte: (s) => ({ short_term: [{ values: [{ value: s.conso }] }] }),
+    meteo: (s) => ({
+      current: {
+        surface_pressure: s.ducting ? 1030 : 1012,
+        relative_humidity_2m: s.ducting ? 30 : 70,
+        temperature_2m: 22, precipitation: 0, wind_speed_10m: 5,
+        weather_code: s.orage ? 95 : 1,
+      },
+      hourly: { thunderstorm_probability: new Array(24).fill(s.orageProb) },
+    }),
+  };
+  const vrai = window.fetch.bind(window);
+  window.fetch = function (url, opts) {
+    const s = window.__telluxCondFixture;
+    const u = String(url);
+    let body = null;
+    if (s) {
+      if (u.includes('plasma-7-day')) body = F.plasma(s);
+      else if (u.includes('mag-7-day')) body = F.mag(s);
+      else if (u.includes('integral-protons')) body = F.protons(s);
+      else if (u.includes('planetary_k_index')) body = F.kp(s);
+      else if (u.includes('kyoto-dst')) body = F.dst(s);
+      else if (u.includes('rte-france')) body = F.rte(s);
+      else if (u.includes('api.open-meteo.com')) body = F.meteo(s);
+    }
+    if (body !== null) {
+      return Promise.resolve(new Response(JSON.stringify(body), {
+        status: 200, headers: { 'Content-Type': 'application/json' },
+      }));
+    }
+    return vrai(url, opts);
+  };
+};
+
 // Fond de repli quand la pile d'ancêtres n'atteint jamais l'opacité 1 (panneau
 // posé sur le canvas Leaflet). Valeur prise sur le fond réellement rendu (Esri
 // World Light Gray Canvas).
@@ -322,8 +413,11 @@ async function main() {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
 
-  const rapport = { url: appUrl, panneaux: null, popup_par_point: null };
+  await page.addInitScript(INSTALL_COND_FIXTURE);
+
+  const rapport = { url: appUrl, panneaux: null, popup_par_point: null, cond_par_scenario: null };
   const POPUP_PANEL = PANELS.find((p) => p.sel === '.leaflet-popup-content');
+  const COND_PANEL = PANELS.find((p) => p.sel === '#conditions-bar');
   const scansPopup = [];
 
   try {
@@ -484,6 +578,70 @@ async function main() {
         violations: violationsUnion,
       });
     }
+
+    // ─── Balayage des branches de #conditions-bar (cf. COND_SCENARIOS) ─────
+    // A lieu APRÈS la passe principale : elle mesure la page telle qu'elle est
+    // servie (fixture inerte), celui-ci force les entrées pour atteindre les
+    // branches que la donnée live ne montre pas ce jour-là.
+    const scansCond = [];
+    for (const sc of COND_SCENARIOS) {
+      await page.evaluate(async (s) => {
+        // Purge du seul cache de fetchEnv (clés `tc_`), pas de sessionStorage.clear() :
+        // d'autres états de page y vivent, les écraser fausserait la mesure suivante.
+        try {
+          for (const k of Object.keys(sessionStorage)) if (k.startsWith('tc_')) sessionStorage.removeItem(k);
+        } catch (_e) { /* stockage indisponible : le stub sert de toute façon la fixture */ }
+        window.__telluxCondFixture = s;
+        // Vraies fonctions de production, dans l'ordre où la page les appelle.
+        if (typeof loadNOAA === 'function') await loadNOAA();
+        if (typeof loadDst === 'function') await loadDst();
+        if (typeof loadLightning === 'function') await loadLightning();
+        if (typeof loadMeteo === 'function') await loadMeteo();
+        if (typeof loadChargeReseau === 'function') await loadChargeReseau();
+        if (typeof _updateDstUI === 'function') _updateDstUI();
+        if (typeof updateCondSummaries === 'function') updateCondSummaries();
+        if (typeof syncBadges === 'function') syncBadges();
+        // État de PRODUCTION : la barre est repliée au chargement. On le réaffirme
+        // au lieu de le supposer — un flux ouvert plus haut pourrait l'avoir dépliée.
+        const bar = document.getElementById('conditions-bar');
+        const det = document.getElementById('conditions-bar-details');
+        if (bar) bar.classList.add('collapsed');
+        if (det) det.setAttribute('hidden', '');
+      }, sc);
+      await page.waitForTimeout(400);
+      const r = await page.evaluate(PROBE_CONTRAST, [[COND_PANEL], BASE_TONE]);
+      scansCond.push({ scenario: sc.nom, ...r[0] });
+    }
+    // Remise en veille du stub : plus aucune fixture servie après le balayage.
+    await page.evaluate(() => { window.__telluxCondFixture = null; });
+
+    // Une entrée de rapport par scénario, dédupliquée par (couleur, taille) comme
+    // pour le popup : un MÊME défaut vu sous trois scénarios se compte une fois.
+    const vuesCond = new Set();
+    const violationsCond = [];
+    for (const s of scansCond) {
+      for (const v of (s.violations || [])) {
+        const cle = `${v.couleur}|${v.px}`;
+        if (vuesCond.has(cle)) continue;
+        vuesCond.add(cle);
+        violationsCond.push({ ...v, vu_au_scenario: s.scenario });
+      }
+    }
+    rapport.cond_par_scenario = scansCond.map((s) => ({
+      scenario: s.scenario, etat: s.etat, noeuds: s.noeuds || 0,
+      violations: (s.violations || []).length,
+    }));
+    rapport.panneaux.push({
+      panel: 'Barre de conditions — branches forcées', sel: '#conditions-bar (fixtures)',
+      etat: scansCond.every((s) => s.etat === 'mesuré') ? 'mesuré' : 'dégradé',
+      // noeuds volontairement à 0 : ces nœuds sont les MÊMES que ceux de « Barre de
+      // conditions » plus haut, mesurés sous d'autres entrées. Les compter gonflerait
+      // le plancher de couverture sans rien couvrir de plus. Le plancher propre à ce
+      // balayage est COND_MIN_NOEUDS, appliqué par scénario ci-dessous.
+      noeuds: 0, scenarios_mesures: scansCond.length,
+      noeuds_par_scenario: scansCond.map((s) => s.noeuds || 0),
+      violations: violationsCond,
+    });
   } finally {
     await browser.close();
     if (server) server.close();
@@ -549,6 +707,21 @@ async function main() {
   // Référence : 204 nœuds mesurés en local le 2026-08-31, sur 5 panneaux × 2 thèmes ;
   // 100 après le retrait du mode sombre ; 192 depuis l'élargissement du 2026-09-01
   // (10 panneaux déclarés, 9 mesurés — Zone 2 reste masquée sans couche contextuelle).
+  // Plancher PAR SCÉNARIO du balayage #conditions-bar — un scénario qui ne rend plus la barre
+  // (loader renommé, fixture qui ne matche plus une URL, stub court-circuité) rapporterait zéro
+  // violation et passerait au vert sans avoir exercé la moindre branche. Exactement le mode
+  // d'échec que ce balayage existe pour supprimer : il ne doit pas pouvoir se le réintroduire.
+  for (const s of (rapport.cond_par_scenario || [])) {
+    if (s.etat !== 'mesuré' || s.noeuds < COND_MIN_NOEUDS) {
+      depassements.push(`balayage #conditions-bar sous son plancher : scénario « ${s.scenario} »`
+        + ` (état : ${s.etat}, ${s.noeuds} nœud(s) < ${COND_MIN_NOEUDS}) — la barre ne s'est pas`
+        + ' peuplée sous fixture, les branches de couleur ne sont pas exercées');
+    }
+  }
+  if (!rapport.cond_par_scenario || rapport.cond_par_scenario.length !== COND_SCENARIOS.length) {
+    depassements.push(`balayage #conditions-bar incomplet :`
+      + ` ${(rapport.cond_par_scenario || []).length}/${COND_SCENARIOS.length} scénarios mesurés`);
+  }
   const MIN_NOEUDS = Number(process.env.CONTRAST_MIN_NOEUDS ?? 75);
   if (noeudsMesures < MIN_NOEUDS) {
     depassements.push(`couverture insuffisante : ${noeudsMesures} nœuds mesurés < plancher ${MIN_NOEUDS}`
@@ -579,6 +752,7 @@ async function main() {
     violations_critiques: critiques,
     violations_aa: aa,
     popup_par_point: rapport.popup_par_point,
+    cond_par_scenario: rapport.cond_par_scenario,
     detail: rapport.panneaux,
   };
   process.stdout.write(JSON.stringify(sortie, null, 2) + '\n');

@@ -34,15 +34,39 @@ name: contrast-panels
 #     jamais desserrés pour absorber l'élargissement
 #   • 2026-09-02 (clôture) : les 28 résorbées (lots 1/2/2bis/3) -> 0 + 0 CONFIRMÉ
 #     sur la mesure réelle du périmètre élargi, pas seulement hérité par défaut
+#   • 2026-09-03 (brief U — balayage des branches de #conditions-bar) : 1 violation
+#     critique (2,91) sur le badge Kp, non pas nouvelle mais RÉVÉLÉE — sa branche
+#     `--warn` n'avait jamais pu s'exécuter tant que curKp restait à « — » (bug
+#     Promise.all de loadNOAA, corrigé par le brief P/#1198). Corrigée par un ocre
+#     de texte (--warn-tx). Cliquets INCHANGÉS à 0/0.
 # Déterminisme vérifié à chaque palier avant promotion du plafond — y compris
-# celui-ci : 2 runs consécutifs identiques avant la clôture du 2026-09-02.
+# celui-ci : 2 runs consécutifs identiques avant la clôture du 2026-09-02, et
+# 3 runs consécutifs identiques le 2026-09-03 après l'ajout du balayage.
+#
+# UN CHECK QUI DÉPEND DE LA MÉTÉO SPATIALE NE PROTÈGE RIEN (2026-09-03)
+# ---------------------------------------------------------------------
+# La même PR (#1204) a produit un run ROUGE puis, 17 minutes plus tard et sans
+# qu'une ligne ne change, des runs VERTS : la barre de conditions colore ses
+# puces par ternaire sur le Kp NOAA du moment, et la branche mesurée dépendait
+# donc de l'activité solaire à l'heure du run. Un tel check est vert la plupart
+# du temps et rouge au hasard — il ne protège pas, il use la confiance.
+# Le script balaie désormais les branches de #conditions-bar sous FIXTURES
+# (4 scénarios : calme / modéré / actif / tempête), en ré-invoquant les vraies
+# fonctions de production avec un fetch stubbé. Le périmètre n'est PAS élargi :
+# c'est la même surface, déjà mesurée, dont on couvre enfin toutes les branches.
 #
 # CE QUE CE CHECK COUVRE, ET CE QU'IL NE COUVRE TOUJOURS PAS (2026-09-02)
 # ------------------------------------------------------------------------
 # Couvre : 10 panneaux déclarés (9 mesurables sans couche contextuelle active —
 # Zone 2 reste masquée sinon), le popup au clic sur 4 points distincts (pas 1),
-# un contrôle par surface qui fait échouer le check si une surface requise ne
-# se peuple plus. Ne couvre PAS : le popup au placement d'une contribution
+# #conditions-bar sous 4 scénarios forcés (depuis le 2026-09-03), un contrôle par
+# surface qui fait échouer le check si une surface requise ne
+# se peuple plus. Ne couvre PAS : le tiroir déplié #conditions-bar-details, replié
+# en production donc en display:none — il porte 16 violations préexistantes
+# MESURÉES le 2026-09-03 (15 de la famille --tx-mica à 4,33, + « (JSON) » à 4,37),
+# indépendantes des branches de couleur ; leur remédiation touche un token gelé
+# (A11Y-CONTRAST-001) et fait l'objet d'un lot séparé, pas d'un fourre-tout ici.
+# Ne couvre pas non plus : le popup au placement d'une contribution
 # terrain (dette distincte, POPUP-REOPEN-DURING-CONTRIB-PLACEMENT-001, pas un
 # problème de contraste) ; les branches de `deltaCol` (vert/ocre/porphyre) —
 # aucun des 4 points n'a de contribution terrain assez proche pour produire un
