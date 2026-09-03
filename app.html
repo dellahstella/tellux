@@ -1984,21 +1984,25 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
   <li style="margin-bottom:4px"><strong>Proximité faille</strong> = +1.5 max si faille tectonique active à &lt;3 km (décroissance linéaire, BRGM 1/50k + Ghilardi 2017)</li>
 </ul>
 
-<p style="margin:10px 0 8px 0;"><strong>Score Indice Tellux — Perturbations vs Naturel (0-10) :</strong></p>
+<p style="margin:10px 0 8px 0;"><strong>Score Indice Tellux — Perturbation humaine (0-5) :</strong></p>
 <ul style="margin:6px 0 6px 16px;padding:0">
-  <li style="margin-bottom:4px"><strong>P (humaines)</strong> : Antennes ANFR (±50m GPS, 1 026 supports), lignes HTA/BT (courants 150-450A fix, modèle Biot-Savart), RF Friis (calibration interne, relecture en cours)</li>
-  <li><strong>N (naturelles)</strong> : IGRF-14 (±50-100 nT IDW interp.), anomalie crustale grille LCS-1 (dérivée EMAG2v3 + BRGM aéromag., ±20 nT), susceptibilité magnétique + failles</li>
+  <li><strong>P (humaines)</strong> : Antennes ANFR (±50m GPS, 1 026 supports), lignes HTA/BT (courants 150-450A fix, modèle Biot-Savart), RF Friis (calibration interne, relecture en cours)</li>
+</ul>
+
+<p style="margin:10px 0 8px 0;"><strong>Contexte géologique affiché (non scoré depuis le 2026-09-03, ADR-064) :</strong> <em style="font-size:11px;color:var(--tx3)">[substrat local, sans jugement chiffré — cf. popup au clic]</em></p>
+<ul style="margin:6px 0 6px 16px;padding:0">
+  <li>Susceptibilité magnétique locale (grille interne 34 points, Ghilardi 2017 + Leandri 2023 + BRGM géologie 1/50 000) — affichée au clic (barre + libellé substrat), sans verdict chiffré associé.</li>
 </ul>
 
 <p style="margin:10px 0 8px 0;"><strong style="color:var(--warn)">⚠️ Incertitudes documentées :</strong></p>
 <ul style="margin:6px 0 6px 16px;padding:0">
   <li style="margin-bottom:3px"><strong>Courants HTA/HTB</strong> = ordres de grandeur (150-450A). Réalité : ±50% journée (pic/creuse). EDF SEI Corse ne publie pas données temps réel.</li>
   <li style="margin-bottom:3px"><strong>IGRF 54 points</strong> → interpolation IDW (erreur ±50-100 nT possibles Corse)</li>
-  <li style="margin-bottom:3px"><strong>Anomalie crustale (score)</strong> : grille LCS-1 ~24 pts (±20 nT) ; EMAG2v3 live (2 arc-min ~3.7 km) réservé au panneau comparatif « anomalies mondiales » (exploratoire, sans incidence sur le score)</li>
+  <li style="margin-bottom:3px"><strong>Anomalie crustale</strong> : grille LCS-1 ~24 pts (±20 nT), affichage seul (panneau « Anomalies de référence », jauge crustale, ligne « C » du détail technique au clic) — n'a jamais alimenté aucun score, ni avant ni après le retrait du score Naturel (ADR-064, 2026-09-03). EMAG2v3 live (2 arc-min ~3.7 km) réservé au panneau comparatif « anomalies mondiales » (même statut, exploratoire).</li>
   <li style="margin-bottom:3px"><strong>Piézoélectricité</strong> : facteur 0.5 arbitraire (Bishop 1981), portée 500m = convention. À valider magnétomètre terrain.</li>
   <li style="margin-bottom:3px"><strong>Failles</strong> : 8 principales BRGM, bonus <3km. Quaternaires vs actives = pondération différente (0.7 vs 1.0).</li>
   <li style="margin-bottom:3px"><strong>RF</strong> : 28 mesures ANFR RF (+ 2 basse fréquence) insuffisantes intérieur Corse. Calibrage = littoral + agglos.</li>
-  <li style="margin-bottom:3px"><strong>Incertitude globale</strong> : ±1-2 points sur 0-10. Utiliser en <b>comparatif (site A vs B)</b> plutôt qu'absolu.</li>
+  <li style="margin-bottom:3px"><strong>Incertitude globale</strong> : à utiliser en <b>comparatif (site A vs B)</b> plutôt qu'en absolu (ancien repère « ±1-2 points sur 0-10 » retiré avec le passage à un score unique 0-5, ADR-064 — pas de valeur recalibrée disponible pour ce nouveau périmètre).</li>
 </ul>
 
 <p style="margin:10px 0 8px 0;"><strong style="color:var(--acc)">✅ Données validées (institutionnelles) :</strong></p>
@@ -3005,26 +3009,23 @@ var JS_STRINGS_EN = {
   ph_label_calme: "Calm",
   ph_label_modere: "Moderate",
   ph_label_perturbe: "Disturbed",
-  an_label_tres_actif: "Very active",
-  an_label_actif: "Active",
-  an_label_neutre: "Neutral",
-  it_verdict_calme_actif: "Notable profile — low surface disturbance, strong magnetic activity at depth",
-  it_verdict_calme_neutre: "Preserved natural area — calm, geologically neutral",
-  it_verdict_zone_calme: "Calm area — ideal for a reference measurement",
-  it_verdict_perturb_faible: "Low disturbance — favorable conditions",
+  // an_label_tres_actif/an_label_actif/an_label_neutre, it_verdict_calme_actif, it_verdict_calme_neutre
+  // SUPPRIMÉES (ADR-064, 2026-09-03) : anLabel et les 2 branches itVerdict croisant activNat sont
+  // retirées côté FR — contrairement au précédent gamma/radon, aucune destination de portage n'est
+  // prévue pour ces 5 clés, donc retirées plutôt que laissées orphelines sans plan de réemploi.
+  it_verdict_zone_calme: "Human disturbance very low", // ADR-064 : texte redéfini, remplace 'Calm area — ideal for a reference measurement'
+  it_verdict_perturb_faible: "Human disturbance low", // ADR-064 : texte redéfini, remplace 'Low disturbance — favorable conditions'
   it_verdict_influence_detectable: "Detectable human influence — antennas or lines",
-  it_verdict_zone_perturbee: "Disturbed area — field measurement recommended",
+  it_verdict_zone_perturbee: "Human disturbance high", // ADR-064 : texte redéfini, remplace 'Disturbed area — field measurement recommended'
   sol_fort: "Substrate with high magnetic susceptibility (biotite granite)",
   sol_modere: "Substrate with moderate susceptibility",
   sol_neutre: "Neutral substrate (limestone/ophiolite)",
   sol_standard: "Standard substrate",
   piezo_label: "Substrate magnetic susceptibility",
   piezo_title: "Relative magnetic susceptibility of the substrate, scale -5 to 60 nT — internal grid, independent of the crustal layer",
-  implan_tip_notable: "Notable configuration — high subsurface susceptibility, low surface disturbance",
-  implan_tip_susceptibilite_moderee: "Moderate subsurface susceptibility, low disturbance",
-  implan_tip_correcte: "Suitable siting — low disturbance",
-  implan_tip_verifier: "Check disturbance sources before siting",
-  implan_tip_deconseillee: "Not recommended for sensitive siting",
+  // implan_tip_notable/implan_tip_susceptibilite_moderee/implan_tip_correcte/implan_tip_verifier/
+  // implan_tip_deconseillee SUPPRIMÉES (ADR-064, 2026-09-03) : implanEmoji/implanTip retirées,
+  // aucune destination de portage prévue pour ces 5 clés.
   link_cartoradio: "CartoRadio ↗",
   elf_contribs_vide: "No nearby contribution",
   elf_contribs_plus_prefix: "+ ",
@@ -3069,7 +3070,7 @@ var JS_STRINGS_EN = {
   radon_commune_z3_sep: ": ",
   v2_footer_reperes: "Radon reference level: 300 Bq/m³ (Art. R. 1333-28 CSP)",
   popup_sub_perturbation: "Disturbance",
-  popup_sub_naturel: "Natural",
+  // popup_sub_naturel SUPPRIMÉE (ADR-064) : colonne « Naturel » retirée du popup, décision 1.
   popup_footer_source: "Source: Biot-Savart EDF SEI · CartoRadio ANFR · Tellux model",
 
   // Zones C + D + G (rapport d'audit initial) — Prescription de mesure,
@@ -7815,16 +7816,28 @@ map.on('click',async e=>{
   const dept=lat<42.0?'2A':'2B';
   const st=CARTORADIO_STATS[dept];
 
-  // ═══ INDICE TELLUX — DOUBLE SCORE ═══
-  // Score 1 : Perturbation humaine (0-5) → bas = bon
-  // Score 2 : Activité naturelle (0-5) → haut = site géophysiquement intéressant
+  // ═══ INDICE TELLUX ═══
+  // Correctif 2026-09-03 (ADR-064, brief H phase 3/4 — recommandation Soleil du cadrage
+  // _drafts/CADRAGE_INDICETELLUX_REFONTE_2026-09-03.md) : n'affiche plus qu'un seul score,
+  // Perturbation humaine (0-5). L'ancien second score « Activité naturelle » (activNat, ci-dessous)
+  // reposait sur des seuils écrits en dur (100/15/30/12 nT) jamais documentés comme calibrés ni
+  // sourcés — contraste net avec b-crustal, qui cite ses sources pour chaque anomalie affichée.
+  // Décision 1 : « ce qui disparaît, c'est un jugement sur 5 que rien ne justifie ». L'information
+  // sous-jacente NE disparaît PAS : susc_nT/geoType/solLabel restent affichés plus bas, déjà dans
+  // un registre non scoré (décision 2 — la donnée reste sur place, pas de migration de surface).
+  // activNat reste calculé (alimente encore indiceTellux, formule inchangée — cf. note plus bas)
+  // mais n'est plus rendu nulle part dans ce popup.
   const rfScore=nRFcalib>6?3:nRFcalib>2?2:nRFcalib>0.5?1:0;
   const humanScore=Math.min(4,Math.round(human/100));
   const geoScore=Math.min(3,Math.round(Math.abs(geo)/15));
   const perturbHumain=Math.min(5,humanScore+rfScore);
   // susc_nT : susceptibilité magnétique locale (nT)
   const suscNat=susc_nT>30?2:susc_nT>12?1:0;
-  const activNat=Math.min(5,geoScore+suscNat);
+  const activNat=Math.min(5,geoScore+suscNat); // n'est plus rendu dans ce popup, cf. commentaire ci-dessus
+  // indiceTellux : formule INCHANGÉE (ADR-064) — pas de consommateur confirmé au-delà de
+  // _geoLastPoint.indice (aucun trouvé par grep dans app.html), touchée à aucune surface publique,
+  // donc aucune raison de la modifier sans bénéfice visible ni instruction explicite. Si un usage
+  // caché apparaît un jour, il verra la même valeur qu'avant cette PR.
   const indiceTellux=Math.min(10,perturbHumain+activNat);
   // Couleurs basées sur perturbation humaine (c'est ça qui compte pour bon/mauvais)
   const phEmoji=perturbHumain<=1?'\ud83d\udfe2':perturbHumain<=2?'\ud83d\udfe1':perturbHumain<=3?'\ud83d\udfe0':'\ud83d\udd34';
@@ -7844,47 +7857,34 @@ map.on('click',async e=>{
   // Porphyre inchangé (7,18). Résultat : 4 niveaux sémantiques (glyphe+chiffre), 3 couleurs.
   // Vérifié par rendu visuel avant d'écrire ce commentaire (mockup temporaire, jamais commité).
   const phColor=perturbHumain<=1?'#3F5B3A':perturbHumain<=2?'#3F5B3A':perturbHumain<=3?'#8A5E22':'#8E2F1F';
-  // Correctif 2026-09-03 (brief H, phase 1) : glyphe non rendu (tofu) confirm\u00e9 en direct sur cette
-  // branche \u2014 \ud83e\udea8 U+1FAA8 (ROCK, Unicode 13.0 / sept. 2020, seul glyphe \u00ab r\u00e9cent \u00bb du fichier parmi
-  // phEmoji/anEmoji/implanEmoji, tous les autres datant d'Unicode 6.0-8.0/2010-2015 et rendant
-  // correctement). Repro : clic carte, \ud83d\udfe21/5 suivi d'une case vide avant 2/5. Remplac\u00e9 par \ud83d\uddfb
-  // MOUNT FUJI (U+1F5FB, Unicode 6.0/2010, m\u00eame famille \u00ab g\u00e9ologie/relief \u00bb que le glyphe vis\u00e9,
-  // m\u00eame vintage que \u26a1/\ud83c\udfe1/\ud83c\udf3f/\ud83d\udeab d\u00e9j\u00e0 pr\u00e9sents sans repro de tofu dans ce fichier).
-  const anEmoji=activNat>=4?'\u26a1':activNat>=2?'\ud83d\uddfb':'\u25cb';
-  const anLabel=activNat>=4?jt('an_label_tres_actif','Tr\u00e8s actif'):activNat>=2?jt('an_label_actif','Actif'):jt('an_label_neutre','Neutre');
-  // Lot 2 bis (2026-09-01) : la branche neutre passe de #9ca3af (2,24 — classe CRITIQUE) à
-  // #626774 (4,98), le gris tertiaire du popup. Elle habille le SCORE PRINCIPAL en 14 px gras,
-  // le chiffre le plus lu du popup, et n'apparaissait dans aucune mesure : le harnais ne clique
-  // qu'un point, donc n'exerce qu'une branche. Repro directe : cliquer 42,55/9,45 affiche « ○ 0/5 »
-  // à 2,24. Ce gris n'est PAS le dégradé sémantique — celui-ci est l'orange #d97706 / le brun
-  // #92400e, et il reste inchangé, réservé au lot 3 avec l'Ocre (échelles à traiter d'ensemble,
-  // pas par branche). Le gris est l'état « neutre / rien à signaler », hors échelle.
-  const anColor=activNat>=4?'#d97706':activNat>=2?'#92400e':'#626774';
-  const itVerdict=perturbHumain<=1&&activNat>=3?jt('it_verdict_calme_actif','Profil notable \u2014 faible perturbation de surface, forte activit\u00e9 magn\u00e9tique en profondeur'):
-    perturbHumain<=1&&activNat<=1?jt('it_verdict_calme_neutre','Zone naturelle pr\u00e9serv\u00e9e \u2014 calme, neutre g\u00e9ologiquement'):
-    perturbHumain<=1?jt('it_verdict_zone_calme','Zone calme \u2014 id\u00e9ale pour mesure de r\u00e9f\u00e9rence'):
-    perturbHumain<=2?jt('it_verdict_perturb_faible','Perturbations faibles \u2014 conditions favorables'):
+  // anEmoji/anLabel/anColor RETIR\u00c9ES le 2026-09-03 (ADR-064, d\u00e9cision 1) : habillaient le score
+  // \u00ab Naturel \u00bb (activNat/5) d\u00e9sormais retir\u00e9 de ce popup, cf. commentaire plus haut. Le repro tofu
+  // rock->mont-fuji document\u00e9 la veille (brief H phase 1) concernait pr\u00e9cis\u00e9ment anEmoji \u2014 devenu
+  // sans objet avec la variable elle-m\u00eame. an_label_* (3 cl\u00e9s) orphelines, cf. table i18n.
+  //
+  // itVerdict — recadré (ADR-064, décision 3, point jugé le plus important par Soleil) : ne se
+  // base plus que sur perturbHumain (seul axe encore affiché) et ne produit plus de vocabulaire de
+  // recommandation d'usage. Constat qui motive ce recadrage : « Zone calme — idéale pour mesure de
+  // référence » ÉTAIT une recommandation, pas une description — un contributeur qui la lisait
+  // allait y mesurer, sur la seule foi d'un seuil (perturbHumain<=1, lui-même Math.round(elf/100))
+  // jamais documenté ni sourcé. Les branches croisant activNat (it_verdict_calme_actif/
+  // _calme_neutre) sont fusionnées dans la branche perturbHumain<=1 restante — l'information
+  // qu'elles portaient sur l'axe naturel reste disponible via solLabel (décision 1). La branche
+  // perturbHumain<=3 (« Influence humaine détectable — antennes ou lignes ») était déjà factuelle
+  // (explique une cause probable, ne recommande rien) : conservée à l'identique, clé incluse.
+  const itVerdict=perturbHumain<=1?jt('it_verdict_zone_calme','Perturbation humaine tr\u00e8s faible'):
+    perturbHumain<=2?jt('it_verdict_perturb_faible','Perturbation humaine faible'):
     perturbHumain<=3?jt('it_verdict_influence_detectable','Influence humaine d\u00e9tectable \u2014 antennes ou lignes'):
-    jt('it_verdict_zone_perturbee','Zone perturb\u00e9e \u2014 mesure terrain recommand\u00e9e');
+    jt('it_verdict_zone_perturbee','Perturbation humaine \u00e9lev\u00e9e');
   const itLabel=phLabel; // itEmoji/itColor retirés le 2026-08-23 (n'étaient utilisés que par l'INFO BAR)
   // Sous-sol simplifié — basé sur susceptibilité magnétique (nT)
   const solLabel=susc_nT>30?jt('sol_fort','Substrat à forte susceptibilité magnétique (granit biotite)'):susc_nT>12?jt('sol_modere','Substrat à susceptibilité modérée'):geo<0?jt('sol_neutre','Substrat neutre (calcaire/ophiolite)'):jt('sol_standard','Substrat standard');
-  // Recommandation implantation basée sur perturbation humaine + activité naturelle
-  // Correctif 2026-09-03 (brief H, phase 2, priorité n°1 — retour Soleil) : « Bon potentiel —
-  // roche résonante, peu perturbé » retiré ci-dessous. Vocabulaire de résonance appliqué à un
-  // substrat, à côté d'un score « naturel » : le passage le plus attaquable de toute la surface
-  // publique (registre géobiologie/radiesthésie — « roche résonante » n'est pas un terme de la
-  // littérature géophysique citée par ce projet). Remplacé par la même description factuelle que
-  // la branche voisine (implan_tip_notable, susceptibilité du sous-sol — grandeur mesurée, cf.
-  // calcGeoSusc()) à un palier d'activité naturelle inférieur. Clé i18n renommée
-  // (implan_tip_bon_potentiel -> implan_tip_susceptibilite_moderee) : l'ancienne ne décrivait
-  // plus rien après ce retrait.
-  const implanEmoji=perturbHumain<=1&&activNat>=2?'🏡':perturbHumain<=2?'🌿':perturbHumain<=3?'⚠️':'🚫';
-  const implanTip=perturbHumain<=1&&activNat>=3?jt('implan_tip_notable','Configuration notable \u2014 forte susceptibilité du sous-sol, faible perturbation de surface'):
-    perturbHumain<=1&&activNat>=2?jt('implan_tip_susceptibilite_moderee','Susceptibilit\u00e9 du sous-sol mod\u00e9r\u00e9e, faible perturbation'):
-    perturbHumain<=2?jt('implan_tip_correcte','Implantation correcte \u2014 perturbations faibles'):
-    perturbHumain<=3?jt('implan_tip_verifier','V\u00e9rifier les sources de perturbation avant implantation'):
-    jt('implan_tip_deconseillee','Zone d\u00e9conseill\u00e9e pour implantation sensible');
+  // implanEmoji/implanTip RETIRÉES le 2026-09-03 (ADR-064, décision 3 étendue) : cette
+  // « recommandation d'implantation » croisait perturbHumain/activNat dans le même registre
+  // prescriptif que l'ancien itVerdict (« Implantation correcte », « Zone déconseillée pour
+  // implantation sensible » — jugements de convenance sur les mêmes seuils non sourcés). Sa
+  // partie factuelle (susceptibilité du sous-sol) fait déjà double emploi avec solLabel
+  // ci-dessus. 5 clés i18n orphelines (implan_tip_*), cf. table i18n.
 
   // INFO BAR retiree le 2026-08-23 (repro Soleil, capture a l'appui) : ce bandeau #info
   // (top-right, z-index 2400, appele sans `duration` donc persistant) dupliquait quasi
@@ -8118,16 +8118,14 @@ map.on('click',async e=>{
     '</div>';
   calcPopup.setContent(
     '<div style="font-family:var(--font);min-width:180px">'+
-    // Double score principal
+    // Score principal — ADR-064 décision 1 : le second score « Naturel » est retiré (l'info
+    // reste disponible via solLabel plus bas, non scorée, cf. commentaire au calcul plus haut).
     '<div style="display:flex;gap:8px;align-items:baseline">'+
       '<div style="font-weight:700;font-size:14px;color:'+phColor+'">'+phEmoji+' '+perturbHumain+'/5</div>'+
-      '<div style="font-weight:700;font-size:14px;color:'+anColor+'">'+anEmoji+' '+activNat+'/5</div>'+
     '</div>'+
-    '<div style="display:flex;gap:8px;font-size:9px;color:#4a4f5e;margin-bottom:2px"><span>'+jt('popup_sub_perturbation','Perturbation')+'</span><span>'+jt('popup_sub_naturel','Naturel')+'</span></div>'+
-    // Ligne 2 : verdict en clair
+    '<div style="display:flex;gap:8px;font-size:9px;color:#4a4f5e;margin-bottom:2px"><span>'+jt('popup_sub_perturbation','Perturbation')+'</span></div>'+
+    // Ligne 2 : description factuelle, pas une recommandation — ADR-064 décision 3
     '<div style="font-size:10px;color:#4a4f5e;margin:2px 0">'+itVerdict+'</div>'+
-    // Ligne 2b : recommandation implantation
-    '<div style="font-size:9px;color:#4a4f5e;margin:1px 0">'+implanEmoji+' '+implanTip+'</div>'+
     // Ligne 2c : substrat + lien CartoRadio ciblé sur ce point — migré depuis l'INFO BAR
     // #info (retirée le 2026-08-23, repro Soleil : bandeau persistant, sans bouton ✕,
     // faisait doublon avec le contenu déjà présent dans ce popup — cf. lignes ci-dessus).
@@ -8164,7 +8162,7 @@ map.on('click',async e=>{
     }
   });
   // v8 : bloc extrait hors de ce fichier
-  _geoLastPoint={lat,lng,igrf,human,geo,crustal,susc_nT,skinD,tellPct,geoType,solLabel,indice:indiceTellux,label:itLabel,verdict:itVerdict,implanTip,rf:nRFcalib,radon_class,gamma_nSvh};
+  _geoLastPoint={lat,lng,igrf,human,geo,crustal,susc_nT,skinD,tellPct,geoType,solLabel,indice:indiceTellux,label:itLabel,verdict:itVerdict,rf:nRFcalib,radon_class,gamma_nSvh}; // implanTip retirée (ADR-064)
 });
 
 // Points violets (contributions citoyennes) alignés sur le pattern bindTooltip sticky des
@@ -12357,16 +12355,19 @@ function capCleanup(){
         "<strong>Fault proximity</strong> = +1.5 max if an active tectonic fault is within &lt;3 km (linear decay, BRGM 1:50k + Ghilardi 2017)"],
       // Score Indice Tellux
       ["#methodology-panel p@6",
-        "Score Indice Tellux — Perturbations vs Naturel (0-10) :",
-        "<strong>Tellux Index Score — Disturbance vs. Natural (0-10):</strong>"],
+        "Score Indice Tellux — Perturbation humaine (0-5) :",
+        "<strong>Tellux Index Score — Human Disturbance (0-5):</strong>"],
       ["#methodology-panel li@1",
         "P (humaines) : Antennes ANFR (±50m GPS, 1 026 supports), lignes HTA/BT (courants 150-450A fix, modèle Biot-Savart), RF Friis (calibration interne, relecture en cours)",
         "<strong>P (human)</strong>: ANFR antennas (±50m GPS, 1,026 supports), HTA/BT lines (fixed 150-450A currents, Biot-Savart model), Friis RF (internal calibration, review underway)"],
       ["#methodology-panel li@2",
-        "N (naturelles) : IGRF-14 (±50-100 nT IDW interp.), anomalie crustale grille LCS-1 (dérivée EMAG2v3 + BRGM aéromag., ±20 nT), susceptibilité magnétique + failles",
-        "<strong>N (natural)</strong>: IGRF-14 (±50-100 nT IDW interp.), LCS-1 grid crustal anomaly (derived from EMAG2v3 + BRGM airborne mag., ±20 nT), magnetic susceptibility + faults"],
-      // Incertitudes documentées
+        "Susceptibilité magnétique locale (grille interne 34 points, Ghilardi 2017 + Leandri 2023 + BRGM géologie 1/50 000) — affichée au clic (barre + libellé substrat), sans verdict chiffré associé.",
+        "Local magnetic susceptibility (internal 34-point grid, Ghilardi 2017 + Leandri 2023 + BRGM 1:50,000 geology) — shown on click (bar + substrate label), with no associated numeric verdict."],
       ["#methodology-panel p@7",
+        "Contexte géologique affiché (non scoré depuis le 2026-09-03, ADR-064) : [substrat local, sans jugement chiffré — cf. popup au clic]",
+        "<strong>Geological context shown (unscored since 2026-09-03, ADR-064):</strong> <em style=\"font-size:11px;color:var(--tx3)\">[local substrate, no numeric judgment — see popup on click]</em>"],
+      // Incertitudes documentées
+      ["#methodology-panel p@8",
         "⚠️ Incertitudes documentées :",
         "<strong style=\"color:var(--warn)\">⚠️ Documented uncertainties:</strong>"],
       ["#methodology-panel li@3",
@@ -12376,8 +12377,8 @@ function capCleanup(){
         "IGRF 54 points → interpolation IDW (erreur ±50-100 nT possibles Corse)",
         "<strong>IGRF 54 points</strong> → IDW interpolation (possible ±50-100 nT error in Corsica)"],
       ["#methodology-panel li@5",
-        "Anomalie crustale (score) : grille LCS-1 ~24 pts (±20 nT) ; EMAG2v3 live (2 arc-min ~3.7 km) réservé au panneau comparatif « anomalies mondiales » (exploratoire, sans incidence sur le score)",
-        "<strong>Crustal anomaly (score)</strong>: LCS-1 grid ~24 pts (±20 nT); live EMAG2v3 (2 arc-min ~3.7 km) reserved for the \"worldwide anomalies\" comparison panel (exploratory, no effect on the score)"],
+        "Anomalie crustale : grille LCS-1 ~24 pts (±20 nT), affichage seul (panneau « Anomalies de référence », jauge crustale, ligne « C » du détail technique au clic) — n'a jamais alimenté aucun score, ni avant ni après le retrait du score Naturel (ADR-064, 2026-09-03). EMAG2v3 live (2 arc-min ~3.7 km) réservé au panneau comparatif « anomalies mondiales » (même statut, exploratoire).",
+        "<strong>Crustal anomaly</strong>: LCS-1 grid ~24 pts (±20 nT), display only (\"Reference anomalies\" panel, crustal gauge, \"C\" line in the on-click technical detail) — has never fed any score, either before or after the Natural score was removed (ADR-064, 2026-09-03). Live EMAG2v3 (2 arc-min ~3.7 km) is reserved for the \"worldwide anomalies\" comparison panel (same status, exploratory)."],
       ["#methodology-panel li@6",
         "Piézoélectricité : facteur 0.5 arbitraire (Bishop 1981), portée 500m = convention. À valider magnétomètre terrain.",
         "<strong>Piezoelectricity</strong>: arbitrary 0.5 factor (Bishop 1981), 500m range = convention. To be validated with field magnetometer."],
@@ -12388,10 +12389,10 @@ function capCleanup(){
         "RF : 28 mesures ANFR RF (+ 2 basse fréquence) insuffisantes intérieur Corse. Calibrage = littoral + agglos.",
         "<strong>RF</strong>: 28 ANFR RF measurements (+ 2 low-frequency) insufficient for indoor Corsica. Calibration = coastal + urban areas."],
       ["#methodology-panel li@9",
-        "Incertitude globale : ±1-2 points sur 0-10. Utiliser en comparatif (site A vs B) plutôt qu'absolu.",
-        "<strong>Overall uncertainty</strong>: ±1-2 points on 0-10. Use <b>comparatively (site A vs. B)</b> rather than as an absolute value."],
+        "Incertitude globale : à utiliser en comparatif (site A vs B) plutôt qu'en absolu (ancien repère « ±1-2 points sur 0-10 » retiré avec le passage à un score unique 0-5, ADR-064 — pas de valeur recalibrée disponible pour ce nouveau périmètre).",
+        "<strong>Overall uncertainty</strong>: use <b>comparatively (site A vs. B)</b> rather than as an absolute value (former \"±1-2 points on 0-10\" benchmark retired along with the move to a single 0-5 score, ADR-064 — no recalibrated figure available yet for this new scope)."],
       // Données validées
-      ["#methodology-panel p@8",
+      ["#methodology-panel p@9",
         "✅ Données validées (institutionnelles) :",
         "<strong style=\"color:var(--acc)\">✅ Validated data (institutional):</strong>"],
       ["#methodology-panel li@10",
@@ -12404,7 +12405,7 @@ function capCleanup(){
         "BRGM WMS : géologie, nappes, cavités = données publiques",
         "<strong>BRGM WMS</strong>: geology, groundwater, cavities = public data"],
       // Références peer-reviewed
-      ["#methodology-panel p@9",
+      ["#methodology-panel p@10",
         "Références peer-reviewed intégrées :",
         "<strong>Integrated peer-reviewed references:</strong>"],
       ["#methodology-panel li@13",
@@ -12417,7 +12418,7 @@ function capCleanup(){
         "Démarche scientifique ↗",
         "<a href=\"cadre-scientifique.html\" target=\"_blank\" rel=\"noopener\" style=\"color:var(--acc);text-decoration:underline\">Scientific Framework ↗</a>"],
       // Roadmap
-      ["#methodology-panel p@10",
+      ["#methodology-panel p@11",
         "Roadmap (Q3 2026+) :",
         "<strong>Roadmap (Q3 2026+):</strong>"],
       ["#methodology-panel li@16",
@@ -12426,7 +12427,7 @@ function capCleanup(){
       ["#methodology-panel li@17",
         "Courants HTA dynamiques = profils journaliers EDF SEI (si accord)",
         "Dynamic HTA currents = EDF SEI daily profiles (if agreement reached)"],
-      ["#methodology-panel p@11",
+      ["#methodology-panel p@12",
         "📚 Corpus & audit complets : GitHub tellux",
         "📚 Full corpus & audit: <a href=\"https://github.com/dellahstella/tellux\" target=\"_blank\" style=\"color:var(--acc);text-decoration:none;\">GitHub tellux</a>"],
       // Drawer Glossaire (#glossary-drawer) — Lot G4 (2026-08-15) : 4 corps
