@@ -3018,16 +3018,27 @@ var JS_STRINGS_EN = {
   sol_modere: "Substrate with moderate susceptibility",
   sol_neutre: "Neutral substrate (limestone/ophiolite)",
   sol_standard: "Standard substrate",
+  piezo_label: "Substrate magnetic susceptibility",
+  piezo_title: "Relative magnetic susceptibility of the substrate, scale -5 to 60 nT — internal grid, independent of the crustal layer",
   implan_tip_notable: "Notable configuration — high subsurface susceptibility, low surface disturbance",
-  implan_tip_bon_potentiel: "Good potential — resonant rock, low disturbance",
+  implan_tip_susceptibilite_moderee: "Moderate subsurface susceptibility, low disturbance",
   implan_tip_correcte: "Suitable siting — low disturbance",
   implan_tip_verifier: "Check disturbance sources before siting",
   implan_tip_deconseillee: "Not recommended for sensitive siting",
   link_cartoradio: "CartoRadio ↗",
   elf_contribs_vide: "No nearby contribution",
   elf_contribs_plus_prefix: "+ ",
-  elf_contribs_plus_suffix: " more",
+  elf_contribs_plus_suffix: " more (full list below)",
   elf_iarc_note: "Documentary reference point: IARC class 2B for chronic residential ELF ≥ 300 nT — not an alert threshold, a statistical signal.",
+  detail_technique_summary: "Technical detail (verification)",
+  detail_delta_label: "gap between a nearby citizen reading and the model (IGRF+ELF+local), — if none within 500 m",
+  detail_crustal_label: "large-scale crustal anomaly, LCS1/EMAG2v3 — exploratory reference point, not integrated into the score",
+  detail_local_label: "local geological susceptibility — feeds the Natural score",
+  detail_human_label: "total anthropic ELF field, same value shown above — feeds the Disturbance score",
+  detail_rf_label: "calibrated RF field, same measurement as above in µW/m², different unit",
+  detail_alt_label: "Altitude (IGN RGE Alti, ~1 m resolution)",
+  detail_elf_liste_title: "Full ELF contributions (",
+  detail_elf_liste_title_suffix: "):",
   radon_eleve: "High",
   radon_modere: "Moderate",
   radon_faible: "Low",
@@ -7859,9 +7870,18 @@ map.on('click',async e=>{
   // Sous-sol simplifié — basé sur susceptibilité magnétique (nT)
   const solLabel=susc_nT>30?jt('sol_fort','Substrat à forte susceptibilité magnétique (granit biotite)'):susc_nT>12?jt('sol_modere','Substrat à susceptibilité modérée'):geo<0?jt('sol_neutre','Substrat neutre (calcaire/ophiolite)'):jt('sol_standard','Substrat standard');
   // Recommandation implantation basée sur perturbation humaine + activité naturelle
-  const implanEmoji=perturbHumain<=1&&activNat>=2?'\ud83c\udfe1':perturbHumain<=2?'\ud83c\udf3f':perturbHumain<=3?'\u26a0\ufe0f':'\ud83d\udeab';
+  // Correctif 2026-09-03 (brief H, phase 2, priorité n°1 — retour Soleil) : « Bon potentiel —
+  // roche résonante, peu perturbé » retiré ci-dessous. Vocabulaire de résonance appliqué à un
+  // substrat, à côté d'un score « naturel » : le passage le plus attaquable de toute la surface
+  // publique (registre géobiologie/radiesthésie — « roche résonante » n'est pas un terme de la
+  // littérature géophysique citée par ce projet). Remplacé par la même description factuelle que
+  // la branche voisine (implan_tip_notable, susceptibilité du sous-sol — grandeur mesurée, cf.
+  // calcGeoSusc()) à un palier d'activité naturelle inférieur. Clé i18n renommée
+  // (implan_tip_bon_potentiel -> implan_tip_susceptibilite_moderee) : l'ancienne ne décrivait
+  // plus rien après ce retrait.
+  const implanEmoji=perturbHumain<=1&&activNat>=2?'🏡':perturbHumain<=2?'🌿':perturbHumain<=3?'⚠️':'🚫';
   const implanTip=perturbHumain<=1&&activNat>=3?jt('implan_tip_notable','Configuration notable \u2014 forte susceptibilité du sous-sol, faible perturbation de surface'):
-    perturbHumain<=1&&activNat>=2?jt('implan_tip_bon_potentiel','Bon potentiel \u2014 roche r\u00e9sonante, peu perturb\u00e9'):
+    perturbHumain<=1&&activNat>=2?jt('implan_tip_susceptibilite_moderee','Susceptibilit\u00e9 du sous-sol mod\u00e9r\u00e9e, faible perturbation'):
     perturbHumain<=2?jt('implan_tip_correcte','Implantation correcte \u2014 perturbations faibles'):
     perturbHumain<=3?jt('implan_tip_verifier','V\u00e9rifier les sources de perturbation avant implantation'):
     jt('implan_tip_deconseillee','Zone d\u00e9conseill\u00e9e pour implantation sensible');
@@ -7923,9 +7943,20 @@ map.on('click',async e=>{
   // #8A5E22 (4,99 sur ce fond) — la même substitution que partout ailleurs dans ce fichier,
   // pas une couleur choisie pour ce cas précis.
   const deltaCol=delta===null?'#626774':Math.abs(delta)<50?'#3F5B3A':Math.abs(delta)<200?'#8A5E22':'#8E2F1F';
-  // Barre susceptibilité magnétique — normalisée sur 60 nT (max grille GEO_SUSC_GRID)
+  // Barre susceptibilité magnétique — normalisée sur -5 à 60 nT (plage réelle de GEO_SUSC_GRID,
+  // cf. calcGeoSusc()/suscPct ci-dessus)
+  // Correctif 2026-09-03 (brief H, phase 2) : cette barre n'avait aucun libellé visible, seule une
+  // valeur au survol (title=) — repéré comme symptôme du brief. Ajout d'une ligne visible
+  // libellé+valeur+unité au-dessus (même patron que les lignes de domaine plus bas, ex. « Champ
+  // statique géomagnétique » / valeur nT), le title= existant reste comme complément (échelle).
   const suscPct=Math.min(100,Math.max(0,Math.round((susc_nT+5)/65*100)));
-  const piezoBar=susc_nT>5?'<div style="height:3px;background:linear-gradient(90deg,#C28533 '+suscPct+'%,#e5e7eb '+suscPct+'%);border-radius:2px;margin:3px 0" title="Susceptibilité magnétique locale : '+susc_nT+' nT ('+geoType+')"></div>':'';
+  const piezoBar=susc_nT>5?
+    '<div style="font-size:8px;color:#626774;margin-top:3px;display:flex;justify-content:space-between">'+
+      '<span>'+jt('piezo_label','Susceptibilité magnétique du substrat')+'</span>'+
+      '<span>'+susc_nT+' nT</span>'+
+    '</div>'+
+    '<div style="height:3px;background:linear-gradient(90deg,#C28533 '+suscPct+'%,#e5e7eb '+suscPct+'%);border-radius:2px;margin:2px 0 3px" title="'+jt('piezo_title','Susceptibilité magnétique relative du substrat, échelle -5 à 60 nT — grille interne indépendante de la couche crustale')+' ('+geoType+')"></div>'
+    :'';
   // Sections domaines v2 (niveau B)
   // Correctif 2026-09-03 (brief H, phase 1) : deux bugs d'affichage confirmés en lecture de code
   // PUIS en direct (52 nT total, 3 lignes visibles ne sommant qu'à 24 nT — écart cohérent avec
@@ -7943,7 +7974,11 @@ map.on('click',async e=>{
   const elfContribsList=v2.domains.magnetic.elf.contributions;
   const elfContribs=elfContribsList.length
     ? elfContribsList.slice(0,3).map(c=>c.source_type+(c.identifier?' ('+c.identifier+')':'')+' : '+c.B_nT+' nT').join(' · ')
-      +(elfContribsList.length>3?' · '+jt('elf_contribs_plus_prefix','+ ')+(elfContribsList.length-3)+jt('elf_contribs_plus_suffix',' autres'):'')
+      // Correctif 2026-09-03 (brief H, phase 2, retour Soleil) : "+N autres" sans accès à la
+      // liste laissait l'utilisateur en demi-information. Suffixe pointe désormais vers le bloc
+      // "détail technique" (cf. detailTechniqueHTML plus bas) qui liste l'intégralité — pas
+      // seulement les 3 premières.
+      +(elfContribsList.length>3?' · '+jt('elf_contribs_plus_prefix','+ ')+(elfContribsList.length-3)+jt('elf_contribs_plus_suffix',' autres (détail ↓)'):'')
     : jt('elf_contribs_vide','Aucune contribution proche');
   const elfIARCnote=elf_nT>=300
     ? '<div style="border-left:2px solid #C28533;padding-left:5px;margin-top:3px;font-size:8px;color:#8A5E22;font-style:italic">'+jt('elf_iarc_note','Repère documentaire : IARC classe 2B pour ELF ≥ 300 nT chronique résidentiel — pas de seuil d\'alerte, signal statistique.')+'</div>'
@@ -7998,6 +8033,40 @@ map.on('click',async e=>{
     }
     return jt('corr_indisponible','correction externe indisponible'); // défensif — calcExternalCorr() pose toujours _extCorrSource, ce cas ne devrait plus jamais survenir
   })();
+
+  // Bloc « détail technique » — brief H phase 2 (retour Soleil, 2026-09-03).
+  // Remplace la ligne de debug brute « Δ · C · L · H · RF · Alt », jamais documentée nulle part
+  // dans l'interface (repérée en phase 1), par un <details> derrière un « ? » avec libellés
+  // développés. Choix retenu explicitement : DÉPLACER, pas supprimer — cette ligne est la seule
+  // trace de traçabilité du panneau permettant à un lecteur technique de vérifier les termes
+  // additifs qui alimentent predicted/perturbHumain/activNat (Δ, L, H) et de situer C, calculé
+  // mais jamais consommé par aucun score (cf. crustal_gauge_desc_prefix, déjà public : « repère
+  // exploratoire — non intégré au score »). Étend aussi la liste ELF complète au-delà des 3
+  // premières lignes affichées plus haut (cf. correctif phase 1) : accueille au même endroit ce
+  // que le compteur "+N autres" ne rendait pas consultable — même "?" pour les deux (retour
+  // Soleil : "si le « ? » accueille la ligne de debug, il pourrait aussi accueillir la liste
+  // complète").
+  const elfContribsFullHTML = elfContribsList.length>3
+    ? '<div style="margin-top:4px"><b>'+jt('detail_elf_liste_title','Contributions ELF complètes (')+elfContribsList.length+jt('detail_elf_liste_title_suffix',') :')+'</b><br>'
+      +elfContribsList.map(c=>c.source_type+(c.identifier?' ('+c.identifier+')':'')+' : '+c.B_nT+' nT').join('<br>')
+      +'</div>'
+    : '';
+  const detailTechniqueHTML =
+    '<details style="margin-top:3px;border-top:1px solid #e5e7eb;padding-top:3px">'+
+      '<summary style="cursor:pointer;font-size:9px;color:#626774;list-style:none;display:flex;align-items:center;gap:4px">'+
+        '<span style="border:1px solid #c7cad3;border-radius:50%;width:11px;height:11px;display:inline-flex;align-items:center;justify-content:center;font-size:8px;flex-shrink:0">?</span>'+
+        jt('detail_technique_summary','Détail technique (vérification)')+
+      '</summary>'+
+      '<div style="font-size:8px;color:#626774;margin-top:3px;line-height:1.6">'+
+        '<div>Δ ('+jt('detail_delta_label','écart mesure citoyenne proche / modèle IGRF+ELF+local, "—" si aucune mesure à moins de 500 m')+') : <span style="color:'+deltaCol+'">'+deltaStr+'</span></div>'+
+        '<div>C ('+jt('detail_crustal_label','anomalie crustale grande échelle, LCS1/EMAG2v3 — repère exploratoire, non intégré au score')+') : <span style="color:#AD22BE">'+(crustal>0?'+':'')+crustal+' nT</span></div>'+
+        '<div>L ('+jt('detail_local_label','susceptibilité géologique locale — alimente le score Naturel')+') : <span style="color:#3F5B3A">'+(geo>0?'+':'')+geo+' nT</span></div>'+
+        '<div>H ('+jt('detail_human_label','champ ELF anthropique total, valeur identique à celle affichée plus haut — alimente le score Perturbation')+') : +'+human+' nT</div>'+
+        (nRFcalib>0.01?'<div>RF ('+jt('detail_rf_label','champ RF calibré, même mesure qu\'au-dessus en µW/m², autre unité')+') : '+nRFcalib.toFixed(1)+' V/m</div>':'')+
+        (typeof altitude_m==='number' && isFinite(altitude_m)?'<div>'+jt('detail_alt_label','Altitude (IGN RGE Alti, résolution ~1 m)')+' : '+altitude_m+' m</div>':'')+
+      '</div>'+
+      elfContribsFullHTML+
+    '</details>';
 
   const v2SectionHTML=
     '<div style="border-top:1px solid #e5e7eb;margin-top:4px;padding-top:4px">'+
@@ -8067,15 +8136,10 @@ map.on('click',async e=>{
     piezoBar+
     // Section domaines v2 (niveau B)
     v2SectionHTML+
-    // Ligne 3 : résumé technique compact
-    '<div style="font-size:9px;color:#626774;margin-top:3px;border-top:1px solid #e5e7eb;padding-top:3px">'+
-      '\u0394 <span style="color:'+deltaCol+'">'+deltaStr+'</span>'+
-      ' \u00b7 <span style="color:#AD22BE">C'+(crustal>0?'+':'')+crustal+'</span>'+
-      ' \u00b7 <span style="color:#3F5B3A">L'+(geo>0?'+':'')+geo+'</span>'+
-      ' \u00b7 H+'+human+
-      (nRFcalib>0.01?' \u00b7 RF '+nRFcalib.toFixed(1)+'V/m':'')+
-      (typeof altitude_m==='number' && isFinite(altitude_m)?' \u00b7 <span title="Altitude IGN RGE Alti ~1 m">Alt '+altitude_m+' m</span>':'')+
-    '</div>'+
+    // Ligne 3 : détail technique — déplacée derrière un "?" (brief H phase 2, cf.
+    // detailTechniqueHTML plus haut). Ancienne ligne brute Δ·C·L·H·RF·Alt, toujours visible,
+    // jamais documentée : conservée en contenu (rien retiré), seulement relocalisée + libellée.
+    detailTechniqueHTML+
     '<div style="font-size:8px;color:#626774;margin-top:2px;font-style:italic">'+jt('popup_footer_source','Source : Biot-Savart EDF SEI · CartoRadio ANFR · Modèle Tellux')+'</div>'+
     '</div>'
   );
