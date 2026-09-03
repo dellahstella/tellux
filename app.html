@@ -72,6 +72,21 @@
   --maquis-clair:#4F7048; /* Maquis éclairci */
   --maquis-pale:#E5EBE0; /* Maquis très pâle */
   --warn:var(--tx-ocre);
+  /* --warn-tx : ocre de TEXTE, ajouté le 2026-09-03 (brief U, dette A11Y-CONTRAST-APP-PANELS-002).
+     --warn (= --tx-ocre #C28533) est un token PARTAGÉ par des dizaines d'usages — fonds de bouton,
+     bordures, pastilles d'état, swatches de carte — où il porte une SIGNIFICATION (le niveau
+     « attention ») et où il n'a aucun problème de lisibilité. Sur du TEXTE posé sur les fonds
+     clairs de l'app il mesure 2,76 (sur --tx-pierre) à 2,91 (sur la puce translucide de
+     #conditions-bar) : illisible au sens WCAG, et sous le seuil « critique » (< 3,0) du garde-fou
+     contraste. Le token global n'est donc PAS modifié — c'est cet alias de texte qui porte la
+     valeur assombrie, exactement comme --tx3 a divergé de --tx-mica le 2026-08-31.
+     #8A5E22 = même teinte (H 34,6° vs 34,4°), même famille ocre, L 33,7 % au lieu de 48,0 % —
+     hex DÉJÀ introduit dans ce fichier le 2026-09-02 (lot 3 phase A, span ℹ de #cform, cf. L~2619) :
+     on réutilise le ton existant plutôt que d'en inventer un second. Ratios obtenus : 5,26 sur la
+     puce #conditions-bar, 5,00 sur --tx-pierre. Palette DA v2 non élargie : aucun nouveau ton.
+     ⚠️ N'utiliser QUE pour du texte. Les pastilles (.acq-dot--warn, .status-dot--pending) et les
+     fonds/bordures gardent var(--warn) : leur couleur est le sens, pas de la lecture. */
+  --warn-tx:#8A5E22;
   --danger:var(--tx-porphyre);
   --info:var(--tx-tyrrhenien);
   --border:rgba(31,35,41,0.10);
@@ -5526,7 +5541,7 @@ function _updateDstUI(){
       dstEl.textContent = curDst.toFixed(0) + ' nT';
       // Code couleur : >=-30 vert, -30 a -50 orange, <=-50 rouge
       const col = curDst >= -30 ? 'var(--acc)'
-                : curDst >= -50 ? 'var(--warn)'
+                : curDst >= -50 ? 'var(--warn-tx)'
                 : 'var(--danger)';
       dstEl.style.color = col;
     } else {
@@ -8341,7 +8356,7 @@ async function loadAnt(){try{
 // déjà vivantes — option B (réécrire le format plasma/mag vers json/rtsw/rtsw_*_1m.json, radicalement
 // différent, tableau d'objets vs tableau+en-tête) explicitement écartée pour l'instant, cf. dette.
 async function loadNOAA(){
-  const col=(v,lo,hi)=>v<lo?'var(--acc)':v<hi?'var(--warn)':'var(--danger)';
+  const col=(v,lo,hi)=>v<lo?'var(--acc)':v<hi?'var(--warn-tx)':'var(--danger)';
   const _set=(id,txt,color)=>{const el=document.getElementById(id);if(el){el.textContent=txt;if(color)el.style.color=color;}};
 
   // Plasma (densité + vitesse) — affichage seul, aucun calcul ne le consomme (grep exhaustif,
@@ -8364,7 +8379,7 @@ async function loadNOAA(){
     const mg=d2[d2.length-1];
     bz=parseFloat(mg[3]);
     curBz=bz.toFixed(1);
-    _set('sw-bz',bz.toFixed(1)+' nT',bz>0?'var(--acc)':bz>-5?'var(--warn)':'var(--danger)');
+    _set('sw-bz',bz.toFixed(1)+' nT',bz>0?'var(--acc)':bz>-5?'var(--warn-tx)':'var(--danger)');
     _set('bz-s',bz>0?'nord protecteur':bz>-5?'légèrement sud':'sud perturbateur');
   }catch(e){console.error('❌ loadNOAA mag erreur:',e.message);}
 
@@ -9740,7 +9755,7 @@ async function loadMeteo(){
     const ducting=meteoData.pression>1025&&meteoData.humidite<40;
     // Afficher dans un indicateur
     document.getElementById('meteo-n').textContent=Math.round(N)+' N';
-    document.getElementById('meteo-n').style.color=ducting?'var(--warn)':'var(--ardoise-clair)';
+    document.getElementById('meteo-n').style.color=ducting?'var(--warn-tx)':'var(--ardoise-clair)';
     document.getElementById('meteo-s').textContent=
       `${meteoData.pression} hPa · ${meteoData.humidite}% · ${meteoData.temp}°C`+
       (ducting?' ⚠ ducting possible':'');
@@ -9767,7 +9782,7 @@ async function loadLightning(){
     }else{
       lightningNearby=0;
       if(warnEl) warnEl.style.display='none';
-      if(lvEl){lvEl.textContent=(prob>20?prob+'% prob.':'calme');lvEl.style.color=prob>20?'var(--warn)':'var(--acc)';}
+      if(lvEl){lvEl.textContent=(prob>20?prob+'% prob.':'calme');lvEl.style.color=prob>20?'var(--warn-tx)':'var(--acc)';}
       if(lsEl) lsEl.textContent='Open-Meteo';
     }
   }catch(e){
@@ -11139,7 +11154,7 @@ function updateCondSummaries(){
       solEl.style.color = 'var(--danger)';
     } else if(kpNum >= 4){
       solEl.textContent = jt('cond_actif_prefix', 'Actif (Kp ') + kpNum.toFixed(1) + ')';
-      solEl.style.color = 'var(--warn)';
+      solEl.style.color = 'var(--warn-tx)';
     } else {
       solEl.textContent = jt('cond_calme_prefix', 'Calme (Kp ') + kpNum.toFixed(1) + ')';
       solEl.style.color = 'var(--acc)';
@@ -11158,7 +11173,7 @@ function updateCondSummaries(){
       atmoEl.style.color = 'var(--danger)';
     } else if(ducting){
       atmoEl.textContent = jt('cond_ducting', 'Ducting possible');
-      atmoEl.style.color = 'var(--warn)';
+      atmoEl.style.color = 'var(--warn-tx)';
     } else if(meteoN && meteoN !== '—'){
       atmoEl.textContent = jt('cond_stables_prefix', 'Stables (') + meteoN.replace(/^N\s*/,'') + ')';
       atmoEl.style.color = 'var(--acc)';
@@ -11180,7 +11195,7 @@ function updateCondSummaries(){
       : jt('cond_reseau_suffix_estime', ' · estimé)');
     if(cf > 1.15){
       resEl.textContent = jt('cond_heure_pleine_prefix', 'Heure pleine (×') + cf.toFixed(2) + cfSrc;
-      resEl.style.color = 'var(--warn)';
+      resEl.style.color = 'var(--warn-tx)';
     } else if(cf < 0.85){
       resEl.textContent = jt('cond_heure_creuse_prefix', 'Heure creuse (×') + cf.toFixed(2) + cfSrc;
       resEl.style.color = 'var(--acc)';
