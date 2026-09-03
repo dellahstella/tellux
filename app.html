@@ -3311,7 +3311,7 @@ var JS_STRINGS_EN = {
   leg_group_anthropique: "Human-made sources",
   mleg_sub_hot: "Tellux model combining the electrical grid and substrate, in nT — not a measurement. Only the electrical-grid component feeds the displayed score.",
   mleg_sub_hotrf: "Tellux model, internally calibrated against certified ANFR/EXEM measurements — order-of-magnitude estimate, not a measurement.",
-  mleg_sub_emag: "Deep Corsican basement anomalies (NOAA EMAG2v3, display) — the calculation uses a separate internal grid, not part of the public score.",
+  mleg_sub_emag: "Deep Corsican basement anomalies (NOAA EMAG2v3, display) — the internal grid actually used (distinct, computed permanently as the badge indicates) is not part of any publicly displayed score.",
   mleg_sub_foretdense: "Tall-canopy species (IGN BD Forêt V2), excluding scrub-forest mosaic — modulates the µW/m² value at map click; neither the heatmap nor the displayed score depends on it.",
   mleg_sub_crustal: "Reference magnetic anomalies, global and Corsican — documentary comparison, outside the calculation.",
   mleg_sub_cert: "236 certified measurement records (2002–2026) — 21 used to calibrate the RF model.",
@@ -3923,12 +3923,12 @@ const LAYER_SUBTITLE_FR={
   hot:  'Modèle Tellux combinant réseau électrique et substrat, en nT — pas une mesure. Seule la composante réseau électrique entre dans le score affiché.',
   hotrf:'Modèle Tellux, calibration interne sur mesures certifiées ANFR/EXEM — estimation d’ordre de grandeur, pas une mesure.',
   // emag (2026-09-03, brief AB) : corrigé — la donnée NOAA EMAG2v3 VISIBLE (ce bouton) n'est pas
-  // celle qui pèse sur le calcul. Le calcul (calcLCS1/calcMagneticStatic, app.html ~L4785) lit une
+  // celle qui pèse sur le calcul. Le calcul (calcLCS1 ~L4798/calcMagneticStatic ~L5641) lit une
   // grille interne figée LCS1_GRID (24 points), chemin de fuite EMAG2_CACHE→score fermé le
   // 2026-08-29 ; sa sortie (static_nT) n'alimente d'ailleurs aucun score public (ni Indice Tellux
   // ni Indice Expert). L'ancienne formule "toujours incluses dans le calcul" était trompeuse :
   // elle laissait croire que la couche affichée était l'entrée du calcul.
-  emag: 'Anomalies du socle profond corse (NOAA EMAG2v3, affichage) — le calcul utilise une grille interne distincte, non intégrée au score public.',
+  emag: 'Anomalies du socle profond corse (NOAA EMAG2v3, affichage) — la grille interne réellement utilisée (distincte, calculée en permanence comme l\'indique le badge) n\'entre dans aucun score public affiché.',
   // foretdense (2026-08-31, revue Soleil PR #1155) : reformulé après vérification RF_field()
   // (app.html ~L6229, garde applyVegetation && FORET_DENSE_PARTS && ACTIVE.foretdense) — le
   // toggle module bien le calcul détaillé (popup/Expert/CSV, confirmé PR #1068 table de vérif :
@@ -12011,11 +12011,11 @@ function capCleanup(){
 ["lyr_cert","#b-cert","","Mesures certifiées (ANFR/EXEM)","Misure certificate (ANFR/EXEM)","Certified measurements (ANFR/EXEM)"],
 ["lyr_cert_tt","#b-cert","title","236 fiches de mesure certifiées ANFR/EXEM (2002–2026), extraites des PDF ou de l'API CartoRadio. 21 ont servi à calibrer la constante k du modèle RF (calcul one-shot à l'initialisation, pas une modulation en direct par point). Losanges = extérieur public (position exacte) ; cercles = résidentiel (centroïde communal), colorés selon la conformité (limite légale 28 V/m).","236 schede di misura certificate ANFR/EXEM (2002–2026), estratte da i PDF o da l'API CartoRadio. 21 anu servutu à calibrà a custante k di u mudellu RF (calculu una volta sola à l'iniziu, micca una mudulazione in direttu per puntu). Rombi = esternu pubblicu (pusizione esatta) ; cerchj = residenziale (centroide cumunale), culuriti secondu a cunfurmità (limita legale 28 V/m).","236 certified ANFR/EXEM measurement sheets (2002–2026), extracted from CartoRadio PDFs or API. 21 used to calibrate the RF model's k constant (one-shot calculation at initialization, not a live per-point modulation). Diamonds = outdoor public (exact position); circles = residential (commune centroid), coloured by compliance (legal limit 28 V/m)."],
 ["lyr_contrib","#b-contrib","","Contributions smartphone","Cuntribuzione smartphone","Smartphone contributions"],
-["lyr_contrib_tt","#b-contrib","title","Contributions terrain des utilisateurs Tellux : magnétomètre smartphone (nT), signal réseau/WiFi (dBm), relevés au capteur externe. Cercles violets, en cluster. N'influence jamais le score composite affiché ; une comparaison indicative apparaît dans le détail technique du popup.","Cuntribuzione di terrenu di l'utilizatori Tellux : magnetometru smartphone (nT), signale reta/WiFi (dBm), rilievi à u sensore esternu. Cerchji viola, in cluster. Affissu solu — mai lette da nisun calculu.","Field contributions from Tellux users: smartphone magnetometer (nT), network/WiFi signal (dBm), external-sensor readings. Purple circles, clustered. Never influences the displayed composite score; an indicative comparison appears in the popup's technical detail."],
+["lyr_contrib_tt","#b-contrib","title","Contributions terrain des utilisateurs Tellux : magnétomètre smartphone (nT), signal réseau/WiFi (dBm), relevés au capteur externe. Cercles violets, en cluster. N'influence jamais le score composite affiché ; une comparaison indicative apparaît dans le détail technique du popup.","Cuntribuzione di terrenu di l'utilizatori Tellux : magnetometru smartphone (nT), signale reta/WiFi (dBm), rilievi à u sensore esternu. Cerchji viola, in cluster. Affissu solu.","Field contributions from Tellux users: smartphone magnetometer (nT), network/WiFi signal (dBm), external-sensor readings. Purple circles, clustered. Never influences the displayed composite score; an indicative comparison appears in the popup's technical detail."],
 ["lyr_ant","#b-ant","","Antennes ANFR + TDF","Antenne ANFR + TDF","ANFR + TDF antennas"],
 ["lyr_ant_tt","#b-ant","title","Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF","Antenne 2G/3G/4G/5G ANFR + emettitori broadcast TDF","2G/3G/4G/5G ANFR antennas + TDF broadcast transmitters"],
 ["lyr_res","#b-res","","Réseau HT","Reta HT","HV grid"],
-["lyr_res_tt","#b-res","title","Lignes électriques haute tension (50 Hz)","Linee è posti elettrichi alta tensione (50 Hz)","High-voltage power lines (50 Hz)"],
+["lyr_res_tt","#b-res","title","Lignes électriques haute tension (50 Hz)","Linee elettrichi alta tensione (50 Hz)","High-voltage power lines (50 Hz)"],
 ["lyr_bt","#b-bt","","Réseau BT","Reta BT","LV grid"],
 ["lyr_bt_tt","#b-bt","title","Réseau basse tension BT — EDF SEI · zoom ≥ 10","Reta bassa tensione BT — EDF SEI · zoom ≥ 10","Low-voltage BT grid — EDF SEI · zoom ≥ 10"],
 ["lyr_prod","#b-prod","","Sites de production","Siti di pruduzzione","Generation sites"],
