@@ -2288,7 +2288,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
                fait le 2026-08-27, aucune fonction de ce fichier ne la lit) — seul
                POINTS_CHAUDS_RADIO alimente le boost ponctuel de calcGammaAmbient. Les deux
                variables partagent juste le même loader, ce n'était pas la même chose. -->
-          <button class="lbtn" id="b-crustal" data-domains="statique" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF), quantifiées (valeur nT, EMAG2v3 + littérature académique) — comparaison locale/mondiale. + 3 sites ophiolitiques corses (Albu, Nonza, Farinole) à anomalie magnétique documentée mais NON quantifiée (aucune mesure nT publiée) — échelle locale distincte, hors calcul." onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales &amp; Corse)<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
+          <button class="lbtn" id="b-crustal" data-domains="statique" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF), quantifiées (valeur nT, EMAG2v3 + littérature académique) — comparaison locale/mondiale. + 4 sites ophiolitiques corses (Albu, Nonza, Farinole, Monte Maggiore) à anomalie magnétique documentée mais NON quantifiée (aucune mesure nT publiée) — échelle locale distincte, hors calcul." onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales &amp; Corse)<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
           <div class="mlegend-inline" id="mleg-crustal"></div>
 
           <!-- Contributions smartphone — non certifiées, capteurs hétérogènes, affichage seul (hors calcul).
@@ -4903,9 +4903,16 @@ function ellipseLatLngs(lat,lon,aKm,bKm,azDeg,n){
 //    distincts (slugs ophi_albu et ophi_nonza, ~2,6 km d'écart après correction GPS Albu du
 //    2026-08-27, cf. commentaire gps_lock_reason dans sites_app.json — ancienne coordonnée
 //    Albu erronée de ~8,7 km, signalée par Soleil après la mise en ligne de ce diff).
-//    Réintégrés ici : 3 sites categorie='ophiolite' (Albu, Nonza, Farinole). Le 4e
-//    (surv_bonifacio, categorie='surveillance_radio', Th-234) est volontairement EXCLU — cf.
-//    point 2.
+//    Réintégrés ici (2026-08-27) : 3 sites categorie='ophiolite' (Albu, Nonza, Farinole). Le 4e
+//    site 'site_em' (surv_bonifacio, categorie='surveillance_radio', Th-234) est volontairement
+//    EXCLU — cf. point 2.
+//    ADDENDUM 2026-09-03 (brief S) : un 4e site categorie='ophiolite' a été ajouté à
+//    sites_app.json depuis ce diff — ophi_monte_maggiore (INPG CSC0038, DREAL Corse). Le filtre
+//    ci-dessous étant piloté par la donnée (categorie==='ophiolite'), il l'a repris
+//    automatiquement, sans changement de code nécessaire ici. Ce sont désormais **4** sites
+//    Corse rendus par ce bloc, pas 3 — le comptage « 3 » ci-dessus décrit l'état au moment de la
+//    réintégration, pas l'état courant. Vérifié en direct (SITES_REMARQUABLES.filter(...).length
+//    === 4) avant ce brief.
 //
 // 2) Bonifacio (Th-234) traité à part, PAS réintégré ici : phénomène de radioactivité
 //    naturelle marine (bioconcentration algues, étude IRSN 2004 post-collision USS Hartford),
@@ -4930,14 +4937,16 @@ function ellipseLatLngs(lat,lon,aKm,bKm,azDeg,n){
 // plutôt que de fusionner en silence") : les 5 sites mondiaux sont des anomalies magnétiques
 // QUANTIFIÉES (valeur nT réelle, EMAG2v3 + littérature académique), utilisées par la jauge
 // comparative (cf. updateCrustalGauge(), qui trie par |nT| — CRUSTAL_REFS n'est PAS étendu avec
-// les sites Corse pour cette raison, la jauge casserait sans valeur nT). Les 3 sites Corse
-// n'ont AUCUNE valeur nT mesurée ("documentaire v1", "non mesurée à ce jour" — cf. description
-// de chaque site). Rendus donc en pentagones bleus (identité visuelle historique de la
-// catégorie 'ophiolite', cf. ancien SR_RENDU retiré par #998) plutôt qu'en cercles colorés par
-// nT, sans cercle de rayon d'emprise (aucun rayon fiable documenté), et dans une sous-section
-// de légende séparée et clairement titrée par échelle.
+// les sites Corse pour cette raison, la jauge casserait sans valeur nT). Les 4 sites Corse
+// (cf. addendum 2026-09-03 ci-dessus) n'ont AUCUNE valeur nT mesurée ("documentaire v1", "non
+// mesurée à ce jour" — cf. description de chaque site). Rendus donc en pentagones bleus
+// (identité visuelle historique de la catégorie 'ophiolite', cf. ancien SR_RENDU retiré par
+// #998 ; agrandis + halo depuis le brief S, 2026-09-03, cf. leur propre commentaire plus bas)
+// plutôt qu'en cercles colorés par nT, sans cercle de rayon d'emprise (aucun rayon fiable
+// documenté sauf Monte Maggiore, seul à porter un contour `geometrie` réel), et dans une
+// sous-section de légende séparée et clairement titrée par échelle.
 //
-// Source des 3 sites : SITES_REMARQUABLES (déjà chargée au boot via loadSitesApp(), cf. plus
+// Source des sites Corse : SITES_REMARQUABLES (déjà chargée au boot via loadSitesApp(), cf. plus
 // bas dans ce fichier — pas de second jeu de données codé en dur ici, pour éviter tout risque
 // de dérive si sites_app.json est mis à jour plus tard). Filtrée sur categorie==='ophiolite'
 // uniquement (exclut Bonifacio par construction, cf. point 2 ci-dessus).
@@ -5020,8 +5029,19 @@ function buildCrustalLayer(){
           fillColor:'#1F3A5F',fillOpacity:0.10,interactive:false}).addTo(lCrustal);
       }
     }
-    const iconHtml='<svg width="14" height="14" viewBox="0 0 14 14" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))"><polygon points="7,1 13,5.5 10.5,13 3.5,13 1,5.5" fill="#1F3A5F" stroke="#F5F0E7" stroke-width="1.5"/></svg>';
-    const icon=L.divIcon({html:iconHtml,className:'',iconSize:[14,14],iconAnchor:[7,7]});
+    // Icône agrandie + halo (brief S, 2026-09-03) : les 4 pentagones (Albu/Nonza/Farinole/Monte
+    // Maggiore) se perdaient à l'usage parmi les mesures certifiées clusterisées, antennes et
+    // couches végétation — constat Soleil, reproduit en direct (14×14px, taille comparable à
+    // tous les autres marqueurs de la carte, aucun d'eux occlus par z-index : zIndexOffset:300
+    // déjà supérieur aux antennes/postes/TDF/contributions (100-200) ; le problème est un
+    // problème de taille/contraste, pas d'empilement). Contrainte palette : pas de rouge, pas de
+    // vert-danger, pas de second usage de Maquis #3F5B3A (couches végétation depuis #1192) — le
+    // contraste porte sur forme/taille/traitement, pas sur une couleur neuve. Halo = même bleu
+    // tyrrhénien #1F3A5F déjà attribué à cette catégorie (identité visuelle inchangée, juste plus
+    // affirmée), pas une couleur supplémentaire. Pentagone passé de 14×14 à 26×26 (~1,3× le
+    // pentagone lui-même, halo inclus), contour 1.5→2.2.
+    const iconHtml='<svg width="26" height="26" viewBox="0 0 26 26" style="filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))"><circle cx="13" cy="13" r="12" fill="#1F3A5F" opacity="0.20"/><polygon points="13,5.2 20.8,11.1 17.6,20.8 8.4,20.8 5.2,11.1" fill="#1F3A5F" stroke="#F5F0E7" stroke-width="2.2"/></svg>';
+    const icon=L.divIcon({html:iconHtml,className:'',iconSize:[26,26],iconAnchor:[13,13]});
     const safeNom=(s.nom||'').replace(/'/g,"\\'");
     // Libellé d'emprise — texte public, volontairement générique sur la provenance de la donnée
     // (« cartographie géologique BRGM 1/50 000 »). Le détail technique de la couche source vit dans
@@ -5029,7 +5049,11 @@ function buildCrustalLayer(){
     const geoHtml=(s.geometrie&&s.geometrie.libelle_public)
       ? '<div style="font-size:9px;color:var(--tx3);margin-top:5px;padding:4px 6px;background:rgba(31,58,95,.06);border-left:2px dashed #1F3A5F;line-height:1.4">'+s.geometrie.libelle_public+'</div>'
       : '';
-    L.marker([s.lat,s.lon],{icon,zIndexOffset:300}).bindPopup(
+    // zIndexOffset 300→600 (brief S) : garantit l'affichage au-dessus de TOUT autre marqueur de
+    // la carte, y compris les mesures certifiées non conformes (zIndexOffset:500, le plus haut
+    // jusqu'ici) — ne change rien à la couche mondiale (CRUSTAL_REFS ci-dessus reste à 300,
+    // règle du brief : ne pas la modifier).
+    L.marker([s.lat,s.lon],{icon,zIndexOffset:600}).bindPopup(
       '<div style="font-family:var(--font);min-width:220px">'+
       '<div style="font-family:var(--font-display);font-weight:600;font-size:13px;color:#1F3A5F;margin-bottom:4px">'+(s.nom||'')+'</div>'+
       '<div style="font-size:9px;color:var(--tx3);margin-bottom:4px">'+jt('crustal_corse_scale_label','Site Corse — échelle locale, non quantifié')+'</div>'+
@@ -11915,7 +11939,7 @@ function capCleanup(){
 ["lyr_hyd","#b-hyd","","Hydrographie","Idrugrafia","Hydrography"],
 ["lyr_hyd_tt","#b-hyd","title","Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct","Falde è corsi d'acqua sutterranei (BRGM REMNAPPE) — stratu visuale ; u calculu adopra un dataset distintu","Groundwater and underground watercourses (BRGM REMNAPPE) — visual layer; the calculation uses a separate dataset"],
 ["lyr_crustal","#b-crustal","","Anomalies de référence (mondiales & Corse)","Anumalie di riferenza (mundiale è corsa)","Reference anomalies (worldwide & Corsica)"],
-["lyr_crustal_tt","#b-crustal","title","5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF), quantifiées (valeur nT, EMAG2v3 + littérature académique) — comparaison locale/mondiale. + 3 sites ophiolitiques corses (Albu, Nonza, Farinole) à anomalie magnétique documentée mais NON quantifiée (aucune mesure nT publiée) — échelle locale distincte, hors calcul.","5 anumalie magnetiche crustale mundiale di riferenza (crateri d'impattu + BIF), quantificate (valore nT, EMAG2v3 + literatura accademica) — paragone lucale/mundiale. + 3 siti ofiolitichi corsi (Albu, Nonza, Farinole) à anumalia magnetica ducumentata ma NON quantificata (nisuna misura nT publicata) — scala lucale distinta, fora di calculu.","5 worldwide reference crustal magnetic anomalies (impact craters + BIF), quantified (nT value, EMAG2v3 + academic literature) — local/global comparison. + 3 Corsican ophiolitic sites (Albu, Nonza, Farinole) with a documented but NOT quantified magnetic anomaly (no published nT measurement) — distinct local scale, outside the calculation."],
+["lyr_crustal_tt","#b-crustal","title","5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF), quantifiées (valeur nT, EMAG2v3 + littérature académique) — comparaison locale/mondiale. + 4 sites ophiolitiques corses (Albu, Nonza, Farinole, Monte Maggiore) à anomalie magnétique documentée mais NON quantifiée (aucune mesure nT publiée) — échelle locale distincte, hors calcul.","5 anumalie magnetiche crustale mundiale di riferenza (crateri d'impattu + BIF), quantificate (valore nT, EMAG2v3 + literatura accademica) — paragone lucale/mundiale. + 4 siti ofiolitichi corsi (Albu, Nonza, Farinole, Monte Maggiore) à anumalia magnetica ducumentata ma NON quantificata (nisuna misura nT publicata) — scala lucale distinta, fora di calculu.","5 worldwide reference crustal magnetic anomalies (impact craters + BIF), quantified (nT value, EMAG2v3 + academic literature) — local/global comparison. + 4 Corsican ophiolitic sites (Albu, Nonza, Farinole, Monte Maggiore) with a documented but NOT quantified magnetic anomaly (no published nT measurement) — distinct local scale, outside the calculation."],
 ["btn_expert_aria","#btn-expert","aria-label","Outils experts","Strumenti esperti","Expert tools"],
 ["btn_expert","#btn-expert span@1","","Outils experts","Strumenti esperti","Expert tools"],
 ["btn_share_aria","button[onclick='shareURL()']","aria-label","Partager la vue","Sparte a vista","Share the view"],
