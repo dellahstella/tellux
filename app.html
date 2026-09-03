@@ -1483,7 +1483,12 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .map-col .leaflet-bottom.leaflet-left{margin-bottom:44px;}
 #legende > *{pointer-events:auto;}
 #legende-toggle{width:36px;height:36px;border-radius:50%;background:rgba(245,240,231,0.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--border);color:var(--tx-ardoise);font-family:var(--font-display,var(--font));font-size:18px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(31,35,41,0.1);transition:background .2s,color .2s,transform .2s;display:flex;align-items:center;justify-content:center;line-height:1;}
-#legende-toggle:hover{background:var(--tx-ocre,#C28533);color:var(--tx-pierre,#F5F0E7);transform:scale(1.05);}
+/* fond #8A5E22 (pas --tx-ocre) depuis le 2026-09-03 (brief V) : texte quasi-blanc sur
+   --tx-ocre mesurait 2,76 — jamais vu, aucun harnais headless ne simule :hover. Même hex que
+   --warn-tx (texte), réemployé ici en fond car son propre rôle documenté est « texte
+   seulement » (cf. commentaire racine ~L75) — cette occurrence reste donc en littéral plutôt
+   que via ce token, mais c'est la même substitution. Ratio texte pierre sur ce fond : 4,99. */
+#legende-toggle:hover{background:#8A5E22;color:var(--tx-pierre,#F5F0E7);transform:scale(1.05);}
 #legende-toggle:focus-visible{outline:2px solid var(--tx-ocre,#C28533);outline-offset:2px;}
 /* Sprint app-ui-polish (mai 2026) — panel slim (légende EM seule, conditions migrées vers #conditions-bar).
    max-width réduit 320→280px, padding compacté pour cohérence avec contenu réduit. */
@@ -1528,7 +1533,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 #legende-content .leg-acc-sum::-webkit-details-marker{display:none;}
 #legende-content .leg-acc-sum::before{content:"\25B8";font-size:9px;color:var(--tx3);transition:transform .15s;}
 #legende-content .leg-acc[open] .leg-acc-sum::before{transform:rotate(90deg);}
-#legende-content .leg-acc-sum:hover{color:var(--tx-ocre,#C28533);}
+#legende-content .leg-acc-sum:hover{color:var(--warn-tx,#8A5E22);}
 #legende-content .leg-acc-body{padding:0 0 9px 15px;}
 /* ═══ Jauge crustale — panneau flottant bas-gauche (Phase 2 « anomalies polygonales », 2026-08-31)
    Troisième et dernière position de cette jauge, cette fois mesurée plutôt que supposée :
@@ -1572,7 +1577,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
 #crustal-gauge-panel .cg-more>summary::-webkit-details-marker{display:none;}
 #crustal-gauge-panel .cg-more>summary::before{content:"\25B8";font-size:8px;color:var(--tx3);transition:transform .15s;}
 #crustal-gauge-panel .cg-more[open]>summary::before{transform:rotate(90deg);}
-#crustal-gauge-panel .cg-more>summary:hover{color:var(--tx-ocre,#C28533);}
+#crustal-gauge-panel .cg-more>summary:hover{color:var(--warn-tx,#8A5E22);}
 #crustal-gauge-panel .cg-more-body{padding-top:7px;}
 /* Correctif de contraste en mode sombre retiré avec le mode sombre lui-même (2026-08-31).
    Il redéfinissait --ardoise / --ardoise-clair / --tx3 / --pierre-ombre localement sur ce
@@ -2710,7 +2715,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
     <!-- Zone IGRF — apparait apres placement du point de mesure -->
     <div id="c-igrf-box" style="display:none;background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;margin-bottom:8px;font-size:11px;color:var(--ardoise-clair);line-height:1.5">
       <span id="c-igrf-text"></span>
-      <span id="c-igrf-warn" style="display:none;color:var(--warn);font-weight:500;margin-top:3px"></span>
+      <span id="c-igrf-warn" style="display:none;color:var(--warn-tx);font-weight:500;margin-top:3px"></span>
     </div>
   </div>
 
@@ -2725,7 +2730,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
       <input type="number" id="c-duration-s" min="0" placeholder="30" style="width:120px;margin-bottom:0">
     </div>
 
-    <a href="#" id="link-comment-mesurer" onclick="event.preventDefault();openPrescription();" style="display:inline-block;font-size:11px;color:var(--ocre);text-decoration:underline;margin-bottom:8px">? Comment mesurer ?</a>
+    <a href="#" id="link-comment-mesurer" onclick="event.preventDefault();openPrescription();" style="display:inline-block;font-size:11px;color:var(--warn-tx);text-decoration:underline;margin-bottom:8px">? Comment mesurer ?</a>
 
     <!-- Contexte intérieur (visible seulement si Interieur choisi a l'etape 1 — cf. setCtx()) -->
     <div id="c-interior-ctx" style="display:none;border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px;background:var(--pierre-ombre)">
@@ -3984,7 +3989,7 @@ function docRefHtml(id,compact){
 // même nuance ; c'est le compromis WCAG standard (le texte a un seuil de contraste propre,
 // plus strict qu'un petit élément décoratif) plutôt qu'une incohérence.
 const LEGEND_HTML={
-  hot:'<div class="leg-block"><b class="leg-title">Champ magnétique composite (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (réseau) + susceptibilité du substrat</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#8b92a5">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · susceptibilité BRGM</div></div>',
+  hot:'<div class="leg-block"><b class="leg-title">Champ magnétique composite (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (réseau) + susceptibilité du substrat</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#4a4f5e;width:140px;margin-bottom:4px"><span>0</span><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#626774">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · susceptibilité BRGM</div></div>',
   // hotrf allégée le 2026-08-29 (brief « exécution groupée », item A ; proposition
   // _drafts/BRIEF_LEGENDES_RF_COMPOSITE_LIVRABLES_2026-08-29.md, texte validé Soleil au tour
   // précédent). Passe de ~2 575 à ~700 car. : ne reste que le visuellement actionnable
@@ -4064,7 +4069,7 @@ const LEGEND_HTML={
 // n'est lu qu'au rendu, jamais à la définition — même principe que
 // INSTRUMENT_LABELS/CRUSTAL_REFS.
 const LEGEND_HTML_EN={
-  hot:'<div class="leg-block"><b class="leg-title">Composite magnetic field (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (grid) + substrate susceptibility</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#6b7280;width:140px;margin-bottom:4px"><span>0</span><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT: IARC class 2B documentary reference point.<br><span style="font-size:8px;color:#8b92a5">Not an alert threshold — see popup Details</span></div><div class="leg-src">Biot-Savart · EDF SEI · BRGM susceptibility</div></div>',
+  hot:'<div class="leg-block"><b class="leg-title">Composite magnetic field (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (grid) + substrate susceptibility</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#4a4f5e;width:140px;margin-bottom:4px"><span>0</span><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT: IARC class 2B documentary reference point.<br><span style="font-size:8px;color:#626774">Not an alert threshold — see popup Details</span></div><div class="leg-src">Biot-Savart · EDF SEI · BRGM susceptibility</div></div>',
   hotrf:'<div class="leg-block"><b class="leg-title">RF electric field (V/m)</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofrequency — outdoor estimate, Tellux model</div>'+
     '<div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div>'+
@@ -5014,7 +5019,7 @@ function buildCrustalLayer(){
       '<div style="margin:3px 0"><span style="font-family:var(--mono);font-size:11px;color:var(--ardoise-clair);font-weight:600">'+signStr+' nT</span>'+
       ' <span style="font-size:9px;color:var(--tx3)">'+dimHtml+'</span></div>'+
       '<div style="font-size:10px;color:var(--ardoise-clair);line-height:1.45;margin-top:5px">'+jt('crustal_'+pt.id+'_desc',pt.desc)+'</div>'+
-      '<div style="font-size:9px;color:#8b92a5;margin-top:6px;padding-top:4px;border-top:1px solid rgba(0,0,0,.08)">'+jt('crustal_type_label','Type&nbsp;: ')+pt.type.replace(/_/g,' ')+'<br>'+jt('crustal_source_label','Source&nbsp;: ')+pt.source+fpHtml+'<br>'+jt('crustal_amplitude_note','Amplitude d\'après le levé dédié cité — EMAG2v3 (2 arc-min) en montre une version atténuée. Repère d\'échelle, non « certifié ».')+'</div>'+
+      '<div style="font-size:9px;color:#626774;margin-top:6px;padding-top:4px;border-top:1px solid rgba(0,0,0,.08)">'+jt('crustal_type_label','Type&nbsp;: ')+pt.type.replace(/_/g,' ')+'<br>'+jt('crustal_source_label','Source&nbsp;: ')+pt.source+fpHtml+'<br>'+jt('crustal_amplitude_note','Amplitude d\'après le levé dédié cité — EMAG2v3 (2 arc-min) en montre une version atténuée. Repère d\'échelle, non « certifié ».')+'</div>'+
       '</div>'
     ).addTo(lCrustal);
   });
@@ -5087,7 +5092,7 @@ function buildCrustalLayer(){
       geoHtml+
       '<div style="font-size:9px;color:#3F5B3A;margin-top:6px;padding:5px 7px;background:#eef3e9;border:1px solid #cfe0c9;border-radius:4px;line-height:1.4">'+jt('crustal_corse_call_to_measure','🔎 Anomalie documentée mais jamais mesurée — peu de sites de ce type sont recensés en Corse. Une première mesure de terrain serait une contribution scientifique bienvenue.')+'</div>'+
       '<button type="button" onclick="startCrustalCorseMeasurement('+s.lat+','+s.lon+',\''+safeNom+'\')" style="margin-top:6px;width:100%;padding:6px 10px;border-radius:var(--r,6px);border:1px solid #3F5B3A;background:#3F5B3A;color:#F5F0E7;font-size:11px;font-family:inherit;cursor:pointer">'+jt('crustal_corse_measure_cta','Contribuer une mesure ici →')+'</button>'+
-      '<div style="font-size:9px;color:#8b92a5;margin-top:6px;padding-top:4px;border-top:1px solid rgba(0,0,0,.08)">'+jt('crustal_corse_source_label','Source : BRGM · sites_app.json — hors calcul')+'</div>'+
+      '<div style="font-size:9px;color:#626774;margin-top:6px;padding-top:4px;border-top:1px solid rgba(0,0,0,.08)">'+jt('crustal_corse_source_label','Source : BRGM · sites_app.json — hors calcul')+'</div>'+
       '</div>'
     ).addTo(lCrustal);
   });
@@ -8995,7 +9000,7 @@ function buildHot(){
     dctl.onAdd=function(){
       const d=L.DomUtil.create('div');
       d.id='delta-hover';
-      d.style.cssText='background:rgba(247,248,250,.92);border:1px solid rgba(0,0,0,.1);border-radius:8px;padding:5px 10px;font-family:var(--font);font-size:11px;color:#8b92a5;min-width:120px;backdrop-filter:blur(4px)';
+      d.style.cssText='background:rgba(247,248,250,.92);border:1px solid rgba(0,0,0,.1);border-radius:8px;padding:5px 10px;font-family:var(--font);font-size:11px;color:#626774;min-width:120px;backdrop-filter:blur(4px)';
       d.innerHTML='Survolez la carte';
       return d;
     };
@@ -10330,11 +10335,15 @@ async function myPlaceAnalyze(lat, lon){
 }
 
 function myPlaceStatusPill(text,tone){
+  // bg à 0.08 (pas 0.12) pour modelise/estime depuis le 2026-09-03 (brief V) : --warn-tx
+  // sur le fond teinté à 0.12 mesurait 4,48 — sous le seuil 4,5, alors qu'il passe largement
+  // (4,99+) sur fond neutre. Le fond teinté lui-même dégradait la lisibilité. 0.08 = même
+  // alpha que 'declaratif' juste au-dessus (aucune convention nouvelle), ratio mesuré 4,65.
   var colors={
     declaratif:{bg:'rgba(31,58,95,0.08)',fg:'var(--tyrrh,#1F3A5F)'},
-    modelise:{bg:'rgba(194,133,51,0.12)',fg:'var(--warn,#C28533)'},
+    modelise:{bg:'rgba(194,133,51,0.08)',fg:'var(--warn-tx,#8A5E22)'},
     officiel:{bg:'rgba(63,91,58,0.10)',fg:'var(--acc,#3F5B3A)'},
-    estime:{bg:'rgba(194,133,51,0.12)',fg:'var(--warn,#C28533)'}
+    estime:{bg:'rgba(194,133,51,0.08)',fg:'var(--warn-tx,#8A5E22)'}
   };
   var c=colors[tone]||colors.modelise;
   return '<span style="display:inline-block;font-size:9.5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;padding:2px 8px;border-radius:20px;background:'+c.bg+';color:'+c.fg+'">'+escapeHtml(text)+'</span>';
