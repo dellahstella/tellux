@@ -157,6 +157,28 @@ const LAYER_BUTTONS = ['b-crustal', 'b-ant', 'b-res'];
 // ⚠️ BRANCHES ENCORE NON EXERCÉES, à documenter plutôt qu'à laisser croire à une couverture
 // complète : activité 4/5, et toutes les branches de deltaCol (vert/ocre/porphyre — les 4 points
 // rendent tous "—", aucun n'a de contribution terrain assez proche pour produire un delta réel).
+// Le <details> qui contient deltaCol est désormais ouvert de force avant chaque sonde (cf. plus
+// bas dans la boucle) — la ligne complète du popup ci-dessous ne concerne QUE l'activité 4/5.
+//
+// ⚠️ ACTIVITÉ 4/5 (anColor, #d97706) — VÉRIFIÉE le 2026-09-03 (brief V), et RÉELLEMENT CASSÉE.
+// Ce n'était plus une hypothèse : point trouvé (41.52°N, 8.92°E, susceptibilité substrat 34 nT,
+// geoScore+suscNat=4), ratio mesuré 2,81 — critique, sous 3,0. Contrairement aux branches sœurs
+// de la même famille (phColor, l'autre branche d'anColor #9ca3af, deltaCol ocre, radonColor),
+// TOUTES corrigées le 2026-09-02 (lot 3 / lot 2 bis), celle-ci avait été explicitement différée
+// au lot 3 (commentaire app.html ~L7874) puis, de fait, oubliée — le hex de anColor>=4 est resté
+// identique à celui mesuré défaillant le 2026-09-01.
+// DÉLIBÉRÉMENT NON CORRIGÉE ici, et DÉLIBÉRÉMENT NON AJOUTÉE à POPUP_POINTS malgré le point
+// identifié ci-dessus : assombrir #d97706 jusqu'au seuil (facteur ~0,65) converge visuellement
+// vers #92400e — la couleur du palier "actif" juste en dessous (rgb 141,77,4 vs 146,64,14,
+// quasi indiscernables) — ce qui détruirait la distinction à 3 paliers de l'échelle avant même
+// de savoir si le résultat reste lisible. Ce n'est pas une substitution mécanique comme
+// --warn/--warn-tx : c'est un choix de palette sur les 3 couleurs ensemble, qu'un correctif
+// ponctuel ne peut pas trancher seul (cf. commentaire app.html ~L7942, "un choix de palette,
+// pas une correction mécanique" — confirmé, pas seulement supposé, par le calcul ci-dessus).
+// Ajouter ce point à POPUP_POINTS ferait échouer ce check sur un défaut connu et non résolu,
+// sans que rien n'ait été décidé sur SA correction — exactement l'inverse du rôle d'un cliquet.
+// Fait à la place : documenté ici avec des coordonnées reproductibles, pour que quiconque
+// tranche la palette puisse vérifier son résultat sans re-chercher un point depuis zéro.
 // Coût mesuré (2026-09-01, local) : script à 1 point ~21 s -> à 4 points ~31 s,
 // soit ~+3,3 s par point ajouté. Round-trip Playwright par point (clic + attente
 // POPUP_WAIT_MS + sonde), pas la sonde elle-même. Déterminisme vérifié (2 runs
@@ -419,6 +441,11 @@ async function main() {
   const POPUP_PANEL = PANELS.find((p) => p.sel === '.leaflet-popup-content');
   const COND_PANEL = PANELS.find((p) => p.sel === '#conditions-bar');
   const scansPopup = [];
+  // Entrées de panneau mesurées à un instant dédié (hover, ou état exclusif d'un autre état
+  // déjà forcé la même passe) puis fusionnées dans rapport.panneaux une fois celui-ci assigné
+  // par la sonde principale — cf. leurs points d'usage plus bas pour le détail de chaque cas.
+  const hoverPanelEntries = [];
+  const igrfWarnPanelEntry = [];
 
   try {
     await page.goto(appUrl, { waitUntil: 'domcontentloaded', timeout: BOOT_TIMEOUT_MS });
@@ -426,6 +453,22 @@ async function main() {
     // existe dès le HTML, mais tog() a besoin du JS initialisé).
     await page.waitForFunction(() => typeof window.tog === 'function', { timeout: BOOT_TIMEOUT_MS });
     await page.waitForTimeout(4000);
+
+    // Fermer la modale de bienvenue par son VRAI bouton, ICI — AVANT tout le reste (2026-09-03,
+    // brief V). Elle était fermée plus bas dans la séquence (cf. "Ouverture des 5 surfaces"),
+    // après l'activation des couches : suffisant tant que rien n'interagit via Playwright avant
+    // ce point (element.click() en JS ignore l'occlusion visuelle, contrairement à un clic/hover
+    // Playwright réel). Les nouveaux page.hover() de ce chantier (cf. HOVER_TARGETS plus bas) EN
+    // dépendent : #disclaimer-overlay (aria-hidden="false" tant que non fermée) intercepte les
+    // pointer-events et fait timeout tout hover tenté avant sa fermeture — trouvé en CI par ce
+    // même harnais (3 hovers en échec silencieux, avalés par leur propre .catch()). La fermeture
+    // plus bas est laissée en place, inoffensive (bouton déjà absent du DOM à ce stade).
+    await page.evaluate(async () => {
+      const acc = Array.from(document.querySelectorAll('button'))
+        .find((b) => /Accéder à la carte|the map/i.test((b.textContent || '').trim()));
+      if (acc) acc.click();
+    });
+    await page.waitForTimeout(400);
 
     // Activer les couches pour que les panneaux soient réellement peuplés.
     await page.evaluate((ids) => {
@@ -440,12 +483,79 @@ async function main() {
     await page.evaluate(() => {
       const a = document.querySelector('.layers-accordion');
       if (a) a.classList.remove('open');
+      // 'hot' n'est dans AUCUNE séquence d'activation (LAYER_BUTTONS ne le contient pas,
+      // 2026-09-03, brief V) : sans ce clic, tout son contenu de légende (repère IARC 300 nT,
+      // sous-texte) est absent du DOM — même pas construit par accHtml() — jamais mesurable a
+      // fortiori. Deux de ses couleurs texte (#8b92a5, #6b7280) étaient d'authentiques
+      // violations critiques/AA, jamais vues par ce check depuis sa création ; corrigées
+      // (cf. app.html), mais la couverture elle-même restait le trou réel.
+      const bhot = document.getElementById('b-hot');
+      if (bhot && !/\bon-/.test(bhot.className)) bhot.click();
       const t = document.getElementById('legende-toggle');
       // Ouvrir le « ? » pour que son contenu soit mesurable.
       if (t && document.getElementById('legende-content')
           && getComputedStyle(document.getElementById('legende-content')).display === 'none') t.click();
     });
     await page.waitForTimeout(1200);
+    await page.evaluate(() => {
+      // Les accordéons du panneau « ? » (details.leg-acc) sont EXCLUSIFS en usage réel
+      // (_legAccOpen ne retient qu'un seul nom à la fois) : seule la DERNIÈRE couche activée
+      // ci-dessus restait ouverte au moment de la sonde — 'hotrf' et 'ant', pourtant actives
+      // PAR DÉFAUT pour tout visiteur réel, restaient donc fermées (contenu non-summary en
+      // display:none natif de <details>) pendant toute la mesure, jamais vues par walk().
+      // Trouvé en marge du brief V (2026-09-03) : leurs couleurs étaient déjà bonnes (0
+      // violation une fois ouvertes) — SAUF 'hot' (cf. ci-dessus). C'est la couverture qui
+      // manquait, pas systématiquement le contraste ; mais un correctif de contraste jamais
+      // revérifié par le check qu'il devait satisfaire (dette A11Y-CONTRAST-APP-PANELS-002,
+      // 2026-08-31, couche 'ant') n'est qu'une hypothèse non prouvée tant que ce trou existe.
+      // On force TOUS les accordéons ouverts pour la mesure : diffère légèrement de l'usage réel
+      // (un seul ouvert à la fois) mais teste chaque contenu qui DOIT être lisible quand il
+      // l'est — même logique que les 4 points du popup plus bas.
+      document.querySelectorAll('#legende-content details.leg-acc').forEach((d) => { d.open = true; });
+    });
+    await page.waitForTimeout(200);
+
+    // ─── États :hover (2026-09-03, brief V) ─────────────────────────────────
+    // getComputedStyle() (utilisé par PROBE_CONTRAST) ne reflète JAMAIS un état :hover tant
+    // qu'aucun survol réel n'a eu lieu — la page ne reçoit aucun événement souris entre son
+    // chargement et une sonde. Deux règles CSS de ce fichier ne changent de couleur QUE sous
+    // :hover, invisibles à ce check depuis toujours (angle mort générique des sondes headless,
+    // pas une régression récente d'un panneau en particulier) : trouvées critiques (2,59 et
+    // 2,76), corrigées (cf. --warn-tx / #8A5E22 dans app.html). page.hover() est un VRAI survol
+    // Playwright — un dispatchEvent('mouseover') manuel NE DÉCLENCHE PAS :hover (vérifié en
+    // direct : matches(':hover') reste faux).
+    // MESURÉES ICI, PAS PLUS BAS : essayé après l'ouverture de #cform/#expert-panel/#myplace-modal
+    // (2026-09-03) — échec silencieux, `page.hover()` avalé par son propre `.catch()` parce que
+    // ces overlays recouvrent le point à survoler. Cet emplacement, juste après l'activation des
+    // couches et avant l'ouverture d'aucun panneau modal, est celui où crustal-gauge-panel et
+    // legende-toggle/.leg-acc-sum sont VISIBLES ET NON RECOUVERTS — condition nécessaire pour
+    // qu'un hover Playwright atteigne réellement sa cible plutôt que l'overlay au-dessus.
+    // Un seul élément peut être :hover à la fois (la souris ne peut pas survoler 2 endroits) :
+    // chaque cible a sa propre passe hover -> attente -> sonde, sur le modèle du popup
+    // multi-points / des scénarios #conditions-bar. Résultats accumulés dans hoverPanelEntries et
+    // fusionnés dans rapport.panneaux après la sonde principale (rapport.panneaux n'existe pas
+    // encore à ce stade du script). noeuds à 0 : ce sont les MÊMES nœuds que leur panneau
+    // d'origine, sous un autre état — les compter ici gonflerait le plancher de couverture sans
+    // rien couvrir de plus.
+    const HOVER_TARGETS = [
+      { sel: '#crustal-gauge-panel .cg-more > summary', nom: 'Jauge crustale — lien « Contexte et méthode » (survol)' },
+      { sel: '#legende-toggle', nom: 'Légende — bouton « ? » (survol)' },
+      { sel: '#legende-content .leg-acc-sum', nom: 'Légende — en-tête d\'accordéon (survol)' },
+    ];
+    for (const h of HOVER_TARGETS) {
+      await page.hover(h.sel).catch(() => {});
+      await page.waitForTimeout(250);
+      const r = await page.evaluate(PROBE_CONTRAST, [[{ sel: h.sel, nom: h.nom }], BASE_TONE]);
+      hoverPanelEntries.push({
+        panel: h.nom, sel: h.sel + ' (survol)',
+        etat: r[0].etat,
+        noeuds: 0, // cf. commentaire ci-dessus — mêmes nœuds que le panneau d'origine.
+        violations: r[0].violations || [],
+      });
+    }
+    // Neutraliser tout survol résiduel avant la suite (coin haut-gauche neutre, hors UI) — le
+    // dernier hover de la boucle ne doit pas fausser une mesure ultérieure sans rapport.
+    await page.mouse.move(4, 4).catch(() => {});
 
     // ─── Ouverture des 5 surfaces ajoutées le 2026-09-01 ────────────────────
     // L'ORDRE COMPTE et n'est pas cosmétique :
@@ -458,15 +568,9 @@ async function main() {
     // chemin UI passe par la géolocalisation ou une recherche d'adresse réseau —
     // on appelle donc sa fonction de rendu avec un résultat de calcul réel, ce
     // qui produit exactement le DOM que rend la production.
-    await page.evaluate(async () => {
-      const dodo = (ms) => new Promise((r) => setTimeout(r, ms));
-      // Fermer la modale de bienvenue par son VRAI bouton — la masquer au
-      // style.display fausse toute géométrie ultérieure (piège éprouvé).
-      const acc = Array.from(document.querySelectorAll('button'))
-        .find((b) => /Accéder à la carte|the map/i.test((b.textContent || '').trim()));
-      if (acc) acc.click();
-      await dodo(400);
-    });
+    // La fermeture de la modale de bienvenue vivait ici jusqu'au 2026-09-03 (brief V) — déplacée
+    // avant l'activation des couches, cf. son commentaire là-bas (page.hover() a besoin qu'elle
+    // soit déjà fermée). Rien à rejouer ici : elle l'est déjà à ce point de la séquence.
 
     // 1) Popup au clic — MESURÉ SUR PLUSIEURS POINTS (2026-09-01, cf. POPUP_POINTS).
     // Une seule mesure ne testait qu'une branche de chaque couleur conditionnelle.
@@ -486,6 +590,18 @@ async function main() {
       // page a déjà eu le temps de finir son travail de fond pendant leur propre clic précédent.
       const wait = i === 0 ? POPUP_WAIT_MS + 1500 : POPUP_WAIT_MS;
       await page.waitForTimeout(wait);
+      // Ouvrir le <details> "Détail technique (vérification)" (2026-09-03, brief V) — ajouté
+      // LE JOUR MÊME par le brief H phase 2, sans attribut `open` ni bascule JS. walk() ne
+      // descend jamais dans un <details> fermé (contenu non-summary en display:none natif) :
+      // les 4 branches de deltaCol (span à l'intérieur) étaient donc TOUTES invisibles au
+      // check depuis ce changement — pas seulement 3/4 comme documenté plus bas (POPUP_POINTS)
+      // avant cette régression de couverture. Les 4 couleurs elles-mêmes restent correctes
+      // (vérifiées ailleurs, lot 3 phase B, 2026-09-02) : pas un défaut de couleur, un trou de
+      // couverture structurel — même famille que #myplace-modal ci-dessus.
+      await page.evaluate(() => {
+        const d = document.querySelector('.leaflet-popup-content details');
+        if (d) d.open = true;
+      });
       const r = await page.evaluate(PROBE_CONTRAST, [[POPUP_PANEL], BASE_TONE]);
       scansPopup.push({ point: `${lat},${lon}`, ...r[0] });
     }
@@ -506,6 +622,19 @@ async function main() {
           commune_info: { nom: 'Bastelica' }, n500: 3, n1000: 9,
           hta: { known: true, distance_m: 820 },
         });
+        // Bascule de vue (2026-09-03, brief V) — STRUCTUREL, pas une branche rare. En
+        // production, myPlaceAnalyze() enchaîne toujours ces 2 lignes juste après avoir appelé
+        // myPlaceRenderSummary() ; le harnais appelait le second directement sans jamais le
+        // premier, laissant #myplace-view-summary en display:none (défaut HTML, jamais
+        // basculé). Toute la mesure de ce panneau ne portait donc que sur la vue "input"
+        // (recherche d'adresse/géoloc) — JAMAIS sur la vue "summary" qu'un utilisateur voit
+        // après CHAQUE recherche réussie, avec ses 2 pastilles color:var(--warn-tx) TOUJOURS
+        // rendues (trouvées critiques à 2,48, corrigées — cf. myPlaceStatusPill, app.html).
+        // Reproduit ici exactement les 2 lignes que myPlaceAnalyze() exécute à ce même point.
+        const vIn = document.getElementById('myplace-view-input');
+        const vOut = document.getElementById('myplace-view-summary');
+        if (vIn) vIn.style.display = 'none';
+        if (vOut) vOut.style.display = 'block';
       }
       await dodo(400);
 
@@ -523,6 +652,61 @@ async function main() {
         map.fire('click', { latlng: L.latLng(42.01, 9.06) });
       }
       await dodo(1500);
+
+      // 5) #c-igrf-warn (2026-09-03, brief V) — <span style="display:none"> qui ne passe à
+      // 'block' que si l'écart mesure saisie/IGRF dépasse 5000 nT (updateIGRFDisplay, app.html).
+      // Le placement ci-dessus pose bien le point, mais AUCUN champ n'était rempli : cette
+      // branche n'était donc jamais exercée, alors qu'elle porte un texte coloré (trouvé
+      // critique à 2,59, corrigé — cf. --warn-tx).
+      // ⚠️ c-igrf-box/#c-val vivent dans .cform-step-panel[data-step="3"] — PAS l'étape 1
+      // (celle ouverte par défaut après placement). Une première vérification manuelle en
+      // navigateur avait semblé confirmer l'étape 1 ; fausse, faussée par un état de stepper
+      // laissé par un test précédent dans le MÊME onglet (déjà avancé à l'étape 3 par
+      // coïncidence — piège : mesurer sans recharger la page peut confirmer le mauvais
+      // mécanisme). L'anomalie a été repérée par CE harnais (noeuds:0 inattendu sur code non
+      // corrigé), pas par la lecture manuelle. cformShowStep(3) explicite lève l'ambiguïté.
+      if (typeof cformShowStep === 'function') cformShowStep(3);
+      await dodo(150);
+      const cval = document.getElementById('c-val');
+      if (cval) {
+        cval.value = '999999';
+        cval.dispatchEvent(new Event('input', { bubbles: true })); // déclenche aussi oninput="refreshIGRFDelta()"
+      }
+      if (typeof refreshIGRFDelta === 'function') refreshIGRFDelta();
+      await dodo(200);
+    });
+    await page.waitForTimeout(300);
+
+    // #c-igrf-warn mesuré ICI, à part (2026-09-03, brief V) — l'étape 6 ci-dessous
+    // (cformShowStep(4)) bascule le stepper vers l'étape 4, ce qui MASQUE l'étape 3 — celle où
+    // vit #c-igrf-box/#c-igrf-warn (display:none tant que non atteinte, exactement le mécanisme
+    // que ce correctif visait). Les deux états forcés dans cette même passe (c-igrf-warn à
+    // l'étape 3, #link-comment-mesurer à l'étape 4) sont MUTUELLEMENT EXCLUS à l'écran — un
+    // seul peut être visible pour la sonde principale plus bas. Sonde dédiée ici, avant que
+    // l'étape 4 ne masque l'étape 3.
+    {
+      const r = await page.evaluate(PROBE_CONTRAST, [[{ sel: '#c-igrf-warn', nom: 'Contribution terrain — écart IGRF hors plage' }], BASE_TONE]);
+      igrfWarnPanelEntry.push({
+        panel: 'Contribution terrain — écart IGRF hors plage', sel: '#c-igrf-warn',
+        etat: r[0].etat,
+        noeuds: 0, // mêmes nœuds que #cform (panneau principal) — cf. commentaire hoverPanelEntries.
+        violations: r[0].violations || [],
+      });
+    }
+
+    await page.evaluate(async () => {
+      const dodo = (ms) => new Promise((r) => setTimeout(r, ms));
+      // 6) Avancer le stepper #cform jusqu'à l'étape 4 (2026-09-03, brief V) — STRUCTUREL,
+      // pas une branche rare : le harnais n'allait jamais au-delà de l'étape 1 (aucun appel à
+      // cformShowStep/cformNextStep dans toute sa séquence), alors qu'avancer le stepper est
+      // le comportement NORMAL d'un contributeur réel remplissant le formulaire. L'étape 4
+      // entière (dont #link-comment-mesurer, color:var(--ocre) trouvé critique à 2,76, corrigé)
+      // restait donc hors du DOM parcouru par walk() (display:none tant que non atteinte).
+      // cformShowStep(4) reproduit l'effet du bouton « Suivant » sans dépendre de la validité
+      // des étapes 2-3 (non remplies ici — hors périmètre de ce correctif de couverture).
+      // APRÈS la sonde dédiée de #c-igrf-warn ci-dessus, exprès : cette étape masque l'étape 3.
+      if (typeof cformShowStep === 'function') cformShowStep(4);
+      await dodo(200);
     });
     await page.waitForTimeout(1500);
 
@@ -540,6 +724,7 @@ async function main() {
     // POPUP_POINTS mesurés en amont, sur ces points-là et aucun autre.
     const panelsSansPopup = PANELS.filter((p) => p !== POPUP_PANEL);
     rapport.panneaux = await page.evaluate(PROBE_CONTRAST, [panelsSansPopup, BASE_TONE]);
+    rapport.panneaux.push(...hoverPanelEntries, ...igrfWarnPanelEntry);
 
     // ─── Reconstruction de l'entrée popup à partir de scansPopup ────────────
     // noeuds = celui du PREMIER point (POPUP_POINTS[0]) : c'est le point historique
