@@ -2522,7 +2522,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
         <div class="cond-row"><span class="cond-key">Kp</span><span class="cond-val" id="kp-v">—</span><span class="cond-src" id="kp-s">NOAA SWPC</span></div>
         <div class="cond-row"><span class="cond-key">Bz (vent solaire)</span><span class="cond-val" id="sw-bz">—</span><span class="cond-src" id="bz-s">NOAA DSCOVR</span></div>
         <div class="cond-row"><span class="cond-key">Densité vent solaire</span><span class="cond-val" id="sw-d">—</span><span class="cond-src" id="sw-ds">NOAA</span></div>
-        <div class="cond-row"><span class="cond-key">Flux proton</span><span class="cond-val" id="sw-p">—</span><span class="cond-src" id="p-s">NOAA GOES</span></div>
+        <div class="cond-row"><span class="cond-key">Flux proton (≥60 MeV)</span><span class="cond-val" id="sw-p">—</span><span class="cond-src" id="p-s">NOAA GOES</span></div>
         <div class="cond-row"><span class="cond-key">Dst</span><span class="cond-val" id="dst-v">—</span><span class="cond-src" id="dst-s">Kyoto WDC via NOAA</span></div>
         <div class="cond-row"><span class="cond-key">Correction utilisée</span><span class="cond-val" id="ext-corr-v">—</span><span class="cond-src" id="ext-corr-s">—</span></div>
         <div class="cond-row acq-row"><span class="cond-key">Acquisition EM</span><span class="cond-val"><span class="acq-dot" id="acq-dot"></span><span id="acq-label">vérification…</span></span><span class="cond-src" id="acq-detail">—</span></div>
@@ -3068,6 +3068,7 @@ var JS_STRINGS_EN = {
   corr_dst_prefix: "Dst correction = ",
   corr_dst_suffix: " nT (Kyoto WDC via NOAA)",
   corr_indisponible: "external correction unavailable",
+  sw_source_indisponible: "unavailable",
   v2_title_statique: "Static geomagnetic field",
   v2_conf_statique: "Confidence: medium — IGRF-14 + LCS1/EMAG2v3, ±100 nT",
   v2_title_elf: "Anthropogenic ELF 50 Hz",
@@ -8367,7 +8368,13 @@ async function loadNOAA(){
     curDensity=density.toFixed(1);
     _set('sw-d',density.toFixed(1)+' p/cm³',col(density,5,15));
     _set('sw-ds','vitesse: '+Math.round(parseFloat(pl[2]))+' km/s');
-  }catch(e){console.error('❌ loadNOAA plasma erreur:',e.message);}
+  }catch(e){
+    console.error('❌ loadNOAA plasma erreur:',e.message);
+    // État honnête (brief AC, 2026-09-03) : source morte confirmée (dette NOAA-SWPC-URLS-DEAD-001)
+    // — remplace le tiret silencieux par une affirmation explicite, même patron que lightning-v.
+    _set('sw-d',jt('sw_source_indisponible','indisponible'),'var(--tx3)');
+    _set('sw-ds',jt('sw_source_indisponible','indisponible'));
+  }
 
   // Bz (champ magnétique interplanétaire) — affichage seul. Même source morte que plasma.
   let bz;
@@ -8379,7 +8386,15 @@ async function loadNOAA(){
     curBz=bz.toFixed(1);
     _set('sw-bz',bz.toFixed(1)+' nT',bz>0?'var(--acc)':bz>-5?'var(--warn-tx)':'var(--danger)');
     _set('bz-s',bz>0?'nord protecteur':bz>-5?'légèrement sud':'sud perturbateur');
-  }catch(e){console.error('❌ loadNOAA mag erreur:',e.message);}
+  }catch(e){
+    console.error('❌ loadNOAA mag erreur:',e.message);
+    // État honnête (brief AC, 2026-09-03) : « chargement… », posé une seule fois au parsing
+    // (top-level, avant DOMContentLoaded), n'était jamais corrigé par ce catch — un mensonge
+    // d'état permanent tant que la source reste morte (NOAA-SWPC-URLS-DEAD-001). Même patron
+    // que lightning-v.
+    _set('sw-bz',jt('sw_source_indisponible','indisponible'),'var(--tx3)');
+    _set('bz-s',jt('sw_source_indisponible','indisponible'));
+  }
 
   // Flux protons — affichage seul. Source vivante, indépendante des deux ci-dessus.
   try{
@@ -12060,7 +12075,7 @@ function capCleanup(){
 ["cond_sum_solaire","#cond-summary-solaire","","vérification…","verificazione…","checking…"],
 ["cond_key_bz",".cond-key@1","","Bz (vent solaire)","Bz (ventu sulare)","Bz (solar wind)"],
 ["cond_key_dens",".cond-key@2","","Densité vent solaire","Densità di u ventu sulare","Solar wind density"],
-["cond_key_proton",".cond-key@3","","Flux proton","Flussu di prutoni","Proton flux"],
+["cond_key_proton",".cond-key@3","","Flux proton (≥60 MeV)","Flussu di prutoni (≥60 MeV)","Proton flux (≥60 MeV)"],
 ["cond_key_corr",".cond-key@5","","Correction utilisée","Currezzione aduprata","Correction used"],
 ["cond_key_acq",".cond-key@6","","Acquisition EM","Acquisizione EM","EM acquisition"],
 ["cond_key_refrac",".cond-key@7","","Réfractivité N","Rifrattività N","Refractivity N"],
