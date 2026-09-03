@@ -3025,6 +3025,8 @@ var JS_STRINGS_EN = {
   implan_tip_deconseillee: "Not recommended for sensitive siting",
   link_cartoradio: "CartoRadio ↗",
   elf_contribs_vide: "No nearby contribution",
+  elf_contribs_plus_prefix: "+ ",
+  elf_contribs_plus_suffix: " more",
   elf_iarc_note: "Documentary reference point: IARC class 2B for chronic residential ELF ≥ 300 nT — not an alert threshold, a statistical signal.",
   radon_eleve: "High",
   radon_modere: "Moderate",
@@ -7831,7 +7833,13 @@ map.on('click',async e=>{
   // Porphyre inchangé (7,18). Résultat : 4 niveaux sémantiques (glyphe+chiffre), 3 couleurs.
   // Vérifié par rendu visuel avant d'écrire ce commentaire (mockup temporaire, jamais commité).
   const phColor=perturbHumain<=1?'#3F5B3A':perturbHumain<=2?'#3F5B3A':perturbHumain<=3?'#8A5E22':'#8E2F1F';
-  const anEmoji=activNat>=4?'\u26a1':activNat>=2?'\ud83e\udea8':'\u25cb';
+  // Correctif 2026-09-03 (brief H, phase 1) : glyphe non rendu (tofu) confirm\u00e9 en direct sur cette
+  // branche \u2014 \ud83e\udea8 U+1FAA8 (ROCK, Unicode 13.0 / sept. 2020, seul glyphe \u00ab r\u00e9cent \u00bb du fichier parmi
+  // phEmoji/anEmoji/implanEmoji, tous les autres datant d'Unicode 6.0-8.0/2010-2015 et rendant
+  // correctement). Repro : clic carte, \ud83d\udfe21/5 suivi d'une case vide avant 2/5. Remplac\u00e9 par \ud83d\uddfb
+  // MOUNT FUJI (U+1F5FB, Unicode 6.0/2010, m\u00eame famille \u00ab g\u00e9ologie/relief \u00bb que le glyphe vis\u00e9,
+  // m\u00eame vintage que \u26a1/\ud83c\udfe1/\ud83c\udf3f/\ud83d\udeab d\u00e9j\u00e0 pr\u00e9sents sans repro de tofu dans ce fichier).
+  const anEmoji=activNat>=4?'\u26a1':activNat>=2?'\ud83d\uddfb':'\u25cb';
   const anLabel=activNat>=4?jt('an_label_tres_actif','Tr\u00e8s actif'):activNat>=2?jt('an_label_actif','Actif'):jt('an_label_neutre','Neutre');
   // Lot 2 bis (2026-09-01) : la branche neutre passe de #9ca3af (2,24 — classe CRITIQUE) à
   // #626774 (4,98), le gris tertiaire du popup. Elle habille le SCORE PRINCIPAL en 14 px gras,
@@ -7919,8 +7927,24 @@ map.on('click',async e=>{
   const suscPct=Math.min(100,Math.max(0,Math.round((susc_nT+5)/65*100)));
   const piezoBar=susc_nT>5?'<div style="height:3px;background:linear-gradient(90deg,#C28533 '+suscPct+'%,#e5e7eb '+suscPct+'%);border-radius:2px;margin:3px 0" title="Susceptibilité magnétique locale : '+susc_nT+' nT ('+geoType+')"></div>':'';
   // Sections domaines v2 (niveau B)
-  const elfContribs=v2.domains.magnetic.elf.contributions.slice(0,3)
-    .map(c=>c.source_type+' : '+c.B_nT+' nT').join(' · ') || jt('elf_contribs_vide','Aucune contribution proche');
+  // Correctif 2026-09-03 (brief H, phase 1) : deux bugs d'affichage confirmés en lecture de code
+  // PUIS en direct (52 nT total, 3 lignes visibles ne sommant qu'à 24 nT — écart cohérent avec
+  // une simple troncature, jamais un écart de calcul). (1) calcMagneticELF_v2() pousse UNE entrée
+  // par source de production électrique proche (boucle PROD_ELECTRIQUE, ligne ~6151) — toutes
+  // avec le même source_type 'production', mais chacune porte déjà un `identifier` (s.nom) que
+  // cette ligne ignorait, rendant plusieurs entrées "production : X nT" indiscernables entre
+  // elles (repro directe : "production : 9 nT · production : 0.7 nT"). Même risque latent pour
+  // poste_source/eolienne (boucles similaires). Corrigé en affichant l'identifiant déjà calculé,
+  // aucune donnée neuve. (2) .slice(0,3) tronque silencieusement la liste sans le signaler —
+  // B_total_nT (affiché juste au-dessus) somme TOUTES les contributions, la ligne détaillée n'en
+  // montre que les 3 premières : ce n'est jamais un écart de calcul (une seule source de vérité,
+  // B_total_nT), seulement une troncature d'affichage non indiquée, qui pouvait se lire à tort
+  // comme un manque de ~nT non expliqué. Ajout d'un compteur "+N autres" quand la liste dépasse 3.
+  const elfContribsList=v2.domains.magnetic.elf.contributions;
+  const elfContribs=elfContribsList.length
+    ? elfContribsList.slice(0,3).map(c=>c.source_type+(c.identifier?' ('+c.identifier+')':'')+' : '+c.B_nT+' nT').join(' · ')
+      +(elfContribsList.length>3?' · '+jt('elf_contribs_plus_prefix','+ ')+(elfContribsList.length-3)+jt('elf_contribs_plus_suffix',' autres'):'')
+    : jt('elf_contribs_vide','Aucune contribution proche');
   const elfIARCnote=elf_nT>=300
     ? '<div style="border-left:2px solid #C28533;padding-left:5px;margin-top:3px;font-size:8px;color:#8A5E22;font-style:italic">'+jt('elf_iarc_note','Repère documentaire : IARC classe 2B pour ELF ≥ 300 nT chronique résidentiel — pas de seuil d\'alerte, signal statistique.')+'</div>'
     : '';
