@@ -101,11 +101,18 @@ function startStaticServer(root, port) {
 
 // ─── Boot detection (signaux app.html du moteur calc*) ─────────────────────
 
+// WMM_GRID retirée de ce gate le 2026-09-04 (brief AR, suite) : app.html ne la charge plus au
+// boot (chargement paresseux, activateExpertMode()) — ce script n'active jamais le mode
+// Expertise, donc booted resterait false indéfiniment sinon (mesuré : score_pondere 5.8/10,
+// booted=false, 0/9 couches, avant ce retrait). La question séparée de savoir si WMM_grid
+// doit continuer à compter comme une des « 9 couches » de PROBE_LAYERS_COUNT plus bas — ce
+// n'est pas un vrai calque visuel, à la différence des 8 autres — reste ouverte (cf. rapport
+// _drafts/DIAGNOSTIC_WMM_CALCUL_SANS_SURFACE_BRIEF_AR_2026-09-04.md, non committé) ; ce
+// correctif-ci ne fait que réparer le boot, pas retoucher le barème.
 const BOOT_READY_FN = function () {
   try {
     if (typeof calcAll_v2 !== 'function') return false;
     if (!Array.isArray(HTA_SEGMENTS_DATA) || HTA_SEGMENTS_DATA.length === 0) return false;
-    if (!Array.isArray(WMM_GRID) || WMM_GRID.length === 0) return false;
     if (!SEGMENT_GRID || typeof SEGMENT_GRID !== 'object') return false;
     return true;
   } catch (_e) {
