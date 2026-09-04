@@ -3366,7 +3366,18 @@ let ctxContrib='exterieur';
 const CFORM_TOTAL_STEPS=6;
 let cformCurrentStep=1;
 let _expertActive=false,_expertConsented=false,_expertLastResult=null,_expertLastLatLon=null,_expertThrottle=null;
+// Garde ajoutée (2026-09-04, brief AR, arbitrage Soleil option 2) : avant ce correctif, la seule
+// garde ici vérifiait la présence DOM de #igrf-wmm-diff (if(!el)return), pas sa visibilité —
+// #expert-panel restant CSS-hidden mais jamais retiré du DOM, cette fonction tournait à CHAQUE
+// clic carte réel, y compris quand le panneau Expert n'est jamais ouvert (aujourd'hui : jamais,
+// #btn-expert étant entièrement commenté depuis le brief Q 2026-09-03). Coût par clic négligeable
+// (~6 µs mesuré) mais calcul servi sans surface pour la quasi-totalité des visiteurs. Reprend le
+// motif de garde déjà utilisé une ligne plus loin (cf. refreshExpertComposite()) — même flag,
+// même fichier, zéro nouvelle dépendance. loadWMMGrid()/WMM_GRID au boot restent inchangés
+// (nécessaires aux gardes de disponibilité moteur du harnais de non-régression — cf. rapport
+// _drafts/DIAGNOSTIC_WMM_CALCUL_SANS_SURFACE_BRIEF_AR_2026-09-04.md, non committé).
 function updateIgrfWmmDiff(lat, lon) {
+  if (!_expertActive) return;
   const el = document.getElementById('igrf-wmm-diff');
   if (!el) return;
   const wmm = (typeof calcMagneticWMM === 'function') ? calcMagneticWMM(lat, lon) : null;
@@ -9886,6 +9897,11 @@ function activateExpertMode() {
   document.getElementById('expert-bandeau').classList.add('visible');
   updateExpertBandeau();
   if (_expertLastResult) refreshExpertComposite();
+  // Même motif que la ligne ci-dessus : updateIgrfWmmDiff() est désormais gardée par
+  // _expertActive (brief AR) et ne tourne plus pendant que le panneau est fermé — sans cet
+  // appel, l'écart IGRF/WMM resterait à « — » à l'ouverture jusqu'au clic suivant, alors
+  // qu'avant ce correctif il affichait déjà la valeur du dernier clic réel.
+  if (_expertLastLatLon) updateIgrfWmmDiff(_expertLastLatLon.lat, _expertLastLatLon.lon);
 }
 
 function closeExpertMode() {
