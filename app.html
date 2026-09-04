@@ -2004,10 +2004,10 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
   <li style="margin-bottom:4px"><strong>Proximité faille</strong> = +1.5 max si faille tectonique active à &lt;3 km (décroissance linéaire, BRGM 1/50k + Ghilardi 2017)</li>
 </ul>
 
-<p style="margin:10px 0 8px 0;"><strong>Score Indice Tellux — Perturbations vs Naturel (0-10) :</strong></p>
+<p style="margin:10px 0 8px 0;"><strong>Score Indice Tellux — Perturbation humaine (0-5) :</strong></p>
 <ul style="margin:6px 0 6px 16px;padding:0">
-  <li style="margin-bottom:4px"><strong>P (humaines)</strong> : Antennes ANFR (±50m GPS, 1 026 supports), lignes HTA/BT (courants 150-450A fix, modèle Biot-Savart), RF Friis (calibration interne, relecture en cours)</li>
-  <li><strong>N (naturelles)</strong> : IGRF-14 (±50-100 nT IDW interp.), anomalie crustale grille LCS-1 (dérivée EMAG2v3 + BRGM aéromag., ±20 nT), susceptibilité magnétique + failles</li>
+  <li style="margin-bottom:4px"><strong>Composantes</strong> : Antennes ANFR (±50m GPS, 1 026 supports), lignes HTA/BT (courants 150-450A fix, modèle Biot-Savart), RF Friis (calibration interne, relecture en cours)</li>
+  <li><strong>Ancien second score « Naturel »</strong> (IGRF-14, anomalie crustale grille LCS-1, susceptibilité magnétique, failles) retiré de l'affichage public le 2026-09-03 (ADR-064) — seuils jamais sourcés. Les données sous-jacentes (susceptibilité, type de sous-sol) restent affichées séparément, hors registre scoré.</li>
 </ul>
 
 <p style="margin:10px 0 8px 0;"><strong style="color:var(--warn)">⚠️ Incertitudes documentées :</strong></p>
@@ -2015,10 +2015,8 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
   <li style="margin-bottom:3px"><strong>Courants HTA/HTB</strong> = ordres de grandeur (150-450A). Réalité : ±50% journée (pic/creuse). EDF SEI Corse ne publie pas données temps réel.</li>
   <li style="margin-bottom:3px"><strong>IGRF 54 points</strong> → interpolation IDW (erreur ±50-100 nT possibles Corse)</li>
   <li style="margin-bottom:3px"><strong>Anomalie crustale (score)</strong> : grille LCS-1 ~24 pts (±20 nT) ; EMAG2v3 live (2 arc-min ~3.7 km) réservé au panneau comparatif « anomalies mondiales » (exploratoire, sans incidence sur le score)</li>
-  <li style="margin-bottom:3px"><strong>Piézoélectricité</strong> : facteur 0.5 arbitraire (Bishop 1981), portée 500m = convention. À valider magnétomètre terrain.</li>
   <li style="margin-bottom:3px"><strong>Failles</strong> : 8 principales BRGM, bonus <3km. Quaternaires vs actives = pondération différente (0.7 vs 1.0).</li>
   <li style="margin-bottom:3px"><strong>RF</strong> : 28 mesures ANFR RF (+ 2 basse fréquence) insuffisantes intérieur Corse. Calibrage = littoral + agglos.</li>
-  <li style="margin-bottom:3px"><strong>Incertitude globale</strong> : ±1-2 points sur 0-10. Utiliser en <b>comparatif (site A vs B)</b> plutôt qu'absolu.</li>
 </ul>
 
 <p style="margin:10px 0 8px 0;"><strong style="color:var(--acc)">✅ Données validées (institutionnelles) :</strong></p>
@@ -3288,7 +3286,7 @@ var JS_STRINGS_EN = {
   myplace_hta_suffix: " m.",
   myplace_hta_title: "Nearest high-voltage line",
   pill_modelise: "Declared position — calculated distance",
-  myplace_champ_title: "Combined electromagnetic field (order of magnitude)",
+  myplace_champ_title: "Anthropogenic ELF 50 Hz (order of magnitude)",
   pill_estime: "Modeled estimate",
   myplace_gamma_title: "Ambient gamma dose (order of magnitude)",
   myplace_gamma_unavailable: "unavailable for this point",
@@ -8524,7 +8522,7 @@ function updateIGRFDisplay(lat, lng){
   var valRaw=parseFloat(document.getElementById('c-val')?.value||'');
   var unite=(document.getElementById('c-unit')?.value)||'nT';
   var instrType=(document.getElementById('c-type')?.value)||'';
-  var msg='Valeur IGRF-14 attendue ici : '+igrf_fmt+' nT.';
+  var msg='Valeur composite Tellux attendue ici (IGRF-14 + anomalie crustale + correction externe) : '+igrf_fmt+' nT.';
   warn.style.display='none';
   if(!isNaN(valRaw) && valRaw>0){
     var valNT=valRaw;
@@ -10391,8 +10389,8 @@ function myPlaceRenderSummary(d){
   // dette confirmée), clés interp_lvl_* conservées pour ce panneau — pas de nouveau barème
   var absScore=Math.abs(v2 && v2.domains && v2.domains.magnetic && v2.domains.magnetic.elf ? Math.round(v2.domains.magnetic.elf.B_total_nT) : 0);
   var champLvl=absScore<30?jt('interp_lvl_tres_calme','Très calme'):absScore<100?jt('interp_lvl_modere','Modéré'):absScore<300?jt('interp_lvl_actif','Actif'):jt('interp_lvl_intense','Intense');
-  var champHtml=escapeHtml(champLvl)+' <span style="color:var(--tx3)">('+Math.round(v2.domains.magnetic.elf.B_total_nT)+' nT, composante liée aux lignes/antennes proches)</span>';
-  var champRow=myPlaceRow(jt('myplace_champ_title','Champ électromagnétique combiné (ordre de grandeur)'),champHtml,jt('pill_estime','Estimation modélisée'),'estime');
+  var champHtml=escapeHtml(champLvl)+' <span style="color:var(--tx3)">('+Math.round(v2.domains.magnetic.elf.B_total_nT)+' nT, composante liée aux lignes électriques proches)</span>';
+  var champRow=myPlaceRow(jt('myplace_champ_title','Champ ELF anthropique 50 Hz (ordre de grandeur)'),champHtml,jt('pill_estime','Estimation modélisée'),'estime');
 
   // Ligne « Dose gamma ambiante (ordre de grandeur) » retirée le 2026-09-01, en même temps que
   // la colonne Gamma du popup carte (décision Soleil) : ce panneau était la SECONDE surface
@@ -12389,14 +12387,14 @@ function capCleanup(){
         "<strong>Fault proximity</strong> = +1.5 max if an active tectonic fault is within &lt;3 km (linear decay, BRGM 1:50k + Ghilardi 2017)"],
       // Score Indice Tellux
       ["#methodology-panel p@6",
-        "Score Indice Tellux — Perturbations vs Naturel (0-10) :",
-        "<strong>Tellux Index Score — Disturbance vs. Natural (0-10):</strong>"],
+        "Score Indice Tellux — Perturbation humaine (0-5) :",
+        "<strong>Tellux Index Score — Human disturbance (0-5):</strong>"],
       ["#methodology-panel li@1",
-        "P (humaines) : Antennes ANFR (±50m GPS, 1 026 supports), lignes HTA/BT (courants 150-450A fix, modèle Biot-Savart), RF Friis (calibration interne, relecture en cours)",
-        "<strong>P (human)</strong>: ANFR antennas (±50m GPS, 1,026 supports), HTA/BT lines (fixed 150-450A currents, Biot-Savart model), Friis RF (internal calibration, review underway)"],
+        "Composantes : Antennes ANFR (±50m GPS, 1 026 supports), lignes HTA/BT (courants 150-450A fix, modèle Biot-Savart), RF Friis (calibration interne, relecture en cours)",
+        "<strong>Components</strong>: ANFR antennas (±50m GPS, 1,026 supports), HTA/BT lines (fixed 150-450A currents, Biot-Savart model), Friis RF (internal calibration, review underway)"],
       ["#methodology-panel li@2",
-        "N (naturelles) : IGRF-14 (±50-100 nT IDW interp.), anomalie crustale grille LCS-1 (dérivée EMAG2v3 + BRGM aéromag., ±20 nT), susceptibilité magnétique + failles",
-        "<strong>N (natural)</strong>: IGRF-14 (±50-100 nT IDW interp.), LCS-1 grid crustal anomaly (derived from EMAG2v3 + BRGM airborne mag., ±20 nT), magnetic susceptibility + faults"],
+        "Ancien second score « Naturel » (IGRF-14, anomalie crustale grille LCS-1, susceptibilité magnétique, failles) retiré de l'affichage public le 2026-09-03 (ADR-064) — seuils jamais sourcés. Les données sous-jacentes (susceptibilité, type de sous-sol) restent affichées séparément, hors registre scoré.",
+        "<strong>Former second \"Natural\" score</strong> (IGRF-14, LCS-1 grid crustal anomaly, magnetic susceptibility, faults) removed from public display on 2026-09-03 (ADR-064) — thresholds never sourced. The underlying data (susceptibility, subsoil type) is still shown separately, outside the scored register."],
       // Incertitudes documentées
       ["#methodology-panel p@7",
         "⚠️ Incertitudes documentées :",
@@ -12410,52 +12408,55 @@ function capCleanup(){
       ["#methodology-panel li@5",
         "Anomalie crustale (score) : grille LCS-1 ~24 pts (±20 nT) ; EMAG2v3 live (2 arc-min ~3.7 km) réservé au panneau comparatif « anomalies mondiales » (exploratoire, sans incidence sur le score)",
         "<strong>Crustal anomaly (score)</strong>: LCS-1 grid ~24 pts (±20 nT); live EMAG2v3 (2 arc-min ~3.7 km) reserved for the \"worldwide anomalies\" comparison panel (exploratory, no effect on the score)"],
+      // Brief AE (2026-09-04) : bullet Piézoélectricité retiré (facteur/portée non
+      // traçables dans le code — calcPiezoScore supprimée le 2026-04-22, cf. audit
+      // brief AD §5.2) — décalage des index li@N qui suit, colonne CO absente ici
+      // (jamais traduit en corse, cf. commentaire d'en-tête de ce tableau).
       ["#methodology-panel li@6",
-        "Piézoélectricité : facteur 0.5 arbitraire (Bishop 1981), portée 500m = convention. À valider magnétomètre terrain.",
-        "<strong>Piezoelectricity</strong>: arbitrary 0.5 factor (Bishop 1981), 500m range = convention. To be validated with field magnetometer."],
-      ["#methodology-panel li@7",
         "Failles : 8 principales BRGM, bonus <3km. Quaternaires vs actives = pondération différente (0.7 vs 1.0).",
         "<strong>Faults</strong>: 8 main BRGM faults, bonus &lt;3km. Quaternary vs. active = different weighting (0.7 vs. 1.0)."],
-      ["#methodology-panel li@8",
+      ["#methodology-panel li@7",
         "RF : 28 mesures ANFR RF (+ 2 basse fréquence) insuffisantes intérieur Corse. Calibrage = littoral + agglos.",
         "<strong>RF</strong>: 28 ANFR RF measurements (+ 2 low-frequency) insufficient for indoor Corsica. Calibration = coastal + urban areas."],
-      ["#methodology-panel li@9",
-        "Incertitude globale : ±1-2 points sur 0-10. Utiliser en comparatif (site A vs B) plutôt qu'absolu.",
-        "<strong>Overall uncertainty</strong>: ±1-2 points on 0-10. Use <b>comparatively (site A vs. B)</b> rather than as an absolute value."],
+      // Brief AE, suivi de revue (2026-09-04) : bullet Incertitude globale retiré —
+      // devenu incohérent avec l'en-tête "(0-5)" corrigé plus haut (l'ancienne valeur
+      // "±1-2 points sur 0-10" n'était de toute façon dérivée d'aucune formule ; pas
+      // de nouvelle valeur inventée pour l'échelle réduite, cf. rapport). Nouveau
+      // décalage des index li@N qui suit.
       // Données validées
       ["#methodology-panel p@8",
         "✅ Données validées (institutionnelles) :",
         "<strong style=\"color:var(--acc)\">✅ Validated data (institutional):</strong>"],
-      ["#methodology-panel li@10",
+      ["#methodology-panel li@8",
         "Antennes ANFR : 1 026 supports, DMS/ETRS89, mis à jour mensuellement",
         "<strong>ANFR antennas</strong>: 1,026 supports, DMS/ETRS89, updated monthly"],
-      ["#methodology-panel li@11",
+      ["#methodology-panel li@9",
         "Failles BRGM : cartes géologiques 1/50k (02B, 2A), D'Anna 2019",
         "<strong>BRGM faults</strong>: 1:50k geological maps (02B, 2A), D'Anna 2019"],
-      ["#methodology-panel li@12",
+      ["#methodology-panel li@10",
         "BRGM WMS : géologie, nappes, cavités = données publiques",
         "<strong>BRGM WMS</strong>: geology, groundwater, cavities = public data"],
       // Références peer-reviewed
       ["#methodology-panel p@9",
         "Références peer-reviewed intégrées :",
         "<strong>Integrated peer-reviewed references:</strong>"],
-      ["#methodology-panel li@13",
+      ["#methodology-panel li@11",
         "Ghilardi et al. (2017) — Failles + piézoélectricité, Géomorphologie",
         "Ghilardi et al. (2017) — Faults + piezoelectricity, Géomorphologie"],
-      ["#methodology-panel li@14",
+      ["#methodology-panel li@12",
         "Bishop (1981) — Quartz piézoélectricité, Jour. Geological Soc.",
         "Bishop (1981) — Quartz piezoelectricity, Jour. Geological Soc."],
-      ["#methodology-panel li@15",
+      ["#methodology-panel li@13",
         "Démarche scientifique ↗",
         "<a href=\"cadre-scientifique.html\" target=\"_blank\" rel=\"noopener\" style=\"color:var(--acc);text-decoration:underline\">Scientific Framework ↗</a>"],
       // Roadmap
       ["#methodology-panel p@10",
         "Roadmap (Q3 2026+) :",
         "<strong>Roadmap (Q3 2026+):</strong>"],
-      ["#methodology-panel li@16",
+      ["#methodology-panel li@14",
         "20 mesures magnétomètre terrain Corse = validation du champ composite estimé",
         "20 field magnetometer measurements in Corsica = validation of the estimated composite field"],
-      ["#methodology-panel li@17",
+      ["#methodology-panel li@15",
         "Courants HTA dynamiques = profils journaliers EDF SEI (si accord)",
         "Dynamic HTA currents = EDF SEI daily profiles (if agreement reached)"],
       ["#methodology-panel p@11",
