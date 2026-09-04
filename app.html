@@ -9009,6 +9009,14 @@ async function saveContrib(){
     'tuyau_pvc':0,         // transparent total
   };
   const attenPrevue=mats.reduce((s,m)=>s+(MAT_DB[m]||0),0);
+  // Champs Kp/Bz/densité/flux protons — Number.isFinite au lieu de ||null (2026-09-04,
+  // dette KP-ZERO-FALLBACK-LIVE-ET-CONTRIB-001, arbitrage Soleil, même motif que brief AF
+  // lot C : Bz=0 nT (IMF nord-sud neutre) et Kp=0 (calme géomagnétique) sont des valeurs
+  // réelles et courantes, pas une absence de donnée ; l'ancien ||null les traitait comme
+  // absentes et le garde anti-PGRST204 plus bas supprimait la clé avant l'insert Supabase —
+  // perte de donnée à l'écriture, pas un simple défaut d'affichage. NaN (fetch échoué/valeur
+  // non numérique) reste correctement null, seul cas où l'absence de donnée est réelle.
+  const kpNum=parseFloat(curKp), bzNum=parseFloat(curBz), densNum=parseFloat(curDensity), fluxNum=parseFloat(curFlux);
   const unite=document.getElementById('c-unit').value;
   const instrType=document.getElementById('c-type').value;
   // Conversion en nT (unite pivot) selon unite saisie
@@ -9024,8 +9032,8 @@ async function saveContrib(){
     valeur:valeurPivot,unite:'nT',unite_saisie:unite,
     csv_stats:csvStats,
     note:document.getElementById('c-note').value||null,
-    kp:parseFloat(curKp)||null,bz:parseFloat(curBz)||null,
-    densite_protons:parseFloat(curDensity)||null,flux_protons:parseFloat(curFlux)||null,
+    kp:Number.isFinite(kpNum)?kpNum:null,bz:Number.isFinite(bzNum)?bzNum:null,
+    densite_protons:Number.isFinite(densNum)?densNum:null,flux_protons:Number.isFinite(fluxNum)?fluxNum:null,
     igrf_nt:Math.round(igrf),perturbation_humaine_nt:human,facteur_eau_nt:water,
     // score_anomalie n'inclut plus water*0.3 (même arbitrage que predicted, ci-dessus) —
     // facteur_eau_nt reste stocké tel quel (brut, diagnostic) pour un audit futur éventuel.
@@ -9037,7 +9045,9 @@ async function saveContrib(){
     etage:etage||null,
     materiaux_murs:mats.length?mats:null,
     appareils_actifs:appareils.length?appareils:null,
-    attenuation_prevue_db:attenPrevue||null,
+    // attenPrevue est toujours un nombre fini (reduce sur MAT_DB, base 0) — 0 signifie
+    // "aucun matériau sélectionné", jamais NaN/undefined ; plus de ||null nécessaire.
+    attenuation_prevue_db:attenPrevue,
     protocole_aveugle: document.getElementById('c-protocole')?.checked ? true : null,
     native_capture: window._nativeCaptureUsed === true ? true : null,
     airplane_mode_on: document.getElementById('c-airplane-mode')?.checked ? true : null,
