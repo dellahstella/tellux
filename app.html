@@ -937,6 +937,19 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 @media(max-width:720px){
   .delta-popup .leaflet-popup-content{max-height:calc(100vh - 120px);}
 }
+/* Fermeture popup (2026-09-04, brief AS étape 3) : croix Leaflet par défaut mesurée à 24×24px,
+   sous 44×44. Zone cliquable élargie par pseudo-élément (même patron que #layers-toggle
+   ci-dessus) sans agrandir le glyphe visuel — étendue vers haut/droite (coin extérieur du
+   popup, rien à recouvrir) et un peu vers bas/gauche (contenu du popup, marge suffisante avec
+   le padding existant du wrapper). Échap ferme aussi le popup actif désormais — cf. le
+   handler keydown partagé avec #hdr-menu, plus bas dans ce fichier. */
+.delta-popup .leaflet-popup-close-button{position:relative;}
+.delta-popup .leaflet-popup-close-button::before{
+  /* 24px de base + 14px (haut/droite, coin extérieur libre) + 6px (bas/gauche, vers le
+     contenu) = 44×44 exact des deux côtés — vérifié par calcul, pas par estimation visuelle
+     (piège rencontré : un premier essai à 8/8/6/6 ne donnait que 38×38). */
+  content:'';position:absolute;top:-14px;right:-14px;left:-6px;bottom:-6px;
+}
 /* Badge NC */
 .nc-badge{display:inline-block;background:#7c0000;color:#ffd700;font-family:var(--mono);font-size:9px;font-weight:500;padding:2px 6px;border-radius:4px;border:1px solid #ffd70055;letter-spacing:.03em;vertical-align:middle;}
 /* Panneau stats corpus */
@@ -1010,6 +1023,14 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   box-shadow:0 2px 8px rgba(0,0,0,.12);cursor:pointer;
   font-size:18px;align-items:center;justify-content:center;color:var(--ardoise-clair);
 }
+/* Cible tactile élargie à 48×44px (2026-09-04, brief AS étape 2), recommandation ≥44×44 —
+   sans agrandir le disque visuel (40×40, DA v2 inchangée). Étendue vers le haut/gauche/droite
+   uniquement, 0 vers le bas : le switch de fond de carte Leaflet .leaflet-top.leaflet-right
+   commence 2px sous ce bouton (mesuré : bottom du bouton à 52px, top du switch à 54px) —
+   l'étendre vers le bas l'aurait recouvert. */
+#layers-toggle::before{
+  content:'';position:absolute;top:-4px;left:-4px;right:-4px;bottom:0;
+}
 
 /* Accordéon couches — tiroir flottant unifié mobile+desktop (passage plein écran,
    brief Soleil §1.3). Remplace l'ancien layout desktop "push-flow" (flex:0 0 420px,
@@ -1027,11 +1048,21 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    de .leaflet-top/.leaflet-bottom/1150 (désormais), #conditions-bar/999,
    .fab-mesure/1050. #sidebar-toggle (repli 48px) est retiré : binaire
    ouvert/fermé désormais, comme le drawer Glossaire déjà présent dans ce fichier. */
+/* Panneau flottant plutôt que colonne pleine hauteur (2026-09-04, brief AS, option 3 —
+   Soleil : "suis ton instinct") : top:130px dégage à la fois #layers-toggle (12-52px) ET le
+   switch de fond de carte Leaflet .leaflet-top.leaflet-right (54-111px, mesuré) — la carte,
+   ce switch ET le coin nord-est restent visibles/manipulables même panneau ouvert. bottom:16px
+   au lieu de 0 pour la même raison côté sud. right:12px + border-radius + ombre omnidirectionnelle
+   = carte flottante plutôt qu'un bord de colonne. Reprend le principe déjà validé et documenté
+   du bottom sheet mobile ci-dessous (pas de scrim, la carte reste interactive derrière) —
+   aucun mécanisme nouveau inventé, juste étendu au-delà de 768px. Fermeture par clic extérieur
+   ajoutée en JS (cf. closeLayersOnOutsideClick(), même patron que #hdr-menu). */
 .map-wrap .layers-accordion{
-  position:fixed;top:0;right:0;bottom:0;z-index:1160;
+  position:fixed;top:130px;right:12px;bottom:16px;z-index:1160;
   width:420px;max-width:92vw;
   background:var(--bg);overflow-y:auto;
-  box-shadow:-4px 0 20px rgba(0,0,0,.15);
+  border-radius:14px;
+  box-shadow:0 8px 32px rgba(0,0,0,.18);
   transform:translateX(100%);transition:transform .3s ease-out;
   padding:8px;
 }
@@ -10363,7 +10394,21 @@ document.addEventListener('click', function(e){
   closeHdrMenu();
 });
 document.addEventListener('keydown', function(e){
-  if(e.key === 'Escape') closeHdrMenu();
+  if(e.key !== 'Escape') return;
+  closeHdrMenu();
+  // Étendu le 2026-09-04 (brief AS étape 3+4, Soleil "suis ton instinct") — même listener
+  // partagé, pas un nouveau mécanisme par cible. Popup : ferme sur desktop et mobile (aucun
+  // conflit avec le clic carte, cf. règle du brief — Échap n'est pas un clic). Panneau
+  // couches : desktop uniquement (window.closeLayersPanel défini plus bas dans un autre bloc
+  // <script>, d'où l'appel via window. — même convention que window.map juste au-dessus dans
+  // ce fichier) — sur mobile le bottom sheet ne ferme pas au clic carte par design (cf.
+  // LAYOUT_MQ), Échap ne doit pas contourner ce choix.
+  try{ if(map && typeof map.closePopup==='function') map.closePopup(); }catch(_e){}
+  try{
+    if(window.matchMedia('(min-width:769px)').matches && typeof window.closeLayersPanel==='function'){
+      window.closeLayersPanel();
+    }
+  }catch(_e){}
 });
 
 // switchMobileTab — refonte 2026-08-26 (brief "refonte nav mobile"), 2 onglets au lieu de 3
@@ -12106,6 +12151,15 @@ function capCleanup(){
    window.toggleLayersPanel (binaire ouvert/fermé, classe .open, cf. §3 du livrable). */
 (function(){
   var DESKTOP_MQ = window.matchMedia('(min-width:1024px)');
+  // LAYOUT_MQ (2026-09-04, brief AS) — distinct de DESKTOP_MQ ci-dessus (1024px, réservé à
+  // l'ouverture auto de la 1re catégorie) : reflète le VRAI point de bascule du panneau
+  // couches lui-même, colonne flottante desktop vs bottom sheet mobile (cf. le
+  // @media(max-width:768px) qui pilote .layers-accordion/#layers-toggle/.mobile-tabbar plus
+  // haut dans ce fichier). Sert à limiter la fermeture au clic extérieur au layout desktop —
+  // sur mobile, le bottom sheet est volontairement cliquable-à-travers (carte manipulable
+  // derrière, sans le fermer ; cf. commentaire "pas de scrim" à .map-wrap .layers-accordion
+  // dans le media query mobile), et le tabbar gère son propre état actif indépendamment.
+  var LAYOUT_MQ = window.matchMedia('(min-width:769px)');
 
   function openFirstAccordionDesktop(){
     if(!DESKTOP_MQ.matches) return;
@@ -12124,12 +12178,11 @@ function capCleanup(){
 
   // Ouvre/ferme le tiroir couches unifié (exposé globalement pour onclick HTML,
   // #layers-toggle — remplace #mob-toggle + #sidebar-toggle).
-  window.toggleLayersPanel = function(){
+  function setLayersPanelOpen(isOpen){
     var la = document.getElementById('layers-accordion');
     var btn = document.getElementById('layers-toggle');
     if(!la) return;
-    la.classList.toggle('open');
-    var isOpen = la.classList.contains('open');
+    la.classList.toggle('open', isOpen);
     if(btn){
       // Glyphe ☰/✕ (langue-agnostique) + aria-expanded (booléen) seulement : ne pas
       // réécrire aria-label en dur ici, ça écraserait la traduction posée par JT_TABLE
@@ -12145,7 +12198,32 @@ function capCleanup(){
     setTimeout(function(){
       try{ if(window.map && typeof window.map.invalidateSize==='function') window.map.invalidateSize(); }catch(e){}
     }, 300);
+  }
+  window.toggleLayersPanel = function(){
+    var la = document.getElementById('layers-accordion');
+    if(!la) return;
+    setLayersPanelOpen(!la.classList.contains('open'));
   };
+  // closeLayersPanel — extrait le 2026-09-04 (brief AS étape 4, option 3 + clic extérieur,
+  // Soleil "suis ton instinct") : un close explicite (jamais un toggle) pour les fermetures
+  // déclenchées hors du bouton lui-même — clic hors panneau, Échap. Panneau devenu flottant
+  // (cf. CSS .map-wrap .layers-accordion) plutôt que colonne pleine hauteur : la carte reste
+  // manipulable au nord, à l'ouest et au sud pendant qu'il est ouvert, mais fermer vite reste
+  // utile (cf. brief). Écouteurs juste en dessous, même patron que #hdr-menu (déjà existant
+  // dans ce fichier, cf. plus haut) — pas de mécanisme neuf inventé.
+  window.closeLayersPanel = function(){
+    var la = document.getElementById('layers-accordion');
+    if(!la || !la.classList.contains('open')) return;
+    setLayersPanelOpen(false);
+  };
+  document.addEventListener('click', function(e){
+    if(!LAYOUT_MQ.matches) return; // mobile : bottom sheet cliquable-à-travers, cf. commentaire LAYOUT_MQ
+    var la = document.getElementById('layers-accordion');
+    var btn = document.getElementById('layers-toggle');
+    if(!la || !la.classList.contains('open')) return;
+    if(la.contains(e.target) || (btn && btn.contains(e.target))) return;
+    window.closeLayersPanel();
+  });
 
   if(document.readyState==='complete' || document.readyState==='interactive'){
     setTimeout(init, 0);
