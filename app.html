@@ -3684,6 +3684,13 @@ function _certClusterIcon(cluster) {
   const nExt = count - nResid;
   const dominant = nResid > nExt ? 'residentiel' : 'exterieur_public';
   const bg = dominant === 'residentiel' ? '#1F3A5F' : '#C28533';
+  // Texte du compte (brief AH phase 2, revue PR #1223) : #F5F0E7 sur Ocre mesurait 2,76:1,
+  // sous AA (4,5:1) — préexistant depuis brief D, jamais mesuré jusqu'à cette revue (22e cas
+  // du même défaut : un état jamais réamendé). Corrigé LOCALEMENT à cette icône, sans toucher
+  // --tx-ocre (token DA v2 partagé par des dizaines d'usages) : réutilise --tx-ardoise
+  // (#1F2329), déjà la couleur de texte principale du site, contre Ocre = 5,03:1. Tyrrhénien
+  // (résidentiel) reste #F5F0E7 — 10,12:1, jamais en cause.
+  const fg = dominant === 'residentiel' ? '#F5F0E7' : '#1F2329';
   const size = count < 10 ? 30 : count < 50 ? 36 : 42;
   const fontSize = count < 10 ? 13 : count < 100 ? 12 : 11;
   const tooltip = nResid + ' résidentiel (centroïde communal) · ' + nExt + ' extérieur public (position exacte)';
@@ -3701,7 +3708,7 @@ function _certClusterIcon(cluster) {
   return L.divIcon({
     html: '<div title="' + tooltip + '" style="position:relative;width:' + size + 'px;height:' + size + 'px">' +
       '<div style="position:absolute;inset:0;background:' + bg + ';border:3px solid white;' + shapeCss + 'box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>' +
-      '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#F5F0E7;font-weight:600;font-size:' + fontSize + 'px">' + count + '</div>' +
+      '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:' + fg + ';font-weight:600;font-size:' + fontSize + 'px">' + count + '</div>' +
       '</div>',
     className: 'tellux-cluster-icon-cert',
     iconSize: [size, size]
