@@ -8209,7 +8209,10 @@ map.on('click',async e=>{
 // de ce chantier (bug plus large signalé séparément) ; seul addMarker() est migré vers un
 // mécanisme qui ne dépend pas de #info, comme toutes les autres couches de points.
 function addMarker(c){
-  var html='<span class="tag" style="background:#f0e8ff;color:#5c3a9b;border:0.5px solid #9b72d4">DB</span><b>'+c.type+'</b>'+(c.valeur?' — '+c.valeur+' '+(c.unite||'nT'):'')+(c.note?'<br><i style="font-size:11px;color:var(--tx3)">'+c.note+'</i>':'')+'<br><span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">IGRF:'+(c.igrf_nt||'—')+'nT · score:'+(c.score_anomalie||'—')+' · Kp:'+(c.kp||'—')+' · Bz:'+(c.bz||'—')+'nT</span>';
+  // Kp/Bz : c.kp!=null (pas c.kp||'—') — 2026-09-04, dette KP-ZERO-FALLBACK-LIVE-ET-CONTRIB-001,
+  // suite de PR #1233 (revue adversariale) : la correction en base (Kp=0/Bz=0 désormais stockés)
+  // était sans effet visible tant que ce lecteur les masquait encore derrière '—' comme absents.
+  var html='<span class="tag" style="background:#f0e8ff;color:#5c3a9b;border:0.5px solid #9b72d4">DB</span><b>'+c.type+'</b>'+(c.valeur?' — '+c.valeur+' '+(c.unite||'nT'):'')+(c.note?'<br><i style="font-size:11px;color:var(--tx3)">'+c.note+'</i>':'')+'<br><span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">IGRF:'+(c.igrf_nt||'—')+'nT · score:'+(c.score_anomalie||'—')+' · Kp:'+(c.kp!=null?c.kp:'—')+' · Bz:'+(c.bz!=null?c.bz:'—')+'nT</span>';
   L.marker([c.lat,c.lon],{icon:mkIcon('#5c3a9b',false,11),zIndexOffset:200}).bindTooltip(html,{sticky:true}).addTo(lCon);
 }
 
@@ -9765,7 +9768,10 @@ function _syncLandeMaquisZoom(fromToggle){
 function exportTerrainCSV(){
   if(!contribsDB||contribsDB.length===0){alert('Aucune contribution en base.');return;}
   const header='lat,lon,type,valeur,unite,note,igrf_nt,score_anomalie,kp,bz,created_at';
-  const rows=contribsDB.map(c=>[c.lat,c.lon,c.type||'',c.valeur||'',c.unite||'','"'+(c.note||'').replace(/"/g,'""')+'"',c.igrf_nt||'',c.score_anomalie||'',c.kp||'',c.bz||'',c.created_at||''].join(','));
+  // Kp/Bz : c.kp!=null (pas c.kp||'') — même correctif que addMarker(), même dette
+  // KP-ZERO-FALLBACK-LIVE-ET-CONTRIB-001 : un export CSV qui vide Kp=0/Bz=0 en cellule
+  // vide serait indiscernable d'une valeur jamais mesurée pour quiconque analyse l'export.
+  const rows=contribsDB.map(c=>[c.lat,c.lon,c.type||'',c.valeur||'',c.unite||'','"'+(c.note||'').replace(/"/g,'""')+'"',c.igrf_nt||'',c.score_anomalie||'',c.kp!=null?c.kp:'',c.bz!=null?c.bz:'',c.created_at||''].join(','));
   const csv=header+'\\n'+rows.join('\\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');
