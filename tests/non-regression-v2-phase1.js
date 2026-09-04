@@ -79,9 +79,12 @@ function runNonRegression() {
   const f2 = assert(subst && typeof subst.lithology === 'string', 'subst.lithology est une chaîne', subst?.lithology);
   const f3 = assert(subst && isFiniteNum(subst.susceptibility_nT), 'subst.susceptibility_nT est un nombre fini', subst?.susceptibility_nT);
   const f4 = assert(subst && [1, 2, 3].includes(subst.radon_potential_class), 'subst.radon_potential_class ∈ {1,2,3}', subst?.radon_potential_class);
-  const f5 = assert(subst && isFiniteNum(subst.distance_fault_m), 'subst.distance_fault_m est un nombre fini', subst?.distance_fault_m);
+  // f5 (subst.distance_fault_m) retiré le 2026-09-04 (brief AG) : le champ a été retiré du
+  // retour de calcSubstrateContext() (aucun lecteur en production, cf. audit brief AD §4) —
+  // trouvé comme le seul lecteur réel restant lors de la revue adversariale de ce retrait,
+  // corrigé ici plutôt que laissé en échec silencieux la prochaine fois que ce script tourne.
   const f6 = assert(subst && subst.lithology.includes('granit'), 'Cauria détectée en zone granitique', subst?.lithology);
-  [f1,f2,f3,f4,f5,f6].forEach(r => { r.pass ? results.pass++ : (results.fail++, results.errors.push(r)); });
+  [f1,f2,f3,f4,f6].forEach(r => { r.pass ? results.pass++ : (results.fail++, results.errors.push(r)); });
   console.groupEnd();
 
   // ── (E) calcHeritageDensity ────────────────────────────────────────────────

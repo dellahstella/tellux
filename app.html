@@ -2188,9 +2188,13 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
         <div class="accordion-cat-content subgroup-content open">
           <p class="subgroup-text" title="Le fond magnétique régional affiché (NOAA EMAG2v3) n'est pas ce qui pèse sur le calcul : une grille interne distincte reste calculée en permanence — comme l'indique le badge — mais son résultat n'entre dans aucun score public affiché. Le bouton n'affiche/masque que la couche visuelle, il ne pilote pas cette entrée. Pour la forêt dense, activer le bouton module la valeur µW/m² du bloc Radiofréquence au clic carte ; il ne modifie ni la heatmap ni le score affiché en haut du popup.">Fond magnétique régional : grille interne calculée en permanence (comme l'indique le badge), non intégrée au score public. Forêt dense : le bouton module la valeur µW/m² au clic ; ni la heatmap ni le score n'en dépendent.</p>
           <!-- Couche « Géologie BRGM » retirée de la carte publique le 2026-08-20 (décision Soleil :
-               chaque couche vit dans l'app qui correspond à son domaine causal — la géologie est la
-               source de lithologie du calcul radon, cf. getGeoType()/GEO_SUSC_GRID, INCHANGÉS). Déjà
-               présente sur radon.html avant ce retrait ; app.html n'en a donc plus de copie. -->
+               chaque couche vit dans l'app qui correspond à son domaine causal). Déjà présente sur
+               radon.html avant ce retrait ; app.html n'en a donc plus de copie. Cette couche était une
+               tuile WMS tierce (geoservices.brgm.fr) — SANS lien technique avec getGeoType()/
+               GEO_SUSC_GRID (grille interne à app.html, INCHANGÉE, précision corrigée 2026-09-04
+               brief AG : 6 appelants confirmés par grep — calcSubstrateContext, calcRadonPotential,
+               calcGammaAmbient, calcSkinDepth, calcTelluricSecondary, et le handler de clic
+               directement — pas seulement « le calcul radon »). -->
           <!-- Couche « Failles tectoniques » (b-failles) retirée le 2026-08-27 (brief "nettoyage
                Contexte naturel") — migrée vers radon.html (#1056), qui en devient l'unique
                affichage. Voir commentaire au retrait de loadFailles()/renderFailles()/togFailles()
@@ -3332,7 +3336,7 @@ function jt(key, fr){
   return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
 }
 
-let contribsDB=[],pending=null,cachedIGRF={},_contribClickHandler=null;
+let contribsDB=[],pending=null,_contribClickHandler=null;
 // Fiche « Mon lieu » (2026-08-20) — positions antennes ANFR retenues en agrégat pur,
 // en plus des marqueurs Leaflet déjà créés par loadAnt() (aucune modification de la
 // boucle de rendu existante). Sert uniquement countAntennasWithinRadius().
@@ -5620,18 +5624,10 @@ function fetchIGRF(lat,lon){
   return igrfFallback(parseFloat(lat),parseFloat(lon))
     +calcLCS1(lat,lon)+calcSq(lat)+calcExternalCorr();
 }
-// Version précise (BGS réseau) — pour export JSON uniquement
-async function fetchIGRF_precise(lat,lon){
-  const k=lat+'_'+lon;
-  if(cachedIGRF[k]) return cachedIGRF[k];
-  try{
-    const yr=new Date().getFullYear()+new Date().getMonth()/12;
-    const d=await fetchEnv('https://geomag.bgs.ac.uk/web_service/GMModels/igrf/14/?latitude='+lat+'&longitude='+lon+'&altitude=0&date='+yr.toFixed(2)+'&format=json');
-    const v=parseFloat(d?.geomagnetic_field_model_result?.field_value?.total_intensity?.value);
-    if(v){cachedIGRF[k]=v;return v+calcLCS1(lat,lon)+calcSq(lat)+calcExternalCorr();}
-  }catch(e){}
-  return fetchIGRF(lat,lon);
-}
+// fetchIGRF_precise() (BGS réseau, précision export JSON) retirée le 2026-09-04
+// (brief AG) — zéro appelant dans tout le dépôt, confirmé par grep exhaustif ;
+// son propre commentaire (« pour export JSON uniquement ») décrivait un usage
+// qui n'existait nulle part (audit brief AD §4).
 
 // ════════════════════════════════════════════════════════════════════════════
 // DOMAINE M — Composante statique (champ continu géomagnétique)
@@ -5719,7 +5715,6 @@ const FH_POINTS=[
 // Source : RTE Data portail + littérature réseau électrique française.
 // ============================================================
 const HTA_BASE_CURRENT_A = 225;
-const BT_BASE_CURRENT_A  = 60; // courant moyen distribution résidentielle BT (dette BT-ELF-001)
 
 // ============================================================
 // Grille spatiale d'indexation des segments HTA
@@ -5938,7 +5933,7 @@ function loadBTLinesAsync() {
 // ============================================================
 // Biot-Savart segment fini avec correction triphasée (v2)
 // Formule : B = (µ₀I)/(4πh) × (sinθ₁ + sinθ₂) — segment fini
-// Unités : I en A, h en m, retour en nT (cohérence contrat calcMagneticELF)
+// Unités : I en A, h en m, sortie en nT (cohérence contrat calcMagneticELF)
 // Correction triphasée : k=0.5 au-delà de 20 m (approximation géométrie pylône)
 // Distance min : 5 m · Plafond : 50 000 nT/segment · Pruning : 2 km
 // Conversion pic → RMS : facteur 1/√2
@@ -5949,47 +5944,14 @@ function loadBTLinesAsync() {
 //   h=1 km   → B_pic_fil = 45 nT, corr × 0.141 → 6.4 → B_rms ≈ 4.5 nT ✓
 //   h=3 km   → return 0 (pruning > 2 km) ✓
 // Réf : Griffiths, Introduction to Electrodynamics, Ch. 5 ; ICNIRP 2010 (200 µT RMS)
+//
+// Variante vectorielle 2D (dette ELF-VECTOR-001) — SEULE VERSION ACTIVE (2026-09-04,
+// brief AG) : retourne {bx, by} en nT dans le repère local horizontal (X=est, Y=nord),
+// perpendiculaire au segment, orienté selon la règle de la main droite. {bx:0, by:0} si
+// segment à plus de 2 km (pruning identique). La variante scalaire (même formule, somme
+// directe des normes plutôt que des vecteurs) a été retirée : zéro appelant, confirmé par
+// grep exhaustif — cf. audit brief AD §4.
 // ============================================================
-function calcBiotSavartSegment(segLat1, segLon1, segLat2, segLon2, obsLat, obsLon, currentA) {
-  const METERS_PER_DEG_LAT = 111320;
-  const METERS_PER_DEG_LON = 111320 * Math.cos(42.0 * Math.PI / 180); // Corse ≈ 82700
-  const x1 = (segLon1 - obsLon) * METERS_PER_DEG_LON;
-  const y1 = (segLat1 - obsLat) * METERS_PER_DEG_LAT;
-  const x2 = (segLon2 - obsLon) * METERS_PER_DEG_LON;
-  const y2 = (segLat2 - obsLat) * METERS_PER_DEG_LAT;
-  const dx = x2 - x1, dy = y2 - y1;
-  const segLen = Math.sqrt(dx*dx + dy*dy);
-  if (segLen < 1) return 0; // segment dégénéré
-  const ux = dx / segLen, uy = dy / segLen;
-  const t = -x1 * ux - y1 * uy; // projection le long du segment
-  const px = x1 + t * ux, py = y1 + t * uy;
-  const h = Math.sqrt(px*px + py*py);
-  // Pruning : distance au plus proche point du segment
-  let closestDist;
-  if (t < 0) closestDist = Math.sqrt(x1*x1 + y1*y1);
-  else if (t > segLen) closestDist = Math.sqrt(x2*x2 + y2*y2);
-  else closestDist = h;
-  if (closestDist > 2000) return 0;
-  const h_eff = Math.max(5, h);
-  // sin θ_i via longueurs signées depuis la projection
-  const d1 = -t, d2 = segLen - t;
-  const sinTheta1 = d1 / Math.sqrt(d1*d1 + h_eff*h_eff);
-  const sinTheta2 = d2 / Math.sqrt(d2*d2 + h_eff*h_eff);
-  // Formule segment fini : facteur 200 = µ₀/(2π) × 1e9 en nT·m/A
-  // Demi-somme (sinθ₁+sinθ₂)/2 : au lieu de la formule originale somme complète,
-  // on retient la moitié pour rester proche du fil infini quand segment centré.
-  let B_pic_nT = 200 * currentA / h_eff * (sinTheta1 + sinTheta2) / 2;
-  // Correction triphasée au-delà de 20 m
-  if (h_eff >= 20) B_pic_nT *= Math.pow(20 / h_eff, 0.5);
-  // Plafond 50 µT = 50 000 nT par segment
-  B_pic_nT = Math.min(50000, Math.abs(B_pic_nT));
-  return B_pic_nT / Math.SQRT2; // pic → RMS
-}
-
-// Variante vectorielle 2D (dette ELF-VECTOR-001)
-// Retourne {bx, by} en nT dans le repère local horizontal (X=est, Y=nord).
-// Le vecteur est perpendiculaire au segment, orienté selon la règle de la main droite.
-// Retourne {bx:0, by:0} si segment à plus de 2 km (pruning identique au scalaire).
 function calcBiotSavartSegmentVec(segLat1, segLon1, segLat2, segLon2, obsLat, obsLon, currentA) {
   const METERS_PER_DEG_LAT = 111320;
   const METERS_PER_DEG_LON = 111320 * Math.cos(42.0 * Math.PI / 180); // ~82700 m/deg à Corse
@@ -6141,10 +6103,8 @@ function calcMagneticELF_v1(lat, lon, chargeFactor) {
     B_total_nT: Math.round(B_total_nT),
     contributions,
     note_ICNIRP: 'Rappel documentaire : limite ICNIRP grand public pour ELF 50 Hz est de 200 µT (200 000 nT).',
-    note_IARC: 'Rappel documentaire : IARC classe 2B pour ELF >= 0,3-0,4 µT (300-400 nT) chronique résidentiel, association statistique leucémies infantiles.',
     source: 'Biot-Savart sur lignes HTA EDF SEI + PROD_ELECTRIQUE + BT_ZONES + postes sources + éoliennes',
     confidence: 'medium',
-    chargeFactorApplied: htFactor,
     chargeFactorSource: htFactorSource
   };
 }
@@ -6157,9 +6117,12 @@ function calcMagneticELF_v1(lat, lon, chargeFactor) {
 //           + PROD_ELECTRIQUE + postes sources + éoliennes
 // Retour identique à v1 (contrat calcAll_v2 préservé) : {B_total_nT, ...}
 // Courant HTA : HTA_BASE_CURRENT_A = 225 A (Option B, sans voltage Supabase)
-// BT_BASE_CURRENT_A (60 A) orpheline depuis l'abandon du Biot-Savart BT
-// vectoriel (approche 3.3 = comptage de densité, pas de courant) — conservée
-// non supprimée en cas de retour à un modèle physique BT après relecture.
+// BT_BASE_CURRENT_A (60 A) retirée le 2026-09-04 (brief AG) — orpheline depuis
+// l'abandon du Biot-Savart BT vectoriel (approche 3.3 = comptage de densité, pas
+// de courant), zéro appelant confirmé par grep exhaustif. Si un modèle BT physique
+// (courant, pas densité) revenait un jour, cette constante (60 A, distribution
+// résidentielle) serait à redéfinir avec la même justification, pas à restaurer
+// telle quelle sans revérification.
 // Correction triphasée k=0.5 au-delà de 20 m (HTA uniquement) · RMS explicite
 // · pruning 2 km · Sommation vectorielle 2D (Bx, By) HTA — ferme ELF-VECTOR-001.
 // Fallback : si grille non prête, délègue à v1.
@@ -6307,13 +6270,10 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
     B_total_nT: Math.round(B_total_nT),
     contributions,
     note_ICNIRP: 'Rappel documentaire : limite ICNIRP grand public pour ELF 50 Hz est de 200 µT (200 000 nT).',
-    note_IARC: 'Rappel documentaire : IARC classe 2B pour ELF >= 0,3-0,4 µT (300-400 nT) chronique résidentiel, association statistique leucémies infantiles.',
     epistemic_note: 'Composante BT : estimation par densité de zone, structure de calage définie (terciles réels), fonction segments→intensité non calibrée statistiquement — choix éditorial à l\'intérieur d\'une fourchette instruite (50-200 nT, ambiant de zone). Ne constitue pas une mesure certifiée. Relecture externe non encore sollicitée.',
     source: 'Biot-Savart vectoriel 2D — ' + HTA_SEGMENTS_DATA.length + ' seg HTA + BT densité de zone (' + btSrc + ') + PROD_ELECTRIQUE + postes + éoliennes',
     confidence: 'medium',
-    chargeFactorApplied: htFactor,
     chargeFactorSource: htFactorSource,
-    version: 'v2.7',
     n_hta_contributing: nHtaContrib,
     n_bt_contributing: nBtContrib
   };
@@ -6601,7 +6561,15 @@ function loadPointsChaudsRadio() { return loadSitesApp(); }
 let ANFR_GRID = null;        // { "gi_gj": [ {lat,lon,generation}, ... ] } — index spatial grille 0.05°
 let _anfrLoadPromise = null; // partage le fetch entre appels concurrents (boot + toggle couche)
 let RF_CALIB_K = 1;          // calibration interne Tellux : facteur scalaire E_cal = k·E_raw (défaut 1 = non calibré)
-let RF_CALIB_STATS = null;   // {k_med,k_geo,disp_geo,iqr,n_used,n_excl_nonconf,n_excl_oor,n_total,bands}
+let RF_CALIB_STATS = null;   // {k_med,k_geo,disp_geo,iqr,n_used,n_excl_nonconf,n_excl_oor,n_excl_indoor,
+                              //  n_excl_ineligible,k_res,pen_dB,n_total,n_fichier_total,bands} — commentaire
+                              // complété 2026-09-04 (brief AG), manquait 5 champs réellement présents.
+                              // Assignée une fois au boot (calibrateRF()), jamais relue ailleurs — le
+                              // console.log adjacent recalcule son propre texte depuis des variables
+                              // locales, pas depuis cet objet. Conservée : ses valeurs sont publiées sur
+                              // methode-limites-transparence.html (brief AE) et elle sert de point de
+                              // vérification console pour la non-régression — pas du code mort au sens
+                              // où ce chantier retire des champs (audit brief AD §4).
 async function loadANFRForField(){
   if (ANFR_GRID) return;
   if (_anfrLoadPromise) return _anfrLoadPromise;
@@ -6646,8 +6614,7 @@ const RF_FREQ_MHZ_BY_GEN = {'2G':900, '3G':2100, '4G':1800, '5G':3500};
 // prohibitif sur la grille dense de buildHotRF() — jamais activé depuis le rendu heatmap,
 // seulement depuis un calcul ponctuel, ex. calcRF() appelé au clic carte).
 function RF_field(lat, lon, applyVegetation){
-  let S_total=0; const contributions=[];
-  let forest_attenuation_dB_max = 0; // pire cas observé parmi les antennes contribuant, cf. note plus bas
+  let S_total=0;
   // (1) MOBILE — antennes ANFR réelles, Friis champ libre, superposition quadratique (E²)
   if(ANFR_GRID){
     const gi=Math.floor(lat/0.05), gj=Math.floor(lon/0.05); let E2=0, nb=0;
@@ -6674,21 +6641,20 @@ function RF_field(lat, lon, applyVegetation){
             const veg = calcVegetationAttenuation(RF_FREQ_MHZ_BY_GEN[a.generation]||1800, depth_m);
             if(veg){
               contrib *= Math.pow(10, -veg.L_veg_dB/10); // dB -> ratio linéaire (base puissance/E²)
-              if(veg.L_veg_dB > forest_attenuation_dB_max) forest_attenuation_dB_max = veg.L_veg_dB;
             }
           }
         }
         E2+=contrib; nb++;
       });
     }
-    if(E2>0){ const S_mob=(E2/377)*1e6; S_total+=S_mob; contributions.push({source_type:'mobile_ANFR',S_uW_m2:Math.round(S_mob*10)/10,distance_m:null,path_name:nb+' antennes ANFR (≤15 km)'}); }
+    if(E2>0){ const S_mob=(E2/377)*1e6; S_total+=S_mob; }
   }
   // (2) BROADCAST TDF — repris tel quel de l'ancien calcRF
   if(TDF_EMITTERS && TDF_EMITTERS.length){
-    TDF_EMITTERS.forEach(em=>{ if(!em.par_kw_estimee||em.par_kw_estimee<=0) return; const d_m=Math.max(50,dist(lat,lon,em.lat,em.lon)*1000); const S=Math.min((em.par_kw_estimee*1000/(4*Math.PI*d_m*d_m))*1e6,50000); if(S>0.1){ S_total+=S; contributions.push({source_type:'broadcast_TDF',S_uW_m2:Math.round(S*10)/10,distance_m:Math.round(d_m),path_name:em.nom,par_kw:em.par_kw_estimee}); } });
+    TDF_EMITTERS.forEach(em=>{ if(!em.par_kw_estimee||em.par_kw_estimee<=0) return; const d_m=Math.max(50,dist(lat,lon,em.lat,em.lon)*1000); const S=Math.min((em.par_kw_estimee*1000/(4*Math.PI*d_m*d_m))*1e6,50000); if(S>0.1){ S_total+=S; } });
   }
   // (3) FAISCEAUX HERTZIENS — repris tel quel de l'ancien calcRF
-  FH_POINTS.forEach(([a,b,name,intensity])=>{ const d=dist(lat,lon,a,b); let c=0; if(d<1.5)c=intensity*(1-d/1.5); else if(d<4)c=intensity*0.2*(1-(d-1.5)/2.5); if(c>0){ S_total+=c; contributions.push({source_type:'FH',S_uW_m2:Math.round(c*10)/10,distance_m:Math.round(d*1000),path_name:name||'FH'}); } });
+  FH_POINTS.forEach(([a,b,name,intensity])=>{ const d=dist(lat,lon,a,b); let c=0; if(d<1.5)c=intensity*(1-d/1.5); else if(d<4)c=intensity*0.2*(1-(d-1.5)/2.5); if(c>0){ S_total+=c; } });
   // (4) PLUS de fond départemental DENSITY[dept].fh×8 (supprimé — unification §2.1/§3.A)
   // (5) CALIBRATION INTERNE Tellux : facteur scalaire k sur le champ E (k dérivé au boot par
   // calibrateRF() sur 30 mesures certifiées). k porte sur E (E_cal=k·E_raw) ⇒ S ∝ E² ⇒ S_cal=k²·S_raw.
@@ -6709,11 +6675,7 @@ function RF_field(lat, lon, applyVegetation){
   const soil_conductivity = soilTex
     ? calcSoilConductivityEffective(1.8, soilTex.rho_b_g_cm3, soilTex.P_sand, soilTex.P_clay)
     : null;
-  // forest_attenuation_dB : pire cas observé parmi les antennes mobiles contribuant (pas une
-  // moyenne — le pire cas est la lecture la plus utile pour un popup "pourquoi ce niveau ici").
-  // 0 si la géométrie n'est pas chargée (dégradation propre) ou si aucun trajet ne traverse la
-  // forêt dense retenue (cf. build_foret_dense_corse_geojson.py pour les classes incluses).
-  return { S_total_uW_m2:Math.round(S_total), E_total_V_m, contributions, forest_attenuation_dB:Math.round(forest_attenuation_dB_max*10)/10, terrain_correction_dB:0, soil_conductivity, note_ICNIRP:'Rappel documentaire : limite ICNIRP grand public en bande GSM ≈ 4,5 W/m² soit 4 500 000 µW/m².', source:'antennes ANFR (Supabase) + émetteurs TDF + faisceaux hertziens', confidence:'low', calibrated:false };
+  return { S_total_uW_m2:Math.round(S_total), E_total_V_m, terrain_correction_dB:0, soil_conductivity, source:'antennes ANFR (Supabase) + émetteurs TDF + faisceaux hertziens', confidence:'low' };
 }
 // ═══ Conductivité effective du sol — ITU-R P.527-6 (09/2021), équations 67-70 ═══
 // Chantier D du brief "chantiers RF/dose" (2026-08-26) — source primaire directe (PDF
@@ -6968,7 +6930,7 @@ function estimateForestDepth(lat1, lon1, lat2, lon2){
 // par défaut — seul le clic carte réel (map.on('click',...)) passe applyVegetation:true.
 function calcRF(lat, lon, applyVegetation){
   const f = RF_field(lat, lon, applyVegetation);
-  return { S_total_uW_m2:f.S_total_uW_m2, E_total_V_m:f.E_total_V_m, contributions:f.contributions, forest_attenuation_dB:f.forest_attenuation_dB, terrain_correction_dB:0, note_ICNIRP:f.note_ICNIRP, source:f.source, confidence:f.confidence, calibrated:false };
+  return { S_total_uW_m2:f.S_total_uW_m2, E_total_V_m:f.E_total_V_m, terrain_correction_dB:0, source:f.source, confidence:f.confidence };
 }
 // ═══ Calibration RF interne Tellux — facteur scalaire k sur 30 mesures certifiées (ADR-028) ═══
 // k = médiane(mesuré/prédit). Applique E_cal=k·E_raw (⇒ S_cal=k²·S_raw, via RF_field). Exclut
@@ -7238,11 +7200,14 @@ function calcGeoSusc(lat,lon){
 }
 
 
-// Contexte substrat géologique — lithologie, susceptibilité, radon, gamma, failles, eau
-// Agrège plusieurs sources (BRGM + ASNR + IGN BD TOPO).
-// gamma_estimated_nSv_h : GELÉ — formule NCRP 94 (13·U + 5.4·Th + 42·K) et
-//   plages U/Th/K par lithologie corse en attente de relecture tiers
-//   (cf. AUDIT_TELLUX_NIVEAU2_MODELE_COMPOSITE_V2.1.md §5, zone GELÉ).
+// Contexte substrat géologique — lithologie, susceptibilité, classe de potentiel radon
+// (2026-09-04, brief AG) : distance faille/eau et gamma_estimated_nSv_h retirés du retour
+// (aucun lecteur en production, cf. audit brief AD §4 ; un seul lecteur réel existait —
+// tests/non-regression-v2-phase1.js, script console manuel, non branché CI — trouvé en
+// revue adversariale, corrigé dans le même geste) — le gamma terrestre réel (formule NCRP 94,
+// verrou NCRP-001, INCHANGÉ) est calculé ailleurs par calcTerrestrialGamma()/calcGammaAmbient(),
+// pas ici ; ce champ n'était qu'un doublon toujours nul. La distance à la faille la plus
+// proche reste calculée, séparément et pour de vrai, par calcFaultProximity().
 function calcSubstrateContext(lat, lon) {
   const lithology = getGeoType(lat, lon);
   const susceptibility_nT = calcGeoSusc(lat, lon);
@@ -7257,30 +7222,10 @@ function calcSubstrateContext(lat, lon) {
   };
   const radon_potential_class = RADON_CLASS_BY_LITHOLOGY[lithology] || 1;
 
-  // Distance à la faille tectonique la plus proche (BRGM + Ghilardi 2017 + D'Anna 2019)
-  let minFaultDist = Infinity;
-  for (const f of FAILLES_CORSE) {
-    const d = dist(lat, lon, f.lat, f.lon) * 1000; // mètres
-    if (d < minFaultDist) minFaultDist = d;
-  }
-
-  // Distance au cours d'eau le plus proche (même points référence que calcWater)
-  const RIVER_PTS = [[42.70,9.35],[42.42,9.19],[42.08,9.17],[41.98,9.12],
-                     [41.85,9.05],[41.73,8.92],[42.30,8.78],[42.15,8.95]];
-  let minWaterDist = Infinity;
-  for (const [a, b] of RIVER_PTS) {
-    const d = dist(lat, lon, a, b) * 1000; // mètres
-    if (d < minWaterDist) minWaterDist = d;
-  }
-
   return {
     lithology,
     susceptibility_nT,
     radon_potential_class,
-    gamma_estimated_nSv_h: null, // GELÉ — formule NCRP 94 + plages U/Th/K en attente relecture tiers
-    distance_fault_m: Math.round(minFaultDist),
-    distance_water_m: Math.round(minWaterDist),
-    source: 'BRGM + ASNR + IGN BD TOPO',
     confidence: 'medium'
   };
 }
@@ -7500,12 +7445,9 @@ function calcRadonPotential(lat, lon, options) {
 
   return {
     class: final_class,
-    class_source: officialMatch ? 'official_decree_2018_434' : 'lithology_estimation',
-    official_classification: officialMatch, // {matched_by, nom, code_insee} ou null
     activity_estimate_Bq_m3: ACTIVITY_RANGES[final_class],
     lithology,
     lithology_class,
-    is_measurement_available: false,
     source: officialMatch
       ? (RADON_L3_SOURCE + ' + cartographie radon 2018 — IRSN (désormais ASNR) + BRGM RP-50200-FR 2000')
       : 'cartographie radon 2018 — IRSN (désormais ASNR) + BRGM RP-50200-FR 2000',
@@ -7561,11 +7503,12 @@ function calcGammaAmbient(lat, lon, altitude_m) {
   const CONVERSION_NGY_TO_NSV = 1.2; // H*(10) nSv/h ≈ dose absorbée air nGy/h × 1,2 (dépend du spectre)
   const terrestrial_nSv_h = terrestrial_nGy_h != null ? Math.round(terrestrial_nGy_h * CONVERSION_NGY_TO_NSV * 10) / 10 : null;
 
-  // Téléray ASNR — in_construction
-  // API candidate : https://teleray.irsn.fr/api/
-  // Balises Corse documentées : AJA (2A, Ajaccio région) + BAP (2B, Bastia périphérie)
-  // Valeurs typiques : 80–120 nSv/h (fond naturel Corse granitique)
-  const nearest_teleray_balise = null; // TODO phase 2 — intégration après vérification API
+  // Téléray ASNR — in_construction. API candidate : https://teleray.irsn.fr/api/
+  // Balises Corse documentées : AJA (2A, Ajaccio région) + BAP (2B, Bastia périphérie).
+  // Valeurs typiques : 80–120 nSv/h (fond naturel Corse granitique). Non intégré (TODO
+  // phase 2, vérification API requise) — pas de balise la plus proche à retourner ici
+  // (2026-09-04, brief AG : le stub `nearest_teleray_balise` toujours-null a été retiré,
+  // n'ayant jamais eu de lecteur, cf. audit brief AD §4).
 
   // Boost ponctuel — sites documentés (anciens sites uranifères, plages monazitiques)
   // Décroissance linéaire du centre du point chaud jusqu'à son rayon d'influence.
@@ -7613,8 +7556,6 @@ function calcGammaAmbient(lat, lon, altitude_m) {
     },
     boost_sources: boost_contributors,
     boost_sources_count,
-    nearest_teleray_balise,      // null — in_construction
-    altitude_used_m: alt,
     source: 'Approximation cosmique calée sur grille modélisée PARMA/EXPACS (Sato 2015) — H*(10), moyenne de cycle solaire · terrestre NCRP 94, coefficients Verdoya 2009 + concentrations Verdoya 1998 par lithotype · boost points chauds documentaires · Téléray ASNR (in_construction)',
     confidence: terrestrialInfo.status === 'ancre' ? 'medium' : 'low',
     under_review: true,          // Téléray manquant ; terrestre extrapolé pour partie du territoire
@@ -7644,7 +7585,10 @@ const SIGMA_ROCK={
 //   Ce n'est PAS une mesure terrain — la conductivité σ est estimée depuis
 //   le type de roche (SIGMA_ROCK), lui-même interpolé sur grille grossière.
 //   Confiance : MEDIUM pour l'ordre de grandeur ; LOW pour la valeur exacte.
-//   Statut : conservé (utilisé par le popup terrain, hypothèses).
+//   Statut (corrigé 2026-09-04, brief AG) : exécutée à chaque clic carte réel, mais
+//   son seul consommateur est _geoLastPoint.skinD — AUCUNE trace de `skinD` dans le
+//   popup, contrairement à ce que cette note affirmait. Sort liée à celui de
+//   _geoLastPoint (arbitrage en cours, cf. audit brief AD §4) — non retirée ici.
 // ────────────────────────────────────────────────────────────────────────────
 function calcSkinDepth(lat,lon){
   const t=getGeoType(lat,lon);
@@ -7720,7 +7664,11 @@ let THERMAL_SOURCES_CORSE = [];
 //   La résolution spatiale des failles BRGM est ~500m-1km : un point "dans"
 //   une faille peut être décalé de plusieurs centaines de mètres en réalité.
 //   Confiance : MEDIUM pour les failles actives ; LOW pour les quaternaires.
-//   Statut calcAll v2 : contexte.fault.distance_m (Tâche 4.5, via calcSubstrateContext).
+//   Statut calcAll v2 (corrigé 2026-09-04, brief AG) : context.fault.value (0-1.5,
+//   sans unité — PAS distance_m, ce champ n'existe pas), peuplé via calcFaultProximity()
+//   directement, PAS via calcSubstrateContext() (qui ne l'appelle pas). Jamais relu
+//   au-delà de v2.context.fault, même pas en variable locale — le moins consommé
+//   des trois fonctions de contexte tellurique (arbitrage en cours, audit brief AD §4).
 // ────────────────────────────────────────────────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────
 // haversine — distance sphérique entre deux points (km)

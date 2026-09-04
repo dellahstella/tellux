@@ -2706,19 +2706,15 @@ a{color:inherit;}
     body.innerHTML = '<div class="mr-geophys-items">' + items.join('') + '</div>' + linksHtml;
   }
 
-  // Resolution de la zone radon d'une commune (meme regle que renderGeophys :
-  // categorie du geojson si listee, sinon zone 1 par defaut).
-  function getRadonZone(code_insee){
-    var info = radonData ? radonData[code_insee] : null;
-    return info ? info.categorie : 1;
-  }
-
   // loadDepotsRadon()/renderDepotsRadonHtml()/renderRadonObligations() — retirés le 2026-08-20
   // (D6, Option B) : le texte légal par zone (articles L.125-5, R.1333-33, etc.) et les dépôts
   // ERP vivent désormais en source unique sur radon.html, pour éviter une divergence silencieuse
   // entre deux copies d'un même texte réglementaire (discipline anti-péremption A.0/A.5 bis).
-  // getRadonZone()/radonData/loadRadon() restent INCHANGÉS — partagés avec
-  // updateCorseOverviewStats(), voir plus haut.
+  // radonData/loadRadon() restent INCHANGÉS — lus directement par updateCorseOverviewStats(),
+  // voir plus haut. getRadonZone(code_insee), elle, a été retirée le 2026-09-04 (brief AG) :
+  // son commentaire affirmait un usage partagé avec updateCorseOverviewStats() qui était faux
+  // (celle-ci lit radonData directement, sans jamais appeler getRadonZone()) — zéro appelant
+  // réel, confirmé par grep exhaustif (audit brief AD §4).
   function renderRadonRenvoi(commune){
     var body = document.getElementById('mr-radon-oblig-body');
     if (!body) return;
