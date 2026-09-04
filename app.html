@@ -7041,6 +7041,17 @@ function calcWater(lat,lon){
     :1.0;
   let w=0;[[42.70,9.35],[42.42,9.19],[42.08,9.17],[41.98,9.12],[41.85,9.05],[41.73,8.92],[42.30,8.78],[42.15,8.95]].forEach(([a,b])=>{const d=dist(lat,lon,a,b);if(d<3)w+=150*(1-d/3);});[[42.25,9.15,300],[42.10,8.85,250],[41.90,9.00,200]].forEach(([a,b,v])=>{const d=dist(lat,lon,a,b);if(d<2)w+=v*(1-d/2);});return Math.round(w*pluieFactor);}
 
+// Sélection ELF v1/v2 — extrait 2026-09-04 (brief AF lot A, revue adversariale PR #1229) :
+// vivait uniquement dans calcAll_v2 jusqu'à ce que updateIGRFDisplay() en ait besoin pour
+// s'aligner sur la formule d'autorité (igrf+human+geo) sans recalculer calcAll_v2 complet.
+// Un second ternaire recopié à la main aurait pu diverger silencieusement d'un futur
+// changement de cette logique (ex. ajout v3) — un seul point d'appel élimine ce risque.
+function calcMagneticELFAuto(lat, lon) {
+  return (typeof USE_ELF_V2 !== 'undefined' && USE_ELF_V2)
+    ? calcMagneticELF_v2(lat, lon)
+    : calcMagneticELF_v1(lat, lon);
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // calcAll_v2 — Architecture à domaines séparés (§6.2 AUDIT_NIVEAU2_V2.1)
 // IMMÉDIAT — introduit la structure de retour standardisée.
@@ -7051,9 +7062,7 @@ function calcAll_v2(lat, lon, options) {
 
   // Domaine M
   const staticResult = calcMagneticStatic(lat, lon);
-  const elfResult    = (typeof USE_ELF_V2 !== 'undefined' && USE_ELF_V2)
-    ? calcMagneticELF_v2(lat, lon)
-    : calcMagneticELF_v1(lat, lon);
+  const elfResult    = calcMagneticELFAuto(lat, lon);
   // Domaine RF
   const rfResult     = calcRF(lat, lon, options.applyVegetation);
   // Domaine I
@@ -8727,12 +8736,21 @@ function updateIGRFDisplay(lat, lng){
   var warn=document.getElementById('c-igrf-warn');
   if(!box||!txt||!warn) return;
   var res=calcMagneticStatic(lat, lng);
-  var igrf_nT=Math.round(res.B_total_nT);
+  // Aligné 2026-09-04 (brief AF lot A, arbitrage Soleil, audit AD §3.A) sur la formule
+  // d'autorité du popup (igrf+human+geo) : cette fonction ne comparait qu'au champ statique
+  // seul (IGRF+crustal+Sq+correction externe), un modèle partiel divergent des deux autres
+  // formules servies. Calcul volontairement restreint aux 3 composantes de la formule (pas
+  // calcAll_v2 complet) pour ne pas recalculer RF/gamma/radon à chaque frappe du champ valeur
+  // — calcMagneticELFAuto() et calcSubstrateContext() sont les mêmes fonctions que celles
+  // lues par calcAll_v2, donc même valeur numérique que la formule popup pour un point donné.
+  var elfRes=calcMagneticELFAuto(lat,lng);
+  var subCtx=calcSubstrateContext(lat,lng);
+  var igrf_nT=Math.round(res.B_total_nT+elfRes.B_total_nT+subCtx.susceptibility_nT);
   var igrf_fmt=igrf_nT.toLocaleString('fr-FR');
   var valRaw=parseFloat(document.getElementById('c-val')?.value||'');
   var unite=(document.getElementById('c-unit')?.value)||'nT';
   var instrType=(document.getElementById('c-type')?.value)||'';
-  var msg='Valeur composite Tellux attendue ici (IGRF-14 + anomalie crustale + correction externe) : '+igrf_fmt+' nT.';
+  var msg='Valeur composite Tellux attendue ici (IGRF-14 + anomalie crustale + correction externe + perturbation ELF + susceptibilité substrat) : '+igrf_fmt+' nT.';
   warn.style.display='none';
   if(!isNaN(valRaw) && valRaw>0){
     var valNT=valRaw;
@@ -8940,7 +8958,14 @@ async function saveContrib(){
   const valeur=parseFloat(document.getElementById('c-val').value)||null;
   // water*0.3 retiré du predicted (cf. commentaire jumeau dans le handler de clic carte) —
   // même arbitrage, même raison (Δ non calibré par un proxy hydrique low-confidence).
-  const predicted=igrf+human;
+  // geo AJOUTÉ 2026-09-04 (brief AF lot A, arbitrage Soleil, audit AD §3.A) : predicted
+  // divergeait du popup (igrf+human+geo) en oubliant systématiquement la composante géo —
+  // geo était déjà déstructuré ci-dessus mais jamais utilisé. Formule d'autorité retenue :
+  // celle du popup, motif = l'écart mesure/modèle doit comparer à ce que le modèle prédit
+  // réellement au point cliqué, composante géologique locale comprise. Pas de recalcul des
+  // lignes déjà en base (5 lignes delta_nt non nul, 13/04→22/08, toutes sans geo) — cf.
+  // DETTES_TECHNIQUES.md.
+  const predicted=igrf+human+geo;
   // Collecter les matériaux et appareils cochés
   const mats=[...document.querySelectorAll('#c-mats input:checked')].map(i=>i.value);
   const appareils=[...document.querySelectorAll('#c-appareils input:checked')].map(i=>i.value);
