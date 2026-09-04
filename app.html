@@ -5342,6 +5342,16 @@ async function loadWMMGrid() {
       WMM_INDEX[key] = p;
     });
     console.log('[Tellux] WMM 2025 grille chargee : ' + WMM_GRID.length + ' points');
+    // Chargement paresseux (2026-09-04, brief AR, suite de l'option 2) : si le panneau Expert
+    // était déjà ouvert sur un point cliqué avant que ce fetch résolve, updateIgrfWmmDiff()
+    // aura affiché « — » (grille pas encore prête, même dégradation que le repli calcMagneticELF_v2
+    // → calcMagneticELF_v1 pour SEGMENT_GRID/HTA_SEGMENTS_DATA, appliquée ici par simple
+    // court-circuit null plutôt que par une seconde méthode de calcul — aucun repli WMM plus
+    // simple n'existe conceptuellement, l'écart n'a de sens qu'avec les deux valeurs). Rafraîchir
+    // maintenant plutôt que d'attendre le clic suivant.
+    if (_expertActive && _expertLastLatLon) {
+      updateIgrfWmmDiff(_expertLastLatLon.lat, _expertLastLatLon.lon);
+    }
   } catch (e) {
     console.warn('[Tellux] WMM 2025 indisponible : ' + e.message);
   }
@@ -5371,7 +5381,13 @@ function calcMagneticWMM(lat, lon) {
   }
   return Math.round(nearest.total_nT);
 }
-loadWMMGrid();
+// loadWMMGrid() n'est plus appelée ici au boot (2026-09-04, brief AR, suite de l'option 2) :
+// seul le panneau Expert consomme WMM_GRID (cross-check invisible), et il n'est aujourd'hui
+// atteignable que depuis la console (#btn-expert commenté depuis le brief Q, 2026-09-03).
+// Payer ~10,2 Kio compressés à chaque visite d'app.html pour une grille qu'aucun visiteur réel
+// n'exploite n'avait plus de justification une fois le calcul lui-même gardé par _expertActive.
+// Déclenchée désormais depuis activateExpertMode() (cf. plus bas dans ce fichier), à la
+// première activation réelle du mode Expertise.
 
 // Variation Sq (Solar quiet) — oscillation ionosphérique diurne
 // Source : Campbell (1989), Rev. Geophys. 27(3), p.399–424
@@ -9902,6 +9918,13 @@ function activateExpertMode() {
   // appel, l'écart IGRF/WMM resterait à « — » à l'ouverture jusqu'au clic suivant, alors
   // qu'avant ce correctif il affichait déjà la valeur du dernier clic réel.
   if (_expertLastLatLon) updateIgrfWmmDiff(_expertLastLatLon.lat, _expertLastLatLon.lon);
+  // Chargement paresseux (2026-09-04, brief AR, suite de l'option 2) : loadWMMGrid() n'est plus
+  // appelée au boot (cf. son ancien site d'appel plus haut dans ce fichier) — déclenchée ici, à
+  // la première activation réelle. Si un point était déjà cliqué (_expertLastLatLon), l'appel
+  // ci-dessus vient de dégrader proprement sur « — » (WMM_INDEX encore null, même court-circuit
+  // que d'habitude) ; loadWMMGrid() rafraîchira elle-même l'affichage à sa résolution (cf. son
+  // propre commentaire). Gardée par `!WMM_GRID` pour ne fetcher qu'une fois par session.
+  if (!WMM_GRID) loadWMMGrid();
 }
 
 function closeExpertMode() {
