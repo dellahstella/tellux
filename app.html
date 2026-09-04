@@ -8727,12 +8727,21 @@ function updateIGRFDisplay(lat, lng){
   var warn=document.getElementById('c-igrf-warn');
   if(!box||!txt||!warn) return;
   var res=calcMagneticStatic(lat, lng);
-  var igrf_nT=Math.round(res.B_total_nT);
+  // Aligné 2026-09-04 (brief AF lot A, arbitrage Soleil, audit AD §3.A) sur la formule
+  // d'autorité du popup (igrf+human+geo) : cette fonction ne comparait qu'au champ statique
+  // seul (IGRF+crustal+Sq+correction externe), un modèle partiel divergent des deux autres
+  // formules servies. Calcul volontairement restreint aux 3 composantes de la formule (pas
+  // calcAll_v2 complet) pour ne pas recalculer RF/gamma/radon à chaque frappe du champ valeur
+  // — mêmes fonctions et même logique de sélection ELF v1/v2 que calcAll_v2, donc même valeur
+  // numérique que la formule popup pour un point donné.
+  var elfRes=(typeof USE_ELF_V2!=='undefined'&&USE_ELF_V2)?calcMagneticELF_v2(lat,lng):calcMagneticELF_v1(lat,lng);
+  var subCtx=calcSubstrateContext(lat,lng);
+  var igrf_nT=Math.round(res.B_total_nT+elfRes.B_total_nT+subCtx.susceptibility_nT);
   var igrf_fmt=igrf_nT.toLocaleString('fr-FR');
   var valRaw=parseFloat(document.getElementById('c-val')?.value||'');
   var unite=(document.getElementById('c-unit')?.value)||'nT';
   var instrType=(document.getElementById('c-type')?.value)||'';
-  var msg='Valeur composite Tellux attendue ici (IGRF-14 + anomalie crustale + correction externe) : '+igrf_fmt+' nT.';
+  var msg='Valeur composite Tellux attendue ici (IGRF-14 + anomalie crustale + correction externe + perturbation ELF + susceptibilité substrat) : '+igrf_fmt+' nT.';
   warn.style.display='none';
   if(!isNaN(valRaw) && valRaw>0){
     var valNT=valRaw;
@@ -8940,7 +8949,14 @@ async function saveContrib(){
   const valeur=parseFloat(document.getElementById('c-val').value)||null;
   // water*0.3 retiré du predicted (cf. commentaire jumeau dans le handler de clic carte) —
   // même arbitrage, même raison (Δ non calibré par un proxy hydrique low-confidence).
-  const predicted=igrf+human;
+  // geo AJOUTÉ 2026-09-04 (brief AF lot A, arbitrage Soleil, audit AD §3.A) : predicted
+  // divergeait du popup (igrf+human+geo) en oubliant systématiquement la composante géo —
+  // geo était déjà déstructuré ci-dessus mais jamais utilisé. Formule d'autorité retenue :
+  // celle du popup, motif = l'écart mesure/modèle doit comparer à ce que le modèle prédit
+  // réellement au point cliqué, composante géologique locale comprise. Pas de recalcul des
+  // lignes déjà en base (5 lignes delta_nt non nul, 13/04→22/08, toutes sans geo) — cf.
+  // DETTES_TECHNIQUES.md.
+  const predicted=igrf+human+geo;
   // Collecter les matériaux et appareils cochés
   const mats=[...document.querySelectorAll('#c-mats input:checked')].map(i=>i.value);
   const appareils=[...document.querySelectorAll('#c-appareils input:checked')].map(i=>i.value);
