@@ -3325,7 +3325,7 @@ function jt(key, fr){
   return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
 }
 
-let contribsDB=[],pending=null,cachedIGRF={},_contribClickHandler=null;
+let contribsDB=[],pending=null,_contribClickHandler=null;
 // Fiche « Mon lieu » (2026-08-20) — positions antennes ANFR retenues en agrégat pur,
 // en plus des marqueurs Leaflet déjà créés par loadAnt() (aucune modification de la
 // boucle de rendu existante). Sert uniquement countAntennasWithinRadius().
@@ -5600,18 +5600,10 @@ function fetchIGRF(lat,lon){
   return igrfFallback(parseFloat(lat),parseFloat(lon))
     +calcLCS1(lat,lon)+calcSq(lat)+calcExternalCorr();
 }
-// Version précise (BGS réseau) — pour export JSON uniquement
-async function fetchIGRF_precise(lat,lon){
-  const k=lat+'_'+lon;
-  if(cachedIGRF[k]) return cachedIGRF[k];
-  try{
-    const yr=new Date().getFullYear()+new Date().getMonth()/12;
-    const d=await fetchEnv('https://geomag.bgs.ac.uk/web_service/GMModels/igrf/14/?latitude='+lat+'&longitude='+lon+'&altitude=0&date='+yr.toFixed(2)+'&format=json');
-    const v=parseFloat(d?.geomagnetic_field_model_result?.field_value?.total_intensity?.value);
-    if(v){cachedIGRF[k]=v;return v+calcLCS1(lat,lon)+calcSq(lat)+calcExternalCorr();}
-  }catch(e){}
-  return fetchIGRF(lat,lon);
-}
+// fetchIGRF_precise() (BGS réseau, précision export JSON) retirée le 2026-09-04
+// (brief AG) — zéro appelant dans tout le dépôt, confirmé par grep exhaustif ;
+// son propre commentaire (« pour export JSON uniquement ») décrivait un usage
+// qui n'existait nulle part (audit brief AD §4).
 
 // ════════════════════════════════════════════════════════════════════════════
 // DOMAINE M — Composante statique (champ continu géomagnétique)
@@ -5699,7 +5691,6 @@ const FH_POINTS=[
 // Source : RTE Data portail + littérature réseau électrique française.
 // ============================================================
 const HTA_BASE_CURRENT_A = 225;
-const BT_BASE_CURRENT_A  = 60; // courant moyen distribution résidentielle BT (dette BT-ELF-001)
 
 // ============================================================
 // Grille spatiale d'indexation des segments HTA
@@ -5918,7 +5909,7 @@ function loadBTLinesAsync() {
 // ============================================================
 // Biot-Savart segment fini avec correction triphasée (v2)
 // Formule : B = (µ₀I)/(4πh) × (sinθ₁ + sinθ₂) — segment fini
-// Unités : I en A, h en m, retour en nT (cohérence contrat calcMagneticELF)
+// Unités : I en A, h en m, sortie en nT (cohérence contrat calcMagneticELF)
 // Correction triphasée : k=0.5 au-delà de 20 m (approximation géométrie pylône)
 // Distance min : 5 m · Plafond : 50 000 nT/segment · Pruning : 2 km
 // Conversion pic → RMS : facteur 1/√2
@@ -5929,47 +5920,14 @@ function loadBTLinesAsync() {
 //   h=1 km   → B_pic_fil = 45 nT, corr × 0.141 → 6.4 → B_rms ≈ 4.5 nT ✓
 //   h=3 km   → return 0 (pruning > 2 km) ✓
 // Réf : Griffiths, Introduction to Electrodynamics, Ch. 5 ; ICNIRP 2010 (200 µT RMS)
+//
+// Variante vectorielle 2D (dette ELF-VECTOR-001) — SEULE VERSION ACTIVE (2026-09-04,
+// brief AG) : retourne {bx, by} en nT dans le repère local horizontal (X=est, Y=nord),
+// perpendiculaire au segment, orienté selon la règle de la main droite. {bx:0, by:0} si
+// segment à plus de 2 km (pruning identique). La variante scalaire (même formule, somme
+// directe des normes plutôt que des vecteurs) a été retirée : zéro appelant, confirmé par
+// grep exhaustif — cf. audit brief AD §4.
 // ============================================================
-function calcBiotSavartSegment(segLat1, segLon1, segLat2, segLon2, obsLat, obsLon, currentA) {
-  const METERS_PER_DEG_LAT = 111320;
-  const METERS_PER_DEG_LON = 111320 * Math.cos(42.0 * Math.PI / 180); // Corse ≈ 82700
-  const x1 = (segLon1 - obsLon) * METERS_PER_DEG_LON;
-  const y1 = (segLat1 - obsLat) * METERS_PER_DEG_LAT;
-  const x2 = (segLon2 - obsLon) * METERS_PER_DEG_LON;
-  const y2 = (segLat2 - obsLat) * METERS_PER_DEG_LAT;
-  const dx = x2 - x1, dy = y2 - y1;
-  const segLen = Math.sqrt(dx*dx + dy*dy);
-  if (segLen < 1) return 0; // segment dégénéré
-  const ux = dx / segLen, uy = dy / segLen;
-  const t = -x1 * ux - y1 * uy; // projection le long du segment
-  const px = x1 + t * ux, py = y1 + t * uy;
-  const h = Math.sqrt(px*px + py*py);
-  // Pruning : distance au plus proche point du segment
-  let closestDist;
-  if (t < 0) closestDist = Math.sqrt(x1*x1 + y1*y1);
-  else if (t > segLen) closestDist = Math.sqrt(x2*x2 + y2*y2);
-  else closestDist = h;
-  if (closestDist > 2000) return 0;
-  const h_eff = Math.max(5, h);
-  // sin θ_i via longueurs signées depuis la projection
-  const d1 = -t, d2 = segLen - t;
-  const sinTheta1 = d1 / Math.sqrt(d1*d1 + h_eff*h_eff);
-  const sinTheta2 = d2 / Math.sqrt(d2*d2 + h_eff*h_eff);
-  // Formule segment fini : facteur 200 = µ₀/(2π) × 1e9 en nT·m/A
-  // Demi-somme (sinθ₁+sinθ₂)/2 : au lieu de la formule originale somme complète,
-  // on retient la moitié pour rester proche du fil infini quand segment centré.
-  let B_pic_nT = 200 * currentA / h_eff * (sinTheta1 + sinTheta2) / 2;
-  // Correction triphasée au-delà de 20 m
-  if (h_eff >= 20) B_pic_nT *= Math.pow(20 / h_eff, 0.5);
-  // Plafond 50 µT = 50 000 nT par segment
-  B_pic_nT = Math.min(50000, Math.abs(B_pic_nT));
-  return B_pic_nT / Math.SQRT2; // pic → RMS
-}
-
-// Variante vectorielle 2D (dette ELF-VECTOR-001)
-// Retourne {bx, by} en nT dans le repère local horizontal (X=est, Y=nord).
-// Le vecteur est perpendiculaire au segment, orienté selon la règle de la main droite.
-// Retourne {bx:0, by:0} si segment à plus de 2 km (pruning identique au scalaire).
 function calcBiotSavartSegmentVec(segLat1, segLon1, segLat2, segLon2, obsLat, obsLon, currentA) {
   const METERS_PER_DEG_LAT = 111320;
   const METERS_PER_DEG_LON = 111320 * Math.cos(42.0 * Math.PI / 180); // ~82700 m/deg à Corse
@@ -6135,9 +6093,12 @@ function calcMagneticELF_v1(lat, lon, chargeFactor) {
 //           + PROD_ELECTRIQUE + postes sources + éoliennes
 // Retour identique à v1 (contrat calcAll_v2 préservé) : {B_total_nT, ...}
 // Courant HTA : HTA_BASE_CURRENT_A = 225 A (Option B, sans voltage Supabase)
-// BT_BASE_CURRENT_A (60 A) orpheline depuis l'abandon du Biot-Savart BT
-// vectoriel (approche 3.3 = comptage de densité, pas de courant) — conservée
-// non supprimée en cas de retour à un modèle physique BT après relecture.
+// BT_BASE_CURRENT_A (60 A) retirée le 2026-09-04 (brief AG) — orpheline depuis
+// l'abandon du Biot-Savart BT vectoriel (approche 3.3 = comptage de densité, pas
+// de courant), zéro appelant confirmé par grep exhaustif. Si un modèle BT physique
+// (courant, pas densité) revenait un jour, cette constante (60 A, distribution
+// résidentielle) serait à redéfinir avec la même justification, pas à restaurer
+// telle quelle sans revérification.
 // Correction triphasée k=0.5 au-delà de 20 m (HTA uniquement) · RMS explicite
 // · pruning 2 km · Sommation vectorielle 2D (Bx, By) HTA — ferme ELF-VECTOR-001.
 // Fallback : si grille non prête, délègue à v1.
