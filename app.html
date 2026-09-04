@@ -7258,8 +7258,14 @@ function calcAll_v2(lat, lon, options) {
     metadata: {
       timestamp: new Date().toISOString(),
       altitude_m: altitudeFallback,
+      // Number.isFinite au lieu de ||null (2026-09-04, brief AM, résidu trouvé par le balayage
+      // repo-wide demandé §4 — même défaut que le Kp live/contributions ci-dessus, sur le même
+      // curKp : un Kp=0 réel devenait null ici aussi. Champ sans consommateur trouvé dans ce
+      // fichier au moment du fix (grep exhaustif sur "kp_snapshot") — corrigé par cohérence et
+      // parce qu'il lit exactement la variable déjà traitée plus haut, pas une extension de
+      // périmètre indépendante.
       kp_snapshot: {
-        value: parseFloat(curKp) || null,
+        value: Number.isFinite(parseFloat(curKp)) ? parseFloat(curKp) : null,
         timestamp: new Date().toISOString()
       },
       data_freshness: {
@@ -8828,16 +8834,60 @@ async function loadNOAA(){
 
   // Kp — LA source réellement consommée par calcExternalCorr() (niveau 3, curKp). Vivante,
   // indépendante des 3 ci-dessus : c'est précisément le découplage que ce fix apporte.
+  //
+  // kp.kp_index||kp.estimated_kp||0 corrigé le 2026-09-04 (brief AM, dette
+  // KP-ZERO-FALLBACK-LIVE-ET-CONTRIB-001, volet 1) — DEUX défauts distincts dans cette seule
+  // ligne, les deux vérifiés en direct sur l'API NOAA au moment du fix (les deux champs
+  // co-existent sur 358/358 lignes de l'historique, PAS un cas rare) :
+  // 1. Ordre de préférence : kp_index (index officiel) est la lecture précise ; estimated_kp
+  //    (nowcast) n'est qu'un repli. Or kp_index=0 est falsy → l'ancien || sautait TOUJOURS vers
+  //    estimated_kp dès que l'officiel valait 0, préférant systématiquement l'estimation moins
+  //    précise à la mesure précise. Observé en direct : kp_index=0, estimated_kp=0.33 → curKp
+  //    devenait "0.3" au lieu de "0.0". Corrigé par Number.isFinite (kp_index prioritaire s'il
+  //    est un nombre fini, 0 inclus ; estimated_kp seulement si kp_index ne l'est pas).
+  // 2. Absence réelle : si aucun des deux champs n'est un nombre exploitable, le |0 final
+  //    masquait cette absence en "Kp calme" — même défaut que l'altitude du lot C. Corrigé :
+  //    kpv devient NaN (jamais 0) quand les deux champs sont absents, affichage bascule sur
+  //    "indisponible" (même patron que Bz/plasma ci-dessus, brief AC) au lieu du "chargement…"
+  //    perpétuel que ce panneau avait avant ce même brief AC pour Bz — à ne pas recréer ici.
+  //
+  // Effet sur calcExternalCorr() (niveau 3, ni la fonction ni sa hiérarchie ne sont modifiées
+  // ici — seul curKp, ce qui l'alimente, change) : le défaut 1 changeait déjà la VALEUR de
+  // curKp transmise (0.3 au lieu de 0.0 dans l'exemple ci-dessus), mais PAS la correction
+  // renvoyée dans ce cas précis — les paliers Menvielle & Berthelier sont plats sous kp=2
+  // (retournent 0 pour tout kp<2), donc 0.0 et 0.3 y produisent la même sortie. Vérifié
+  // numériquement sur l'échantillon live du fix, pas supposé — reste vrai uniquement tant que
+  // kp_index et estimated_kp ne franchissent pas ensemble une frontière de palier (2/4/6) ;
+  // pas démontré impossible en général. Le défaut 2 (NaN au lieu de 0 quand tout est absent)
+  // ne change rien à calcExternalCorr() : NaN||0 valait déjà 0 avant ce fix (curKp restait à
+  // son ancienne valeur, jamais réassigné en échec) et le vaut toujours après.
   let kpv;
   try{
     const r3=await fetch('https://services.swpc.noaa.gov/json/planetary_k_index_1m.json');
     const d3=await r3.json();
     const kp=d3[d3.length-1];
-    kpv=parseFloat(kp.kp_index||kp.estimated_kp||0);
-    curKp=kpv.toFixed(1);
-    _set('kp-v',Math.round(kpv*10)/10,col(kpv,2,5));
-    _set('kp-s',kpv<2?'calme':kpv<4?'actif':kpv<6?'tempête mineure':'tempête majeure');
-  }catch(e){console.error('❌ loadNOAA kp erreur:',e.message);}
+    const kIdx=parseFloat(kp.kp_index), kEst=parseFloat(kp.estimated_kp);
+    kpv=Number.isFinite(kIdx)?kIdx:(Number.isFinite(kEst)?kEst:NaN);
+    if(Number.isFinite(kpv)){
+      curKp=kpv.toFixed(1);
+      _set('kp-v',Math.round(kpv*10)/10,col(kpv,2,5));
+      _set('kp-s',kpv<2?'calme':kpv<4?'actif':kpv<6?'tempête mineure':'tempête majeure');
+    }else{
+      // Les deux champs absents/non numériques dans une réponse par ailleurs valide (JSON
+      // reçu, mais sans valeur Kp exploitable) — curKp N'EST PAS réassigné (garde la dernière
+      // valeur connue ou '—' initial, comportement inchangé), seul l'affichage est honnête ici.
+      _set('kp-v',jt('sw_source_indisponible','indisponible'),'var(--tx3)');
+      _set('kp-s',jt('sw_source_indisponible','indisponible'));
+    }
+  }catch(e){
+    console.error('❌ loadNOAA kp erreur:',e.message);
+    // État honnête (même patron que Bz/plasma ci-dessus, brief AC) : ce catch ne mettait
+    // auparavant AUCUN état à jour — kp-v gardait le "chargement…" posé au parsing initial,
+    // indéfiniment, si la source restait en échec. curKp non plus n'était jamais réassigné ici
+    // (comportement conservé, cf. commentaire ci-dessus sur l'effet nul sur calcExternalCorr()).
+    _set('kp-v',jt('sw_source_indisponible','indisponible'),'var(--tx3)');
+    _set('kp-s',jt('sw_source_indisponible','indisponible'));
+  }
 
   try{if(typeof _apiStore==='function')_apiStore('noaa',{kp:curKp,bz:curBz,d:curDensity,f:curFlux});}catch(e){}
 
