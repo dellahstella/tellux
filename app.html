@@ -6121,10 +6121,8 @@ function calcMagneticELF_v1(lat, lon, chargeFactor) {
     B_total_nT: Math.round(B_total_nT),
     contributions,
     note_ICNIRP: 'Rappel documentaire : limite ICNIRP grand public pour ELF 50 Hz est de 200 µT (200 000 nT).',
-    note_IARC: 'Rappel documentaire : IARC classe 2B pour ELF >= 0,3-0,4 µT (300-400 nT) chronique résidentiel, association statistique leucémies infantiles.',
     source: 'Biot-Savart sur lignes HTA EDF SEI + PROD_ELECTRIQUE + BT_ZONES + postes sources + éoliennes',
     confidence: 'medium',
-    chargeFactorApplied: htFactor,
     chargeFactorSource: htFactorSource
   };
 }
@@ -6287,13 +6285,10 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
     B_total_nT: Math.round(B_total_nT),
     contributions,
     note_ICNIRP: 'Rappel documentaire : limite ICNIRP grand public pour ELF 50 Hz est de 200 µT (200 000 nT).',
-    note_IARC: 'Rappel documentaire : IARC classe 2B pour ELF >= 0,3-0,4 µT (300-400 nT) chronique résidentiel, association statistique leucémies infantiles.',
     epistemic_note: 'Composante BT : estimation par densité de zone, structure de calage définie (terciles réels), fonction segments→intensité non calibrée statistiquement — choix éditorial à l\'intérieur d\'une fourchette instruite (50-200 nT, ambiant de zone). Ne constitue pas une mesure certifiée. Relecture externe non encore sollicitée.',
     source: 'Biot-Savart vectoriel 2D — ' + HTA_SEGMENTS_DATA.length + ' seg HTA + BT densité de zone (' + btSrc + ') + PROD_ELECTRIQUE + postes + éoliennes',
     confidence: 'medium',
-    chargeFactorApplied: htFactor,
     chargeFactorSource: htFactorSource,
-    version: 'v2.7',
     n_hta_contributing: nHtaContrib,
     n_bt_contributing: nBtContrib
   };
@@ -6626,8 +6621,7 @@ const RF_FREQ_MHZ_BY_GEN = {'2G':900, '3G':2100, '4G':1800, '5G':3500};
 // prohibitif sur la grille dense de buildHotRF() — jamais activé depuis le rendu heatmap,
 // seulement depuis un calcul ponctuel, ex. calcRF() appelé au clic carte).
 function RF_field(lat, lon, applyVegetation){
-  let S_total=0; const contributions=[];
-  let forest_attenuation_dB_max = 0; // pire cas observé parmi les antennes contribuant, cf. note plus bas
+  let S_total=0;
   // (1) MOBILE — antennes ANFR réelles, Friis champ libre, superposition quadratique (E²)
   if(ANFR_GRID){
     const gi=Math.floor(lat/0.05), gj=Math.floor(lon/0.05); let E2=0, nb=0;
@@ -6654,21 +6648,20 @@ function RF_field(lat, lon, applyVegetation){
             const veg = calcVegetationAttenuation(RF_FREQ_MHZ_BY_GEN[a.generation]||1800, depth_m);
             if(veg){
               contrib *= Math.pow(10, -veg.L_veg_dB/10); // dB -> ratio linéaire (base puissance/E²)
-              if(veg.L_veg_dB > forest_attenuation_dB_max) forest_attenuation_dB_max = veg.L_veg_dB;
             }
           }
         }
         E2+=contrib; nb++;
       });
     }
-    if(E2>0){ const S_mob=(E2/377)*1e6; S_total+=S_mob; contributions.push({source_type:'mobile_ANFR',S_uW_m2:Math.round(S_mob*10)/10,distance_m:null,path_name:nb+' antennes ANFR (≤15 km)'}); }
+    if(E2>0){ const S_mob=(E2/377)*1e6; S_total+=S_mob; }
   }
   // (2) BROADCAST TDF — repris tel quel de l'ancien calcRF
   if(TDF_EMITTERS && TDF_EMITTERS.length){
-    TDF_EMITTERS.forEach(em=>{ if(!em.par_kw_estimee||em.par_kw_estimee<=0) return; const d_m=Math.max(50,dist(lat,lon,em.lat,em.lon)*1000); const S=Math.min((em.par_kw_estimee*1000/(4*Math.PI*d_m*d_m))*1e6,50000); if(S>0.1){ S_total+=S; contributions.push({source_type:'broadcast_TDF',S_uW_m2:Math.round(S*10)/10,distance_m:Math.round(d_m),path_name:em.nom,par_kw:em.par_kw_estimee}); } });
+    TDF_EMITTERS.forEach(em=>{ if(!em.par_kw_estimee||em.par_kw_estimee<=0) return; const d_m=Math.max(50,dist(lat,lon,em.lat,em.lon)*1000); const S=Math.min((em.par_kw_estimee*1000/(4*Math.PI*d_m*d_m))*1e6,50000); if(S>0.1){ S_total+=S; } });
   }
   // (3) FAISCEAUX HERTZIENS — repris tel quel de l'ancien calcRF
-  FH_POINTS.forEach(([a,b,name,intensity])=>{ const d=dist(lat,lon,a,b); let c=0; if(d<1.5)c=intensity*(1-d/1.5); else if(d<4)c=intensity*0.2*(1-(d-1.5)/2.5); if(c>0){ S_total+=c; contributions.push({source_type:'FH',S_uW_m2:Math.round(c*10)/10,distance_m:Math.round(d*1000),path_name:name||'FH'}); } });
+  FH_POINTS.forEach(([a,b,name,intensity])=>{ const d=dist(lat,lon,a,b); let c=0; if(d<1.5)c=intensity*(1-d/1.5); else if(d<4)c=intensity*0.2*(1-(d-1.5)/2.5); if(c>0){ S_total+=c; } });
   // (4) PLUS de fond départemental DENSITY[dept].fh×8 (supprimé — unification §2.1/§3.A)
   // (5) CALIBRATION INTERNE Tellux : facteur scalaire k sur le champ E (k dérivé au boot par
   // calibrateRF() sur 30 mesures certifiées). k porte sur E (E_cal=k·E_raw) ⇒ S ∝ E² ⇒ S_cal=k²·S_raw.
@@ -6689,11 +6682,7 @@ function RF_field(lat, lon, applyVegetation){
   const soil_conductivity = soilTex
     ? calcSoilConductivityEffective(1.8, soilTex.rho_b_g_cm3, soilTex.P_sand, soilTex.P_clay)
     : null;
-  // forest_attenuation_dB : pire cas observé parmi les antennes mobiles contribuant (pas une
-  // moyenne — le pire cas est la lecture la plus utile pour un popup "pourquoi ce niveau ici").
-  // 0 si la géométrie n'est pas chargée (dégradation propre) ou si aucun trajet ne traverse la
-  // forêt dense retenue (cf. build_foret_dense_corse_geojson.py pour les classes incluses).
-  return { S_total_uW_m2:Math.round(S_total), E_total_V_m, contributions, forest_attenuation_dB:Math.round(forest_attenuation_dB_max*10)/10, terrain_correction_dB:0, soil_conductivity, note_ICNIRP:'Rappel documentaire : limite ICNIRP grand public en bande GSM ≈ 4,5 W/m² soit 4 500 000 µW/m².', source:'antennes ANFR (Supabase) + émetteurs TDF + faisceaux hertziens', confidence:'low', calibrated:false };
+  return { S_total_uW_m2:Math.round(S_total), E_total_V_m, terrain_correction_dB:0, soil_conductivity, source:'antennes ANFR (Supabase) + émetteurs TDF + faisceaux hertziens', confidence:'low' };
 }
 // ═══ Conductivité effective du sol — ITU-R P.527-6 (09/2021), équations 67-70 ═══
 // Chantier D du brief "chantiers RF/dose" (2026-08-26) — source primaire directe (PDF
@@ -6948,7 +6937,7 @@ function estimateForestDepth(lat1, lon1, lat2, lon2){
 // par défaut — seul le clic carte réel (map.on('click',...)) passe applyVegetation:true.
 function calcRF(lat, lon, applyVegetation){
   const f = RF_field(lat, lon, applyVegetation);
-  return { S_total_uW_m2:f.S_total_uW_m2, E_total_V_m:f.E_total_V_m, contributions:f.contributions, forest_attenuation_dB:f.forest_attenuation_dB, terrain_correction_dB:0, note_ICNIRP:f.note_ICNIRP, source:f.source, confidence:f.confidence, calibrated:false };
+  return { S_total_uW_m2:f.S_total_uW_m2, E_total_V_m:f.E_total_V_m, terrain_correction_dB:0, source:f.source, confidence:f.confidence };
 }
 // ═══ Calibration RF interne Tellux — facteur scalaire k sur 30 mesures certifiées (ADR-028) ═══
 // k = médiane(mesuré/prédit). Applique E_cal=k·E_raw (⇒ S_cal=k²·S_raw, via RF_field). Exclut
@@ -7218,11 +7207,12 @@ function calcGeoSusc(lat,lon){
 }
 
 
-// Contexte substrat géologique — lithologie, susceptibilité, radon, gamma, failles, eau
-// Agrège plusieurs sources (BRGM + ASNR + IGN BD TOPO).
-// gamma_estimated_nSv_h : GELÉ — formule NCRP 94 (13·U + 5.4·Th + 42·K) et
-//   plages U/Th/K par lithologie corse en attente de relecture tiers
-//   (cf. AUDIT_TELLUX_NIVEAU2_MODELE_COMPOSITE_V2.1.md §5, zone GELÉ).
+// Contexte substrat géologique — lithologie, susceptibilité, classe de potentiel radon
+// (2026-09-04, brief AG) : distance faille/eau et gamma_estimated_nSv_h retirés du retour
+// (champs jamais lus, cf. audit brief AD §4) — le gamma terrestre réel (formule NCRP 94,
+// verrou NCRP-001, INCHANGÉ) est calculé ailleurs par calcTerrestrialGamma()/calcGammaAmbient(),
+// pas ici ; ce champ n'était qu'un doublon toujours nul. La distance à la faille la plus
+// proche reste calculée, séparément et pour de vrai, par calcFaultProximity().
 function calcSubstrateContext(lat, lon) {
   const lithology = getGeoType(lat, lon);
   const susceptibility_nT = calcGeoSusc(lat, lon);
@@ -7237,30 +7227,10 @@ function calcSubstrateContext(lat, lon) {
   };
   const radon_potential_class = RADON_CLASS_BY_LITHOLOGY[lithology] || 1;
 
-  // Distance à la faille tectonique la plus proche (BRGM + Ghilardi 2017 + D'Anna 2019)
-  let minFaultDist = Infinity;
-  for (const f of FAILLES_CORSE) {
-    const d = dist(lat, lon, f.lat, f.lon) * 1000; // mètres
-    if (d < minFaultDist) minFaultDist = d;
-  }
-
-  // Distance au cours d'eau le plus proche (même points référence que calcWater)
-  const RIVER_PTS = [[42.70,9.35],[42.42,9.19],[42.08,9.17],[41.98,9.12],
-                     [41.85,9.05],[41.73,8.92],[42.30,8.78],[42.15,8.95]];
-  let minWaterDist = Infinity;
-  for (const [a, b] of RIVER_PTS) {
-    const d = dist(lat, lon, a, b) * 1000; // mètres
-    if (d < minWaterDist) minWaterDist = d;
-  }
-
   return {
     lithology,
     susceptibility_nT,
     radon_potential_class,
-    gamma_estimated_nSv_h: null, // GELÉ — formule NCRP 94 + plages U/Th/K en attente relecture tiers
-    distance_fault_m: Math.round(minFaultDist),
-    distance_water_m: Math.round(minWaterDist),
-    source: 'BRGM + ASNR + IGN BD TOPO',
     confidence: 'medium'
   };
 }
@@ -7480,12 +7450,9 @@ function calcRadonPotential(lat, lon, options) {
 
   return {
     class: final_class,
-    class_source: officialMatch ? 'official_decree_2018_434' : 'lithology_estimation',
-    official_classification: officialMatch, // {matched_by, nom, code_insee} ou null
     activity_estimate_Bq_m3: ACTIVITY_RANGES[final_class],
     lithology,
     lithology_class,
-    is_measurement_available: false,
     source: officialMatch
       ? (RADON_L3_SOURCE + ' + cartographie radon 2018 — IRSN (désormais ASNR) + BRGM RP-50200-FR 2000')
       : 'cartographie radon 2018 — IRSN (désormais ASNR) + BRGM RP-50200-FR 2000',
@@ -7541,11 +7508,12 @@ function calcGammaAmbient(lat, lon, altitude_m) {
   const CONVERSION_NGY_TO_NSV = 1.2; // H*(10) nSv/h ≈ dose absorbée air nGy/h × 1,2 (dépend du spectre)
   const terrestrial_nSv_h = terrestrial_nGy_h != null ? Math.round(terrestrial_nGy_h * CONVERSION_NGY_TO_NSV * 10) / 10 : null;
 
-  // Téléray ASNR — in_construction
-  // API candidate : https://teleray.irsn.fr/api/
-  // Balises Corse documentées : AJA (2A, Ajaccio région) + BAP (2B, Bastia périphérie)
-  // Valeurs typiques : 80–120 nSv/h (fond naturel Corse granitique)
-  const nearest_teleray_balise = null; // TODO phase 2 — intégration après vérification API
+  // Téléray ASNR — in_construction. API candidate : https://teleray.irsn.fr/api/
+  // Balises Corse documentées : AJA (2A, Ajaccio région) + BAP (2B, Bastia périphérie).
+  // Valeurs typiques : 80–120 nSv/h (fond naturel Corse granitique). Non intégré (TODO
+  // phase 2, vérification API requise) — pas de balise la plus proche à retourner ici
+  // (2026-09-04, brief AG : le stub `nearest_teleray_balise` toujours-null a été retiré,
+  // n'ayant jamais eu de lecteur, cf. audit brief AD §4).
 
   // Boost ponctuel — sites documentés (anciens sites uranifères, plages monazitiques)
   // Décroissance linéaire du centre du point chaud jusqu'à son rayon d'influence.
@@ -7593,8 +7561,6 @@ function calcGammaAmbient(lat, lon, altitude_m) {
     },
     boost_sources: boost_contributors,
     boost_sources_count,
-    nearest_teleray_balise,      // null — in_construction
-    altitude_used_m: alt,
     source: 'Approximation cosmique calée sur grille modélisée PARMA/EXPACS (Sato 2015) — H*(10), moyenne de cycle solaire · terrestre NCRP 94, coefficients Verdoya 2009 + concentrations Verdoya 1998 par lithotype · boost points chauds documentaires · Téléray ASNR (in_construction)',
     confidence: terrestrialInfo.status === 'ancre' ? 'medium' : 'low',
     under_review: true,          // Téléray manquant ; terrestre extrapolé pour partie du territoire
