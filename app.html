@@ -6140,7 +6140,15 @@ function calcMagneticELF_v1(lat, lon, chargeFactor) {
     note_ICNIRP: 'Rappel documentaire : limite ICNIRP grand public pour ELF 50 Hz est de 200 µT (200 000 nT).',
     source: 'Biot-Savart sur lignes HTA EDF SEI + PROD_ELECTRIQUE + BT_ZONES + postes sources + éoliennes',
     confidence: 'medium',
-    chargeFactorSource: htFactorSource
+    chargeFactorSource: htFactorSource,
+    // model : discriminant v1/v2 (2026-09-04, brief AP, Cran B — champ additif, aucun calcul
+    // touché). Absent jusqu'ici de toute valeur de retour ELF : aucun appelant ne pouvait
+    // distinguer un résultat v1 (8 axes hardcodés) d'un résultat v2 (Biot-Savart vectoriel sur
+    // segments réels) — y compris le repli SILENCIEUX de calcMagneticELF_v2 vers cette même
+    // fonction quand SEGMENT_GRID/HTA_SEGMENTS_DATA ne sont pas encore chargées (cf. brief AF
+    // §3.C). 'v1' ici — vrai qu'on soit appelé directement ou via ce repli, car v2 retourne
+    // alors littéralement cet objet tel quel.
+    model: 'v1'
   };
 }
 
@@ -6310,7 +6318,11 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
     confidence: 'medium',
     chargeFactorSource: htFactorSource,
     n_hta_contributing: nHtaContrib,
-    n_bt_contributing: nBtContrib
+    n_bt_contributing: nBtContrib,
+    // model : discriminant v1/v2 (2026-09-04, brief AP) — cf. commentaire jumeau dans
+    // calcMagneticELF_v1(). Atteint uniquement quand SEGMENT_GRID/HTA_SEGMENTS_DATA sont
+    // chargées (garde plus haut dans cette fonction) — jamais 'v2' pendant le repli.
+    model: 'v2'
   };
 }
 
