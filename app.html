@@ -3057,7 +3057,7 @@ var JS_STRINGS_EN = {
   detail_technique_summary: "Technical detail (verification)",
   detail_delta_label: "gap between a nearby citizen reading and the model (IGRF+ELF+local), — if none within 500 m",
   detail_crustal_label: "large-scale crustal anomaly, LCS1/EMAG2v3 — exploratory reference point, not integrated into the score",
-  detail_local_label: "local geological susceptibility, same value as susc_nT above — feeds indiceTellux internally, unscored in this popup since ADR-064",
+  detail_local_label: "local geological susceptibility, same value as susc_nT above — feeds axesTotal internally, unscored in this popup since ADR-064",
   detail_human_label: "total anthropic ELF field, same value shown above — feeds the Disturbance score",
   detail_rf_label: "calibrated RF field — a separate calculation from the µW/m² value above (never forest-attenuated) — feeds the displayed score",
   detail_alt_label: "Altitude (IGN RGE Alti, ~1 m resolution)",
@@ -7806,14 +7806,15 @@ map.on('click',async e=>{
   // jugement sur 5 que rien ne justifie ». L'information sous-jacente NE disparaît PAS :
   // susc_nT/geoType/solLabel restent affichés plus bas, déjà dans un registre non scoré (décision
   // 2 — la donnée reste sur place, pas de migration de surface). activNat reste calculé (alimente
-  // encore indiceTellux, formule inchangée — cf. note plus bas) mais n'est plus rendu nulle part
+  // encore axesTotal, formule inchangée — cf. note plus bas) mais n'est plus rendu nulle part
   // dans ce popup.
   //
   // Nomenclature (décision 4, brief T) : « Indice Tellux » désigne désormais spécifiquement
-  // perturbHumain/5, le seul score affiché ici — pas la variable interne indiceTellux (0-10,
-  // somme des deux axes, jamais affichée, formule et nom inchangés). À ne pas confondre avec
-  // « Indice Expert » (computeExpertComposite(), gelé/masqué) ni la « Carte de densité
-  // magnétique » (heatmap b-hot).
+  // perturbHumain/5, le seul score affiché ici — pas la variable interne axesTotal (0-10,
+  // somme des deux axes, jamais affichée, formule inchangée). Renommée depuis `indiceTellux`
+  // le 2026-09-04 (brief W) — l'ancien nom collisionnait avec le nom public posé par ADR-064,
+  // ce que ce renommage élimine. À ne pas confondre avec « Indice Expert »
+  // (computeExpertComposite(), gelé/masqué) ni la « Carte de densité magnétique » (heatmap b-hot).
   const rfScore=nRFcalib>6?3:nRFcalib>2?2:nRFcalib>0.5?1:0;
   const humanScore=Math.min(4,Math.round(human/100));
   const geoScore=Math.min(3,Math.round(Math.abs(geo)/15));
@@ -7821,11 +7822,14 @@ map.on('click',async e=>{
   // susc_nT : susceptibilité magnétique locale (nT)
   const suscNat=susc_nT>30?2:susc_nT>12?1:0;
   const activNat=Math.min(5,geoScore+suscNat); // n'est plus rendu dans ce popup, cf. commentaire ci-dessus
-  // indiceTellux : formule INCHANGÉE (ADR-064) — pas de consommateur confirmé au-delà de
-  // _geoLastPoint.indice (aucun trouvé par grep dans app.html), touchée à aucune surface publique,
-  // donc aucune raison de la modifier sans bénéfice visible ni instruction explicite. Si un usage
-  // caché apparaît un jour, il verra la même valeur qu'avant cette PR.
-  const indiceTellux=Math.min(10,perturbHumain+activNat);
+  // axesTotal (nom interne, ex-indiceTellux — renommé 2026-09-04, brief W, cf. note de
+  // nomenclature ci-dessus) : formule INCHANGÉE (ADR-064) — pas de consommateur confirmé
+  // au-delà de _geoLastPoint.indice (aucun trouvé par grep sur le dépôt entier, reconfirmé au
+  // brief W), touchée à aucune surface publique hors ce commentaire et le libellé de détail
+  // technique (jt('detail_local_label',...) plus bas), donc aucune raison de modifier la
+  // valeur sans instruction explicite — seul le nom change ici. Si un usage caché apparaît un
+  // jour, il verra la même valeur qu'avant ce renommage.
+  const axesTotal=Math.min(10,perturbHumain+activNat);
   // Couleurs basées sur perturbation humaine (c'est ça qui compte pour bon/mauvais)
   const phEmoji=perturbHumain<=1?'🟢':perturbHumain<=2?'🟡':perturbHumain<=3?'🟠':'🔴';
   const phLabel=perturbHumain<=1?jt('ph_label_tres_calme','Très calme'):perturbHumain<=2?jt('ph_label_calme','Calme'):perturbHumain<=3?jt('ph_label_modere','Modéré'):jt('ph_label_perturbe','Perturbé');
@@ -8042,7 +8046,7 @@ map.on('click',async e=>{
       '<div style="font-size:8px;color:#626774;margin-top:3px;line-height:1.6">'+
         '<div>Δ ('+jt('detail_delta_label','écart mesure citoyenne proche / modèle IGRF+ELF+local, "—" si aucune mesure à moins de 500 m')+') : <span style="color:'+deltaCol+'">'+deltaStr+'</span></div>'+
         '<div>C ('+jt('detail_crustal_label','anomalie crustale grande échelle, LCS1/EMAG2v3 — repère exploratoire, non intégré au score')+') : <span style="color:#AD22BE">'+(crustal>0?'+':'')+crustal+' nT</span></div>'+
-        '<div>L ('+jt('detail_local_label','susceptibilité géologique locale, même valeur que susc_nT ci-dessus — alimente indiceTellux en interne, non scorée dans ce popup depuis ADR-064')+') : <span style="color:#3F5B3A">'+(geo>0?'+':'')+geo+' nT</span></div>'+
+        '<div>L ('+jt('detail_local_label','susceptibilité géologique locale, même valeur que susc_nT ci-dessus — alimente axesTotal en interne, non scorée dans ce popup depuis ADR-064')+') : <span style="color:#3F5B3A">'+(geo>0?'+':'')+geo+' nT</span></div>'+
         '<div>H ('+jt('detail_human_label','champ ELF anthropique total, valeur identique à celle affichée plus haut — alimente le score Perturbation')+') : +'+human+' nT</div>'+
         (nRFcalib>0.01?'<div>RF ('+jt('detail_rf_label','champ RF calibré — calcul distinct de la valeur µW/m² ci-dessus (jamais atténué par la forêt) — alimente le score affiché')+') : '+nRFcalib.toFixed(1)+' V/m</div>':'')+
         (typeof altitude_m==='number' && isFinite(altitude_m)?'<div>'+jt('detail_alt_label','Altitude (IGN RGE Alti, résolution ~1 m)')+' : '+altitude_m+' m</div>':'')+
@@ -8144,7 +8148,7 @@ map.on('click',async e=>{
     }
   });
   // v8 : bloc extrait hors de ce fichier
-  _geoLastPoint={lat,lng,igrf,human,geo,crustal,susc_nT,skinD,tellPct,geoType,solLabel,indice:indiceTellux,label:itLabel,verdict:itVerdict,rf:nRFcalib,radon_class,gamma_nSvh}; // implanTip retirée (ADR-064)
+  _geoLastPoint={lat,lng,igrf,human,geo,crustal,susc_nT,skinD,tellPct,geoType,solLabel,indice:axesTotal,label:itLabel,verdict:itVerdict,rf:nRFcalib,radon_class,gamma_nSvh}; // implanTip retirée (ADR-064) ; indice alimenté par axesTotal (ex-indiceTellux, brief W 2026-09-04) — clé "indice" inchangée, décision brief W étape 5
 });
 
 // Points violets (contributions citoyennes) alignés sur le pattern bindTooltip sticky des
