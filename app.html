@@ -2181,9 +2181,13 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
         <div class="accordion-cat-content subgroup-content open">
           <p class="subgroup-text" title="Le fond magnétique régional (anomalie du socle) est inclus en permanence dans le calcul Tellux — le bouton n'affiche/masque que la couche visuelle, il ne pilote pas cette entrée. Pour la forêt dense, activer le bouton inclut l'atténuation RF de la canopée (ITU-R P.833-6) dans le calcul au clic carte ; le désactiver la retire.">Fond magnétique régional : toujours dans le calcul (le bouton n'affiche que la couche). Forêt dense : le bouton active l'atténuation RF.</p>
           <!-- Couche « Géologie BRGM » retirée de la carte publique le 2026-08-20 (décision Soleil :
-               chaque couche vit dans l'app qui correspond à son domaine causal — la géologie est la
-               source de lithologie du calcul radon, cf. getGeoType()/GEO_SUSC_GRID, INCHANGÉS). Déjà
-               présente sur radon.html avant ce retrait ; app.html n'en a donc plus de copie. -->
+               chaque couche vit dans l'app qui correspond à son domaine causal). Déjà présente sur
+               radon.html avant ce retrait ; app.html n'en a donc plus de copie. Cette couche était une
+               tuile WMS tierce (geoservices.brgm.fr) — SANS lien technique avec getGeoType()/
+               GEO_SUSC_GRID (grille interne à app.html, INCHANGÉE, précision corrigée 2026-09-04
+               brief AG : 6 appelants confirmés par grep — calcSubstrateContext, calcRadonPotential,
+               calcGammaAmbient, calcSkinDepth, calcTelluricSecondary, et le handler de clic
+               directement — pas seulement « le calcul radon »). -->
           <!-- Couche « Failles tectoniques » (b-failles) retirée le 2026-08-27 (brief "nettoyage
                Contexte naturel") — migrée vers radon.html (#1056), qui en devient l'unique
                affichage. Voir commentaire au retrait de loadFailles()/renderFailles()/togFailles()
@@ -6537,7 +6541,15 @@ function loadPointsChaudsRadio() { return loadSitesApp(); }
 let ANFR_GRID = null;        // { "gi_gj": [ {lat,lon,generation}, ... ] } — index spatial grille 0.05°
 let _anfrLoadPromise = null; // partage le fetch entre appels concurrents (boot + toggle couche)
 let RF_CALIB_K = 1;          // calibration interne Tellux : facteur scalaire E_cal = k·E_raw (défaut 1 = non calibré)
-let RF_CALIB_STATS = null;   // {k_med,k_geo,disp_geo,iqr,n_used,n_excl_nonconf,n_excl_oor,n_total,bands}
+let RF_CALIB_STATS = null;   // {k_med,k_geo,disp_geo,iqr,n_used,n_excl_nonconf,n_excl_oor,n_excl_indoor,
+                              //  n_excl_ineligible,k_res,pen_dB,n_total,n_fichier_total,bands} — commentaire
+                              // complété 2026-09-04 (brief AG), manquait 5 champs réellement présents.
+                              // Assignée une fois au boot (calibrateRF()), jamais relue ailleurs — le
+                              // console.log adjacent recalcule son propre texte depuis des variables
+                              // locales, pas depuis cet objet. Conservée : ses valeurs sont publiées sur
+                              // methode-limites-transparence.html (brief AE) et elle sert de point de
+                              // vérification console pour la non-régression — pas du code mort au sens
+                              // où ce chantier retire des champs (audit brief AD §4).
 async function loadANFRForField(){
   if (ANFR_GRID) return;
   if (_anfrLoadPromise) return _anfrLoadPromise;
@@ -7551,7 +7563,10 @@ const SIGMA_ROCK={
 //   Ce n'est PAS une mesure terrain — la conductivité σ est estimée depuis
 //   le type de roche (SIGMA_ROCK), lui-même interpolé sur grille grossière.
 //   Confiance : MEDIUM pour l'ordre de grandeur ; LOW pour la valeur exacte.
-//   Statut : conservé (utilisé par le popup terrain, hypothèses).
+//   Statut (corrigé 2026-09-04, brief AG) : exécutée à chaque clic carte réel, mais
+//   son seul consommateur est _geoLastPoint.skinD — AUCUNE trace de `skinD` dans le
+//   popup, contrairement à ce que cette note affirmait. Sort liée à celui de
+//   _geoLastPoint (arbitrage en cours, cf. audit brief AD §4) — non retirée ici.
 // ────────────────────────────────────────────────────────────────────────────
 function calcSkinDepth(lat,lon){
   const t=getGeoType(lat,lon);
@@ -7627,7 +7642,11 @@ let THERMAL_SOURCES_CORSE = [];
 //   La résolution spatiale des failles BRGM est ~500m-1km : un point "dans"
 //   une faille peut être décalé de plusieurs centaines de mètres en réalité.
 //   Confiance : MEDIUM pour les failles actives ; LOW pour les quaternaires.
-//   Statut calcAll v2 : contexte.fault.distance_m (Tâche 4.5, via calcSubstrateContext).
+//   Statut calcAll v2 (corrigé 2026-09-04, brief AG) : context.fault.value (0-1.5,
+//   sans unité — PAS distance_m, ce champ n'existe pas), peuplé via calcFaultProximity()
+//   directement, PAS via calcSubstrateContext() (qui ne l'appelle pas). Jamais relu
+//   au-delà de v2.context.fault, même pas en variable locale — le moins consommé
+//   des trois fonctions de contexte tellurique (arbitrage en cours, audit brief AD §4).
 // ────────────────────────────────────────────────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────
 // haversine — distance sphérique entre deux points (km)
