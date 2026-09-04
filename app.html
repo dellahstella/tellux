@@ -3042,6 +3042,9 @@ var JS_STRINGS_EN = {
   elf_state_failed_badge: "≈ estimate",
   elf_state_failed_title: "Simplified model (8 typical axes) — the real grid data could not be loaded this session.",
   detail_human_loading: "anthropic ELF field — not yet available on this visit (preloading in progress, cf. ELF block above)",
+  detail_delta_loading: "not yet available (preloading in progress)",
+  btn_save_finalizing: "Finalizing calculation…",
+  save_elf_fallback_notice: "Measurement saved with a simplified estimate of the electromagnetic field (grid data unavailable).",
   // an_label_tres_actif/an_label_actif/an_label_neutre, it_verdict_calme_actif/_calme_neutre/
   // _zone_calme/_perturb_faible/_influence_detectable/_zone_perturbee SUPPRIMÉES (ADR-064, brief T,
   // 2026-09-03) : anLabel retirée (score Naturel plus affiché) ; itVerdict devient un renvoi unique
@@ -7112,6 +7115,17 @@ function calcMagneticELFAuto(lat, lon) {
     : calcMagneticELF_v1(lat, lon);
 }
 
+// computeElfState — extrait 2026-09-04 (brief AF lot B, suite, arbitrage Soleil) : vivait en
+// ligne dans le handler de clic carte jusqu'à ce que saveContrib() en ait besoin aussi (même
+// motif qui a fait extraire calcMagneticELFAuto() au brief AF lot A — un second calcul recopié
+// à la main aurait pu diverger silencieusement). 'ready' si SEGMENT_GRID!==null (source de
+// vérité, ce que calcMagneticELF_v2 lit réellement) ; sinon 'failed' si _htaPreloadState
+// l'indique (panne durable, repli v1 assumé) ; 'loading' sinon (encore une chance d'aboutir).
+function computeElfState() {
+  return (typeof SEGMENT_GRID !== 'undefined' && SEGMENT_GRID !== null) ? 'ready'
+    : ((typeof _htaPreloadState !== 'undefined' && _htaPreloadState === 'failed') ? 'failed' : 'loading');
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // calcAll_v2 — Architecture à domaines séparés (§6.2 AUDIT_NIVEAU2_V2.1)
 // IMMÉDIAT — introduit la structure de retour standardisée.
@@ -7858,11 +7872,8 @@ map.on('click',async e=>{
   // silencieusement approximative (brief AP a mesuré : 33 % des points changent de palier de
   // score entre v1 et v2, un quart du minimum au maximum — pas une nuance). Statique/RF/substrat
   // ne dépendent pas de SEGMENT_GRID et s'affichent normalement dans tous les cas.
-  // SEGMENT_GRID!==null est l'état réellement lu par calcMagneticELF_v2 (source de vérité) ;
-  // _htaPreloadState départage ensuite 'loading' (encore une chance d'aboutir) de 'failed'
-  // (repli v1 assumé et marqué — jamais un état d'attente qui ne se termine pas, cf. Bz).
-  const elfState = (typeof SEGMENT_GRID !== 'undefined' && SEGMENT_GRID !== null) ? 'ready'
-    : ((typeof _htaPreloadState !== 'undefined' && _htaPreloadState === 'failed') ? 'failed' : 'loading');
+  // computeElfState() extraite (brief AF lot B suite) — saveContrib() en a besoin aussi.
+  const elfState = computeElfState();
   // Valeurs v2 structurées — utilisées pour la popup niveau B
   const elf_nT    = v2.domains.magnetic.elf.B_total_nT;
   const static_nT = v2.domains.magnetic.static.B_total_nT;
@@ -8051,6 +8062,17 @@ map.on('click',async e=>{
   // #8A5E22 (4,99 sur ce fond) — la même substitution que partout ailleurs dans ce fichier,
   // pas une couleur choisie pour ce cas précis.
   const deltaCol=delta===null?'#626774':Math.abs(delta)<50?'#3F5B3A':Math.abs(delta)<200?'#8A5E22':'#8E2F1F';
+  // deltaGatedHTML : même motif que la ligne H (2026-09-04, brief AF lot B suite, arbitrage
+  // Soleil) — Δ dérive de predicted=igrf+human, donc de human/elfState exactement comme H,
+  // trouvé non gaté en revue adversariale de PR #1243 (signalé, pas corrigé sur le moment —
+  // traité ici). 'loading' + delta!==null : texte d'attente au lieu d'un chiffre qui pourrait
+  // changer une fois le calcul complet (rejoint le fait que le score/bloc ELF ne montrent déjà
+  // rien dans ce cas). 'failed' + delta!==null : chiffre v1 affiché, marqué ≈. delta===null
+  // (aucune mesure citoyenne à moins de 500m, le cas le plus fréquent) : inchangé quel que soit
+  // elfState — rien à gater, il n'y a pas de chiffre.
+  const deltaGatedHTML = (elfState === 'loading' && delta !== null)
+    ? '<span style="color:#626774;font-style:italic">'+jt('detail_delta_loading','pas encore disponible (préchargement en cours)')+'</span>'
+    : '<span style="color:'+deltaCol+'">'+deltaStr+(elfState==='failed'&&delta!==null?' <span style="color:#8A5E22">('+jt('elf_state_failed_badge','≈ estimation')+')</span>':'')+'</span>';
   // Barre susceptibilité magnétique — normalisée sur -5 à 60 nT (plage réelle de GEO_SUSC_GRID,
   // cf. calcGeoSusc()/suscPct ci-dessus)
   // Correctif 2026-09-03 (brief H, phase 2) : cette barre n'avait aucun libellé visible, seule une
@@ -8181,7 +8203,7 @@ map.on('click',async e=>{
         jt('detail_technique_summary','Détail technique (vérification)')+
       '</summary>'+
       '<div style="font-size:8px;color:#626774;margin-top:3px;line-height:1.6">'+
-        '<div>Δ ('+jt('detail_delta_label','écart mesure citoyenne proche / modèle IGRF+ELF+local, "—" si aucune mesure à moins de 500 m')+') : <span style="color:'+deltaCol+'">'+deltaStr+'</span></div>'+
+        '<div>Δ ('+jt('detail_delta_label','écart mesure citoyenne proche / modèle IGRF+ELF+local, "—" si aucune mesure à moins de 500 m')+') : '+deltaGatedHTML+'</div>'+
         '<div>C ('+jt('detail_crustal_label','anomalie crustale grande échelle, LCS1/EMAG2v3 — repère exploratoire, non intégré au score')+') : <span style="color:#AD22BE">'+(crustal>0?'+':'')+crustal+' nT</span></div>'+
         '<div>L ('+jt('detail_local_label','susceptibilité géologique locale, même valeur que susc_nT ci-dessus — alimente axesTotal en interne, non scorée dans ce popup depuis ADR-064')+') : <span style="color:#3F5B3A">'+(geo>0?'+':'')+geo+' nT</span></div>'+
         // H : masqué/marqué selon elfState (brief AF lot B) — le libellé dit explicitement
@@ -9062,6 +9084,30 @@ async function saveContrib(){
     map.removeLayer(pending);pending=null;return;
   }
   const btn=document.getElementById('btn-save');btn.textContent='Sauvegarde…';btn.disabled=true;
+  // Attendre la résolution de elfState avant de calculer predicted (2026-09-04, brief AF lot B
+  // suite, arbitrage Soleil — même sujet que le lot A/AO : « une formule qui écrit sans savoir
+  // sur quoi elle s'appuie »). Avant ce correctif, une contribution soumise pendant la fenêtre
+  // de préchargement (2-6s mesurés, brief AP) écrivait en base predicted/perturbation_humaine_nt
+  // dérivés du v1 approximatif sans jamais le savoir — irréversible une fois écrit, contrairement
+  // à l'affichage du popup qui se corrige au clic suivant. Timeout large (20s, très supérieur à
+  // la fenêtre mesurée) : les fetch de loadHTADataOnly() n'ont pas leur propre timeout — sans
+  // celui-ci, un Supabase qui ne répond ni n'échoue jamais bloquerait ce bouton indéfiniment,
+  // exactement l'anti-motif que Soleil a nommé (« le motif de Bz ») pour le popup. Au-delà du
+  // timeout, traité comme une panne pour CET enregistrement uniquement — ne modifie pas
+  // _htaPreloadState lui-même, un futur clic peut encore aboutir normalement.
+  if (computeElfState() === 'loading') {
+    btn.textContent = jt('btn_save_finalizing', 'Finalisation du calcul…');
+    const _elfWaitStart = Date.now();
+    while (computeElfState() === 'loading' && (Date.now() - _elfWaitStart) < 20000) {
+      await new Promise(r => setTimeout(r, 250));
+    }
+    btn.textContent = 'Sauvegarde…';
+  }
+  // Jamais silencieux (même principe que le popup) : si la valeur écrite reste basée sur le
+  // repli v1 (panne durable OU timeout ci-dessus sans résolution), le contributeur en est informé.
+  if (computeElfState() !== 'ready') {
+    info(jt('save_elf_fallback_notice', 'Mesure enregistrée avec une estimation simplifiée du champ électromagnétique (données réseau indisponibles).'), 'warn', 6000);
+  }
   const igrf=fetchIGRF(ll.lat,ll.lng);
   const {human,water}=calcAll(ll.lat,ll.lng);
   const valeur=parseFloat(document.getElementById('c-val').value)||null;
