@@ -9490,19 +9490,23 @@ function buildHot(){
       const el=document.getElementById('delta-hover');
       if(!el)return;
       const lt=e.latlng.lat,ln=e.latlng.lng;
+      // N{aN} (\u00ab Activit\u00e9 naturelle \u00bb, geoScore+susceptibilit\u00e9 seuill\u00e9e) retir\u00e9 ici le
+      // 2026-09-04 (nettoyage ADR-064, brief AL, sur cadrage brief AK + arbitrage Soleil
+      // explicite \u00ab go 1 \u00bb) : ce hover recalculait ind\u00e9pendamment le m\u00eame sch\u00e9ma que
+      // l'ex-activNat du popup (seuils 15/30 nT, quasi identiques aux 12/30 retir\u00e9s c\u00f4t\u00e9
+      // popup le 2026-09-03) \u2014 jamais touch\u00e9 par les commits ADR-064, qui n'avaient couvert
+      // que le popup. M\u00eame raison qu'alors : seuils sur calcGeoSusc()/GEO_SUSC_GRID jamais
+      // audit\u00e9s en r\u00e9solution (CALCGEOSUSC-GRID-RESOLUTION-UNAUDITED-001, cadrage brief AK
+      // confirme qu'aucune mati\u00e8re sourc\u00e9e ne justifierait un nouveau seuil ici non plus).
+      // calcGeoSusc() n'est donc plus appel\u00e9e dans ce hover \u2014 plus aucun consommateur ici.
       const {human:h}=calcAll(lt,ln);
-      const g=calcGeoSusc(lt,ln);
       const rf=calcN_RF_calib(lt,ln);
       const rfS=rf>6?3:rf>2?2:rf>0.5?1:0;
       const hS=Math.min(4,Math.round(h/100));
-      const gS=Math.min(3,Math.round(Math.abs(g)/15));
       const pH=Math.min(5,hS+rfS);
-      const pzN=Math.abs(g)>30?2:Math.abs(g)>15?1:0;
-      const aN=Math.min(5,gS+pzN);
       const em=pH<=1?'\ud83d\udfe2':pH<=2?'\ud83d\udfe1':pH<=3?'\ud83d\udfe0':'\ud83d\udd34';
       const col=pH<=1?'#1a6b5c':pH<=2?'#2d9b87':pH<=3?'#b85c00':'#dc2626';
-      const anC=aN>=3?'#d97706':'#9ca3af';
-      el.innerHTML=em+' <span style="color:'+col+';font-weight:600">P'+pH+'</span> <span style="color:'+anC+';font-weight:500">N'+aN+'</span>';
+      el.innerHTML=em+' <span style="color:'+col+';font-weight:600">P'+pH+'</span>';
     });
   }
 }
@@ -12351,10 +12355,11 @@ function capCleanup(){
         <div class="glossary-entry-title">nT — nanoTesla</div>
         <div class="glossary-entry-body">L'unité de mesure du champ magnétique. Le rôle du nT dans la navigation des animaux migrateurs est établi ; son effet éventuel sur les humains est un sujet de recherche actif, sans consensus.</div>
       </div>
-      <div class="glossary-entry" data-search="double score tellux perturbation activite naturelle separation">
-        <div class="glossary-entry-title">Double score Tellux</div>
-        <div class="glossary-entry-body">Deux scores distincts pour chaque point : Perturbation humaine (0–5, bas = bon) et Activité naturelle (0–5, haut = intéressant). Séparer les deux évite de mélanger l'influence anthropique et la géologie du sous-sol.</div>
-      </div>
+      <!-- « Double score Tellux » et « Activité naturelle (0–5) » retirées le 2026-09-04
+           (nettoyage ADR-064, brief AL, sur cadrage brief AK) : décrivaient un popup à deux
+           scores qui n'existe plus depuis le 2026-09-03 (ADR-064/brief T) — l'entrée
+           « Perturbation humaine » ci-dessous suffit désormais à elle seule, sans « double »
+           à expliquer. -->
       <div class="glossary-entry" data-search="perturbation humaine score anthropique antennes lignes ht radiofrequences rf">
         <div class="glossary-entry-title">Perturbation humaine (0–5)</div>
         <div class="glossary-entry-body">
@@ -12363,15 +12368,6 @@ function capCleanup(){
           <span class="glossary-swatch glossary-swatch-circle" style="background:#EDD59A"></span> 2 calme &middot;
           <span class="glossary-swatch glossary-swatch-circle" style="background:#C28533"></span> 3 modéré &middot;
           <span class="glossary-swatch glossary-swatch-circle" style="background:#8E2F1F"></span> 4–5 perturbé
-        </div>
-      </div>
-      <div class="glossary-entry" data-search="activite naturelle score geologie susceptibilite failles anomalies crustales">
-        <div class="glossary-entry-title">Activité naturelle (0–5)</div>
-        <div class="glossary-entry-body">
-          Activité géologique du sous-sol : susceptibilité magnétique, failles, anomalies crustales.<br>
-          <span class="glossary-swatch glossary-swatch-ring"></span> 0–1 neutre &middot;
-          <span class="glossary-swatch glossary-swatch-square" style="background:#C28533"></span> 2–3 actif &middot;
-          <span class="glossary-swatch glossary-swatch-triangle"></span> 4–5 très actif
         </div>
       </div>
       <div class="glossary-entry" data-search="heatmap elf 50 hz zones ocre composite carte composition">
@@ -12783,28 +12779,25 @@ function capCleanup(){
 ["gloss_t1",".glossary-entry-title@1","","Champ N+H — naturel + humain","","N+H field — natural + human"],
 ["gloss_t2",".glossary-entry-title@2","","Delta (Δ) — anomalie","","Delta (Δ) — anomaly"],
 ["gloss_t3",".glossary-entry-title@3","","nT — nanoTesla","","nT — nanotesla"],
-["gloss_t4",".glossary-entry-title@4","","Double score Tellux","","Tellux dual score"],
-["gloss_t5",".glossary-entry-title@5","","Perturbation humaine (0–5)","","Human disturbance (0–5)"],
-["gloss_t6",".glossary-entry-title@6","","Activité naturelle (0–5)","","Natural activity (0–5)"],
-["gloss_t7",".glossary-entry-title@7","","Heatmap ELF","","ELF heatmap"],
-["gloss_t8",".glossary-entry-title@8","","Indice Kp","","Kp index"],
-["gloss_t9",".glossary-entry-title@9","","Bz — composante du vent solaire","","Bz — solar wind component"],
-["gloss_t10",".glossary-entry-title@10","","Losanges (mesures ANFR)","","Diamonds (ANFR measurements)"],
-["gloss_t11",".glossary-entry-title@11","","IGRF-14","","IGRF-14"],
-["gloss_t12",".glossary-entry-title@12","","Mesurer avec votre téléphone","","Measuring with your phone"],
-["gloss_t13",".glossary-entry-title@13","","Lire les couleurs sur la carte","","Reading the colors on the map"],
-["gloss_t14",".glossary-entry-title@14","","Protocole Prospecteur — 5 min","","Prospector Protocol — 5 min"],
+["gloss_t4",".glossary-entry-title@4","","Perturbation humaine (0–5)","","Human disturbance (0–5)"],
+["gloss_t5",".glossary-entry-title@5","","Heatmap ELF","","ELF heatmap"],
+["gloss_t6",".glossary-entry-title@6","","Indice Kp","","Kp index"],
+["gloss_t7",".glossary-entry-title@7","","Bz — composante du vent solaire","","Bz — solar wind component"],
+["gloss_t8",".glossary-entry-title@8","","Losanges (mesures ANFR)","","Diamonds (ANFR measurements)"],
+["gloss_t9",".glossary-entry-title@9","","IGRF-14","","IGRF-14"],
+["gloss_t10",".glossary-entry-title@10","","Mesurer avec votre téléphone","","Measuring with your phone"],
+["gloss_t11",".glossary-entry-title@11","","Lire les couleurs sur la carte","","Reading the colors on the map"],
+["gloss_t12",".glossary-entry-title@12","","Protocole Prospecteur — 5 min","","Prospector Protocol — 5 min"],
 ["gloss_b0",".glossary-entry-body@0","","Le champ magnétique que la Terre génère elle-même, sans intervention humaine. En Corse : 46 150–47 200 nT (référence IGRF-14 2025).","","The magnetic field the Earth generates on its own, without human involvement. In Corsica: 46,150–47,200 nT (IGRF-14 2025 reference)."],
 ["gloss_b1",".glossary-entry-body@1","","Le champ N auquel s'ajoute l'influence des installations proches : antennes, lignes haute tension, transformateurs. Plus élevé près d'une ville ou d'une antenne.","","The N field plus the influence of nearby installations: antennas, high-voltage lines, transformers. Higher near a town or an antenna."],
 ["gloss_b2",".glossary-entry-body@2","","L'écart entre ce que le modèle prédit et ce qu'une mesure terrain révèle. Delta proche de zéro = modèle cohérent. Delta grand = quelque chose d'inexpliqué à creuser.","","The gap between what the model predicts and what a field measurement reveals. Delta close to zero = model consistent. Large delta = something unexplained worth investigating."],
 ["gloss_b3",".glossary-entry-body@3","","L'unité de mesure du champ magnétique. Le rôle du nT dans la navigation des animaux migrateurs est établi ; son effet éventuel sur les humains est un sujet de recherche actif, sans consensus.","","The unit of measurement for the magnetic field. The role of nT in migratory animal navigation is established; its possible effect on humans is an active research topic, without consensus."],
-["gloss_b4",".glossary-entry-body@4","","Deux scores distincts pour chaque point : Perturbation humaine (0–5, bas = bon) et Activité naturelle (0–5, haut = intéressant). Séparer les deux évite de mélanger l'influence anthropique et la géologie du sous-sol.","","Two distinct scores for each point: Human disturbance (0–5, low = good) and Natural activity (0–5, high = interesting). Keeping the two separate avoids mixing anthropogenic influence with subsurface geology."],
-["gloss_b7",".glossary-entry-body@7","","Zones où le modèle indique une composante 50 Hz plus élevée (dégradé ocre). Ce n'est pas une carte de risque — c'est une carte de composition physique, qui signale où une mesure terrain serait la plus informative.","","Areas where the model indicates a higher 50 Hz component (ochre gradient). This is not a risk map — it's a physical composition map, indicating where a field measurement would be most informative."],
-["gloss_b8",".glossary-entry-body@8","","Agitation du champ magnétique terrestre due à l'activité solaire, notée 0 à 9. 0–1 calme · 2–3 normal · 4–5 actif · 6+ tempête géomagnétique. Un Kp élevé perturbe les mesures instrumentales.","","Disturbance of the Earth's magnetic field due to solar activity, rated 0 to 9. 0–1 calm · 2–3 normal · 4–5 active · 6+ geomagnetic storm. A high Kp disturbs instrumental measurements."],
-["gloss_b9",".glossary-entry-body@9","","Quand Bz est positif (nord), le bouclier magnétique terrestre est renforcé. Quand Bz est négatif (sud), la magnétosphère peut être perturbée — souvent le signe d'aurores boréales à venir.","","When Bz is positive (north), Earth's magnetic shield is strengthened. When Bz is negative (south), the magnetosphere can be disturbed — often a sign of upcoming auroras."],
-["gloss_b11",".glossary-entry-body@11","","Le modèle international de référence du champ magnétique terrestre, mis à jour tous les 5 ans. Version 14 = 2025. Source : IAGA / BGS.","","The international reference model for Earth's magnetic field, updated every 5 years. Version 14 = 2025. Source: IAGA / BGS."],
-["gloss_b12",".glossary-entry-body@12","","Tous les smartphones ont un magnétomètre intégré. Utilisez Physics Toolbox Suite (Android) ou Sensor Kinetics (iOS). Tenez le téléphone à bout de bras, loin du corps et de tout objet métallique. Valeur normale en Corse : 46 000–47 500 nT. Un écart > 1 000 nT par rapport à la référence IGRF du point signale une anomalie potentielle.","","All smartphones have a built-in magnetometer. Use Physics Toolbox Suite (Android) or Sensor Kinetics (iOS). Hold the phone at arm's length, away from your body and any metal object. Normal value in Corsica: 46,000–47,500 nT. A deviation > 1,000 nT from the point's IGRF reference signals a potential anomaly."],
-["gloss_b13",".glossary-entry-body@13","","Les losanges = mesures ANFR certifiées en V/m. Les zones colorées (heatmap) = estimation composite du modèle Tellux, pas des mesures réelles. Elles indiquent où une mesure terrain serait la plus utile pour valider le modèle.","","Diamonds = certified ANFR measurements in V/m. Colored areas (heatmap) = Tellux model's composite estimate, not actual measurements. They indicate where a field measurement would be most useful to validate the model."],
+["gloss_b5",".glossary-entry-body@5","","Zones où le modèle indique une composante 50 Hz plus élevée (dégradé ocre). Ce n'est pas une carte de risque — c'est une carte de composition physique, qui signale où une mesure terrain serait la plus informative.","","Areas where the model indicates a higher 50 Hz component (ochre gradient). This is not a risk map — it's a physical composition map, indicating where a field measurement would be most informative."],
+["gloss_b6",".glossary-entry-body@6","","Agitation du champ magnétique terrestre due à l'activité solaire, notée 0 à 9. 0–1 calme · 2–3 normal · 4–5 actif · 6+ tempête géomagnétique. Un Kp élevé perturbe les mesures instrumentales.","","Disturbance of the Earth's magnetic field due to solar activity, rated 0 to 9. 0–1 calm · 2–3 normal · 4–5 active · 6+ geomagnetic storm. A high Kp disturbs instrumental measurements."],
+["gloss_b7",".glossary-entry-body@7","","Quand Bz est positif (nord), le bouclier magnétique terrestre est renforcé. Quand Bz est négatif (sud), la magnétosphère peut être perturbée — souvent le signe d'aurores boréales à venir.","","When Bz is positive (north), Earth's magnetic shield is strengthened. When Bz is negative (south), the magnetosphere can be disturbed — often a sign of upcoming auroras."],
+["gloss_b9",".glossary-entry-body@9","","Le modèle international de référence du champ magnétique terrestre, mis à jour tous les 5 ans. Version 14 = 2025. Source : IAGA / BGS.","","The international reference model for Earth's magnetic field, updated every 5 years. Version 14 = 2025. Source: IAGA / BGS."],
+["gloss_b10",".glossary-entry-body@10","","Tous les smartphones ont un magnétomètre intégré. Utilisez Physics Toolbox Suite (Android) ou Sensor Kinetics (iOS). Tenez le téléphone à bout de bras, loin du corps et de tout objet métallique. Valeur normale en Corse : 46 000–47 500 nT. Un écart > 1 000 nT par rapport à la référence IGRF du point signale une anomalie potentielle.","","All smartphones have a built-in magnetometer. Use Physics Toolbox Suite (Android) or Sensor Kinetics (iOS). Hold the phone at arm's length, away from your body and any metal object. Normal value in Corsica: 46,000–47,500 nT. A deviation > 1,000 nT from the point's IGRF reference signals a potential anomaly."],
+["gloss_b11",".glossary-entry-body@11","","Les losanges = mesures ANFR certifiées en V/m. Les zones colorées (heatmap) = estimation composite du modèle Tellux, pas des mesures réelles. Elles indiquent où une mesure terrain serait la plus utile pour valider le modèle.","","Diamonds = certified ANFR measurements in V/m. Colored areas (heatmap) = Tellux model's composite estimate, not actual measurements. They indicate where a field measurement would be most useful to validate the model."],
 ["app_linky","#c-appareils .mat-chip@0","","📟 Linky","","📟 Linky"],
 ["mat_sep_betons","#c-mats div@0","","— Bétons (µr=1 tous, effet RF uniquement) —","","— Concretes (µr=1 all, RF effect only) —"],
 ["mat_sep_legeres","#c-mats div@1","","— Parois légères —","","— Lightweight partitions —"],
@@ -13029,16 +13022,13 @@ function capCleanup(){
       // Les titres et les corps sans balise imbriquée restent dans
       // I18N_ENTRIES (gloss_t*/gloss_b*, sélecteurs .glossary-entry-title@N
       // / .glossary-entry-body@N).
-      ["#glossary-drawer .glossary-entry-body@5",
+      ["#glossary-drawer .glossary-entry-body@4",
         "Influence mesurée des antennes, lignes HT et radiofréquences. 0–1 très calme · 2 calme · 3 modéré · 4–5 perturbé",
         "Measured influence of antennas, HV lines, and radiofrequencies.<br>\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#3F5B3A\"></span> 0–1 very calm &middot;\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#EDD59A\"></span> 2 calm &middot;\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#C28533\"></span> 3 moderate &middot;\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#8E2F1F\"></span> 4–5 disturbed"],
-      ["#glossary-drawer .glossary-entry-body@6",
-        "Activité géologique du sous-sol : susceptibilité magnétique, failles, anomalies crustales. 0–1 neutre · 2–3 actif · 4–5 très actif",
-        "Geological activity of the subsurface: magnetic susceptibility, faults, crustal anomalies.<br>\n          <span class=\"glossary-swatch glossary-swatch-ring\"></span> 0–1 neutral &middot;\n          <span class=\"glossary-swatch glossary-swatch-square\" style=\"background:#C28533\"></span> 2–3 active &middot;\n          <span class=\"glossary-swatch glossary-swatch-triangle\"></span> 4–5 very active"],
-      ["#glossary-drawer .glossary-entry-body@10",
+      ["#glossary-drawer .glossary-entry-body@8",
         "Mesures officielles certifiées en V/m (champ radio). faible · modéré · élevé · dépassement légal",
         "Official certified measurements in V/m (radio field).<br>\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#3F5B3A\"></span> low &middot;\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#C28533\"></span> moderate &middot;\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#8E2F1F\"></span> high &middot;\n          <span class=\"glossary-swatch glossary-swatch-diamond\" style=\"background:#8E2F1F;border:1.5px solid #D4A84C\"></span> legal exceedance"],
-      ["#glossary-drawer .glossary-entry-body@14",
+      ["#glossary-drawer .glossary-entry-body@12",
         "Ouvrez votre app magnétomètre. Cliquez sur le point Tellux — notez la valeur IGRF estimée. Mesurez à 1,5 m du sol, bras tendu, loin de tout métal — notez la valeur nT. Comparez : écart > 500 nT avec l'estimation composite = anomalie locale significative. Enregistrez via le bouton + Mesure — Tellux calcule le Δ automatiquement. Bonus : répétez sur une grille 2 m × 2 m pour cartographier un gradient local.",
         "<ol>\n            <li>Open your magnetometer app.</li>\n            <li>Click the Tellux point — note the estimated IGRF value.</li>\n            <li>Measure at 1.5 m above ground, arm extended, away from any metal — note the nT value.</li>\n            <li>Compare: deviation &gt; 500 nT from the composite estimate = significant local anomaly.</li>\n            <li>Record via the +Measure button — Tellux calculates the Δ automatically.</li>\n          </ol>\n          Bonus: repeat on a 2 m × 2 m grid to map a local gradient."]
     ];
