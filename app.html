@@ -937,6 +937,19 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 @media(max-width:720px){
   .delta-popup .leaflet-popup-content{max-height:calc(100vh - 120px);}
 }
+/* Fermeture popup (2026-09-04, brief AS étape 3) : croix Leaflet par défaut mesurée à 24×24px,
+   sous 44×44. Zone cliquable élargie par pseudo-élément (même patron que #layers-toggle
+   ci-dessus) sans agrandir le glyphe visuel — étendue vers haut/droite (coin extérieur du
+   popup, rien à recouvrir) et un peu vers bas/gauche (contenu du popup, marge suffisante avec
+   le padding existant du wrapper). Échap ferme aussi le popup actif désormais — cf. le
+   handler keydown partagé avec #hdr-menu, plus bas dans ce fichier. */
+.delta-popup .leaflet-popup-close-button{position:relative;}
+.delta-popup .leaflet-popup-close-button::before{
+  /* 24px de base + 14px (haut/droite, coin extérieur libre) + 6px (bas/gauche, vers le
+     contenu) = 44×44 exact des deux côtés — vérifié par calcul, pas par estimation visuelle
+     (piège rencontré : un premier essai à 8/8/6/6 ne donnait que 38×38). */
+  content:'';position:absolute;top:-14px;right:-14px;left:-6px;bottom:-6px;
+}
 /* Badge NC */
 .nc-badge{display:inline-block;background:#7c0000;color:#ffd700;font-family:var(--mono);font-size:9px;font-weight:500;padding:2px 6px;border-radius:4px;border:1px solid #ffd70055;letter-spacing:.03em;vertical-align:middle;}
 /* Panneau stats corpus */
@@ -1010,6 +1023,14 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   box-shadow:0 2px 8px rgba(0,0,0,.12);cursor:pointer;
   font-size:18px;align-items:center;justify-content:center;color:var(--ardoise-clair);
 }
+/* Cible tactile élargie à 48×44px (2026-09-04, brief AS étape 2), recommandation ≥44×44 —
+   sans agrandir le disque visuel (40×40, DA v2 inchangée). Étendue vers le haut/gauche/droite
+   uniquement, 0 vers le bas : le switch de fond de carte Leaflet .leaflet-top.leaflet-right
+   commence 2px sous ce bouton (mesuré : bottom du bouton à 52px, top du switch à 54px) —
+   l'étendre vers le bas l'aurait recouvert. */
+#layers-toggle::before{
+  content:'';position:absolute;top:-4px;left:-4px;right:-4px;bottom:0;
+}
 
 /* Accordéon couches — tiroir flottant unifié mobile+desktop (passage plein écran,
    brief Soleil §1.3). Remplace l'ancien layout desktop "push-flow" (flex:0 0 420px,
@@ -1027,11 +1048,21 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    de .leaflet-top/.leaflet-bottom/1150 (désormais), #conditions-bar/999,
    .fab-mesure/1050. #sidebar-toggle (repli 48px) est retiré : binaire
    ouvert/fermé désormais, comme le drawer Glossaire déjà présent dans ce fichier. */
+/* Panneau flottant plutôt que colonne pleine hauteur (2026-09-04, brief AS, option 3 —
+   Soleil : "suis ton instinct") : top:130px dégage à la fois #layers-toggle (12-52px) ET le
+   switch de fond de carte Leaflet .leaflet-top.leaflet-right (54-111px, mesuré) — la carte,
+   ce switch ET le coin nord-est restent visibles/manipulables même panneau ouvert. bottom:16px
+   au lieu de 0 pour la même raison côté sud. right:12px + border-radius + ombre omnidirectionnelle
+   = carte flottante plutôt qu'un bord de colonne. Reprend le principe déjà validé et documenté
+   du bottom sheet mobile ci-dessous (pas de scrim, la carte reste interactive derrière) —
+   aucun mécanisme nouveau inventé, juste étendu au-delà de 768px. Fermeture par clic extérieur
+   ajoutée en JS (cf. closeLayersOnOutsideClick(), même patron que #hdr-menu). */
 .map-wrap .layers-accordion{
-  position:fixed;top:0;right:0;bottom:0;z-index:1160;
+  position:fixed;top:130px;right:12px;bottom:16px;z-index:1160;
   width:420px;max-width:92vw;
   background:var(--bg);overflow-y:auto;
-  box-shadow:-4px 0 20px rgba(0,0,0,.15);
+  border-radius:14px;
+  box-shadow:0 8px 32px rgba(0,0,0,.18);
   transform:translateX(100%);transition:transform .3s ease-out;
   padding:8px;
 }
@@ -3034,6 +3065,17 @@ var JS_STRINGS_EN = {
   ph_label_calme: "Calm",
   ph_label_modere: "Moderate",
   ph_label_perturbe: "Disturbed",
+  // État d'attente ELF (2026-09-04, brief AF lot B, arbitrage Soleil) — la ligne de score et le
+  // bloc ELF montrent cet état pendant la fenêtre de préchargement, plutôt qu'une valeur v1
+  // silencieuse. ph_state_failed_badge/_title : repli v1 marqué, réservé à la panne durable.
+  ph_state_loading: "Calculation in progress…",
+  elf_state_loading: "⏳ Preparing the calculation…",
+  elf_state_failed_badge: "≈ estimate",
+  elf_state_failed_title: "Simplified model (8 typical axes) — the real grid data could not be loaded this session.",
+  detail_human_loading: "anthropic ELF field — not yet available on this visit (preloading in progress, cf. ELF block above)",
+  detail_delta_loading: "not yet available (preloading in progress)",
+  btn_save_finalizing: "Finalizing calculation…",
+  save_elf_fallback_notice: "Measurement saved with a simplified estimate of the electromagnetic field (grid data unavailable).",
   // an_label_tres_actif/an_label_actif/an_label_neutre, it_verdict_calme_actif/_calme_neutre/
   // _zone_calme/_perturb_faible/_influence_detectable/_zone_perturbee SUPPRIMÉES (ADR-064, brief T,
   // 2026-09-03) : anLabel retirée (score Naturel plus affiché) ; itVerdict devient un renvoi unique
@@ -3358,7 +3400,18 @@ let ctxContrib='exterieur';
 const CFORM_TOTAL_STEPS=6;
 let cformCurrentStep=1;
 let _expertActive=false,_expertConsented=false,_expertLastResult=null,_expertLastLatLon=null,_expertThrottle=null;
+// Garde ajoutée (2026-09-04, brief AR, arbitrage Soleil option 2) : avant ce correctif, la seule
+// garde ici vérifiait la présence DOM de #igrf-wmm-diff (if(!el)return), pas sa visibilité —
+// #expert-panel restant CSS-hidden mais jamais retiré du DOM, cette fonction tournait à CHAQUE
+// clic carte réel, y compris quand le panneau Expert n'est jamais ouvert (aujourd'hui : jamais,
+// #btn-expert étant entièrement commenté depuis le brief Q 2026-09-03). Coût par clic négligeable
+// (~6 µs mesuré) mais calcul servi sans surface pour la quasi-totalité des visiteurs. Reprend le
+// motif de garde déjà utilisé une ligne plus loin (cf. refreshExpertComposite()) — même flag,
+// même fichier, zéro nouvelle dépendance. loadWMMGrid()/WMM_GRID au boot restent inchangés
+// (nécessaires aux gardes de disponibilité moteur du harnais de non-régression — cf. rapport
+// _drafts/DIAGNOSTIC_WMM_CALCUL_SANS_SURFACE_BRIEF_AR_2026-09-04.md, non committé).
 function updateIgrfWmmDiff(lat, lon) {
+  if (!_expertActive) return;
   const el = document.getElementById('igrf-wmm-diff');
   if (!el) return;
   const wmm = (typeof calcMagneticWMM === 'function') ? calcMagneticWMM(lat, lon) : null;
@@ -3683,28 +3736,41 @@ function _certClusterIcon(cluster) {
   children.forEach(function(mk){ if (mk._certType === 'residentiel') nResid++; });
   const nExt = count - nResid;
   const dominant = nResid > nExt ? 'residentiel' : 'exterieur_public';
-  const bg = dominant === 'residentiel' ? '#1F3A5F' : '#C28533';
+  // Teinte résidentielle : #1F3A5F (Tyrrhénien) → #1F2329 (Ardoise pleine) le 2026-09-04
+  // (brief AL, distinction visuelle entre couches de clusters — constat Soleil sur capture
+  // prod : avec les antennes activées en plus des mesures certifiées, les cercles bleu foncé
+  // du résidentiel devenaient indiscernables des cercles gris de lAntCluster, "deux sombres
+  // voisins"). Ardoise choisie plutôt qu'Ardoise éclaircie (--ardoise-clair #3D424A, elle
+  // aussi "disponible" dans la palette) sur mesure, pas impression : distance RGB à
+  // lAntCluster (#4a4f5e) = 81 pour Ardoise pleine contre 27 pour l'éclaircie — l'éclaircie
+  // est PLUS proche du gris antennes que lAntCluster ne l'est déjà de lTDFCluster (#6b7280,
+  // distance 59) : elle aurait déplacé la collision, pas résolu. Ardoise pleine aussi la plus
+  // distincte de lTDFCluster (140) et de lCon (#5c3a9b, 131). Ocre (extérieur) inchangée —
+  // seul le résidentiel bouge, conformément au brief.
+  const bg = dominant === 'residentiel' ? '#1F2329' : '#C28533';
   // Texte du compte (brief AH phase 2, revue PR #1223) : #F5F0E7 sur Ocre mesurait 2,76:1,
   // sous AA (4,5:1) — préexistant depuis brief D, jamais mesuré jusqu'à cette revue (22e cas
   // du même défaut : un état jamais réamendé). Corrigé LOCALEMENT à cette icône, sans toucher
   // --tx-ocre (token DA v2 partagé par des dizaines d'usages) : réutilise --tx-ardoise
-  // (#1F2329), déjà la couleur de texte principale du site, contre Ocre = 5,03:1. Tyrrhénien
-  // (résidentiel) reste #F5F0E7 — 10,12:1, jamais en cause.
+  // (#1F2329), déjà la couleur de texte principale du site, contre Ocre = 5,03:1. Résidentiel
+  // reste #F5F0E7 — 13,90:1 contre le nouveau fond Ardoise (mieux que les 10,12:1 d'avant,
+  // jamais en cause de toute façon), revérifié brief AL, pas juste supposé inchangé.
   const fg = dominant === 'residentiel' ? '#F5F0E7' : '#1F2329';
   const size = count < 10 ? 30 : count < 50 ? 36 : 42;
   const fontSize = count < 10 ? 13 : count < 100 ? 12 : 11;
   const tooltip = nResid + ' résidentiel (centroïde communal) · ' + nExt + ' extérieur public (position exacte)';
-  // Forme = dominante (brief AH phase 2) : cercle résidentiel / losange extérieur public, en
-  // miroir de la convention déjà appliquée aux marqueurs individuels (shapeStyle, ~L10852+64
-  // décalage phase 2) — jusqu'ici perdue au clustering (bulle toujours ronde, teinte seule,
-  // constat Soleil : "trois bleus voisins ne se distinguent pas"). Losange via clip-path, PAS
-  // transform:rotate comme au marqueur individuel : le noeud racine (icon.firstElementChild)
-  // est celui que le mécanisme anti-collision (TCA_apply, cf. bloc après lTDFCluster) déplace
-  // via son propre style.transform — y poser aussi un rotate() les ferait s'écraser l'un
-  // l'autre. La forme vit donc sur un enfant dédié (position:absolute, inset:0), le texte sur
-  // un second enfant non tourné empilé par-dessus ; la racine (position:relative, SANS
-  // transform) reste le seul noeud que TCA_apply touche, inchangée par cette forme.
-  const shapeCss = dominant === 'residentiel' ? 'border-radius:50%;' : 'clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);';
+  // Forme résidentielle : cercle → carré à coins arrondis le 2026-09-04 (brief AL), même
+  // raison que la teinte ci-dessus — c'est le CERCLE qui collisionnait avec lAntCluster/lCon
+  // (tous deux ronds), pas le losange extérieur, qu'on ne touche pas. Carré arrondi retenu sur
+  // triangle (l'autre option remontée) : Soleil l'a écarté explicitement — pointe en haut est
+  // le pictogramme d'alerte le plus universel, à contre-courant du refus d'alarmisme du reste
+  // de l'interface (mode Expertise masqué, verdicts retirés, rouge/vert bannis) pour marquer
+  // des mesures certifiées au domicile de particuliers. Rayon = 22% de la taille de l'icône
+  // (angles nets à cette échelle, sans redevenir un cercle) — brief AH phase 2 (losange via
+  // clip-path) reste la référence pour NE PAS faire : transform:rotate() entrerait en
+  // conflit avec le style.transform que TCA_apply pose sur ce même noeud racine (cf.
+  // commentaire d'origine, toujours valide) ; border-radius, lui, compose sans risque.
+  const shapeCss = dominant === 'residentiel' ? 'border-radius:'+Math.round(size*0.22)+'px;' : 'clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);';
   return L.divIcon({
     html: '<div title="' + tooltip + '" style="position:relative;width:' + size + 'px;height:' + size + 'px">' +
       '<div style="position:absolute;inset:0;background:' + bg + ';border:3px solid white;' + shapeCss + 'box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>' +
@@ -4029,7 +4095,11 @@ function docRefHtml(id,compact){
 // même nuance ; c'est le compromis WCAG standard (le texte a un seuil de contraste propre,
 // plus strict qu'un petit élément décoratif) plutôt qu'une incohérence.
 const LEGEND_HTML={
-  hot:'<div class="leg-block"><b class="leg-title">Champ magnétique composite (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (réseau) + susceptibilité du substrat</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#4a4f5e;width:140px;margin-bottom:4px"><span>0</span><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#626774">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · susceptibilité BRGM</div></div>',
+  // Corrigée le 2026-09-04 (brief AQ) : le dégradé promettait une teinte pâle continue dès
+  // 0 nT (axe "0 · 200 · 500 · 1000") ; buildHot() (app.html) ne trace pourtant AUCUNE cellule
+  // sous 200 nT (if(magNT>200)) — transparence totale, pas la teinte pâle #DDBB88 que la
+  // légende laissait attendre. Dégradé et axe recadrés sur les 3 teintes réellement rendues.
+  hot:'<div class="leg-block"><b class="leg-title">Champ magnétique composite (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (réseau) + susceptibilité du substrat</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#4a4f5e;width:140px;margin-bottom:4px"><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="font-size:8px;color:var(--tx3)">Aucune cellule affichée sous 200 nT (transparence totale)</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#626774">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · susceptibilité BRGM</div></div>',
   // hotrf allégée le 2026-08-29 (brief « exécution groupée », item A ; proposition
   // _drafts/BRIEF_LEGENDES_RF_COMPOSITE_LIVRABLES_2026-08-29.md, texte validé Soleil au tour
   // précédent). Passe de ~2 575 à ~700 car. : ne reste que le visuellement actionnable
@@ -4053,7 +4123,16 @@ const LEGEND_HTML={
   // de toute façon jamais dans le panneau "?" avant ce diff (jamais dans LEGEND_CORE_IDS) —
   // seulement en pastille flottante Zone 2 sur la carte ; ce retrait élimine cette pastille.
   hyd:'<div class="leg-block"><b class="leg-title">Nappes</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Eau souterraine proche de la surface — couche visuelle BRGM ; le calcul utilise un dataset distinct</div><img src="https://geoservices.brgm.fr/risques?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.1.1&FORMAT=image/png&LAYER=REMNAPPE_FR" style="max-width:260px;width:100%;display:block;margin:4px 0;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:4px;padding:4px;box-sizing:border-box" alt="Légende Remontées de nappes (BRGM REMNAPPE_FR)"><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Légende renvoyée en direct par le serveur BRGM — remplace l\'ancienne liste statique (« Affleurante / Sub-affleurante ») qui décrivait une autre classification que celle réellement servie.</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
-  ant:'<div class="leg-block"><b class="leg-title">Antennes ANFR</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Regroupées en grappe (comptage) à faible zoom — couleur par génération au zoom individuel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a4b8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a4b8c">2G</b> GSM — voix, SMS</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a6b5c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a6b5c">3G</b> UMTS — data mobile</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#a25100">4G</b> LTE — haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#991b1b">5G</b> NR — très haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#616874">Infra</b> FH · TV · FM · PMR</div><div class="leg-row"><span style="display:inline-block;position:relative;width:12px;height:12px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:5px;top:0;width:2px;height:12px;background:#5f5e5a"></span><span style="position:absolute;top:5px;left:0;width:12px;height:2px;background:#5f5e5a"></span></span>Émetteur radio/TV majeur</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Opérateurs : Orange · SFR · Bouygues · Free<br><span id="leg-ant-count">—</span> antennes · Source ANFR open data</div><div class="leg-src">ANFR</div><div style="border-top:1px solid rgba(0,0,0,.08);padding-top:6px;margin-top:4px"><div style="font-family:var(--mono);font-size:9px;color:var(--tx3);margin-bottom:4px">MESURES CEM OFFICIELLES (losanges) · limite légale = 28 V/m :</div><div style="display:flex;flex-wrap:wrap;gap:4px"><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#0f766e;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#0f766e">Faible</b> &lt; 0.5 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#a25100">Modéré</b> 0.5–2 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#991b1b">Élevé</b> 2–5 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#5c0000;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#5c0000">Très élevé</b> 5–28 V/m</div><div class="leg" style="padding:2px 6px;background:#fff8e6;border-radius:20px;border:1.5px solid #ffd700"><span style="display:inline-block;width:8px;height:8px;background:#7c0000;border:1.5px solid #ffd700;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#7c0000">⚠ &gt;28 V/m</b> non conforme</div></div></div></div>',
+  ant:'<div class="leg-block"><b class="leg-title">Antennes ANFR</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Regroupées en grappe (comptage) à faible zoom — couleur par génération au zoom individuel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a4b8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a4b8c">2G</b> GSM — voix, SMS</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a6b5c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a6b5c">3G</b> UMTS — data mobile</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#a25100">4G</b> LTE — haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#991b1b">5G</b> NR — très haut débit</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#616874">Infra</b> FH · TV · FM · PMR</div><div class="leg-row"><span style="display:inline-block;position:relative;width:12px;height:12px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:5px;top:0;width:2px;height:12px;background:#5f5e5a"></span><span style="position:absolute;top:5px;left:0;width:12px;height:2px;background:#5f5e5a"></span></span><b style="color:#5f5e5a">Émetteur radio/TV majeur</b> (TDF)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Opérateurs : Orange · SFR · Bouygues · Free<br><span id="leg-ant-count">—</span> antennes · Source ANFR open data</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px">Conformité réglementaire (seuil légal 28 V/m) : voir la couche <b>« Mesures certifiées (ANFR/EXEM) »</b> (menu Contexte naturel).</div><div class="leg-src">ANFR</div></div>',
+  // Sous-bloc "MESURES CEM OFFICIELLES" retiré d'ici le 2026-09-04 (brief AQ) — faisait doublon
+  // avec LEGEND_HTML.cert (vérifié concordant avec _certColor() une fois le champ
+  // seuil_legal_vm du dataset pris en compte, contrairement à cert qui, elle, était fausse).
+  // Deux légendes qui décrivent la même chose divergeront de nouveau — c'est précisément ce qui
+  // s'est produit ici (arbitrage Soleil : source unique, cert reste la référence).
+  // Passe 2 (2026-09-04, GO Soleil) : ce retrait laissait un lecteur qui n'ouvre que 'ant'
+  // (couche active par défaut) sans aucune piste vers 'cert' (couche différente, catégorie
+  // menu différente, off par défaut) — trou silencieux repéré, pas seulement théorique.
+  // Une ligne de renvoi explicite vers la couche cert ajoutée en fin de bloc ci-dessous.
   // 'emag' compactée le 2026-08-27 (brief "Panneau '?' sélectif") : passe de 7 lignes (titre,
   // sous-titre, 2 couleurs, 3 lignes d'info, "why", source) à 1 seule ligne — état visuel
   // simple (2 couleurs) gardé "par souci de rigueur" (triage Soleil) mais plus un bloc. Promue
@@ -4069,19 +4148,44 @@ const LEGEND_HTML={
   // Conflit avec #1062 (ligne d'appel à mesure ajoutée à cette même entrée) résolu en faveur
   // du retrait au merge du 2026-08-27 — rien n'est perdu, ce texte existe déjà dans le popup
   // par marqueur ajouté par #1062 (buildCrustalLayer() plus bas dans ce fichier).
-  res:'<div class="leg-block"><b class="leg-title">Réseau électrique</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>Ligne HTA 20kV</div><div class="leg-row"><span style="display:inline-block;width:14px;height:3px;background:#5c2000;vertical-align:middle;margin-right:4px"></span>Ligne HTB 63-225kV</div><div class="leg-src">EDF SEI · Supabase · OSM</div></div>',
+  // res : légende honnête sur la limite HTA/HTB — le rendu normal (Supabase, 8386
+  // lignes, dette documentée app.html:5774-5779) n'a qu'une seule couleur faute de
+  // champ tension ; la distinction HTB (repli OSM, seuil réel v>=50000 à
+  // app.html:~9510) n'existe que dans ce mode de secours d'exception (fetch
+  // Supabase en échec), jamais mentionnée jusqu'ici (brief AQ, 2026-09-04).
+  res:'<div class="leg-block"><b class="leg-title">Réseau électrique</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>Ligne électrique (couleur unique)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Le jeu de données Supabase (8386 lignes EDF SEI) ne porte pas de champ tension : HTA et HTB partagent donc la même couleur en rendu normal (dette technique documentée). Une distinction HTB &#x2265; 50 kV n\'existe que dans un mode de secours exceptionnel (relevé OSM, si Supabase est indisponible), non représenté ici.</div><div class="leg-src">EDF SEI · Supabase · OSM (repli)</div></div>',
     bt:'<div class="leg-block"><b class="leg-title">Réseau BT</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Distribution électrique dans les rues</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>BT aérien</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>BT souterrain</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 10</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Sites de production</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Centrales du réseau électrique corse</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique barrage</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique fil de l&#39;eau</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogaz</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>TAC (turbine à combustion)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnexion</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Taille selon puissance :</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
   // con scindée le 2026-08-29 (brief « exécution groupée », item C) → cert + contrib.
+  // Corrigée le 2026-09-04 (brief AQ, sur audit AN) : décrivait un schéma à 2 paliers (seuils
+  // 5/28 V/m) qui ne correspond à AUCUNE branche de _certColor() (app.html, seuils réels
+  // 0.5/2/5) — 2 des 4 couleurs conformes réelles (#991b1b, #5c0000) n'y figuraient pas, et
+  // "basse fréquence toujours teal" était contredit par les données (2 fiches BF réelles,
+  // 2 couleurs différentes). Ci-dessous : les 6 états réels de _certColor(), avec 28 V/m posé
+  // comme repère réglementaire séparé (champ seuil_legal_vm du dataset, ANFR/DR 15-4 — pas une
+  // borne de _certColor() elle-même, qui n'a pas de notion de 28 en interne). Source unique
+  // désormais : le sous-bloc "MESURES CEM OFFICIELLES" de LEGEND_HTML.ant, qui redisait la même
+  // chose sans jamais diverger (vérifié), est retiré plutôt que corrigé en double — deux
+  // légendes qui décrivent la même chose divergeront de nouveau, c'est exactement ce qui s'est
+  // produit ici (arbitrage Soleil).
+  // Passe 2 (2026-09-04, GO Soleil sur ce même brief avec 2 points de vérification) : le
+  // sous-titre et la ligne "Non conforme" ci-dessous disaient déjà 28 V/m mais sans jamais
+  // dire explicitement que ce seuil est d'une AUTRE nature que les 4 bandes de couleur
+  // 0,5/2/5 (repère réglementaire externe vs bande visuelle interne) — un lecteur pressé
+  // pouvait lire les 6 lignes comme 6 paliers d'une même échelle. Sous-titre reformulé +
+  // séparateur visuel ajouté devant "Non conforme" ; aucune couleur/seuil/teinte changé.
   cert:'<div class="leg-block"><b class="leg-title">Mesures certifiées (ANFR/EXEM)</b>'+
-    '<div class="leg-sub" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">236 fiches 2002–2026 · limite légale 28 V/m</div>'+
-    '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-bottom:2px"><span style="display:inline-block;width:9px;height:9px;background:#6b7280;transform:rotate(45deg);vertical-align:middle;margin-right:5px"></span>Losange = extérieur public (151, position exacte)&nbsp;&nbsp;<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#6b7280;vertical-align:middle;margin-right:5px"></span>Cercle = résidentiel (85, centroïde communal)</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Conforme &lt; 5 V/m</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Conforme 5–28 V/m</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#7c0000;transform:rotate(45deg);border:2px solid #C28533;vertical-align:middle;margin-right:4px"></span> Non conforme &gt; 28 V/m (ex. Monticello)</div>'+
-    '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Basse fréquence 9 kHz–100 kHz</div>'+
-    '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Détail par fiche au clic sur le marqueur · regroupement par proximité au zoom large (teinte = type dominant du groupe)</div>'+
-    '<div class="leg-src">ANFR/EXEM · CartoRadio — 21 fiches ont calibré la constante k du modèle RF (one-shot)</div>'+
+    '<div class="leg-sub" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">236 fiches 2002–2026 · seuil légal 28 V/m = repère réglementaire externe, pas une bande de couleur</div>'+
+    '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-bottom:2px"><span style="display:inline-block;width:9px;height:9px;background:#6b7280;transform:rotate(45deg);vertical-align:middle;margin-right:5px"></span>Losange = extérieur public (151, position exacte)&nbsp;&nbsp;<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#6b7280;vertical-align:middle;margin-right:5px"></span>Cercle = résidentiel (85, centroïde communal) — la forme, pas la teinte</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Faible &lt; 0,5 V/m</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Modéré 0,5–2 V/m</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#991b1b;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Élevé 2–5 V/m</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c0000;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Très élevé ≥ 5 V/m (conforme, sous le seuil légal)</div>'+
+    '<div class="leg-row" style="border-top:1px dashed rgba(0,0,0,.08);padding-top:4px;margin-top:2px;font-size:8px;color:var(--tx3)">Seuil réglementaire externe (pas une bande de couleur) :</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#7c0000;transform:rotate(45deg);border:2.5px solid #C28533;vertical-align:middle;margin-right:4px"></span> Non conforme &gt; 28 V/m (ex. Monticello)</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#7B7770;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Valeur non extraite (conforme, sans mesure chiffrée disponible)</div>'+
+    '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Basse fréquence (9 kHz–100 kHz) : même code couleur ci-dessus, marqueur légèrement plus petit — pas une teinte à part · regroupement par proximité au zoom large (forme et teinte = type dominant du groupe : carré arrondi gris ardoise si résidentiel, losange ocre si extérieur public — brief AL, 2026-09-04)</div>'+
+    '<div class="leg-src">ANFR/EXEM · CartoRadio — 21 fiches ont calibré la constante k du modèle RF (one-shot) · seuil légal 28 V/m = champ seuil_legal_vm du jeu de données (protocole ANFR/DR 15-4)</div>'+
     '</div>',
   contrib:'<div class="leg-block"><b class="leg-title">Contributions smartphone</b>'+
     '<div class="leg-sub" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">Relevés terrain des contributeurs Tellux</div>'+
@@ -4096,11 +4200,15 @@ const LEGEND_HTML={
     '<div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#eef3f0;border:1px solid #cfe0da;border-radius:4px;font-size:8.5px;color:#2f5f54;line-height:1.4"><b>Mesures indicatives, non certifiées.</b> Capteurs hétérogènes. Le jeu inclut des <b>traces continues</b> (une session de marche vaut plusieurs centaines de points) → densité affichée <b>≠ nombre de sites de mesure</b>.</div>'+
     '<div class="leg-src">OpenRadiation contributors — ODbL</div>'+
     '</div>',
+  // postesSources : le seuil "≤ 63 kV" n'existait dans aucun code ni dataset —
+  // fabriqué. _renderPostesSources() (app.html:10882-10887) n'a qu'une coupure
+  // binaire à 150 kV ; le jeu réel ne porte que {20,90,150,200} kV, jamais ≤63
+  // (brief AQ, 2026-09-04).
   postesSources:'<div class="leg-block"><b class="leg-title">Postes sources EDF SEI</b>'+
-    '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Poste source &#x2264; 63 kV</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Poste source &lt; 150 kV</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Poste source &#x2265; 150 kV</div>'+
     '<div class="leg-why">Noeuds du réseau HTB/HTA — champ ELF 50 Hz significatif à proximité.</div>'+
-    '<div class="leg-src">EDF SEI · OSM · 21 postes</div></div>'
+    '<div class="leg-src">EDF SEI · OSM · 21 postes (tensions réelles : 20/90/150/200 kV)</div></div>'
 };
 
 // Traduction EN — Zone B (LEGEND_HTML), 22/22 blocs livrés (2026-08-15,
@@ -4109,7 +4217,7 @@ const LEGEND_HTML={
 // n'est lu qu'au rendu, jamais à la définition — même principe que
 // INSTRUMENT_LABELS/CRUSTAL_REFS.
 const LEGEND_HTML_EN={
-  hot:'<div class="leg-block"><b class="leg-title">Composite magnetic field (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (grid) + substrate susceptibility</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#DDBB88,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#4a4f5e;width:140px;margin-bottom:4px"><span>0</span><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT: IARC class 2B documentary reference point.<br><span style="font-size:8px;color:#626774">Not an alert threshold — see popup Details</span></div><div class="leg-src">Biot-Savart · EDF SEI · BRGM susceptibility</div></div>',
+  hot:'<div class="leg-block"><b class="leg-title">Composite magnetic field (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (grid) + substrate susceptibility</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#4a4f5e;width:140px;margin-bottom:4px"><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="font-size:8px;color:var(--tx3)">No cell shown below 200 nT (fully transparent)</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT: IARC class 2B documentary reference point.<br><span style="font-size:8px;color:#626774">Not an alert threshold — see popup Details</span></div><div class="leg-src">Biot-Savart · EDF SEI · BRGM susceptibility</div></div>',
   hotrf:'<div class="leg-block"><b class="leg-title">RF electric field (V/m)</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofrequency — outdoor estimate, Tellux model</div>'+
     '<div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div>'+
@@ -4120,15 +4228,15 @@ const LEGEND_HTML_EN={
     '<div class="leg-src">Friis · ~3,000 ANFR antennas · internal calibration — <a href="/cadre-scientifique.html#radiofrequences" target="_blank" rel="noopener" style="color:var(--maquis-clair)">model, calibration &amp; reading references ↗</a></div>'+
     '</div>',
   hyd:'<div class="leg-block"><b class="leg-title">Groundwater</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Groundwater near the surface — BRGM visual layer; the calculation uses a separate dataset</div><img src="https://geoservices.brgm.fr/risques?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.1.1&FORMAT=image/png&LAYER=REMNAPPE_FR" style="max-width:260px;width:100%;display:block;margin:4px 0;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:4px;padding:4px;box-sizing:border-box" alt="Groundwater rise legend (BRGM REMNAPPE_FR)"><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Legend served live by the BRGM server — replaces the previous static list (\"Outcropping / Sub-outcropping\"), which described a different classification than the one actually rendered.</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
-  ant:'<div class="leg-block"><b class="leg-title">ANFR Antennas</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Grouped into clusters (count) at low zoom — colour by generation at individual zoom</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a4b8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a4b8c">2G</b> GSM — voice, SMS</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a6b5c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a6b5c">3G</b> UMTS — mobile data</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#a25100">4G</b> LTE — broadband</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#991b1b">5G</b> NR — ultra-high-speed</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#616874">Infra</b> microwave links · TV · FM · PMR</div><div class="leg-row"><span style="display:inline-block;position:relative;width:12px;height:12px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:5px;top:0;width:2px;height:12px;background:#5f5e5a"></span><span style="position:absolute;top:5px;left:0;width:12px;height:2px;background:#5f5e5a"></span></span>Major radio/TV transmitter</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Operators: Orange · SFR · Bouygues · Free<br><span id="leg-ant-count">—</span> antennes · Source: ANFR open data</div><div class="leg-src">ANFR</div><div style="border-top:1px solid rgba(0,0,0,.08);padding-top:6px;margin-top:4px"><div style="font-family:var(--mono);font-size:9px;color:var(--tx3);margin-bottom:4px">OFFICIAL EMF MEASUREMENTS (diamonds) · legal limit = 28 V/m:</div><div style="display:flex;flex-wrap:wrap;gap:4px"><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#0f766e;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#0f766e">Low</b> &lt; 0.5 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#a25100">Moderate</b> 0.5–2 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#991b1b">High</b> 2–5 V/m</div><div class="leg" style="padding:2px 6px;background:var(--pierre-ombre);border-radius:20px;border:1px solid var(--border)"><span style="display:inline-block;width:8px;height:8px;background:#5c0000;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#5c0000">Very high</b> 5–28 V/m</div><div class="leg" style="padding:2px 6px;background:#fff8e6;border-radius:20px;border:1.5px solid #ffd700"><span style="display:inline-block;width:8px;height:8px;background:#7c0000;border:1.5px solid #ffd700;border-radius:1px;transform:rotate(45deg);margin-right:3px"></span><b style="color:#7c0000">⚠ &gt;28 V/m</b> non-compliant</div></div></div></div>',
+  ant:'<div class="leg-block"><b class="leg-title">ANFR Antennas</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Grouped into clusters (count) at low zoom — colour by generation at individual zoom</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a4b8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a4b8c">2G</b> GSM — voice, SMS</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a6b5c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a6b5c">3G</b> UMTS — mobile data</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#a25100">4G</b> LTE — broadband</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#991b1b">5G</b> NR — ultra-high-speed</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#616874">Infra</b> microwave links · TV · FM · PMR</div><div class="leg-row"><span style="display:inline-block;position:relative;width:12px;height:12px;vertical-align:middle;margin-right:4px"><span style="position:absolute;left:5px;top:0;width:2px;height:12px;background:#5f5e5a"></span><span style="position:absolute;top:5px;left:0;width:12px;height:2px;background:#5f5e5a"></span></span><b style="color:#5f5e5a">Major radio/TV transmitter</b> (TDF)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Operators: Orange · SFR · Bouygues · Free<br><span id="leg-ant-count">—</span> antennes · Source: ANFR open data</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px">Regulatory compliance (legal threshold 28 V/m): see the <b>"Certified measurements (ANFR/EXEM)"</b> layer (Natural context menu).</div><div class="leg-src">ANFR</div></div>',
   emag:'<div class="leg-block"><b class="leg-title" style="font-size:11px">Regional magnetic background</b><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px"><span style="display:inline-block;width:8px;height:8px;background:#dc2626;border-radius:2px;vertical-align:middle;margin-right:2px"></span>Positive ·<span style="display:inline-block;width:8px;height:8px;background:#2563eb;border-radius:2px;vertical-align:middle;margin:0 2px 0 4px"></span>Negative — deep basement, unrelated to human activity (NOAA EMAG2v3)</div></div>',
-  res:'<div class="leg-block"><b class="leg-title">Electrical grid</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>HTA line 20kV</div><div class="leg-row"><span style="display:inline-block;width:14px;height:3px;background:#5c2000;vertical-align:middle;margin-right:4px"></span>HTB line 63-225kV</div><div class="leg-src">EDF SEI · Supabase · OSM</div></div>',
+  res:'<div class="leg-block"><b class="leg-title">Electrical grid</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>Power line (single colour)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">The Supabase dataset (8,386 EDF SEI lines) carries no voltage field: HTA and HTB share the same colour in normal rendering (documented technical debt). An HTB &#x2265; 50 kV distinction only exists in an exceptional fallback mode (OSM lookup, when Supabase is unavailable), not shown here.</div><div class="leg-src">EDF SEI · Supabase · OSM (fallback)</div></div>',
   bt:'<div class="leg-block"><b class="leg-title">LV grid</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Street-level electrical distribution</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>Overhead BT</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>Underground BT</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 10</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Generation sites</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Corsican power grid generation plants</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydro dam</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Run-of-river hydro</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Wind</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogas</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Gas turbine (combustion turbine)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnection</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Size according to power output:</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
-  cert:'<div class="leg-block"><b class="leg-title">Certified measurements (ANFR/EXEM)</b><div class="leg-sub" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">236 sheets 2002–2026 · legal limit 28 V/m</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-bottom:2px"><span style="display:inline-block;width:9px;height:9px;background:#6b7280;transform:rotate(45deg);vertical-align:middle;margin-right:5px"></span>Diamond = outdoor public (151, exact position)&nbsp;&nbsp;<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#6b7280;vertical-align:middle;margin-right:5px"></span>Circle = residential (85, commune centroid)</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Compliant &lt; 5 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;transform:rotate(45deg);border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Compliant 5–28 V/m</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#7c0000;transform:rotate(45deg);border:2px solid #C28533;vertical-align:middle;margin-right:4px"></span> Non-compliant &gt; 28 V/m (e.g. Monticello)</div><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#0f766e;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Low frequency 9 kHz–100 kHz</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Detail per sheet by clicking the marker · grouped by proximity at wide zoom (colour = group\'s dominant type)</div><div class="leg-src">ANFR/EXEM · CartoRadio — 21 sheets calibrated the RF model\'s k constant (one-shot)</div></div>',
+  cert:'<div class="leg-block"><b class="leg-title">Certified measurements (ANFR/EXEM)</b><div class="leg-sub" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">236 sheets 2002–2026 · legal threshold 28 V/m = external regulatory reference, not a colour band</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-bottom:2px"><span style="display:inline-block;width:9px;height:9px;background:#6b7280;transform:rotate(45deg);vertical-align:middle;margin-right:5px"></span>Diamond = outdoor public (151, exact position)&nbsp;&nbsp;<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#6b7280;vertical-align:middle;margin-right:5px"></span>Circle = residential (85, commune centroid) — shape, not colour</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Low &lt; 0.5 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Moderate 0.5–2 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#991b1b;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> High 2–5 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c0000;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Very high ≥ 5 V/m (compliant, below legal threshold)</div><div class="leg-row" style="border-top:1px dashed rgba(0,0,0,.08);padding-top:4px;margin-top:2px;font-size:8px;color:var(--tx3)">External regulatory threshold (not a colour band):</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#7c0000;transform:rotate(45deg);border:2.5px solid #C28533;vertical-align:middle;margin-right:4px"></span> Non-compliant &gt; 28 V/m (e.g. Monticello)</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#7B7770;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Value not extracted (compliant, no numeric reading available)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Low frequency (9 kHz–100 kHz): same colour code above, slightly smaller marker — not a separate colour · Detail per sheet by clicking the marker · grouped by proximity at wide zoom (shape and colour = group\'s dominant type: rounded slate-grey square if residential, ochre diamond if outdoor public — brief AL, 2026-09-04)</div><div class="leg-src">ANFR/EXEM · CartoRadio — 21 sheets calibrated the RF model\'s k constant (one-shot) · legal threshold 28 V/m = dataset field seuil_legal_vm (ANFR/DR 15-4 protocol)</div></div>',
   contrib:'<div class="leg-block"><b class="leg-title">Smartphone contributions</b><div class="leg-sub" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">Field readings from Tellux contributors</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#5c3a9b;border-radius:50%;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Citizen contribution (cluster)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Magnetometer (nT), network/WiFi signal (dBm), external sensor. <b>Display only, outside the calculation.</b></div><div class="leg-src">Tellux crowdsourced · Supabase</div></div>',
   openrad:'<div class="leg-block"><b class="leg-title">Citizen gamma (OpenRadiation)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Ambient gamma/X dose rate · citizen measurements · Geiger tubes</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;opacity:0.55;vertical-align:middle;margin-right:4px"></span>Citizen measurement point (µSv/h)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4"><b>Gamma/X, not radon.</b> Independent display layer — not fed into the index or the gamma calculation.</div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#eef3f0;border:1px solid #cfe0da;border-radius:4px;font-size:8.5px;color:#2f5f54;line-height:1.4"><b>Indicative measurements, not certified.</b> Heterogeneous sensors. The dataset includes <b>continuous tracks</b> (a single walking session accounts for several hundred points) → displayed density <b>≠ number of measurement sites</b>.</div><div class="leg-src">OpenRadiation contributors — ODbL</div></div>',
-  postesSources:'<div class="leg-block"><b class="leg-title">EDF SEI substations</b><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Substation &#x2264; 63 kV</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Substation &#x2265; 150 kV</div><div class="leg-why">HTB/HTA grid nodes — significant ELF 50 Hz field nearby.</div><div class="leg-src">EDF SEI · OSM · 21 substations</div></div>'
+  postesSources:'<div class="leg-block"><b class="leg-title">EDF SEI substations</b><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Substation &lt; 150 kV</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Substation &#x2265; 150 kV</div><div class="leg-why">HTB/HTA grid nodes — significant ELF 50 Hz field nearby.</div><div class="leg-src">EDF SEI · OSM · 21 substations (real voltages: 20/90/150/200 kV)</div></div>'
 
 };
 
@@ -5310,6 +5418,16 @@ async function loadWMMGrid() {
       WMM_INDEX[key] = p;
     });
     console.log('[Tellux] WMM 2025 grille chargee : ' + WMM_GRID.length + ' points');
+    // Chargement paresseux (2026-09-04, brief AR, suite de l'option 2) : si le panneau Expert
+    // était déjà ouvert sur un point cliqué avant que ce fetch résolve, updateIgrfWmmDiff()
+    // aura affiché « — » (grille pas encore prête, même dégradation que le repli calcMagneticELF_v2
+    // → calcMagneticELF_v1 pour SEGMENT_GRID/HTA_SEGMENTS_DATA, appliquée ici par simple
+    // court-circuit null plutôt que par une seconde méthode de calcul — aucun repli WMM plus
+    // simple n'existe conceptuellement, l'écart n'a de sens qu'avec les deux valeurs). Rafraîchir
+    // maintenant plutôt que d'attendre le clic suivant.
+    if (_expertActive && _expertLastLatLon) {
+      updateIgrfWmmDiff(_expertLastLatLon.lat, _expertLastLatLon.lon);
+    }
   } catch (e) {
     console.warn('[Tellux] WMM 2025 indisponible : ' + e.message);
   }
@@ -5339,7 +5457,13 @@ function calcMagneticWMM(lat, lon) {
   }
   return Math.round(nearest.total_nT);
 }
-loadWMMGrid();
+// loadWMMGrid() n'est plus appelée ici au boot (2026-09-04, brief AR, suite de l'option 2) :
+// seul le panneau Expert consomme WMM_GRID (cross-check invisible), et il n'est aujourd'hui
+// atteignable que depuis la console (#btn-expert commenté depuis le brief Q, 2026-09-03).
+// Payer ~10,2 Kio compressés à chaque visite d'app.html pour une grille qu'aucun visiteur réel
+// n'exploite n'avait plus de justification une fois le calcul lui-même gardé par _expertActive.
+// Déclenchée désormais depuis activateExpertMode() (cf. plus bas dans ce fichier), à la
+// première activation réelle du mode Expertise.
 
 // Variation Sq (Solar quiet) — oscillation ionosphérique diurne
 // Source : Campbell (1989), Rev. Geophys. 27(3), p.399–424
@@ -6127,7 +6251,15 @@ function calcMagneticELF_v1(lat, lon, chargeFactor) {
     note_ICNIRP: 'Rappel documentaire : limite ICNIRP grand public pour ELF 50 Hz est de 200 µT (200 000 nT).',
     source: 'Biot-Savart sur lignes HTA EDF SEI + PROD_ELECTRIQUE + BT_ZONES + postes sources + éoliennes',
     confidence: 'medium',
-    chargeFactorSource: htFactorSource
+    chargeFactorSource: htFactorSource,
+    // model : discriminant v1/v2 (2026-09-04, brief AP, Cran B — champ additif, aucun calcul
+    // touché). Absent jusqu'ici de toute valeur de retour ELF : aucun appelant ne pouvait
+    // distinguer un résultat v1 (8 axes hardcodés) d'un résultat v2 (Biot-Savart vectoriel sur
+    // segments réels) — y compris le repli SILENCIEUX de calcMagneticELF_v2 vers cette même
+    // fonction quand SEGMENT_GRID/HTA_SEGMENTS_DATA ne sont pas encore chargées (cf. brief AF
+    // §3.C). 'v1' ici — vrai qu'on soit appelé directement ou via ce repli, car v2 retourne
+    // alors littéralement cet objet tel quel.
+    model: 'v1'
   };
 }
 
@@ -6297,7 +6429,11 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
     confidence: 'medium',
     chargeFactorSource: htFactorSource,
     n_hta_contributing: nHtaContrib,
-    n_bt_contributing: nBtContrib
+    n_bt_contributing: nBtContrib,
+    // model : discriminant v1/v2 (2026-09-04, brief AP) — cf. commentaire jumeau dans
+    // calcMagneticELF_v1(). Atteint uniquement quand SEGMENT_GRID/HTA_SEGMENTS_DATA sont
+    // chargées (garde plus haut dans cette fonction) — jamais 'v2' pendant le repli.
+    model: 'v2'
   };
 }
 
@@ -7041,6 +7177,28 @@ function calcWater(lat,lon){
     :1.0;
   let w=0;[[42.70,9.35],[42.42,9.19],[42.08,9.17],[41.98,9.12],[41.85,9.05],[41.73,8.92],[42.30,8.78],[42.15,8.95]].forEach(([a,b])=>{const d=dist(lat,lon,a,b);if(d<3)w+=150*(1-d/3);});[[42.25,9.15,300],[42.10,8.85,250],[41.90,9.00,200]].forEach(([a,b,v])=>{const d=dist(lat,lon,a,b);if(d<2)w+=v*(1-d/2);});return Math.round(w*pluieFactor);}
 
+// Sélection ELF v1/v2 — extrait 2026-09-04 (brief AF lot A, revue adversariale PR #1229) :
+// vivait uniquement dans calcAll_v2 jusqu'à ce que updateIGRFDisplay() en ait besoin pour
+// s'aligner sur la formule d'autorité (igrf+human+geo) sans recalculer calcAll_v2 complet.
+// Un second ternaire recopié à la main aurait pu diverger silencieusement d'un futur
+// changement de cette logique (ex. ajout v3) — un seul point d'appel élimine ce risque.
+function calcMagneticELFAuto(lat, lon) {
+  return (typeof USE_ELF_V2 !== 'undefined' && USE_ELF_V2)
+    ? calcMagneticELF_v2(lat, lon)
+    : calcMagneticELF_v1(lat, lon);
+}
+
+// computeElfState — extrait 2026-09-04 (brief AF lot B, suite, arbitrage Soleil) : vivait en
+// ligne dans le handler de clic carte jusqu'à ce que saveContrib() en ait besoin aussi (même
+// motif qui a fait extraire calcMagneticELFAuto() au brief AF lot A — un second calcul recopié
+// à la main aurait pu diverger silencieusement). 'ready' si SEGMENT_GRID!==null (source de
+// vérité, ce que calcMagneticELF_v2 lit réellement) ; sinon 'failed' si _htaPreloadState
+// l'indique (panne durable, repli v1 assumé) ; 'loading' sinon (encore une chance d'aboutir).
+function computeElfState() {
+  return (typeof SEGMENT_GRID !== 'undefined' && SEGMENT_GRID !== null) ? 'ready'
+    : ((typeof _htaPreloadState !== 'undefined' && _htaPreloadState === 'failed') ? 'failed' : 'loading');
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // calcAll_v2 — Architecture à domaines séparés (§6.2 AUDIT_NIVEAU2_V2.1)
 // IMMÉDIAT — introduit la structure de retour standardisée.
@@ -7051,9 +7209,7 @@ function calcAll_v2(lat, lon, options) {
 
   // Domaine M
   const staticResult = calcMagneticStatic(lat, lon);
-  const elfResult    = (typeof USE_ELF_V2 !== 'undefined' && USE_ELF_V2)
-    ? calcMagneticELF_v2(lat, lon)
-    : calcMagneticELF_v1(lat, lon);
+  const elfResult    = calcMagneticELFAuto(lat, lon);
   // Domaine RF
   const rfResult     = calcRF(lat, lon, options.applyVegetation);
   // Domaine I
@@ -7782,6 +7938,15 @@ map.on('click',async e=>{
   _expertLastLatLon = { lat, lon: lng };
   updateIgrfWmmDiff(lat, lng);
   if (_expertActive) refreshExpertComposite();
+  // elfState : état de préparation du calcul ELF (2026-09-04, brief AF lot B, arbitrage Soleil,
+  // sur la base de la mesure du brief AP). Le popup s'ouvre sans attendre SEGMENT_GRID — le
+  // délai d'ouverture ne change pas — mais tout ce qui EN DÉPEND (bloc ELF, score Perturbation)
+  // montre un état d'attente pendant la fenêtre de préchargement plutôt qu'une valeur v1
+  // silencieusement approximative (brief AP a mesuré : 33 % des points changent de palier de
+  // score entre v1 et v2, un quart du minimum au maximum — pas une nuance). Statique/RF/substrat
+  // ne dépendent pas de SEGMENT_GRID et s'affichent normalement dans tous les cas.
+  // computeElfState() extraite (brief AF lot B suite) — saveContrib() en a besoin aussi.
+  const elfState = computeElfState();
   // Valeurs v2 structurées — utilisées pour la popup niveau B
   const elf_nT    = v2.domains.magnetic.elf.B_total_nT;
   const static_nT = v2.domains.magnetic.static.B_total_nT;
@@ -7813,7 +7978,17 @@ map.on('click',async e=>{
   // le Δ terrain affiché aux contributeurs "Mode Prospecteur" ne doit plus être partiellement
   // gonflé par un proxy hydrique non calibré (confidence LOW, calcWater() reste calculé et
   // stocké — cf. facteur_eau_nt — mais n'influence plus aucune valeur affichée/comparée).
-  const predicted=Math.round(igrf+human+geo);
+  // geo RETIRÉ du predicted (2026-09-04, brief AO phase 2, arbitrage Soleil) : geo/susc_nT
+  // (calcGeoSusc(), grille GEO_SUSC_GRID) n'a jamais eu de conversion dimensionnelle vers
+  // un champ — la grille retourne directement des valeurs nommées "nT" sans formule
+  // susceptibilité→champ. Comparé quantitativement à calcLCS1 (déjà dans igrf) sur 770
+  // points : r=0,285, accord de signe 91%, amplitude relative 44% — pas le profil d'un
+  // résidu local orthogonal, celui de deux estimations du même signal. TELLUX_MODELE_CALCUL.md
+  // v1.2 §2.1/§2.3 rejette explicitement ce type d'addition scalaire hétérogène ; geo reste du
+  // contexte (susc_nT, encore affiché séparément plus bas), pas un terme du champ prédit.
+  // predicted revient à sa formule d'avant le brief AF lot A (igrf+human), désormais la
+  // formule d'autorité définitive — cf. _drafts/RAPPORT_BRIEF_AO_NATURE_GEO_2026-09-04.md.
+  const predicted=Math.round(igrf+human);
   let real=null,bd=999;
   contribsDB.forEach(c=>{const d=dist(lat,lng,c.lat,c.lon);if(d<0.5&&d<bd&&c.valeur&&c.unite==='nT'){bd=d;real=c.valeur;}});
   const delta=real!==null?Math.round(real-predicted):null;
@@ -7872,6 +8047,13 @@ map.on('click',async e=>{
   // Porphyre inchangé (7,18). Résultat : 4 niveaux sémantiques (glyphe+chiffre), 3 couleurs.
   // Vérifié par rendu visuel avant d'écrire ce commentaire (mockup temporaire, jamais commité).
   const phColor=perturbHumain<=1?'#3F5B3A':perturbHumain<=2?'#3F5B3A':perturbHumain<=3?'#8A5E22':'#8E2F1F';
+  // phHeaderHTML : état d'attente ELF (2026-09-04, brief AF lot B, arbitrage Soleil) — perturbHumain
+  // dépend de human (ELF), lui-même v1 tant que elfState!=='ready'. 'loading' : aucun chiffre
+  // affiché (le score changerait de palier dans 33% des cas, brief AP — pas une nuance à montrer
+  // avec confiance). 'failed' : chiffre v1 affiché, marqué ≈ (repli assumé, jamais silencieux).
+  const phHeaderHTML = elfState === 'loading'
+    ? '<div style="font-weight:700;font-size:13px;color:#626774;font-style:italic">'+jt('ph_state_loading','Calcul en préparation…')+'</div>'
+    : '<div style="font-weight:700;font-size:14px;color:'+phColor+'">'+phEmoji+' '+perturbHumain+'/5'+(elfState==='failed'?' <span style="font-size:9px;font-weight:400;color:#8A5E22" title="'+jt('elf_state_failed_title','Modèle simplifié (8 axes types) — les données réelles du réseau n\'ont pas pu être chargées cette session.')+'">'+jt('elf_state_failed_badge','≈ estimation')+'</span>':'')+'</div>';
   // anEmoji/anLabel/anColor RETIRÉES le 2026-09-03 (ADR-064, décision 1) : habillaient le score
   // « Naturel » (activNat/5) désormais retiré de ce popup, cf. commentaire plus haut. Le repro tofu
   // rock->mont-fuji (brief H phase 1, PR #1203) concernait précisément anEmoji — devenu sans objet
@@ -7953,6 +8135,17 @@ map.on('click',async e=>{
   // #8A5E22 (4,99 sur ce fond) — la même substitution que partout ailleurs dans ce fichier,
   // pas une couleur choisie pour ce cas précis.
   const deltaCol=delta===null?'#626774':Math.abs(delta)<50?'#3F5B3A':Math.abs(delta)<200?'#8A5E22':'#8E2F1F';
+  // deltaGatedHTML : même motif que la ligne H (2026-09-04, brief AF lot B suite, arbitrage
+  // Soleil) — Δ dérive de predicted=igrf+human, donc de human/elfState exactement comme H,
+  // trouvé non gaté en revue adversariale de PR #1243 (signalé, pas corrigé sur le moment —
+  // traité ici). 'loading' + delta!==null : texte d'attente au lieu d'un chiffre qui pourrait
+  // changer une fois le calcul complet (rejoint le fait que le score/bloc ELF ne montrent déjà
+  // rien dans ce cas). 'failed' + delta!==null : chiffre v1 affiché, marqué ≈. delta===null
+  // (aucune mesure citoyenne à moins de 500m, le cas le plus fréquent) : inchangé quel que soit
+  // elfState — rien à gater, il n'y a pas de chiffre.
+  const deltaGatedHTML = (elfState === 'loading' && delta !== null)
+    ? '<span style="color:#626774;font-style:italic">'+jt('detail_delta_loading','pas encore disponible (préchargement en cours)')+'</span>'
+    : '<span style="color:'+deltaCol+'">'+deltaStr+(elfState==='failed'&&delta!==null?' <span style="color:#8A5E22">('+jt('elf_state_failed_badge','≈ estimation')+')</span>':'')+'</span>';
   // Barre susceptibilité magnétique — normalisée sur -5 à 60 nT (plage réelle de GEO_SUSC_GRID,
   // cf. calcGeoSusc()/suscPct ci-dessus)
   // Correctif 2026-09-03 (brief H, phase 2) : cette barre n'avait aucun libellé visible, seule une
@@ -7993,6 +8186,19 @@ map.on('click',async e=>{
   const elfIARCnote=elf_nT>=300
     ? '<div style="border-left:2px solid #C28533;padding-left:5px;margin-top:3px;font-size:8px;color:#8A5E22;font-style:italic">'+jt('elf_iarc_note','Repère documentaire : IARC classe 2B pour ELF ≥ 300 nT chronique résidentiel — pas de seuil d\'alerte, signal statistique.')+'</div>'
     : '';
+  // elfBlockHTML : état d'attente ELF (2026-09-04, brief AF lot B, arbitrage Soleil) — cf.
+  // commentaire d'elfState plus haut. 'loading' : ni chiffre ni détail de contribution ni note
+  // IARC (tous dérivés de la même donnée pas encore prête) — juste le texte d'attente. 'failed' :
+  // valeur/détail/note v1 affichés normalement, avec le même badge ≈ que le score.
+  const elfBlockHTML = elfState === 'loading'
+    ? '<div style="font-size:11px;color:#626774;font-style:italic;margin-bottom:1px">'+jt('elf_state_loading','⏳ Préparation du calcul en cours…')+'</div>'
+    : '<div style="display:flex;align-items:center;gap:4px;margin-bottom:1px">'+
+        '<span style="font-size:12px;font-weight:700;color:#8A5E22">'+elf_nT+' nT</span>'+
+        (elfState==='failed'?' <span style="font-size:9px;font-weight:400;color:#8A5E22" title="'+jt('elf_state_failed_title','Modèle simplifié (8 axes types) — les données réelles du réseau n\'ont pas pu être chargées cette session.')+'">'+jt('elf_state_failed_badge','≈ estimation')+'</span>':'')+
+        '<span style="font-size:9px;color:#626774" title="'+jt('v2_conf_elf','Confiance : moyen — modélisation Biot-Savart, ±50%')+'">●●○</span>'+
+      '</div>'+
+      '<div style="font-size:8px;color:#626774">'+elfContribs+'</div>'+
+      elfIARCnote;
   // radonColor/radonConf/radonLabel — SUPPRIMÉES le 2026-09-02 (retrait du bloc "Domaine
   // ionisant", cf. commentaire plus bas) : leur seul consommateur était ce bloc, elles seraient
   // devenues du code mort en le laissant en place. Ne servaient PAS l'export CSV expert, qui lit
@@ -8056,7 +8262,9 @@ map.on('click',async e=>{
   // que le compteur "+N autres" ne rendait pas consultable — même "?" pour les deux (retour
   // Soleil : "si le « ? » accueille la ligne de debug, il pourrait aussi accueillir la liste
   // complète").
-  const elfContribsFullHTML = elfContribsList.length>3
+  // elfState==='loading' : masquée comme elfBlockHTML plus haut — même donnée pas encore prête,
+  // pas de raison d'en montrer le détail complet ici alors que le résumé ne montre rien.
+  const elfContribsFullHTML = (elfState!=='loading' && elfContribsList.length>3)
     ? '<div style="margin-top:4px"><b>'+jt('detail_elf_liste_title','Contributions ELF complètes (')+elfContribsList.length+jt('detail_elf_liste_title_suffix',') :')+'</b><br>'
       +elfContribsList.map(c=>c.source_type+(c.identifier?' ('+c.identifier+')':'')+' : '+c.B_nT+' nT').join('<br>')
       +'</div>'
@@ -8068,10 +8276,15 @@ map.on('click',async e=>{
         jt('detail_technique_summary','Détail technique (vérification)')+
       '</summary>'+
       '<div style="font-size:8px;color:#626774;margin-top:3px;line-height:1.6">'+
-        '<div>Δ ('+jt('detail_delta_label','écart mesure citoyenne proche / modèle IGRF+ELF+local, "—" si aucune mesure à moins de 500 m')+') : <span style="color:'+deltaCol+'">'+deltaStr+'</span></div>'+
+        '<div>Δ ('+jt('detail_delta_label','écart mesure citoyenne proche / modèle IGRF+ELF+local, "—" si aucune mesure à moins de 500 m')+') : '+deltaGatedHTML+'</div>'+
         '<div>C ('+jt('detail_crustal_label','anomalie crustale grande échelle, LCS1/EMAG2v3 — repère exploratoire, non intégré au score')+') : <span style="color:#AD22BE">'+(crustal>0?'+':'')+crustal+' nT</span></div>'+
         '<div>L ('+jt('detail_local_label','susceptibilité géologique locale, même valeur que susc_nT ci-dessus — alimente axesTotal en interne, non scorée dans ce popup depuis ADR-064')+') : <span style="color:#3F5B3A">'+(geo>0?'+':'')+geo+' nT</span></div>'+
-        '<div>H ('+jt('detail_human_label','champ ELF anthropique total, valeur identique à celle affichée plus haut — alimente le score Perturbation')+') : +'+human+' nT</div>'+
+        // H : masqué/marqué selon elfState (brief AF lot B) — le libellé dit explicitement
+        // "valeur identique à celle affichée plus haut", ce qui deviendrait faux pendant
+        // l'attente (rien n'est affiché plus haut dans ce cas).
+        (elfState==='loading'
+          ? '<div>H : '+jt('detail_human_loading','champ ELF anthropique — pas encore disponible cette visite (préchargement en cours, cf. bloc ELF ci-dessus)')+'</div>'
+          : '<div>H ('+jt('detail_human_label','champ ELF anthropique total, valeur identique à celle affichée plus haut — alimente le score Perturbation')+') : +'+human+' nT'+(elfState==='failed'?' <span style="color:#8A5E22">('+jt('elf_state_failed_badge','≈ estimation')+')</span>':'')+'</div>')+
         (nRFcalib>0.01?'<div>RF ('+jt('detail_rf_label','champ RF calibré — calcul distinct de la valeur µW/m² ci-dessus (jamais atténué par la forêt) — alimente le score affiché')+') : '+nRFcalib.toFixed(1)+' V/m</div>':'')+
         (typeof altitude_m==='number' && isFinite(altitude_m)?'<div>'+jt('detail_alt_label','Altitude (IGN RGE Alti, résolution ~1 m)')+' : '+altitude_m+' m</div>':'')+
       '</div>'+
@@ -8087,14 +8300,9 @@ map.on('click',async e=>{
         '<span style="font-size:9px;color:#626774" title="'+jt('v2_conf_statique','Confiance : moyen — IGRF-14 + LCS1/EMAG2v3, ±100 nT')+'">●●○</span>'+
       '</div>'+
       '<div style="font-size:8px;color:#626774">IGRF-14 · LCS1/EMAG2v3 · Sq · '+corrLabel+'</div>'+
-      // ── ELF 50 Hz ──
+      // ── ELF 50 Hz ── elfBlockHTML porte l'état d'attente (brief AF lot B) — cf. son commentaire.
       '<div style="margin-top:3px;font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">'+jt('v2_title_elf','ELF anthropique 50 Hz')+'</div>'+
-      '<div style="display:flex;align-items:center;gap:4px;margin-bottom:1px">'+
-        '<span style="font-size:12px;font-weight:700;color:#8A5E22">'+elf_nT+' nT</span>'+
-        '<span style="font-size:9px;color:#626774" title="'+jt('v2_conf_elf','Confiance : moyen — modélisation Biot-Savart, ±50%')+'">●●○</span>'+
-      '</div>'+
-      '<div style="font-size:8px;color:#626774">'+elfContribs+'</div>'+
-      elfIARCnote+
+      elfBlockHTML+
       // ── RF ──
       '<div style="margin-top:3px;font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">'+jt('v2_title_rf','Radiofréquence (FH + fond)')+'</div>'+
       '<div style="display:flex;align-items:center;gap:4px">'+
@@ -8130,8 +8338,9 @@ map.on('click',async e=>{
     '<div style="font-family:var(--font);min-width:180px">'+
     // Score principal — ADR-064 décision 1 : le second score « Naturel » est retiré (l'info
     // reste disponible via solLabel plus bas, non scorée, cf. commentaire au calcul plus haut).
+    // phHeaderHTML porte l'état d'attente ELF (brief AF lot B) — cf. son propre commentaire.
     '<div style="display:flex;gap:8px;align-items:baseline">'+
-      '<div style="font-weight:700;font-size:14px;color:'+phColor+'">'+phEmoji+' '+perturbHumain+'/5</div>'+
+      phHeaderHTML+
     '</div>'+
     '<div style="display:flex;gap:8px;font-size:9px;color:#4a4f5e;margin-bottom:2px"><span>'+jt('popup_sub_perturbation','Perturbation')+'</span></div>'+
     // Ligne 2 : renvoi explicite (Option A) — plus de verdict catégorique, cf. commentaire au calcul
@@ -8172,7 +8381,7 @@ map.on('click',async e=>{
     }
   });
   // v8 : bloc extrait hors de ce fichier
-  _geoLastPoint={lat,lng,igrf,human,geo,crustal,susc_nT,skinD,tellPct,geoType,solLabel,indice:axesTotal,label:itLabel,verdict:itVerdict,rf:nRFcalib,radon_class,gamma_nSvh}; // implanTip retirée (ADR-064) ; indice alimenté par axesTotal (ex-indiceTellux, brief W 2026-09-04) — clé "indice" inchangée, décision brief W étape 5
+  _geoLastPoint={lat,lng,igrf,human,geo,crustal,susc_nT,skinD,tellPct,geoType,solLabel,indice:axesTotal,label:itLabel,verdict:itVerdict,rf:nRFcalib,radon_class,gamma_nSvh,elfState}; // implanTip retirée (ADR-064) ; indice alimenté par axesTotal (ex-indiceTellux, brief W 2026-09-04) — clé "indice" inchangée, décision brief W étape 5. elfState ajouté (brief AF lot B, 2026-09-04) — champ additif, mêmes précautions que le discriminant model du brief AP
 });
 
 // Points violets (contributions citoyennes) alignés sur le pattern bindTooltip sticky des
@@ -8187,7 +8396,10 @@ map.on('click',async e=>{
 // de ce chantier (bug plus large signalé séparément) ; seul addMarker() est migré vers un
 // mécanisme qui ne dépend pas de #info, comme toutes les autres couches de points.
 function addMarker(c){
-  var html='<span class="tag" style="background:#f0e8ff;color:#5c3a9b;border:0.5px solid #9b72d4">DB</span><b>'+c.type+'</b>'+(c.valeur?' — '+c.valeur+' '+(c.unite||'nT'):'')+(c.note?'<br><i style="font-size:11px;color:var(--tx3)">'+c.note+'</i>':'')+'<br><span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">IGRF:'+(c.igrf_nt||'—')+'nT · score:'+(c.score_anomalie||'—')+' · Kp:'+(c.kp||'—')+' · Bz:'+(c.bz||'—')+'nT</span>';
+  // Kp/Bz : c.kp!=null (pas c.kp||'—') — 2026-09-04, dette KP-ZERO-FALLBACK-LIVE-ET-CONTRIB-001,
+  // suite de PR #1233 (revue adversariale) : la correction en base (Kp=0/Bz=0 désormais stockés)
+  // était sans effet visible tant que ce lecteur les masquait encore derrière '—' comme absents.
+  var html='<span class="tag" style="background:#f0e8ff;color:#5c3a9b;border:0.5px solid #9b72d4">DB</span><b>'+c.type+'</b>'+(c.valeur?' — '+c.valeur+' '+(c.unite||'nT'):'')+(c.note?'<br><i style="font-size:11px;color:var(--tx3)">'+c.note+'</i>':'')+'<br><span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">IGRF:'+(c.igrf_nt||'—')+'nT · score:'+(c.score_anomalie||'—')+' · Kp:'+(c.kp!=null?c.kp:'—')+' · Bz:'+(c.bz!=null?c.bz:'—')+'nT</span>';
   L.marker([c.lat,c.lon],{icon:mkIcon('#5c3a9b',false,11),zIndexOffset:200}).bindTooltip(html,{sticky:true}).addTo(lCon);
 }
 
@@ -8727,12 +8939,22 @@ function updateIGRFDisplay(lat, lng){
   var warn=document.getElementById('c-igrf-warn');
   if(!box||!txt||!warn) return;
   var res=calcMagneticStatic(lat, lng);
-  var igrf_nT=Math.round(res.B_total_nT);
+  // Aligné 2026-09-04 (brief AO phase 2, arbitrage Soleil) sur la formule d'autorité
+  // définitive (igrf+human) : cette fonction avait été alignée le même jour sur
+  // igrf+human+geo (brief AF lot A) puis geo en a été retiré partout (brief AO — pas de
+  // conversion dimensionnelle susceptibilité→champ dans calcGeoSusc(), corrèle avec
+  // calcLCS1/igrf comme deux estimations du même signal plutôt qu'un terme complémentaire,
+  // cf. _drafts/RAPPORT_BRIEF_AO_NATURE_GEO_2026-09-04.md). Calcul restreint aux 2
+  // composantes de la formule (pas calcAll_v2 complet) pour ne pas recalculer RF/gamma/radon
+  // à chaque frappe du champ valeur — calcMagneticELFAuto() est la même fonction que celle
+  // lue par calcAll_v2, donc même valeur numérique que la formule popup pour un point donné.
+  var elfRes=calcMagneticELFAuto(lat,lng);
+  var igrf_nT=Math.round(res.B_total_nT+elfRes.B_total_nT);
   var igrf_fmt=igrf_nT.toLocaleString('fr-FR');
   var valRaw=parseFloat(document.getElementById('c-val')?.value||'');
   var unite=(document.getElementById('c-unit')?.value)||'nT';
   var instrType=(document.getElementById('c-type')?.value)||'';
-  var msg='Valeur composite Tellux attendue ici (IGRF-14 + anomalie crustale + correction externe) : '+igrf_fmt+' nT.';
+  var msg='Valeur composite Tellux attendue ici (IGRF-14 + anomalie crustale + correction externe + perturbation ELF) : '+igrf_fmt+' nT.';
   warn.style.display='none';
   if(!isNaN(valRaw) && valRaw>0){
     var valNT=valRaw;
@@ -8935,11 +9157,41 @@ async function saveContrib(){
     map.removeLayer(pending);pending=null;return;
   }
   const btn=document.getElementById('btn-save');btn.textContent='Sauvegarde…';btn.disabled=true;
+  // Attendre la résolution de elfState avant de calculer predicted (2026-09-04, brief AF lot B
+  // suite, arbitrage Soleil — même sujet que le lot A/AO : « une formule qui écrit sans savoir
+  // sur quoi elle s'appuie »). Avant ce correctif, une contribution soumise pendant la fenêtre
+  // de préchargement (2-6s mesurés, brief AP) écrivait en base predicted/perturbation_humaine_nt
+  // dérivés du v1 approximatif sans jamais le savoir — irréversible une fois écrit, contrairement
+  // à l'affichage du popup qui se corrige au clic suivant. Timeout large (20s, très supérieur à
+  // la fenêtre mesurée) : les fetch de loadHTADataOnly() n'ont pas leur propre timeout — sans
+  // celui-ci, un Supabase qui ne répond ni n'échoue jamais bloquerait ce bouton indéfiniment,
+  // exactement l'anti-motif que Soleil a nommé (« le motif de Bz ») pour le popup. Au-delà du
+  // timeout, traité comme une panne pour CET enregistrement uniquement — ne modifie pas
+  // _htaPreloadState lui-même, un futur clic peut encore aboutir normalement.
+  if (computeElfState() === 'loading') {
+    btn.textContent = jt('btn_save_finalizing', 'Finalisation du calcul…');
+    const _elfWaitStart = Date.now();
+    while (computeElfState() === 'loading' && (Date.now() - _elfWaitStart) < 20000) {
+      await new Promise(r => setTimeout(r, 250));
+    }
+    btn.textContent = 'Sauvegarde…';
+  }
+  // Jamais silencieux (même principe que le popup) : si la valeur écrite reste basée sur le
+  // repli v1 (panne durable OU timeout ci-dessus sans résolution), le contributeur en est informé.
+  if (computeElfState() !== 'ready') {
+    info(jt('save_elf_fallback_notice', 'Mesure enregistrée avec une estimation simplifiée du champ électromagnétique (données réseau indisponibles).'), 'warn', 6000);
+  }
   const igrf=fetchIGRF(ll.lat,ll.lng);
-  const {human,water,geo}=calcAll(ll.lat,ll.lng);
+  const {human,water}=calcAll(ll.lat,ll.lng);
   const valeur=parseFloat(document.getElementById('c-val').value)||null;
   // water*0.3 retiré du predicted (cf. commentaire jumeau dans le handler de clic carte) —
   // même arbitrage, même raison (Δ non calibré par un proxy hydrique low-confidence).
+  // geo (brièvement ajouté 2026-09-04, brief AF lot A) RETIRÉ le même jour (brief AO phase 2,
+  // arbitrage Soleil) : calcGeoSusc()/GEO_SUSC_GRID n'a jamais eu de conversion dimensionnelle
+  // vers un champ, et corrèle avec calcLCS1 (déjà dans igrf) comme deux estimations du même
+  // signal (r=0,285, accord de signe 91% sur 770 points, cf. rapport brief AO) — pas un terme
+  // orthogonal complémentaire. predicted = igrf+human, formule d'autorité désormais définitive.
+  // `geo` n'est plus destructuré ici (plus aucun usage dans cette fonction).
   const predicted=igrf+human;
   // Collecter les matériaux et appareils cochés
   const mats=[...document.querySelectorAll('#c-mats input:checked')].map(i=>i.value);
@@ -8971,6 +9223,14 @@ async function saveContrib(){
     'tuyau_pvc':0,         // transparent total
   };
   const attenPrevue=mats.reduce((s,m)=>s+(MAT_DB[m]||0),0);
+  // Champs Kp/Bz/densité/flux protons — Number.isFinite au lieu de ||null (2026-09-04,
+  // dette KP-ZERO-FALLBACK-LIVE-ET-CONTRIB-001, arbitrage Soleil, même motif que brief AF
+  // lot C : Bz=0 nT (IMF nord-sud neutre) et Kp=0 (calme géomagnétique) sont des valeurs
+  // réelles et courantes, pas une absence de donnée ; l'ancien ||null les traitait comme
+  // absentes et le garde anti-PGRST204 plus bas supprimait la clé avant l'insert Supabase —
+  // perte de donnée à l'écriture, pas un simple défaut d'affichage. NaN (fetch échoué/valeur
+  // non numérique) reste correctement null, seul cas où l'absence de donnée est réelle.
+  const kpNum=parseFloat(curKp), bzNum=parseFloat(curBz), densNum=parseFloat(curDensity), fluxNum=parseFloat(curFlux);
   const unite=document.getElementById('c-unit').value;
   const instrType=document.getElementById('c-type').value;
   // Conversion en nT (unite pivot) selon unite saisie
@@ -8986,8 +9246,8 @@ async function saveContrib(){
     valeur:valeurPivot,unite:'nT',unite_saisie:unite,
     csv_stats:csvStats,
     note:document.getElementById('c-note').value||null,
-    kp:parseFloat(curKp)||null,bz:parseFloat(curBz)||null,
-    densite_protons:parseFloat(curDensity)||null,flux_protons:parseFloat(curFlux)||null,
+    kp:Number.isFinite(kpNum)?kpNum:null,bz:Number.isFinite(bzNum)?bzNum:null,
+    densite_protons:Number.isFinite(densNum)?densNum:null,flux_protons:Number.isFinite(fluxNum)?fluxNum:null,
     igrf_nt:Math.round(igrf),perturbation_humaine_nt:human,facteur_eau_nt:water,
     // score_anomalie n'inclut plus water*0.3 (même arbitrage que predicted, ci-dessus) —
     // facteur_eau_nt reste stocké tel quel (brut, diagnostic) pour un audit futur éventuel.
@@ -8999,7 +9259,9 @@ async function saveContrib(){
     etage:etage||null,
     materiaux_murs:mats.length?mats:null,
     appareils_actifs:appareils.length?appareils:null,
-    attenuation_prevue_db:attenPrevue||null,
+    // attenPrevue est toujours un nombre fini (reduce sur MAT_DB, base 0) — 0 signifie
+    // "aucun matériau sélectionné", jamais NaN/undefined ; plus de ||null nécessaire.
+    attenuation_prevue_db:attenPrevue,
     protocole_aveugle: document.getElementById('c-protocole')?.checked ? true : null,
     native_capture: window._nativeCaptureUsed === true ? true : null,
     airplane_mode_on: document.getElementById('c-airplane-mode')?.checked ? true : null,
@@ -9343,10 +9605,20 @@ const PROD_ELECTRIQUE=[{"lat":42.3312,"lon":8.9823,"nom":"Sovenzia","commune":"C
 // relance un fetch via loadReseau(). Aucune régression vs comportement actuel.
 let _htaDataLoading = false;
 let _htaDataCache = null;
+// _htaPreloadState : discriminant explicite pour l'affichage (2026-09-04, brief AF lot B,
+// arbitrage Soleil) — distingue « pas encore prêt, ça va arriver » (état d'attente dans le
+// popup, cf. map.on('click',...)) de « ne chargera pas cette session » (repli v1 marqué).
+// 'pending' avant le premier appel · 'loading' pendant le fetch · 'ready' une fois SEGMENT_GRID
+// construite (par ce chemin OU par loadReseau(), cf. son propre commentaire) · 'failed' sur
+// échec durable (exception réseau, ou 0 ligne reçue). Jamais un état d'attente qui ne se
+// termine pas : toute sortie de 'loading' passe par 'ready' ou 'failed', jamais un blocage —
+// c'est précisément le motif qui a fait retirer l'affichage de Bz plus tôt cette session.
+let _htaPreloadState = 'pending';
 
 async function loadHTADataOnly() {
   if (_htaDataLoading || SEGMENT_GRID) return;
   _htaDataLoading = true;
+  _htaPreloadState = 'loading';
   try {
     console.log('[Tellux] Préchargement data HTA pour calcul ELF...');
     let all = [], offset = 0, PAGE = 1000;
@@ -9365,13 +9637,16 @@ async function loadHTADataOnly() {
     }
     if (all.length === 0) {
       console.warn('[Tellux] HTA data préchargement : 0 lignes reçues');
+      _htaPreloadState = 'failed';
       return;
     }
     buildSegmentGrid(all);
     setTimeout(loadBTLinesAsync, 200);
     _htaDataCache = all;
+    _htaPreloadState = 'ready';
     console.log('[Tellux] HTA data préchargée : ' + all.length + ' lignes, grille prête.');
   } catch (e) {
+    _htaPreloadState = 'failed';
     console.warn('[Tellux] Préchargement HTA échec : ' + e.message + ' (fallback v1 actif jusqu\'à activation manuelle couche Réseau)');
   } finally {
     _htaDataLoading = false;
@@ -9418,6 +9693,10 @@ async function loadReseau(){
       buildSegmentGrid(all);
       // Chargement asynchrone BT après HTA (dette BT-ELF-001)
       setTimeout(loadBTLinesAsync, 200);
+      // _htaPreloadState : ce chemin (activation manuelle couche Réseau) peut réussir même si
+      // le préchargement automatique du boot a échoué — cf. son propre commentaire. Remis à
+      // 'ready' ici pour rester exact (auto-guérison si la panne était transitoire).
+      if (typeof _htaPreloadState !== 'undefined') _htaPreloadState = 'ready';
     }
   }catch(e){
     console.warn('HTA Supabase:',e.message,'→ fallback OSM');
@@ -9721,7 +10000,10 @@ function _syncLandeMaquisZoom(fromToggle){
 function exportTerrainCSV(){
   if(!contribsDB||contribsDB.length===0){alert('Aucune contribution en base.');return;}
   const header='lat,lon,type,valeur,unite,note,igrf_nt,score_anomalie,kp,bz,created_at';
-  const rows=contribsDB.map(c=>[c.lat,c.lon,c.type||'',c.valeur||'',c.unite||'','"'+(c.note||'').replace(/"/g,'""')+'"',c.igrf_nt||'',c.score_anomalie||'',c.kp||'',c.bz||'',c.created_at||''].join(','));
+  // Kp/Bz : c.kp!=null (pas c.kp||'') — même correctif que addMarker(), même dette
+  // KP-ZERO-FALLBACK-LIVE-ET-CONTRIB-001 : un export CSV qui vide Kp=0/Bz=0 en cellule
+  // vide serait indiscernable d'une valeur jamais mesurée pour quiconque analyse l'export.
+  const rows=contribsDB.map(c=>[c.lat,c.lon,c.type||'',c.valeur||'',c.unite||'','"'+(c.note||'').replace(/"/g,'""')+'"',c.igrf_nt||'',c.score_anomalie||'',c.kp!=null?c.kp:'',c.bz!=null?c.bz:'',c.created_at||''].join(','));
   const csv=header+'\\n'+rows.join('\\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');
@@ -9754,6 +10036,18 @@ function activateExpertMode() {
   document.getElementById('expert-bandeau').classList.add('visible');
   updateExpertBandeau();
   if (_expertLastResult) refreshExpertComposite();
+  // Même motif que la ligne ci-dessus : updateIgrfWmmDiff() est désormais gardée par
+  // _expertActive (brief AR) et ne tourne plus pendant que le panneau est fermé — sans cet
+  // appel, l'écart IGRF/WMM resterait à « — » à l'ouverture jusqu'au clic suivant, alors
+  // qu'avant ce correctif il affichait déjà la valeur du dernier clic réel.
+  if (_expertLastLatLon) updateIgrfWmmDiff(_expertLastLatLon.lat, _expertLastLatLon.lon);
+  // Chargement paresseux (2026-09-04, brief AR, suite de l'option 2) : loadWMMGrid() n'est plus
+  // appelée au boot (cf. son ancien site d'appel plus haut dans ce fichier) — déclenchée ici, à
+  // la première activation réelle. Si un point était déjà cliqué (_expertLastLatLon), l'appel
+  // ci-dessus vient de dégrader proprement sur « — » (WMM_INDEX encore null, même court-circuit
+  // que d'habitude) ; loadWMMGrid() rafraîchira elle-même l'affichage à sa résolution (cf. son
+  // propre commentaire). Gardée par `!WMM_GRID` pour ne fetcher qu'une fois par session.
+  if (!WMM_GRID) loadWMMGrid();
 }
 
 function closeExpertMode() {
@@ -10146,7 +10440,21 @@ document.addEventListener('click', function(e){
   closeHdrMenu();
 });
 document.addEventListener('keydown', function(e){
-  if(e.key === 'Escape') closeHdrMenu();
+  if(e.key !== 'Escape') return;
+  closeHdrMenu();
+  // Étendu le 2026-09-04 (brief AS étape 3+4, Soleil "suis ton instinct") — même listener
+  // partagé, pas un nouveau mécanisme par cible. Popup : ferme sur desktop et mobile (aucun
+  // conflit avec le clic carte, cf. règle du brief — Échap n'est pas un clic). Panneau
+  // couches : desktop uniquement (window.closeLayersPanel défini plus bas dans un autre bloc
+  // <script>, d'où l'appel via window. — même convention que window.map juste au-dessus dans
+  // ce fichier) — sur mobile le bottom sheet ne ferme pas au clic carte par design (cf.
+  // LAYOUT_MQ), Échap ne doit pas contourner ce choix.
+  try{ if(map && typeof map.closePopup==='function') map.closePopup(); }catch(_e){}
+  try{
+    if(window.matchMedia('(min-width:769px)').matches && typeof window.closeLayersPanel==='function'){
+      window.closeLayersPanel();
+    }
+  }catch(_e){}
 });
 
 // switchMobileTab — refonte 2026-08-26 (brief "refonte nav mobile"), 2 onglets au lieu de 3
@@ -10252,6 +10560,15 @@ function toggleLayersSheetExpand(){
 if(typeof loadNOAA==='function')loadNOAA();
 if(typeof loadCEM==='function')loadCEM();
 loadChargeReseau().then(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}}).catch(()=>{});
+// loadHTADataOnly() sorti du Promise.all décalé de 1500ms ci-dessous (2026-09-04, brief AF
+// lot B, arbitrage Soleil, mesure en prod : la grille ELF v2 mettait 4-7s à être prête, pas
+// les 1,5s de l'hypothèse initiale, en partie parce qu'elle attendait son tour dans un lot de
+// 11 fetches concurrents). Démarrage immédiat, même pattern que loadNOAA/loadCEM/loadChargeReseau
+// ci-dessus (aucun n'attend le rendu complet de la carte). Fire-and-forget assumé (comme avant) :
+// le préchargement échoue silencieusement si Supabase est indisponible au boot, et
+// calcMagneticELF_v2 retombe sur v1 jusqu'à activation manuelle de la couche Réseau (cf.
+// commentaire de loadHTADataOnly()). Reste à remesurer en prod pour quantifier le gain réel.
+if(typeof loadHTADataOnly==='function')loadHTADataOnly();
 // buildHotRF() au boot (au lieu de buildHot()) — RF activé par défaut (ACTIVE.hotrf=true).
 // Pas d'équivalent loadChargeReseau() nécessaire : buildHotRF()/calcN_RF_calib() ne dépend
 // pas du facteur de charge RTE (spécifique au domaine ELF/magnétique de buildHot()).
@@ -10277,7 +10594,7 @@ map.on('zoomend',function(){ _syncBTZoom(false); });
 // forêt dense ci-dessus, cf. _syncForetOuverteZoom/_syncLandeMaquisZoom.
 map.on('zoomend',function(){ _syncForetOuverteZoom(false); });
 map.on('zoomend',function(){ _syncLandeMaquisZoom(false); });
-setTimeout(()=>Promise.all([loadAnt().then(function(){if(ACTIVE.ant)lAnt.addTo(map);}),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.cert)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k). ant:true au boot (2026-09-02) : lAnt.addTo(map) conditionné à ACTIVE.ant, même pattern que lCert ci-après.
+setTimeout(()=>Promise.all([loadAnt().then(function(){if(ACTIVE.ant)lAnt.addTo(map);}),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.cert)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k). ant:true au boot (2026-09-02) : lAnt.addTo(map) conditionné à ACTIVE.ant, même pattern que lCert ci-après. loadHTADataOnly() RETIRÉ de ce lot (2026-09-04, brief AF lot B) — démarre désormais immédiatement, cf. commentaire plus haut.
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET DUR/EBR/CLF (nom loadAQU conservé, cf. commentaire fonction) — correction externe réelle niveau 1
 setTimeout(loadDst,5500); // Dst Kyoto via NOAA — correction externe niveau 2 (Sprint astro 2026-05-25)
@@ -11880,6 +12197,15 @@ function capCleanup(){
    window.toggleLayersPanel (binaire ouvert/fermé, classe .open, cf. §3 du livrable). */
 (function(){
   var DESKTOP_MQ = window.matchMedia('(min-width:1024px)');
+  // LAYOUT_MQ (2026-09-04, brief AS) — distinct de DESKTOP_MQ ci-dessus (1024px, réservé à
+  // l'ouverture auto de la 1re catégorie) : reflète le VRAI point de bascule du panneau
+  // couches lui-même, colonne flottante desktop vs bottom sheet mobile (cf. le
+  // @media(max-width:768px) qui pilote .layers-accordion/#layers-toggle/.mobile-tabbar plus
+  // haut dans ce fichier). Sert à limiter la fermeture au clic extérieur au layout desktop —
+  // sur mobile, le bottom sheet est volontairement cliquable-à-travers (carte manipulable
+  // derrière, sans le fermer ; cf. commentaire "pas de scrim" à .map-wrap .layers-accordion
+  // dans le media query mobile), et le tabbar gère son propre état actif indépendamment.
+  var LAYOUT_MQ = window.matchMedia('(min-width:769px)');
 
   function openFirstAccordionDesktop(){
     if(!DESKTOP_MQ.matches) return;
@@ -11898,12 +12224,11 @@ function capCleanup(){
 
   // Ouvre/ferme le tiroir couches unifié (exposé globalement pour onclick HTML,
   // #layers-toggle — remplace #mob-toggle + #sidebar-toggle).
-  window.toggleLayersPanel = function(){
+  function setLayersPanelOpen(isOpen){
     var la = document.getElementById('layers-accordion');
     var btn = document.getElementById('layers-toggle');
     if(!la) return;
-    la.classList.toggle('open');
-    var isOpen = la.classList.contains('open');
+    la.classList.toggle('open', isOpen);
     if(btn){
       // Glyphe ☰/✕ (langue-agnostique) + aria-expanded (booléen) seulement : ne pas
       // réécrire aria-label en dur ici, ça écraserait la traduction posée par JT_TABLE
@@ -11919,7 +12244,32 @@ function capCleanup(){
     setTimeout(function(){
       try{ if(window.map && typeof window.map.invalidateSize==='function') window.map.invalidateSize(); }catch(e){}
     }, 300);
+  }
+  window.toggleLayersPanel = function(){
+    var la = document.getElementById('layers-accordion');
+    if(!la) return;
+    setLayersPanelOpen(!la.classList.contains('open'));
   };
+  // closeLayersPanel — extrait le 2026-09-04 (brief AS étape 4, option 3 + clic extérieur,
+  // Soleil "suis ton instinct") : un close explicite (jamais un toggle) pour les fermetures
+  // déclenchées hors du bouton lui-même — clic hors panneau, Échap. Panneau devenu flottant
+  // (cf. CSS .map-wrap .layers-accordion) plutôt que colonne pleine hauteur : la carte reste
+  // manipulable au nord, à l'ouest et au sud pendant qu'il est ouvert, mais fermer vite reste
+  // utile (cf. brief). Écouteurs juste en dessous, même patron que #hdr-menu (déjà existant
+  // dans ce fichier, cf. plus haut) — pas de mécanisme neuf inventé.
+  window.closeLayersPanel = function(){
+    var la = document.getElementById('layers-accordion');
+    if(!la || !la.classList.contains('open')) return;
+    setLayersPanelOpen(false);
+  };
+  document.addEventListener('click', function(e){
+    if(!LAYOUT_MQ.matches) return; // mobile : bottom sheet cliquable-à-travers, cf. commentaire LAYOUT_MQ
+    var la = document.getElementById('layers-accordion');
+    var btn = document.getElementById('layers-toggle');
+    if(!la || !la.classList.contains('open')) return;
+    if(la.contains(e.target) || (btn && btn.contains(e.target))) return;
+    window.closeLayersPanel();
+  });
 
   if(document.readyState==='complete' || document.readyState==='interactive'){
     setTimeout(init, 0);

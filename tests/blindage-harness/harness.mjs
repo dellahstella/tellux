@@ -93,13 +93,16 @@ const BOOT_CHECK_FN = function () {
   // against arbitrary GPS coordinates. We check the presence of:
   //   - the function calcAll_v2 (the orchestrator)
   //   - HTA_SEGMENTS_DATA populated (loaded from Supabase hta_lines)
-  //   - WMM_GRID populated (loaded from public/data/wmm_2025_grid_corse.json)
   //   - SEGMENT_GRID built (depends on HTA_SEGMENTS_DATA)
   // The Supabase fetch can take 5-15s on cold start.
+  // WMM_GRID retirée d'ici le 2026-09-04 (brief AR, suite) : n'a jamais été une dépendance de
+  // calcAll_v2 — seule updateIgrfWmmDiff() (panneau Expert, cross-check invisible) la lit.
+  // app.html ne la charge plus au boot (chargement paresseux, déclenché par activateExpertMode())
+  // ; ce harnais n'active jamais le mode Expertise, donc WMM_GRID resterait indéfiniment null si
+  // ce gate n'était pas retiré — timeout garanti sur un signal qui ne mesure rien de réel ici.
   try {
     if (typeof calcAll_v2 !== 'function') return false;
     if (!Array.isArray(HTA_SEGMENTS_DATA) || HTA_SEGMENTS_DATA.length === 0) return false;
-    if (!Array.isArray(WMM_GRID) || WMM_GRID.length === 0) return false;
     if (!SEGMENT_GRID || typeof SEGMENT_GRID !== 'object') return false;
     return true;
   } catch (_e) {
@@ -271,8 +274,12 @@ export async function createHarness(opts = {}) {
         curKp: typeof curKp !== 'undefined' ? curKp : null,
         // eslint-disable-next-line no-undef
         chargeFacteur: typeof chargeFacteur !== 'undefined' ? chargeFacteur : null,
+        // WMM_GRID vaut désormais `null` (pas `undefined`) tant que le mode Expertise n'a pas
+        // été activé (chargement paresseux, 2026-09-04, brief AR) — `typeof null` est 'object',
+        // donc l'ancien garde-fou `typeof WMM_GRID !== 'undefined'` laissait passer `null` et
+        // faisait planter `.length` (TypeError). Array.isArray() couvre correctement les deux cas.
         // eslint-disable-next-line no-undef
-        WMM_GRID_length: typeof WMM_GRID !== 'undefined' ? WMM_GRID.length : null,
+        WMM_GRID_length: Array.isArray(WMM_GRID) ? WMM_GRID.length : null,
         // eslint-disable-next-line no-undef
         HTA_SEGMENTS_DATA_length: typeof HTA_SEGMENTS_DATA !== 'undefined' ? HTA_SEGMENTS_DATA.length : null,
         // eslint-disable-next-line no-undef

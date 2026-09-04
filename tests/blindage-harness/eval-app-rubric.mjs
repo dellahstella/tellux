@@ -101,11 +101,18 @@ function startStaticServer(root, port) {
 
 // ─── Boot detection (signaux app.html du moteur calc*) ─────────────────────
 
+// WMM_GRID retirée de ce gate le 2026-09-04 (brief AR, suite) : app.html ne la charge plus au
+// boot (chargement paresseux, activateExpertMode()) — ce script n'active jamais le mode
+// Expertise, donc booted resterait false indéfiniment sinon (mesuré : score_pondere 5.8/10,
+// booted=false, 0/9 couches, avant ce retrait). La question séparée de savoir si WMM_grid
+// doit continuer à compter comme une des « 9 couches » de PROBE_LAYERS_COUNT plus bas — ce
+// n'est pas un vrai calque visuel, à la différence des 8 autres — reste ouverte (cf. rapport
+// _drafts/DIAGNOSTIC_WMM_CALCUL_SANS_SURFACE_BRIEF_AR_2026-09-04.md, non committé) ; ce
+// correctif-ci ne fait que réparer le boot, pas retoucher le barème.
 const BOOT_READY_FN = function () {
   try {
     if (typeof calcAll_v2 !== 'function') return false;
     if (!Array.isArray(HTA_SEGMENTS_DATA) || HTA_SEGMENTS_DATA.length === 0) return false;
-    if (!Array.isArray(WMM_GRID) || WMM_GRID.length === 0) return false;
     if (!SEGMENT_GRID || typeof SEGMENT_GRID !== 'object') return false;
     return true;
   } catch (_e) {
@@ -159,11 +166,25 @@ const PROBE_LAYERS_COUNT = function () {
 // `null` (interprétation : pas de signal négatif).
 const PROBE_INIT_COUNT_NULL = null; // Hook absent → null. Voir flag explicite ci-dessous.
 
-// Probe — Indice Tellux dual.
-// Le protocole §5.1 énonce le format `P{n} N{m}` ; la réalité app.html
-// présente `Perturbation X/5 · Activité naturelle Y/5` (cf. l.4956).
-// La sonde tolère les deux formats — c'est le SCORE DUAL qui compte,
-// pas la chaîne exacte.
+// Probe — Indice Tellux (score unique depuis ADR-064/brief T, 2026-09-03).
+// Corrigé 2026-09-04 (brief AT, arbitrage Soleil) : le protocole §5.1 énonce
+// encore le format historique `P{n} N{m}` (double score) — cette moitié a
+// été retirée du popup par ADR-064, « Activité naturelle » n'y est plus
+// affichée nulle part (cf. rapport _drafts/RAPPORT_BRIEF_AT_ACTIVNAT_DOUBLE_
+// COMPTAGE_2026-09-04.md). L'ancienne sonde cherchait ce texte mort ET
+// retombait, faute de le trouver, sur un sélecteur générique
+// (`.leaflet-popup-content`, qui matche dès qu'un popup existe, quel que
+// soit son contenu) — elle passait donc sans jamais vérifier qu'un score
+// s'affiche réellement. Vérifié en direct sur tellux.pages.dev/app : le DOM
+// réel est `<div style="font-weight:700...">🔴 5/5</div>` PUIS, dans un
+// <div> frère séparé, le libellé « Perturbation » — l'ancien regex
+// `Perturbation\s+\d\/5` ne pouvait de toute façon jamais matcher cet ordre.
+// La sonde vérifie maintenant directement le bloc `font-weight:700` du
+// popup (celui que rend phHeaderHTML, app.html) pour un chiffre suivi de
+// `/5` — le score qui existe réellement aujourd'hui. Nom de fonction et clé
+// `indice_dual`/`check:'indice_dual'` conservés tels quels (compatibilité
+// des consommateurs du JSON de sortie), même si « dual » ne décrit plus ce
+// qui est mesuré.
 //
 // L'indice n'est calculé qu'APRÈS un clic sur la carte (handler map.on
 // 'click' déclenche calcAll_v2 + rendu popup avec indice). On simule un
@@ -186,24 +207,19 @@ async function probeIndiceDual(page) {
     }
   } catch (_e) { /* on continue */ }
 
-  const candidates = [
-    'text=/Perturbation\\s+\\d\\s*\\/\\s*5/',
-    'text=/Activit[ée]\\s+naturelle\\s+\\d\\s*\\/\\s*5/',
-    'text=/P\\d\\s+N\\d/',
-    '.leaflet-popup-content',
-  ];
-  for (const sel of candidates) {
-    try {
-      const visible = await page.locator(sel).first().isVisible({ timeout: 800 });
-      if (visible) {
-        // Si on tape sur le contenu de popup, on confirme qu'il contient bien le dual
-        const txt = await page.locator(sel).first().textContent().catch(() => '');
-        const dualOk = /Perturbation.*\d.*5|P\d\s+N\d/i.test(txt || '');
-        return { matched: sel, dual_found: dualOk };
-      }
-    } catch (_e) { /* try next */ }
+  // Cible le bloc réel du score (phHeaderHTML, app.html) plutôt qu'un texte
+  // générique — pas de repli sur `.leaflet-popup-content` seul : sans chiffre
+  // `/5` dedans, ce n'est pas un score, même si un popup est bien ouvert.
+  try {
+    const scoreEl = page.locator('.leaflet-popup-content div[style*="font-weight:700"]').first();
+    const visible = await scoreEl.isVisible({ timeout: 800 }).catch(() => false);
+    if (!visible) return { matched: null };
+    const txt = await scoreEl.textContent().catch(() => '');
+    const scoreVisible = /\d\s*\/\s*5/.test(txt || '');
+    return { matched: scoreVisible ? 'perturbation_score' : null, score_text: txt || null };
+  } catch (_e) {
+    return { matched: null };
   }
-  return { matched: null };
 }
 
 // Probe — toggle de légende. Sélecteur confirmé : #legende-toggle (cf. app.html l.1151).
@@ -508,7 +524,7 @@ async function main() {
     if (!filtreCoter?.ok) fails.push({ check: 'filtre_cotier', detail: `filtre offshore : method=${filtreCoter?.method}, ok=${filtreCoter?.ok}` });
 
     indice = await probeIndiceDual(page);
-    if (!indice?.matched) fails.push({ check: 'indice_dual', detail: 'Indice Tellux dual (Perturbation X/5 · Activité naturelle Y/5) non visible.' });
+    if (!indice?.matched) fails.push({ check: 'indice_dual', detail: 'Indice Tellux (score Perturbation X/5) non visible dans le popup.' });
 
     drillDown = await probeDrillDown(page);
     if (!drillDown?.present) fails.push({ check: 'drill_down', detail: 'Mécanisme drill-down (popup/modale/panel) non détecté.' });
@@ -537,6 +553,7 @@ async function main() {
       couches_chargees: layers?.loadedCount ?? null,
       couches_detail: layers?.layers ?? null,
       indice_dual: indice?.matched ?? null,
+      indice_score_text: indice?.score_text ?? null,
       toggle_legend: toggleLegend?.clicked ?? null,
       drill_down: drillDown?.present ?? null,
       filtre_cotier: filtreCoter?.ok ?? null,
