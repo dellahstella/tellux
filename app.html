@@ -10302,6 +10302,15 @@ function toggleLayersSheetExpand(){
 if(typeof loadNOAA==='function')loadNOAA();
 if(typeof loadCEM==='function')loadCEM();
 loadChargeReseau().then(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}}).catch(()=>{});
+// loadHTADataOnly() sorti du Promise.all décalé de 1500ms ci-dessous (2026-09-04, brief AF
+// lot B, arbitrage Soleil, mesure en prod : la grille ELF v2 mettait 4-7s à être prête, pas
+// les 1,5s de l'hypothèse initiale, en partie parce qu'elle attendait son tour dans un lot de
+// 11 fetches concurrents). Démarrage immédiat, même pattern que loadNOAA/loadCEM/loadChargeReseau
+// ci-dessus (aucun n'attend le rendu complet de la carte). Fire-and-forget assumé (comme avant) :
+// le préchargement échoue silencieusement si Supabase est indisponible au boot, et
+// calcMagneticELF_v2 retombe sur v1 jusqu'à activation manuelle de la couche Réseau (cf.
+// commentaire de loadHTADataOnly()). Reste à remesurer en prod pour quantifier le gain réel.
+if(typeof loadHTADataOnly==='function')loadHTADataOnly();
 // buildHotRF() au boot (au lieu de buildHot()) — RF activé par défaut (ACTIVE.hotrf=true).
 // Pas d'équivalent loadChargeReseau() nécessaire : buildHotRF()/calcN_RF_calib() ne dépend
 // pas du facteur de charge RTE (spécifique au domaine ELF/magnétique de buildHot()).
@@ -10327,7 +10336,7 @@ map.on('zoomend',function(){ _syncBTZoom(false); });
 // forêt dense ci-dessus, cf. _syncForetOuverteZoom/_syncLandeMaquisZoom.
 map.on('zoomend',function(){ _syncForetOuverteZoom(false); });
 map.on('zoomend',function(){ _syncLandeMaquisZoom(false); });
-setTimeout(()=>Promise.all([loadAnt().then(function(){if(ACTIVE.ant)lAnt.addTo(map);}),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadHTADataOnly(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.cert)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k). ant:true au boot (2026-09-02) : lAnt.addTo(map) conditionné à ACTIVE.ant, même pattern que lCert ci-après.
+setTimeout(()=>Promise.all([loadAnt().then(function(){if(ACTIVE.ant)lAnt.addTo(map);}),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.cert)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k). ant:true au boot (2026-09-02) : lAnt.addTo(map) conditionné à ACTIVE.ant, même pattern que lCert ci-après. loadHTADataOnly() RETIRÉ de ce lot (2026-09-04, brief AF lot B) — démarre désormais immédiatement, cf. commentaire plus haut.
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET DUR/EBR/CLF (nom loadAQU conservé, cf. commentaire fonction) — correction externe réelle niveau 1
 setTimeout(loadDst,5500); // Dst Kyoto via NOAA — correction externe niveau 2 (Sprint astro 2026-05-25)
