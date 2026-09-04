@@ -7057,7 +7057,7 @@ function calcAll_v2(lat, lon, options) {
   // Domaine RF
   const rfResult     = calcRF(lat, lon, options.applyVegetation);
   // Domaine I
-  const altitudeFallback = options.altitude_m || null; // intégration DEM future
+  const altitudeFallback = options.altitude_m ?? null; // intégration DEM future — ?? plutôt que || (2026-09-04, brief AF lot C) : 0 est une altitude côtière réelle, pas une absence de donnée ; || la traitait comme absente et faisait retomber calcGammaAmbient sur son défaut de 200 m, ~9 % de sur-estimation silencieuse de la dose cosmique à chaque clic sur un point à altitude nulle (audit brief AD §3.D)
   const gammaResult  = calcGammaAmbient(lat, lon, altitudeFallback);
   const radonResult  = calcRadonPotential(lat, lon, {commune_info: options.commune_info || null});
   // Contexte
