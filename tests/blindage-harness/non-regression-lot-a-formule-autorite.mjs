@@ -1,14 +1,20 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // Tellux — Non-régression : équivalence des 3 formules d'écart mesure/modèle
 // Création : 2026-09-04 · brief AF lot A (arbitrage Soleil, audit AD §3.A)
+// Révisé  : 2026-09-04 · brief AO phase 2 (arbitrage Soleil) — geo retiré
 // ═══════════════════════════════════════════════════════════════════════════
 //
 // Contexte : l'audit AD §3.A avait trouvé trois formules divergentes pour
 // l'écart mesure/modèle du champ statique dans app.html — popup click handler,
-// saveContrib() et updateIGRFDisplay(). Arbitrage Soleil (2026-09-04) : les 3
-// doivent produire la même valeur (igrf+human+geo, la formule du popup).
-// PR #1229 a aligné les 3 chemins ; revue adversariale a noté qu'aucun test
-// committé ne verrouillait cette équivalence — ce script comble ce trou.
+// saveContrib() et updateIGRFDisplay(). Brief AF lot A (2026-09-04) les avait
+// d'abord alignées sur igrf+human+geo. Brief AO (même jour, phase 1 lecture
+// seule puis phase 2 sur arbitrage explicite) a établi que geo (calcGeoSusc()/
+// GEO_SUSC_GRID) n'a jamais eu de conversion dimensionnelle susceptibilité→
+// champ, et corrèle avec calcLCS1 (déjà dans igrf) comme deux estimations du
+// même signal plutôt qu'un terme complémentaire (r=0,285, accord de signe 91%
+// sur 770 points — cf. _drafts/RAPPORT_BRIEF_AO_NATURE_GEO_2026-09-04.md).
+// Formule d'autorité définitive, arbitrée : predicted = igrf + human. Les 3
+// chemins doivent produire cette même valeur.
 //
 // Ne compare PAS à une fixture figée (les valeurs dépendent de données live —
 // curDst/INTERMAGNET/Kp/RTE — donc non reproductibles bit-à-bit d'un jour à
@@ -43,17 +49,15 @@ async function main() {
         // eslint-disable-next-line no-undef
         const igrf = fetchIGRF(lat, lon);
         // eslint-disable-next-line no-undef
-        const { human, geo } = calcAll(lat, lon);
-        const popup_formula = igrf + human + geo;
-        const saveContrib_predicted = igrf + human + geo; // même expression que app.html:saveContrib()
+        const { human } = calcAll(lat, lon);
+        const popup_formula = igrf + human;
+        const saveContrib_predicted = igrf + human; // même expression que app.html:saveContrib()
 
         // eslint-disable-next-line no-undef
         const res = calcMagneticStatic(lat, lon);
         // eslint-disable-next-line no-undef
         const elf = calcMagneticELFAuto(lat, lon);
-        // eslint-disable-next-line no-undef
-        const subCtx = calcSubstrateContext(lat, lon);
-        const updateIGRF_nT = Math.round(res.B_total_nT + elf.B_total_nT + subCtx.susceptibility_nT);
+        const updateIGRF_nT = Math.round(res.B_total_nT + elf.B_total_nT);
 
         return { popup_formula, saveContrib_predicted, updateIGRF_nT };
       }, p);
@@ -74,7 +78,9 @@ async function main() {
         boxDisplay: document.getElementById('c-igrf-box')?.style.display || null,
       };
     });
-    const domOk = !!dom.txt && dom.txt.includes('perturbation ELF') && dom.txt.includes('susceptibilité substrat') && dom.boxDisplay === 'block';
+    // susceptibilité substrat NE DOIT PLUS apparaître (brief AO) — assertion négative
+    // explicite, pas seulement l'absence d'assertion positive, pour verrouiller le retrait.
+    const domOk = !!dom.txt && dom.txt.includes('perturbation ELF') && !dom.txt.includes('susceptibilité substrat') && dom.boxDisplay === 'block';
     if (!domOk) nFail++;
     console.log(`[${domOk ? 'PASS' : 'DIFF'}] DOM #c-igrf-text : "${dom.txt}"`);
 
@@ -89,7 +95,7 @@ async function main() {
 
   console.log('');
   console.log('────────────────────────────────────────────────────────────────────');
-  console.log(nFail === 0 ? `Résultat : PASS — ${POINTS.length} points + DOM, équivalence popup/saveContrib/updateIGRFDisplay confirmée.` : `Résultat : ${nFail} DIFF — équivalence rompue, à diagnostiquer avant de faire confiance à la formule d'autorité.`);
+  console.log(nFail === 0 ? `Résultat : PASS — ${POINTS.length} points + DOM, équivalence popup/saveContrib/updateIGRFDisplay confirmée (igrf+human, geo exclu).` : `Résultat : ${nFail} DIFF — équivalence rompue, à diagnostiquer avant de faire confiance à la formule d'autorité.`);
   console.log('────────────────────────────────────────────────────────────────────');
 
   if (nFail > 0) process.exit(1);

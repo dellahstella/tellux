@@ -7835,7 +7835,17 @@ map.on('click',async e=>{
   // le Δ terrain affiché aux contributeurs "Mode Prospecteur" ne doit plus être partiellement
   // gonflé par un proxy hydrique non calibré (confidence LOW, calcWater() reste calculé et
   // stocké — cf. facteur_eau_nt — mais n'influence plus aucune valeur affichée/comparée).
-  const predicted=Math.round(igrf+human+geo);
+  // geo RETIRÉ du predicted (2026-09-04, brief AO phase 2, arbitrage Soleil) : geo/susc_nT
+  // (calcGeoSusc(), grille GEO_SUSC_GRID) n'a jamais eu de conversion dimensionnelle vers
+  // un champ — la grille retourne directement des valeurs nommées "nT" sans formule
+  // susceptibilité→champ. Comparé quantitativement à calcLCS1 (déjà dans igrf) sur 770
+  // points : r=0,285, accord de signe 91%, amplitude relative 44% — pas le profil d'un
+  // résidu local orthogonal, celui de deux estimations du même signal. TELLUX_MODELE_CALCUL.md
+  // v1.2 §2.1/§2.3 rejette explicitement ce type d'addition scalaire hétérogène ; geo reste du
+  // contexte (susc_nT, encore affiché séparément plus bas), pas un terme du champ prédit.
+  // predicted revient à sa formule d'avant le brief AF lot A (igrf+human), désormais la
+  // formule d'autorité définitive — cf. _drafts/RAPPORT_BRIEF_AO_NATURE_GEO_2026-09-04.md.
+  const predicted=Math.round(igrf+human);
   let real=null,bd=999;
   contribsDB.forEach(c=>{const d=dist(lat,lng,c.lat,c.lon);if(d<0.5&&d<bd&&c.valeur&&c.unite==='nT'){bd=d;real=c.valeur;}});
   const delta=real!==null?Math.round(real-predicted):null;
@@ -8752,21 +8762,22 @@ function updateIGRFDisplay(lat, lng){
   var warn=document.getElementById('c-igrf-warn');
   if(!box||!txt||!warn) return;
   var res=calcMagneticStatic(lat, lng);
-  // Aligné 2026-09-04 (brief AF lot A, arbitrage Soleil, audit AD §3.A) sur la formule
-  // d'autorité du popup (igrf+human+geo) : cette fonction ne comparait qu'au champ statique
-  // seul (IGRF+crustal+Sq+correction externe), un modèle partiel divergent des deux autres
-  // formules servies. Calcul volontairement restreint aux 3 composantes de la formule (pas
-  // calcAll_v2 complet) pour ne pas recalculer RF/gamma/radon à chaque frappe du champ valeur
-  // — calcMagneticELFAuto() et calcSubstrateContext() sont les mêmes fonctions que celles
-  // lues par calcAll_v2, donc même valeur numérique que la formule popup pour un point donné.
+  // Aligné 2026-09-04 (brief AO phase 2, arbitrage Soleil) sur la formule d'autorité
+  // définitive (igrf+human) : cette fonction avait été alignée le même jour sur
+  // igrf+human+geo (brief AF lot A) puis geo en a été retiré partout (brief AO — pas de
+  // conversion dimensionnelle susceptibilité→champ dans calcGeoSusc(), corrèle avec
+  // calcLCS1/igrf comme deux estimations du même signal plutôt qu'un terme complémentaire,
+  // cf. _drafts/RAPPORT_BRIEF_AO_NATURE_GEO_2026-09-04.md). Calcul restreint aux 2
+  // composantes de la formule (pas calcAll_v2 complet) pour ne pas recalculer RF/gamma/radon
+  // à chaque frappe du champ valeur — calcMagneticELFAuto() est la même fonction que celle
+  // lue par calcAll_v2, donc même valeur numérique que la formule popup pour un point donné.
   var elfRes=calcMagneticELFAuto(lat,lng);
-  var subCtx=calcSubstrateContext(lat,lng);
-  var igrf_nT=Math.round(res.B_total_nT+elfRes.B_total_nT+subCtx.susceptibility_nT);
+  var igrf_nT=Math.round(res.B_total_nT+elfRes.B_total_nT);
   var igrf_fmt=igrf_nT.toLocaleString('fr-FR');
   var valRaw=parseFloat(document.getElementById('c-val')?.value||'');
   var unite=(document.getElementById('c-unit')?.value)||'nT';
   var instrType=(document.getElementById('c-type')?.value)||'';
-  var msg='Valeur composite Tellux attendue ici (IGRF-14 + anomalie crustale + correction externe + perturbation ELF + susceptibilité substrat) : '+igrf_fmt+' nT.';
+  var msg='Valeur composite Tellux attendue ici (IGRF-14 + anomalie crustale + correction externe + perturbation ELF) : '+igrf_fmt+' nT.';
   warn.style.display='none';
   if(!isNaN(valRaw) && valRaw>0){
     var valNT=valRaw;
@@ -8970,18 +8981,17 @@ async function saveContrib(){
   }
   const btn=document.getElementById('btn-save');btn.textContent='Sauvegarde…';btn.disabled=true;
   const igrf=fetchIGRF(ll.lat,ll.lng);
-  const {human,water,geo}=calcAll(ll.lat,ll.lng);
+  const {human,water}=calcAll(ll.lat,ll.lng);
   const valeur=parseFloat(document.getElementById('c-val').value)||null;
   // water*0.3 retiré du predicted (cf. commentaire jumeau dans le handler de clic carte) —
   // même arbitrage, même raison (Δ non calibré par un proxy hydrique low-confidence).
-  // geo AJOUTÉ 2026-09-04 (brief AF lot A, arbitrage Soleil, audit AD §3.A) : predicted
-  // divergeait du popup (igrf+human+geo) en oubliant systématiquement la composante géo —
-  // geo était déjà déstructuré ci-dessus mais jamais utilisé. Formule d'autorité retenue :
-  // celle du popup, motif = l'écart mesure/modèle doit comparer à ce que le modèle prédit
-  // réellement au point cliqué, composante géologique locale comprise. Pas de recalcul des
-  // lignes déjà en base (5 lignes delta_nt non nul, 13/04→22/08, toutes sans geo) — cf.
-  // DETTES_TECHNIQUES.md.
-  const predicted=igrf+human+geo;
+  // geo (brièvement ajouté 2026-09-04, brief AF lot A) RETIRÉ le même jour (brief AO phase 2,
+  // arbitrage Soleil) : calcGeoSusc()/GEO_SUSC_GRID n'a jamais eu de conversion dimensionnelle
+  // vers un champ, et corrèle avec calcLCS1 (déjà dans igrf) comme deux estimations du même
+  // signal (r=0,285, accord de signe 91% sur 770 points, cf. rapport brief AO) — pas un terme
+  // orthogonal complémentaire. predicted = igrf+human, formule d'autorité désormais définitive.
+  // `geo` n'est plus destructuré ici (plus aucun usage dans cette fonction).
+  const predicted=igrf+human;
   // Collecter les matériaux et appareils cochés
   const mats=[...document.querySelectorAll('#c-mats input:checked')].map(i=>i.value);
   const appareils=[...document.querySelectorAll('#c-appareils input:checked')].map(i=>i.value);
