@@ -3684,10 +3684,32 @@ function _certClusterIcon(cluster) {
   const nExt = count - nResid;
   const dominant = nResid > nExt ? 'residentiel' : 'exterieur_public';
   const bg = dominant === 'residentiel' ? '#1F3A5F' : '#C28533';
+  // Texte du compte (brief AH phase 2, revue PR #1223) : #F5F0E7 sur Ocre mesurait 2,76:1,
+  // sous AA (4,5:1) — préexistant depuis brief D, jamais mesuré jusqu'à cette revue (22e cas
+  // du même défaut : un état jamais réamendé). Corrigé LOCALEMENT à cette icône, sans toucher
+  // --tx-ocre (token DA v2 partagé par des dizaines d'usages) : réutilise --tx-ardoise
+  // (#1F2329), déjà la couleur de texte principale du site, contre Ocre = 5,03:1. Tyrrhénien
+  // (résidentiel) reste #F5F0E7 — 10,12:1, jamais en cause.
+  const fg = dominant === 'residentiel' ? '#F5F0E7' : '#1F2329';
   const size = count < 10 ? 30 : count < 50 ? 36 : 42;
+  const fontSize = count < 10 ? 13 : count < 100 ? 12 : 11;
   const tooltip = nResid + ' résidentiel (centroïde communal) · ' + nExt + ' extérieur public (position exacte)';
+  // Forme = dominante (brief AH phase 2) : cercle résidentiel / losange extérieur public, en
+  // miroir de la convention déjà appliquée aux marqueurs individuels (shapeStyle, ~L10852+64
+  // décalage phase 2) — jusqu'ici perdue au clustering (bulle toujours ronde, teinte seule,
+  // constat Soleil : "trois bleus voisins ne se distinguent pas"). Losange via clip-path, PAS
+  // transform:rotate comme au marqueur individuel : le noeud racine (icon.firstElementChild)
+  // est celui que le mécanisme anti-collision (TCA_apply, cf. bloc après lTDFCluster) déplace
+  // via son propre style.transform — y poser aussi un rotate() les ferait s'écraser l'un
+  // l'autre. La forme vit donc sur un enfant dédié (position:absolute, inset:0), le texte sur
+  // un second enfant non tourné empilé par-dessus ; la racine (position:relative, SANS
+  // transform) reste le seul noeud que TCA_apply touche, inchangée par cette forme.
+  const shapeCss = dominant === 'residentiel' ? 'border-radius:50%;' : 'clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);';
   return L.divIcon({
-    html: '<div title="' + tooltip + '" style="background:' + bg + ';color:#F5F0E7;border:3px solid white;border-radius:50%;width:' + size + 'px;height:' + size + 'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:' + (count < 10 ? 13 : count < 100 ? 12 : 11) + 'px;box-shadow:0 2px 8px rgba(0,0,0,0.35)">' + count + '</div>',
+    html: '<div title="' + tooltip + '" style="position:relative;width:' + size + 'px;height:' + size + 'px">' +
+      '<div style="position:absolute;inset:0;background:' + bg + ';border:3px solid white;' + shapeCss + 'box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>' +
+      '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:' + fg + ';font-weight:600;font-size:' + fontSize + 'px">' + count + '</div>' +
+      '</div>',
     className: 'tellux-cluster-icon-cert',
     iconSize: [size, size]
   });
@@ -8199,12 +8221,224 @@ const lAntCluster=L.markerClusterGroup({
   },
   maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true
 });
+// lTDFCluster (brief AH, 2026-09-04) — cause du défaut « chiffre illisible au dézoom max » :
+// les émetteurs TDF (icône croix) étaient ajoutés directement à lAnt (jamais clusterisés,
+// cf. commentaire original ci-dessous, "le signal croix doit rester visible") pendant que
+// lAntCluster, lui, fusionne les ~566 antennes ANFR en une seule bulle au même dézoom. Les
+// croix individuelles s'écrasaient alors sur/à côté de cette bulle — CE N'ÉTAIT PAS un
+// problème de dimensionnement (un compte à 3 chiffres seul, testé isolément, tient
+// proprement dans le plus grand palier) : deux couches occupaient les mêmes pixels.
+// Fix : les TDF se clusterisent maintenant À PART (jamais fondus avec le comptage ANFR —
+// l'intention d'origine, « garder le signal distinct », est préservée, pas retirée).
+// Teinte : GC.infra (#6b7280) — déjà la couleur des antennes ANFR de génération "infra"
+// (FH·TV·FM·PMR dans la légende, le même registre thématique que les émetteurs TDF),
+// réutilisée plutôt qu'un nouveau ton (palette DA v2 non élargie, cf. --warn-tx). Distincte
+// en clarté de GC.default (lAntCluster) et des teintes lCert (Tyrrhénien/Ocre). Badge croix
+// en coin (pas au centre, pour ne pas recréer le chevauchement qu'on corrige) : le signal
+// "ce sont des émetteurs, pas des antennes" reste lisible même sur la bulle groupée. Contraste
+// blanc sur #6b7280 : 4,8:1 (WCAG AA texte, ratio > 4,5 requis). className distinct
+// ('tellux-cluster-icon-tdf', même pattern que lCert/tellux-cluster-icon-cert) : n'hérite pas
+// du garde anti-collision _armContribClick (L~8514, sélecteur '.tellux-cluster-icon' seul) —
+// lCert n'en hérite déjà pas non plus depuis brief D, gap pré-existant, hors périmètre ici
+// (rendu seul), signalé sans corriger.
+const lTDFCluster=L.markerClusterGroup({
+  iconCreateFunction:function(cluster){
+    var count=cluster.getChildCount();
+    var size=count<10?26:count<50?32:38;
+    return L.divIcon({html:'<div style="position:relative;width:'+size+'px;height:'+size+'px">'+
+      '<div style="width:100%;height:100%;background:'+GC.infra+';color:white;border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?11:count<100?10:9)+'px;box-shadow:0 1px 4px rgba(0,0,0,.35)">'+count+'</div>'+
+      '<div style="position:absolute;top:-3px;right:-3px;width:11px;height:11px;background:white;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.3)">'+
+        '<div style="position:absolute;left:4px;top:1px;width:2px;height:9px;background:'+GC.infra+'"></div>'+
+        '<div style="position:absolute;top:4px;left:1px;width:9px;height:2px;background:'+GC.infra+'"></div>'+
+      '</div></div>',className:'tellux-cluster-icon-tdf',iconSize:[size,size]});
+  },
+  maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true
+});
+
+// ─── Anti-collision visuelle des bulles de cluster (brief AH phase 2, 2026-09-04) ──────
+// Constat phase 1 : au dézoom maximal, lAntCluster et lTDFCluster projettent leur centroïde
+// sur EXACTEMENT le même pixel (translate3d identique, prouvé en direct) — la bulle ajoutée
+// en second à la carte masquait entièrement l'autre. Pas un cas particulier de A : le même
+// mécanisme protège aussi lCert vs lAntCluster/lTDFCluster dès que la couche "cert" est
+// activée (défaut originellement nommé "B" par Soleil — même cause, un seul chantier).
+//
+// Principe : ne JAMAIS toucher ce que Leaflet/markercluster gère lui-même (translate3d posé
+// sur .leaflet-marker-icon, cluster._latlng, spiderfyOnMaxZoom, zoomToBoundsOnClick — tous
+// lisent/écrivent les coordonnées RÉELLES, jamais notre décalage visuel). On lit uniquement
+// la position déjà posée par Leaflet (getBoundingClientRect), et on écrit un décalage sur un
+// second noeud DOM indépendant : icon.firstElementChild, le contenu HTML retourné par chaque
+// iconCreateFunction (racine unique sans transform inline dans les 4 groupes actuels, vérifié
+// ligne par ligne — aucune des 4 fonctions ci-dessus/ci-dessous n'est modifiée pour ça).
+//
+// Détection : composantes connexes (union-find) sur les bulles racine actuellement rendues,
+// sélectionnées par la réunion des className enregistrés (générique — un 5e groupe s'ajoute
+// par un seul appel TCA_registerGroup(...), sans toucher à l'algorithme). Résolution :
+// disposition radiale par composante, décalage par bulle borné à min(24px, rayon PROPRE de
+// la bulle) — cette borne n'est pas un réglage empirique : un centre qui ne se déplace jamais
+// de plus que son propre rayon reste, dans le pire cas, sur le BORD de son nouveau cercle,
+// jamais à l'extérieur — le point réel qu'elle représente ne peut donc jamais devenir trompeur
+// par construction. Un clamp de bord de viewport évite qu'un décalage pousse une bulle dans la
+// zone rognée par .leaflet-container{overflow:hidden} (cas mobile, bulle proche du bord).
+//
+// Recalcul sur zoomend/moveend (position des bulles change) + layeradd/layerremove AU NIVEAU
+// DE LA CARTE, pas du groupe : group.on('layeradd',...) est silencieusement court-circuité par
+// l'option interne skipLayerAddEvent de markercluster quand un groupe déjà peuplé est
+// réactivé (ex. bouton "Mesures certifiées" pendant que la Corse dézoomée affiche déjà "566"
+// antennes) — sans ce correctif, aucun recalcul n'aurait lieu sur le chemin utilisateur le
+// plus banal, violation silencieuse de la règle absolue du brief (ne jamais masquer un
+// cluster visible). animationend/spiderfied/unspiderfied par groupe couvrent le cycle de vie
+// propre à markercluster (re-clustering en cours de zoom). Débounce 120ms (fenêtre glissante,
+// pas un rAF mono-coup) : les groupes sont indépendants et n'émettent pas leur animationend au
+// même instant pendant une même transition.
+//
+// Limite assumée, signalée plutôt que masquée : si la borne (24px max) ne suffit pas à séparer
+// visuellement une collision (composante à 8+ bulles au même pixel — non atteint aujourd'hui,
+// 4 groupes), TCA_checkOcclusion le détecte et le publie dans window.__telluxClusterCollisionDeficit
+// (même patron que window.__telluxLayers, cf. loadAnt ci-dessous) plutôt que de dépasser la borne.
+const TCA_REGISTRY=[];        // [{group, className}]
+const TCA_MARGIN_PX=4;        // espace résiduel visé entre deux bulles séparées
+const TCA_ABS_CEILING_PX=24;  // filet de sécurité — n'est actif avec aucune icône actuelle (rayon max 21px)
+const TCA_DEBOUNCE_MS=120;
+const TCA_EDGE_PAD_PX=2;
+
+let _tcaTimer=null;
+function TCA_schedule(){ clearTimeout(_tcaTimer); _tcaTimer=setTimeout(TCA_recompute, TCA_DEBOUNCE_MS); }
+
+function TCA_registerGroup(group, className){
+  TCA_REGISTRY.push({group, className});
+  group.on('animationend spiderfied unspiderfied', TCA_schedule);
+}
+
+const _tcaWarnedIcons=new WeakSet();
+function TCA_warnBadContract(icon){
+  if(_tcaWarnedIcons.has(icon)) return;
+  _tcaWarnedIcons.add(icon);
+  console.warn('[tellux-cluster-anticollision] iconCreateFunction à racine multiple — icône ignorée', icon.className);
+}
+
+function TCA_collect(){
+  const pane=map.getPane('markerPane');
+  if(!pane || !TCA_REGISTRY.length) return [];
+  const sel=Array.from(new Set(TCA_REGISTRY.map(r=>r.className))).map(c=>'.'+c).join(',');
+  const items=[];
+  pane.querySelectorAll(sel).forEach(icon=>{
+    const n=icon.children.length;
+    if(n===0) return;                              // pas encore peint / en transition — silencieux
+    if(n>1){ TCA_warnBadContract(icon); return; }   // contrat racine-unique violé — dégrade cette icône seule
+    const content=icon.firstElementChild;
+    const rect=icon.getBoundingClientRect();        // lecture SEULE — jamais réécrit par ce module
+    if(rect.width<1) return;
+    items.push({icon, content, cx:rect.left+rect.width/2, cy:rect.top+rect.height/2,
+      r:Math.max(rect.width, rect.height)/2, ox:0, oy:0});
+  });
+  return items;
+}
+
+function TCA_findComponents(items){
+  const parent=items.map((_,i)=>i);
+  const find=i=>{ while(parent[i]!==i){ parent[i]=parent[parent[i]]; i=parent[i]; } return i; };
+  const union=(a,b)=>{ const ra=find(a), rb=find(b); if(ra!==rb) parent[ra]=rb; };
+  for(let i=0;i<items.length;i++) for(let j=i+1;j<items.length;j++){
+    const dx=items[j].cx-items[i].cx, dy=items[j].cy-items[i].cy;
+    if(Math.hypot(dx,dy) < items[i].r+items[j].r+TCA_MARGIN_PX) union(i,j);
+  }
+  const comps=new Map();
+  items.forEach((it,i)=>{
+    const r=find(i);
+    if(!comps.has(r)) comps.set(r,[]);
+    comps.get(r).push(it);
+  });
+  return Array.from(comps.values()).filter(c=>c.length>1);
+}
+
+function TCA_resolveComponent(members){
+  const n=members.length;
+  // Tri par position naturelle (cx,cy) — jamais par ordre DOM ni ordre d'enregistrement de
+  // groupe : en cas de coïncidence pixel exacte, ne change QUE qui reçoit l'angle 0 vs 180,
+  // jamais si la séparation réussit.
+  const sorted=members.slice().sort((a,b)=>(a.cx-b.cx)||(a.cy-b.cy));
+  const maxR=Math.max.apply(null, members.map(m=>m.r));
+  const requiredR=(2*maxR+TCA_MARGIN_PX)/(2*Math.sin(Math.PI/n));
+  sorted.forEach((m,i)=>{
+    const angle=-Math.PI/2 + i*(2*Math.PI/n);
+    const bound=Math.min(TCA_ABS_CEILING_PX, m.r);   // jamais plus que le rayon PROPRE de la bulle
+    const applied=Math.min(requiredR, bound);
+    m.ox=Math.cos(angle)*applied; m.oy=Math.sin(angle)*applied;
+  });
+}
+
+function TCA_clampToViewport(members){
+  const c=map.getContainer().getBoundingClientRect();
+  const minX=c.left+TCA_EDGE_PAD_PX, maxX=c.right-TCA_EDGE_PAD_PX;
+  const minY=c.top+TCA_EDGE_PAD_PX, maxY=c.bottom-TCA_EDGE_PAD_PX;
+  members.forEach(m=>{
+    if(!m.ox && !m.oy) return;
+    if(maxX-m.r<=minX+m.r || maxY-m.r<=minY+m.r) return;  // conteneur trop petit — cas défensif
+    const nx=Math.min(Math.max(m.cx+m.ox, minX+m.r), maxX-m.r);
+    const ny=Math.min(Math.max(m.cy+m.oy, minY+m.r), maxY-m.r);
+    m.ox=nx-m.cx; m.oy=ny-m.cy;
+  });
+}
+
+const _tcaSignaled=new Set();
+function TCA_checkOcclusion(members){
+  for(let i=0;i<members.length;i++) for(let j=i+1;j<members.length;j++){
+    const a=members[i], b=members[j];
+    const dist=Math.hypot((b.cx+b.ox)-(a.cx+a.ox), (b.cy+b.oy)-(a.cy+a.oy));
+    if(dist + Math.min(a.r,b.r)*0.5 <= Math.max(a.r,b.r)){   // encore substantiellement avalé après décalage
+      const key=[a.icon.className,b.icon.className].sort().join('+')+'@z'+map.getZoom();
+      if(_tcaSignaled.has(key)) continue;
+      _tcaSignaled.add(key);
+      console.warn('[tellux-cluster-anticollision] borne insuffisante au zoom '+map.getZoom(), a.icon.className, b.icon.className);
+      window.__telluxClusterCollisionDeficit=window.__telluxClusterCollisionDeficit||[];
+      window.__telluxClusterCollisionDeficit.push({a:a.icon.className,b:b.icon.className,zoom:map.getZoom(),dist,ts:Date.now()});
+      if(window.__telluxClusterCollisionDeficit.length>20) window.__telluxClusterCollisionDeficit.shift();
+    }
+  }
+}
+
+const _tcaTouched=new Set();
+function TCA_apply(items){
+  const rm=tlxReduceMotion();
+  const next=new Set();
+  items.forEach(m=>{
+    if(Math.abs(m.ox)<0.5 && Math.abs(m.oy)<0.5) return;
+    next.add(m.content);
+    m.content.style.transition=rm?'none':'transform 150ms ease-out';
+    m.content.style.transform='translate('+m.ox.toFixed(1)+'px,'+m.oy.toFixed(1)+'px)';
+  });
+  _tcaTouched.forEach(el=>{ if(!next.has(el)) el.style.transform=''; });
+  _tcaTouched.clear(); next.forEach(el=>_tcaTouched.add(el));
+}
+
+function TCA_recompute(){
+  const items=TCA_collect();
+  if(items.length<2){
+    if(_tcaTouched.size){ _tcaTouched.forEach(el=>el.style.transform=''); _tcaTouched.clear(); }
+    return;
+  }
+  TCA_findComponents(items).forEach(members=>{
+    TCA_resolveComponent(members);
+    TCA_clampToViewport(members);
+    TCA_checkOcclusion(members);
+  });
+  TCA_apply(items);
+}
+
+map.on('zoomend moveend layeradd layerremove', TCA_schedule);
+// Un futur 5e groupe clusterisé s'ajoute par une seule ligne ici — aucune autre modification.
+TCA_registerGroup(lCon, 'tellux-cluster-icon');
+TCA_registerGroup(lAntCluster, 'tellux-cluster-icon');
+TCA_registerGroup(lCert, 'tellux-cluster-icon-cert');
+TCA_registerGroup(lTDFCluster, 'tellux-cluster-icon-tdf');
 
 async function loadAnt(){try{
   // lAntCluster ajouté ici (pas à la déclaration de lAnt) : loadAnt() n'est appelée qu'une
   // fois (gardée par lAnt.getLayers().length===0 côté tog()) — l'ajouter à la déclaration de
   // lAnt aurait rendu lAnt non-vide dès le boot, cassant cette garde côté premier toggle.
   lAnt.addLayer(lAntCluster);
+  // lTDFCluster : même raison (brief AH) — ajouté ici, pas à la déclaration de lAnt.
+  lAnt.addLayer(lTDFCluster);
   // Chargement paginé — fetch direct sans AbortSignal (évite l'erreur postMessage clonage)
   let rows=[], page=0, pageSize=500;
   while(true){
@@ -8284,9 +8518,11 @@ async function loadAnt(){try{
   } catch (_e) { /* hook best-effort, ne doit pas casser le boot */ }
   // Emetteurs broadcast TDF — dataset-driven (public/data/tdf_emitters_corse.json)
   // Icone croix, info-bulle listant PAR + services + notes.
-  // Volontairement PAS clusterisés (.addTo(lAnt) direct, pas lAntCluster) : dataset sparse
+  // Clusterisés À PART depuis brief AH (2026-09-04, cf. lTDFCluster ci-dessus) : dataset sparse
   // (quelques dizaines de sites), l'icône croix distincte doit rester visible individuellement
-  // — les fondre dans les bulles de comptage ANFR perdrait ce signal sans gain de lisibilité.
+  // au zoom individuel — l'intention d'origine (ne PAS fondre ce signal dans le comptage ANFR)
+  // est préservée par un cluster dédié, pas par l'absence de clustering (qui superposait les
+  // croix sur la bulle ANFR au dézoom max, défaut brief AH).
   await loadTDFEmitters();
   TDF_EMITTERS.forEach(em => {
     const shape='<div style="position:relative;width:12px;height:12px"><div style="position:absolute;left:5px;top:0;width:2px;height:12px;background:#5f5e5a"></div><div style="position:absolute;top:5px;left:0;width:12px;height:2px;background:#5f5e5a"></div></div>';
@@ -8307,7 +8543,7 @@ async function loadAnt(){try{
       '<span style="font-size:12px;color:var(--ardoise-clair)">' + desc + '</span>' +
       (em.notes ? '<br><span style="font-size:11px;color:var(--tx3);font-style:italic">' + em.notes + '</span>' : ''),
       null, 6000
-    )).addTo(lAnt);
+    )).addTo(lTDFCluster);
   });
 }catch(e){console.error('❌ loadAnt erreur:',e.message);}}
 
