@@ -32,11 +32,15 @@ const BOOT_TIMEOUT = Number(process.env.SMOKE_BOOT_TIMEOUT_MS) || 60_000;
 const CONSOLE_NOISE_RE = /favicon|ERR_BLOCKED_BY_CLIENT|Failed to load resource: the server responded with a status of 404/i;
 const DATA_HOSTS = ['supabase.co', 'anfr', 'geo.api.gouv.fr', 'data.geopf.fr', 'geoservices.brgm.fr'];
 
+// WMM_GRID retirée de ce gate le 2026-09-04 (brief AR, suite) : jamais une dépendance réelle de
+// calcAll_v2 (seul updateIgrfWmmDiff(), panneau Expert, la lit) ; app.html ne la charge plus au
+// boot depuis le même correctif (chargement paresseux, activateExpertMode()) — ce script ne
+// bascule jamais ce mode, donc le condition ci-dessous timeoutait pour rien avant ce retrait
+// (WARNING seul, cf. checkRoute() plus bas — jamais un échec bloquant, vérifié avant retrait).
 const BOOT_READY_FN = function () {
   try {
     if (typeof calcAll_v2 !== 'function') return false;
     if (!Array.isArray(HTA_SEGMENTS_DATA) || HTA_SEGMENTS_DATA.length === 0) return false;
-    if (!Array.isArray(WMM_GRID) || WMM_GRID.length === 0) return false;
     if (!SEGMENT_GRID || typeof SEGMENT_GRID !== 'object') return false;
     return true;
   } catch (_e) { return false; }
