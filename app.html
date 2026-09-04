@@ -1189,7 +1189,13 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
      couches et en-têtes de catégorie
      agrandis pour cible tactile ≥44px (police/padding desktop trop petits — 10px/3-7px —
      conçus pour une sidebar 420px, pas un panneau mobile). */
-  .lbtn{font-size:13px;padding:11px 14px;border-radius:10px;min-height:44px;}
+  /* flex-wrap ajouté (brief BA, 2026-09-04) : le badge de domaine posé en plus du badge de
+     statut existant peut dépasser la largeur du bouton sur mobile (measuré en direct :
+     #b-hot-rf, badge "RF" à 382px de bord gauche pour un viewport 375px, débordement réel,
+     pas hypothétique). Sans wrap, le second badge sortait du bouton ET du viewport. Desktop
+     non touché (row assez large, aucun débordement mesuré à 1440px) — flex-wrap vit dans CE
+     bloc mobile, pas sur la règle .lbtn de base. */
+  .lbtn{font-size:13px;padding:11px 14px;border-radius:10px;min-height:44px;flex-wrap:wrap;row-gap:4px;}
   .accordion-cat-content{gap:8px;}
   .accordion-cat-header{padding:12px 14px;font-size:13px;}
   .domain-chip{padding:7px 13px;font-size:12px;}
@@ -1271,6 +1277,28 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .layer-badge--context{background:var(--pierre-ombre);color:var(--tx3);}
 .layer-badge--hors{background:rgba(142,47,31,.12);color:#8E2F1F;}
 .layer-badge--link{background:rgba(2,132,199,.12);color:#0284c7;}
+/* Badge de domaine physique (brief BA, 2026-09-04) — AXE ORTHOGONAL au badge de statut
+   ci-dessus : celui-ci dit UNIQUEMENT de quel(s) domaine(s) physique(s) relève la couche
+   (statique / ELF / RF), jamais son statut de participation au calcul — cette nuance reste
+   dans le title=, déjà bien écrit, pas dupliquée ici. Forme retenue après arbitrage Soleil
+   (cadrage brief AU §8, instruction brief BA) : réutilise data-domains plutôt que
+   d'étendre l'axe de statut par des libellés qualifiés ("Module le calcul RF"), qui se
+   heurtait structurellement au cas b-hot (2 domaines à statut de participation DIFFÉRENT
+   chacun — l'inverse serait obligé de dire les deux dans un seul badge).
+   Forme délibérément DISTINCTE du badge de statut (pas seulement une autre couleur) :
+   contour + coins carrés (tag) contre pastille pleine (pill) ci-dessus — pour que la
+   distinction entre les deux axes reste visible même quand le badge de domaine apparaît
+   SEUL (cas b-hot, seul bouton sans badge de statut). Couleur : gris ardoise neutre
+   (rgba de --tx-ardoise), volontairement hors de toute teinte déjà prise — pas de rouge,
+   pas de vert (collision Maquis --tx-maquis/--maquis-pale, déjà pris par le badge « calc »),
+   pas de bleu (collision avec les teintes de cluster ANFR/TDF, GC 2G #1a4b8c etc., et le
+   badge « link » inutilisé #0284c7), pas de violet (cluster contributions #5c3a9b), pas
+   d'ocre (déjà --warn, sémantique "attention" ailleurs dans ce fichier). Contraste
+   vérifié À LA MAIN (composition alpha sur le fond réel du bouton, --bg #F5F0E7,
+   opaque dès .lbtn) : texte #3D424A sur fond composité ≈ rgb(236,230,222) → 8,16:1,
+   large marge au-dessus du seuil WCAG 4,5:1 texte normal — cf. réserve consignée
+   ci-dessous sur l'absence de couverture AUTOMATISÉE de ce panneau. */
+.layer-badge--domain{background:rgba(31,35,41,.05);color:var(--ardoise-clair);border:1px solid rgba(31,35,41,.35);border-radius:4px;}
 
 /* Quête FAB */
 .quest-btn{position:fixed;bottom:20px;left:16px;width:52px;height:52px;border-radius:50%;background:var(--acc);color:white;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);transition:all .2s;z-index:1050;display:flex;align-items:center;justify-content:center;}
@@ -2137,9 +2165,9 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
       <span>Modèle EM</span>
     </div>
     <div class="accordion-cat-content open">
-      <button class="lbtn" id="b-hot" data-domains="statique elf" title="Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. Estimation du modèle Tellux, pas une mesure. La composante ELF entre dans le score Indice Tellux affiché ; la composante substrat reste une donnée de contexte, sans consommateur dans ce score." onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ magnétique composite (nT)</button>
+      <button class="lbtn" id="b-hot" data-domains="statique elf" title="Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. Estimation du modèle Tellux, pas une mesure. La composante ELF entre dans le score Indice Tellux affiché ; la composante substrat reste une donnée de contexte, sans consommateur dans ce score." onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ magnétique composite (nT)<span class="layer-badge layer-badge--domain">Statique + ELF</span></button>
       <div class="mlegend-inline" id="mleg-hot"></div>
-      <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span></button>
+      <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-hotrf"></div>
       <!-- L'ex-bouton unique b-con (« Mesures EM ») vit désormais dans GROUPE 3 « Contexte
            naturel » / sous-groupe « Repères et mesures externes », SCINDÉ le 2026-08-29 (brief
@@ -2156,9 +2184,9 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
       <span>Sources anthropiques</span>
     </div>
     <div class="accordion-cat-content">
-      <button class="lbtn on-ant" id="b-ant" data-domains="rf" title="Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR + TDF<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span></button>
+      <button class="lbtn on-ant" id="b-ant" data-domains="rf" title="Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR + TDF<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-ant"></div>
-      <button class="lbtn" id="b-res" data-domains="elf" title="Lignes électriques haute tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HT<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span></button>
+      <button class="lbtn" id="b-res" data-domains="elf" title="Lignes électriques haute tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HT<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">ELF</span></button>
       <div class="mlegend-inline" id="mleg-res"></div>
       <!-- Couche « Réseau BT » masquée en prod le 2026-08-29 (#1122, verdict RF : n'entre dans
            aucune fonction RF), REMISE EN PROD le 2026-08-30 : le rendu statique (buildBTStaticLayer,
@@ -2167,11 +2195,11 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            masquage (instabilité d'affichage) n'existe plus. Le terme BT du calcul ELF
            (loadBTLinesAsync / getBTSegmentsNear / USE_BT_SEGMENTS) n'a jamais été affecté par ce
            masquage, dans un sens comme dans l'autre. -->
-      <button class="lbtn" id="b-bt" data-domains="elf" title="Réseau basse tension BT — EDF SEI · zoom ≥ 10" onclick="tog('bt','on-bt',this)"><span class="ln" style="background:#d97706"></span>Réseau BT<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span></button>
+      <button class="lbtn" id="b-bt" data-domains="elf" title="Réseau basse tension BT — EDF SEI · zoom ≥ 10" onclick="tog('bt','on-bt',this)"><span class="ln" style="background:#d97706"></span>Réseau BT<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">ELF</span></button>
       <div class="mlegend-inline" id="mleg-bt"></div>
-      <button class="lbtn" id="b-prod" data-domains="elf" title="Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions" onclick="tog('prod','on-prod',this)"><span class="sq" style="background:#1a5c8c"></span>Sites de production<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span></button>
+      <button class="lbtn" id="b-prod" data-domains="elf" title="Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions" onclick="tog('prod','on-prod',this)"><span class="sq" style="background:#1a5c8c"></span>Sites de production<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">ELF</span></button>
       <div class="mlegend-inline" id="mleg-prod"></div>
-      <button class="lbtn" id="b-postes" data-domains="elf" title="Postes sources EDF SEI (transformateurs HTB/HTA) — 21 postes OSM" onclick="togPostesSources(this)"><span class="sq" style="background:#C28533;border:1px solid #3F5B3A"></span>Postes sources EDF<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span></button>
+      <button class="lbtn" id="b-postes" data-domains="elf" title="Postes sources EDF SEI (transformateurs HTB/HTA) — 21 postes OSM" onclick="togPostesSources(this)"><span class="sq" style="background:#C28533;border:1px solid #3F5B3A"></span>Postes sources EDF<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">ELF</span></button>
       <div class="mlegend-inline" id="mleg-postesSources"></div>
       <!-- Couche « Particules fines PM2,5 » retirée de la carte publique le 2026-08-20 (décision
            Soleil : co-exposition radon/particulaire, elle vit désormais sur radon.html plutôt
@@ -2214,7 +2242,19 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            score public. Cf. paragraphe d'intro du sous-groupe ci-dessous — vérifié (revue 3/3,
            2026-09-03) : aucun chemin ne révèle le badge sans ce paragraphe adjacent, la même
            profondeur d'interaction (ouvrir « Contexte naturel ») donne accès aux deux à la fois,
-           jamais l'un sans l'autre. -->
+           jamais l'un sans l'autre.
+           Second axe ORTHOGONAL ajouté (brief BA, 2026-09-04) : .layer-badge--domain, sur
+           data-domains (statique/elf/rf) — dit UNIQUEMENT le domaine physique, jamais le
+           statut de participation ci-dessus (les deux axes sont indépendants par construction,
+           cf. commentaire CSS de .layer-badge--domain plus haut). Posé sur 12 des 16 boutons
+           data-domains : absent par choix sur les 3 couches "visuel" (b-hyd/b-foretouverte/
+           b-landemaquis, déjà hors de ce système par le tooltip du sélecteur posé au brief AV)
+           et sur b-openrad (data-domains="ionisant", domaine hors du périmètre discuté par ce
+           brief — son propre chip de filtre reste commenté depuis le 2026-08-30, cf. plus haut).
+           b-hot : SEUL bouton où le badge de domaine apparaît sans aucun badge de statut
+           (b-hot n'en a aucun depuis le brief AB) — forme intentionnelle, pas un oubli : ses
+           deux domaines n'ont pas le même statut de participation (ELF dans le score, substrat
+           statique hors score, cf. son title=), un badge de statut unique les aurait mal dits. -->
       <div class="subgroup">
         <div class="accordion-cat-header subgroup-toggle open" onclick="toggleAccordion(this)">
           <span class="accordion-cat-icon open">▶</span>
@@ -2249,14 +2289,14 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
                uniquement dans #hdr-menu (menu sandwich, cf. commentaire à son ajout plus haut dans
                ce fichier), pour ne garder qu'un seul chemin de navigation au lieu de deux
                redondants. -->
-          <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#AD22BE"></span>Fond magnétique régional<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span></button>
+          <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#AD22BE"></span>Fond magnétique régional<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">Statique</span></button>
           <div class="mlegend-inline" id="mleg-emag"></div>
           <!-- Couche « Forêt dense » (b-foretdense) ajoutée le 2026-08-27 (brief "nettoyage Contexte
                naturel" point 5, dette FORET-DENSE-LAYER-001 close par ce diff) : jusqu'ici
                foret_dense_corse.geojson (BD Forêt V2, #1038) alimentait calcVegetationAttenuation()
                (RF, clic carte) sans aucune couche visible correspondante. Cf.
                buildForetDenseLayer()/lForetDense plus bas dans ce fichier. -->
-          <button class="lbtn" id="b-foretdense" data-domains="rf" title="BD Forêt V2 IGN — forêt fermée à essence haute (chênes, hêtre, châtaignier, pins laricio/maritime, sapin…), hors classes de feuillus indifférenciés qui recouvrent surtout le maquis-forêt corse (~28 % de la Corse). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6). Ce calque module la valeur en µW/m² du bloc Radiofréquence. Il ne modifie ni la heatmap, ni le score affiché en haut du popup." onclick="tog('foretdense','on-foretdense',this)"><span class="sq" style="background:#3a7d5c;border:1px solid #1b5e3f"></span>Forêt dense (atténuation RF)<span class="layer-badge layer-badge--calc">Module le calcul</span></button>
+          <button class="lbtn" id="b-foretdense" data-domains="rf" title="BD Forêt V2 IGN — forêt fermée à essence haute (chênes, hêtre, châtaignier, pins laricio/maritime, sapin…), hors classes de feuillus indifférenciés qui recouvrent surtout le maquis-forêt corse (~28 % de la Corse). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6). Ce calque module la valeur en µW/m² du bloc Radiofréquence. Il ne modifie ni la heatmap, ni le score affiché en haut du popup." onclick="tog('foretdense','on-foretdense',this)"><span class="sq" style="background:#3a7d5c;border:1px solid #1b5e3f"></span>Forêt dense (atténuation RF)<span class="layer-badge layer-badge--calc">Module le calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
           <div class="mlegend-inline" id="mleg-foretdense"></div>
           <!-- Couches « Forêt ouverte » et « Lande/maquis » (b-foretouverte, b-landemaquis) ajoutées
                le 2026-09-02 (brief F, couches contextuelles hors calcul). Même source que Forêt dense
@@ -2328,7 +2368,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
                • b-contrib → lCon seul, badge « Hors calcul » seul. D'abord placé dans un
                  sous-sous-groupe « Mesures citoyennes » (avec Gamma citoyen), remonté au niveau
                  supérieur le 2026-08-30 quand Gamma citoyen a été muté (cf. plus bas). -->
-          <button class="lbtn" id="b-cert" data-domains="rf" title="236 fiches de mesure certifiées ANFR/EXEM (2002–2026), extraites des PDF CartoRadio ou de l'API CartoRadio. 21 ont servi à calibrer la constante k du modèle RF (calcul one-shot à l'initialisation, pas une modulation en direct par point). Losanges = extérieur public (position exacte) ; cercles = résidentiel (centroïde communal), colorés selon la conformité (limite légale 28 V/m)." onclick="tog('cert','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Mesures certifiées (ANFR/EXEM)<span class="layer-badge layer-badge--calc">Calibration RF</span></button>
+          <button class="lbtn" id="b-cert" data-domains="rf" title="236 fiches de mesure certifiées ANFR/EXEM (2002–2026), extraites des PDF CartoRadio ou de l'API CartoRadio. 21 ont servi à calibrer la constante k du modèle RF (calcul one-shot à l'initialisation, pas une modulation en direct par point). Losanges = extérieur public (position exacte) ; cercles = résidentiel (centroïde communal), colorés selon la conformité (limite légale 28 V/m)." onclick="tog('cert','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Mesures certifiées (ANFR/EXEM)<span class="layer-badge layer-badge--calc">Calibration RF</span><span class="layer-badge layer-badge--domain">RF</span></button>
           <div class="mlegend-inline" id="mleg-cert"></div>
           <!-- Couche « Sites U/Th à mesurer » retirée de la carte publique le 2026-08-19 (décision
                Soleil, risque nocebo A.4 sur un catalogue 100% documentaire/non mesuré) — contenu
@@ -2352,14 +2392,14 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
                fait le 2026-08-27, aucune fonction de ce fichier ne la lit) — seul
                POINTS_CHAUDS_RADIO alimente le boost ponctuel de calcGammaAmbient. Les deux
                variables partagent juste le même loader, ce n'était pas la même chose. -->
-          <button class="lbtn" id="b-crustal" data-domains="statique" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF), quantifiées (valeur nT, EMAG2v3 + littérature académique) — comparaison locale/mondiale. + 4 sites ophiolitiques corses (Albu, Nonza, Farinole, Monte Maggiore) à anomalie magnétique documentée mais NON quantifiée (aucune mesure nT publiée) — échelle locale distincte, hors calcul." onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales &amp; Corse)<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
+          <button class="lbtn" id="b-crustal" data-domains="statique" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF), quantifiées (valeur nT, EMAG2v3 + littérature académique) — comparaison locale/mondiale. + 4 sites ophiolitiques corses (Albu, Nonza, Farinole, Monte Maggiore) à anomalie magnétique documentée mais NON quantifiée (aucune mesure nT publiée) — échelle locale distincte, hors calcul." onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales &amp; Corse)<span class="layer-badge layer-badge--hors">Hors calcul</span><span class="layer-badge layer-badge--domain">Statique</span></button>
           <div class="mlegend-inline" id="mleg-crustal"></div>
 
           <!-- Contributions smartphone — non certifiées, capteurs hétérogènes, affichage seul (hors calcul).
                Remontée au niveau supérieur de « Repères et mesures externes » le 2026-08-30 (décision
                Soleil) : le sous-sous-groupe « Mesures citoyennes » créé le 2026-08-29 (#1117) est dissous
                car il ne restait qu'une couche. -->
-          <button class="lbtn" id="b-contrib" data-domains="statique rf" title="Contributions terrain des utilisateurs Tellux : magnétomètre smartphone (nT), signal réseau/WiFi (dBm), relevés au capteur externe. Cercles violets, en cluster. N'influence jamais le score composite affiché ; une comparaison indicative apparaît dans le détail technique du popup." onclick="tog('contrib','on-contrib',this)"><span class="dot" style="background:#5c3a9b"></span>Contributions smartphone<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
+          <button class="lbtn" id="b-contrib" data-domains="statique rf" title="Contributions terrain des utilisateurs Tellux : magnétomètre smartphone (nT), signal réseau/WiFi (dBm), relevés au capteur externe. Cercles violets, en cluster. N'influence jamais le score composite affiché ; une comparaison indicative apparaît dans le détail technique du popup." onclick="tog('contrib','on-contrib',this)"><span class="dot" style="background:#5c3a9b"></span>Contributions smartphone<span class="layer-badge layer-badge--hors">Hors calcul</span><span class="layer-badge layer-badge--domain">Statique + RF</span></button>
           <div class="mlegend-inline" id="mleg-contrib"></div>
 
           <!-- Couche « Gamma citoyen (OpenRadiation) » (b-openrad) MUTÉE dans app.html le 2026-08-30
@@ -12625,6 +12665,20 @@ function capCleanup(){
 ["chip_elf_tt",".domain-chip[data-domain-filter='elf']","title","Magnétique basse fréquence ELF 50 Hz : lignes HT/BT, postes sources, production","Magneticu à bassa frequenza ELF 50 Hz : linee HT/BT, posti surgente, pruduzzione","Low-frequency magnetic ELF 50 Hz: HT/BT lines, substations, generation"],
 ["chip_rf_tt",".domain-chip[data-domain-filter='rf']","title","Radiofréquences : antennes ANFR, émetteurs TDF","Radiofrequenze : antenne ANFR, emettitori TDF","Radiofrequency: ANFR antennas, TDF transmitters"],
 // chip_ionisant / chip_ionisant_tt retirés le 2026-08-30 (chip « Ionisant » commenté, cf. .domain-chips).
+// Badges de domaine physique (brief BA, 2026-09-04, forme B — badge orthogonal au badge de
+// statut, cf. commentaire CSS .layer-badge--domain). RF et ELF sont des sigles identiques
+// dans les 3 langues (même précédent que les libellés de chip ci-dessus, jamais traduits
+// non plus) : aucune entrée n'est nécessaire pour les 8 badges "RF"/"ELF" seuls. Seuls
+// "Statique" (repris tel quel de chip_statique) et les 2 cas à deux domaines (b-hot,
+// b-contrib) ont une entrée. CO laissée vide sur les 2 compositions ("Statique + ELF",
+// "Statique + RF") — le mot "Staticu" est déjà validé seul (chip_statique), mais cette
+// JONCTION précise n'a jamais été relue par un locuteur natif ; même discipline que
+// chip_label_tt (brief AV) et LAYER-BADGE-TITLE-I18N-CO-STALE-BRIEF-AB-001 : pas de
+// traduction improvisée, le FR reste affiché tant qu'elle n'est pas fournie.
+["dom_hot","#b-hot .layer-badge--domain","","Statique + ELF","","Static + ELF"],
+["dom_emag","#b-emag .layer-badge--domain","","Statique","Staticu","Static"],
+["dom_crustal","#b-crustal .layer-badge--domain","","Statique","Staticu","Static"],
+["dom_contrib","#b-contrib .layer-badge--domain","","Statique + RF","","Static + RF"],
 ["cat_modele",".accordion-cat-header > span:nth-child(2)@0","","Modèle EM","Mudellu EM","EM model"],
 ["cat_anthropique",".accordion-cat-header > span:nth-child(2)@1","","Sources anthropiques","Fonti antropiche","Anthropogenic sources"],
 ["cat_naturel",".accordion-cat-header > span:nth-child(2)@2","","Contexte naturel","Cuntestu naturale","Natural context"],
