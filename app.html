@@ -6183,15 +6183,20 @@ function calcMagneticELF_v1(lat, lon, chargeFactor) {
     }
   });
 
-  // === SITES DE PRODUCTION ÉLECTRIQUE ===
-  // Champ ELF des installations (générateurs, transformateurs, câbles internes)
-  // Contribution ∝ √(puissance_MW) / distance (courant ∝ √P à tension fixe)
+  // === SITES DE PRODUCTION ÉLECTRIQUE === (scalaire — source ponctuelle)
+  // Modélise le site comme un fil rectiligne infini (MU0_OVER_2PI, même
+  // constante que les segments HTA réels ci-dessus) — décroissance en 1/d.
+  // Un site de production est une installation compacte (boucles fermées :
+  // alternateur/transformateur/jeu de barres), pas un conducteur étendu —
+  // modélisation en question, non arbitrée ici. Cf. dette privée
+  // PROD-ELECTRIQUE-LOI-DECROISSANCE-1D-NON-PHYSIQUE-001 (briefs AW/AX,
+  // 2026-09-04). Corrigé (commentaire seul) brief AY, même date.
   PROD_ELECTRIQUE.forEach(s => {
     if (s.puissance < 0.5) return;
     if (s.type === 'Eolien') return; // dédup — parcs éoliens comptés via EOLIENNES_DATA (ODRE, coords fiables) ; les 3 entrées Eolien de PROD_ELECTRIQUE ont des coords inline divergentes 2-6 km
     const d = dist(lat, lon, s.lat, s.lon);
     const d_m = Math.max(100, d * 1000);
-    const I_equiv = Math.sqrt(s.puissance) * 50; // estimation I∝√P
+    const I_equiv = Math.sqrt(s.puissance) * 50; // I∝√P non établi par P=V×I (donnerait I∝P) ; cf. dette PROD-ELECTRIQUE-I-EQUIV-RACINE-P-NON-JUSTIFIEE-001
     const B_nT = MU0_OVER_2PI * I_equiv / d_m * 1e9;
     if (B_nT > 0.5) {
       const contrib = Math.min(B_nT, 400);
@@ -6339,13 +6344,20 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
   let B_total_nT = B_lines;
 
   // === SITES DE PRODUCTION ÉLECTRIQUE === (scalaire — source ponctuelle)
+  // Modélise le site comme un fil rectiligne infini (MU0_OVER_2PI, même
+  // constante que les segments HTA réels ci-dessus) — décroissance en 1/d.
+  // Un site de production est une installation compacte (boucles fermées :
+  // alternateur/transformateur/jeu de barres), pas un conducteur étendu —
+  // modélisation en question, non arbitrée ici. Cf. dette privée
+  // PROD-ELECTRIQUE-LOI-DECROISSANCE-1D-NON-PHYSIQUE-001 (briefs AW/AX,
+  // 2026-09-04). Corrigé (commentaire seul) brief AY, même date.
   const MU0_OVER_2PI = 2e-7;
   PROD_ELECTRIQUE.forEach(s => {
     if (s.puissance < 0.5) return;
     if (s.type === 'Eolien') return; // dédup — parcs éoliens comptés via EOLIENNES_DATA (ODRE, coords fiables) ; les 3 entrées Eolien de PROD_ELECTRIQUE ont des coords inline divergentes 2-6 km
     const d = dist(lat, lon, s.lat, s.lon);
     const d_m = Math.max(100, d * 1000);
-    const I_equiv = Math.sqrt(s.puissance) * 50;
+    const I_equiv = Math.sqrt(s.puissance) * 50; // I∝√P non établi par P=V×I (donnerait I∝P) ; cf. dette PROD-ELECTRIQUE-I-EQUIV-RACINE-P-NON-JUSTIFIEE-001
     const B_nT = MU0_OVER_2PI * I_equiv / d_m * 1e9;
     if (B_nT > 0.5) {
       const contrib = Math.min(B_nT, 400);
