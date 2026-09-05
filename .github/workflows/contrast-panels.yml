@@ -90,6 +90,21 @@ on:
       - '.github/workflows/contrast-panels.yml'
   workflow_dispatch:
 
+# Annule un run devenu obsolète quand un nouveau push arrive sur la même PR
+# avant que le précédent ait fini (brief BQ, 2026-09-05 — mesuré : ~1,89
+# runs/branche sur ce workflow, une partie réelle mais non quantifiée à
+# l'avance de runs superflus). Groupé par numéro de PR (repli sur la ref pour
+# workflow_dispatch, ex. main) — ne peut donc jamais annuler un run sur une
+# AUTRE PR, ni sur `main` : ce workflow ne se déclenche que sur pull_request,
+# jamais sur push vers main (vérifié dans ce fichier même, ci-dessus), donc
+# aucun run ne tourne jamais avec `github.ref == refs/heads/main` sauf un
+# déclenchement manuel explicite depuis main — cas qui n'est ni requis ni
+# bloquant (cf. plancher CI, ADR-045). Le dernier push d'une PR reste TOUJOURS
+# vérifié avant merge : seuls les runs strictement supersédés sont coupés.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
