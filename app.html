@@ -2165,7 +2165,26 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
       <span>Modèle EM</span>
     </div>
     <div class="accordion-cat-content open">
-      <button class="lbtn" id="b-hot" data-domains="statique elf" title="Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. Estimation du modèle Tellux, pas une mesure. La composante ELF entre dans le score Indice Tellux affiché ; la composante substrat reste une donnée de contexte, sans consommateur dans ce score." onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ magnétique composite (nT)<span class="layer-badge layer-badge--domain">Statique + ELF</span></button>
+      <!-- b-hot title= corrigé le 2026-09-05 (brief BF, arbitrage Soleil : « conserver la couche,
+           corriger ce qui la décrit ») — mesure du brief BF : là où la couche rend quelque chose,
+           magNT (696nT médian) reste très inférieur au champ géomagnétique total (46 000-47 500 nT,
+           cf. cadre-scientifique.html#magnetique-statique) qu'un magnétomètre de smartphone mesure
+           réellement (facteur ~66-68, proche de deux ordres de grandeur) ; rien dans l'ancien
+           title= ne réservait ce point, un malentendu que le brief a jugé plausible pour un
+           lecteur normal. ⚠️ Correctif à la revue adversariale (2026-09-05) : le rapport brief BF
+           lui-même affirmait « quatre ordres de grandeur » à cet endroit (46000/696≈66, log10≈1,82,
+           pas 4/10000) — erreur arithmétique corrigée ici, à corriger aussi dans le rapport source
+           et sa mémoire (non fait par cette session). Formulation revue une 2e fois : la clause
+           d'exclusion ne dit plus que magNT est « une perturbation ajoutée » au fond géomagnétique
+           — cette relation fond+perturbation n'est vraie que pour geo (1,8% de magNT), pas pour
+           human (ELF anthropique, 98,2%), un domaine physique distinct et sans rapport avec le
+           champ géomagnétique terrestre ; la clause dit maintenant seulement que ce sont deux
+           grandeurs distinctes, jamais additionnées, sans suggérer de relation physique entre elles.
+           Clause dans title= + même clause dans LAYER_SUBTITLE_FR.hot/JS_STRINGS_EN.mleg_sub_hot
+           (sous-titre mobile) et LEGEND_HTML.hot/LEGEND_HTML_EN.hot (panneau "?") — ces deux
+           dernières utilisaient déjà "exclut"/"hors", jamais la formulation "perturbation ajoutée",
+           donc non concernées par ce second correctif. -->
+      <button class="lbtn" id="b-hot" data-domains="statique elf" title="Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. N'inclut pas le champ géomagnétique terrestre total (~46 000-47 500 nT en Corse, l'ordre de grandeur qu'un magnétomètre de smartphone mesure) : ce sont deux grandeurs physiques distinctes, jamais additionnées ici — le champ géomagnétique n'entre dans ce nombre à aucun titre. Estimation du modèle Tellux, pas une mesure. La composante ELF entre dans le score Indice Tellux affiché ; la composante substrat reste une donnée de contexte, sans consommateur dans ce score." onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ magnétique composite (nT)<span class="layer-badge layer-badge--domain">Statique + ELF</span></button>
       <div class="mlegend-inline" id="mleg-hot"></div>
       <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-hotrf"></div>
@@ -3399,13 +3418,16 @@ var JS_STRINGS_EN = {
   docref_more: "Learn more",
   docref_con_calib: "Role in RF calibration",
   docref_con_status: "Status of citizen contributions",
+  // hot (2026-09-05, brief BF) : 2 liens distincts, cf. LAYER_DOC_ANCHORS.hot.
+  docref_hot_elf: "ELF component (electrical grid)",
+  docref_hot_susc: "Substrate susceptibility component",
 
   // Brief "clôture chantier légende" (2026-08-31) — titre de groupe "?" desktop +
   // sous-titres descriptifs .mleg-subtitle mobile (cf. LAYER_SUBTITLE_FR, plus bas dans ce
   // fichier). Résolus via jt('mleg_sub_'+id, ...) — clé construite dynamiquement, cf.
   // commentaire à updateInlineLegendMobile().
   leg_group_anthropique: "Human-made sources",
-  mleg_sub_hot: "Tellux model combining the electrical grid and substrate, in nT — not a measurement. Only the electrical-grid component feeds the displayed score.",
+  mleg_sub_hot: "Tellux model combining the electrical grid and substrate, in nT — excludes the total geomagnetic field (~46,000-47,500 nT in Corsica), not a measurement. Only the electrical-grid component feeds the displayed score.",
   mleg_sub_hotrf: "Tellux model, internally calibrated against certified ANFR/EXEM measurements — order-of-magnitude estimate, not a measurement.",
   mleg_sub_emag: "Deep Corsican basement anomalies (NOAA EMAG2v3, display) — the internal grid actually used (distinct, computed permanently as the badge indicates) is not part of any publicly displayed score.",
   mleg_sub_foretdense: "Tall-canopy species (IGN BD Forêt V2), excluding scrub-forest mosaic — modulates the µW/m² value at map click; neither the heatmap nor the displayed score depends on it.",
@@ -4031,7 +4053,21 @@ function coreLegLabel(id){
 let _legAccOpen=null;
 const LEGEND_ACTIVE_DOCREFS=new Set();
 const LAYER_DOC_ANCHORS={
-  hot:        [{href:'/cadre-scientifique.html#objets-composites'}],
+  // hot (2026-09-05, brief BF/arbitrage Soleil) : pointait vers #objets-composites, qui décrit
+  // un TOUT AUTRE objet (« Carte de densité magnétique », EMAG2v3+LCS1 — aucun rapport avec
+  // buildHot()=human ELF anthropique + geo susceptibilité substrat, brief BF §3, trouvaille
+  // annexe). Redirigé vers les 2 sections qui documentent réellement chacune des composantes
+  // additionnées dans magNT : #elf-anthropique (human, Biot-Savart) et #magnetique-statique
+  // (dont le 3e point, B_susceptibilité_locale, correspond à calcGeoSusc()/GEO_SUSC_GRID = geo).
+  // ⚠️ #magnetique-statique cite « Gattacceca et al. 2004 » pour cette composante, alors que le
+  // code (app.html, commentaire au-dessus de GEO_SUSC_GRID) cite Ghilardi 2017 + Leandri 2023 +
+  // BRGM 1/50000 — mismatch de citation trouvé en vérifiant ce lien, signalé au registre privé
+  // (CADRE-SCIENTIFIQUE-GATTACCECA-GHILARDI-CITATION-MISMATCH-001), PAS corrigé ici : vérifier
+  // une attribution scientifique est hors périmètre de ce lot (titre + lien de b-hot seulement).
+  hot: [
+    {href:'/cadre-scientifique.html#elf-anthropique',    labelKey:'docref_hot_elf',  labelFr:'Composante ELF (réseau électrique)'},
+    {href:'/cadre-scientifique.html#magnetique-statique',labelKey:'docref_hot_susc',labelFr:'Composante susceptibilité du substrat'}
+  ],
   hotrf:      [{href:'/cadre-scientifique.html#radiofrequences'}],
   emag:       [{href:'/cadre-scientifique.html#magnetique-statique'}],
   foretdense: [{href:'/cadre-scientifique.html#radiofrequences'}],
@@ -4062,7 +4098,9 @@ const LAYER_DOC_ANCHORS={
 // (couches mutées/réservées, cf. LAYER_DOC_ANCHORS ci-dessus) n'ont pas de bouton vivant —
 // updateInlineLegendMobile() ne peut de toute façon jamais être appelée avec show=true pour elles.
 const LAYER_SUBTITLE_FR={
-  hot:  'Modèle Tellux combinant réseau électrique et substrat, en nT — pas une mesure. Seule la composante réseau électrique entre dans le score affiché.',
+  // hot (2026-09-05, brief BF) : ajout « exclut le champ géomagnétique total » — même clause
+  // que title= et LEGEND_HTML.hot, mêmes motifs (cf. commentaire au-dessus du bouton #b-hot).
+  hot:  'Modèle Tellux combinant réseau électrique et substrat, en nT — exclut le champ géomagnétique total (~46 000-47 500 nT en Corse), pas une mesure. Seule la composante réseau électrique entre dans le score affiché.',
   hotrf:'Modèle Tellux, calibration interne sur mesures certifiées ANFR/EXEM — estimation d’ordre de grandeur, pas une mesure.',
   // emag (2026-09-03, brief AB) : corrigé — la donnée NOAA EMAG2v3 VISIBLE (ce bouton) n'est pas
   // celle qui pèse sur le calcul. Le calcul (calcLCS1 ~L4798/calcMagneticStatic ~L5641) lit une
@@ -4143,7 +4181,9 @@ const LEGEND_HTML={
   // 0 nT (axe "0 · 200 · 500 · 1000") ; buildHot() (app.html) ne trace pourtant AUCUNE cellule
   // sous 200 nT (if(magNT>200)) — transparence totale, pas la teinte pâle #DDBB88 que la
   // légende laissait attendre. Dégradé et axe recadrés sur les 3 teintes réellement rendues.
-  hot:'<div class="leg-block"><b class="leg-title">Champ magnétique composite (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (réseau) + susceptibilité du substrat</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#4a4f5e;width:140px;margin-bottom:4px"><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="font-size:8px;color:var(--tx3)">Aucune cellule affichée sous 200 nT (transparence totale)</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#626774">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · susceptibilité BRGM</div></div>',
+  // Sous-titre complété le 2026-09-05 (brief BF) : « hors champ géomagnétique total », même
+  // clause que title=/LAYER_SUBTITLE_FR.hot (cf. commentaire au bouton #b-hot).
+  hot:'<div class="leg-block"><b class="leg-title">Champ magnétique composite (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (réseau) + susceptibilité du substrat — hors champ géomagnétique total (~46 000 nT)</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#4a4f5e;width:140px;margin-bottom:4px"><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="font-size:8px;color:var(--tx3)">Aucune cellule affichée sous 200 nT (transparence totale)</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#626774">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · susceptibilité BRGM</div></div>',
   // hotrf allégée le 2026-08-29 (brief « exécution groupée », item A ; proposition
   // _drafts/BRIEF_LEGENDES_RF_COMPOSITE_LIVRABLES_2026-08-29.md, texte validé Soleil au tour
   // précédent). Passe de ~2 575 à ~700 car. : ne reste que le visuellement actionnable
@@ -4261,7 +4301,7 @@ const LEGEND_HTML={
 // n'est lu qu'au rendu, jamais à la définition — même principe que
 // INSTRUMENT_LABELS/CRUSTAL_REFS.
 const LEGEND_HTML_EN={
-  hot:'<div class="leg-block"><b class="leg-title">Composite magnetic field (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (grid) + substrate susceptibility</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#4a4f5e;width:140px;margin-bottom:4px"><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="font-size:8px;color:var(--tx3)">No cell shown below 200 nT (fully transparent)</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT: IARC class 2B documentary reference point.<br><span style="font-size:8px;color:#626774">Not an alert threshold — see popup Details</span></div><div class="leg-src">Biot-Savart · EDF SEI · BRGM susceptibility</div></div>',
+  hot:'<div class="leg-block"><b class="leg-title">Composite magnetic field (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (grid) + substrate susceptibility — excludes the total geomagnetic field (~46,000 nT)</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#4a4f5e;width:140px;margin-bottom:4px"><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="font-size:8px;color:var(--tx3)">No cell shown below 200 nT (fully transparent)</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT: IARC class 2B documentary reference point.<br><span style="font-size:8px;color:#626774">Not an alert threshold — see popup Details</span></div><div class="leg-src">Biot-Savart · EDF SEI · BRGM susceptibility</div></div>',
   hotrf:'<div class="leg-block"><b class="leg-title">RF electric field (V/m)</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofrequency — outdoor estimate, Tellux model</div>'+
     '<div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div>'+
@@ -12686,7 +12726,13 @@ function capCleanup(){
 ["subgroup_b",".subgroup-header@1","","Repères et mesures externes","Puntelli è misure esterne","External references and measurements"],
 // subgroup_c (« Mesures citoyennes », .subgroup-header@2) retiré le 2026-08-30 — sous-sous-groupe dissous.
 ["lyr_hot","#b-hot","","Champ magnétique composite (nT)","Campu magneticu cumpostu (nT)","Composite magnetic field (nT)"],
-["lyr_hot_tt","#b-hot","title","Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. Estimation du modèle Tellux, pas une mesure. La composante ELF entre dans le score Indice Tellux affiché ; la composante substrat reste une donnée de contexte, sans consommateur dans ce score.","Campu magneticu cumpostu — ELF 50 Hz (rete elettrica) + suscettibilità di u sustratu, espressu in nT. Stima di u mudellu Tellux, micca una misura.","Composite magnetic field — ELF 50 Hz (electrical grid) + substrate susceptibility, expressed in nT. Tellux model estimate, not a measurement. The ELF component feeds the displayed Indice Tellux score; the substrate component remains contextual data, with no consumer in that score."],
+// lyr_hot_tt (2026-09-05, brief BF) : FR étendue d'une clause d'exclusion (cf. commentaire au
+// bouton #b-hot, y compris le correctif de revue adversariale sur la formulation "perturbation
+// ajoutée") — CO laissée VIDE plutôt que réamendée : l'ancienne traduction CO ne couvrait déjà
+// que la 1re moitié de l'ancien FR (2e phrase jamais traduite), la réamender à la volée sans
+// locuteur natif aurait improvisé une traduction, interdit par doctrine (cf. brief AV/précédent
+// LAYER-BADGE-TITLE-I18N-CO-STALE-BRIEF-AB-001) — colonne vide = non appliquée, FR reste affiché.
+["lyr_hot_tt","#b-hot","title","Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. N'inclut pas le champ géomagnétique terrestre total (~46 000-47 500 nT en Corse, l'ordre de grandeur qu'un magnétomètre de smartphone mesure) : ce sont deux grandeurs physiques distinctes, jamais additionnées ici — le champ géomagnétique n'entre dans ce nombre à aucun titre. Estimation du modèle Tellux, pas une mesure. La composante ELF entre dans le score Indice Tellux affiché ; la composante substrat reste une donnée de contexte, sans consommateur dans ce score.","","Composite magnetic field — ELF 50 Hz (electrical grid) + substrate susceptibility, expressed in nT. Does not include the total terrestrial geomagnetic field (~46,000-47,500 nT in Corsica, the order of magnitude a smartphone magnetometer measures): these are two distinct physical quantities, never added together here — the geomagnetic field plays no part whatsoever in this number. Tellux model estimate, not a measurement. The ELF component feeds the displayed Indice Tellux score; the substrate component remains contextual data, with no consumer in that score."],
 ["lyr_hotrf","#b-hot-rf","","Champ électrique RF (V/m)","Campu elettricu RF (V/m)","RF electric field (V/m)"],
 ["lyr_hotrf_tt","#b-hot-rf","title","Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte.","Campu elettricu radiufrequenza (V/m) — mudellu Tellux — calibrazione interna nantu à 30 misure certificate ANFR/EXEM (propagazione da ~3000 antenne ANFR reale). Stima centrale d'ordine di grandezza (campu esternu ; sott'ivaluta i siti più esposti, sopravaluta l'internu di i fabbricati). Rilettura fisicu in corsu ; ùn rimpiazza micca una misura certificata. Riferimenti ICNIRP indicativi, micca soglia d'alerta.","Radiofrequency electric field (V/m) — Tellux model — internal calibration on 30 certified ANFR/EXEM measurements (propagation from ~3,000 actual ANFR antennas). Central order-of-magnitude estimate (outdoor field; underestimates highly exposed sites, overestimates indoor levels). Physicist review underway; does not replace a certified measurement. ICNIRP reference points are indicative, not an alert threshold."],
 ["lyr_cert","#b-cert","","Mesures certifiées (ANFR/EXEM)","Misure certificate (ANFR/EXEM)","Certified measurements (ANFR/EXEM)"],
