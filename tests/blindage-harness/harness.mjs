@@ -33,6 +33,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve as pathResolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { installSupabaseCache } from './supabase-cache.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const HARNESS_DIR = pathResolve(__filename, '..');
@@ -142,52 +143,89 @@ export async function createHarness(opts = {}) {
     server = await startStaticServer(REPO_ROOT, port);
   }
 
-  const browser = await chromium.launch({ headless });
-  const context = await browser.newContext({
-    ignoreHTTPSErrors: true,
-  });
-
-  // Time-freezing init script — installed in every page of the context BEFORE
-  // app.html's scripts run. Replaces Date with a subclass that, when constructed
-  // with no arg or called with Date.now(), returns the frozen instant.
-  // Keeps the original Date constructor for explicit-arg calls.
-  if (freezeTime) {
-    const epochMs = new Date(freezeTime).getTime();
-    if (!Number.isFinite(epochMs)) {
-      throw new Error('createHarness: freezeTime is not a valid ISO date string: ' + freezeTime);
-    }
-    await context.addInitScript((frozenEpoch) => {
-      const _OrigDate = Date;
-      const Frozen = function (...args) {
-        if (args.length === 0) return new _OrigDate(frozenEpoch);
-        // eslint-disable-next-line new-cap
-        return new _OrigDate(...args);
-      };
-      Frozen.now = () => frozenEpoch;
-      Frozen.parse = _OrigDate.parse.bind(_OrigDate);
-      Frozen.UTC = _OrigDate.UTC.bind(_OrigDate);
-      Frozen.prototype = _OrigDate.prototype;
-      // Replace global Date (script lexical environment + window prop)
-      // eslint-disable-next-line no-global-assign
-      Date = Frozen;
-      window.Date = Frozen;
-    }, epochMs);
-  }
-
-  const page = await context.newPage();
-
-  // Capture console errors / warnings for diagnostics.
+  // Nettoyage-si-échec (brief BN, 2026-09-05, trouvé en durcissant le cache local) :
+  // avant ce correctif, un échec PENDANT le boot (page.goto/waitForFunction) faisait
+  // sortir createHarness() par une exception AVANT de retourner l'objet api — donc
+  // avant que son harness.close() existe. browser/context/server restaient ouverts
+  // indéfiniment : un zombie Node + un zombie Chromium par échec, chacun continuant
+  // à occuper le port par défaut (3779, partagé par tous les scripts de ce dossier)
+  // et à consommer des ressources. Un premier échec (ex. un vrai problème réseau
+  // transitoire) pouvait ainsi en cascader d'autres sans rapport, purement par
+  // pollution de l'environnement — observé concrètement en vérifiant ce chantier :
+  // plusieurs zombies accumulés ont fait échouer des runs sans lien avec le cache
+  // lui-même, le temps de les identifier et de les arrêter à la main. Tout ce qui
+  // peut échouer entre le lancement du navigateur et la fin du boot est donc
+  // maintenant sous try/catch, avec un nettoyage complet avant de relancer l'erreur.
+  let browser = null;
+  let context = null;
+  let page = null;
   const consoleErrors = [];
   const consoleWarns = [];
-  page.on('console', (msg) => {
-    const t = msg.type();
-    if (t === 'error') consoleErrors.push(msg.text());
-    else if (t === 'warning') consoleWarns.push(msg.text());
-  });
-  page.on('pageerror', (err) => consoleErrors.push('pageerror: ' + (err?.message || String(err))));
+  let cacheInfo = null;
 
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: bootTimeoutMs });
-  await page.waitForFunction(BOOT_CHECK_FN, undefined, { timeout: bootTimeoutMs, polling: 250 });
+  try {
+    browser = await chromium.launch({ headless });
+    context = await browser.newContext({
+      ignoreHTTPSErrors: true,
+    });
+
+    // Cache local Supabase (brief BN, 2026-09-05) — posé AVANT toute navigation
+    // pour intercepter le premier chargement lui-même, pas seulement les
+    // rechargements. opts.cache===false équivaut à TELLUX_HARNESS_CACHE=off
+    // pour ce contexte précis (utilisé par loading-path-live-check.mjs) : aucune
+    // route posée, réseau réel garanti. Ne touche jamais app.html ni le chemin
+    // de chargement réel — cf. commentaire de tête de supabase-cache.mjs pour
+    // la conception complète.
+    cacheInfo = opts.cache === false
+      ? { disabled: true }
+      : await installSupabaseCache(context, opts.cacheOpts);
+
+    // Time-freezing init script — installed in every page of the context BEFORE
+    // app.html's scripts run. Replaces Date with a subclass that, when constructed
+    // with no arg or called with Date.now(), returns the frozen instant.
+    // Keeps the original Date constructor for explicit-arg calls.
+    if (freezeTime) {
+      const epochMs = new Date(freezeTime).getTime();
+      if (!Number.isFinite(epochMs)) {
+        throw new Error('createHarness: freezeTime is not a valid ISO date string: ' + freezeTime);
+      }
+      await context.addInitScript((frozenEpoch) => {
+        const _OrigDate = Date;
+        const Frozen = function (...args) {
+          if (args.length === 0) return new _OrigDate(frozenEpoch);
+          // eslint-disable-next-line new-cap
+          return new _OrigDate(...args);
+        };
+        Frozen.now = () => frozenEpoch;
+        Frozen.parse = _OrigDate.parse.bind(_OrigDate);
+        Frozen.UTC = _OrigDate.UTC.bind(_OrigDate);
+        Frozen.prototype = _OrigDate.prototype;
+        // Replace global Date (script lexical environment + window prop)
+        // eslint-disable-next-line no-global-assign
+        Date = Frozen;
+        window.Date = Frozen;
+      }, epochMs);
+    }
+
+    page = await context.newPage();
+
+    // Capture console errors / warnings for diagnostics.
+    page.on('console', (msg) => {
+      const t = msg.type();
+      if (t === 'error') consoleErrors.push(msg.text());
+      else if (t === 'warning') consoleWarns.push(msg.text());
+    });
+    page.on('pageerror', (err) => consoleErrors.push('pageerror: ' + (err?.message || String(err))));
+
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: bootTimeoutMs });
+    await page.waitForFunction(BOOT_CHECK_FN, undefined, { timeout: bootTimeoutMs, polling: 250 });
+  } catch (e) {
+    await page?.close({ runBeforeUnload: false }).catch(() => {});
+    await context?.close().catch(() => {});
+    await browser?.close().catch(() => {});
+    if (server) await new Promise((res) => server.close(() => res())).catch(() => {});
+    throw e;
+  }
 
   // ─── Public API ────────────────────────────────────────────────────────────
 
@@ -327,7 +365,7 @@ export async function createHarness(opts = {}) {
       }
     },
 
-    _internal: { page, server, browser, context, url },
+    _internal: { page, server, browser, context, url, cacheInfo },
   };
 
   return api;

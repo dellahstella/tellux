@@ -66,6 +66,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve as pathResolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { installSupabaseCache } from './supabase-cache.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const REPO_ROOT = pathResolve(__filename, '..', '..', '..');
@@ -433,6 +434,7 @@ async function main() {
   // newContext() explicitement : newPage() direct suffit ici, mais on garde la
   // même forme que les autres harnais du dossier.
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await installSupabaseCache(context, { label: 'contrast-panels' }); // brief BN
   const page = await context.newPage();
 
   await page.addInitScript(INSTALL_COND_FIXTURE);

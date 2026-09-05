@@ -32,6 +32,19 @@ async function main() {
 
   async function clickAndReadPopup(lat, lon) {
     return await h.evalInPage(({ lat, lon }) => new Promise((resolve) => {
+      // Ré-injection de la mesure citoyenne synthétique ICI, en synchrone, immédiatement
+      // avant map.fire('click',...) — dans le MÊME évalInPage (donc le même tick JS, sans
+      // roundtrip CDP entre les deux) — pas dans un evalInPage séparé en amont. Trouvaille
+      // brief BN (2026-09-05) : loadDB() (app.html) recharge /contributions (jamais mise en
+      // cache, règle brief BN) et fait contribsDB=data||[] ~1,5s après le boot, un NOUVEAU
+      // tableau qui remplace celui où l'entrée synthétique avait été poussée. Une injection
+      // séparée AVANT ce bloc (même juste avant, via un evalInPage distinct) laisse une
+      // fenêtre — le temps du roundtrip Node↔navigateur suivant — pendant laquelle loadDB()
+      // peut encore résoudre et écraser contribsDB avant que le clic ne lise dedans (course
+      // rare mais réelle, observée 1 run sur 6 avec une injection séparée juste avant).
+      // Synchrone + même appel que le clic : aucune fenêtre possible, la course est fermée.
+      // eslint-disable-next-line no-undef
+      contribsDB.push({ lat, lon, valeur: 46500, unite: 'nT' });
       // eslint-disable-next-line no-undef
       if (typeof map !== 'undefined' && map.closePopup) map.closePopup();
       // eslint-disable-next-line no-undef
@@ -67,13 +80,10 @@ async function main() {
     };
   }
 
-  // Injecte une mesure citoyenne synthétique à ~0km du point de test (dans le rayon 500m que
-  // lit le calcul de Δ) — en mémoire uniquement (contribsDB, script-scope), jamais écrite en
-  // base. Nécessaire pour que Δ affiche un chiffre plutôt que "—" dans les 3 états testés.
-  await h.evalInPage(({ lat, lon }) => {
-    // eslint-disable-next-line no-undef
-    contribsDB.push({ lat, lon, valeur: 46500, unite: 'nT' });
-  }, TEST_POINT);
+  // Mesure citoyenne synthétique à ~0km du point de test (dans le rayon 500m que lit le calcul
+  // de Δ) — en mémoire uniquement (contribsDB, script-scope), jamais écrite en base. Nécessaire
+  // pour que Δ affiche un chiffre plutôt que "—" dans les 3 états testés. Poussée dans
+  // clickAndReadPopup() elle-même (pas ici) — voir son commentaire pour la course que ça évite.
 
   try {
     // ─── État LOADING : SEGMENT_GRID null, préchargement pas encore tenté/pas fini ───

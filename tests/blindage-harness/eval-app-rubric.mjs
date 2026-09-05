@@ -45,6 +45,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve as pathResolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { installSupabaseCache } from './supabase-cache.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const REPO_ROOT = pathResolve(__filename, '..', '..', '..');
@@ -423,6 +424,7 @@ async function main() {
 
   const browser = await chromium.launch({ headless: DEFAULT_HEADLESS });
   const context = await browser.newContext();
+  await installSupabaseCache(context, { label: 'eval-app-rubric' }); // brief BN
   const page = await context.newPage();
 
   // Tracking des erreurs console — séparés boot vs interaction.
