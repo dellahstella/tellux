@@ -2188,6 +2188,15 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
       <div class="mlegend-inline" id="mleg-hot"></div>
       <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-hotrf"></div>
+      <!-- Champ ELF (nT) — brief BH, 2026-09-05 : couche ELF PURE (data-domains="elf" seul),
+           distincte de b-hot (composite human+geo, cf. brief BF — conservé, non touché ici).
+           N'affiche rien sous 300 nT (cf. buildElf()) : seuil délibérément choisi comme seul
+           repère réellement sourcé du fichier — la même annotation IARC classe 2B déjà présente
+           dans la légende de b-hot (repère documentaire, PAS une recommandation de seuil
+           cartographique) — arbitrage Soleil explicite, réserve reprise ici dans le title= et
+           la légende, pas seulement en commentaire de code. -->
+      <button class="lbtn" id="b-elf" data-domains="elf" title="Champ magnétique ELF 50 Hz (réseau électrique), exprimé en nT — composante anthropique seule du modèle Tellux, sans la susceptibilité du substrat (distincte de « Champ magnétique composite », qui combine les deux). Estimation, pas une mesure. N'affiche rien sous 300 nT : seuil réutilisant le repère documentaire IARC classe 2B, une classification épidémiologique de long terme — un choix éditorial d'affichage, pas une évaluation du risque à ce niveau précis." onclick="tog('elf','on-elf',this)"><span class="dot" style="background:#5c3a9b"></span>Champ ELF (nT)<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">ELF</span></button>
+      <div class="mlegend-inline" id="mleg-elf"></div>
       <!-- L'ex-bouton unique b-con (« Mesures EM ») vit désormais dans GROUPE 3 « Contexte
            naturel » / sous-groupe « Repères et mesures externes », SCINDÉ le 2026-08-29 (brief
            « exécution groupée », item C) en b-cert (« Mesures certifiées ANFR/EXEM ») et
@@ -3139,6 +3148,8 @@ var JS_STRINGS_EN = {
   detail_delta_loading: "not yet available (preloading in progress)",
   btn_save_finalizing: "Finalizing calculation…",
   save_elf_fallback_notice: "Measurement saved with a simplified estimate of the electromagnetic field (grid data unavailable).",
+  elf_loading_label: "ELF field (nT) — loading…",
+  elf_fallback_notice: "ELF field unavailable right now (network data not loaded).",
   // an_label_tres_actif/an_label_actif/an_label_neutre, it_verdict_calme_actif/_calme_neutre/
   // _zone_calme/_perturb_faible/_influence_detectable/_zone_perturbee SUPPRIMÉES (ADR-064, brief T,
   // 2026-09-03) : anLabel retirée (score Naturel plus affiché) ; itVerdict devient un renvoi unique
@@ -3429,6 +3440,7 @@ var JS_STRINGS_EN = {
   leg_group_anthropique: "Human-made sources",
   mleg_sub_hot: "Tellux model combining the electrical grid and substrate, in nT — excludes the total geomagnetic field (~46,000-47,500 nT in Corsica), not a measurement. Only the electrical-grid component feeds the displayed score.",
   mleg_sub_hotrf: "Tellux model, internally calibrated against certified ANFR/EXEM measurements — order-of-magnitude estimate, not a measurement.",
+  mleg_sub_elf: "Tellux model, 50 Hz electrical grid only — no substrate, no total geomagnetic field. Shows nothing below 300 nT (IARC class 2B reference point — a display choice, not a risk threshold).",
   mleg_sub_emag: "Deep Corsican basement anomalies (NOAA EMAG2v3, display) — the internal grid actually used (distinct, computed permanently as the badge indicates) is not part of any publicly displayed score.",
   mleg_sub_foretdense: "Tall-canopy species (IGN BD Forêt V2), excluding scrub-forest mosaic — modulates the µW/m² value at map click; neither the heatmap nor the displayed score depends on it.",
   mleg_sub_crustal: "Reference magnetic anomalies, global and Corsican — documentary comparison, outside the calculation.",
@@ -3761,7 +3773,7 @@ const lPostesSources=L.layerGroup();
 // restent chargées au boot pour le calcul, seul l'affichage carte a été retiré.
 // lSit/lSit2/lAlign/lEgl/lTour/lIndu/lCast/lPont : couches patrimoniales migrées vers patrimoine.html
 // anciennes couches supprimées — déplacées hors de ce fichier
-const lBT=L.layerGroup(),lAnt=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup(),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}),lHotRF=L.layerGroup().addTo(map),lGeom=L.layerGroup().addTo(map);
+const lBT=L.layerGroup(),lAnt=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup(),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}),lHotRF=L.layerGroup().addTo(map),lGeom=L.layerGroup().addTo(map),lElf=L.layerGroup();
 // lCon (contributions citoyennes) n'est plus .addTo(map) à la déclaration depuis 2026-08-29 —
 // ajoutée/retirée uniquement par tog('contrib') (bouton « Contributions smartphone », ex-b-con).
 const lCrustal=L.layerGroup();
@@ -3953,7 +3965,7 @@ let _landeMaquisZoomHintShown=false;
 const VEG_GROUP=['foretdense','foretouverte','landemaquis'];
 // SCISSION 2026-08-29 (brief « exécution groupée », item C) : con → cert (lCert, fiches
 // certifiées ANFR/EXEM) + contrib (lCon, contributions citoyennes). Deux boutons, deux toggles.
-const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,cert:lCert,contrib:lCon,foretdense:lForetDense,foretouverte:lForetOuverte,landemaquis:lLandeMaquis,crustal:lCrustal,openrad:lOpenRad};
+const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,elf:lElf,cert:lCert,contrib:lCon,foretdense:lForetDense,foretouverte:lForetOuverte,landemaquis:lLandeMaquis,crustal:lCrustal,openrad:lOpenRad};
 const WMS={hyd:wmsHyd,emag:wmsEmag};
 // hot:false/hotrf:true — modèle RF activé par défaut à la place du champ magnétique
 // composite (arbitrage Soleil 2026-08-23). Swap symétrique avec la déclaration lHot/lHotRF
@@ -3980,7 +3992,7 @@ const WMS={hyd:wmsHyd,emag:wmsEmag};
 // ci-dessus) : les antennes ANFR + TDF s'affichent par défaut à la place des mesures certifiées,
 // en complément de la grille RF (hotrf, déjà true). Mesures certifiées toujours chargées et
 // disponibles au clic (bouton b-cert), simplement plus affichées au premier rendu.
-const ACTIVE={bt:false,ant:true,hyd:false,emag:false,hot:false,hotrf:true,res:false,prod:false,cert:false,contrib:false,crustal:false,openrad:false};
+const ACTIVE={bt:false,ant:true,hyd:false,emag:false,hot:false,hotrf:true,elf:false,res:false,prod:false,cert:false,contrib:false,crustal:false,openrad:false};
 
 // 'con' (scindé depuis en 'cert'+'contrib', 2026-08-29 item C) et 'emag' promues en Zone 1
 // "core" le 2026-08-27 (brief "Panneau '?' sélectif",
@@ -4068,6 +4080,9 @@ const LAYER_DOC_ANCHORS={
     {href:'/cadre-scientifique.html#elf-anthropique',    labelKey:'docref_hot_elf',  labelFr:'Composante ELF (réseau électrique)'},
     {href:'/cadre-scientifique.html#magnetique-statique',labelKey:'docref_hot_susc',labelFr:'Composante susceptibilité du substrat'}
   ],
+  // elf (brief BH, 2026-09-05) : couche ELF pure — pointe uniquement vers la composante
+  // anthropique (pas de susceptibilité du substrat ici, contrairement à b-hot ci-dessus).
+  elf:        [{href:'/cadre-scientifique.html#elf-anthropique'}],
   hotrf:      [{href:'/cadre-scientifique.html#radiofrequences'}],
   emag:       [{href:'/cadre-scientifique.html#magnetique-statique'}],
   foretdense: [{href:'/cadre-scientifique.html#radiofrequences'}],
@@ -4101,6 +4116,11 @@ const LAYER_SUBTITLE_FR={
   // hot (2026-09-05, brief BF) : ajout « exclut le champ géomagnétique total » — même clause
   // que title= et LEGEND_HTML.hot, mêmes motifs (cf. commentaire au-dessus du bouton #b-hot).
   hot:  'Modèle Tellux combinant réseau électrique et substrat, en nT — exclut le champ géomagnétique total (~46 000-47 500 nT en Corse), pas une mesure. Seule la composante réseau électrique entre dans le score affiché.',
+  // elf (brief BH, 2026-09-05) : couche ELF pure, distincte de hot (composite). Seuil 300nT
+  // délibérément différent de celui de hot (200nT) — réutilise le repère IARC classe 2B déjà
+  // cité dans la légende de hot, réserve explicite reprise ici (arbitrage Soleil : ne jamais
+  // laisser lire ce seuil comme une évaluation du risque à ce niveau précis).
+  elf:  'Modèle Tellux, réseau électrique 50 Hz seul — sans le substrat, sans le champ géomagnétique total. N\'affiche rien sous 300 nT (repère IARC classe 2B — un choix d\'affichage, pas un seuil de risque).',
   hotrf:'Modèle Tellux, calibration interne sur mesures certifiées ANFR/EXEM — estimation d’ordre de grandeur, pas une mesure.',
   // emag (2026-09-03, brief AB) : corrigé — la donnée NOAA EMAG2v3 VISIBLE (ce bouton) n'est pas
   // celle qui pèse sur le calcul. Le calcul (calcLCS1 ~L4798/calcMagneticStatic ~L5641) lit une
@@ -4184,6 +4204,7 @@ const LEGEND_HTML={
   // Sous-titre complété le 2026-09-05 (brief BF) : « hors champ géomagnétique total », même
   // clause que title=/LAYER_SUBTITLE_FR.hot (cf. commentaire au bouton #b-hot).
   hot:'<div class="leg-block"><b class="leg-title">Champ magnétique composite (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (réseau) + susceptibilité du substrat — hors champ géomagnétique total (~46 000 nT)</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#4a4f5e;width:140px;margin-bottom:4px"><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="font-size:8px;color:var(--tx3)">Aucune cellule affichée sous 200 nT (transparence totale)</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT : repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#626774">Pas de seuil d\'alerte — cf. popup Détails</span></div><div class="leg-src">Biot-Savart · EDF SEI · susceptibilité BRGM</div></div>',
+  elf:'<div class="leg-block"><b class="leg-title">Champ ELF (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">50 Hz réseau électrique — composante anthropique seule, sans le substrat</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#c9b8e8,#8f6bc4,#5c3a9b,#3d2569);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#4a4f5e;width:140px;margin-bottom:4px"><span>300</span><span>600</span><span>1200</span><span>2500 nT</span></div><div class="leg-row" style="font-size:8px;color:var(--tx3)">Aucune cellule affichée sous 300 nT (transparence totale)</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #5c3a9b;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ Seuil réutilisant le repère documentaire IARC classe 2B<br><span style="font-size:8px;color:#626774">Classification épidémiologique de long terme — pas une recommandation de seuil cartographique, pas une évaluation du risque à ce niveau</span></div><div class="leg-src">Biot-Savart · EDF SEI</div></div>',
   // hotrf allégée le 2026-08-29 (brief « exécution groupée », item A ; proposition
   // _drafts/BRIEF_LEGENDES_RF_COMPOSITE_LIVRABLES_2026-08-29.md, texte validé Soleil au tour
   // précédent). Passe de ~2 575 à ~700 car. : ne reste que le visuellement actionnable
@@ -4302,6 +4323,7 @@ const LEGEND_HTML={
 // INSTRUMENT_LABELS/CRUSTAL_REFS.
 const LEGEND_HTML_EN={
   hot:'<div class="leg-block"><b class="leg-title">Composite magnetic field (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (grid) + substrate susceptibility — excludes the total geomagnetic field (~46,000 nT)</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#4a4f5e;width:140px;margin-bottom:4px"><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="font-size:8px;color:var(--tx3)">No cell shown below 200 nT (fully transparent)</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT: IARC class 2B documentary reference point.<br><span style="font-size:8px;color:#626774">Not an alert threshold — see popup Details</span></div><div class="leg-src">Biot-Savart · EDF SEI · BRGM susceptibility</div></div>',
+  elf:'<div class="leg-block"><b class="leg-title">ELF field (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">50 Hz electrical grid — anthropic component only, no substrate</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#c9b8e8,#8f6bc4,#5c3a9b,#3d2569);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#4a4f5e;width:140px;margin-bottom:4px"><span>300</span><span>600</span><span>1200</span><span>2500 nT</span></div><div class="leg-row" style="font-size:8px;color:var(--tx3)">No cell shown below 300 nT (fully transparent)</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #5c3a9b;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ Threshold reuses the IARC class 2B documentary reference point<br><span style="font-size:8px;color:#626774">Long-term epidemiological classification — not a cartographic threshold recommendation, not a risk evaluation at this level</span></div><div class="leg-src">Biot-Savart · EDF SEI</div></div>',
   hotrf:'<div class="leg-block"><b class="leg-title">RF electric field (V/m)</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofrequency — outdoor estimate, Tellux model</div>'+
     '<div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div>'+
@@ -4796,6 +4818,7 @@ function tog(id,cls,btn){
     if(id==='emag')document.getElementById('emag-op-row').style.display='flex';
     if(id==='hot'&&lHot.getLayers().length===0)buildHot();
     if(id==='hotrf'&&lHotRF.getLayers().length===0)buildHotRF();
+    if(id==='elf'&&lElf.getLayers().length===0)buildElf();
     if(id==='foretdense'){
       document.getElementById('foretdense-op-row').style.display='flex';
       if(lForetDense.getLayers().length===0)loadForetDenseGrid().then(buildForetDenseLayer);
@@ -9705,6 +9728,79 @@ function buildHotRF(){
   }
 }
 
+// Champ ELF (nT) — couche dédiée (brief BH, 2026-09-05). Palette violette (dérivée de la
+// teinte déjà établie pour les contributions smartphone, #5c3a9b) — délibérément distincte de
+// l'ocre du composite (scoreColor) et du bleu de la RF (rfColor), jamais réutilisée ailleurs
+// comme dégradé de heatmap (seule un marqueur ponctuel l'utilisait jusqu'ici).
+function elfColor(nt){
+  if(nt<600)return{fill:'#c9b8e8',opacity:0.28,label:'Plus faible (300–600 nT)'};
+  if(nt<1200)return{fill:'#8f6bc4',opacity:0.38,label:'Faible (600–1200 nT)'};
+  if(nt<2500)return{fill:'#5c3a9b',opacity:0.48,label:'Modéré (1200–2500 nT)'};
+  return{fill:'#3d2569',opacity:0.55,label:'Élevé (> 2500 nT)'};
+}
+
+// buildElf() — grille ELF PURE (brief BH, 2026-09-05), distincte de buildHot() (composite
+// human+geo, brief BF — conservé, NON touché ici). N'appelle QUE calcMagneticELFAuto() —
+// confirmé directement appelable sans passer par calcAll_v2() complet (cadrage AU : calcAll_v2
+// calcule 8 domaines/contextes par cellule pour n'en consommer qu'un ici) — coût évité sans
+// modifier calcAll_v2() lui-même (règle du brief : aucune modification de calcul).
+//
+// Seuil d'affichage : 300 nT, PAS 200 (celui de b-hot) — seul repère réellement sourcé du
+// fichier (IARC classe 2B, déjà cité dans la légende de b-hot), réserve explicite reprise dans
+// le title= et LEGEND_HTML.elf : c'est une classification épidémiologique de long terme, pas
+// une recommandation de seuil cartographique — un choix éditorial d'affichage, à ne jamais lire
+// comme une évaluation du risque à ce niveau précis (arbitrage Soleil explicite, brief BH).
+//
+// v1/v2 : ATTEND computeElfState()==='ready' avant de dessiner (jamais un repli v1 silencieux
+// sur une grille entière) — même doctrine que le popup et saveContrib() depuis le lot B
+// (cohérence entre les trois surfaces qui lisent le même état). Fenêtre mesurée courte (2-6s,
+// brief AP) : n'affecte que la toute première activation, pas les pans/zooms suivants
+// (rebuildHotDebounced() les résout déjà 'ready' dans l'immense majorité des cas). Indicateur
+// d'attente sur le LIBELLÉ du bouton lui-même (pas silencieux, pas ambigu — demande explicite
+// Soleil) : swap du nœud texte direct du bouton, restauré à l'identique (FR ou EN selon la
+// langue déjà appliquée par l'i18n) une fois résolu.
+async function buildElf(){
+  if(computeElfState()==='loading'){
+    const btn=document.getElementById('b-elf');
+    const txtNode=btn?[...btn.childNodes].find(n=>n.nodeType===3&&n.textContent.trim()):null;
+    const original=txtNode?txtNode.nodeValue:null;
+    if(txtNode)txtNode.nodeValue=jt('elf_loading_label','Champ ELF (nT) — chargement…');
+    const _elfWaitStart=Date.now();
+    while(computeElfState()==='loading'&&(Date.now()-_elfWaitStart)<20000){
+      await new Promise(r=>setTimeout(r,250));
+    }
+    if(txtNode&&original!=null)txtNode.nodeValue=original;
+    // Jamais silencieux (même principe que le popup/saveContrib()) : si la fenêtre a expiré sans
+    // résolution, informer plutôt que dessiner un vide ambigu ou un repli v1 non signalé.
+    if(computeElfState()!=='ready'){
+      info(jt('elf_fallback_notice','Champ ELF indisponible pour le moment (données réseau non chargées).'),'warn',6000);
+      return;
+    }
+  }
+  lElf.clearLayers();
+  const z=map.getZoom();
+  const step=z>=16?0.001:z>=14?0.003:z>=12?0.008:z>=10?0.02:0.04;
+  const bnds=map.getBounds();
+  const latMin=z>=10?Math.max(41.35,bnds.getSouth()-0.1):41.35;
+  const latMax=z>=10?Math.min(43.05,bnds.getNorth()+0.1):43.05;
+  const lonMin=z>=10?Math.max(8.55,bnds.getWest()-0.1):8.55;
+  const lonMax=z>=10?Math.min(9.65,bnds.getEast()+0.1):9.65;
+  for(let a=latMin;a<latMax;a+=step){
+    for(let o=lonMin;o<lonMax;o+=step){
+      const nt=calcMagneticELFAuto(a,o).B_total_nT;
+      if(nt>300){
+        const {fill,opacity}=elfColor(nt);
+        const rect=L.rectangle([[a,o],[a+step,o+step]],{
+          color:fill, weight:0.5, opacity:0.4,
+          fillColor:fill, fillOpacity:opacity,
+          interactive:false
+        });
+        rect.addTo(lElf);
+      }
+    }
+  }
+}
+
 // Sources de production electrique (couche dediee lProd)
 // Fusion : PROD_ELECTRIQUE (hors Eolien) + EOLIENNES_DATA (RTE ODRE, coords fiables).
 // Les 3 entrees type Eolien de PROD_ELECTRIQUE sont filtrees a la lecture —
@@ -10705,7 +10801,7 @@ function toggleLayersSheetExpand(){
 // Guard: loadNOAA/loadCEM may be absent post-v8 cleanup — ne pas bloquer le reste du chaînage init
 if(typeof loadNOAA==='function')loadNOAA();
 if(typeof loadCEM==='function')loadCEM();
-loadChargeReseau().then(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}}).catch(()=>{});
+loadChargeReseau().then(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.elf)buildElf();}).catch(()=>{});
 // loadHTADataOnly() sorti du Promise.all décalé de 1500ms ci-dessous (2026-09-04, brief AF
 // lot B, arbitrage Soleil, mesure en prod : la grille ELF v2 mettait 4-7s à être prête, pas
 // les 1,5s de l'hypothèse initiale, en partie parce qu'elle attendait son tour dans un lot de
@@ -10730,7 +10826,7 @@ showLegend('hotrf',true);
 showLegend('ant',true);
 // Démarrage : anomalies EM (couche RF + mesures terrain par défaut, cf. arbitrage 2026-08-23)
 let _hotDebounce=null;
-function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.hotrf){lHotRF.clearLayers();buildHotRF();}},300);}
+function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.hotrf){lHotRF.clearLayers();buildHotRF();}if(ACTIVE.elf)buildElf();},300);}
 map.on('zoomend',rebuildHotDebounced);
 map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
 // Zoom-gate visuel de la couche forêt dense (décision Soleil 2026-08-30) — cf. _syncForetDenseZoom.
@@ -12734,7 +12830,11 @@ function capCleanup(){
 // LAYER-BADGE-TITLE-I18N-CO-STALE-BRIEF-AB-001) — colonne vide = non appliquée, FR reste affiché.
 ["lyr_hot_tt","#b-hot","title","Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. N'inclut pas le champ géomagnétique terrestre total (~46 000-47 500 nT en Corse, l'ordre de grandeur qu'un magnétomètre de smartphone mesure) : ce sont deux grandeurs physiques distinctes, jamais additionnées ici — le champ géomagnétique n'entre dans ce nombre à aucun titre. Estimation du modèle Tellux, pas une mesure. La composante ELF entre dans le score Indice Tellux affiché ; la composante substrat reste une donnée de contexte, sans consommateur dans ce score.","","Composite magnetic field — ELF 50 Hz (electrical grid) + substrate susceptibility, expressed in nT. Does not include the total terrestrial geomagnetic field (~46,000-47,500 nT in Corsica, the order of magnitude a smartphone magnetometer measures): these are two distinct physical quantities, never added together here — the geomagnetic field plays no part whatsoever in this number. Tellux model estimate, not a measurement. The ELF component feeds the displayed Indice Tellux score; the substrate component remains contextual data, with no consumer in that score."],
 ["lyr_hotrf","#b-hot-rf","","Champ électrique RF (V/m)","Campu elettricu RF (V/m)","RF electric field (V/m)"],
+["lyr_elf","#b-elf","","Champ ELF (nT)","","ELF field (nT)"],
 ["lyr_hotrf_tt","#b-hot-rf","title","Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte.","Campu elettricu radiufrequenza (V/m) — mudellu Tellux — calibrazione interna nantu à 30 misure certificate ANFR/EXEM (propagazione da ~3000 antenne ANFR reale). Stima centrale d'ordine di grandezza (campu esternu ; sott'ivaluta i siti più esposti, sopravaluta l'internu di i fabbricati). Rilettura fisicu in corsu ; ùn rimpiazza micca una misura certificata. Riferimenti ICNIRP indicativi, micca soglia d'alerta.","Radiofrequency electric field (V/m) — Tellux model — internal calibration on 30 certified ANFR/EXEM measurements (propagation from ~3,000 actual ANFR antennas). Central order-of-magnitude estimate (outdoor field; underestimates highly exposed sites, overestimates indoor levels). Physicist review underway; does not replace a certified measurement. ICNIRP reference points are indicative, not an alert threshold."],
+// lyr_elf_tt (brief BH, 2026-09-05) : CO laissée vide à dessein — pas de traduction improvisée
+// sans validation locuteur natif (même discipline que chip_label_tt/brief AV, dom_hot/brief BA).
+["lyr_elf_tt","#b-elf","title","Champ magnétique ELF 50 Hz (réseau électrique), exprimé en nT — composante anthropique seule du modèle Tellux, sans la susceptibilité du substrat (distincte de « Champ magnétique composite », qui combine les deux). Estimation, pas une mesure. N'affiche rien sous 300 nT : seuil réutilisant le repère documentaire IARC classe 2B, une classification épidémiologique de long terme — un choix éditorial d'affichage, pas une évaluation du risque à ce niveau précis.","","ELF magnetic field 50 Hz (electrical grid), expressed in nT — anthropic component only of the Tellux model, without substrate susceptibility (distinct from \"Composite magnetic field\", which combines both). Estimate, not a measurement. Shows nothing below 300 nT: a threshold reusing the IARC class 2B documentary reference point, a long-term epidemiological classification — an editorial display choice, not a risk evaluation at this precise level."],
 ["lyr_cert","#b-cert","","Mesures certifiées (ANFR/EXEM)","Misure certificate (ANFR/EXEM)","Certified measurements (ANFR/EXEM)"],
 ["lyr_cert_tt","#b-cert","title","236 fiches de mesure certifiées ANFR/EXEM (2002–2026), extraites des PDF ou de l'API CartoRadio. 21 ont servi à calibrer la constante k du modèle RF (calcul one-shot à l'initialisation, pas une modulation en direct par point). Losanges = extérieur public (position exacte) ; cercles = résidentiel (centroïde communal), colorés selon la conformité (limite légale 28 V/m).","236 schede di misura certificate ANFR/EXEM (2002–2026), estratte da i PDF o da l'API CartoRadio. 21 anu servutu à calibrà a custante k di u mudellu RF (calculu una volta sola à l'iniziu, micca una mudulazione in direttu per puntu). Rombi = esternu pubblicu (pusizione esatta) ; cerchj = residenziale (centroide cumunale), culuriti secondu a cunfurmità (limita legale 28 V/m).","236 certified ANFR/EXEM measurement sheets (2002–2026), extracted from CartoRadio PDFs or API. 21 used to calibrate the RF model's k constant (one-shot calculation at initialization, not a live per-point modulation). Diamonds = outdoor public (exact position); circles = residential (commune centroid), coloured by compliance (legal limit 28 V/m)."],
 ["lyr_contrib","#b-contrib","","Contributions smartphone","Cuntribuzione smartphone","Smartphone contributions"],
