@@ -97,6 +97,49 @@ function tableFromPath(pathname) {
   return m ? m[1] : null;
 }
 
+// DEUX DÉFAUTS TROUVÉS EN VÉRIFIANT CE CHANTIER (2026-09-05, pas en revue de conception) :
+//
+// 1) CORS origin figée (LA cause confirmée de "❌ loadAnt erreur: Failed to fetch" —
+//    diagnostiqué en direct via page.on('requestfailed') : errorText="net::ERR_FAILED").
+//    access-control-allow-origin dans la réponse Supabase d'origine vaut l'origine EXACTE
+//    du serveur local qui a fait la requête au moment où l'entrée a été écrite (ex.
+//    http://127.0.0.1:3779, port par défaut de createHarness()). La clé de cache n'inclut
+//    PAS ce port — volontairement, cf. cacheKeyFor : le cache est partagé entre TOUS les
+//    scripts sur disque. Mais eval-app-rubric.mjs tourne sur son propre port fixe (3780,
+//    indépendant de createHarness()) : en lisant une entrée écrite par un script tournant
+//    sur 3779, l'en-tête rejoué prétend autoriser 3779 alors que la page réelle est sur
+//    3780 — Chromium applique bien CORS à une réponse mockée par route.fulfill() (il ne
+//    sait pas qu'elle est simulée), et rejette. Solution : ces réponses n'ont plus de
+//    frontière de sécurité réelle à faire respecter (page de test locale parlant à
+//    elle-même) — les requêtes ici n'utilisent jamais `credentials:'include'` (auth par
+//    en-tête Authorization, pas cookie), donc allow-origin:'*' est valide et définitif,
+//    quel que soit le port de n'importe quel script présent ou futur.
+//
+// 2) content-encoding : route.fetch() → response.body() (et donc tout ce qu'on stocke/
+//    rejoue) renvoie TOUJOURS le corps déjà DÉCOMPRESSÉ — Playwright décode gzip/br
+//    automatiquement en récupérant .body(). Rejouer content-encoding tel quel prétendrait
+//    à Chromium qu'il doit encore décoder un corps déjà en clair. Pas confirmé comme la
+//    cause du símptome observé ici (l'erreur réseau était bien CORS, pas
+//    ERR_CONTENT_DECODING_FAILED), mais reste un mensonge de l'en-tête envers le corps
+//    réellement servi — retiré par hygiène/prudence, avant qu'un jour une réponse
+//    compressée ne déclenche ce second défaut latent. content-length/transfer-encoding/
+//    connection retirés pour la même raison (ne décrivent plus le corps qu'on rejoue, ou
+//    sont des en-têtes de bout en bout HTTP/1.1 sans sens pour un serveur simulé) ;
+//    set-cookie par hygiène (cookie de session Supabase sans usage pour la page locale).
+const UNSAFE_REPLAY_HEADERS = new Set([
+  'content-encoding', 'content-length', 'transfer-encoding', 'connection', 'set-cookie', 'keep-alive',
+]);
+
+function sanitizeReplayHeaders(headers) {
+  const out = {};
+  for (const [k, v] of Object.entries(headers || {})) {
+    if (!UNSAFE_REPLAY_HEADERS.has(k.toLowerCase())) out[k] = v;
+  }
+  // Toujours '*', jamais l'origine capturée à l'écriture — cf. point 1) ci-dessus.
+  out['access-control-allow-origin'] = '*';
+  return out;
+}
+
 function cacheKeyFor(url, headers) {
   // Inclut explicitement l'en-tête Range (pagination hta_lines) et Prefer
   // (peut influencer Content-Range dans la réponse) — jamais l'URL seule.
@@ -154,46 +197,76 @@ export async function installSupabaseCache(context, opts = {}) {
   await mkdir(cacheDir, { recursive: true });
 
   await context.route('**/rest/v1/**', async (route) => {
-    const request = route.request();
-    const url = request.url();
-    const u = new URL(url);
-    const table = tableFromPath(u.pathname);
+    // GARDE-FOU CRITIQUE (trouvé en CI, PR #1263 — pas en local) : un script
+    // peut fermer sa page/son contexte AVANT que toutes les pages de
+    // pagination interceptées aient fini de répondre (ex. contrast-panels.mjs
+    // n'attend pas la fin du chargement BT pour conclure ses propres mesures).
+    // route.fetch()/route.fulfill() lèvent alors "Request context disposed" —
+    // une rejection NON INTERCEPTÉE ici plantait tout le process Node
+    // (triggerUncaughtException), faisant échouer des workflows CI qui
+    // n'avaient RIEN à voir avec Supabase. Tout le corps du handler est donc
+    // sous try/catch : une route qui échoue parce que le contexte ferme ne
+    // doit jamais faire tomber le test qui l'a fermé À DESSEIN.
+    try {
+      const request = route.request();
+      const url = request.url();
+      const u = new URL(url);
+      const table = tableFromPath(u.pathname);
 
-    // Liste blanche stricte + jamais les préflights OPTIONS (pas de corps
-    // significatif, coût négligeable, complexité CORS inutile à gérer ici).
-    if (!table || !CACHEABLE_TABLES.has(table) || request.method() === 'OPTIONS') {
-      return route.continue();
-    }
+      // Liste blanche stricte + jamais les préflights OPTIONS (pas de corps
+      // significatif, coût négligeable, complexité CORS inutile à gérer ici).
+      if (!table || !CACHEABLE_TABLES.has(table) || request.method() === 'OPTIONS') {
+        return await route.continue();
+      }
 
-    const headers = request.headers();
-    const key = cacheKeyFor(url, headers);
-    const cached = await readCacheEntry(cacheDir, table, key, ttlMs);
+      const headers = request.headers();
+      const key = cacheKeyFor(url, headers);
+      const cached = await readCacheEntry(cacheDir, table, key, ttlMs);
 
-    if (cached) {
-      return route.fulfill({
-        status: cached.status,
-        headers: cached.headers,
-        body: Buffer.from(cached.bodyBase64, 'base64'),
+      if (cached) {
+        // sanitizeReplayHeaders en défense — même sur une entrée écrite par une version
+        // antérieure de ce fichier (avant le correctif content-encoding ci-dessus), qui
+        // aurait persisté l'en-tête brut : aucun vidage de cache à exiger pour bénéficier
+        // du correctif, une entrée existante s'auto-corrige dès sa prochaine lecture.
+        return await route.fulfill({
+          status: cached.status,
+          headers: sanitizeReplayHeaders(cached.headers),
+          body: Buffer.from(cached.bodyBase64, 'base64'),
+        });
+      }
+
+      // Miss ou entrée expirée — toujours logué, jamais silencieux (retour Soleil).
+      console.log(`${label}[supabase-cache] MISS/expiré — ${table} (${key.slice(0, 12)}…) → réseau réel.`);
+
+      const response = await route.fetch();
+      const body = await response.body();
+      const rawHeaders = response.headers();
+      // headers explicite (pas {response, body} seul) — ne dépend d'aucun comportement
+      // implicite de Playwright pour ce couple, corrige le même défaut content-encoding
+      // que la relecture cache ci-dessus, dès la toute première requête (jamais mise en
+      // cache) et pas seulement sur un HIT ultérieur.
+      await route.fulfill({ status: response.status(), headers: sanitizeReplayHeaders(rawHeaders), body });
+
+      // Persiste APRÈS avoir répondu à la page — ne retarde jamais le test. En-têtes déjà
+      // assainis à l'écriture : le fichier sur disque ne doit jamais prétendre décrire un
+      // corps compressé qu'il ne contient plus, et n'a aucune raison de garder un cookie de
+      // session Supabase sans usage pour la page locale testée.
+      await writeCacheEntry(cacheDir, table, key, {
+        status: response.status(),
+        headers: sanitizeReplayHeaders(rawHeaders),
+        bodyBase64: body.toString('base64'),
+        cachedAt: new Date().toISOString(),
+        url,
+      }).catch((e) => {
+        console.warn(`${label}[supabase-cache] échec d'écriture cache (non bloquant) : ${e.message}`);
       });
+    } catch (e) {
+      // Contexte/page déjà fermé(e), ou toute autre erreur réseau — le test
+      // qui a déclenché cette requête a déjà cessé de s'y intéresser (sinon
+      // il n'aurait pas fermé le contexte). Signalé, jamais fatal.
+      console.warn(`${label}[supabase-cache] requête interrompue (contexte probablement fermé) — ${e?.message || e}`);
+      await route.abort().catch(() => {}); // best-effort — peut lui-même échouer si déjà disposé
     }
-
-    // Miss ou entrée expirée — toujours logué, jamais silencieux (retour Soleil).
-    console.log(`${label}[supabase-cache] MISS/expiré — ${table} (${key.slice(0, 12)}…) → réseau réel.`);
-
-    const response = await route.fetch();
-    const body = await response.body();
-    await route.fulfill({ response, body });
-
-    // Persiste APRÈS avoir répondu à la page — ne retarde jamais le test.
-    await writeCacheEntry(cacheDir, table, key, {
-      status: response.status(),
-      headers: response.headers(),
-      bodyBase64: body.toString('base64'),
-      cachedAt: new Date().toISOString(),
-      url,
-    }).catch((e) => {
-      console.warn(`${label}[supabase-cache] échec d'écriture cache (non bloquant) : ${e.message}`);
-    });
   });
 
   return { disabled: false, cacheDir, ttlMs };
