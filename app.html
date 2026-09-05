@@ -2209,7 +2209,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            donc non concernées par ce second correctif. -->
       <button class="lbtn" id="b-hot" data-domains="statique elf" title="Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. N'inclut pas le champ géomagnétique terrestre total (~46 000-47 500 nT en Corse, l'ordre de grandeur qu'un magnétomètre de smartphone mesure) : ce sont deux grandeurs physiques distinctes, jamais additionnées ici — le champ géomagnétique n'entre dans ce nombre à aucun titre. Estimation du modèle Tellux, pas une mesure. La composante ELF entre dans le score Indice Tellux affiché ; la composante substrat reste une donnée de contexte, sans consommateur dans ce score." onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ magnétique composite (nT)<span class="layer-badge layer-badge--domain">Statique + ELF</span></button>
       <div class="mlegend-inline" id="mleg-hot"></div>
-      <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
+      <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)<span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-hotrf"></div>
       <!-- Champ ELF (nT) — brief BH, 2026-09-05 : couche ELF PURE (data-domains="elf" seul),
            distincte de b-hot (composite human+geo, cf. brief BF — conservé, non touché ici).
@@ -2218,7 +2218,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            dans la légende de b-hot (repère documentaire, PAS une recommandation de seuil
            cartographique) — arbitrage Soleil explicite, réserve reprise ici dans le title= et
            la légende, pas seulement en commentaire de code. -->
-      <button class="lbtn" id="b-elf" data-domains="elf" title="Champ magnétique ELF 50 Hz (réseau électrique), exprimé en nT — composante anthropique seule du modèle Tellux, sans la susceptibilité du substrat (distincte de « Champ magnétique composite », qui combine les deux). Estimation, pas une mesure. N'affiche rien sous 300 nT : seuil réutilisant le repère documentaire IARC classe 2B, une classification épidémiologique de long terme — un choix éditorial d'affichage, pas une évaluation du risque à ce niveau précis." onclick="tog('elf','on-elf',this)"><span class="dot" style="background:#5c3a9b"></span>Champ ELF (nT)<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">ELF</span></button>
+      <button class="lbtn" id="b-elf" data-domains="elf" title="Champ magnétique ELF 50 Hz (réseau électrique), exprimé en nT — composante anthropique seule du modèle Tellux, sans la susceptibilité du substrat (distincte de « Champ magnétique composite », qui combine les deux). Estimation, pas une mesure. N'affiche rien sous 300 nT : seuil réutilisant le repère documentaire IARC classe 2B, une classification épidémiologique de long terme — un choix éditorial d'affichage, pas une évaluation du risque à ce niveau précis." onclick="tog('elf','on-elf',this)"><span class="dot" style="background:#5c3a9b"></span>Champ ELF (nT)<span class="layer-badge layer-badge--domain">ELF</span></button>
       <div class="mlegend-inline" id="mleg-elf"></div>
       <!-- L'ex-bouton unique b-con (« Mesures EM ») vit désormais dans GROUPE 3 « Contexte
            naturel » / sous-groupe « Repères et mesures externes », SCINDÉ le 2026-08-29 (brief
@@ -2293,7 +2293,28 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            score public. Cf. paragraphe d'intro du sous-groupe ci-dessous — vérifié (revue 3/3,
            2026-09-03) : aucun chemin ne révèle le badge sans ce paragraphe adjacent, la même
            profondeur d'interaction (ouvrir « Contexte naturel ») donne accès aux deux à la fois,
-           jamais l'un sans l'autre.
+           jamais l'un sans l'autre. ⚠️ Ce badge reste un cas à traiter (brief BP, 2026-09-05,
+           arbitrage Soleil) — reclassement possible en « Hors calcul » (comme b-crustal), mais
+           la reformulation exacte (title=, badge) doit être remontée avant d'être écrite : cette
+           couche a déjà été touchée par le brief BF et sa formulation actuelle porte une nuance
+           délibérée à ne pas contredire par inadvertance. Non fait par ce diff.
+
+           PRINCIPE (brief BP, 2026-09-05, arbitrage Soleil — ce qui manquait à brief AB) : l'axe
+           de statut qualifie la PARTICIPATION d'une couche au calcul (source, conditionnelle ou
+           non) — il ne s'applique PAS aux couches qui MONTRENT le résultat de ce calcul (sorties,
+           ex. b-hot/b-hot-rf/b-elf, des heatmaps). L'absence de badge de statut sur une sortie
+           n'est pas un oubli, c'est une non-application de l'axe à une nature de couche qu'il ne
+           mesure pas — la couche reste qualifiée par son seul badge de domaine (.layer-badge--
+           domain, ci-dessous), qui lui s'applique à toute couche quelle que soit sa nature.
+           Écrit ici explicitement parce que son absence est ce qui a permis, dans le même commit
+           (brief AB, `df5376f`) qui a laissé b-hot sans badge de statut pour cette même raison
+           structurelle (domaines mixtes, cf. plus bas), de badger b-hot-rf — une sortie soeur,
+           domaine RF unique, sans la mixité qui aurait dû, par le même principe, en dispenser —
+           « Toujours dans le calcul ». Un principe non écrit ne s'applique qu'à la couche pour
+           laquelle il a été pensé ; le prochain ajout d'une heatmap (b-elf, brief BH, le jour
+           même de ce diff) a copié ce patron non écrit plutôt que le principe qu'il aurait dû
+           suivre. Badges retirés de b-hot-rf et b-elf par ce même diff pour appliquer ce principe
+           aux deux cas identifiés par la capture Soleil ; b-emag traité séparément ci-dessus.
            Second axe ORTHOGONAL ajouté (brief BA, 2026-09-04) : .layer-badge--domain, sur
            data-domains (statique/elf/rf) — dit UNIQUEMENT le domaine physique, jamais le
            statut de participation ci-dessus (les deux axes sont indépendants par construction,
