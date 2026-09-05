@@ -18,20 +18,28 @@ name: eval-app-rubric
 #   (FEDER-first) créerait du friction injustifiée. Phase B promotion à
 #   bloquant après ≥ 20 runs CI stables.
 #
-# Scope : déclenche UNIQUEMENT sur PR qui touchent app.html. Ne tourne pas
-# sur les PR veille / data / docs / tooling — évite le bruit et garde le
-# CI focalisé.
+# Scope (historique, jusqu'au 2026-09-05) : déclenchait automatiquement sur
+# toute PR touchant app.html/ce workflow/le script/package.json. Voir le bloc
+# ci-dessous — remplacé par un déclenchement manuel seul.
+#
+# DÉCLENCHEMENT MANUEL SEUL DEPUIS LE 2026-09-05 (brief BQ, voie 3)
+# ------------------------------------------------------------------
+# Le trigger `pull_request` automatique a été retiré : mesuré à 152 runs/7j
+# sur 84 branches distinctes (~286 Mo/semaine d'egress Supabase CI, cf.
+# _drafts/BRIEF_BQ_DIAGNOSTIC_CI_SUPABASE_2026-09-05.md), pour un check qui
+# est déjà `continue-on-error: true` (informatif, jamais bloquant, Phase A) —
+# le signal automatique par-PR ne se vérifiait pas plus qu'il ne se croyait
+# sur parole. Motivé en plus par EVAL-APP-RUBRIC-COUCHES-SETTIMEOUT-RACE-001
+# (4 défauts trouvés en 5 jours sur ce script, dont un flake introduit par le
+# cache Supabase du brief BN sur sa propre sonde de couches secondaires) —
+# une révision de fond de ce harnais est ouverte, pas close. `workflow_dispatch`
+# reste inchangé (inputs ci-dessous identiques) : le check se relance à la
+# demande, exactement comme avant, juste plus automatiquement à chaque push.
+# Réversible en un commit dédié sur ce fichier seul (jamais le script) —
+# rien n'empêche de restaurer `pull_request` une fois la révision de fond
+# faite, ni de repasser en `workflow_dispatch` seul si elle se prolonge.
 
 on:
-  pull_request:
-    branches:
-      - dev
-      - main
-    paths:
-      - 'app.html'
-      - '.github/workflows/eval-app-rubric.yml'
-      - 'tests/blindage-harness/eval-app-rubric.mjs'
-      - 'tests/blindage-harness/package.json'
   workflow_dispatch:
     inputs:
       app_url:
@@ -46,6 +54,19 @@ on:
         description: "Si '0', l'eval bloque la PR sur exit code (Phase B). Défaut '1' = informatif."
         required: false
         default: "1"
+
+# PAS de bloc concurrency ici, volontairement (revue adversariale brief BQ,
+# 2026-09-05) — contrairement à contrast-panels.yml, ce workflow n'a plus
+# QUE workflow_dispatch comme déclencheur depuis le retrait du trigger
+# pull_request ci-dessus. `github.event.pull_request.number` n'y est donc
+# JAMAIS renseigné : un bloc concurrency group/cancel-in-progress y
+# retomberait systématiquement sur `github.ref`, groupant deux dispatches
+# manuels sur la même branche — y compris deux vérifications manuelles
+# successives sur `main` après un merge. Exactement le cas que Soleil exclut
+# explicitement (« annuler une vérification post-merge ne l'est pas [sain] »).
+# Le gain (éviter des doublons de dispatch manuel, un cas rare) ne justifie
+# pas ce risque, contrairement à contrast-panels.yml où le trigger
+# pull_request garantit que la clé de groupement reste le numéro de PR.
 
 # Pas de permission write : on n'a besoin que de checkout + run.
 permissions:
