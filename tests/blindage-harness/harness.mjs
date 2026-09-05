@@ -33,6 +33,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve as pathResolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { installSupabaseCache } from './supabase-cache.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const HARNESS_DIR = pathResolve(__filename, '..');
@@ -146,6 +147,17 @@ export async function createHarness(opts = {}) {
   const context = await browser.newContext({
     ignoreHTTPSErrors: true,
   });
+
+  // Cache local Supabase (brief BN, 2026-09-05) — posé AVANT toute navigation
+  // pour intercepter le premier chargement lui-même, pas seulement les
+  // rechargements. opts.cache===false équivaut à TELLUX_HARNESS_CACHE=off
+  // pour ce contexte précis (utilisé par loading-path-live-check.mjs) : aucune
+  // route posée, réseau réel garanti. Ne touche jamais app.html ni le chemin
+  // de chargement réel — cf. commentaire de tête de supabase-cache.mjs pour
+  // la conception complète.
+  const cacheInfo = opts.cache === false
+    ? { disabled: true }
+    : await installSupabaseCache(context, opts.cacheOpts);
 
   // Time-freezing init script — installed in every page of the context BEFORE
   // app.html's scripts run. Replaces Date with a subclass that, when constructed
@@ -327,7 +339,7 @@ export async function createHarness(opts = {}) {
       }
     },
 
-    _internal: { page, server, browser, context, url },
+    _internal: { page, server, browser, context, url, cacheInfo },
   };
 
   return api;

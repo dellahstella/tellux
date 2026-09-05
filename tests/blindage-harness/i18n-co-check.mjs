@@ -27,6 +27,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve as pathResolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { installSupabaseCache } from './supabase-cache.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const REPO_ROOT = pathResolve(__filename, '..', '..', '..');
@@ -120,6 +121,7 @@ try {
   // ── Passe 1 : FR par défaut ──────────────────────────────────────────────
   {
     const page = await browser.newPage();
+    await installSupabaseCache(page.context(), { label: 'i18n-co-check:fr' }); // brief BN
     const consoleErrors = [];
     page.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
     page.on('pageerror', (err) => consoleErrors.push(String(err)));
@@ -147,6 +149,7 @@ try {
   // ── Passe 2 : CO via ?lang=co ────────────────────────────────────────────
   {
     const page = await browser.newPage();
+    await installSupabaseCache(page.context(), { label: 'i18n-co-check:co' }); // brief BN
     const consoleErrors = [];
     page.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
     page.on('pageerror', (err) => consoleErrors.push(String(err)));
