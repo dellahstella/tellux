@@ -2286,7 +2286,11 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            statut de participation ci-dessus (les deux axes sont indépendants par construction,
            cf. commentaire CSS de .layer-badge--domain plus haut). Posé sur 12 des 16 boutons
            data-domains : absent par choix sur les 3 couches "visuel" (b-hyd/b-foretouverte/
-           b-landemaquis, déjà hors de ce système par le tooltip du sélecteur posé au brief AV)
+           b-landemaquis, déjà hors de ce système par le tooltip du sélecteur posé au brief AV —
+           les 3 sont d'ailleurs masquées du menu depuis le brief AI, 2026-09-05 ; ce constat sur
+           l'absence de badge de domaine reste vrai qu'un bouton soit visible ou non, propos non
+           réamendé pour autant, juste noté ici pour éviter de laisser croire que 2 des 3 étaient
+           encore live au moment de lire ce commentaire)
            et sur b-openrad (data-domains="ionisant", domaine hors du périmètre discuté par ce
            brief — son propre chip de filtre reste commenté depuis le 2026-08-30, cf. plus haut).
            b-hot : SEUL bouton où le badge de domaine apparaît sans aucun badge de statut
@@ -2346,10 +2350,34 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
                (VEG_GROUP, cf. tog()) — une seule couche de couvert visible à la fois, comme les
                fonds de carte. Millésime 2016-2017 rendu visible directement dans le libellé du
                bouton (pas seulement dans les métadonnées du GeoJSON), cf. brief F étape 8. -->
+          <!-- Couches « Forêt ouverte » et « Lande/maquis » (b-foretouverte, b-landemaquis) masquées
+               du menu public le 2026-09-05 (brief AI, décision Soleil maintenue après réexamen) —
+               conservées en dette RÉSERVÉE, NI migrées NI supprimées : boutons, GeoJSON
+               (foret_ouverte_corse.geojson, lande_maquis_corse.geojson), LAYERS.foretouverte/
+               landemaquis, tog('foretouverte'|'landemaquis',...), VEG_GROUP (INCHANGÉ — reste à 3
+               membres, aucun retiré du groupe, cf. const VEG_GROUP plus bas), LAYER_SUBTITLE_FR/
+               JS_STRINGS_EN (zoom hints foretouverte_zoom_hint/landemaquis_zoom_hint) et
+               foretouverte-op-row/landemaquis-op-row (déjà display:none par défaut comme
+               hyd-op-row, jamais affichées puisque leur seul déclencheur — tog() — devient
+               inatteignable) restent INCHANGÉS dans le code JS/CSS, seul l'affichage des boutons
+               est retiré ici par commentaire. Réactivable par un futur brief en dé-commentant le
+               bloc ci-dessous, sans reconstruction — condition de réactivation posée par ce brief :
+               des points de mesure certifiés en couvert méditerranéen, seule voie établie par DS-01
+               pour ces formations (aucune profondeur de végétation équivalente n'existe aujourd'hui
+               pour elles). Les entrées i18n JT_TABLE ["lyr_foretouverte","lyr_foretouverte_tt",
+               "lyr_landemaquis","lyr_landemaquis_tt"] visant ces boutons sont laissées telles
+               quelles : sans élément DOM à cibler tant que ce bloc reste commenté, elles ne
+               s'appliquent simplement à rien (aucune erreur) — même traitement que #b-hyd/#b-openrad
+               ci-dessous. Écart réconcilié par ce diff : le registre technique privé
+               (VEG-GROUP-EXCLUSIVITE-CALC-SIDE-EFFECT-001) décrivait ces deux couches comme déjà
+               masquées depuis le 2026-09-04, alors que ce brief n'avait jamais été exécuté avant
+               aujourd'hui — chronologie complète dans l'entrée amendée du registre. -->
+          <!--
           <button class="lbtn" id="b-foretouverte" data-domains="visuel" title="BD Forêt V2 IGN — forêt ouverte (couvert arboré 10-40 %, feuillus FO1/conifères FO2/mélange FO3 — codes nomenclature IGN §4.1.2). Couche de contexte, millésimes 2016 (2B) / 2017 (2A) — incendies possibles depuis, ne pas lire comme un état actuel. N'entre dans AUCUN calcul directement (contrairement à Forêt dense) ; une seule couche de végétation affichée à la fois — activer ce bouton désactive Forêt dense s'il était actif, ce qui retire alors l'atténuation RF du prochain calcul au clic." onclick="tog('foretouverte','on-foretouverte',this)"><span class="sq" style="background:#4F7048;border:1px solid #3F5B3A"></span>Forêt ouverte (2016-2017)<span class="layer-badge layer-badge--context">Contexte</span></button>
           <div class="mlegend-inline" id="mleg-foretouverte"></div>
           <button class="lbtn" id="b-landemaquis" data-domains="visuel" title="BD Forêt V2 IGN — lande (bruyères, genêts, ajoncs ; garrigues et maquis non boisés — code LA4, nomenclature IGN §4.1.2). Couche de contexte, millésimes 2016 (2B) / 2017 (2A) — incendies possibles depuis, ne pas lire comme un état actuel. N'entre dans AUCUN calcul (contrairement à Forêt dense) ; une seule couche de végétation affichée à la fois." onclick="tog('landemaquis','on-landemaquis',this)"><span class="sq" style="background:#C28533;border:1px solid #8E6423"></span>Lande / maquis (2016-2017)<span class="layer-badge layer-badge--context">Contexte</span></button>
           <div class="mlegend-inline" id="mleg-landemaquis"></div>
+          -->
           <!-- Couche « Forêts publiques » (b-foret, ONF via WMS IGN) retirée complètement le
                2026-08-27 (décision Soleil, brief court "la couche forêt publique n'est plus utile
                dans app") — devenue redondante une fois « Forêt dense » (ci-dessus) affichée et
@@ -4119,9 +4147,13 @@ const LAYER_DOC_ANCHORS={
 // panneau "?" (retiré de ce breakpoint par ce même diff, cf. CSS #legende) donnait à voir sans
 // clic supplémentaire. Condensé depuis des sources déjà publiées ailleurs dans ce fichier
 // (title= du bouton, LEGEND_HTML[id]) — aucune affirmation neuve, aucun chiffre recalculé.
-// Seules les 12 couches réellement joignables (bouton non commenté) ont une entrée ; openrad/hyd
-// (couches mutées/réservées, cf. LAYER_DOC_ANCHORS ci-dessus) n'ont pas de bouton vivant —
-// updateInlineLegendMobile() ne peut de toute façon jamais être appelée avec show=true pour elles.
+// Seules les couches réellement joignables (bouton non commenté) ont vocation à avoir une
+// entrée ; openrad/hyd (couches mutées/réservées, cf. LAYER_DOC_ANCHORS ci-dessus) n'ont pas de
+// bouton vivant — updateInlineLegendMobile() ne peut de toute façon jamais être appelée avec
+// show=true pour elles. Exception non nettoyée, par choix (brief AI, 2026-09-05, masquage
+// foretouverte/landemaquis) : ces deux entrées restent ci-dessous alors que leurs boutons sont
+// désormais commentés eux aussi — laissées telles quelles (ne rien supprimer), même sort inerte
+// que documenté ici pour openrad/hyd, cf. commentaire au masquage de leurs boutons plus haut.
 const LAYER_SUBTITLE_FR={
   // hot (2026-09-05, brief BF) : ajout « exclut le champ géomagnétique total » — même clause
   // que title= et LEGEND_HTML.hot, mêmes motifs (cf. commentaire au-dessus du bouton #b-hot).
