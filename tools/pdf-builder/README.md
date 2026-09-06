@@ -35,7 +35,8 @@ Les DLL sont généralement fournies par le gestionnaire de paquets. Voir la [do
 python tools/pdf-builder/build_pdf.py <source.md> --output <sortie.pdf>
 ```
 
-Exemples :
+Exemples (le script accepte n'importe quel fichier markdown — les deux noms ci-dessous sont
+illustratifs, pas des chemins fournis par ce dépôt) :
 
 ```bash
 # Export test (non publié, gitignoré)
@@ -47,6 +48,11 @@ python tools/pdf-builder/build_pdf.py \
   TELLUX_POSITION_EPISTEMIQUE.md \
   --output build/pdf-tests/position_epistemique.pdf
 ```
+
+**Note (2026-09-06)** : ces deux documents source (précédemment `_archive/phase_2a_documents/`)
+sont désormais archivés en interne, non versionnés publiquement — la conversion PDF réelle,
+de toute façon différée jusqu'à la relecture physicien (cf. § Statut), s'exécutera depuis leur
+version interne au moment venu.
 
 Options :
 
