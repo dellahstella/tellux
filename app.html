@@ -1034,6 +1034,13 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   .legend{flex-direction:column;}
   .mpanel{margin-top:4px;padding:8px;}
   .quest-btn{bottom:12px;left:12px;width:44px;height:44px;}
+  /* NB (constaté 2026-09-06, non corrigé ici) : cette règle .fab-mesure est SANS EFFET. La règle
+     de base .fab-mesure est déclarée plus BAS dans le fichier ; une media query n'ajoutant pas
+     de spécificité, c'est l'ordre de source qui tranche et la règle de base l'emporte. Le FAB
+     rend donc 52x52 à tous les breakpoints, jamais 44x44. Mesuré en navigateur à 375x812.
+     Aucun .fab-entry n'est ajouté ici pour cette raison : une règle morte de plus n'aiderait
+     personne — le décalage vertical de .fab-entry est posé plus bas, APRÈS la règle de base,
+     là où il s'applique réellement. */
   .fab-mesure{bottom:12px;right:12px;width:44px;height:44px;font-size:22px;}
   .fab-menu{bottom:64px;right:12px;}
   #prescription-panel{width:calc(100vw - 32px)!important;right:16px!important;left:16px!important;}
@@ -1272,6 +1279,19 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .accordion-cat-icon.open{transform:rotate(90deg);}
 .accordion-cat-content{max-height:0;overflow:hidden;transition:max-height .35s ease;display:flex;flex-direction:column;gap:4px;padding:0 4px;}
 .accordion-cat-content.open{max-height:900px;padding:8px 4px;}
+/* .is-settled (2026-09-06) — le plafond de 900px ci-dessus n'existe que pour rendre la
+   transition possible (max-height n'est pas interpolable vers auto). Sur un conteneur
+   display:flex, un contenu plus haut que le plafond n'est pas débordé mais COMPRIMÉ :
+   chaque enfant rétrécit, overflow:hidden coupe le reste, et il n'y a ni barre de
+   défilement ni ellipse — le texte s'arrête en pleine phrase. Mesuré à 375x812 sur la
+   catégorie « Sources anthropiques », légendes dépliées : 3 couches actives suffisent à
+   atteindre 900px (2 couches = 897px), et à 5 couches #mleg-ant tombe de 397px naturels à
+   173px rendus, soit 56% de la légende masquée. Le cas n'est pas limite : 'ant' est allumée
+   par défaut, et les légendes inline grandissent APRÈS l'ouverture (updateInlineLegendMobile
+   injecte dans une catégorie déjà dépliée) — un correctif qui ne jouerait qu'à l'ouverture
+   ne couvrirait pas la vraie cause. Une fois la transition d'ouverture terminée, le plafond
+   est donc libéré : toute croissance ultérieure du contenu est libre. */
+.accordion-cat-content.open.is-settled{max-height:none;}
 .accordion-cat-content .lbtn{margin:0;}
 /* Header descriptif d'un accordéon (paragraphe d'ouverture, ex. Groupe 3 « Contexte naturel »). */
 /* .cat-header-text retirée le 2026-08-27 (brief "3 corrections UI menu EM") — dernier
@@ -1385,6 +1405,27 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 }
 .fab-mesure:hover{transform:scale(1.1);box-shadow:0 6px 20px rgba(0,0,0,.3);}
 .fab-mesure.fab-active{background:var(--danger);transform:rotate(45deg);}
+/* .fab-entry (2026-09-06) — « Mon lieu », bouton permanent et nommé, à GAUCHE du « + » et sur
+   sa ligne de base. Placement horizontal délibéré : la pile verticale du FAB porte déjà des
+   décalages mobile finement calculés (au-dessus de .mobile-tabbar ET de #conditions-bar, cf.
+   la règle .fab-mesure du bloc mobile de bas de fichier) ; y insérer un étage aurait obligé à
+   re-dériver ces valeurs, exercice que ce fichier a déjà payé cher. right:80px = 16 (right du
+   «+») + 52 (sa largeur) + 12 d'écart — 52 et non 44, parce que le FAB rend 52x52 à TOUS les
+   breakpoints : son override mobile 44x44 est court-circuité par l'ordre de source (cf. la note
+   sur cette règle, plus haut). Une seule géométrie à tenir des deux côtés, donc, et elle est
+   mesurée, pas supposée. Teinte reprise telle quelle de l'ancien bouton de menu (var(--tyrrh))
+   — aucune couleur neuve ; hauteur et ombre alignées sur .fab-mesure. */
+.fab-entry{
+  position:fixed;bottom:20px;right:80px;z-index:1050;
+  display:flex;align-items:center;gap:7px;height:52px;padding:0 16px;
+  border:none;border-radius:26px;cursor:pointer;
+  background:var(--tyrrh,#1F3A5F);color:#fff;
+  font-family:var(--font);font-size:13px;font-weight:500;line-height:1;
+  box-shadow:0 4px 16px rgba(0,0,0,.25);transition:all .2s;
+}
+.fab-entry:hover{transform:scale(1.05);box-shadow:0 6px 20px rgba(0,0,0,.3);}
+.fab-entry:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+.fab-entry-label{white-space:nowrap;}
 /* FAB mini-menu */
 .fab-menu{
   position:fixed;bottom:80px;right:16px;z-index:1049;
@@ -1407,6 +1448,15 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   box-shadow:0 2px 8px rgba(0,0,0,.12);white-space:nowrap;font-family:var(--font);
 }
 @keyframes fabSlideUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+/* Fondu d'apparition d'une couche (2026-09-06, brief « transitions ») — évite qu'une couche
+   surgisse d'un coup et fasse perdre le repère spatial. Durée .15s : c'est la durée dominante
+   du fichier (30 occurrences contre 10 pour .2s), reprise plutôt qu'inventée.
+   Animation et non transition : un one-shot posé puis retiré, sans état à maintenir sur des
+   centaines d'éléments. prefers-reduced-motion est déjà neutralisé globalement plus bas
+   (animation-duration:0.01ms !important) — rien à ajouter, la règle existante couvre celle-ci.
+   Aucun effet de particules, aucune dissolution : opacité seule. */
+.tlx-layer-fade{animation:tlxLayerFade .15s ease-out;}
+@keyframes tlxLayerFade{from{opacity:0;}to{opacity:1;}}
 .quest-tooltip{
   position:absolute;left:60px;top:50%;transform:translateY(-50%);
   background:var(--bg);color:var(--ardoise-clair);font-size:11px;font-weight:500;
@@ -1534,6 +1584,10 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
      passer sur 2 lignes si les 5 badges ne tiennent pas sur une — un chiffre en dur aurait
      seulement déplacé le bug vers d'autres locales/tailles de police plutôt que le résoudre. */
   .fab-mesure{bottom:calc(12px + var(--mobile-tabbar-h) + var(--conditions-bar-h, 66px));}
+  /* .fab-entry partage la ligne de base de .fab-mesure : même décalage, à la lettre — c'est
+     précisément pour ne pas re-dériver ce calcul que « Mon lieu » a été placé à côté du «+»
+     et non au-dessus (cf. commentaire de .fab-entry). */
+  .fab-entry{bottom:calc(12px + var(--mobile-tabbar-h) + var(--conditions-bar-h, 66px));}
   .fab-menu{bottom:calc(64px + var(--mobile-tabbar-h) + var(--conditions-bar-h, 66px));}
 }
 #conditions-bar-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:8px 14px;background:none;border:none;cursor:pointer;font:inherit;color:inherit;text-align:left;}
@@ -2125,7 +2179,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
 
 <p style="margin:10px 0 8px 0;"><strong style="color:var(--warn)">⚠️ Incertitudes documentées :</strong></p>
 <ul style="margin:6px 0 6px 16px;padding:0">
-  <li style="margin-bottom:3px"><strong>Courants HTA/HTB</strong> = ordres de grandeur (150-450A). Réalité : ±50% journée (pic/creuse). EDF SEI Corse ne publie pas données temps réel.</li>
+  <li style="margin-bottom:3px"><strong>Courants HTA</strong> = ordres de grandeur (150-450A). Réalité : ±50% journée (pic/creuse). EDF SEI Corse ne publie pas données temps réel.</li>
   <li style="margin-bottom:3px"><strong>IGRF 54 points</strong> → interpolation IDW (erreur ±50-100 nT possibles Corse)</li>
   <li style="margin-bottom:3px"><strong>Anomalie crustale (score)</strong> : grille LCS-1 ~24 pts (±20 nT) ; EMAG2v3 live (2 arc-min ~3.7 km) réservé au panneau comparatif « anomalies mondiales » (exploratoire, sans incidence sur le score)</li>
   <li style="margin-bottom:3px"><strong>Failles</strong> : 8 principales BRGM, bonus <3km. Quaternaires vs actives = pondération différente (0.7 vs 1.0).</li>
@@ -2276,7 +2330,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
     <div class="accordion-cat-content">
       <button class="lbtn on-ant" id="b-ant" data-domains="rf" title="Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR + TDF<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-ant"></div>
-      <button class="lbtn" id="b-res" data-domains="elf" title="Lignes électriques haute tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HT<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">ELF</span></button>
+      <button class="lbtn" id="b-res" data-domains="elf" title="Lignes électriques HTA — moyenne tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HTA<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">ELF</span></button>
       <div class="mlegend-inline" id="mleg-res"></div>
       <!-- Couche « Réseau BT » masquée en prod le 2026-08-29 (#1122, verdict RF : n'entre dans
            aucune fonction RF), REMISE EN PROD le 2026-08-30 : le rendu statique (buildBTStaticLayer,
@@ -3567,7 +3621,7 @@ var JS_STRINGS_EN = {
   mleg_sub_cert: "236 certified measurement records (2002–2026) — 21 used to calibrate the RF model.",
   mleg_sub_contrib: "Citizen smartphone measurements, uncertified — display only, outside the calculation.",
   mleg_sub_ant: "2G-to-5G mobile antennas and broadcast transmitters — ANFR open data.",
-  mleg_sub_res: "50 Hz high-voltage lines — EDF SEI, OSM.",
+  mleg_sub_res: "50 Hz medium-voltage (HTA) lines — EDF SEI, OSM.",
   mleg_sub_bt: "Low-voltage street distribution — EDF SEI, visible from zoom level 10.",
   mleg_sub_prod: "Power stations of the Corsican grid — hydro, wind, thermal.",
   mleg_sub_postesSources: "21 HV/MV transformer substations — EDF SEI, OSM data.",
@@ -4302,7 +4356,7 @@ const LAYER_SUBTITLE_FR={
   cert: '236 fiches de mesure certifiées (2002–2026) — 21 ont servi à calibrer le modèle RF.',
   contrib:'Mesures citoyennes au smartphone, non certifiées — affichage seul, hors calcul.',
   ant:  'Antennes mobiles 2G à 5G et émetteurs broadcast — source ANFR open data.',
-  res:  'Lignes haute tension 50 Hz — EDF SEI, OSM.',
+  res:  'Lignes HTA (moyenne tension) 50 Hz — EDF SEI, OSM.',
   bt:   'Distribution basse tension dans les rues — EDF SEI, visible à partir du zoom 10.',
   prod: 'Centrales du réseau électrique corse — hydraulique, éolien, thermique.',
   postesSources:'21 postes de transformation HTB/HTA — EDF SEI, données OSM.'
@@ -5071,6 +5125,55 @@ document.addEventListener('DOMContentLoaded',function(){
     });
   });
 });
+// ═══ Fondu d'apparition au basculement d'une couche (2026-09-06, brief « transitions ») ═══
+// Pose une animation d'opacité one-shot (.15s, cf. .tlx-layer-fade) sur les éléments DOM que
+// Leaflet a réellement créés pour la couche qu'on vient d'allumer.
+//
+// Pourquoi les éléments et non un pane : un pane Leaflet est partagé par plusieurs couches
+// (overlayPane, markerPane) — le fondre ferait clignoter tout ce qui était déjà affiché, ce qui
+// est l'inverse du but recherché (garder le repère spatial). Les couches de ce fichier n'ont pas
+// de pane dédié et leur en attribuer un rétroactivement toucherait un empilement z-index déjà
+// finement documenté ailleurs.
+//
+// Portée réelle, à ne pas surestimer : beaucoup de couches sont peuplées de façon ASYNCHRONE
+// APRÈS map.addLayer() (loadAnt, loadProd, loadReseau, loadBT, loadMesuresCertifiees…). À la
+// toute première activation, le groupe est donc encore vide et il n'y a rien à fondre : la
+// fonction ne fait rien. Le fondu joue aux activations SUIVANTES, quand la donnée est déjà là —
+// c'est-à-dire précisément dans le geste répété de comparaison de couches que le brief vise.
+// Retirer une couche reste immédiat : différer le retrait désynchroniserait ACTIVE[id] du DOM
+// pour un gain nul (une disparition n'est ambiguë dans aucun sens).
+const _TLX_FADE_MAX_ELS=400; // garde-fou perf ; au-delà, on n'anime pas plutôt que de saccader
+function _tlxFadeInLayer(layer){
+  if(!layer||typeof layer.eachLayer!=='function'&&!layer._container)return;
+  const els=[];
+  let debordement=false;
+  (function walk(l){
+    if(!l||debordement)return;
+    const el=l._icon||l._path||l._container;
+    if(el){
+      if(els.length>=_TLX_FADE_MAX_ELS){debordement=true;return;}
+      els.push(el);
+    }
+    // Couches en grappe (lAntCluster, lTDFCluster, lCert, lCon) : eachLayer() d'un
+    // markerClusterGroup itère les MARQUEURS, qui n'ont pas de _icon tant qu'ils sont
+    // regroupés — les bulles réellement dessinées vivent dans son _featureGroup. Sans cette
+    // descente, les couches les plus visibles de la carte ne fondaient jamais (mesuré : 0
+    // élément trouvé pour 'ant'). _featureGroup est une API privée de leaflet.markercluster :
+    // l'accès est donc opportuniste et sans conséquence s'il disparaît — au pire il n'y a pas
+    // de fondu, jamais d'erreur. Le nombre d'éléments reste borné par ce qui est à l'écran
+    // (mesuré : 1 bulle au dézoom Corse entière), pas par la taille du jeu de données.
+    if(l._featureGroup)walk(l._featureGroup);
+    if(typeof l.eachLayer==='function')l.eachLayer(walk);
+  })(layer);
+  if(debordement||!els.length)return; // pas de fondu partiel : tout ou rien, jamais à moitié
+  els.forEach(function(el){
+    el.classList.add('tlx-layer-fade');
+    el.addEventListener('animationend',function h(){
+      el.classList.remove('tlx-layer-fade');
+      el.removeEventListener('animationend',h);
+    });
+  });
+}
 function tog(id,cls,btn){
   // Guard : couche migrée hors de ce fichier
   // ou référence cassée — sortie silencieuse pour éviter map.addLayer(undefined).
@@ -5114,7 +5217,7 @@ function tog(id,cls,btn){
     if(id==='landemaquis'){_landeMaquisZoomHintShown=false;document.getElementById('landemaquis-op-row').style.display='none';}
     if(id==='bt')_btZoomHintShown=false;
     showLegend(id,false);
-  }else{WMS[id]?map.addLayer(WMS[id]):map.addLayer(LAYERS[id]);ACTIVE[id]=true;if(btn)btn.classList.add(cls);
+  }else{WMS[id]?map.addLayer(WMS[id]):map.addLayer(LAYERS[id]);_tlxFadeInLayer(WMS[id]||LAYERS[id]);ACTIVE[id]=true;if(btn)btn.classList.add(cls);
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='flex';
     if(id==='emag')document.getElementById('emag-op-row').style.display='flex';
     if(id==='hot'&&lHot.getLayers().length===0)buildHot();
@@ -11285,11 +11388,28 @@ function runAutoTests(){ return Promise.resolve(); }
 </script>
 <!-- Bouton Quête (Hypothèses) → système complet migré vers patrimoine.html -->
 <!-- FAB mini-menu -->
+<!-- « Mon lieu » sorti du FAB (2026-09-06, brief « entrée par le lieu », arbitrage Soleil).
+     Constat de départ : la fiche était à DEUX clics derrière un bouton « + » intitulé « Actions
+     terrain » — un « + » qui se lit comme ajouter/contribuer, pas comme analyser son lieu. Elle
+     devient un bouton permanent et NOMMÉ, posé à gauche du « + », sur la même ligne de base :
+     aucune modification de la pile verticale du FAB (dont les décalages mobile au-dessus de
+     .mobile-tabbar et #conditions-bar sont déjà finement calculés, cf. .fab-mesure), seul le
+     placement horizontal change.
+     Les deux id sont CONSERVÉS (#myplace-fab-btn, #myplace-fab-label) : les entrées i18n
+     myplace_fab_btn_aria et myplace_fab_label continuent de s'appliquer sans toucher la table,
+     donc aucune chaîne publique neuve. La classe .fab-mini est en revanche RETIRÉE — voir le
+     commentaire sur #fab-menu juste en dessous.
+     Le libellé texte est indispensable : le glyphe 📍 est déjà pris par le contrôle Leaflet
+     « Recentrer sur la Corse » (haut-gauche) — deux 📍 permanents sans texte seraient
+     indistinguables. -->
+<button type="button" id="myplace-fab-btn" class="fab-entry" aria-label="Analyser mon adresse ou ma position" onclick="openMyPlaceModal();if(typeof closeFabMenu==='function')closeFabMenu();">&#128205;<span class="fab-entry-label" id="myplace-fab-label">Mon lieu</span></button>
+<!-- #fab-menu ne contient plus que « Contribution terrain ». Effet de bord VOULU et vérifié :
+     les entrées i18n fab_mini_label et fab_mini_aria visent « .fab-mini » / « .fab-mini-label »
+     SANS index, donc le premier de la liste. Tant que « Mon lieu » occupait cette place, le FR
+     attendu (« Contribution terrain ») ne correspondait pas et la garde anti-drift SAUTAIT les
+     deux entrées — le bouton Contribution restait donc en français sous ?lang=en (confirmé :
+     window.__telluxI18n.skipped contenait fab_mini_label et fab_mini_aria). -->
 <div class="fab-menu" id="fab-menu">
-  <div class="fab-menu-item" onclick="openMyPlaceModal();closeFabMenu();">
-    <span class="fab-mini-label" id="myplace-fab-label">Mon lieu</span>
-    <button id="myplace-fab-btn" class="fab-mini" style="background:var(--tyrrh,#1F3A5F)" aria-label="Analyser mon adresse ou ma position" onclick="event.stopPropagation();openMyPlaceModal();closeFabMenu();">&#128205;</button>
-  </div>
   <div class="fab-menu-item" onclick="openContribLevelModal();closeFabMenu();">
     <span class="fab-mini-label">Contribution terrain</span>
     <button class="fab-mini" style="background:var(--acc)" aria-label="Contribution terrain" onclick="event.stopPropagation();openContribLevelModal();closeFabMenu();">+</button>
@@ -12266,11 +12386,50 @@ function exportSitePDF(){
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
+// toggleAccordion — dépliage d'une catégorie du menu Couches (5 appelants, tous
+// onclick="toggleAccordion(this)" : app.html:2206, 2253, 2283, 2355, 2467 ; les deux
+// sous-groupes .subgroup-toggle partagent la même mécanique).
+// Étendu le 2026-09-06 : le plafond .accordion-cat-content.open{max-height:900px} tronquait
+// silencieusement la légende mobile (cf. commentaire daté au-dessus de la règle .is-settled).
+// La classe .is-settled est posée une fois l'ouverture terminée, ce qui libère le plafond et
+// rend la croissance ultérieure du contenu (légendes injectées par updateInlineLegendMobile
+// dans une catégorie déjà ouverte) inoffensive. Le repli repasse obligatoirement par une
+// hauteur concrète : max-height:none n'est PAS interpolable vers 0, retirer .is-settled et
+// .open dans le même geste supprimerait l'animation de fermeture.
 function toggleAccordion(header){
+  const content=header.nextElementSibling;
+  const willOpen=!header.classList.contains('open');
   header.classList.toggle('open');
   header.querySelector('.accordion-cat-icon').classList.toggle('open');
-  header.nextElementSibling.classList.toggle('open');
+  if(willOpen){
+    content.classList.add('open');
+    _accSettleLater(content);
+  }else{
+    _accCollapse(content);
+  }
 }
+function _accSettleLater(content){
+  // 400ms > la transition de 350ms (app.html, .accordion-cat-content). Sous
+  // prefers-reduced-motion la transition dure 0.01ms (app.html:1754) : le délai reste correct,
+  // simplement plus long que nécessaire. Le contains('open') final protège contre un
+  // repli intervenu entre-temps.
+  window.setTimeout(function(){
+    if(content.classList.contains('open'))content.classList.add('is-settled');
+  },400);
+}
+function _accCollapse(content){
+  content.style.maxHeight=content.scrollHeight+'px'; // hauteur réelle, plafond compris ou non
+  content.classList.remove('is-settled');
+  void content.offsetHeight;                          // reflow : la hauteur concrète est rendue
+  content.style.maxHeight='';                         // la main repasse au CSS
+  content.classList.remove('open');                   // → max-height:0, animé depuis la hauteur réelle
+}
+// Les deux catégories ouvertes dans le HTML (app.html:2210 « Modèle EM », app.html:2359
+// « Substrat et paysage ») n'ont jamais joué de transition d'ouverture : sans ce réglage
+// initial, elles resteraient plafonnées à 900px pour toute la session.
+document.querySelectorAll('.accordion-cat-content.open').forEach(function(c){
+  c.classList.add('is-settled');
+});
 
 // ═══ Panneau "Conditions actuelles" ═══
 // Plies par defaut, chaque sous-section affiche un resume une ligne.
@@ -13300,8 +13459,8 @@ function capCleanup(){
 ["lyr_contrib_tt","#b-contrib","title","Contributions terrain des utilisateurs Tellux : magnétomètre smartphone (nT), signal réseau/WiFi (dBm), relevés au capteur externe. Cercles violets, en cluster. N'influence jamais le score composite affiché ; une comparaison indicative apparaît dans le détail technique du popup.","Cuntribuzione di terrenu di l'utilizatori Tellux : magnetometru smartphone (nT), signale reta/WiFi (dBm), rilievi à u sensore esternu. Cerchji viola, in cluster. Affissu solu.","Field contributions from Tellux users: smartphone magnetometer (nT), network/WiFi signal (dBm), external-sensor readings. Purple circles, clustered. Never influences the displayed composite score; an indicative comparison appears in the popup's technical detail."],
 ["lyr_ant","#b-ant","","Antennes ANFR + TDF","Antenne ANFR + TDF","ANFR + TDF antennas"],
 ["lyr_ant_tt","#b-ant","title","Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF","Antenne 2G/3G/4G/5G ANFR + emettitori broadcast TDF","2G/3G/4G/5G ANFR antennas + TDF broadcast transmitters"],
-["lyr_res","#b-res","","Réseau HT","Reta HT","HV grid"],
-["lyr_res_tt","#b-res","title","Lignes électriques haute tension (50 Hz)","Linee elettrichi alta tensione (50 Hz)","High-voltage power lines (50 Hz)"],
+["lyr_res","#b-res","","Réseau HTA","Reta HTA","MV grid"],
+["lyr_res_tt","#b-res","title","Lignes électriques HTA — moyenne tension (50 Hz)","Linee elettrichi alta tensione (50 Hz)","Medium-voltage (HTA) power lines (50 Hz)"],
 ["lyr_bt","#b-bt","","Réseau BT","Reta BT","LV grid"],
 ["lyr_bt_tt","#b-bt","title","Réseau basse tension BT — EDF SEI · zoom ≥ 10","Reta bassa tensione BT — EDF SEI · zoom ≥ 10","Low-voltage BT grid — EDF SEI · zoom ≥ 10"],
 ["lyr_prod","#b-prod","","Sites de production","Siti di pruduzzione","Generation sites"],
@@ -13683,8 +13842,8 @@ function capCleanup(){
         "⚠️ Incertitudes documentées :",
         "<strong style=\"color:var(--warn)\">⚠️ Documented uncertainties:</strong>"],
       ["#methodology-panel li@3",
-        "Courants HTA/HTB = ordres de grandeur (150-450A). Réalité : ±50% journée (pic/creuse). EDF SEI Corse ne publie pas données temps réel.",
-        "<strong>HTA/HTB currents</strong> = orders of magnitude (150-450A). Reality: ±50% across the day (peak/off-peak). EDF SEI Corsica does not publish real-time data."],
+        "Courants HTA = ordres de grandeur (150-450A). Réalité : ±50% journée (pic/creuse). EDF SEI Corse ne publie pas données temps réel.",
+        "<strong>HTA currents</strong> = orders of magnitude (150-450A). Reality: ±50% across the day (peak/off-peak). EDF SEI Corsica does not publish real-time data."],
       ["#methodology-panel li@4",
         "IGRF 54 points → interpolation IDW (erreur ±50-100 nT possibles Corse)",
         "<strong>IGRF 54 points</strong> → IDW interpolation (possible ±50-100 nT error in Corsica)"],
@@ -13809,6 +13968,39 @@ function capCleanup(){
     coBanner.appendChild(coBannerX);
     (document.body || document.documentElement).appendChild(coBanner);
   } catch (_eBanner) {}
+
+  // --- Re-rendu des légendes après la passe i18n (2026-09-06) ---
+  // legendHtmlFor() (app.html:4753) choisit LEGEND_HTML_EN ou LEGEND_HTML en lisant
+  // document.documentElement.lang AU MOMENT DU RENDU. Or les légendes des deux couches
+  // allumées par défaut sont rendues au boot par showLegend('hotrf') (app.html:11076) et
+  // showLegend('ant') (app.html:11084) — c'est-à-dire dans le 1er <script>, donc AVANT que
+  // ce bloc-ci ne pose lang (app.html:13454). Rien ne les re-rendait ensuite : sous ?lang=en,
+  // un visiteur atterrissait sur « Champ électrique RF (V/m) » et « Antennes ANFR » au lieu
+  // de « RF electric field (V/m) » et « ANFR Antennas », sur le panneau « ? » desktop comme
+  // sur la légende mobile — et le texte ne basculait en anglais qu'au premier toggle de
+  // couche. Les traductions existaient (LEGEND_HTML_EN, app.html:4458) ; elles n'étaient
+  // simplement jamais rendues. Vérifié en navigateur avant/après.
+  // Le piège est celui documenté app.html:3139-3146 pour jt() ; il n'avait pas été traité
+  // pour cette surface. Aucun risque d'écraser le travail de la boucle ci-dessus : les 6
+  // entrées I18N_ENTRIES qui touchent la légende visent toutes le CHÂSSIS statique
+  // (#legende, #legende-toggle, #legende-content, #tellux-legends-context : attributs de
+  // conteneur ; .legende-section-title et #legende-em-empty : nœuds jamais réécrits par
+  // updateLegendPanel()), jamais le contenu injecté.
+  try {
+    if (typeof updateLegendPanel === 'function') updateLegendPanel();
+    // Légende mobile : re-rendre les slots effectivement peuplés, sans avoir à connaître la
+    // liste des couches actives (elle varie, cf. LEGEND_HTML) — .active est posée par
+    // updateInlineLegendMobile() elle-même (app.html:4879).
+    if (typeof updateInlineLegendMobile === 'function') {
+      document.querySelectorAll('.mlegend-inline.active').forEach(function (el) {
+        updateInlineLegendMobile(el.id.replace(/^mleg-/, ''), true);
+      });
+    }
+    // updateLegendPanel() réécrit #tellux-leg-panel, donc aussi le #leg-ant-count qu'il
+    // contient : le recompléter tout de suite plutôt que d'attendre le prochain passage de
+    // loadAnt() (+1500 ms, app.html:11097), qui laisserait un « — » visible entre-temps.
+    if (typeof syncAntCount === 'function') syncAntCount();
+  } catch (_eLeg) {}
 })();
 </script>
 
