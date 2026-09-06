@@ -3583,9 +3583,14 @@ let _expertActive=false,_expertConsented=false,_expertLastResult=null,_expertLas
 // #btn-expert étant entièrement commenté depuis le brief Q 2026-09-03). Coût par clic négligeable
 // (~6 µs mesuré) mais calcul servi sans surface pour la quasi-totalité des visiteurs. Reprend le
 // motif de garde déjà utilisé une ligne plus loin (cf. refreshExpertComposite()) — même flag,
-// même fichier, zéro nouvelle dépendance. loadWMMGrid()/WMM_GRID au boot restent inchangés
-// (nécessaires aux gardes de disponibilité moteur du harnais de non-régression — cf. rapport
-// _drafts/DIAGNOSTIC_WMM_CALCUL_SANS_SURFACE_BRIEF_AR_2026-09-04.md, non committé).
+// même fichier, zéro nouvelle dépendance.
+// CORRECTIF (brief BW, 2026-09-06) : la phrase qui suivait ici affirmait que
+// « loadWMMGrid()/WMM_GRID au boot restent inchangés » — vrai au moment de CE commit (brief AR,
+// garde _expertActive), devenu faux dès le commit suivant du MÊME brief, le jour même, qui a
+// déplacé loadWMMGrid() du boot vers un chargement paresseux déclenché par activateExpertMode()
+// (cf. le commentaire à jour à la définition de loadWMMGrid(), plus bas dans ce fichier).
+// Résidu de documentation trouvé par le rapport brief BU (2026-09-06, section 1.6) — corrigé
+// ici, pas seulement signalé.
 function updateIgrfWmmDiff(lat, lon) {
   if (!_expertActive) return;
   const el = document.getElementById('igrf-wmm-diff');
@@ -6956,24 +6961,54 @@ let RF_CALIB_STATS = null;   // {k_med,k_geo,disp_geo,iqr,n_used,n_excl_nonconf,
                               // methode-limites-transparence.html (brief AE) et elle sert de point de
                               // vérification console pour la non-régression — pas du code mort au sens
                               // où ce chantier retire des champs (audit brief AD §4).
+// Fetch brut partagé antennas_corse (brief BT lot C, 2026-09-06) — loadAnt() et
+// loadANFRForField() interrogeaient chacune leur propre pagination de la MÊME table
+// (~15,3 Ko dupliqués par chargement de page). Les deux tournent en parallèle au boot
+// (même Promise.all plus bas dans ce fichier) SANS garantie d'ordre entre elles — un
+// couplage direct (l'une lisant les données déjà transformées de l'autre) casserait donc
+// selon la latence réseau relative des deux. Ce fetch partagé élimine la duplication SANS
+// dépendre d'un ordre : les deux consommateurs attendent la MÊME promesse — celle qui
+// arrive en premier déclenche le réseau, l'autre réutilise son résultat. Sélectionne
+// l'union stricte des champs (loadAnt() a besoin de commune/operateur en plus de
+// lat/lon/generation). Chaque consommateur garde EXACTEMENT son propre filtrage/traitement
+// en aval (bbox+offshore+dédup pour loadAnt(), null-check seul pour ANFR_GRID) — seule la
+// source du fetch réseau est partagée, rien d'autre ne change.
+let _antennasCorseRawRows = null;
+let _antennasCorseRawPromise = null;
+async function fetchAntennasCorseRaw(){
+  if (_antennasCorseRawRows) return _antennasCorseRawRows;
+  if (_antennasCorseRawPromise) return _antennasCorseRawPromise;
+  _antennasCorseRawPromise = (async()=>{
+    // Fetch direct + sbH() sans AbortSignal (évite l'erreur postMessage clonage, cf. loadAnt).
+    let rows=[], page=0, pageSize=500;
+    while(true){
+      const url=SB_URL+'/rest/v1/antennas_corse?select=lat,lon,generation,commune,operateur&order=id.asc&offset='+(page*pageSize)+'&limit='+pageSize;
+      const r=await fetch(url,{headers:sbH()});
+      if(!r.ok) throw new Error('Supabase HTTP '+r.status);
+      const batch=await r.json();
+      if(!batch||!batch.length) break;
+      rows=rows.concat(batch);
+      if(batch.length<pageSize) break;
+      page++;
+    }
+    _antennasCorseRawRows = rows;
+    return rows;
+  })();
+  // Retire le cache d'échec sur rejet — un premier échec réseau ne doit pas condamner tout
+  // appel futur (loadAnt() rappelable par tog(), loadANFRForField() par un futur appel
+  // manuel) sans jamais retenter. N'affecte pas le cas de succès (_antennasCorseRawRows
+  // reste alors la source de vérité, ce catch ne s'exécute jamais dans ce cas).
+  _antennasCorseRawPromise.catch(()=>{ _antennasCorseRawPromise = null; });
+  return _antennasCorseRawPromise;
+}
 async function loadANFRForField(){
   if (ANFR_GRID) return;
   if (_anfrLoadPromise) return _anfrLoadPromise;
   _anfrLoadPromise = (async()=>{
     try {
-      // Fetch PAGINÉ (pattern loadAnt) — PostgREST plafonne à 1000/appel ; antennas_corse ≈ 3000.
-      // Fetch direct + sbH() sans AbortSignal (évite l'erreur postMessage clonage, cf. loadAnt).
-      let rows=[], page=0, pageSize=500;
-      while(true){
-        const url=SB_URL+'/rest/v1/antennas_corse?select=lat,lon,generation&order=id.asc&offset='+(page*pageSize)+'&limit='+pageSize;
-        const r=await fetch(url,{headers:sbH()});
-        if(!r.ok) throw new Error('Supabase HTTP '+r.status);
-        const batch=await r.json();
-        if(!batch||!batch.length) break;
-        rows=rows.concat(batch);
-        if(batch.length<pageSize) break;
-        page++;
-      }
+      // PostgREST plafonne à 1000/appel ; antennas_corse ≈ 3000 — pagination gérée par
+      // fetchAntennasCorseRaw() (brief BT lot C, partagée avec loadAnt()).
+      const rows = await fetchAntennasCorseRaw();
       ANFR_GRID={};
       rows.forEach(a=>{ if(a.lat==null||a.lon==null) return; const k=Math.floor(a.lat/0.05)+'_'+Math.floor(a.lon/0.05); (ANFR_GRID[k]=ANFR_GRID[k]||[]).push(a); });
       console.log('[Tellux] RF_field : '+rows.length+' antennes ANFR indexées');
@@ -8166,6 +8201,18 @@ map.on('click',async e=>{
   ]);
   // applyVegetation:true — seul point d'entrée légitime pour ce coût (clic carte réel,
   // pas une boucle de grille) : cf. commentaire calcRF() pour l'incident du 2026-08-26.
+  //
+  // DIFFÉRENCE LÉGITIME, DOCUMENTÉE (brief BW, registre 2026-09-06) : ce clic carte est le SEUL
+  // des 5 points d'entrée de production à passer le jeu d'options complet (commune_info +
+  // altitude_m + applyVegetation). saveContrib(), la heatmap buildHot() et le survol n'en
+  // passent aucune ; la fiche « Mon lieu » passe commune_info+altitude_m mais jamais
+  // applyVegetation. Choix de coût assumé, pas un bug : ce chemin ne traite qu'un seul point par
+  // interaction (géocodage inverse + IGN + grille végétation acceptables) ; les autres traitent
+  // des centaines de points (grille, survol) ou n'ont pas besoin de cette précision
+  // supplémentaire (saveContrib enregistre une mesure brute du contributeur). Faire converger
+  // ferait payer ce coût partout, à chaque rendu de heatmap ou mouvement de souris — cf. rapport
+  // brief BU, 2026-09-06, section 2.A. Renvoi croisé : commentaires jumeaux dans saveContrib(),
+  // buildHot() (couche + survol) et le calcul de la fiche « Mon lieu ».
   const {human,geo,v2}=calcAll(lat,lng,{commune_info, altitude_m, applyVegetation:true});
   // Mode Expertise — mémoriser le résultat pour recalcul composite via curseurs
   _expertLastResult = v2;
@@ -8252,6 +8299,18 @@ map.on('click',async e=>{
   const humanScore=Math.min(4,Math.round(human/100));
   const geoScore=Math.min(3,Math.round(Math.abs(geo)/15));
   const perturbHumain=Math.min(5,humanScore+rfScore);
+  // DIFFÉRENCE LÉGITIME, DOCUMENTÉE (brief BW, registre 2026-09-06) : cette formule (ELF+RF,
+  // 0-5, « Indice Tellux ») mesure autre chose que la heatmap b-hot (ELF+susceptibilité
+  // substrat, dans buildHot()) et que champLvl de la fiche « Mon lieu » (ELF seul) — trois
+  // combinaisons de domaines physiques différentes, pas trois scores redondants. Les faire
+  // converger exigerait de décider scientifiquement quels domaines entrent dans un score unique
+  // (question éditoriale, cf. rapport brief BU, 2026-09-06, section 2 — « ce qui ne relève pas
+  // de "une seule version" »), pas de factoriser du code.
+  // Précision, pour ne pas confondre : cette formule EST rendue à l'identique (byte-identique)
+  // dans le badge de survol de buildHot() (hS/rfS/pH, même seuils, même plafond). Cette
+  // duplication-là N'EST PAS documentée ici comme légitime — le rapport BU la classe au
+  // contraire comme candidate à factorisation, sans arbitrage de fond nécessaire puisque la
+  // formule y est déjà identique (section 2.B) — hors mandat de ce brief (commentaires seuls).
   // susc_nT : susceptibilité magnétique locale (nT)
   const suscNat=susc_nT>30?2:susc_nT>12?1:0;
   const activNat=Math.min(5,geoScore+suscNat); // n'est plus rendu dans ce popup, cf. commentaire ci-dessus
@@ -8895,19 +8954,10 @@ async function loadAnt(){try{
   lAnt.addLayer(lAntCluster);
   // lTDFCluster : même raison (brief AH) — ajouté ici, pas à la déclaration de lAnt.
   lAnt.addLayer(lTDFCluster);
-  // Chargement paginé — fetch direct sans AbortSignal (évite l'erreur postMessage clonage)
-  let rows=[], page=0, pageSize=500;
-  while(true){
-    const url=SB_URL+'/rest/v1/antennas_corse?select=lat,lon,generation,commune,operateur&order=id.asc'+
-      '&offset='+(page*pageSize)+'&limit='+pageSize;
-    const r=await fetch(url,{headers:sbH()});
-    if(!r.ok) throw new Error('Supabase HTTP '+r.status);
-    const batch=await r.json();
-    if(!batch||!batch.length)break;
-    rows=rows.concat(batch);
-    if(batch.length<pageSize)break;
-    page++;
-  }
+  // Fetch brut partagé avec loadANFRForField() (brief BT lot C) — voir
+  // fetchAntennasCorseRaw() plus haut : élimine la double pagination réseau vers la même
+  // table, sans dépendre d'un ordre entre les deux (elles tournent en parallèle au boot).
+  const rows = await fetchAntennasCorseRaw();
   // Filtre offshore — etat post-backfill 2026-06-10 :
   // Le champ legacy `commune` est conserve pour tracabilite. Apres le pipeline
   // fix_supabase_commune_insee.py (polygones IGN + fallback reverse-geocode BAN),
@@ -9486,6 +9536,12 @@ async function saveContrib(){
     info(jt('save_elf_fallback_notice', 'Mesure enregistrée avec une estimation simplifiée du champ électromagnétique (données réseau indisponibles).'), 'warn', 6000);
   }
   const igrf=fetchIGRF(ll.lat,ll.lng);
+  // DIFFÉRENCE LÉGITIME, DOCUMENTÉE (brief BW, registre 2026-09-06) : ce point d'entrée ne passe
+  // aucune option (ni applyVegetation, ni commune_info, ni altitude_m), à la différence du clic
+  // carte (map.on('click',...), les trois) — la contribution enregistrée ici est une mesure
+  // brute du contributeur, comparée à predicted/delta_nt plus bas ; aucune des trois options
+  // n'entre dans cette comparaison. Cf. rapport brief BU, 2026-09-06, section 2.A pour les 5
+  // points d'entrée et leurs options respectives.
   const {human,water}=calcAll(ll.lat,ll.lng);
   const valeur=parseFloat(document.getElementById('c-val').value)||null;
   // water*0.3 retiré du predicted (cf. commentaire jumeau dans le handler de clic carte) —
@@ -9756,10 +9812,35 @@ function buildHot(){
     for(let o=lonMin;o<lonMax;o+=step){
       // Couche magnétique : grandeur HOMOGÈNE en nT = ELF 50 Hz (human) + susceptibilité
       // substrat (geo). Le proxy hydrique (0.3·water, unit:'proxy' sans dimension) est EXCLU
-      // de cette heatmap nT (ADR-024 — intégrité d'unité) ; il reste dans l'Indice et le popup
-      // de clic, inchangés. La RF (V/m) a désormais sa propre couche homogène lHotRF (buildHotRF).
+      // de cette heatmap nT (ADR-024 — intégrité d'unité).
+      // CORRECTIF (brief BW, 2026-09-06) : la phrase qui suivait ici affirmait que ce proxy
+      // « reste dans l'Indice et le popup de clic, inchangés » — faux sur les deux points. Il a
+      // été retiré du popup de clic (predicted, cf. commentaire jumeau dans le handler de clic
+      // et dans saveContrib(), arbitrage Soleil 2026-08-23) et il n'a jamais fait partie de
+      // l'Indice Tellux (perturbHumain, handler de clic — formule ELF+RF, jamais ELF+eau). Seul
+      // le champ mort calcAll().scorePhys (0 consommateur) le conserve encore, sans effet sur
+      // rien d'affiché. Trouvé par le rapport brief BU, 2026-09-06, section 1.5 item 8 ; corrigé
+      // ici, pas seulement signalé.
+      // La RF (V/m) a désormais sa propre couche homogène lHotRF (buildHotRF).
       // [Refonte 2026-06-29] supprimé : ancien Math.max(score, rfScore) qui mêlait nT et V/m
       // sur une échelle nT (rfScore plafonnait à 200, jamais > seuil → branche RF inerte de toute façon).
+      //
+      // DIFFÉRENCE LÉGITIME, DOCUMENTÉE (brief BW, registre 2026-09-06) : cette heatmap
+      // (ELF+susceptibilité substrat, un score par cellule) mesure autre chose que l'Indice
+      // Tellux du popup (ELF+RF, perturbHumain — handler de clic) et que champLvl de la fiche
+      // « Mon lieu » (ELF seul) — trois combinaisons de domaines physiques différentes, pas
+      // trois implémentations redondantes. Les faire converger exigerait de trancher
+      // scientifiquement quels domaines inclure dans un score unique — question éditoriale, pas
+      // une question de factorisation de code (rapport brief BU, section 2, « ce qui ne relève
+      // pas de "une seule version" »).
+      //
+      // DIFFÉRENCE LÉGITIME, DOCUMENTÉE (brief BW, registre 2026-09-06) : cet appel à calcAll()
+      // ne passe aucune option (ni applyVegetation, ni commune_info, ni altitude_m), à la
+      // différence du clic carte (les trois). Choix de coût assumé : cette boucle évalue des
+      // centaines de cellules de grille à chaque rendu (zoom/pan) — géocodage inverse + IGN +
+      // grille végétation par cellule serait prohibitif ici. Faire converger ferait payer ce
+      // coût à chaque rendu de heatmap ; rapport brief BU, section 2.A. Même raison de coût pour
+      // le survol ci-dessous (throttlé à 80ms, mais sur mouvement de souris continu).
       const {human:h,geo:g}=calcAll(a,o);
       const magNT=h+g;
       if(magNT>200){
@@ -9803,6 +9884,9 @@ function buildHot(){
       // audit\u00e9s en r\u00e9solution (CALCGEOSUSC-GRID-RESOLUTION-UNAUDITED-001, cadrage brief AK
       // confirme qu'aucune mati\u00e8re sourc\u00e9e ne justifierait un nouveau seuil ici non plus).
       // calcGeoSusc() n'est donc plus appel\u00e9e dans ce hover \u2014 plus aucun consommateur ici.
+      // DIFFÉRENCE LÉGITIME, DOCUMENTÉE (brief BW, registre 2026-09-06) : cet appel ne passe
+      // aucune option, même raison de coût que la heatmap ci-dessus (survol continu, throttlé à
+      // 80ms). Cf. rapport brief BU, 2026-09-06, section 2.A.
       const {human:h}=calcAll(lt,ln);
       const rf=calcN_RF_calib(lt,ln);
       const rfS=rf>6?3:rf>2?2:rf>0.5?1:0;
@@ -11235,6 +11319,11 @@ async function myPlaceAnalyze(lat, lon){
 
   var v2;
   try{
+    // DIFFÉRENCE LÉGITIME, DOCUMENTÉE (brief BW, registre 2026-09-06) : ce point d'entrée passe
+    // commune_info+altitude_m mais jamais applyVegetation, à la différence du clic carte (les
+    // trois) — cette fiche n'affiche aucune grandeur RF/végétation (cf. champRow plus bas, ELF
+    // seul), ce paramètre n'a donc aucun effet sur ce qui est rendu ici. Cf. rapport brief BU,
+    // 2026-09-06, section 2.A pour les 5 points d'entrée et leurs options respectives.
     v2=calcAll(lat,lon,{commune_info:commune_info,altitude_m:altitude_m}).v2;
   }catch(e){
     if(body) body.innerHTML='<p style="font-size:12px;color:var(--porphyre,#8E2F1F);padding:16px 0">'+escapeHtml(jt('myplace_calc_error','Calcul impossible pour ce point.'))+'</p>';
@@ -11295,6 +11384,14 @@ function myPlaceRenderSummary(d){
 
   // Champ composite — mêmes seuils/libellés que l'ancien showInterp() (retiré le 2026-08-23,
   // dette confirmée), clés interp_lvl_* conservées pour ce panneau — pas de nouveau barème
+  //
+  // DIFFÉRENCE LÉGITIME, DOCUMENTÉE (brief BW, registre 2026-09-06) : champLvl ne lit que
+  // v2.domains.magnetic.elf.B_total_nT (ELF seul) — ni RF (Indice Tellux, handler de clic) ni
+  // susceptibilité substrat (heatmap b-hot, buildHot()). Domaine physique différent par choix,
+  // pas par oubli : cette fiche affiche explicitement « Champ ELF anthropique 50 Hz » (titre
+  // corrigé, cf. rapport brief BU section 1.4) — pas un score combiné. Converger exigerait de
+  // décider scientifiquement quels domaines entrent dans un score « Mon lieu » — question
+  // éditoriale, hors mandat de ce brief (rapport brief BU, 2026-09-06, section 2).
   var absScore=Math.abs(v2 && v2.domains && v2.domains.magnetic && v2.domains.magnetic.elf ? Math.round(v2.domains.magnetic.elf.B_total_nT) : 0);
   var champLvl=absScore<30?jt('interp_lvl_tres_calme','Très calme'):absScore<100?jt('interp_lvl_modere','Modéré'):absScore<300?jt('interp_lvl_actif','Actif'):jt('interp_lvl_intense','Intense');
   var champHtml=escapeHtml(champLvl)+' <span style="color:var(--tx3)">('+Math.round(v2.domains.magnetic.elf.B_total_nT)+' nT, composante liée aux lignes électriques proches)</span>';
