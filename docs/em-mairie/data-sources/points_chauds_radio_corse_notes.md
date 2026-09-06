@@ -3,7 +3,7 @@
 **Fichier :** `public/data/points_chauds_radio_corse.json`
 **Date d'extraction :** 2026-04-23 (version 3.0 refonte)
 **Remplace :** version du 2026-04-21 (5 entrées avec doses estimées, Argentella inclus) désormais obsolète
-**Source :** consolidation Cowork basée sur `_corpus/tellux_note_uranium_thorium_corse_v1.md` (version 1.0 du 23 avril 2026)
+**Source :** consolidation Cowork basée sur `tellux_note_uranium_thorium_corse_v1.md` (version 1.0 du 23 avril 2026) — archivé en interne depuis le 2026-09-06, non versionné publiquement (précédemment `_archive/_corpus/` de ce dépôt)
 **Statut :** données **documentaires**, **non mesurées par Tellux**, **non utilisées pour moduler `calcGammaAmbient`** en l'état
 
 ---

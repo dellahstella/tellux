@@ -12,7 +12,8 @@
 --   attenuation_prevue_db : atténuation RF calculée depuis les matériaux
 --
 -- Application : SQL Editor du dashboard Supabase
--- Prérequis : sauvegarder la base avant (voir TELLUX_SAUVEGARDE.md)
+-- Prérequis : sauvegarder la base avant (voir TELLUX_SAUVEGARDE.md — archivé en interne
+-- depuis le 2026-09-06, non versionné publiquement ; procédure inchangée)
 
 ALTER TABLE public.contributions
   ADD COLUMN IF NOT EXISTS contexte TEXT;
