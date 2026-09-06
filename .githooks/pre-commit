@@ -47,9 +47,15 @@ echo "────────────────────────�
 # 3) ALLOWLIST DE CHEMINS (garde secondaire, low-false-positive).
 #    Autorisé : tout fichier racine (sans « / »), ou sous un répertoire de
 #    contenu connu. Un fichier sous un répertoire de tête inconnu => abort.
+#    `-c core.quotepath=false` (brief BT lot B, 2026-09-06) : sans ce flag,
+#    git entoure de guillemets et échappe en octal tout chemin non-ASCII —
+#    un fichier légitime au nom accentué sous un répertoire autorisé (ex.
+#    `tests/nom_é.txt`) ne matchait alors plus aucun `allowed_dirs` et était
+#    bloqué à tort (faux positif reproduit, brief BD 2026-09-05 ; même cause
+#    racine que le faux négatif déjà corrigé côté hook privé, `50f7567`).
 allowed_dirs=".github .githooks _data _migrations _scripts assets docs public scripts skills tests tools"
 
-bad=$(git diff --cached --name-only | while IFS= read -r f; do
+bad=$(git -c core.quotepath=false diff --cached --name-only | while IFS= read -r f; do
   case "$f" in
     */*) top=${f%%/*} ;;   # a un répertoire de tête
     *)   continue ;;       # fichier racine => autorisé
