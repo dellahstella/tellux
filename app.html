@@ -1403,6 +1403,15 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   box-shadow:0 2px 8px rgba(0,0,0,.12);white-space:nowrap;font-family:var(--font);
 }
 @keyframes fabSlideUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+/* Fondu d'apparition d'une couche (2026-09-06, brief « transitions ») — évite qu'une couche
+   surgisse d'un coup et fasse perdre le repère spatial. Durée .15s : c'est la durée dominante
+   du fichier (30 occurrences contre 10 pour .2s), reprise plutôt qu'inventée.
+   Animation et non transition : un one-shot posé puis retiré, sans état à maintenir sur des
+   centaines d'éléments. prefers-reduced-motion est déjà neutralisé globalement plus bas
+   (animation-duration:0.01ms !important) — rien à ajouter, la règle existante couvre celle-ci.
+   Aucun effet de particules, aucune dissolution : opacité seule. */
+.tlx-layer-fade{animation:tlxLayerFade .15s ease-out;}
+@keyframes tlxLayerFade{from{opacity:0;}to{opacity:1;}}
 .quest-tooltip{
   position:absolute;left:60px;top:50%;transform:translateY(-50%);
   background:var(--bg);color:var(--ardoise-clair);font-size:11px;font-weight:500;
@@ -4904,6 +4913,55 @@ function showLegend(id,show){
   updateInlineLegendMobile(id,show);
   syncAntCount(); // no-op tant que 'ant' n'est pas rendu (cf. commentaire à ANFR_ONSHORE_COUNT)
 }
+// ═══ Fondu d'apparition au basculement d'une couche (2026-09-06, brief « transitions ») ═══
+// Pose une animation d'opacité one-shot (.15s, cf. .tlx-layer-fade) sur les éléments DOM que
+// Leaflet a réellement créés pour la couche qu'on vient d'allumer.
+//
+// Pourquoi les éléments et non un pane : un pane Leaflet est partagé par plusieurs couches
+// (overlayPane, markerPane) — le fondre ferait clignoter tout ce qui était déjà affiché, ce qui
+// est l'inverse du but recherché (garder le repère spatial). Les couches de ce fichier n'ont pas
+// de pane dédié et leur en attribuer un rétroactivement toucherait un empilement z-index déjà
+// finement documenté ailleurs.
+//
+// Portée réelle, à ne pas surestimer : beaucoup de couches sont peuplées de façon ASYNCHRONE
+// APRÈS map.addLayer() (loadAnt, loadProd, loadReseau, loadBT, loadMesuresCertifiees…). À la
+// toute première activation, le groupe est donc encore vide et il n'y a rien à fondre : la
+// fonction ne fait rien. Le fondu joue aux activations SUIVANTES, quand la donnée est déjà là —
+// c'est-à-dire précisément dans le geste répété de comparaison de couches que le brief vise.
+// Retirer une couche reste immédiat : différer le retrait désynchroniserait ACTIVE[id] du DOM
+// pour un gain nul (une disparition n'est ambiguë dans aucun sens).
+const _TLX_FADE_MAX_ELS=400; // garde-fou perf ; au-delà, on n'anime pas plutôt que de saccader
+function _tlxFadeInLayer(layer){
+  if(!layer||typeof layer.eachLayer!=='function'&&!layer._container)return;
+  const els=[];
+  let debordement=false;
+  (function walk(l){
+    if(!l||debordement)return;
+    const el=l._icon||l._path||l._container;
+    if(el){
+      if(els.length>=_TLX_FADE_MAX_ELS){debordement=true;return;}
+      els.push(el);
+    }
+    // Couches en grappe (lAntCluster, lTDFCluster, lCert, lCon) : eachLayer() d'un
+    // markerClusterGroup itère les MARQUEURS, qui n'ont pas de _icon tant qu'ils sont
+    // regroupés — les bulles réellement dessinées vivent dans son _featureGroup. Sans cette
+    // descente, les couches les plus visibles de la carte ne fondaient jamais (mesuré : 0
+    // élément trouvé pour 'ant'). _featureGroup est une API privée de leaflet.markercluster :
+    // l'accès est donc opportuniste et sans conséquence s'il disparaît — au pire il n'y a pas
+    // de fondu, jamais d'erreur. Le nombre d'éléments reste borné par ce qui est à l'écran
+    // (mesuré : 1 bulle au dézoom Corse entière), pas par la taille du jeu de données.
+    if(l._featureGroup)walk(l._featureGroup);
+    if(typeof l.eachLayer==='function')l.eachLayer(walk);
+  })(layer);
+  if(debordement||!els.length)return; // pas de fondu partiel : tout ou rien, jamais à moitié
+  els.forEach(function(el){
+    el.classList.add('tlx-layer-fade');
+    el.addEventListener('animationend',function h(){
+      el.classList.remove('tlx-layer-fade');
+      el.removeEventListener('animationend',h);
+    });
+  });
+}
 function tog(id,cls,btn){
   // Guard : couche migrée hors de ce fichier
   // ou référence cassée — sortie silencieuse pour éviter map.addLayer(undefined).
@@ -4947,7 +5005,7 @@ function tog(id,cls,btn){
     if(id==='landemaquis'){_landeMaquisZoomHintShown=false;document.getElementById('landemaquis-op-row').style.display='none';}
     if(id==='bt')_btZoomHintShown=false;
     showLegend(id,false);
-  }else{WMS[id]?map.addLayer(WMS[id]):map.addLayer(LAYERS[id]);ACTIVE[id]=true;if(btn)btn.classList.add(cls);
+  }else{WMS[id]?map.addLayer(WMS[id]):map.addLayer(LAYERS[id]);_tlxFadeInLayer(WMS[id]||LAYERS[id]);ACTIVE[id]=true;if(btn)btn.classList.add(cls);
     if(id==='hyd')document.getElementById('hyd-op-row').style.display='flex';
     if(id==='emag')document.getElementById('emag-op-row').style.display='flex';
     if(id==='hot'&&lHot.getLayers().length===0)buildHot();
