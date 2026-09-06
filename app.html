@@ -1258,6 +1258,10 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
   .mlegend-inline .mleg-details summary::before{content:'▸';font-size:9px;transition:transform .15s;}
   .mlegend-inline .mleg-details[open] summary::before{transform:rotate(90deg);}
   .mlegend-inline .mleg-details .leg-block{padding:0 0 10px;}
+  /* Cible tactile de « Voir sur la carte » (2026-09-06) : 44px, le plancher réellement rendu
+     par .lbtn à ce breakpoint — la règle .lbtn{min-height:36px} plus haut dans le fichier est
+     écrasée par celle de ce même bloc mobile (même spécificité, l'ordre de source tranche). */
+  .mlegend-inline .leg-focus-btn{min-height:44px;display:flex;align-items:center;font-size:12px;}
 }
 .layers-accordion{display:flex;flex-direction:column;gap:4px;}
 .accordion-cat{background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:all .2s;flex-shrink:0;}
@@ -1702,6 +1706,21 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
 .leg-docref-layer{display:block;color:var(--tx-ardoise);font-weight:500;}
 .leg-docref-link{display:inline-block;color:var(--tx-tyrrhenien,#1F3A5F);text-decoration:none;border-bottom:1px solid rgba(31,58,95,.3);margin-right:8px;}
 .leg-docref-link:hover{border-bottom-color:var(--tx-tyrrhenien,#1F3A5F);}
+/* .leg-focus-btn (2026-09-06) — « Voir sur la carte », posé en tête du corps de légende des
+   7 couches qui possèdent des objets réellement dessinés (cf. LEGEND_FOCUS_IDS). Même idiome
+   visuel que .leg-docref-link juste au-dessus (texte tyrrhénien, filet sous le texte) : aucune
+   teinte neuve, aucune forme neuve — ce n'est pas un bouton plein, qui entrerait en
+   concurrence avec les boutons de couche. */
+.leg-focus-btn{display:inline-block;margin:0 0 6px;padding:0;border:none;background:none;cursor:pointer;
+  font-family:var(--font);font-size:10.5px;color:var(--tx-tyrrhenien,#1F3A5F);
+  border-bottom:1px solid rgba(31,58,95,.3);line-height:1.5;}
+.leg-focus-btn:hover{border-bottom-color:var(--tx-tyrrhenien,#1F3A5F);}
+.leg-focus-btn:focus-visible{outline:2px solid var(--tx-tyrrhenien,#1F3A5F);outline-offset:2px;}
+/* Rappel de la vue précédente, rendu dans #info (panneau de message existant). */
+.leg-focus-undo{display:inline-block;margin-left:6px;padding:0;border:none;background:none;cursor:pointer;
+  font-family:var(--font);font-size:inherit;color:var(--tx-tyrrhenien,#1F3A5F);
+  border-bottom:1px solid rgba(31,58,95,.3);}
+.leg-focus-undo:hover{border-bottom-color:var(--tx-tyrrhenien,#1F3A5F);}
 /* .mleg-docref RETIRÉE le 2026-08-31 (brief "clôture chantier légende") : dernier point
    d'usage supprimé par le même diff dans updateInlineLegendMobile() — le docref mobile vit
    désormais dans .mleg-subtitle (cf. plus haut dans ce fichier), plus dans un conteneur à
@@ -3551,7 +3570,20 @@ var JS_STRINGS_EN = {
   mleg_sub_res: "50 Hz high-voltage lines — EDF SEI, OSM.",
   mleg_sub_bt: "Low-voltage street distribution — EDF SEI, visible from zoom level 10.",
   mleg_sub_prod: "Power stations of the Corsican grid — hydro, wind, thermal.",
-  mleg_sub_postesSources: "21 HV/MV transformer substations — EDF SEI, OSM data."
+  mleg_sub_postesSources: "21 HV/MV transformer substations — EDF SEI, OSM data.",
+
+  // Légende « Voir sur la carte » (2026-09-06) — bouton de recadrage par couche.
+  // Volontairement SANS décompte : un chiffre serait faux pour bt (2 features GeoJSON pour
+  // tout le réseau) et ambigu pour ant (marqueurs dédoublonnés par position, ~552 pour
+  // ~2 986 antennes) — cf. le commentaire daté sur legendFocusOnLayer().
+  legfocus_btn: "Show on map",
+  legfocus_aria_prefix: "Show on map: ",
+  legfocus_empty: "No item from this layer on the map right now.",
+  legfocus_already: "Already fully visible — the view stays as it is.",
+  legfocus_done: "View reframed to this layer.",
+  legfocus_gated: "This layer appears from zoom level 10 — view centred on its extent at that zoom.",
+  legfocus_undo: "Back to previous view",
+  legfocus_undone: "Previous view restored."
 };
 function jt(key, fr){
   return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
@@ -4791,7 +4823,10 @@ function updateLegendPanel(){
         // hotrf exclu : son .leg-src (LEGEND_HTML.hotrf) intègre déjà un lien vers ce même
         // #radiofrequences ("modèle, calibration & repères de lecture ↗", 2026-08-29) — ajouter
         // le docref générique en dessous doublerait le même lien dans le même accordéon.
-        '<div class="leg-acc-body">'+legendHtmlFor(id)+(LAYER_DOC_ANCHORS[id]&&id!=='hotrf'?docRefHtml(id,true):'')+'</div></details>').join('');
+        // _legFocusBtnHtml en TÊTE du corps (2026-09-06) : le contenu scientifique du bloc
+        // n'est ni déplacé ni modifié, le bouton se pose avant lui. Chaîne vide pour les
+        // couches hors LEGEND_FOCUS_IDS — aucune branche à écrire ici.
+        '<div class="leg-acc-body">'+_legFocusBtnHtml(id)+legendHtmlFor(id)+(LAYER_DOC_ANCHORS[id]&&id!=='hotrf'?docRefHtml(id,true):'')+'</div></details>').join('');
       // Titre de groupe 2 (2026-08-31) : seulement si au moins une couche anthropique est
       // active — jamais un intitulé vide. h4, pas h3 (déjà pris par le titre du panneau,
       // #legende .legende-section-title) : hiérarchie de titres correcte, même classe CSS
@@ -4875,7 +4910,9 @@ function updateInlineLegendMobile(id,show){
   if(legHtml||subHtml){
     const btn=document.getElementById(btnIdFor(id));
     const shortLabel=(btn&&btn.title)?btn.title.split(/[—–]/)[0].trim():'Légende';
-    el.innerHTML=subHtml+(legHtml?'<details class="mleg-details"><summary>'+shortLabel+'</summary>'+legHtml+'</details>':'');
+    // Même producteur de bouton qu'en desktop (_legFocusBtnHtml), au même endroit relatif :
+    // en tête du contenu de légende, jamais entre le titre et le texte scientifique.
+    el.innerHTML=subHtml+(legHtml?'<details class="mleg-details"><summary>'+shortLabel+'</summary>'+_legFocusBtnHtml(id)+legHtml+'</details>':'');
     el.classList.add('active');
   }else{
     el.classList.remove('active');
@@ -4904,6 +4941,134 @@ function showLegend(id,show){
   updateInlineLegendMobile(id,show);
   syncAntCount(); // no-op tant que 'ant' n'est pas rendu (cf. commentaire à ANFR_ONSHORE_COUNT)
 }
+
+// ═══ Légende « Voir sur la carte » (2026-09-06, brief « rendre la légende navigable ») ═══
+// Un bouton texte en tête du corps de légende recadre la carte sur l'emprise des objets de
+// cette couche, avec retour à la vue précédente. Rien n'est masqué, rien n'est filtré, aucun
+// objet carte n'est muté : la seule chose qui change est le cadrage.
+//
+// PÉRIMÈTRE — 7 couches. Les exclusions sont motivées, pas des oublis :
+//  · hot / hotrf / elf construisent leur géométrie À PARTIR de map.getBounds() — leur emprise
+//    EST la vue courante, un recadrage serait tautologique ;
+//  · emag est un imageOverlay à bbox fixe (Corse entière) ;
+//  · hyd est un tileLayer WMS, sans aucune géométrie côté client ;
+//  · openrad n'a pas de bouton de couche actif.
+//
+// PAS DE DÉCOMPTE, volontairement. Un « N éléments » serait FAUX pour bt (2 features GeoJSON
+// pour tout le réseau, cf. buildBTStaticLayer) et AMBIGU pour ant (marqueurs dédoublonnés par
+// position, ~552 pour ~2 986 antennes onshore, cf. loadAnt) — c'est exactement la confusion
+// densité/effectif que le fichier documente déjà ailleurs. Un chiffre public sur une couche de
+// données s'arbitre éditorialement, il ne se câble pas au passage d'un chantier d'UI.
+const LEGEND_FOCUS_IDS=new Set(['ant','res','bt','prod','cert','contrib','postesSources']);
+let _legFocusPrevView=null;
+function _legFocusGroup(id){
+  // Résolu à l'appel, jamais au niveau module : lCert (app.html) et lPostesSources sont des
+  // const déclarées plus haut, mais ce fichier a déjà été mordu par des résolutions trop
+  // précoces (cf. le commentaire sur JS_STRINGS_EN/jt en tête de fichier).
+  const m={ant:lAnt,res:lRes,bt:lBT,prod:lProd,cert:lCert,contrib:lCon,postesSources:lPostesSources};
+  return m[id]||null;
+}
+function _legFocusBtnHtml(id){
+  if(!LEGEND_FOCUS_IDS.has(id))return '';
+  // Un seul producteur de HTML pour les deux surfaces (panneau « ? » desktop et légende
+  // inline mobile) : aucune divergence desktop/mobile possible par construction — c'est le
+  // même motif que legendHtmlFor(), et la parade au précédent de la légende TDF.
+  const aria=(jt('legfocus_aria_prefix','Voir sur la carte : ')+coreLegLabel(id)).replace(/"/g,'&quot;');
+  return '<button type="button" class="leg-focus-btn" data-legend-id="'+id+'" aria-label="'+aria+'">'+
+    jt('legfocus_btn','Voir sur la carte')+'</button>';
+}
+function _legFocusPoints(group){
+  // Ordre des tests non interchangeable : lAnt contient lAntCluster et lTDFCluster, lBT
+  // contient deux L.geoJSON — tous exposent getBounds() ET eachLayer(). Descendre d'abord
+  // donne l'emprise réelle des objets ; s'arrêter à getBounds() du groupe la donnerait aussi,
+  // mais masquerait un groupe vide dont getBounds() n'est pas valide.
+  const pts=[];
+  (function walk(l){
+    if(!l)return;
+    if(typeof l.getLatLng==='function'){pts.push(l.getLatLng());return;}
+    if(typeof l.eachLayer==='function'){l.eachLayer(walk);return;}
+    if(typeof l.getBounds==='function'){
+      const b=l.getBounds();
+      if(b&&b.isValid())pts.push(b.getNorthEast(),b.getSouthWest());
+    }
+  })(group);
+  return pts;
+}
+function legendFocusOnLayer(id){
+  const empty=jt('legfocus_empty',"Aucun élément de cette couche sur la carte pour l'instant.");
+  const g=_legFocusGroup(id);
+  if(!g){info(empty,'warn',6000);return;}
+  // Le contenu du groupe est lu, pas sa présence sur la carte : une couche retirée par un
+  // zoom-gate (bt, cf. _syncBTZoom) reste recadrable, ce qui est précisément le cas où le
+  // bouton est le plus utile.
+  const pts=_legFocusPoints(g);
+  if(!pts.length){info(empty,'warn',6000);return;}
+  const b=L.latLngBounds(pts);
+  if(!b.isValid()){info(empty,'warn',6000);return;}
+  // Occlusion du bottom sheet mobile : sous 768px, le panneau « Couches » ouvert couvre le bas
+  // de la carte (~52vh). Sans en tenir compte, « déjà visible » serait vrai pour une couche
+  // entièrement cachée derrière le panneau, et le recadrage centrerait dessous.
+  const sheet=document.getElementById('layers-accordion');
+  const occl=(window.matchMedia('(max-width:768px)').matches&&sheet&&sheet.classList.contains('open'))
+    ? Math.round(sheet.getBoundingClientRect().height) : 0;
+  const size=map.getSize();
+  const vue=occl
+    ? L.latLngBounds(map.containerPointToLatLng([0,0]),map.containerPointToLatLng([size.x,size.y-occl]))
+    : map.getBounds();
+  if(vue.contains(b)){
+    // Ne rien faire vaut mieux qu'un mouvement inutile : la couche est déjà entièrement à
+    // l'écran, la déplacer ferait perdre le repère spatial sans rien montrer de plus.
+    info(jt('legfocus_already','Déjà tous visibles, la vue ne bouge pas.'),null,5000);
+    return;
+  }
+  const anim=!tlxReduceMotion();
+  const pad=L.point(40,40);
+  _legFocusPrevView={center:map.getCenter(),zoom:map.getZoom()};
+  let msg=jt('legfocus_done','Vue recadrée sur cette couche.');
+  // Zoom-gate BT : le zoom cible est calculé AVANT de bouger (getBoundsZoom), pas relu après
+  // fitBounds — pendant une animation de zoom, getZoom() ne renvoie pas encore la valeur finale.
+  if(id==='bt'&&map.getBoundsZoom(b,false,L.point(40,40+occl))<BT_MIN_ZOOM){
+    map.setView(b.getCenter(),BT_MIN_ZOOM,{animate:anim});
+    msg=jt('legfocus_gated','Couche visible à partir du zoom 10 — vue centrée sur son emprise à ce zoom.');
+  }else if(occl){
+    map.fitBounds(b,{paddingTopLeft:pad,paddingBottomRight:L.point(40,40+occl),animate:anim});
+  }else{
+    map.fitBounds(b,{padding:[40,40],animate:anim});
+  }
+  if(occl){
+    // fitBounds/setView réécrivent le centre : la compensation d'occlusion posée par
+    // syncCouchesSheetMapPan() (map.panBy de la moitié de la hauteur du panneau) n'est plus
+    // appliquée. Remettre son compteur à zéro pour qu'elle reflète la réalité — sinon, à la
+    // fermeture du panneau, elle défera un décalage qui n'existe plus et déplacerait la carte
+    // sans raison.
+    if(typeof _couchesSheetPanPx!=='undefined')_couchesSheetPanPx=0;
+  }
+  info(msg+' <button type="button" class="leg-focus-undo" onclick="legendFocusUndo()">'+
+    jt('legfocus_undo','Revenir à la vue précédente')+'</button>',null,12000);
+}
+function legendFocusUndo(){
+  if(!_legFocusPrevView)return;
+  map.setView(_legFocusPrevView.center,_legFocusPrevView.zoom,{animate:!tlxReduceMotion()});
+  _legFocusPrevView=null;
+  info(jt('legfocus_undone','Vue précédente rétablie.'),null,4000);
+}
+// Deux écouteurs délégués sur des conteneurs STABLES, jamais recréés : #tellux-leg-panel
+// (desktop) et #layers-accordion (mobile, englobe les 17 slots .mlegend-inline). Le contenu
+// des deux est réécrit par innerHTML à chaque bascule de couche — un écouteur posé sur les
+// boutons eux-mêmes serait perdu au premier toggle.
+document.addEventListener('DOMContentLoaded',function(){
+  ['tellux-leg-panel','layers-accordion'].forEach(function(cid){
+    const host=document.getElementById(cid);
+    if(!host)return;
+    host.addEventListener('click',function(ev){
+      const btn=ev.target.closest&&ev.target.closest('.leg-focus-btn');
+      if(!btn||!host.contains(btn))return;
+      ev.preventDefault();
+      ev.stopPropagation(); // le bouton vit dans un <summary>/<details> et dans .accordion-cat-content
+      legendFocusOnLayer(btn.dataset.legendId);
+    });
+  });
+});
 function tog(id,cls,btn){
   // Guard : couche migrée hors de ce fichier
   // ou référence cassée — sortie silencieuse pour éviter map.addLayer(undefined).
