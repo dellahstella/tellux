@@ -1042,7 +1042,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
      personne — le décalage vertical de .fab-entry est posé plus bas, APRÈS la règle de base,
      là où il s'applique réellement. */
   .fab-mesure{bottom:12px;right:12px;width:44px;height:44px;font-size:22px;}
-  .fab-menu{bottom:64px;right:12px;}
   #prescription-panel{width:calc(100vw - 32px)!important;right:16px!important;left:16px!important;}
   .hypo-panel{top:6px;right:6px;width:calc(100vw - 60px);}
 }
@@ -1426,28 +1425,10 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .fab-entry:hover{transform:scale(1.05);box-shadow:0 6px 20px rgba(0,0,0,.3);}
 .fab-entry:focus-visible{outline:2px solid #fff;outline-offset:2px;}
 .fab-entry-label{white-space:nowrap;}
-/* FAB mini-menu */
-.fab-menu{
-  position:fixed;bottom:80px;right:16px;z-index:1049;
-  display:none;flex-direction:column;gap:8px;align-items:flex-end;
-}
-.fab-menu.open{display:flex;}
-.fab-menu-item{
-  display:flex;align-items:center;gap:8px;cursor:pointer;
-  animation:fabSlideUp .2s ease-out;
-}
-.fab-menu-item .fab-mini{
-  width:40px;height:40px;border-radius:50%;border:none;color:white;
-  font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;
-  box-shadow:0 2px 10px rgba(0,0,0,.2);transition:transform .15s;
-}
-.fab-menu-item .fab-mini:hover{transform:scale(1.1);}
-.fab-menu-item .fab-mini-label{
-  background:var(--bg);color:var(--ardoise-clair);font-size:11px;font-weight:500;
-  padding:5px 12px;border-radius:8px;border:1px solid var(--border);
-  box-shadow:0 2px 8px rgba(0,0,0,.12);white-space:nowrap;font-family:var(--font);
-}
-@keyframes fabSlideUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+/* Bloc .fab-menu / .fab-menu-item / .fab-mini / .fab-mini-label et @keyframes fabSlideUp
+   RETIRÉS avec leur dernier utilisateur le 2026-09-07 (#fab-menu supprimé, cf. le commentaire
+   au-dessus de #fab-mesure) — même règle que .cat-header-text plus haut : une règle CSS part
+   avec son dernier point d'usage, elle ne survit pas en orpheline. */
 /* Fondu d'apparition d'une couche (2026-09-06, brief « transitions ») — évite qu'une couche
    surgisse d'un coup et fasse perdre le repère spatial. Durée .15s : c'est la durée dominante
    du fichier (30 occurrences contre 10 pour .2s), reprise plutôt qu'inventée.
@@ -1588,7 +1569,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
      précisément pour ne pas re-dériver ce calcul que « Mon lieu » a été placé à côté du «+»
      et non au-dessus (cf. commentaire de .fab-entry). */
   .fab-entry{bottom:calc(12px + var(--mobile-tabbar-h) + var(--conditions-bar-h, 66px));}
-  .fab-menu{bottom:calc(64px + var(--mobile-tabbar-h) + var(--conditions-bar-h, 66px));}
 }
 #conditions-bar-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:8px 14px;background:none;border:none;cursor:pointer;font:inherit;color:inherit;text-align:left;}
 #conditions-bar-toggle:hover{background:rgba(31,35,41,0.03);}
@@ -3639,7 +3619,13 @@ var JS_STRINGS_EN = {
   legfocus_done: "View reframed to this layer.",
   legfocus_gated: "This layer appears from zoom level 10 — view centred on its extent at that zoom.",
   legfocus_undo: "Back to previous view",
-  legfocus_undone: "Previous view restored."
+  legfocus_undone: "Previous view restored.",
+
+  // FAB « + » — libellé accessible qui suit l'état (2026-09-07). Le libellé par défaut existe
+  // aussi en entrée I18N_ENTRIES (fab_mesure_tt / fab_mesure_aria, attributs du HTML statique) ;
+  // il est répété ici parce que _syncFabLabel() le repose en JS à chaque changement d'état.
+  fab_contribuer_aria: "Contribute a measurement",
+  fab_annuler_aria: "Cancel current contribution"
 };
 function jt(key, fr){
   return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
@@ -11402,25 +11388,19 @@ function runAutoTests(){ return Promise.resolve(); }
      Le libellé texte est indispensable : le glyphe 📍 est déjà pris par le contrôle Leaflet
      « Recentrer sur la Corse » (haut-gauche) — deux 📍 permanents sans texte seraient
      indistinguables. -->
-<button type="button" id="myplace-fab-btn" class="fab-entry" aria-label="Analyser mon adresse ou ma position" onclick="openMyPlaceModal();if(typeof closeFabMenu==='function')closeFabMenu();">&#128205;<span class="fab-entry-label" id="myplace-fab-label">Mon lieu</span></button>
-<!-- #fab-menu ne contient plus que « Contribution terrain ». Effet de bord VOULU et vérifié :
-     les entrées i18n fab_mini_label et fab_mini_aria visent « .fab-mini » / « .fab-mini-label »
-     SANS index, donc le premier de la liste. Tant que « Mon lieu » occupait cette place, le FR
-     attendu (« Contribution terrain ») ne correspondait pas et la garde anti-drift SAUTAIT les
-     deux entrées — le bouton Contribution restait donc en français sous ?lang=en (confirmé :
-     window.__telluxI18n.skipped contenait fab_mini_label et fab_mini_aria). -->
-<div class="fab-menu" id="fab-menu">
-  <div class="fab-menu-item" onclick="openContribLevelModal();closeFabMenu();">
-    <span class="fab-mini-label">Contribution terrain</span>
-    <button class="fab-mini" style="background:var(--acc)" aria-label="Contribution terrain" onclick="event.stopPropagation();openContribLevelModal();closeFabMenu();">+</button>
-  </div>
-  <!-- Bouton FAB "Prescription de mesure" (Rx) retire (2026-08-13) : il apparaissait
-       en concurrence directe avec "Contribution terrain" avant meme d'entrer dans le
-       flux. Le panneau openPrescription() n'a pas disparu — il est desormais accessible
-       via le lien contextuel "Comment mesurer ?" a l'etape 4 (Conditions de mesure) du
-       stepper #cform, la ou la question se pose reellement. -->
-</div>
-<button class="fab-mesure" id="fab-mesure" onclick="toggleFabMenu()" title="Actions terrain">+</button>
+<button type="button" id="myplace-fab-btn" class="fab-entry" aria-label="Analyser mon adresse ou ma position" onclick="openMyPlaceModal();">&#128205;<span class="fab-entry-label" id="myplace-fab-label">Mon lieu</span></button>
+<!-- #fab-menu RETIRÉ (2026-09-07, arbitrage Soleil). Depuis que « Mon lieu » en est sorti
+     (2026-09-06, ci-dessus), il ne restait qu'un item : « un menu à un seul item n'est plus un
+     menu ». Le « + » déclenche désormais directement la contribution, ce qui rend enfin son
+     affordance honnête — c'est exactement ce qu'il fait.
+     Historique conservé de l'ancien bloc : le bouton FAB « Prescription de mesure » (Rx) avait
+     été retiré le 2026-08-13 parce qu'il concurrençait « Contribution terrain » avant même
+     d'entrer dans le flux ; openPrescription() n'a pas disparu, il reste atteignable par le lien
+     « Comment mesurer ? » à l'étape 4 du stepper #cform, là où la question se pose.
+     Les entrées i18n fab_mini_label / fab_mini_aria sont retirées avec leur dernière cible
+     plutôt que laissées orphelines (elles visaient .fab-mini / .fab-mini-label, qui n'existent
+     plus) — même règle que pour une règle CSS dont le dernier utilisateur disparaît. -->
+<button class="fab-mesure" id="fab-mesure" onclick="contribFabAction()" title="Contribuer une mesure" aria-label="Contribuer une mesure">+</button>
 
 <!-- Nav mobile — 2 onglets (refonte 2026-08-26, brief "refonte nav mobile" — remplace les
      3 onglets plein écran de Phase 1, contrat CONTRAT_NAV_MOBILE_APP_2026-08-23.md).
@@ -11768,9 +11748,17 @@ function chooseContribLevelN0(){
   startContribFromFAB();
 }
 
-// ═══ FAB MENU ═══
-function toggleFabMenu(){
-  const menu=document.getElementById('fab-menu');
+// ═══ FAB « + » — action de contribution ═══
+// Remplace toggleFabMenu() (2026-09-07, arbitrage Soleil) : #fab-menu ne contenait plus qu'un
+// item depuis la sortie de « Mon lieu », et un menu à un seul item n'est plus un menu.
+//
+// LES DEUX PREMIÈRES BRANCHES SONT REPRISES VERBATIM, et c'est le point important : le « + »
+// n'était pas qu'un ouvre-menu, c'était aussi le SEUL contrôle d'annulation d'un placement de
+// contribution en cours (il pivote à 45° en croix via .fab-active pour le signaler). Le brancher
+// directement sur openContribLevelModal() aurait supprimé cette échappatoire sans que rien ne le
+// signale — vérification demandée avant écriture, revenue négative. Seule la branche terminale
+// « ouvrir/fermer le menu » est remplacée par l'ouverture directe de la modale.
+function contribFabAction(){
   const fab=document.getElementById('fab-mesure');
   const form=document.getElementById('cform');
   const presc=document.getElementById('prescription-panel');
@@ -11778,29 +11766,55 @@ function toggleFabMenu(){
   // intermediaire, cf. startContribFromFAB), fermer/annuler tout.
   if((form&&form.style.display==='block')||_contribAwaitingFirstPlacement){
     startContribFromFAB(); // toggle off (gere aussi l'etat d'attente de placement)
-    closeFabMenu();
     return;
   }
   if(presc&&presc.style.display==='block'){
     presc.style.display='none';
     if(fab)fab.classList.remove('fab-active');
-    closeFabMenu();
     return;
   }
-  // Toggle menu
-  if(menu.classList.contains('open')){
-    closeFabMenu();
-  }else{
-    menu.classList.add('open');
-    if(fab)fab.classList.add('fab-active');
-  }
+  openContribLevelModal();
 }
+// closeFabMenu() — conservée pour son seul appelant restant, switchMobileTab() : sans #fab-menu,
+// il ne lui reste qu'à retomber l'état visuel du « + ». GARDE AJOUTÉE dans le même geste :
+// .fab-active ne code plus que « contribution en cours » depuis le retrait du menu (avant, il
+// codait aussi « menu ouvert »). L'effacer pendant un placement retirerait l'affordance
+// d'annulation alors que le bouton, lui, annule toujours — la classe doit suivre l'état réel.
 function closeFabMenu(){
-  const menu=document.getElementById('fab-menu');
-  if(menu)menu.classList.remove('open');
   const fab=document.getElementById('fab-mesure');
-  if(fab)fab.classList.remove('fab-active');
+  if(fab&&!_contribEnCours())fab.classList.remove('fab-active');
 }
+// Source de vérité de l'état « une contribution est en cours » : exactement la condition testée
+// par la première branche de contribFabAction(), donc exactement les cas où le « + » annule.
+function _contribEnCours(){
+  const form=document.getElementById('cform');
+  return !!((form&&form.style.display==='block')||_contribAwaitingFirstPlacement);
+}
+// Le libellé accessible suit l'état (2026-09-07, arbitrage Soleil) : un aria-label fixe
+// « Contribuer une mesure » sur un bouton qui annule est un mensonge aux utilisateurs de lecteur
+// d'écran — et c'est le seul public à qui la rotation à 45° ne dit rien.
+// Le libellé dérive de la CONDITION réelle (_contribEnCours), pas de la classe .fab-active : si
+// l'état « panneau de prescription ouvert sans formulaire » — inatteignable par le seul appelant
+// vivant d'openPrescription(), le lien « Comment mesurer ? » qui vit DANS #cform — survenait un
+// jour, le bouton retomberait sur « Contribuer une mesure » plutôt que d'annoncer une annulation
+// qu'il ne ferait pas.
+function _syncFabLabel(){
+  const fab=document.getElementById('fab-mesure');
+  if(!fab)return;
+  const txt=_contribEnCours()
+    ? jt('fab_annuler_aria','Annuler la contribution en cours')
+    : jt('fab_contribuer_aria','Contribuer une mesure');
+  if(fab.getAttribute('aria-label')!==txt){fab.setAttribute('aria-label',txt);fab.title=txt;}
+}
+// Resynchronisation par MutationObserver plutôt que par 9 rappels dispersés : .fab-active est
+// muté à neuf endroits du fichier (startContribFromFAB, openPrescription, cancelContrib, etc.).
+// Un point de câblage unique ne peut pas dériver quand un dixième site apparaît.
+document.addEventListener('DOMContentLoaded',function(){
+  const fab=document.getElementById('fab-mesure');
+  if(!fab||typeof MutationObserver!=='function')return;
+  new MutationObserver(_syncFabLabel).observe(fab,{attributes:true,attributeFilter:['class']});
+  _syncFabLabel();
+});
 
 // ═══ PRESCRIPTION DE MESURE ═══
 const PRESCRIPTION_METHODS=[
@@ -13655,9 +13669,8 @@ function capCleanup(){
 ["gloss_tab_guides",".glossary-tab[data-tab='guides']","","Guides pratiques","Guide pratiche","Practical guides"],
 ["gloss_search_ph","#glossary-search","placeholder","Rechercher un terme...","Circà un termine...","Search for a term..."],
 ["gloss_search_aria","#glossary-search","aria-label","Rechercher dans le glossaire","Circà in u glussariu","Search the glossary"],
-["fab_mini_label",".fab-mini-label","","Contribution terrain","","Field contribution"],
-["fab_mini_aria",".fab-mini","aria-label","Contribution terrain","","Field contribution"],
-["fab_mesure_tt","#fab-mesure","title","Actions terrain","","Field actions"],
+["fab_mesure_tt","#fab-mesure","title","Contribuer une mesure","","Contribute a measurement"],
+["fab_mesure_aria","#fab-mesure","aria-label","Contribuer une mesure","","Contribute a measurement"],
 ["cap_intro_p0",".cap-intro p@0","","L'API Web Sensor donnant accès au magnétomètre du téléphone a été restreinte par les navigateurs Android (Chrome, Firefox, Edge) depuis 2023, pour des raisons de protection contre l'identification des appareils par leurs capteurs. Cette restriction ne peut pas être contournée côté navigateur.","","The Web Sensor API giving access to the phone's magnetometer has been restricted by Android browsers (Chrome, Firefox, Edge) since 2023, for reasons of protection against device fingerprinting via sensors. This restriction cannot be worked around on the browser side."],
 ["cap_intro_p1",".cap-intro p@1","","Une application Android Tellux dédiée, en cours de conception, permettra l'accès direct aux capteurs avec un protocole de mesure encadré (mode avion, calibration, moyennage temporel, métadonnées contextuelles) conforme aux recommandations de la littérature scientifique grand public.","","A dedicated Tellux Android app, currently in design, will allow direct sensor access with a structured measurement protocol (airplane mode, calibration, temporal averaging, contextual metadata) consistent with the recommendations of the general scientific literature."],
 ["cap_intro_p2",".cap-intro p@2","","En attendant, l'onglet « Mesure technique » ci-dessus permet la saisie manuelle d'une valeur obtenue avec une application dédiée comme Phyphox (Android) ou Sensor Kinetics (iOS), qui contournent les restrictions du navigateur.","","In the meantime, the \"Technical measurement\" tab above allows manual entry of a value obtained with a dedicated app such as Phyphox (Android) or Sensor Kinetics (iOS), which work around the browser restrictions."],
