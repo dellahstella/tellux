@@ -276,7 +276,14 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
       <div class="lp-map-stats">
         <div class="lp-map-stat"><div class="lp-map-stat-val">3 000</div><div class="lp-map-stat-label" data-i18n-key="stat_antennes">antennes</div></div>
         <div class="lp-map-stat"><div class="lp-map-stat-val"><span data-stat="supports-total">1 026</span></div><div class="lp-map-stat-label" data-i18n-key="stat_supports" data-i18n-title-key="stat_supports_tt" title="Source ANFR CartoRadio &middot; compte dérivé du JSON pipeline">supports</div></div>
-        <div class="lp-map-stat"><div class="lp-map-stat-val">8 000<span style="font-size:12px">+</span></div><div class="lp-map-stat-label" data-i18n-key="stat_km">km lignes HTA/HTB</div></div>
+        <!-- ~2 600 km (2026-09-06, brief CH addendum, revue Soleil PR #1290) : remplace un
+             ancien "8 000+ km lignes HTA/HTB" qui était doublement faux — l'unité elle-même
+             (8 387 est un compte de polylignes, pas des km) et le périmètre (HTB non modélisé,
+             cf. guide-et-glossaire.html #term-htb). Méthode calculée et consignée dans
+             scripts/compute_hta_network_length_km.py — somme Haversine sur le dataset HTA
+             réellement ingéré (Supabase hta_lines, celui que calcMagneticELF_v2() lit), pas
+             l'export brut EDF SEI : 8 387 polylignes, longueur totale 2 608,5 km, arrondie ici. -->
+        <div class="lp-map-stat"><div class="lp-map-stat-val">2 600</div><div class="lp-map-stat-label" data-i18n-key="stat_km" data-i18n-title-key="stat_km_tt" title="Source EDF SEI (Supabase hta_lines) · somme des longueurs de segments, méthode consignée dans scripts/compute_hta_network_length_km.py">km de lignes HTA</div></div>
       </div>
     </div>
   </div>
@@ -677,7 +684,8 @@ function telluxGetEffectiveLang(){
     stat_antennes: 'antennas',
     stat_supports: 'supports',
     stat_supports_tt: 'Source: ANFR CartoRadio · count derived from JSON pipeline',
-    stat_km: 'km HTA/HTB lines'
+    stat_km: 'km of HTA lines',
+    stat_km_tt: 'Source: EDF SEI (Supabase hta_lines) · sum of segment lengths, method logged in scripts/compute_hta_network_length_km.py'
     // "TELLUX" (logo) omis : identique FR/EN, aucune traduction nécessaire.
     // Toggle EN/FR (#lang-toggle-en*) omis : déjà géré par le script dédié ci-dessus.
   };
