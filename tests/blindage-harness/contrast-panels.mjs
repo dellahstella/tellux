@@ -161,25 +161,20 @@ const LAYER_BUTTONS = ['b-crustal', 'b-ant', 'b-res'];
 // Le <details> qui contient deltaCol est désormais ouvert de force avant chaque sonde (cf. plus
 // bas dans la boucle) — la ligne complète du popup ci-dessous ne concerne QUE l'activité 4/5.
 //
-// ⚠️ ACTIVITÉ 4/5 (anColor, #d97706) — VÉRIFIÉE le 2026-09-03 (brief V), et RÉELLEMENT CASSÉE.
-// Ce n'était plus une hypothèse : point trouvé (41.52°N, 8.92°E, susceptibilité substrat 34 nT,
-// geoScore+suscNat=4), ratio mesuré 2,81 — critique, sous 3,0. Contrairement aux branches sœurs
-// de la même famille (phColor, l'autre branche d'anColor #9ca3af, deltaCol ocre, radonColor),
-// TOUTES corrigées le 2026-09-02 (lot 3 / lot 2 bis), celle-ci avait été explicitement différée
-// au lot 3 (commentaire app.html ~L7874) puis, de fait, oubliée — le hex de anColor>=4 est resté
-// identique à celui mesuré défaillant le 2026-09-01.
-// DÉLIBÉRÉMENT NON CORRIGÉE ici, et DÉLIBÉRÉMENT NON AJOUTÉE à POPUP_POINTS malgré le point
-// identifié ci-dessus : assombrir #d97706 jusqu'au seuil (facteur ~0,65) converge visuellement
-// vers #92400e — la couleur du palier "actif" juste en dessous (rgb 141,77,4 vs 146,64,14,
-// quasi indiscernables) — ce qui détruirait la distinction à 3 paliers de l'échelle avant même
-// de savoir si le résultat reste lisible. Ce n'est pas une substitution mécanique comme
-// --warn/--warn-tx : c'est un choix de palette sur les 3 couleurs ensemble, qu'un correctif
-// ponctuel ne peut pas trancher seul (cf. commentaire app.html ~L7942, "un choix de palette,
-// pas une correction mécanique" — confirmé, pas seulement supposé, par le calcul ci-dessus).
-// Ajouter ce point à POPUP_POINTS ferait échouer ce check sur un défaut connu et non résolu,
-// sans que rien n'ait été décidé sur SA correction — exactement l'inverse du rôle d'un cliquet.
-// Fait à la place : documenté ici avec des coordonnées reproductibles, pour que quiconque
-// tranche la palette puisse vérifier son résultat sans re-chercher un point depuis zéro.
+// ⚠️ ACTIVITÉ 4/5 (anColor, #d97706) — RÉSOLU DE FAIT, PAS PAR CORRECTIF : DEVENU CODE MORT.
+// Cette note documentait un vrai défaut, VÉRIFIÉ le 2026-09-03 (brief V) — point reproductible
+// (41.52°N, 8.92°E, susceptibilité substrat 34 nT, geoScore+suscNat=4), ratio mesuré 2,81,
+// critique, sous 3,0. Mais `anColor` et toute la ligne de score « Activité naturelle » du popup
+// ont été RETIRÉS le jour même, ~1h30 plus tard (commit edee4414, ADR-064 décision 1 — refonte
+// indiceTellux, sans rapport avec ce chantier de contraste) : cet élément DOM n'existe plus du
+// tout depuis le 2026-09-03. Trouvé en vérifiant la prémisse de ce lot (brief BT lot E,
+// 2026-09-06) — `anColor` avait cessé d'exister 3 jours avant d'être repris comme un défaut
+// encore à corriger, sans que ce commentaire n'ait jamais été mis à jour (un commit de nettoyage
+// ADR-064 postérieur, `9c47f1d`, a traité d'autres résidus de ce retrait mais pas celui-ci).
+// Rien à corriger ici : ni palette à redessiner (le choix à 3 couleurs ci-dessous documenté est
+// devenu sans objet), ni point à ajouter à POPUP_POINTS. Conservé comme note historique — pas
+// supprimé en silence — pour qu'un futur lecteur retrouvant « anColor » ailleurs (ex. dans un
+// brief, une mémoire de session) sache pourquoi aucune trace n'en subsiste dans app.html.
 // Coût mesuré (2026-09-01, local) : script à 1 point ~21 s -> à 4 points ~31 s,
 // soit ~+3,3 s par point ajouté. Round-trip Playwright par point (clic + attente
 // POPUP_WAIT_MS + sonde), pas la sonde elle-même. Déterminisme vérifié (2 runs
