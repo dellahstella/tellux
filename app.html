@@ -1268,6 +1268,19 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .accordion-cat-icon.open{transform:rotate(90deg);}
 .accordion-cat-content{max-height:0;overflow:hidden;transition:max-height .35s ease;display:flex;flex-direction:column;gap:4px;padding:0 4px;}
 .accordion-cat-content.open{max-height:900px;padding:8px 4px;}
+/* .is-settled (2026-09-06) — le plafond de 900px ci-dessus n'existe que pour rendre la
+   transition possible (max-height n'est pas interpolable vers auto). Sur un conteneur
+   display:flex, un contenu plus haut que le plafond n'est pas débordé mais COMPRIMÉ :
+   chaque enfant rétrécit, overflow:hidden coupe le reste, et il n'y a ni barre de
+   défilement ni ellipse — le texte s'arrête en pleine phrase. Mesuré à 375x812 sur la
+   catégorie « Sources anthropiques », légendes dépliées : 3 couches actives suffisent à
+   atteindre 900px (2 couches = 897px), et à 5 couches #mleg-ant tombe de 397px naturels à
+   173px rendus, soit 56% de la légende masquée. Le cas n'est pas limite : 'ant' est allumée
+   par défaut, et les légendes inline grandissent APRÈS l'ouverture (updateInlineLegendMobile
+   injecte dans une catégorie déjà dépliée) — un correctif qui ne jouerait qu'à l'ouverture
+   ne couvrirait pas la vraie cause. Une fois la transition d'ouverture terminée, le plafond
+   est donc libéré : toute croissance ultérieure du contenu est libre. */
+.accordion-cat-content.open.is-settled{max-height:none;}
 .accordion-cat-content .lbtn{margin:0;}
 /* Header descriptif d'un accordéon (paragraphe d'ouverture, ex. Groupe 3 « Contexte naturel »). */
 /* .cat-header-text retirée le 2026-08-27 (brief "3 corrections UI menu EM") — dernier
@@ -12099,11 +12112,50 @@ function exportSitePDF(){
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
+// toggleAccordion — dépliage d'une catégorie du menu Couches (5 appelants, tous
+// onclick="toggleAccordion(this)" : app.html:2206, 2253, 2283, 2355, 2467 ; les deux
+// sous-groupes .subgroup-toggle partagent la même mécanique).
+// Étendu le 2026-09-06 : le plafond .accordion-cat-content.open{max-height:900px} tronquait
+// silencieusement la légende mobile (cf. commentaire daté au-dessus de la règle .is-settled).
+// La classe .is-settled est posée une fois l'ouverture terminée, ce qui libère le plafond et
+// rend la croissance ultérieure du contenu (légendes injectées par updateInlineLegendMobile
+// dans une catégorie déjà ouverte) inoffensive. Le repli repasse obligatoirement par une
+// hauteur concrète : max-height:none n'est PAS interpolable vers 0, retirer .is-settled et
+// .open dans le même geste supprimerait l'animation de fermeture.
 function toggleAccordion(header){
+  const content=header.nextElementSibling;
+  const willOpen=!header.classList.contains('open');
   header.classList.toggle('open');
   header.querySelector('.accordion-cat-icon').classList.toggle('open');
-  header.nextElementSibling.classList.toggle('open');
+  if(willOpen){
+    content.classList.add('open');
+    _accSettleLater(content);
+  }else{
+    _accCollapse(content);
+  }
 }
+function _accSettleLater(content){
+  // 400ms > la transition de 350ms (app.html, .accordion-cat-content). Sous
+  // prefers-reduced-motion la transition dure 0.01ms (app.html:1754) : le délai reste correct,
+  // simplement plus long que nécessaire. Le contains('open') final protège contre un
+  // repli intervenu entre-temps.
+  window.setTimeout(function(){
+    if(content.classList.contains('open'))content.classList.add('is-settled');
+  },400);
+}
+function _accCollapse(content){
+  content.style.maxHeight=content.scrollHeight+'px'; // hauteur réelle, plafond compris ou non
+  content.classList.remove('is-settled');
+  void content.offsetHeight;                          // reflow : la hauteur concrète est rendue
+  content.style.maxHeight='';                         // la main repasse au CSS
+  content.classList.remove('open');                   // → max-height:0, animé depuis la hauteur réelle
+}
+// Les deux catégories ouvertes dans le HTML (app.html:2210 « Modèle EM », app.html:2359
+// « Substrat et paysage ») n'ont jamais joué de transition d'ouverture : sans ce réglage
+// initial, elles resteraient plafonnées à 900px pour toute la session.
+document.querySelectorAll('.accordion-cat-content.open').forEach(function(c){
+  c.classList.add('is-settled');
+});
 
 // ═══ Panneau "Conditions actuelles" ═══
 // Plies par defaut, chaque sous-section affiche un resume une ligne.
