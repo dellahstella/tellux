@@ -44,7 +44,19 @@
   /* Tellux palette v1 — neutres */
   --tx-ardoise:#1F2329;
   --tx-pierre:#F5F0E7;
-  --tx-mica:#74706A;
+  --tx-mica:#6C6863; /* était #74706A — assombri 2026-09-06 (brief BT lot E), gel
+     A11Y-CONTRAST-APP-PANELS-002 levé POUR CE CAS (voir commentaire --tx3 ci-dessous pour
+     l'historique du gel — corrige aussi une mauvaise référence à A11Y-CONTRAST-001, entrée sans
+     rapport, mairies.html). 16 violations dans #conditions-bar-details (tiroir replié par défaut, hors
+     périmètre de contrast-panels.mjs — cf. son propre commentaire) : 15 usages --tx-mica à
+     4,33:1 sur --tx-pierre (sous le seuil AA 4,5:1) + 1 usage --tx3 sur --tx-brume, traité
+     séparément ci-dessous (token distinct, ~132 usages, pas assombri ici). Assombrissement
+     proportionnel de #74706A (même teinte, -7%, même méthode que --tx3 en 2026-08-31) :
+     4,871:1 sur --tx-pierre — marge de sécurité au-dessus de 4,5, pas un seuil tangent.
+     16+ usages HORS du tiroir audités avant ce changement (headers, disclaimers, tooltips,
+     glossaire — tous texte/bordure sur fond clair de la même famille --tx-pierre/--tx-brume) :
+     aucun sur fond sombre, assombrir ne peut donc que les faire tendre vers PLUS de contraste,
+     jamais moins. Mesuré à la main (hors périmètre automatisé), pas seulement calculé. */
   --tx-brume:#E8E2D5;
   /* Tellux palette v1 — accents */
   --tx-maquis:#3F5B3A;
@@ -57,12 +69,20 @@
   /* --tx3 diverge de --tx-mica le 2026-08-31 (revue accessibilité, dette
      A11Y-CONTRAST-APP-PANELS-002) : les ~132 usages de var(--tx3) en texte 8-14px
      mesuraient 4,07-4,33 sur les fonds --tx-pierre/--pierre-ombre — sous le seuil
-     WCAG 4,5:1. --tx-mica lui-même (#74706A) reste INTACT, gelé (A11Y-CONTRAST-001) ;
-     seul cet alias sémantique — prévu pour diverger, cf. commentaire ci-dessus — porte
-     désormais une valeur propre. #6A6761 : assombrissement proportionnel de #74706A
-     (même teinte, ratio conservé), calé sur le fond le plus sombre du duo (4,66 sur
-     --pierre-ombre, 4,97 sur --tx-pierre) avec marge de sécurité. Aucun fond sombre
-     restant ne lit --tx3 (vérifié : #expert-bandeau code sa couleur en dur) — rien à
+     WCAG 4,5:1. À l'époque, --tx-mica lui-même (#74706A) restait intact, gelé
+     (A11Y-CONTRAST-APP-PANELS-002 — corrigé le 2026-09-06, citait à tort A11Y-CONTRAST-001,
+     entrée sans rapport, mairies.html) ; seul cet alias sémantique — prévu pour diverger, cf.
+     commentaire ci-dessus — portait une valeur propre. **2026-09-06 (brief BT lot E)** :
+     le gel de --tx-mica a depuis été levé POUR UN AUTRE CAS (16 violations du tiroir
+     #conditions-bar-details, cf. commentaire de sa définition ci-dessus) — --tx3, lui,
+     N'A PAS bougé ici (#6A6761 inchangé) : une de ces 16 violations est un usage --tx3
+     (pas --tx-mica) sur --tx-brume, à 4,367:1 — corrigé par une classe LOCALE au seul
+     nœud concerné (cf. .cond-body-contribs "(JSON)"), pas en assombrissant --tx3
+     globalement (~132 usages, un blast radius sans rapport avec ce lot). #6A6761 :
+     assombrissement proportionnel de #74706A (même teinte, ratio conservé), calé sur le
+     fond le plus sombre du duo (4,66 sur --pierre-ombre, 4,97 sur --tx-pierre) avec
+     marge de sécurité. Aucun fond sombre restant ne lit --tx3 (vérifié : #expert-bandeau
+     code sa couleur en dur) — rien à
      casser dans l'autre sens depuis le retrait du mode sombre. */
   --tx3:#6A6761;
   --bg:var(--tx-pierre);
@@ -2748,7 +2768,13 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
             <div style="font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Sources certifiées</div>
             <button id="btn-cert-download" type="button" onclick="downloadCertifiedJSON()" style="width:100%;padding:8px 12px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg3);color:var(--tx);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:inherit;transition:all .15s" onmouseover="this.style.background='var(--tx-brume)';this.style.borderColor='var(--tx-mica)'" onmouseout="this.style.background='var(--bg3)';this.style.borderColor='var(--border)'">
               <span style="font-size:13px">⬇</span>
-              <span style="flex:1;text-align:left">Télécharger les 236 fiches ANFR/EXEM <span style="color:var(--tx3);font-size:10px">(JSON)</span></span>
+              <!-- #63605A en dur, PAS var(--tx3) (brief BT lot E, 2026-09-06) : ce nœud était
+                   l'une des 16 violations de contraste du tiroir (4,367:1 sur --tx-brume, sous
+                   AA 4,5:1). --tx3 a ~132 usages ailleurs dans l'app (cf. commentaire --tx-mica
+                   plus haut) — l'assombrir globalement pour ce seul nœud serait un blast radius
+                   sans rapport avec ce lot. Couleur locale = même teinte assombrie -7% (méthode
+                   identique à --tx-mica ci-dessus), 4,855:1 sur --tx-brume, marge de sécurité. -->
+              <span style="flex:1;text-align:left">Télécharger les 236 fiches ANFR/EXEM <span style="color:#63605A;font-size:10px">(JSON)</span></span>
             </button>
             <div style="font-size:10px;color:var(--tx3);margin-top:6px;line-height:1.4">Mesures certifiées de laboratoire (ANFR · EXEM) extraites des PDFs CartoRadio. Déjà visibles sur la carte en losanges colorés.</div>
           </div>
