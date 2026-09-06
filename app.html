@@ -2106,7 +2106,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
 
 <p style="margin:10px 0 8px 0;"><strong style="color:var(--warn)">⚠️ Incertitudes documentées :</strong></p>
 <ul style="margin:6px 0 6px 16px;padding:0">
-  <li style="margin-bottom:3px"><strong>Courants HTA/HTB</strong> = ordres de grandeur (150-450A). Réalité : ±50% journée (pic/creuse). EDF SEI Corse ne publie pas données temps réel.</li>
+  <li style="margin-bottom:3px"><strong>Courants HTA</strong> = ordres de grandeur (150-450A). Réalité : ±50% journée (pic/creuse). EDF SEI Corse ne publie pas données temps réel.</li>
   <li style="margin-bottom:3px"><strong>IGRF 54 points</strong> → interpolation IDW (erreur ±50-100 nT possibles Corse)</li>
   <li style="margin-bottom:3px"><strong>Anomalie crustale (score)</strong> : grille LCS-1 ~24 pts (±20 nT) ; EMAG2v3 live (2 arc-min ~3.7 km) réservé au panneau comparatif « anomalies mondiales » (exploratoire, sans incidence sur le score)</li>
   <li style="margin-bottom:3px"><strong>Failles</strong> : 8 principales BRGM, bonus <3km. Quaternaires vs actives = pondération différente (0.7 vs 1.0).</li>
@@ -2257,7 +2257,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
     <div class="accordion-cat-content">
       <button class="lbtn on-ant" id="b-ant" data-domains="rf" title="Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR + TDF<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-ant"></div>
-      <button class="lbtn" id="b-res" data-domains="elf" title="Lignes électriques haute tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HT<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">ELF</span></button>
+      <button class="lbtn" id="b-res" data-domains="elf" title="Lignes électriques HTA — moyenne tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HTA<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">ELF</span></button>
       <div class="mlegend-inline" id="mleg-res"></div>
       <!-- Couche « Réseau BT » masquée en prod le 2026-08-29 (#1122, verdict RF : n'entre dans
            aucune fonction RF), REMISE EN PROD le 2026-08-30 : le rendu statique (buildBTStaticLayer,
@@ -3548,7 +3548,7 @@ var JS_STRINGS_EN = {
   mleg_sub_cert: "236 certified measurement records (2002–2026) — 21 used to calibrate the RF model.",
   mleg_sub_contrib: "Citizen smartphone measurements, uncertified — display only, outside the calculation.",
   mleg_sub_ant: "2G-to-5G mobile antennas and broadcast transmitters — ANFR open data.",
-  mleg_sub_res: "50 Hz high-voltage lines — EDF SEI, OSM.",
+  mleg_sub_res: "50 Hz medium-voltage (HTA) lines — EDF SEI, OSM.",
   mleg_sub_bt: "Low-voltage street distribution — EDF SEI, visible from zoom level 10.",
   mleg_sub_prod: "Power stations of the Corsican grid — hydro, wind, thermal.",
   mleg_sub_postesSources: "21 HV/MV transformer substations — EDF SEI, OSM data."
@@ -4268,7 +4268,7 @@ const LAYER_SUBTITLE_FR={
   cert: '236 fiches de mesure certifiées (2002–2026) — 21 ont servi à calibrer le modèle RF.',
   contrib:'Mesures citoyennes au smartphone, non certifiées — affichage seul, hors calcul.',
   ant:  'Antennes mobiles 2G à 5G et émetteurs broadcast — source ANFR open data.',
-  res:  'Lignes haute tension 50 Hz — EDF SEI, OSM.',
+  res:  'Lignes HTA (moyenne tension) 50 Hz — EDF SEI, OSM.',
   bt:   'Distribution basse tension dans les rues — EDF SEI, visible à partir du zoom 10.',
   prod: 'Centrales du réseau électrique corse — hydraulique, éolien, thermique.',
   postesSources:'21 postes de transformation HTB/HTA — EDF SEI, données OSM.'
@@ -13133,8 +13133,8 @@ function capCleanup(){
 ["lyr_contrib_tt","#b-contrib","title","Contributions terrain des utilisateurs Tellux : magnétomètre smartphone (nT), signal réseau/WiFi (dBm), relevés au capteur externe. Cercles violets, en cluster. N'influence jamais le score composite affiché ; une comparaison indicative apparaît dans le détail technique du popup.","Cuntribuzione di terrenu di l'utilizatori Tellux : magnetometru smartphone (nT), signale reta/WiFi (dBm), rilievi à u sensore esternu. Cerchji viola, in cluster. Affissu solu.","Field contributions from Tellux users: smartphone magnetometer (nT), network/WiFi signal (dBm), external-sensor readings. Purple circles, clustered. Never influences the displayed composite score; an indicative comparison appears in the popup's technical detail."],
 ["lyr_ant","#b-ant","","Antennes ANFR + TDF","Antenne ANFR + TDF","ANFR + TDF antennas"],
 ["lyr_ant_tt","#b-ant","title","Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF","Antenne 2G/3G/4G/5G ANFR + emettitori broadcast TDF","2G/3G/4G/5G ANFR antennas + TDF broadcast transmitters"],
-["lyr_res","#b-res","","Réseau HT","Reta HT","HV grid"],
-["lyr_res_tt","#b-res","title","Lignes électriques haute tension (50 Hz)","Linee elettrichi alta tensione (50 Hz)","High-voltage power lines (50 Hz)"],
+["lyr_res","#b-res","","Réseau HTA","Reta HTA","MV grid"],
+["lyr_res_tt","#b-res","title","Lignes électriques HTA — moyenne tension (50 Hz)","Linee elettrichi alta tensione (50 Hz)","Medium-voltage (HTA) power lines (50 Hz)"],
 ["lyr_bt","#b-bt","","Réseau BT","Reta BT","LV grid"],
 ["lyr_bt_tt","#b-bt","title","Réseau basse tension BT — EDF SEI · zoom ≥ 10","Reta bassa tensione BT — EDF SEI · zoom ≥ 10","Low-voltage BT grid — EDF SEI · zoom ≥ 10"],
 ["lyr_prod","#b-prod","","Sites de production","Siti di pruduzzione","Generation sites"],
@@ -13516,8 +13516,8 @@ function capCleanup(){
         "⚠️ Incertitudes documentées :",
         "<strong style=\"color:var(--warn)\">⚠️ Documented uncertainties:</strong>"],
       ["#methodology-panel li@3",
-        "Courants HTA/HTB = ordres de grandeur (150-450A). Réalité : ±50% journée (pic/creuse). EDF SEI Corse ne publie pas données temps réel.",
-        "<strong>HTA/HTB currents</strong> = orders of magnitude (150-450A). Reality: ±50% across the day (peak/off-peak). EDF SEI Corsica does not publish real-time data."],
+        "Courants HTA = ordres de grandeur (150-450A). Réalité : ±50% journée (pic/creuse). EDF SEI Corse ne publie pas données temps réel.",
+        "<strong>HTA currents</strong> = orders of magnitude (150-450A). Reality: ±50% across the day (peak/off-peak). EDF SEI Corsica does not publish real-time data."],
       ["#methodology-panel li@4",
         "IGRF 54 points → interpolation IDW (erreur ±50-100 nT possibles Corse)",
         "<strong>IGRF 54 points</strong> → IDW interpolation (possible ±50-100 nT error in Corsica)"],
