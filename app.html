@@ -8725,7 +8725,14 @@ function addMarker(c){
 
 // ── ANFR ANTENNES CORSE — loader Supabase + émetteurs radio/TV majeurs ──
 // Restauré post-v8 (régression cleanup). Domaine EM strict — aucune dépendance patrimoine/agro.
-const GC={'2G':'#1a4b8c','3G':'#1a6b5c','4G':'#b85c00','5G':'#991b1b','infra':'#6b7280','default':'#4a4f5e'};
+// infraText (2026-09-06, brief CC) : jeton partagé pour la teinte TEXTE assortie à 'infra' —
+// ajouté ici plutôt que recopié une 5e fois en dur. Origine du besoin : le tag du popup TDF
+// individuel (loadAnt(), plus bas) recopiait encore #5f5e5a (la couleur périmée du glyphe croix
+// d'origine) alors que le glyphe lui-même avait déjà migré vers GC.infra/#616874 — trois lignes
+// d'écart dans le même fichier, la même fonction, sans qu'aucun jeton ne relie les deux. Une
+// vigilance supplémentaire n'aurait pas empêché ceci de se reproduire une 5e fois ; un jeton
+// partagé, si.
+const GC={'2G':'#1a4b8c','3G':'#1a6b5c','4G':'#b85c00','5G':'#991b1b','infra':'#6b7280','default':'#4a4f5e','infraText':'#616874'};
 
 // Clustering ANFR à faible zoom (brief 2026-08-30, suite au brief clustering général jamais
 // exécuté — aucune trace en prod/PR/SUIVI de ce brief antérieur, vérifié avant d'écrire ceci ;
@@ -9081,6 +9088,11 @@ async function loadAnt(){try{
     const alt = (em.altitude_m != null) ? em.altitude_m + ' m' : '';
     const typeLabel = em.type === 'broadcast_principal' ? 'Émetteur principal' : (em.type === 'relais' ? 'Relais' : 'Émetteur');
     const desc = par + (alt ? ' | ' + alt + ' altitude' : '') + ' | ' + services + (em.operateur ? ' | ' + em.operateur : '');
+    // Tag du popup ci-dessous : recopiait #5f5e5a en dur (couleur périmée de l'ancienne croix),
+    // trois lignes sous le commentaire qui documente pourtant déjà la migration du glyphe vers
+    // GC.infra/#616874 (2026-09-06, brief BM). Corrigé vers GC.infraText (jeton partagé posé plus
+    // haut, cf. commentaire sur la déclaration de GC) plutôt que recopié une 4e fois en dur — brief
+    // CC, 2026-09-06.
     // duration=6000 (2026-08-31, brief "clôture chantier légende" volet tooltip) : ce site
     // d'appel omettait la durée, donc ne posait jamais le timer d'auto-fermeture de info()
     // (if(duration&&duration>0) — cf. fonction) — le panneau restait affiché indéfiniment,
@@ -9088,7 +9100,7 @@ async function loadAnt(){try{
     // ailleurs) : contenu un peu plus dense (type + nom + puissance/altitude/services/
     // opérateur + notes le cas échéant) que les toasts de confirmation habituels.
     L.marker([em.lat, em.lon], {icon, zIndexOffset: 150}).on('click', () => info(
-      '<span class="tag" style="background:#f0f0ee;color:#5f5e5a;border:0.5px solid #aaa">' + typeLabel + '</span> <b>' + em.nom + '</b><br>' +
+      '<span class="tag" style="background:#f0f0ee;color:' + GC.infraText + ';border:0.5px solid #aaa">' + typeLabel + '</span> <b>' + em.nom + '</b><br>' +
       '<span style="font-size:12px;color:var(--ardoise-clair)">' + desc + '</span>' +
       (em.notes ? '<br><span style="font-size:11px;color:var(--tx3);font-style:italic">' + em.notes + '</span>' : ''),
       null, 6000
