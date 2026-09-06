@@ -13694,6 +13694,39 @@ function capCleanup(){
     coBanner.appendChild(coBannerX);
     (document.body || document.documentElement).appendChild(coBanner);
   } catch (_eBanner) {}
+
+  // --- Re-rendu des légendes après la passe i18n (2026-09-06) ---
+  // legendHtmlFor() (app.html:4753) choisit LEGEND_HTML_EN ou LEGEND_HTML en lisant
+  // document.documentElement.lang AU MOMENT DU RENDU. Or les légendes des deux couches
+  // allumées par défaut sont rendues au boot par showLegend('hotrf') (app.html:11076) et
+  // showLegend('ant') (app.html:11084) — c'est-à-dire dans le 1er <script>, donc AVANT que
+  // ce bloc-ci ne pose lang (app.html:13454). Rien ne les re-rendait ensuite : sous ?lang=en,
+  // un visiteur atterrissait sur « Champ électrique RF (V/m) » et « Antennes ANFR » au lieu
+  // de « RF electric field (V/m) » et « ANFR Antennas », sur le panneau « ? » desktop comme
+  // sur la légende mobile — et le texte ne basculait en anglais qu'au premier toggle de
+  // couche. Les traductions existaient (LEGEND_HTML_EN, app.html:4458) ; elles n'étaient
+  // simplement jamais rendues. Vérifié en navigateur avant/après.
+  // Le piège est celui documenté app.html:3139-3146 pour jt() ; il n'avait pas été traité
+  // pour cette surface. Aucun risque d'écraser le travail de la boucle ci-dessus : les 6
+  // entrées I18N_ENTRIES qui touchent la légende visent toutes le CHÂSSIS statique
+  // (#legende, #legende-toggle, #legende-content, #tellux-legends-context : attributs de
+  // conteneur ; .legende-section-title et #legende-em-empty : nœuds jamais réécrits par
+  // updateLegendPanel()), jamais le contenu injecté.
+  try {
+    if (typeof updateLegendPanel === 'function') updateLegendPanel();
+    // Légende mobile : re-rendre les slots effectivement peuplés, sans avoir à connaître la
+    // liste des couches actives (elle varie, cf. LEGEND_HTML) — .active est posée par
+    // updateInlineLegendMobile() elle-même (app.html:4879).
+    if (typeof updateInlineLegendMobile === 'function') {
+      document.querySelectorAll('.mlegend-inline.active').forEach(function (el) {
+        updateInlineLegendMobile(el.id.replace(/^mleg-/, ''), true);
+      });
+    }
+    // updateLegendPanel() réécrit #tellux-leg-panel, donc aussi le #leg-ant-count qu'il
+    // contient : le recompléter tout de suite plutôt que d'attendre le prochain passage de
+    // loadAnt() (+1500 ms, app.html:11097), qui laisserait un « — » visible entre-temps.
+    if (typeof syncAntCount === 'function') syncAntCount();
+  } catch (_eLeg) {}
 })();
 </script>
 
