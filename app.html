@@ -3319,6 +3319,9 @@ var JS_STRINGS_EN = {
   btn_save_finalizing: "Finalizing calculation…",
   save_elf_fallback_notice: "Measurement saved with a simplified estimate of the electromagnetic field (grid data unavailable).",
   elf_loading_label: "ELF field (nT) — loading…",
+  // Étiquetage du terme BT manquant (2026-09-07, brief CJ). Direction de l'écart connue et dite.
+  elf_bt_incomplet: "Incomplete value: the low-voltage term has not loaded yet, so the value shown is under-estimated. It is added as soon as the grid data is available.",
+  elf_bt_incomplet_badge: "incomplete value",
   elf_fallback_notice: "ELF field unavailable right now (network data not loaded).",
   // an_label_tres_actif/an_label_actif/an_label_neutre, it_verdict_calme_actif/_calme_neutre/
   // _zone_calme/_perturb_faible/_influence_detectable/_zone_perturbee SUPPRIMÉES (ADR-064, brief T,
@@ -6553,7 +6556,16 @@ function getBTSegmentsNear(lat, lon) {
 }
 
 // Chargement asynchrone bt_lines sur bbox Corse complète (Option C)
-// Non bloquant : les clics avant la fin retournent HTA + BT_ZONES proxy uniquement.
+// Non bloquant : les clics avant la fin retournent HTA seul, SANS aucun terme BT.
+// CORRECTION 2026-09-07 (brief CJ) — cette ligne disait « HTA + BT_ZONES proxy uniquement ».
+// C'était faux depuis le retrait du proxy BT_ZONES (9 valeurs sans source connue), remplacé par la
+// densité de segments, cf. les deux commentaires de calcMagneticELF_v2 qui le disent déjà
+// (« proxy BT_ZONES retiré, cf. BT-CALIBRATION-001 approche 3.3 »). Le proxy ne subsiste que dans
+// calcMagneticELF (v1). Conséquence de la phrase fausse : elle laissait croire que le calcul
+// DÉGRADE gracieusement pendant le chargement, alors qu'il OMET — le terme BT vaut exactement 0
+// tant que BT_SEGMENT_GRID n'existe pas (garde `USE_BT_SEGMENTS && BT_SEGMENT_GRID`).
+// Mesuré : −21,4 % sur la valeur ELF au point Ajaccio, −0,072 sur l'indice composite, pendant les
+// ≈136 s que dure ce chargement. Un lecteur du code aurait pu ne jamais chercher ce défaut.
 // Promesse partagée (2026-08-30, brief "Option A couche BT statique") : le boot déclenche ce
 // chargement en fire-and-forget (setTimeout(loadBTLinesAsync,200), x2, cf. préchargement HTA) ;
 // loadBT() (rendu visuel) a maintenant besoin d'ATTENDRE la même donnée de façon fiable si
@@ -6968,6 +6980,11 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
     chargeFactorSource: htFactorSource,
     n_hta_contributing: nHtaContrib,
     n_bt_contributing: nBtContrib,
+    // Métadonnée d'étiquetage (2026-09-07, brief CJ) — condition de déblocage nommée par
+    // BT-ZONE-CHARGEMENT-ASYNC-SILENCIEUX-001 : « champ de métadonnée explicite dans le retour de
+    // calcMagneticELF_v2 ». false ⇒ le terme BT est ABSENT du B_total_nT ci-dessus, valeur minorée.
+    // Chaque surface publique qui affiche cette valeur doit le dire (cf. btIncompletNote()).
+    bt_terme_inclus: btTermeInclus(),
     // model : discriminant v1/v2 (2026-09-04, brief AP) — cf. commentaire jumeau dans
     // calcMagneticELF_v1(). Atteint uniquement quand SEGMENT_GRID/HTA_SEGMENTS_DATA sont
     // chargées (garde plus haut dans cette fonction) — jamais 'v2' pendant le repli.
@@ -7766,6 +7783,37 @@ function calcMagneticELFAuto(lat, lon) {
 function computeElfState() {
   return (typeof SEGMENT_GRID !== 'undefined' && SEGMENT_GRID !== null) ? 'ready'
     : ((typeof _htaPreloadState !== 'undefined' && _htaPreloadState === 'failed') ? 'failed' : 'loading');
+}
+
+// ═══ Terme BT : inclus ou non ? (2026-09-07, brief CJ, arbitrage Soleil) ═══
+// computeElfState() ci-dessus fait autorité pour la grille HTA, et RIEN pour la grille BT :
+// quand HTA est prête et BT non, il répond 'ready' alors que la valeur affichée omet un terme.
+// C'est un signal DISTINCT, volontairement pas fondu dans computeElfState() — la valeur HTA est
+// bien prête, la déclarer 'loading' masquerait ou bloquerait un affichage légitime.
+//
+// Pourquoi ce signal existe (mesuré en production le 2026-09-07) : bt_lines se télécharge au boot
+// en 157 requêtes paginées, ≈12 Mo, dernière requête terminée à t+136 s. Or le terme BT de
+// calcMagneticELF_v2 est gardé par `USE_BT_SEGMENTS && BT_SEGMENT_GRID`, et cette grille n'est
+// construite qu'À LA FIN de ce téléchargement. Avant, getBTSegmentsNear() renvoie [] et le terme
+// vaut EXACTEMENT 0 — il n'y a pas de repli : le calcul n'estime pas moins bien, il OMET.
+// Mesure au point Ajaccio (41,919 / 8,738) : BT_zone_densite = 180 nT sur 841 nT au total, soit
+// −21,4 % pendant la fenêtre ; propagé à l'indice composite (w_M = 0,40, bornes ELF [0,1000]),
+// cela fait −0,072, soit 7,2 points sur 100.
+// Ce n'est pas un cas limite : c'est l'état par défaut des deux premières minutes de CHAQUE visite.
+function btTermeInclus() {
+  return !!(typeof USE_BT_SEGMENTS !== 'undefined' && USE_BT_SEGMENTS
+            && typeof BT_SEGMENT_GRID !== 'undefined' && BT_SEGMENT_GRID);
+}
+// Mention publique à apposer partout où la valeur ELF (ou un indice qui en dérive) est affichée
+// tant que le terme manque. Direction de l'écart CONNUE et dite : minorée, jamais « incertaine ».
+// On n'estime pas le terme absent, on ne masque pas la valeur — on la déclare incomplète.
+function btIncompletNote() {
+  return jt('elf_bt_incomplet',
+    'Valeur incomplète : le terme basse tension n’est pas encore chargé, la valeur affichée est '
+    + 'minorée. Il s’ajoute dès que les données réseau sont disponibles.');
+}
+function btIncompletBadge() {
+  return jt('elf_bt_incomplet_badge', 'valeur incomplète');
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -8803,6 +8851,11 @@ map.on('click',async e=>{
         '<span style="font-size:9px;color:#626774" title="'+jt('v2_conf_elf','Confiance : moyen — modélisation Biot-Savart, ±50%')+'">●●○</span>'+
       '</div>'+
       '<div style="font-size:8px;color:#626774">'+elfContribs+'</div>'+
+      // Étiquetage du terme BT manquant (2026-09-07, brief CJ) : additif, jamais substitutif —
+      // la valeur reste affichée, elle se déclare incomplète. Même teinte que les autres notes
+      // de ce bloc (#8A5E22), aucune couleur neuve, aucune connotation d'alerte.
+      (btTermeInclus() ? '' :
+        '<div style="font-size:8px;color:#8A5E22;font-style:italic;margin-top:1px">'+btIncompletNote()+'</div>')+
       elfIARCnote;
   // radonColor/radonConf/radonLabel — SUPPRIMÉES le 2026-09-02 (retrait du bloc "Domaine
   // ionisant", cf. commentaire plus bas) : leur seul consommateur était ce bloc, elles seraient
@@ -10975,7 +11028,20 @@ function refreshExpertComposite() {
   var wI  = EXPERT_WEIGHTS_DEFAULT.I;
   var comp = computeExpertComposite(_expertLastResult, { M: wM, RF: wRF, I: wI });
   var el = document.getElementById('expert-index-val');
-  if (el) el.textContent = comp.index.toFixed(3);
+  if (el) {
+    // Étiquetage du terme BT (2026-09-07, brief CJ) : l'indice dérive d'ELF via w_M, donc
+    // l'omission s'y propage — mesuré −0,072 (7,2 points sur 100) au point Ajaccio. Le badge est
+    // apposé à côté de l'indice, la valeur reste lisible. textContent puis badge : jamais
+    // d'innerHTML sur une valeur numérique.
+    el.textContent = comp.index.toFixed(3);
+    if (!btTermeInclus()) {
+      var b = document.createElement('span');
+      b.style.cssText = 'font-size:9px;font-weight:400;color:#8A5E22;font-style:italic;margin-left:5px';
+      b.title = btIncompletNote();
+      b.textContent = btIncompletBadge();
+      el.appendChild(b);
+    }
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -11002,6 +11068,11 @@ function exportExpertCSV() {
     ['Champ', 'Valeur', 'Unite', 'Confiance', 'En_cours_de_validation', 'Source', 'Horodatage'],
     ['timestamp', ts, '', '', '0', 'Tellux v2', ts],
     ['elf_B_total_nT', elf.B_total_nT != null ? elf.B_total_nT : '', 'nT', elf.confidence || '', elf.under_review ? '1' : '0', (elf.source || '').replace(/;/g, ','), ts],
+    // Étiquetage du terme BT (2026-09-07, brief CJ) : champ explicite plutôt qu'une mention noyée
+    // dans Source — un export se relit à la machine, et une valeur minorée doit être filtrable.
+    // 0 ⇒ le terme basse tension est ABSENT de elf_B_total_nT ci-dessus (valeur minorée).
+    ['elf_bt_terme_inclus', elf.bt_terme_inclus === false ? '0' : '1', '', '', '0',
+      elf.bt_terme_inclus === false ? 'Terme BT non charge au moment de l export - valeur minoree' : 'Terme BT inclus', ts],
     ['magnetic_static_B_total_nT', st.B_total_nT != null ? st.B_total_nT : '', 'nT', st.confidence || '', '0', (st.source || '').replace(/;/g, ','), ts],
     ['rf_S_total_uW_m2', rf.S_total_uW_m2 != null ? rf.S_total_uW_m2 : '', 'uW/m2', rf.confidence || '', '0', (rf.source || '').replace(/;/g, ','), ts],
     ['gamma_dose_rate_nSv_h', gam.dose_rate_nSv_h != null ? gam.dose_rate_nSv_h : '', 'nSv/h', gam.confidence || '', gam.under_review ? '1' : '0', (gam.source || '').replace(/;/g, ','), ts],
@@ -11826,6 +11897,12 @@ function myPlaceRenderSummary(d){
   var absScore=Math.abs(v2 && v2.domains && v2.domains.magnetic && v2.domains.magnetic.elf ? Math.round(v2.domains.magnetic.elf.B_total_nT) : 0);
   var champLvl=absScore<30?jt('interp_lvl_tres_calme','Très calme'):absScore<100?jt('interp_lvl_modere','Modéré'):absScore<300?jt('interp_lvl_actif','Actif'):jt('interp_lvl_intense','Intense');
   var champHtml=escapeHtml(champLvl)+' <span style="color:var(--tx3)">('+Math.round(v2.domains.magnetic.elf.B_total_nT)+' nT, composante liée aux lignes électriques proches)</span>';
+  // Étiquetage du terme BT manquant (2026-09-07, brief CJ) — même mention que le popup carte et
+  // que l'indice composite : une seule formulation, produite par btIncompletNote(), jamais
+  // recopiée. La valeur reste affichée ; c'est la complétude qui est déclarée, pas la valeur.
+  if(!btTermeInclus()){
+    champHtml+='<div style="font-size:10.5px;color:#8A5E22;font-style:italic;margin-top:3px">'+btIncompletNote()+'</div>';
+  }
   var champRow=myPlaceRow(jt('myplace_champ_title','Champ ELF anthropique 50 Hz (ordre de grandeur)'),champHtml,jt('pill_estime','Estimation modélisée'),'estime');
 
   // Ligne « Dose gamma ambiante (ordre de grandeur) » retirée le 2026-09-01, en même temps que
