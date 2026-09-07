@@ -507,7 +507,20 @@
   flex:1 1 auto;
   min-width:220px;
   max-width:400px;
-  max-height:150px;
+  /* max-height relatif à la fenêtre plutôt qu'un pixel fixe (2026-09-07, brief CK, arbitrage
+     Soleil) — l'ancienne valeur (150px, posée le 24/04/2026 dans la PR fondatrice #128) est
+     restée inchangée seize mois pendant que le contenu de certaines pastilles grandissait
+     (mesuré : elf la dépassait de 20-26 %, cf. LEGENDE-ELF-ROUTAGE-CONTEXT-001, désormais
+     résolue en la routant vers le panneau "?", sans plafond). Garde-fou PROSPECTIF, pas la
+     protection d'une occupante vivante : les deux couches encore routées ici, hyd et openrad,
+     ont toutes deux leur bouton retiré du DOM par commentaire (hyd depuis le 2026-08-27, openrad
+     depuis le 2026-08-30 — cf. commentaires à ces boutons, "réactivable en dé-commentant"), donc
+     aucune pastille n'est joignable par un visiteur aujourd'hui. Ce plafond vaut pour leur
+     réactivation future ou tout nouvel ajout ambigu : 30vh reste nettement sous le plafond du
+     conteneur parent (#tellux-legends-context, 40vh desktop/35vh mobile ci-dessous), donc une
+     pastille seule n'occupe jamais tout l'espace disponible même si son contenu grandit — pas
+     de nouveau chiffre en dur à réviser dans N mois pour le même motif. */
+  max-height:30vh;
   overflow-y:auto;
   background:var(--tx-pierre);
   border:1px solid var(--border);
@@ -4239,7 +4252,35 @@ const ACTIVE={bt:false,ant:true,hyd:false,emag:false,hot:false,hotrf:true,elf:fa
 // seul un second bloc "Sources anthropiques" s'ajoute. Gamma citoyen (openrad) reste hors
 // périmètre : couche mutée/inatteignable depuis le 2026-08-30 (cf. commentaire au bouton),
 // rien à promouvoir tant qu'elle n'est pas réactivée.
-const LEGEND_CORE_IDS=new Set(['hot','hotrf','cert','contrib','emag','ant','res','bt','prod','postesSources']);
+//
+// EXTENSION 2026-09-07 (brief CK, arbitrage Soleil, option C) — elf rejoint le core. Motif
+// établi par `git log -S`, pas supposé : le commit fondateur de ce système (23/04/2026)
+// qualifiait déjà elf_domain/rf_domain de « couches ambiguës laissées inchangées… probablement
+// préparées pour un mode futur » — une ambiguïté assumée dès le premier jour, jamais tranchée.
+// Ni la vague du 27/08 (con/emag) ni celle du 31/08 ci-dessus n'ont nommé elf, à la différence
+// d'openrad dont l'exclusion EST documentée et réelle (ligne au-dessus) — l'absence de raison
+// pour elf était elle-même le constat, pas une décision à respecter. Cause concrète, pas
+// seulement historique : son contenu dépassait le plafond fixe de `.legend-context-pill`
+// (150px, posé le 24/04/2026, jamais revu en 16 mois) — desktop 186px de contenu réel contre
+// 148px rendus, mobile 201px contre 148px, mesuré pane visible (cf.
+// _drafts/BRIEF_CK_LEGENDE_ELF_PASTILLE_TRONCATURE_2026-09-07.md, Tellux public, gitignored).
+// Le panneau "?" n'a lui aucun plafond par entrée (cf. règle
+// `#legende-content #tellux-leg-panel{max-height:none!important}`) : corrige la troncature à la
+// racine plutôt que par un chiffre de plus à réviser dans N mois. Effet de bord réel, tracé
+// séparément et non absorbé en silence : elf hérite désormais de la fermeture automatique du
+// panneau "?" à l'ouverture du tiroir Couches (cf. commentaire à setLayersPanelOpen()) — dette
+// privée LEGENDE-EXCLUSIVITE-FERMETURE-SILENCIEUSE-001.
+// hyd EXCLUE de cette extension (corrigé après premier passage de ce même brief, qui l'avait
+// incluse à tort) : contrairement à ce qu'affirmait le brief, hyd A une exclusion documentée et
+// réelle — bouton #b-hyd retiré du DOM par commentaire depuis le 2026-08-27 (décision Soleil,
+// brief « nettoyage Contexte naturel » point 3, conservé en dette RÉSERVÉE, cf. l.~2529). Couche
+// aujourd'hui inactivable par un visiteur : la question de son routage de légende est sans objet
+// tant que ce bouton reste commenté. openrad reste hors périmètre, même nature d'exclusion
+// (bouton #b-openrad commenté depuis le 2026-08-30, l.~2608, couche mutée vers radon.html) —
+// conséquence à nommer : elf était la SEULE couche joignable de la Zone 2 ; une fois promue,
+// la pastille contextuelle n'a plus aucune occupante activable par un visiteur. Mécanisme
+// conservé tel quel (hyd/openrad sont explicitement "réactivables en dé-commentant").
+const LEGEND_CORE_IDS=new Set(['hot','hotrf','cert','contrib','emag','ant','res','bt','prod','postesSources','elf']);
 const LEGEND_MAX_CONTEXT=3;
 const LEGEND_ACTIVE_CORE=new Set();
 const LEGEND_ACTIVE_CONTEXT=[];
@@ -4872,7 +4913,11 @@ function updateLegendPanel(){
     // ordre d'affichage core = Composite, RF, Mesures certifiées, Contributions smartphone,
     // Fond magnétique régional (compacté à une ligne). 'con' (2026-08-27, brief "Panneau '?'
     // sélectif") a été scindé le 2026-08-29 (item C) en 'cert' + 'contrib', tous deux core.
-    const coreOrder=['hot','hotrf','cert','contrib','emag'];
+    // 'elf' ajoutée le 2026-09-07 (brief CK, cf. commentaire daté à LEGEND_CORE_IDS) juste après
+    // 'hot' : même famille de domaine (magnétique), avant le passage au domaine RF. 'hyd' NON
+    // ajoutée malgré l'intention initiale du brief — cf. commentaire à LEGEND_CORE_IDS : son
+    // bouton est déjà retiré du DOM, exclusion réelle et documentée découverte en implémentant.
+    const coreOrder=['hot','elf','hotrf','cert','contrib','emag'];
     // Groupe 2 — Sources anthropiques (2026-08-31, cf. commentaire daté à LEGEND_CORE_IDS) :
     // même ordre que GROUPE 2 du menu Couches. Rendu dans un bloc séparé, sous son propre
     // intitulé — jamais fusionné avec coreOrder ci-dessus, dont le comportement ne change pas.
@@ -13416,6 +13461,10 @@ function capCleanup(){
     // même ancrage (top:130/right:12/bottom:16, cf. #legende-content) : sans fermeture
     // explicite ici, une ouverture simultanée les superposerait pixel pour pixel au lieu de se
     // recouvrir par accident comme avant. Cf. commentaire symétrique dans initLegendeOverlay.
+    //
+    // Périmètre élargi le 2026-09-07 (brief CK) : elf promue en core (cf. LEGEND_CORE_IDS) ferme
+    // donc désormais ici aussi, sans annonce — comportement signalé, pas résolu, dette privée
+    // LEGENDE-EXCLUSIVITE-FERMETURE-SILENCIEUSE-001.
     if (isOpen && typeof window.closeLegendeOverlay === 'function') window.closeLegendeOverlay();
     la.classList.toggle('open', isOpen);
     if(btn){
