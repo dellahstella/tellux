@@ -11872,13 +11872,27 @@ function myPlaceRenderSummary(d){
   // éditoriale, hors mandat de ce brief (rapport brief BU, 2026-09-06, section 2).
   var absScore=Math.abs(v2 && v2.domains && v2.domains.magnetic && v2.domains.magnetic.elf ? Math.round(v2.domains.magnetic.elf.B_total_nT) : 0);
   var champLvl=absScore<30?jt('interp_lvl_tres_calme','Très calme'):absScore<100?jt('interp_lvl_modere','Modéré'):absScore<300?jt('interp_lvl_actif','Actif'):jt('interp_lvl_intense','Intense');
-  var champHtml=escapeHtml(champLvl)+' <span style="color:var(--tx3)">('+Math.round(v2.domains.magnetic.elf.B_total_nT)+' nT, composante liée aux lignes électriques proches)</span>';
-  // Étiquetage de la valeur provisoire (2026-09-07, brief CI) — même note que le popup carte et
-  // l'indice composite, produite par elfV1Note(), jamais recopiée. La valeur reste affichée ;
-  // c'est sa complétude qui est déclarée, pas la valeur elle-même. Lu directement sur le
-  // résultat (`model`), pas sur une variable d'état parallèle.
-  if(v2 && v2.domains && v2.domains.magnetic && v2.domains.magnetic.elf && v2.domains.magnetic.elf.model==='v1'){
-    champHtml+='<div style="font-size:10.5px;color:#8A5E22;font-style:italic;margin-top:3px">'+elfV1Note()+'</div>';
+  var champHtml;
+  // Distinction chargement/repli (2026-09-07, brief CI, ajouté en revue #1307) : computeElfState()
+  // ('loading' tant que le préchargement HTA n'a pas résolu 'ready' NI 'failed') vaut ici comme
+  // au popup carte (l.~8827) — la fenêtre est transitoire (quelques secondes en usage normal),
+  // pas un état à étiqueter comme provisoire. `model==='v1'` reste vrai pendant 'loading' ET
+  // 'failed' (calcMagneticELF_v2 ne distingue pas les deux), donc vérifier 'loading' D'ABORD,
+  // avant de lire `model` : sinon la fenêtre de chargement de CHAQUE visite afficherait le badge
+  // "valeur provisoire" au lieu d'un simple message d'attente — même chaîne, même registre que
+  // le popup carte, pas une nouvelle formulation.
+  if (computeElfState()==='loading') {
+    champHtml='<span style="color:var(--tx3);font-style:italic">'+jt('elf_state_loading','⏳ Préparation du calcul en cours…')+'</span>';
+  } else {
+    champHtml=escapeHtml(champLvl)+' <span style="color:var(--tx3)">('+Math.round(v2.domains.magnetic.elf.B_total_nT)+' nT, composante liée aux lignes électriques proches)</span>';
+    // Étiquetage de la valeur provisoire (2026-09-07, brief CI) — même note que le popup carte et
+    // l'indice composite, produite par elfV1Note(), jamais recopiée. La valeur reste affichée ;
+    // c'est sa complétude qui est déclarée, pas la valeur elle-même. Lu directement sur le
+    // résultat (`model`), pas sur une variable d'état parallèle. Atteint ici seulement pour
+    // 'failed' (durable) — 'loading' (transitoire) est déjà sorti ci-dessus.
+    if(v2 && v2.domains && v2.domains.magnetic && v2.domains.magnetic.elf && v2.domains.magnetic.elf.model==='v1'){
+      champHtml+='<div style="font-size:10.5px;color:#8A5E22;font-style:italic;margin-top:3px">'+elfV1Note()+'</div>';
+    }
   }
   var champRow=myPlaceRow(jt('myplace_champ_title','Champ ELF anthropique 50 Hz (ordre de grandeur)'),champHtml,jt('pill_estime','Estimation modélisée'),'estime');
 
