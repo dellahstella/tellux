@@ -3320,7 +3320,7 @@ var JS_STRINGS_EN = {
   save_elf_fallback_notice: "Measurement saved with a simplified estimate of the electromagnetic field (grid data unavailable).",
   elf_loading_label: "ELF field (nT) — loading…",
   // Étiquetage du terme BT manquant (2026-09-07, brief CJ). Direction de l'écart connue et dite.
-  elf_bt_incomplet: "Incomplete value: the low-voltage term has not loaded yet, so the value shown is under-estimated. It is added as soon as the grid data is available.",
+  elf_bt_incomplet: "Incomplete value: the low-voltage term has not loaded yet, so the value shown is too low. It is included as soon as the network data is available.",
   elf_bt_incomplet_badge: "incomplete value",
   elf_fallback_notice: "ELF field unavailable right now (network data not loaded).",
   // an_label_tres_actif/an_label_actif/an_label_neutre, it_verdict_calme_actif/_calme_neutre/
@@ -8853,9 +8853,13 @@ map.on('click',async e=>{
       '<div style="font-size:8px;color:#626774">'+elfContribs+'</div>'+
       // Étiquetage du terme BT manquant (2026-09-07, brief CJ) : additif, jamais substitutif —
       // la valeur reste affichée, elle se déclare incomplète. Même teinte que les autres notes
-      // de ce bloc (#8A5E22), aucune couleur neuve, aucune connotation d'alerte.
+      // de ce bloc, aucune couleur neuve, aucune connotation d'alerte — mais par le JETON
+      // var(--warn-tx) et non par le hex #8A5E22 que ses trois voisines immédiates recopient.
+      // Le jeton existe (déclaré en tête de feuille) et 36 occurrences l'ignorent dans ce
+      // fichier ; une ligne neuve n'a pas d'excuse pour être la 37e. Les 36 existantes ne sont
+      // PAS converties ici : hors périmètre de cette PR, à traiter en une passe dédiée.
       (btTermeInclus() ? '' :
-        '<div style="font-size:8px;color:#8A5E22;font-style:italic;margin-top:1px">'+btIncompletNote()+'</div>')+
+        '<div style="font-size:8px;color:var(--warn-tx);font-style:italic;margin-top:1px">'+btIncompletNote()+'</div>')+
       elfIARCnote;
   // radonColor/radonConf/radonLabel — SUPPRIMÉES le 2026-09-02 (retrait du bloc "Domaine
   // ionisant", cf. commentaire plus bas) : leur seul consommateur était ce bloc, elles seraient
@@ -11036,7 +11040,7 @@ function refreshExpertComposite() {
     el.textContent = comp.index.toFixed(3);
     if (!btTermeInclus()) {
       var b = document.createElement('span');
-      b.style.cssText = 'font-size:9px;font-weight:400;color:#8A5E22;font-style:italic;margin-left:5px';
+      b.style.cssText = 'font-size:9px;font-weight:400;color:var(--warn-tx);font-style:italic;margin-left:5px';
       b.title = btIncompletNote();
       b.textContent = btIncompletBadge();
       el.appendChild(b);
@@ -11901,7 +11905,7 @@ function myPlaceRenderSummary(d){
   // que l'indice composite : une seule formulation, produite par btIncompletNote(), jamais
   // recopiée. La valeur reste affichée ; c'est la complétude qui est déclarée, pas la valeur.
   if(!btTermeInclus()){
-    champHtml+='<div style="font-size:10.5px;color:#8A5E22;font-style:italic;margin-top:3px">'+btIncompletNote()+'</div>';
+    champHtml+='<div style="font-size:10.5px;color:var(--warn-tx);font-style:italic;margin-top:3px">'+btIncompletNote()+'</div>';
   }
   var champRow=myPlaceRow(jt('myplace_champ_title','Champ ELF anthropique 50 Hz (ordre de grandeur)'),champHtml,jt('pill_estime','Estimation modélisée'),'estime');
 
