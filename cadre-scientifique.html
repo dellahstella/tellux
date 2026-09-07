@@ -518,7 +518,7 @@ li ol {
   <p data-i18n-key="s3_m_p1">Tellux calcule le champ magnétique statique comme la somme de trois contributions (Doc 1 §3.1) :</p>
   <ol>
     <li data-i18n-key="s3_m_li1"><strong>IGRF-14</strong> — le champ produit par le noyau terrestre (modèle mondial IAGA). En Corse : inclinaison 58°, déclinaison ~3,5° Est.</li>
-    <li data-i18n-key="s3_m_li2"><strong>EMAG2v3</strong> (primaire) + <strong>LCS1</strong> (secours) — les <strong>anomalies crustales</strong>, variations locales dues à la composition magnétique des roches. Résolution EMAG2v3 : 2 minutes d'arc (~3,7 km au sol).</li>
+    <li data-i18n-key="s3_m_li2"><strong>LCS1</strong> — les <strong>anomalies crustales</strong>, variations locales dues à la composition magnétique des roches. C'est la <strong>source unique et permanente</strong> de ce terme : le calcul interpole une grille locale dérivée de LCS1 (24 points sur la Corse, maille ~0,3° × 0,5°), sans jamais consulter d'autre source. Correctif au 2026-09-07 : ce paragraphe présentait jusqu'ici EMAG2v3 comme la source primaire et LCS1 comme un secours — l'inverse de ce que fait le code, qui n'a aucune branche entre les deux. <strong>EMAG2v3 (2 minutes d'arc, ~3,7 km au sol) n'entre dans aucun calcul</strong> : il alimente la couche « Anomalies de référence » affichée sur la carte et la jauge crustale, rien d'autre. La résolution qui s'applique au champ modélisé est donc celle de la grille locale, décrite plus bas, pas les 3,7 km d'EMAG2v3.</li>
     <li data-i18n-key="s3_m_li3"><code>B_susceptibilité_locale</code> — correction dérivée des cartes BRGM 1/50 000 et des données de Gattacceca et al. 2004.</li>
   </ol>
   <h4 data-i18n-key="s3_h4_3">Ce qui est affiché en contexte</h4>
@@ -559,24 +559,30 @@ li ol {
   <h4 data-i18n-key="s5_h4_1">Ce qui est certain</h4>
   <ul>
     <li data-i18n-key="s5_c_li1">Les antennes (téléphonie mobile, faisceaux hertziens, FM/TV) émettent des ondes radio.</li>
-    <li data-i18n-key="s5_c_li2">Le champ électrique diminue avec le carré de la distance.</li>
+    <li data-i18n-key="s5_c_li2">En espace libre, le <strong>champ électrique</strong> (V/m) décroît comme l'inverse de la distance ; c'est la <strong>densité de puissance</strong> (W/m²), proportionnelle au carré du champ, qui décroît comme l'inverse du carré de la distance. Correctif au 2026-09-07 : cette ligne affirmait jusqu'ici que le champ électrique lui-même décroissait avec le carré de la distance — inexact, et contredit par le modèle de Tellux, qui calcule bien le carré du champ en 1/d².</li>
     <li data-i18n-key="s5_c_li3">Les seuils de référence ICNIRP pour le grand public se situent entre <strong>28 et 61 V/m</strong> selon les bandes de fréquence.</li>
   </ul>
   <h4 data-i18n-key="s5_h4_2">Ce qui est modélisé</h4>
-  <p data-i18n-key="s5_m_p1">Tellux calcule le champ RF à partir des données déclarées par les opérateurs (ANFR Cartoradio, ~974 supports en Corse) et d'un modèle de propagation en espace libre (équation de Friis simplifiée), avec des corrections (Doc 1 §3.3) :</p>
+  <p data-i18n-key="s5_m_p1">Tellux calcule le champ RF à partir des données déclarées par les opérateurs (ANFR Cartoradio, <strong>1 026 supports en Corse</strong>) et d'un modèle de propagation en <strong>espace libre</strong> (équation de Friis simplifiée), <strong>sans aucune correction de propagation</strong> : ni relief, ni diffraction par obstacle, ni bâti. Une seule correction physique s'y ajoute, et elle est conditionnelle (Doc 1 §3.3) :</p>
   <ul>
-    <li data-i18n-key="s5_m_li1">ITU-R P.452 — propagation point à point.</li>
-    <li data-i18n-key="s5_m_li2">ITU-R P.526 — diffraction par obstacles.</li>
-    <li data-i18n-key="s5_m_li3">ITU-R P.833-6 (2007) — atténuation par végétation (modèle simplifié historique).</li>
+    <li data-i18n-key="s5_m_li1"><strong>ITU-R P.833-6 (2007)</strong> — atténuation par la végétation (modèle simplifié historique). Elle n'est appliquée qu'au <strong>calcul ponctuel déclenché par un clic sur la carte</strong>, et seulement si la couche « Forêt dense » est activée — elle ne l'est pas par défaut. Le rendu territorial (heatmap) ne l'applique jamais : le coût de calcul, mesuré, est incompatible avec une grille dense.</li>
   </ul>
-  <p data-i18n-key="s5_veg"><strong>Source végétation utilisée :</strong> <strong>BD Forêt V2 IGN</strong> (<code>foret_dense_corse.geojson</code>, ~2 880 polygones) — source vectorielle locale, non un raster mondial. Le modèle d'atténuation utilisé est la version <strong>P.833-6 (2007)</strong> — version obsolète, en attente de migration vers P.833-10 (Doc 1 §3.3).</p>
+  <p data-i18n-key="s5_m_corr"><strong>Correctif au 2026-09-07 :</strong> cette liste annonçait jusqu'ici deux corrections supplémentaires — <strong>ITU-R P.452</strong> (propagation point à point) et <strong>ITU-R P.526</strong> (diffraction par obstacles). <strong>Ni l'une ni l'autre n'est implémentée</strong> ; recherche faite dans le code de l'application, aucune occurrence. Le modèle RF est un champ libre, et la limite « pas d'atténuation par bâti modélisée » listée plus bas en découle directement.</p>
+  <!-- Compte de polygones — 5 676 au 2026-09-07, vérifié sur le fichier versionné.
+       PIÈGE À NE PAS REFAIRE : le chiffre précédent (~2 880) était celui du jeu antérieur au
+       filtre « option C » du 2026-08-30 (2 882 polygones exactement). Ce filtre a RÉDUIT la
+       couverture (59 % → 28,5 % de la Corse) tout en AUGMENTANT le nombre de polygones — filtrer
+       par essence fragmente les massifs contigus. Quelqu'un qui raisonne « la couverture baisse,
+       donc le compte baisse » validerait l'ancien chiffre. Recompter sur le fichier, jamais
+       déduire du sens de variation de la couverture. -->
+  <p data-i18n-key="s5_veg"><strong>Source végétation utilisée :</strong> <strong>BD Forêt V2 IGN</strong> (<code>foret_dense_corse.geojson</code>, <strong>5 676 polygones</strong>, ~28,5 % de la surface de la Corse) — source vectorielle locale, non un raster mondial. Le modèle d'atténuation utilisé est la version <strong>P.833-6 (2007)</strong> — version obsolète, en attente de migration vers P.833-10 (Doc 1 §3.3).</p>
   <h4 data-i18n-key="s5_h4_3">Calibration du modèle RF</h4>
   <p data-i18n-key="s5_cal">Le modèle RF est calibré sur des mesures certifiées extérieures (<code>cartoradio_certified_corse.json</code>, points conformes en environnement extérieur public). Un facteur multiplicatif <code>k</code> est dérivé une fois au démarrage comme la médiane du ratio mesuré/prédit, sur 21 mesures extérieures éligibles (sur 30 dans le pool de calibration). Valeur actuelle : <strong>k ≈ 0,361</strong>. Dispersion du ratio : écart interquartile (IQR) <strong>[0,183 ; 0,499]</strong> — pas un intervalle de confiance. Ce facteur est une constante figée au démarrage, pas un terme recalculé point par point — il multiplie uniformément le champ prédit partout sur le territoire. Le détail des sources est dans la section <a href="/methode-limites-transparence.html#sources-rf">Sources RF et végétation</a> de la page Méthode.</p>
   <h4 data-i18n-key="s5_h4_4">Limites <span class="meta-ref">(Doc 1 §5.2)</span></h4>
   <ul>
     <li data-i18n-key="s5_l_li1">30 fiches ANFR/EXEM certifiées en Corse à ce jour (couverture spatiale insuffisante).</li>
     <li data-i18n-key="s5_l_li2">Pas d'atténuation par bâti modélisée (calcul en espace libre simplifié).</li>
-    <li data-i18n-key="s5_l_li3">Pas d'effet d'absorption par végétation modélisé spatialement à l'échelle territoriale.</li>
+    <li data-i18n-key="s5_l_li3">Pas d'effet d'absorption par végétation modélisé spatialement à l'échelle territoriale — l'atténuation décrite plus haut ne s'applique qu'au calcul ponctuel, couche « Forêt dense » activée. Les deux affirmations ne se contredisent pas : elles portent sur deux chemins de calcul distincts, ce que cette page ne disait pas jusqu'au 2026-09-07.</li>
   </ul>
 </section>
 
