@@ -1436,6 +1436,22 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    centaines d'éléments. prefers-reduced-motion est déjà neutralisé globalement plus bas
    (animation-duration:0.01ms !important) — rien à ajouter, la règle existante couvre celle-ci.
    Aucun effet de particules, aucune dissolution : opacité seule. */
+/* Infobulle d'une position ANFR (2026-09-07) — elle liste désormais toutes les générations et
+   tous les opérateurs déclarés, donc jusqu'à trois lignes. Leaflet met ses infobulles en
+   white-space:nowrap : sans cette règle, le pire cas (4 générations + 4 opérateurs) mesurait
+   246 px de large et SORTAIT du viewport sur mobile — « Operators: Bouygues, Free, Oran… »
+   coupé net, constaté à 375 px avant correction.
+   max-width:50vw n'est pas arbitraire : Leaflet ouvre l'infobulle du côté opposé au centre de la
+   carte (direction:'auto'), donc le cas contraignant est un marqueur JUSTE à gauche du centre :
+   l'infobulle s'ouvre vers la droite et dispose de la moitié de la largeur, MOINS le décalage
+   que Leaflet pose entre le marqueur et la bulle. D'où 50vw - 20px : mesuré à 375 px, un simple
+   50vw laissait encore 6 px de débordement (bord droit à 381 pour un viewport de 375), parce que
+   la bulle démarre à x+6 et non à x. Le 240 px cape la largeur sur grand écran, où la moitié du
+   viewport serait inutilement large.
+   width:max-content est indispensable avec max-width : sans lui, la boîte absolue se réduit à sa
+   largeur MINIMALE de contenu — mesuré 82 px de large pour 192 px de haut, une colonne d'un mot
+   par ligne, moins lisible que le débordement qu'on corrigeait. */
+.leaflet-tooltip.tlx-ant-tt{white-space:normal;width:max-content;max-width:min(240px,calc(50vw - 20px));line-height:1.35;}
 .tlx-layer-fade{animation:tlxLayerFade .15s ease-out;}
 @keyframes tlxLayerFade{from{opacity:0;}to{opacity:1;}}
 .quest-tooltip{
@@ -2319,7 +2335,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            masquage (instabilité d'affichage) n'existe plus. Le terme BT du calcul ELF
            (loadBTLinesAsync / getBTSegmentsNear / USE_BT_SEGMENTS) n'a jamais été affecté par ce
            masquage, dans un sens comme dans l'autre. -->
-      <button class="lbtn" id="b-bt" data-domains="elf" title="Réseau basse tension BT — EDF SEI · zoom ≥ 10" onclick="tog('bt','on-bt',this)"><span class="ln" style="background:#d97706"></span>Réseau BT<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">ELF</span></button>
+      <button class="lbtn" id="b-bt" data-domains="elf" title="Réseau basse tension BT — EDF SEI · zoom ≥ 9" onclick="tog('bt','on-bt',this)"><span class="ln" style="background:#d97706"></span>Réseau BT<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">ELF</span></button>
       <div class="mlegend-inline" id="mleg-bt"></div>
       <button class="lbtn" id="b-prod" data-domains="elf" title="Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions" onclick="tog('prod','on-prod',this)"><span class="sq" style="background:#1a5c8c"></span>Sites de production<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">ELF</span></button>
       <div class="mlegend-inline" id="mleg-prod"></div>
@@ -3245,7 +3261,7 @@ var JS_STRINGS_EN = {
   reseau_osm_prefix: "OSM grid: ",
   reseau_osm_suffix: " lines",
   hta_indisponible: "HTA: unavailable",
-  bt_zoom_hint: "BT grid — layer shown from zoom 10 (too dense at small scale); the calculation stays active.",
+  bt_zoom_hint: "BT grid — layer shown from zoom {z} (too dense at small scale); the calculation stays active.",
   bt_loading: "Loading BT grid…",
   bt_indisponible: "BT: unavailable",
   // bt_truncated_suffix / bt_line_aerien / bt_line_souterrain : orphelines depuis le passage au
@@ -3257,7 +3273,7 @@ var JS_STRINGS_EN = {
   bt_line_aerien: "Overhead BT line · EDF SEI",
   bt_line_souterrain: "Underground BT line · EDF SEI",
   legende_generic: "Legend",
-  foretdense_zoom_hint: "Dense forest — layer shown from zoom 10 (too extensive at small scale); the calculation stays active.",
+  foretdense_zoom_hint: "Dense forest — layer shown from zoom {z} (too extensive at small scale); the calculation stays active.",
   foretouverte_zoom_hint: "Open forest — layer shown from zoom 10 (too extensive at small scale); context layer, outside the calculation.",
   landemaquis_zoom_hint: "Heathland / scrub — layer shown from zoom 10 (too extensive at small scale); context layer, outside the calculation.",
   cert_toast_prefix: "Certified measurements — ",
@@ -3602,7 +3618,7 @@ var JS_STRINGS_EN = {
   mleg_sub_contrib: "Citizen smartphone measurements, uncertified — display only, outside the calculation.",
   mleg_sub_ant: "2G-to-5G mobile antennas and broadcast transmitters — ANFR open data.",
   mleg_sub_res: "50 Hz medium-voltage (HTA) lines — EDF SEI, OSM.",
-  mleg_sub_bt: "Low-voltage street distribution — EDF SEI, visible from zoom level 10.",
+  mleg_sub_bt: "Low-voltage street distribution — EDF SEI, visible from zoom level 9.",
   mleg_sub_prod: "Power stations of the Corsican grid — hydro, wind, thermal.",
   mleg_sub_postesSources: "21 HV/MV transformer substations — EDF SEI, OSM data.",
 
@@ -3617,7 +3633,7 @@ var JS_STRINGS_EN = {
   legfocus_empty: "No items from this layer are on the map right now.",
   legfocus_already: "All already visible — the view stays as it is.",
   legfocus_done: "View reframed to this layer.",
-  legfocus_gated: "This layer appears from zoom level 10 — view centred on its extent at that zoom.",
+  legfocus_gated: "This layer appears from zoom level {z} — view centred on its extent at that zoom.",
   legfocus_undo: "Back to previous view",
   legfocus_undone: "Previous view restored.",
 
@@ -3625,7 +3641,12 @@ var JS_STRINGS_EN = {
   // aussi en entrée I18N_ENTRIES (fab_mesure_tt / fab_mesure_aria, attributs du HTML statique) ;
   // il est répété ici parce que _syncFabLabel() le repose en JS à chaque changement d'état.
   fab_contribuer_aria: "Contribute a measurement",
-  fab_annuler_aria: "Cancel current contribution"
+  fab_annuler_aria: "Cancel current contribution",
+
+  // Infobulle d'une position ANFR (2026-09-07) — liste ce qui est déclaré à la position, pas la
+  // première ligne. Espace final volontaire : concaténé directement à la liste.
+  ant_tt_generations: "Generations: ",
+  ant_tt_operateurs: "Operators: "
 };
 function jt(key, fr){
   return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
@@ -4098,7 +4119,15 @@ lForetDense.setOpacity = function(value){
 // échelle la couche (~28,5 % de la Corse, 5 680 parties) sature la carte sans rien apprendre.
 // N'affecte QUE l'affichage : le calcul (calcVegetationAttenuation via ACTIVE.foretdense) reste
 // actif quel que soit le zoom. _syncForetDenseZoom() est défini près de buildForetDenseLayer().
-const FORET_DENSE_MIN_ZOOM=10;
+// Abaissé 10 → 9 le 2026-09-07 (constat _drafts/CONSTAT_SEUILS_ZOOM_FORET_BT_2026-09-07.md, GO
+// Soleil). Le motif du gate reste la LISIBILITÉ, pas la performance — et la mesure a montré que la
+// performance ne s'y opposait pas, au contraire : le redessin CULMINE au seuil de 10 et diminue en
+// dessous (desktop 506 ms à z10 contre 331 à z9 ; mobile 606 contre 366), parce que le coût canvas
+// d'un polygone plein tient à la surface remplie en pixels, pas au nombre de sommets. Volume
+// transféré inchangé : le GeoJSON (1,88 Mo) est chargé au boot quel que soit le zoom.
+// 9 et non 8 : à 8 la couche cesse de décrire un massif pour ne décrire qu'une répartition. 8 est
+// techniquement gratuit — c'est un choix de lecture, pas un compromis de coût.
+const FORET_DENSE_MIN_ZOOM=9;
 let _foretDenseZoomHintShown=false;
 // lForetOuverte / lLandeMaquis (brief F, 2026-09-02) — couches contextuelles hors calcul,
 // mêmes source/format que lForetDense (BD Forêt V2 IGN, cf.
@@ -4343,7 +4372,7 @@ const LAYER_SUBTITLE_FR={
   contrib:'Mesures citoyennes au smartphone, non certifiées — affichage seul, hors calcul.',
   ant:  'Antennes mobiles 2G à 5G et émetteurs broadcast — source ANFR open data.',
   res:  'Lignes HTA (moyenne tension) 50 Hz — EDF SEI, OSM.',
-  bt:   'Distribution basse tension dans les rues — EDF SEI, visible à partir du zoom 10.',
+  bt:   'Distribution basse tension dans les rues — EDF SEI, visible à partir du zoom 9.',
   prod: 'Centrales du réseau électrique corse — hydraulique, éolien, thermique.',
   postesSources:'21 postes de transformation HTB/HTA — EDF SEI, données OSM.'
 };
@@ -4459,7 +4488,7 @@ const LEGEND_HTML={
   // app.html:~9510) n'existe que dans ce mode de secours d'exception (fetch
   // Supabase en échec), jamais mentionnée jusqu'ici (brief AQ, 2026-09-04).
   res:'<div class="leg-block"><b class="leg-title">Réseau électrique</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>Ligne électrique (couleur unique)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Le jeu de données Supabase (8386 lignes EDF SEI) ne porte pas de champ tension : HTA et HTB partagent donc la même couleur en rendu normal (dette technique documentée). Une distinction HTB &#x2265; 50 kV n\'existe que dans un mode de secours exceptionnel (relevé OSM, si Supabase est indisponible), non représenté ici.</div><div class="leg-src">EDF SEI · Supabase · OSM (repli)</div></div>',
-  bt:'<div class="leg-block"><b class="leg-title">Réseau BT</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Distribution électrique dans les rues</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>BT aérien</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>BT souterrain</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 10</span></div><div class="leg-src">EDF SEI open data</div></div>',
+  bt:'<div class="leg-block"><b class="leg-title">Réseau BT</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Distribution électrique dans les rues</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>BT aérien</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>BT souterrain</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 9</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Sites de production</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Centrales du réseau électrique corse</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique barrage</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydraulique fil de l&#39;eau</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Éolien</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogaz</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>TAC (turbine à combustion)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnexion</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Taille selon puissance :</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
   // con scindée le 2026-08-29 (brief « exécution groupée », item C) → cert + contrib.
   // Corrigée le 2026-09-04 (brief AQ, sur audit AN) : décrivait un schéma à 2 paliers (seuils
@@ -4545,7 +4574,7 @@ const LEGEND_HTML_EN={
   ant:'<div class="leg-block"><b class="leg-title">ANFR Antennas</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Grouped into clusters (count) at low zoom — colour by generation at individual zoom. TDF transmitters keep their own colour and a corner badge even when clustered, to stay distinct from ANFR antennas.</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a4b8c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a4b8c">2G</b> GSM — voice, SMS</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a6b5c;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#1a6b5c">3G</b> UMTS — mobile data</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#a25100">4G</b> LTE — broadband</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#991b1b">5G</b> NR — ultra-high-speed</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;border-radius:50%;vertical-align:middle;margin-right:4px"></span><b style="color:#616874">Infra</b> microwave links · TV · FM · PMR</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;vertical-align:middle;margin-right:4px"></span><b style="color:#616874">Major radio/TV transmitter</b> (TDF)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Operators: Orange · SFR · Bouygues · Free<br><span id="leg-ant-count">—</span> antennes · Source: ANFR open data</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px">Regulatory compliance (legal threshold 28 V/m): see the <b>"Certified measurements (ANFR/EXEM)"</b> layer (Natural context menu).</div><div class="leg-src">ANFR</div></div>',
   emag:'<div class="leg-block"><b class="leg-title" style="font-size:11px">Regional magnetic background</b><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px"><span style="display:inline-block;width:8px;height:8px;background:#dc2626;border-radius:2px;vertical-align:middle;margin-right:2px"></span>Positive ·<span style="display:inline-block;width:8px;height:8px;background:#2563eb;border-radius:2px;vertical-align:middle;margin:0 2px 0 4px"></span>Negative — deep basement, unrelated to human activity (NOAA EMAG2v3)</div></div>',
   res:'<div class="leg-block"><b class="leg-title">Electrical grid</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>Power line (single colour)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">The Supabase dataset (8,386 EDF SEI lines) carries no voltage field: HTA and HTB share the same colour in normal rendering (documented technical debt). An HTB &#x2265; 50 kV distinction only exists in an exceptional fallback mode (OSM lookup, when Supabase is unavailable), not shown here.</div><div class="leg-src">EDF SEI · Supabase · OSM (fallback)</div></div>',
-  bt:'<div class="leg-block"><b class="leg-title">LV grid</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Street-level electrical distribution</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>Overhead BT</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>Underground BT</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 10</span></div><div class="leg-src">EDF SEI open data</div></div>',
+  bt:'<div class="leg-block"><b class="leg-title">LV grid</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Street-level electrical distribution</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>Overhead BT</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>Underground BT</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 9</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Generation sites</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Corsican power grid generation plants</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydro dam</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Run-of-river hydro</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Wind</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogas</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Gas turbine (combustion turbine)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnection</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Size according to power output:</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
   cert:'<div class="leg-block"><b class="leg-title">Certified measurements (ANFR/EXEM)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">236 sheets 2002–2026 · legal threshold 28 V/m = external regulatory reference, not a colour band</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-bottom:2px"><span style="display:inline-block;width:9px;height:9px;background:#6b7280;transform:rotate(45deg);vertical-align:middle;margin-right:5px"></span>Diamond = outdoor public (151, exact position)&nbsp;&nbsp;<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#6b7280;vertical-align:middle;margin-right:5px"></span>Circle = residential (85, commune centroid) — shape, not colour</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Low &lt; 0.5 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Moderate 0.5–2 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#991b1b;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> High 2–5 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c0000;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Very high ≥ 5 V/m (compliant, below legal threshold)</div><div class="leg-row" style="border-top:1px dashed rgba(0,0,0,.08);padding-top:4px;margin-top:2px;font-size:8px;color:var(--tx3)">External regulatory threshold (not a colour band):</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#7c0000;transform:rotate(45deg);border:2.5px solid #C28533;vertical-align:middle;margin-right:4px"></span> Non-compliant &gt; 28 V/m (e.g. Monticello)</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#7B7770;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Value not extracted (compliant, no numeric reading available)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Low frequency (9 kHz–100 kHz): same colour code above, slightly smaller marker — not a separate colour · Detail per sheet by clicking the marker · grouped by proximity at wide zoom (shape and colour = group\'s dominant type: rounded slate-grey square if majority residential, ochre diamond if majority outdoor public or tied — brief AL, 2026-09-04)</div><div class="leg-src">ANFR/EXEM · CartoRadio — 21 sheets calibrated the RF model\'s k constant (one-shot) · legal threshold 28 V/m = dataset field seuil_legal_vm (ANFR/DR 15-4 protocol)</div></div>',
   contrib:'<div class="leg-block"><b class="leg-title">Smartphone contributions</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">Field readings from Tellux contributors</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#5c3a9b;border-radius:50%;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Citizen contribution (cluster)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Magnetometer (nT), network/WiFi signal (dBm), external sensor. <b>Display only, outside the calculation.</b></div><div class="leg-src">Tellux crowdsourced · Supabase</div></div>',
@@ -5071,7 +5100,7 @@ function legendFocusOnLayer(id){
   // fitBounds — pendant une animation de zoom, getZoom() ne renvoie pas encore la valeur finale.
   if(id==='bt'&&map.getBoundsZoom(b,false,L.point(40,40+occl))<BT_MIN_ZOOM){
     map.setView(b.getCenter(),BT_MIN_ZOOM,{animate:anim});
-    msg=jt('legfocus_gated','Couche visible à partir du zoom 10 — vue centrée sur son emprise à ce zoom.');
+    msg=jt('legfocus_gated','Couche visible à partir du zoom {z} — vue centrée sur son emprise à ce zoom.').replace('{z}',BT_MIN_ZOOM);
   }else if(occl){
     map.fitBounds(b,{paddingTopLeft:pad,paddingBottomRight:L.point(40,40+occl),animate:anim});
   }else{
@@ -9237,6 +9266,33 @@ TCA_registerGroup(lAntCluster, 'tellux-cluster-icon');
 TCA_registerGroup(lCert, 'tellux-cluster-icon-cert');
 TCA_registerGroup(lTDFCluster, 'tellux-cluster-icon-tdf');
 
+// ═══ Infobulle d'une position ANFR (2026-09-07, brief « couche ANFR conforme à la donnée ») ═══
+// Le marqueur représente une POSITION, pas une antenne : le rendu dédoublonne par coordonnées
+// (~552 marqueurs pour ~2 986 lignes onshore). L'infobulle liste donc TOUT ce qui est déclaré à
+// cette position — générations et opérateurs — et non la première ligne rencontrée en id.asc.
+// Aucun décompte affiché : le nombre de LIGNES à une position n'est pas un nombre d'émetteurs
+// (une ligne = une bande déclarée par un opérateur), et un chiffre ici se lirait comme une
+// intensité. Cette imprécision reste consignée en dette, elle n'est pas corrigée par ce diff.
+// Ordre des générations : croissant et fixe, jamais l'ordre d'arrivée en base — deux positions
+// portant les mêmes générations doivent produire exactement la même chaîne.
+// jt() est sûr ici : loadAnt() part d'un setTimeout à +1500 ms, donc bien après la passe i18n
+// (dernier <script> du fichier) qui pose documentElement.lang.
+const ANT_GEN_ORDER=['2G','3G','4G','5G'];
+function _antTooltipHtml(agg,f){
+  // Échappement local plutôt qu'escapeHtml() : cette fonction vit dans le 1er <script>, celle-là
+  // dans le 2e — dépendance inutile entre blocs pour quatre caractères.
+  const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const commune=(agg&&agg.commune)||(f&&f.commune)||'Corse';
+  if(!agg)return esc(commune);
+  const connues=ANT_GEN_ORDER.filter(g=>agg.gens.has(g));
+  // Valeur de generation inconnue au registre : listée après, jamais silencieusement écartée.
+  const autres=[...agg.gens].filter(g=>ANT_GEN_ORDER.indexOf(g)===-1).sort();
+  const gens=connues.concat(autres);
+  const ops=[...agg.ops].sort();
+  return '<b>'+esc(commune)+'</b>'+
+    (gens.length?'<br>'+jt('ant_tt_generations','Générations : ')+esc(gens.join(', ')):'')+
+    (ops.length?'<br>'+jt('ant_tt_operateurs','Opérateurs : ')+esc(ops.join(', ')):'');
+}
 async function loadAnt(){try{
   // lAntCluster ajouté ici (pas à la déclaration de lAnt) : loadAnt() n'est appelée qu'une
   // fois (gardée par lAnt.getLayers().length===0 côté tog()) — l'ajouter à la déclaration de
@@ -9268,6 +9324,26 @@ async function loadAnt(){try{
   console.log('Unique lat/lon : ' + new Set(rows.map(f=>f.lat+','+f.lon)).size);
   const seenPos=new Set();
   let nOffshore=0, nSeaFiltered=0, nOnshore=0;
+  // Pré-passe d'agrégation par position (2026-09-07) — correction de vérité, cf.
+  // _antTooltipHtml() plus haut. Le dédoublonnage ci-dessous ne garde qu'UNE ligne par position
+  // et jetait les autres : l'infobulle décrivait donc la première ligne rencontrée en id.asc, pas
+  // la position. Mesuré avant correction : 98,9 % des positions portent plusieurs générations,
+  // 50,4 % plusieurs opérateurs — l'opérateur affiché était donc faux pour la moitié des
+  // marqueurs, et la génération n'apparaissait nulle part. Exemple : Col De Mela, 10 lignes,
+  // 4 générations, 3 opérateurs → « Col De Mela · Bouygues ».
+  // Aucune requête modifiée : fetchAntennasCorseRaw() sélectionne déjà generation et operateur
+  // pour les 3 000 lignes et les met en cache ; cette passe ne fait que grouper ce qui est déjà
+  // en mémoire, avec les mêmes filtres bbox/commune que la boucle de rendu.
+  const parPosition=new Map();
+  rows.forEach(f=>{
+    if(f.lon<8.30||f.lon>9.65||f.lat<41.35||f.lat>43.03)return;
+    if(!f.commune)return;
+    const k=f.lat.toFixed(5)+','+f.lon.toFixed(5);
+    let e=parPosition.get(k);
+    if(!e){e={commune:f.commune,gens:new Set(),ops:new Set()};parPosition.set(k,e);}
+    if(f.generation)e.gens.add(f.generation);
+    if(f.operateur)e.ops.add(f.operateur);
+  });
   rows.forEach(f=>{
     if(f.lon<8.30||f.lon>9.65||f.lat<41.35||f.lat>43.03){nSeaFiltered++;return;}
     if(!f.commune){nOffshore++;return;}
@@ -9281,7 +9357,7 @@ async function loadAnt(){try{
       // .addTo(lAntCluster) — pas lAnt directement — depuis le 2026-08-30 (clustering faible zoom) :
       // couleur par génération conservée au zoom individuel (GC[gen], inchangé), le cluster
       // n'affiche qu'un comptage neutre (cf. iconCreateFunction de lAntCluster ci-dessus).
-      L.marker([f.lat,f.lon],{icon:mkIcon(GC[gen]||GC.default,false,9),zIndexOffset:100}).bindTooltip((f.commune||'Corse')+' · '+(f.operateur||'?'),{sticky:true}).addTo(lAntCluster);
+      L.marker([f.lat,f.lon],{icon:mkIcon(GC[gen]||GC.default,false,9),zIndexOffset:100}).bindTooltip(_antTooltipHtml(parPosition.get(posKey),f),{sticky:true,className:'tlx-ant-tt'}).addTo(lAntCluster);
       ANTENNES_LOCATIONS.push({lat:f.lat,lon:f.lon}); // fiche « Mon lieu » — agrégat pur, une entrée par position distincte (miroir des marqueurs)
       seenPos.add(posKey);
     }
@@ -10491,7 +10567,14 @@ async function loadReseau(){
 // loadBT()/buildBTStaticLayer() ici ne servent QUE le rendu visuel, construit une fois pour toute
 // la Corse (pas de notion de viewport).
 const _btCanvas=L.canvas({padding:0.5});
-const BT_MIN_ZOOM=10;
+// Abaissé 10 → 9 le 2026-09-07 (même constat, même GO). Mesuré : de z10 à z9 la géométrie dans le
+// viewport QUINTUPLE en mobile (83 k → 405 k sommets) et le temps de redessin reste PLAT (~35 ms) —
+// un trait de 1,2 px coûte en longueur de tracé, pas en sommets. Le BT est 10 à 20× moins cher à
+// redessiner que la forêt dense. Volume transféré inchangé, et pour une raison qui vaut d'être
+// écrite : bt_lines est téléchargé au boot par loadBTLinesAsync() POUR LE CALCUL ELF,
+// inconditionnellement — que la couche soit affichée ou non, quel que soit le zoom. Le gate n'a
+// jamais piloté un octet.
+const BT_MIN_ZOOM=9;
 let _btZoomHintShown=false;
 // buildBTStaticLayer() — construit 2 features GeoJSON MultiLineString (aérien/souterrain) à
 // partir de BT_LINES_RAW (pts groupés par ligne + type, préservés par loadBTLinesAsync — distinct
@@ -10550,7 +10633,10 @@ function _syncBTZoom(fromToggle){
   }else{
     if(map.hasLayer(lBT))map.removeLayer(lBT);
     if(fromToggle||!_btZoomHintShown){
-      info(jt('bt_zoom_hint','Réseau BT — couche visible à partir du zoom 10 (trop dense à petite échelle) ; le calcul reste actif.'),null,4500);
+      // {z} substitué depuis la constante (2026-09-07) : le nombre était écrit en dur ici ET dans
+      // la traduction EN. Un seuil répété à la main dans deux langues finit par diverger de la
+      // constante — c'est la classe d'erreur qui a déjà coûté plusieurs corrections sur ce fichier.
+      info(jt('bt_zoom_hint','Réseau BT — couche visible à partir du zoom {z} (trop dense à petite échelle) ; le calcul reste actif.').replace('{z}',BT_MIN_ZOOM),null,4500);
       _btZoomHintShown=true;
     }
   }
@@ -10662,7 +10748,7 @@ function _syncForetDenseZoom(fromToggle){
   }else{
     if(map.hasLayer(lForetDense))map.removeLayer(lForetDense);
     if(fromToggle||!_foretDenseZoomHintShown){
-      info(jt('foretdense_zoom_hint','Forêt dense — couche visible à partir du zoom 10 (trop étendue à petite échelle) ; le calcul reste actif.'),null,4500);
+      info(jt('foretdense_zoom_hint','Forêt dense — couche visible à partir du zoom {z} (trop étendue à petite échelle) ; le calcul reste actif.').replace('{z}',FORET_DENSE_MIN_ZOOM),null,4500);
       _foretDenseZoomHintShown=true;
     }
   }
@@ -13476,7 +13562,7 @@ function capCleanup(){
 ["lyr_res","#b-res","","Réseau HTA","Reta HTA","MV grid"],
 ["lyr_res_tt","#b-res","title","Lignes électriques HTA — moyenne tension (50 Hz)","Linee elettrichi alta tensione (50 Hz)","Medium-voltage (HTA) power lines (50 Hz)"],
 ["lyr_bt","#b-bt","","Réseau BT","Reta BT","LV grid"],
-["lyr_bt_tt","#b-bt","title","Réseau basse tension BT — EDF SEI · zoom ≥ 10","Reta bassa tensione BT — EDF SEI · zoom ≥ 10","Low-voltage BT grid — EDF SEI · zoom ≥ 10"],
+["lyr_bt_tt","#b-bt","title","Réseau basse tension BT — EDF SEI · zoom ≥ 9","Reta bassa tensione BT — EDF SEI · zoom ≥ 9","Low-voltage BT grid — EDF SEI · zoom ≥ 9"],
 ["lyr_prod","#b-prod","","Sites de production","Siti di pruduzzione","Generation sites"],
 ["lyr_prod_tt","#b-prod","title","Centrales hydrauliques, éoliennes, diesel, TAC, biogaz, interconnexions","Centrale idrauliche, eoliane, diesel, TAC, biogas, intercunnessione","Hydro, wind, diesel, gas turbine, biogas plants, interconnections"],
 ["lyr_postes","#b-postes","","Postes sources EDF","Posti surgente EDF","EDF substations"],
