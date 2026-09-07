@@ -6487,6 +6487,15 @@ function getSegmentsNear(lat, lon) {
 // runELFRegressionTest est inclus pour la même raison en pire : sans HTA_SEGMENTS_DATA, il compare
 // calcMagneticELF_v1 à un calcMagneticELF_v2 qui vient d'y retomber. Il rendrait « aucune
 // divergence » — un vert obtenu en ne mesurant rien.
+//
+// RÉSERVE POUR LE CHANTIER QUI LIBÉRERA LA STRUCTURE — à lire avant de le faire. Ici l'état devient
+// 'loading' et non 'failed', parce que _htaPreloadState vaudra 'ready' : le préchargement, lui, a
+// bien abouti. Tant que la libération n'existe pas, c'est correct — la seule façon d'être en écart
+// aujourd'hui est un chargement en cours. Mais une libération DÉLIBÉRÉE rendrait cet état permanent,
+// et « Mon lieu » afficherait indéfiniment « ⏳ Préparation du calcul en cours… » : une attente qui
+// n'aboutit jamais. C'est un mensonge dans l'autre sens — bien moins grave qu'une valeur trois fois
+// trop haute étiquetée normale, mais réel. Le chantier qui libère la structure devra trancher quel
+// état c'est ('failed' ? un troisième ?), pas s'en remettre à cette garde.
 function htaGridPrete() {
   return !!(typeof SEGMENT_GRID !== 'undefined' && SEGMENT_GRID
             && typeof HTA_SEGMENTS_DATA !== 'undefined' && HTA_SEGMENTS_DATA);
