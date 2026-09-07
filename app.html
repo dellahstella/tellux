@@ -11901,10 +11901,28 @@ function myPlaceRenderSummary(d){
   var absScore=Math.abs(v2 && v2.domains && v2.domains.magnetic && v2.domains.magnetic.elf ? Math.round(v2.domains.magnetic.elf.B_total_nT) : 0);
   var champLvl=absScore<30?jt('interp_lvl_tres_calme','Très calme'):absScore<100?jt('interp_lvl_modere','Modéré'):absScore<300?jt('interp_lvl_actif','Actif'):jt('interp_lvl_intense','Intense');
   var champHtml=escapeHtml(champLvl)+' <span style="color:var(--tx3)">('+Math.round(v2.domains.magnetic.elf.B_total_nT)+' nT, composante liée aux lignes électriques proches)</span>';
-  // Étiquetage du terme BT manquant (2026-09-07, brief CJ) — même mention que le popup carte et
-  // que l'indice composite : une seule formulation, produite par btIncompletNote(), jamais
-  // recopiée. La valeur reste affichée ; c'est la complétude qui est déclarée, pas la valeur.
-  if(!btTermeInclus()){
+  // DEUX ÉTATS DÉGRADÉS DISTINCTS, traités différemment (2026-09-07, brief CJ, arbitrage Soleil).
+  // Le critère : ON ÉTIQUETTE UN ÉCART, ON MASQUE UN AUTRE MODÈLE.
+  //
+  // (1) computeElfState()==='loading' — la grille HTA n'est pas encore construite, donc
+  //     calcMagneticELF_v2 retombe sur calcMagneticELF_v1 (garde `!SEGMENT_GRID ||
+  //     !HTA_SEGMENTS_DATA`). Ce n'est plus le même modèle : mesuré à Ajaccio, v1 = 2 147 nT
+  //     contre 659 en v2, un facteur 3,3. Une valeur qui vaut trois fois trop ne s'étiquette pas,
+  //     elle NE S'AFFICHE PAS — c'est déjà la règle du popup carte, dont le bloc ELF n'affiche
+  //     « ni chiffre ni détail » en 'loading'. Cette fiche ne l'avait pas : aucune occurrence de
+  //     computeElfState() n'y existait, elle affichait la valeur v1 étiquetée « Estimation
+  //     modélisée » comme n'importe quelle autre. Fenêtre mesurée EN PRODUCTION : ≈4,9 s
+  //     (grille HTA = 8 386 lignes, légère — sans commune mesure avec les ≈136 s du BT).
+  //     Enjeu aggravé le 2026-09-06 : « Mon lieu » est devenu le bouton permanent mis en avant
+  //     par l'app, donc la surface où l'on atterrit le plus tôt après le chargement.
+  //     AUCUNE CHAÎNE NEUVE : on réutilise elf_state_loading, le texte d'attente déjà employé par
+  //     le popup pour cet état exact — deux formulations pour un même état seraient une divergence.
+  //
+  // (2) terme BT absent — la valeur reste du v2 et dans le bon ordre de grandeur, seulement
+  //     minorée. Ici masquer serait pire que dire : on affiche et on étiquette (btIncompletNote).
+  if(computeElfState()==='loading'){
+    champHtml='<span style="color:var(--tx3);font-style:italic">'+escapeHtml(jt('elf_state_loading','⏳ Préparation du calcul en cours…'))+'</span>';
+  }else if(!btTermeInclus()){
     champHtml+='<div style="font-size:10.5px;color:var(--warn-tx);font-style:italic;margin-top:3px">'+btIncompletNote()+'</div>';
   }
   var champRow=myPlaceRow(jt('myplace_champ_title','Champ ELF anthropique 50 Hz (ordre de grandeur)'),champHtml,jt('pill_estime','Estimation modélisée'),'estime');
