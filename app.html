@@ -3258,9 +3258,9 @@ var JS_STRINGS_EN = {
   click_to_place_measurement: "Click on the map to place your measurement.",
   cform_position_js: "Click on the map to place the point",
   line_hta_aerien: "Overhead HTA line · EDF SEI open data",
-  reseau_osm_prefix: "OSM grid: ",
-  reseau_osm_suffix: " lines",
-  hta_indisponible: "HTA: unavailable",
+  reseau_osm_prefix: "⚠ OSM fallback (Supabase unavailable): ",
+  reseau_osm_suffix: " lines — partial community coverage",
+  hta_indisponible: "⚠ HTA/HTB: no source available",
   bt_zoom_hint: "BT grid — layer shown from zoom {z} (too dense at small scale); the calculation stays active.",
   bt_loading: "Loading BT grid…",
   bt_indisponible: "BT: unavailable",
@@ -10549,6 +10549,26 @@ async function loadReseau(){
       if (typeof _htaPreloadState !== 'undefined') _htaPreloadState = 'ready';
     }
   }catch(e){
+    // Secours OSM/Overpass — chemin réel, pas seulement théorique : c'est le repli documenté
+    // pour un préchargement hta_lines qui a déjà échoué (cf. commentaire loadHTADataOnly()) et
+    // Supabase a connu plusieurs pannes/dégradations réelles cette semaine (briefs BN/BO/BS,
+    // 2026-09-05/06) — pas un cas d'école.
+    //
+    // Constat brief CI (2026-09-07, _drafts/BRIEF_CI_HTB_DISPONIBILITE_DONNEES_2026-09-07.md) :
+    // OSM tague la liaison SACOI (interconnexion Corse-Sardaigne-Italie, COURANT CONTINU) à
+    // voltage=200000 sans que ce filtre l'exclue — elle aurait été comptée comme de l'HTB
+    // alternatif 50 Hz (aucun champ ELF réel). Exclue ci-dessous via le tag frequency='0' (posé
+    // par OSM sur toute liaison continue), pas via un seuil de tension qui la confondrait avec
+    // une vraie ligne HTB.
+    //
+    // Statuts rendus PERSISTENTS (persistent=true, cf. setStatus()) et explicitement marqués ⚠ :
+    // ce chemin signale un état dégradé (Supabase indisponible + source de repli contributive,
+    // pas institutionnelle), pas une variante normale — un message qui s'efface après 3 s ne
+    // remplit pas ce rôle. LIMITE CONNUE, non résolue ici : ce signal reste local à la session en
+    // cours (visible seulement par qui regarde l'écran à ce moment précis) — aucune trace
+    // durable/interrogeable après coup n'existe dans ce dépôt (pas de service de journalisation
+    // câblé). Répondre à « ce chemin s'est-il déjà déclenché ? » reste impossible rétroactivement
+    // tant que ce point n'est pas traité séparément.
     console.warn('HTA Supabase:',e.message,'→ fallback OSM');
     try{
       const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),12000);
@@ -10557,15 +10577,16 @@ async function loadReseau(){
       const d=await r.json();let n=0;
       (d.elements||[]).forEach(way=>{
         if(!way.geometry||way.geometry.length<2)return;
+        if(way.tags?.frequency==='0')return; // liaison continue (ex. SACOI) — pas de champ ELF 50 Hz
         const v=parseInt(way.tags?.voltage)||0;if(v<10000)return;
         const pts=way.geometry.map(p=>[p.lat,p.lon]);
         const color=v>=50000?'#5c2000':'#b85c00';
         L.polyline(pts,{color,weight:v>=50000?2:1.5,opacity:.7,dashArray:v>=50000?null:'4 3'})
           .bindTooltip((v>=50000?'HTB ':'HTA ')+v/1000+'kV',{sticky:true}).addTo(lRes);n++;
       });
-      if(n>0){setStatus(jt('reseau_osm_prefix', 'Réseau OSM: ')+n+jt('reseau_osm_suffix', ' lignes'));return;}
+      if(n>0){setStatus(jt('reseau_osm_prefix', '⚠ Secours OSM (Supabase indisponible) : ')+n+jt('reseau_osm_suffix', ' lignes — couverture communautaire partielle'),true);return;}
     }catch(e2){}
-    setStatus(jt('hta_indisponible', 'HTA: indisponible'));
+    setStatus(jt('hta_indisponible', '⚠ HTA/HTB : aucune source disponible'),true);
   }
   loadChargeReseau();
 }
