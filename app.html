@@ -3312,8 +3312,11 @@ var JS_STRINGS_EN = {
   // silencieuse. ph_state_failed_badge/_title : repli v1 marqué, réservé à la panne durable.
   ph_state_loading: "Calculation in progress…",
   elf_state_loading: "⏳ Preparing the calculation…",
-  elf_state_failed_badge: "≈ estimate",
-  elf_state_failed_title: "Simplified model (8 typical axes) — the real grid data could not be loaded this session.",
+  // Reformulé (2026-09-07, brief CI, arbitrage Soleil) : ne plus nommer "v1"/"modèle simplifié"
+  // (n'informe pas le lecteur) — dire l'état (provisoire, sera recalculé), registre provenance,
+  // pas alerte. Clés inchangées pour ne pas dupliquer un même message sous deux identifiants.
+  elf_state_failed_badge: "provisional value",
+  elf_state_failed_title: "Provisional value: calculated with a fallback model because the electrical network data could not be loaded. It will be recalculated once the real data is available.",
   detail_human_loading: "anthropic ELF field — not yet available on this visit (preloading in progress, cf. ELF block above)",
   detail_delta_loading: "not yet available (preloading in progress)",
   btn_save_finalizing: "Finalizing calculation…",
@@ -7829,6 +7832,26 @@ function computeElfState() {
     : ((typeof _htaPreloadState !== 'undefined' && _htaPreloadState === 'failed') ? 'failed' : 'loading');
 }
 
+// ═══ Valeur ELF provisoire (repli v1) : note et badge partagés (2026-09-07, brief CI) ═══
+// Constat qui motive ceci : calcMagneticELF_v2() bascule vers calcMagneticELF_v1() — 8 axes
+// tracés à la main, pas les 8 386 segments réels — dès que SEGMENT_GRID est indisponible.
+// Chiffré via runELFRegressionTest() (déjà présent dans ce fichier, jamais exécuté avant ce
+// jour) : les deux modèles NE CONVERGENT PAS — écarts de ×0,08 (Calvi) à ×49 (Palaggiu), dans
+// les deux sens, pas un biais qu'on pourrait négliger. Le discriminant `model:'v1'`/`model:'v2'`
+// existe sur le retour de ces deux fonctions depuis le 2026-09-04 (brief AP) précisément pour
+// détecter ce cas — n'était lu nulle part avant ce commit.
+// Registre volontairement neutre (arbitrage Soleil) : ne pas nommer "v1"/"modèle simplifié"
+// (n'informe pas le lecteur d'une page publique) — dire l'état (provisoire, sera recalculé),
+// jamais un chiffre d'écart (connu seulement en moyenne, pas au point précis affiché).
+function elfV1Note() {
+  return jt('elf_state_failed_title',
+    'Valeur provisoire : calculée avec un modèle de repli faute d\'avoir pu charger les données '
+    + 'du réseau électrique. Elle sera recalculée avec les données réelles.');
+}
+function elfV1Badge() {
+  return jt('elf_state_failed_badge', 'valeur provisoire');
+}
+
 // ═══ Terme BT : inclus ou non ? (2026-09-07, brief CJ, arbitrage Soleil) ═══
 // computeElfState() ci-dessus fait autorité pour la grille HTA, et RIEN pour la grille BT :
 // quand HTA est prête et BT non, il répond 'ready' alors que la valeur affichée omet un terme.
@@ -7858,6 +7881,30 @@ function btIncompletNote() {
 }
 function btIncompletBadge() {
   return jt('elf_bt_incomplet_badge', 'valeur incomplète');
+}
+
+// ═══ Priorité de repli — v1 masque BT (2026-09-07, cohabitation, arbitrage Soleil) ═══
+// Les deux conditions sont atteignables ensemble : dans le boot automatique, BT ne charge
+// jamais tant que HTA n'a pas réussi (setTimeout(loadBTLinesAsync,200) vit DANS la branche de
+// succès HTA, aux deux points d'appel) — donc v1 actif ⟹ BT incomplet dans le déroulement normal.
+// Mais loadBT() (bouton couche BT visuelle) appelle loadBTLinesAsync() de façon indépendante :
+// un visiteur qui l'active pendant une panne HTA peut faire coexister v1 ET BT chargé — ce qui
+// confirme, plutôt qu'infirme, que le cas inverse (v1 ET BT incomplet, sans ce bouton actionné)
+// est le scénario ordinaire d'une vraie panne, pas un cas limite.
+// Un seul message à la fois, jamais empilés : v1 prime, pas par convention mais par exactitude —
+// calcMagneticELF_v1 (8 axes) ne modélise JAMAIS de terme basse tension, donc dire « le terme BT
+// n'est pas encore chargé » sous v1 serait faux : il ne se chargera pas, il n'existe pas dans ce
+// modèle. Paramètre booléen plutôt que relire `.model`/`elfState` ici : chaque site connaît déjà
+// sa propre condition v1 (état ou résultat selon le contexte), pas de nouvelle lecture à dupliquer.
+function elfNoteFor(isV1) {
+  if (isV1) return elfV1Note();
+  if (!btTermeInclus()) return btIncompletNote();
+  return '';
+}
+function elfBadgeFor(isV1) {
+  if (isV1) return elfV1Badge();
+  if (!btTermeInclus()) return btIncompletBadge();
+  return '';
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -8750,7 +8797,7 @@ map.on('click',async e=>{
   // avec confiance). 'failed' : chiffre v1 affiché, marqué ≈ (repli assumé, jamais silencieux).
   const phHeaderHTML = elfState === 'loading'
     ? '<div style="font-weight:700;font-size:13px;color:#626774;font-style:italic">'+jt('ph_state_loading','Calcul en préparation…')+'</div>'
-    : '<div style="font-weight:700;font-size:14px;color:'+phColor+'">'+phEmoji+' '+perturbHumain+'/5'+(elfState==='failed'?' <span style="font-size:9px;font-weight:400;color:#8A5E22" title="'+jt('elf_state_failed_title','Modèle simplifié (8 axes types) — les données réelles du réseau n\'ont pas pu être chargées cette session.')+'">'+jt('elf_state_failed_badge','≈ estimation')+'</span>':'')+'</div>';
+    : '<div style="font-weight:700;font-size:14px;color:'+phColor+'">'+phEmoji+' '+perturbHumain+'/5'+(elfState==='failed'?' <span style="font-size:9px;font-weight:400;color:#8A5E22" title="'+elfV1Note()+'">'+elfV1Badge()+'</span>':'')+'</div>';
   // anEmoji/anLabel/anColor RETIRÉES le 2026-09-03 (ADR-064, décision 1) : habillaient le score
   // « Naturel » (activNat/5) désormais retiré de ce popup, cf. commentaire plus haut. Le repro tofu
   // rock->mont-fuji (brief H phase 1, PR #1203) concernait précisément anEmoji — devenu sans objet
@@ -8842,7 +8889,7 @@ map.on('click',async e=>{
   // elfState — rien à gater, il n'y a pas de chiffre.
   const deltaGatedHTML = (elfState === 'loading' && delta !== null)
     ? '<span style="color:#626774;font-style:italic">'+jt('detail_delta_loading','pas encore disponible (préchargement en cours)')+'</span>'
-    : '<span style="color:'+deltaCol+'">'+deltaStr+(elfState==='failed'&&delta!==null?' <span style="color:#8A5E22">('+jt('elf_state_failed_badge','≈ estimation')+')</span>':'')+'</span>';
+    : '<span style="color:'+deltaCol+'">'+deltaStr+(elfState==='failed'&&delta!==null?' <span style="color:#8A5E22">('+elfV1Badge()+')</span>':'')+'</span>';
   // Barre susceptibilité magnétique — normalisée sur -5 à 60 nT (plage réelle de GEO_SUSC_GRID,
   // cf. calcGeoSusc()/suscPct ci-dessus)
   // Correctif 2026-09-03 (brief H, phase 2) : cette barre n'avait aucun libellé visible, seule une
@@ -8887,23 +8934,26 @@ map.on('click',async e=>{
   // commentaire d'elfState plus haut. 'loading' : ni chiffre ni détail de contribution ni note
   // IARC (tous dérivés de la même donnée pas encore prête) — juste le texte d'attente. 'failed' :
   // valeur/détail/note v1 affichés normalement, avec le même badge ≈ que le score.
+  // Un seul message à la fois (2026-09-07, cohabitation briefs CI+CJ, cf. elfNoteFor() ci-dessus
+  // computeElfState()) : sans ce garde, git auto-mergeait les deux ajouts sans conflit puisqu'ils
+  // vivent sur des lignes adjacentes mais distinctes — un badge de score ET une note de bloc
+  // auraient pu s'afficher ensemble, empilant deux causes différentes pour la même incomplétude.
+  const elfIsV1 = elfState === 'failed';
+  const elfDegradedBadge = elfBadgeFor(elfIsV1);
+  const elfDegradedNote = elfNoteFor(elfIsV1);
   const elfBlockHTML = elfState === 'loading'
     ? '<div style="font-size:11px;color:#626774;font-style:italic;margin-bottom:1px">'+jt('elf_state_loading','⏳ Préparation du calcul en cours…')+'</div>'
     : '<div style="display:flex;align-items:center;gap:4px;margin-bottom:1px">'+
         '<span style="font-size:12px;font-weight:700;color:#8A5E22">'+elf_nT+' nT</span>'+
-        (elfState==='failed'?' <span style="font-size:9px;font-weight:400;color:#8A5E22" title="'+jt('elf_state_failed_title','Modèle simplifié (8 axes types) — les données réelles du réseau n\'ont pas pu être chargées cette session.')+'">'+jt('elf_state_failed_badge','≈ estimation')+'</span>':'')+
+        (elfDegradedBadge?' <span style="font-size:9px;font-weight:400;color:var(--warn-tx)" title="'+elfDegradedNote+'">'+elfDegradedBadge+'</span>':'')+
         '<span style="font-size:9px;color:#626774" title="'+jt('v2_conf_elf','Confiance : moyen — modélisation Biot-Savart, ±50%')+'">●●○</span>'+
       '</div>'+
       '<div style="font-size:8px;color:#626774">'+elfContribs+'</div>'+
-      // Étiquetage du terme BT manquant (2026-09-07, brief CJ) : additif, jamais substitutif —
-      // la valeur reste affichée, elle se déclare incomplète. Même teinte que les autres notes
-      // de ce bloc, aucune couleur neuve, aucune connotation d'alerte — mais par le JETON
-      // var(--warn-tx) et non par le hex #8A5E22 que ses trois voisines immédiates recopient.
-      // Le jeton existe (déclaré en tête de feuille) et 36 occurrences l'ignorent dans ce
-      // fichier ; une ligne neuve n'a pas d'excuse pour être la 37e. Les 36 existantes ne sont
-      // PAS converties ici : hors périmètre de cette PR, à traiter en une passe dédiée.
-      (btTermeInclus() ? '' :
-        '<div style="font-size:8px;color:var(--warn-tx);font-style:italic;margin-top:1px">'+btIncompletNote()+'</div>')+
+      // Note détaillée (2026-09-07, briefs CI+CJ) : même texte que le titre du badge ci-dessus,
+      // rendu visible sans survol — traitement hérité du bloc BT (brief CJ), conservé pour les
+      // deux causes plutôt que réduit à une bulle d'aide, l'écart mesuré (jusqu'à ×49 pour v1,
+      // −21,4 % pour BT) justifiant une mention lisible directement, pas seulement au survol.
+      (elfDegradedNote?'<div style="font-size:8px;color:var(--warn-tx);font-style:italic;margin-top:1px">'+elfDegradedNote+'</div>':'')+
       elfIARCnote;
   // radonColor/radonConf/radonLabel — SUPPRIMÉES le 2026-09-02 (retrait du bloc "Domaine
   // ionisant", cf. commentaire plus bas) : leur seul consommateur était ce bloc, elles seraient
@@ -8990,7 +9040,7 @@ map.on('click',async e=>{
         // l'attente (rien n'est affiché plus haut dans ce cas).
         (elfState==='loading'
           ? '<div>H : '+jt('detail_human_loading','champ ELF anthropique — pas encore disponible cette visite (préchargement en cours, cf. bloc ELF ci-dessus)')+'</div>'
-          : '<div>H ('+jt('detail_human_label','champ ELF anthropique total, valeur identique à celle affichée plus haut — alimente le score Perturbation')+') : +'+human+' nT'+(elfState==='failed'?' <span style="color:#8A5E22">('+jt('elf_state_failed_badge','≈ estimation')+')</span>':'')+'</div>')+
+          : '<div>H ('+jt('detail_human_label','champ ELF anthropique total, valeur identique à celle affichée plus haut — alimente le score Perturbation')+') : +'+human+' nT'+(elfState==='failed'?' <span style="color:#8A5E22">('+elfV1Badge()+')</span>':'')+'</div>')+
         (nRFcalib>0.01?'<div>RF ('+jt('detail_rf_label','champ RF calibré — calcul distinct de la valeur µW/m² ci-dessus (jamais atténué par la forêt) — alimente le score affiché')+') : '+nRFcalib.toFixed(1)+' V/m</div>':'')+
         (typeof altitude_m==='number' && isFinite(altitude_m)?'<div>'+jt('detail_alt_label','Altitude (IGN RGE Alti, résolution ~1 m)')+' : '+altitude_m+' m</div>':'')+
       '</div>'+
@@ -11077,16 +11127,19 @@ function refreshExpertComposite() {
   var comp = computeExpertComposite(_expertLastResult, { M: wM, RF: wRF, I: wI });
   var el = document.getElementById('expert-index-val');
   if (el) {
-    // Étiquetage du terme BT (2026-09-07, brief CJ) : l'indice dérive d'ELF via w_M, donc
-    // l'omission s'y propage — mesuré −0,072 (7,2 points sur 100) au point Ajaccio. Le badge est
-    // apposé à côté de l'indice, la valeur reste lisible. textContent puis badge : jamais
-    // d'innerHTML sur une valeur numérique.
+    // Étiquetage (2026-09-07, briefs CI+CJ, un seul badge — v1 masque BT, cf. elfNoteFor()
+    // au-dessus de computeElfState()) : l'indice dérive d'ELF via w_M, donc une valeur
+    // provisoire (repli v1) ou incomplète (BT non chargé) s'y propage. textContent puis badge
+    // distinct — jamais d'innerHTML sur une valeur numérique.
     el.textContent = comp.index.toFixed(3);
-    if (!btTermeInclus()) {
+    var elfDom = _expertLastResult.domains && _expertLastResult.domains.magnetic && _expertLastResult.domains.magnetic.elf;
+    var isV1 = !!(elfDom && elfDom.model === 'v1');
+    var badgeTxt = elfBadgeFor(isV1);
+    if (badgeTxt) {
       var b = document.createElement('span');
       b.style.cssText = 'font-size:9px;font-weight:400;color:var(--warn-tx);font-style:italic;margin-left:5px';
-      b.title = btIncompletNote();
-      b.textContent = btIncompletBadge();
+      b.title = elfNoteFor(isV1);
+      b.textContent = badgeTxt;
       el.appendChild(b);
     }
   }
@@ -11116,9 +11169,12 @@ function exportExpertCSV() {
     ['Champ', 'Valeur', 'Unite', 'Confiance', 'En_cours_de_validation', 'Source', 'Horodatage'],
     ['timestamp', ts, '', '', '0', 'Tellux v2', ts],
     ['elf_B_total_nT', elf.B_total_nT != null ? elf.B_total_nT : '', 'nT', elf.confidence || '', elf.under_review ? '1' : '0', (elf.source || '').replace(/;/g, ','), ts],
-    // Étiquetage du terme BT (2026-09-07, brief CJ) : champ explicite plutôt qu'une mention noyée
-    // dans Source — un export se relit à la machine, et une valeur minorée doit être filtrable.
-    // 0 ⇒ le terme basse tension est ABSENT de elf_B_total_nT ci-dessus (valeur minorée).
+    // Étiquetage (2026-09-07, briefs CI+CJ) : deux champs distincts, pas un seul masqué par
+    // l'autre — un export CSV est machine-relu et filtrable, contrairement à un badge visuel
+    // (cf. elfNoteFor() : là, un seul message à la fois ; ici, les deux causes restent
+    // interrogeables séparément, même si l'une accompagne presque toujours l'autre en pratique).
+    ['elf_model', elf.model || '', '', '', '0',
+      elf.model === 'v1' ? 'Modele de repli (reseau non charge) - valeur provisoire' : 'Modele complet (segments reels)', ts],
     ['elf_bt_terme_inclus', elf.bt_terme_inclus === false ? '0' : '1', '', '', '0',
       elf.bt_terme_inclus === false ? 'Terme BT non charge au moment de l export - valeur minoree' : 'Terme BT inclus', ts],
     ['magnetic_static_B_total_nT', st.B_total_nT != null ? st.B_total_nT : '', 'nT', st.confidence || '', '0', (st.source || '').replace(/;/g, ','), ts],
@@ -11944,30 +12000,33 @@ function myPlaceRenderSummary(d){
   // éditoriale, hors mandat de ce brief (rapport brief BU, 2026-09-06, section 2).
   var absScore=Math.abs(v2 && v2.domains && v2.domains.magnetic && v2.domains.magnetic.elf ? Math.round(v2.domains.magnetic.elf.B_total_nT) : 0);
   var champLvl=absScore<30?jt('interp_lvl_tres_calme','Très calme'):absScore<100?jt('interp_lvl_modere','Modéré'):absScore<300?jt('interp_lvl_actif','Actif'):jt('interp_lvl_intense','Intense');
-  var champHtml=escapeHtml(champLvl)+' <span style="color:var(--tx3)">('+Math.round(v2.domains.magnetic.elf.B_total_nT)+' nT, composante liée aux lignes électriques proches)</span>';
-  // DEUX ÉTATS DÉGRADÉS DISTINCTS, traités différemment (2026-09-07, brief CJ, arbitrage Soleil).
-  // Le critère : ON ÉTIQUETTE UN ÉCART, ON MASQUE UN AUTRE MODÈLE.
+  // Trois états, un seul message à la fois (2026-09-07, cohabitation briefs CI+CJ). Trouvé
+  // indépendamment des deux côtés : cette fiche ne distinguait rien du tout avant ce jour
+  // (aucune occurrence de computeElfState() ici), affichant une valeur v1 étiquetée « Estimation
+  // modélisée » comme n'importe quelle autre. Devenu plus grave le 2026-09-06 : « Mon lieu » est
+  // le bouton permanent mis en avant par l'app, la surface où l'on atterrit le plus tôt après
+  // le chargement.
   //
-  // (1) computeElfState()==='loading' — la grille HTA n'est pas encore construite, donc
-  //     calcMagneticELF_v2 retombe sur calcMagneticELF_v1 (garde `!SEGMENT_GRID ||
-  //     !HTA_SEGMENTS_DATA`). Ce n'est plus le même modèle : mesuré à Ajaccio, v1 = 2 147 nT
-  //     contre 659 en v2, un facteur 3,3. Une valeur qui vaut trois fois trop ne s'étiquette pas,
-  //     elle NE S'AFFICHE PAS — c'est déjà la règle du popup carte, dont le bloc ELF n'affiche
-  //     « ni chiffre ni détail » en 'loading'. Cette fiche ne l'avait pas : aucune occurrence de
-  //     computeElfState() n'y existait, elle affichait la valeur v1 étiquetée « Estimation
-  //     modélisée » comme n'importe quelle autre. Fenêtre mesurée EN PRODUCTION : ≈4,9 s
-  //     (grille HTA = 8 386 lignes, légère — sans commune mesure avec les ≈136 s du BT).
-  //     Enjeu aggravé le 2026-09-06 : « Mon lieu » est devenu le bouton permanent mis en avant
-  //     par l'app, donc la surface où l'on atterrit le plus tôt après le chargement.
-  //     AUCUNE CHAÎNE NEUVE : on réutilise elf_state_loading, le texte d'attente déjà employé par
-  //     le popup pour cet état exact — deux formulations pour un même état seraient une divergence.
-  //
-  // (2) terme BT absent — la valeur reste du v2 et dans le bon ordre de grandeur, seulement
-  //     minorée. Ici masquer serait pire que dire : on affiche et on étiquette (btIncompletNote).
-  if(computeElfState()==='loading'){
-    champHtml='<span style="color:var(--tx3);font-style:italic">'+escapeHtml(jt('elf_state_loading','⏳ Préparation du calcul en cours…'))+'</span>';
-  }else if(!btTermeInclus()){
-    champHtml+='<div style="font-size:10.5px;color:var(--warn-tx);font-style:italic;margin-top:3px">'+btIncompletNote()+'</div>';
+  // (1) computeElfState()==='loading' — grille HTA pas encore construite, calcMagneticELF_v2
+  //     retombe déjà sur calcMagneticELF_v1 (garde `!SEGMENT_GRID || !HTA_SEGMENTS_DATA`) : une
+  //     valeur qui peut valoir plusieurs fois la vraie (mesuré ×3,3 à Ajaccio, fenêtre ≈4,9 s
+  //     pour la seule grille HTA) ne s'étiquette pas, elle NE S'AFFICHE PAS — même règle que le
+  //     popup carte, même chaîne réutilisée (elf_state_loading), aucune formulation neuve.
+  // (2) model==='v1' (durable, panne réelle) — priorité sur BT via elfNoteFor()/elfBadgeFor()
+  //     (cf. leur commentaire au-dessus de computeElfState()) : v1 ne modélise aucun terme BT,
+  //     dire « BT pas chargé » sous v1 serait faux, pas seulement redondant.
+  // (3) sinon, terme BT absent seul (v2 valide, juste minoré) — étiqueté, jamais masqué : la
+  //     valeur reste dans le bon ordre de grandeur, masquer serait pire que dire.
+  var champHtml;
+  if (computeElfState()==='loading') {
+    champHtml='<span style="color:var(--tx3);font-style:italic">'+jt('elf_state_loading','⏳ Préparation du calcul en cours…')+'</span>';
+  } else {
+    champHtml=escapeHtml(champLvl)+' <span style="color:var(--tx3)">('+Math.round(v2.domains.magnetic.elf.B_total_nT)+' nT, composante liée aux lignes électriques proches)</span>';
+    var champIsV1 = !!(v2 && v2.domains && v2.domains.magnetic && v2.domains.magnetic.elf && v2.domains.magnetic.elf.model==='v1');
+    var champNote = elfNoteFor(champIsV1);
+    if (champNote) {
+      champHtml+='<div style="font-size:10.5px;color:var(--warn-tx);font-style:italic;margin-top:3px">'+champNote+'</div>';
+    }
   }
   var champRow=myPlaceRow(jt('myplace_champ_title','Champ ELF anthropique 50 Hz (ordre de grandeur)'),champHtml,jt('pill_estime','Estimation modélisée'),'estime');
 
