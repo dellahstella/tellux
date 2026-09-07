@@ -3312,8 +3312,11 @@ var JS_STRINGS_EN = {
   // silencieuse. ph_state_failed_badge/_title : repli v1 marqué, réservé à la panne durable.
   ph_state_loading: "Calculation in progress…",
   elf_state_loading: "⏳ Preparing the calculation…",
-  elf_state_failed_badge: "≈ estimate",
-  elf_state_failed_title: "Simplified model (8 typical axes) — the real grid data could not be loaded this session.",
+  // Reformulé (2026-09-07, brief CI, arbitrage Soleil) : ne plus nommer "v1"/"modèle simplifié"
+  // (n'informe pas le lecteur) — dire l'état (provisoire, sera recalculé), registre provenance,
+  // pas alerte. Clés inchangées pour ne pas dupliquer un même message sous deux identifiants.
+  elf_state_failed_badge: "provisional value",
+  elf_state_failed_title: "Provisional value: calculated with a fallback model while the electrical grid data is loading. It will be recalculated once the real data is available.",
   detail_human_loading: "anthropic ELF field — not yet available on this visit (preloading in progress, cf. ELF block above)",
   detail_delta_loading: "not yet available (preloading in progress)",
   btn_save_finalizing: "Finalizing calculation…",
@@ -7768,6 +7771,31 @@ function computeElfState() {
     : ((typeof _htaPreloadState !== 'undefined' && _htaPreloadState === 'failed') ? 'failed' : 'loading');
 }
 
+// ═══ Valeur ELF provisoire (repli v1) : note et badge partagés (2026-09-07, brief CI) ═══
+// Constat qui motive ceci : calcMagneticELF_v2() bascule vers calcMagneticELF_v1() — 8 axes
+// tracés à la main, pas les 8 386 segments réels — dès que SEGMENT_GRID est indisponible.
+// Chiffré via runELFRegressionTest() (déjà présent dans ce fichier, jamais exécuté avant ce
+// jour) : les deux modèles NE CONVERGENT PAS — écarts de ×0,08 (Calvi) à ×49 (Palaggiu), dans
+// les deux sens, pas un biais qu'on pourrait négliger. Le discriminant `model:'v1'`/`model:'v2'`
+// existe sur le retour de ces deux fonctions depuis le 2026-09-04 (brief AP) précisément pour
+// détecter ce cas — n'était lu nulle part avant ce commit.
+// Popup carte : `elfState==='failed'` reste la bonne condition (le popup n'affiche déjà aucun
+// chiffre pendant 'loading', seul un repère "en cours" — pas de fenêtre non couverte à corriger
+// là). Les 3 autres surfaces (Mon lieu, indice composite, export CSV) lisent `.model` directement
+// sur le résultat, qui est la source de vérité exacte — pas une variable d'état parallèle qui
+// pourrait diverger.
+// Registre volontairement neutre (arbitrage Soleil) : ne pas nommer "v1"/"modèle simplifié"
+// (n'informe pas le lecteur d'une page publique) — dire l'état (provisoire, sera recalculé),
+// jamais un chiffre d'écart (connu seulement en moyenne, pas au point précis affiché).
+function elfV1Note() {
+  return jt('elf_state_failed_title',
+    'Valeur provisoire : calculée avec un modèle de repli pendant le chargement du réseau '
+    + 'électrique. Elle sera recalculée avec les données réelles.');
+}
+function elfV1Badge() {
+  return jt('elf_state_failed_badge', 'valeur provisoire');
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // calcAll_v2 — Architecture à domaines séparés (§6.2 AUDIT_NIVEAU2_V2.1)
 // IMMÉDIAT — introduit la structure de retour standardisée.
@@ -8658,7 +8686,7 @@ map.on('click',async e=>{
   // avec confiance). 'failed' : chiffre v1 affiché, marqué ≈ (repli assumé, jamais silencieux).
   const phHeaderHTML = elfState === 'loading'
     ? '<div style="font-weight:700;font-size:13px;color:#626774;font-style:italic">'+jt('ph_state_loading','Calcul en préparation…')+'</div>'
-    : '<div style="font-weight:700;font-size:14px;color:'+phColor+'">'+phEmoji+' '+perturbHumain+'/5'+(elfState==='failed'?' <span style="font-size:9px;font-weight:400;color:#8A5E22" title="'+jt('elf_state_failed_title','Modèle simplifié (8 axes types) — les données réelles du réseau n\'ont pas pu être chargées cette session.')+'">'+jt('elf_state_failed_badge','≈ estimation')+'</span>':'')+'</div>';
+    : '<div style="font-weight:700;font-size:14px;color:'+phColor+'">'+phEmoji+' '+perturbHumain+'/5'+(elfState==='failed'?' <span style="font-size:9px;font-weight:400;color:#8A5E22" title="'+elfV1Note()+'">'+elfV1Badge()+'</span>':'')+'</div>';
   // anEmoji/anLabel/anColor RETIRÉES le 2026-09-03 (ADR-064, décision 1) : habillaient le score
   // « Naturel » (activNat/5) désormais retiré de ce popup, cf. commentaire plus haut. Le repro tofu
   // rock->mont-fuji (brief H phase 1, PR #1203) concernait précisément anEmoji — devenu sans objet
@@ -8750,7 +8778,7 @@ map.on('click',async e=>{
   // elfState — rien à gater, il n'y a pas de chiffre.
   const deltaGatedHTML = (elfState === 'loading' && delta !== null)
     ? '<span style="color:#626774;font-style:italic">'+jt('detail_delta_loading','pas encore disponible (préchargement en cours)')+'</span>'
-    : '<span style="color:'+deltaCol+'">'+deltaStr+(elfState==='failed'&&delta!==null?' <span style="color:#8A5E22">('+jt('elf_state_failed_badge','≈ estimation')+')</span>':'')+'</span>';
+    : '<span style="color:'+deltaCol+'">'+deltaStr+(elfState==='failed'&&delta!==null?' <span style="color:#8A5E22">('+elfV1Badge()+')</span>':'')+'</span>';
   // Barre susceptibilité magnétique — normalisée sur -5 à 60 nT (plage réelle de GEO_SUSC_GRID,
   // cf. calcGeoSusc()/suscPct ci-dessus)
   // Correctif 2026-09-03 (brief H, phase 2) : cette barre n'avait aucun libellé visible, seule une
@@ -8799,7 +8827,7 @@ map.on('click',async e=>{
     ? '<div style="font-size:11px;color:#626774;font-style:italic;margin-bottom:1px">'+jt('elf_state_loading','⏳ Préparation du calcul en cours…')+'</div>'
     : '<div style="display:flex;align-items:center;gap:4px;margin-bottom:1px">'+
         '<span style="font-size:12px;font-weight:700;color:#8A5E22">'+elf_nT+' nT</span>'+
-        (elfState==='failed'?' <span style="font-size:9px;font-weight:400;color:#8A5E22" title="'+jt('elf_state_failed_title','Modèle simplifié (8 axes types) — les données réelles du réseau n\'ont pas pu être chargées cette session.')+'">'+jt('elf_state_failed_badge','≈ estimation')+'</span>':'')+
+        (elfState==='failed'?' <span style="font-size:9px;font-weight:400;color:#8A5E22" title="'+elfV1Note()+'">'+elfV1Badge()+'</span>':'')+
         '<span style="font-size:9px;color:#626774" title="'+jt('v2_conf_elf','Confiance : moyen — modélisation Biot-Savart, ±50%')+'">●●○</span>'+
       '</div>'+
       '<div style="font-size:8px;color:#626774">'+elfContribs+'</div>'+
@@ -8889,7 +8917,7 @@ map.on('click',async e=>{
         // l'attente (rien n'est affiché plus haut dans ce cas).
         (elfState==='loading'
           ? '<div>H : '+jt('detail_human_loading','champ ELF anthropique — pas encore disponible cette visite (préchargement en cours, cf. bloc ELF ci-dessus)')+'</div>'
-          : '<div>H ('+jt('detail_human_label','champ ELF anthropique total, valeur identique à celle affichée plus haut — alimente le score Perturbation')+') : +'+human+' nT'+(elfState==='failed'?' <span style="color:#8A5E22">('+jt('elf_state_failed_badge','≈ estimation')+')</span>':'')+'</div>')+
+          : '<div>H ('+jt('detail_human_label','champ ELF anthropique total, valeur identique à celle affichée plus haut — alimente le score Perturbation')+') : +'+human+' nT'+(elfState==='failed'?' <span style="color:#8A5E22">('+elfV1Badge()+')</span>':'')+'</div>')+
         (nRFcalib>0.01?'<div>RF ('+jt('detail_rf_label','champ RF calibré — calcul distinct de la valeur µW/m² ci-dessus (jamais atténué par la forêt) — alimente le score affiché')+') : '+nRFcalib.toFixed(1)+' V/m</div>':'')+
         (typeof altitude_m==='number' && isFinite(altitude_m)?'<div>'+jt('detail_alt_label','Altitude (IGN RGE Alti, résolution ~1 m)')+' : '+altitude_m+' m</div>':'')+
       '</div>'+
@@ -10975,7 +11003,20 @@ function refreshExpertComposite() {
   var wI  = EXPERT_WEIGHTS_DEFAULT.I;
   var comp = computeExpertComposite(_expertLastResult, { M: wM, RF: wRF, I: wI });
   var el = document.getElementById('expert-index-val');
-  if (el) el.textContent = comp.index.toFixed(3);
+  if (el) {
+    // Étiquetage de la valeur provisoire (2026-09-07, brief CI) : l'indice dérive d'ELF via w_M,
+    // donc une valeur provisoire s'y propage. textContent puis badge distinct — jamais d'innerHTML
+    // sur une valeur numérique.
+    el.textContent = comp.index.toFixed(3);
+    var elfDom = _expertLastResult.domains && _expertLastResult.domains.magnetic && _expertLastResult.domains.magnetic.elf;
+    if (elfDom && elfDom.model === 'v1') {
+      var b = document.createElement('span');
+      b.style.cssText = 'font-size:9px;font-weight:400;color:#8A5E22;font-style:italic;margin-left:5px';
+      b.title = elfV1Note();
+      b.textContent = elfV1Badge();
+      el.appendChild(b);
+    }
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -11002,6 +11043,12 @@ function exportExpertCSV() {
     ['Champ', 'Valeur', 'Unite', 'Confiance', 'En_cours_de_validation', 'Source', 'Horodatage'],
     ['timestamp', ts, '', '', '0', 'Tellux v2', ts],
     ['elf_B_total_nT', elf.B_total_nT != null ? elf.B_total_nT : '', 'nT', elf.confidence || '', elf.under_review ? '1' : '0', (elf.source || '').replace(/;/g, ','), ts],
+    // Étiquetage de la valeur provisoire (2026-09-07, brief CI) : champ explicite plutôt qu'une
+    // mention noyée dans Source — un export se relit à la machine, une valeur provisoire doit
+    // être filtrable. Écarts mesurés entre les deux modèles (×0,08 à ×49, runELFRegressionTest())
+    // trop dépendants du point pour être résumés en un chiffre unique ici.
+    ['elf_model', elf.model || '', '', '', '0',
+      elf.model === 'v1' ? 'Modele de repli (reseau non charge) - valeur provisoire' : 'Modele complet (segments reels)', ts],
     ['magnetic_static_B_total_nT', st.B_total_nT != null ? st.B_total_nT : '', 'nT', st.confidence || '', '0', (st.source || '').replace(/;/g, ','), ts],
     ['rf_S_total_uW_m2', rf.S_total_uW_m2 != null ? rf.S_total_uW_m2 : '', 'uW/m2', rf.confidence || '', '0', (rf.source || '').replace(/;/g, ','), ts],
     ['gamma_dose_rate_nSv_h', gam.dose_rate_nSv_h != null ? gam.dose_rate_nSv_h : '', 'nSv/h', gam.confidence || '', gam.under_review ? '1' : '0', (gam.source || '').replace(/;/g, ','), ts],
@@ -11826,6 +11873,13 @@ function myPlaceRenderSummary(d){
   var absScore=Math.abs(v2 && v2.domains && v2.domains.magnetic && v2.domains.magnetic.elf ? Math.round(v2.domains.magnetic.elf.B_total_nT) : 0);
   var champLvl=absScore<30?jt('interp_lvl_tres_calme','Très calme'):absScore<100?jt('interp_lvl_modere','Modéré'):absScore<300?jt('interp_lvl_actif','Actif'):jt('interp_lvl_intense','Intense');
   var champHtml=escapeHtml(champLvl)+' <span style="color:var(--tx3)">('+Math.round(v2.domains.magnetic.elf.B_total_nT)+' nT, composante liée aux lignes électriques proches)</span>';
+  // Étiquetage de la valeur provisoire (2026-09-07, brief CI) — même note que le popup carte et
+  // l'indice composite, produite par elfV1Note(), jamais recopiée. La valeur reste affichée ;
+  // c'est sa complétude qui est déclarée, pas la valeur elle-même. Lu directement sur le
+  // résultat (`model`), pas sur une variable d'état parallèle.
+  if(v2 && v2.domains && v2.domains.magnetic && v2.domains.magnetic.elf && v2.domains.magnetic.elf.model==='v1'){
+    champHtml+='<div style="font-size:10.5px;color:#8A5E22;font-style:italic;margin-top:3px">'+elfV1Note()+'</div>';
+  }
   var champRow=myPlaceRow(jt('myplace_champ_title','Champ ELF anthropique 50 Hz (ordre de grandeur)'),champHtml,jt('pill_estime','Estimation modélisée'),'estime');
 
   // Ligne « Dose gamma ambiante (ordre de grandeur) » retirée le 2026-09-01, en même temps que
