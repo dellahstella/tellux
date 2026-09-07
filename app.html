@@ -6460,6 +6460,38 @@ function getSegmentsNear(lat, lon) {
   return SEGMENT_GRID[tileKey(lat, lon)] || [];
 }
 
+// ─── « La grille HTA est-elle prête ? » — prédicat unique (2026-09-07, brief CJ) ───
+// UNE condition, lue par les quatre endroits qui en dépendent. Elle était recopiée à la main, et
+// elle avait DÉJÀ divergé :
+//   · calcMagneticELF_v2   → `!SEGMENT_GRID || !HTA_SEGMENTS_DATA`   (les deux variables)
+//   · myPlaceNearestHTA    → idem
+//   · computeElfState()    → `SEGMENT_GRID !== null` SEULEMENT       (une seule)
+//   · runELFRegressionTest → `!SEGMENT_GRID` SEULEMENT               (une seule)
+//
+// computeElfState() est l'ÉTIQUETTE PUBLIQUE : c'est elle qui décide si l'utilisateur voit une
+// valeur ou « ⏳ Préparation du calcul en cours… ». Son commentaire affirmait lire « la source de
+// vérité, ce que calcMagneticELF_v2 lit réellement » — elle en lisait la moitié. Une étiquette qui
+// prétend suivre le calcul doit être gardée par la condition du calcul, pas par une approximation.
+//
+// Sans effet aujourd'hui, ET C'EST LE MOTIF : buildSegmentGrid() pose les deux variables coup sur
+// coup dans la même fonction synchrone, donc aucun état intermédiaire n'est observable. L'écart est
+// du code conditionnellement mort — inerte tant que rien ne dissocie les deux variables. Or le
+// chantier suivant (agrégat ELF précalculé) a précisément pour objet de libérer des structures
+// après construction : le jour où HTA_SEGMENTS_DATA est vidée pour récupérer la mémoire, le calcul
+// repasse en v1 pendant que l'étiquette continue d'annoncer une valeur normale. Dissociation
+// simulée à Ajaccio (41,919 / 8,738 ; chargeFactor = 1,0) : SEGMENT_GRID conservée, la seule mise à
+// null de HTA_SEGMENTS_DATA fait passer calcMagneticELF_v2 de 742 nT à 2 311 — soit exactement
+// calcMagneticELF_v1, un facteur 3,1, sans rien qui le signale. On aligne AVANT le chantier qui
+// peut l'activer, pas après.
+//
+// runELFRegressionTest est inclus pour la même raison en pire : sans HTA_SEGMENTS_DATA, il compare
+// calcMagneticELF_v1 à un calcMagneticELF_v2 qui vient d'y retomber. Il rendrait « aucune
+// divergence » — un vert obtenu en ne mesurant rien.
+function htaGridPrete() {
+  return !!(typeof SEGMENT_GRID !== 'undefined' && SEGMENT_GRID
+            && typeof HTA_SEGMENTS_DATA !== 'undefined' && HTA_SEGMENTS_DATA);
+}
+
 // ─── Fiche « Mon lieu » (2026-08-20) — distance à la ligne HTA la plus proche ───
 // Géométrie pure, réutilise HTA_SEGMENTS_DATA/getSegmentsNear déjà chargés pour
 // calcMagneticELF_v2 (aucune modification de calcMagneticELF_v2 ni de sa sortie ;
@@ -6484,7 +6516,7 @@ function distancePointToSegmentM(lat, lon, segLat1, segLon1, segLat2, segLon2) {
   return Math.sqrt(px*px + py*py);
 }
 function nearestHTADistanceM(lat, lon) {
-  if (!SEGMENT_GRID || !HTA_SEGMENTS_DATA) return { known: false, distance_m: null };
+  if (!htaGridPrete()) return { known: false, distance_m: null };
   const nearby = getSegmentsNear(lat, lon);
   let minD = Infinity;
   nearby.forEach(idx => {
@@ -6834,7 +6866,7 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
   // provenance seul — htFactor ne change pas.
   const htFactorSource = (chargeFactor !== undefined) ? 'parametre'
                  : (typeof chargeFactorSource !== 'undefined' ? chargeFactorSource : 'estime');
-  if (!SEGMENT_GRID || !HTA_SEGMENTS_DATA) {
+  if (!htaGridPrete()) {
     return calcMagneticELF_v1(lat, lon, chargeFactor);
   }
   let totalBx = 0, totalBy = 0;
@@ -7054,7 +7086,7 @@ const ELF_TEST_POINTS = [
 ];
 
 function runELFRegressionTest() {
-  if (!SEGMENT_GRID) {
+  if (!htaGridPrete()) {
     console.warn('[Tellux] runELFRegressionTest : grille non prete, activer "Réseau" d\'abord');
     return;
   }
@@ -7777,11 +7809,14 @@ function calcMagneticELFAuto(lat, lon) {
 // computeElfState — extrait 2026-09-04 (brief AF lot B, suite, arbitrage Soleil) : vivait en
 // ligne dans le handler de clic carte jusqu'à ce que saveContrib() en ait besoin aussi (même
 // motif qui a fait extraire calcMagneticELFAuto() au brief AF lot A — un second calcul recopié
-// à la main aurait pu diverger silencieusement). 'ready' si SEGMENT_GRID!==null (source de
-// vérité, ce que calcMagneticELF_v2 lit réellement) ; sinon 'failed' si _htaPreloadState
-// l'indique (panne durable, repli v1 assumé) ; 'loading' sinon (encore une chance d'aboutir).
+// à la main aurait pu diverger silencieusement). 'ready' si htaGridPrete() — le MÊME prédicat que
+// la garde de repli de calcMagneticELF_v2, plus une condition recopiée : la version précédente ne
+// testait que SEGMENT_GRID en se disant « source de vérité, ce que calcMagneticELF_v2 lit
+// réellement », alors que le calcul en teste deux (2026-09-07, brief CJ — motif au-dessus de
+// htaGridPrete()). Sinon 'failed' si _htaPreloadState l'indique (panne durable, repli v1 assumé) ;
+// 'loading' sinon (encore une chance d'aboutir).
 function computeElfState() {
-  return (typeof SEGMENT_GRID !== 'undefined' && SEGMENT_GRID !== null) ? 'ready'
+  return htaGridPrete() ? 'ready'
     : ((typeof _htaPreloadState !== 'undefined' && _htaPreloadState === 'failed') ? 'failed' : 'loading');
 }
 
