@@ -11021,9 +11021,16 @@ function _syncBTZoom(fromToggle){
   }
 }
 
-// Charge réseau Corse — sources par ordre de priorité :
-// 1. RTE eco2mix (CORS-friendly, données Corse réelles)
-// 2. Modèle horaire local (profil type corse, ±20% précision)
+// Charge réseau Corse — modèle horaire local (profil type Corse, calibré sur bilans RTE
+// 2020-2024, ±20% précision) — c'est la SEULE source qui aboutit aujourd'hui.
+// Correctif 2026-09-08 : cette fonction tentait aussi l'API RTE eco2mix ci-dessous ;
+// l'endpoint (digital.iservices.rte-france.com) exige un token OAuth2 même en sandbox
+// (vérifié : HTTP 400, WWW-Authenticate: Bearer, "Unable to find token in the message"),
+// jamais envoyé par ce dépôt statique — l'appel échoue donc systématiquement, chargeFactorSource
+// ne devient jamais 'RTE' en pratique. Le badge n'attribue plus ce fournisseur (cf. app.html
+// ~L2792). Appel conservé tel quel (pas retiré) : si RTE ouvre un jour un accès sans auth ou
+// qu'une clé est ajoutée hors dépôt, le chemin de succès (L~11050) redevient actif sans y
+// retoucher — mais tant que ce correctif n'est pas fait, considérer ce bloc comme mort.
 async function loadChargeReseau(){
   // Fallback : modèle horaire type Corse
   // Source : RTE bilans électriques Corse 2020-2024 (MW moyen par heure)
