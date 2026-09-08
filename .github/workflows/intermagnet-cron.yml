@@ -37,8 +37,37 @@ name: intermagnet-cron
 # --admin, aucun bypass : le scan tourne pour de vrai et la protection de branche
 # est satisfaite normalement.
 #
-# Cadence : toutes les 30 minutes (aligne sur setInterval(loadAQU,...) cote
-# client). Declenchement manuel : Actions > intermagnet-cron > Run workflow.
+# Cadence DEMANDEE : toutes les 30 minutes (`cron: '*/30 * * * *'` ci-dessous, aligne
+# sur setInterval(loadAQU,...) cote client). Declenchement manuel : Actions >
+# intermagnet-cron > Run workflow.
+#
+# ⚠ CADENCE REELLE : environ 3 h, PAS 30 minutes. CE N'EST PAS UNE PANNE.
+# (constat CM, 2026-09-08 — corrige une ligne qui a longtemps annonce 30 minutes sans
+# reserve, et qui pouvait faire rediagnostiquer une panne la ou il n'y en a pas.)
+#
+#   - `schedule` est documente par GitHub comme BEST-EFFORT : aux cadences fines, les
+#     declenchements sont retardes ou sautes selon la charge de la plateforme. Un
+#     `*/30` est une demande, jamais une garantie. Rien a corriger dans ce fichier.
+#   - Mesure sur 90 executions du 2026-08-26 au 2026-09-08 : intervalle moyen ~3h30
+#     entre RUNS.
+#   - Mesure sur les mises a jour EFFECTIVES du fichier servi (ce qui compte pour le
+#     client — la donnee n'atteint la production qu'au merge de la PR ouverte plus
+#     bas) : mediane 3,19 h sur les 13 j, 3,19 h sur le regime post-02/09, 3,13 h sur
+#     les 7 derniers jours. La mediane est remarquablement stable ; c'est elle qui est
+#     desormais annoncee sur methode-limites-transparence.html §13, a la place du
+#     « Temps reel (1h) » qui n'a jamais ete tenu.
+#   - Disponibilite (age < INTERMAGNET_STALE_AFTER_MS = 3 h, cote app.html) : 56,3 %
+#     sur les 13 j, mais 76,1 % sur le seul regime post-02/09. L'ecart entre les deux
+#     vient des 21 echecs de cron, TOUS anterieurs au 2026-09-02 et resolus : citer le
+#     56 % comme etat courant serait decrire une periode de panne close.
+#
+# CONSEQUENCE A NE PAS MANQUER, et qui n'est PAS traitee ici : la cadence reelle
+# (mediane 3,19 h) est legerement AU-DESSUS du seuil de peremption de 3 h code dans
+# app.html. Le niveau 1 perime donc sur une majorite de cycles par simple ecart entre
+# les deux nombres, et le client descend au niveau 2 (Dst) — comportement normal et
+# etiquete, pas une avarie. Le seuil est une entree de calcul d'une valeur publique :
+# il n'est PAS modifie ici, ni la cascade. Arbitrage separe si un jour on veut fermer
+# cet ecart, dans un sens ou dans l'autre.
 #
 # ⚠ PR ORPHELINES (constat 2026-09-08, PR publique #1184 restee ouverte 6 jours,
 # CONFLICTING, checks pourtant tous verts) : l'etape finale a DEUX chemins qui
