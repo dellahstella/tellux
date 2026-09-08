@@ -275,7 +275,19 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);}
       <div class="lp-map-sim" id="lp-hero-map"></div>
       <div class="lp-map-stats">
         <div class="lp-map-stat"><div class="lp-map-stat-val">3 000</div><div class="lp-map-stat-label" data-i18n-key="stat_antennes">antennes</div></div>
-        <div class="lp-map-stat"><div class="lp-map-stat-val"><span data-stat="supports-total">1 026</span></div><div class="lp-map-stat-label" data-i18n-key="stat_supports" data-i18n-title-key="stat_supports_tt" title="Source ANFR CartoRadio &middot; compte dérivé du JSON pipeline">supports</div></div>
+        <!-- ⚠ NE PAS RÉÉCRIRE « supports » ICI SANS LIRE CECI (2026-09-08).
+             Ce nombre n'est PAS un compte de supports ANFR. C'est un regroupement Tellux par
+             (latitude arrondie, longitude arrondie, opérateur) — un pylône partagé par trois
+             opérateurs y compte trois fois. Le vrai compte de supports ANFR pour la Corse est
+             976 (dont 656 portent du mobile), établi sur l'export national ANFR : il dort dans
+             les tables anfr_supports/anfr_secteurs, qu'aucune page ne lit encore.
+             Le mot « supports » retiré ici parce qu'il nommait une grandeur que ce nombre ne
+             mesure pas. Trois valeurs se sont succédé sous ce mot (~974, 1 026, 1 030) : la
+             première était à deux unités du compte ANFR réel, et chaque « correction » a éloigné
+             la surface de ce que le mot désigne.
+             Branchement du jeu ANFR = décision Soleil en cours, avec la date de l'export affichée
+             à côté du nombre. -->
+        <div class="lp-map-stat"><div class="lp-map-stat-val"><span data-stat="supports-total">1 030</span></div><div class="lp-map-stat-label" data-i18n-key="stat_supports" data-i18n-title-key="stat_supports_tt" title="Regroupement Tellux par position et opérateur, dérivé des données ANFR CartoRadio &middot; ce n'est pas le compte de supports ANFR : un pylône partagé compte une fois par opérateur">positions par opérateur</div></div>
         <!-- ~2 600 km (2026-09-06, brief CH addendum, revue Soleil PR #1290) : remplace un
              ancien "8 000+ km lignes HTA/HTB" qui était doublement faux — l'unité elle-même
              (8 387 est un compte de polylignes, pas des km) et le périmètre (HTB non modélisé,
@@ -474,8 +486,12 @@ if(document.readyState === 'loading'){
   });
 })();
 
-/* Dynamic supports count — derived from /public/data/antennes_par_commune_corse.json (_meta.n_supports_total)
-   Fallback hardcoded in HTML matches the JSON at build time (1 026 au 2026-04-24).
+/* Dynamic count — derived from /public/data/antennes_par_commune_corse.json (_meta.n_supports_total)
+   Grandeur = groupes (lat arrondie, lon arrondie, opérateur), PAS des supports ANFR (cf. le
+   commentaire au-dessus de la statistique dans le corps de la page).
+   Fallback hardcoded in HTML aligné sur le JSON servi (1 030 depuis #1078, 2026-08-28 — il était
+   resté à 1 026, valeur d'avant ce refresh : un repli qui diverge affiche un faux chiffre le jour
+   où le fetch échoue, et personne ne le voit puisque le chemin nominal le remplace).
    Construction : la landing ne peut pas diverger de l'app par rapport à cette stat — quand le pipeline
    regenere le JSON, la landing récupère le nouveau compte au prochain chargement. */
 (function initStats(){
@@ -693,8 +709,8 @@ function telluxGetEffectiveLang(){
     scope_head: '360 municipalities &middot; ANFR-certified RF',
     scope_live: 'Real data',
     stat_antennes: 'antennas',
-    stat_supports: 'supports',
-    stat_supports_tt: 'Source: ANFR CartoRadio · count derived from JSON pipeline',
+    stat_supports: 'sites per operator',
+    stat_supports_tt: 'Tellux grouping by position and operator, derived from ANFR CartoRadio data · this is not the ANFR support count: a shared mast counts once per operator',
     stat_km: 'km of HTA lines',
     stat_km_tt: 'Source: EDF SEI (Supabase hta_lines) · sum of segment lengths, method logged in scripts/compute_hta_network_length_km.py'
     // "TELLUX" (logo) omis : identique FR/EN, aucune traduction nécessaire.
