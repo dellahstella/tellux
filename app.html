@@ -3138,14 +3138,51 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
 
 <!-- PANNEAU HYPOTHÈSES (tableau de bord Phase 1-4) → migré vers patrimoine.html -->
 
-<!-- PANNEAU STATS CORPUS -->
+<!-- PANNEAU STATS CORPUS — CONTENU CORRIGÉ le 2026-09-08 (arbitrage Soleil : « réactive-le »),
+     TOUJOURS display:none — la réactivation demandée s'est révélée plus qu'un toggle CSS.
+     `.map-col` (ancêtre de ce panneau) est en `position:absolute`, calée exactement sur le
+     viewport (top:0;left:0, largeur/hauteur = fenêtre), sur desktop ET mobile — vérifié en
+     navigateur aux deux tailles. Un enfant en flux normal qui dépasse cette boîte n'agrandit PAS
+     le document (les éléments absolument positionnés ne comptent pas dans le scrollHeight du
+     parent) : ce panneau, une fois démasqué, rendait bien `display:block` et une géométrie
+     cohérente (getBoundingClientRect), mais AUCUN scroll de la page ne peut jamais l'atteindre —
+     invisible pour de vrai, pas seulement discret. L'architecture a migré vers une carte plein
+     viewport avec panneaux flottants (`position:fixed`, cf. #expert-modal/#contrib-level-modal/
+     #tellux-legends-context, tous fixed) depuis la construction de ce panneau ; `#geo-panel` retiré
+     plus haut aujourd'hui vivait dans la même impasse structurelle.
+     CE QUI EST FAIT, prêt dès qu'un hôte est choisi : contenu intégralement vérifié et un bug
+     corrigé (ci-dessous). CE QUI RESTE À DÉCIDER, hors périmètre de ce correctif : par quel
+     mécanisme existant (modal, panneau flottant Zone 2, nouvelle entrée de menu) le faire
+     apparaître — décision de placement, pas de contenu, non tranchée ici.
+     Recompté sur public/data/cartoradio_certified_corse.json avant tout :
+       - le titre (236/151/85/1 non-conformité) porte sur le CORPUS COMPLET, exact ;
+       - la grille de stats (min/max/médiane/seuils) porte sur les 30 fiches D'ORIGINE
+         (calib_eligible absent), 28 RF + 2 basse fréquence (protocole 9 kHz-100 kHz, ids 190593 et
+         194161, exclues des V/m) — DEUX PÉRIMÈTRES DIFFÉRENTS sur un même panneau, jamais
+         distingués : même piège que 236/30/21 corrigé le même jour sur cadre-scientifique.html.
+         Sous-titre ajouté pour lever l'ambiguïté.
+       - MÉDIANE CORRIGÉE : 1,92 → 1,57. Erreur d'origine confirmée : sur 28 valeurs triées (compte
+         pair), 1,92 est la 15e valeur seule ; la vraie médiane moyenne les 14e et 15e (1,22 et
+         1,92). Les 7 autres chiffres de la grille (min 0,16 Barrettali, max 29,05 Monticello,
+         seuils 3/9/13, 1 dépassement) sont exacts, recomptés un par un.
+       - #stats-bars ÉTAIT VIDE : le CSS (.stats-bar-row et enfants, plus haut dans ce fichier)
+         existe depuis toujours, aucune fonction JS ne l'a jamais peuplé — feature posée, jamais
+         câblée. Rempli ci-dessous en statique (le panneau entier est du texte figé, pas un rendu
+         dynamique) avec les 9 mesures ≥ 5 V/m réelles — le sous-ensemble que le sous-titre du
+         graphique nomme déjà lui-même « seuil atypique 9 V/m ». Barres à l'échelle du maximum réel
+         (29,05). Couleurs reprises des jetons déjà utilisés dans les grilles ci-dessus
+         (--danger ≥10 V/m, --warn 5-10 V/m), aucune couleur neuve. Les deux mesures de Monticello
+         San Quilico sont deux dates distinctes, pas un doublon : #192990 (20/03/2025, non
+         conforme) et #193102 (01/04/2025, re-mesure après correctif opérateur, conforme) — la note
+         de la fiche #192990 le confirme. -->
 <div class="stats-panel" id="stats-panel">
   <div class="mpanel-title">Corpus CartoRadio EXEM — 236 fiches ANFR/EXEM · Corse 2002–2026 · 1 non-conformité documentée (Monticello) · 151 en position exacte, 85 résidentielles agrégées au centroïde communal</div>
+  <div id="stats-scope-note" style="font-size:10px;color:var(--tx3);margin:-4px 0 8px">Détail ci-dessous sur les 30 fiches d'origine (28 mesures RF + 2 basse fréquence), sous-ensemble du corpus complet — pas les 236.</div>
   <div class="stats-grid">
     <div class="stat-box"><div class="stat-val" style="color:var(--acc)">28</div><div class="stat-lbl">mesures RF (+ 2 BF)</div></div>
     <div class="stat-box"><div class="stat-val" style="color:var(--maquis-clair)">0.16</div><div class="stat-lbl">min V/m · Barrettali</div></div>
     <div class="stat-box"><div class="stat-val" style="color:var(--danger)">29.05</div><div class="stat-lbl">max V/m · Monticello</div></div>
-    <div class="stat-box"><div class="stat-val" style="color:var(--warn)">1.92</div><div class="stat-lbl">médiane V/m</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:var(--warn)">1.57</div><div class="stat-lbl">médiane V/m</div></div>
   </div>
   <div class="stats-grid" style="margin-bottom:12px">
     <div class="stat-box"><div class="stat-val" style="color:var(--danger)">1</div><div class="stat-lbl">dépassement légal</div></div>
@@ -3155,7 +3192,17 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
   </div>
   <div class="stats-bar-wrap">
     <div class="stats-bar-title">Top mesures par valeur (V/m) — limite légale 28–61 V/m · seuil atypique 9 V/m</div>
-    <div id="stats-bars"></div>
+    <div id="stats-bars">
+      <div class="stats-bar-row"><span class="lbl">Monticello (20/03)</span><div class="bar"><div class="fill" style="width:100%;background:var(--danger)"></div></div><span class="val">29.05</span></div>
+      <div class="stats-bar-row"><span class="lbl">Monticello (01/04)</span><div class="bar"><div class="fill" style="width:50%;background:var(--danger)"></div></div><span class="val">14.55</span></div>
+      <div class="stats-bar-row"><span class="lbl">Piana</span><div class="bar"><div class="fill" style="width:36%;background:var(--danger)"></div></div><span class="val">10.32</span></div>
+      <div class="stats-bar-row"><span class="lbl">Oletta</span><div class="bar"><div class="fill" style="width:29%;background:var(--warn)"></div></div><span class="val">8.53</span></div>
+      <div class="stats-bar-row"><span class="lbl">Calvi</span><div class="bar"><div class="fill" style="width:23%;background:var(--warn)"></div></div><span class="val">6.81</span></div>
+      <div class="stats-bar-row"><span class="lbl">Speloncato</span><div class="bar"><div class="fill" style="width:23%;background:var(--warn)"></div></div><span class="val">6.76</span></div>
+      <div class="stats-bar-row"><span class="lbl">Porto Vecchio</span><div class="bar"><div class="fill" style="width:21%;background:var(--warn)"></div></div><span class="val">6.24</span></div>
+      <div class="stats-bar-row"><span class="lbl">Olmo</span><div class="bar"><div class="fill" style="width:20%;background:var(--warn)"></div></div><span class="val">5.90</span></div>
+      <div class="stats-bar-row"><span class="lbl">Grosseto Prugna</span><div class="bar"><div class="fill" style="width:19%;background:var(--warn)"></div></div><span class="val">5.61</span></div>
+    </div>
   </div>
   <div style="font-size:11px;color:var(--tx3);border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
     Laboratoire : <b>EXEM</b> · Protocole ANFR/DR 15-4 · Toutes mesures conformes sauf <span class="nc-badge">NON CONFORME</span> Monticello San Quilico #192990 (29.05 V/m · 20/03/2025) — rapport d'infraction établi
@@ -14043,6 +14090,7 @@ function capCleanup(){
 ["mat_sep_betons","#c-mats div@0","","— Bétons (µr=1 tous, effet RF uniquement) —","","— Concretes (µr=1 all, RF effect only) —"],
 ["mat_sep_legeres","#c-mats div@1","","— Parois légères —","","— Lightweight partitions —"],
 ["mat_sep_tuyauterie","#c-mats div@2","","— Tuyauterie (effet ELF local uniquement) —","","— Piping (local ELF effect only) —"],
+["stats_scope_note","#stats-scope-note","","Détail ci-dessous sur les 30 fiches d'origine (28 mesures RF + 2 basse fréquence), sous-ensemble du corpus complet — pas les 236.","","Detail below covers the 30 original records (28 RF measurements + 2 low-frequency), a subset of the full corpus — not the 236."],
 ["stats_mpanel_title","#stats-panel .mpanel-title","","Corpus CartoRadio EXEM — 236 fiches ANFR/EXEM · Corse 2002–2026 · 1 non-conformité documentée (Monticello) · 151 en position exacte, 85 résidentielles agrégées au centroïde communal","","CartoRadio EXEM corpus — 236 ANFR/EXEM sheets · Corsica 2002–2026 · 1 documented non-compliance (Monticello) · 151 at exact position, 85 residential aggregated at commune centroid"],
 ["stats_bar_title",".stats-bar-title","","Top mesures par valeur (V/m) — limite légale 28–61 V/m · seuil atypique 9 V/m","","Top measurements by value (V/m) — legal limit 28–61 V/m · atypical threshold 9 V/m"],
 ["stats_labo_prefix","#stats-panel > div:last-of-type","","Laboratoire :","","Laboratory:"],
