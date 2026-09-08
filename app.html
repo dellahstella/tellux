@@ -6139,9 +6139,12 @@ const INTERMAGNET_OBSERVATORIES = [
 
 async function loadAQU(){
   // Wrapper retro-compat : delegue a loadINTERMAGNETObservatory() (sprint v2).
-  // Conserve nom 'loadAQU' pour compat bootstrap + ID HTML aqu-status historique
-  // (nom historique conservé malgré le retrait d'AQU de la liste, cf. commentaire
-  // ci-dessus — casser ce nom romprait le chaînage de boot et les IDs HTML).
+  // Conserve le nom 'loadAQU' pour compat bootstrap (setTimeout/setInterval l'appellent
+  // par ce nom) — mais l'« ID HTML aqu-status historique » que ce commentaire invoquait
+  // n'existe plus : #aqu-status est absent du HTML, confirmé le 2026-09-08 (inventaire
+  // d'ingestion). Les écritures DOM correspondantes, dans loadINTERMAGNETObservatory()
+  // ci-dessous, ont été retirées le même jour — no-ops silencieux depuis le retrait
+  // effectif de la station AQU (2026-08-26), jamais nettoyées avec.
   return loadINTERMAGNETObservatory();
 }
 
@@ -6164,32 +6167,27 @@ async function loadINTERMAGNETObservatory(){
   // via generated_at, cf. INTERMAGNET_STALE_AFTER_MS. INTERMAGNET_OBSERVATORIES
   // (DUR/EBR/CLF) reste défini plus haut à titre documentaire — la sélection de
   // station se fait désormais côté script (scripts/fetch_intermagnet.py), pas ici.
+  // DOM mort retiré le 2026-09-08 (inventaire d'ingestion app.html, 32 fonctions vérifiées,
+  // aucun autre défaut du genre trouvé — celui-ci confirmé). Les 4 branches de cette fonction
+  // manipulaient `#aqu-status`, un élément absent du HTML (grep confirmé avant retrait) :
+  // no-ops silencieux à chaque appel, sans effet ni erreur. De même, `window._intermagnetBaseline`,
+  // `_intermagnetNSamples` et leurs alias `_aquBaseline`/`_aquNSamples` étaient assignés mais
+  // n'avaient AUCUN lecteur ailleurs dans le fichier (grep exhaustif, contre-vérifié). Seuls
+  // `aquExternalCorr` et `window._intermagnetSource` sont vivants (lus par calcExternalCorr(),
+  // _updateDstUI(), et le texte i18n de correction externe) — conservés ci-dessous.
   try{
     const d = await fetchEnv('public/data/intermagnet_latest.json', 4000);
     if(!d || !d.station_used || !d.generated_at) {
-      const _aq = document.getElementById('aqu-status');
-      if(_aq) _aq.style.display = 'none';
       return; // fichier absent, ou aucune station exploitable au dernier cycle
     }
     const age_ms = Date.now() - new Date(d.generated_at).getTime();
     if(isNaN(age_ms) || age_ms > INTERMAGNET_STALE_AFTER_MS){
-      const _aq = document.getElementById('aqu-status');
-      if(_aq) _aq.style.display = 'none';
       return; // fichier périmé (cron en panne) — fallback Dst/Kp, pas de delta obsolète affiché
     }
     aquExternalCorr = Math.round(d.delta_nT);
     window._intermagnetSource = d.station_used;
-    window._intermagnetBaseline = Math.round(d.baseline_30j_nT);
-    window._intermagnetNSamples = d.n_samples;
-    // Alias retro-compat pour code existant referencant ces variables.
-    window._aquBaseline = window._intermagnetBaseline;
-    window._aquNSamples = window._intermagnetNSamples;
-    const _aq = document.getElementById('aqu-status');
-    if(_aq) _aq.textContent = d.station_used + ' ' + Math.round(d.baseline_30j_nT + d.delta_nT) + ' nT (baseline 30j ' + Math.round(d.baseline_30j_nT) + ' nT, n=' + d.n_samples + ')';
     if(typeof _updateDstUI === 'function') _updateDstUI();
   }catch(e){
-    const _aq = document.getElementById('aqu-status');
-    if(_aq) _aq.style.display = 'none';
     // Fichier statique indisponible -> fallback Dst (niveau 2), comportement inchangé.
   }
 }
