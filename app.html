@@ -6706,8 +6706,61 @@ function getBTSegmentsNear(lat, lon) {
 // l'utilisateur active la couche avant la fin du chargement boot. Remplace l'ancien garde booléen
 // (qui renvoyait undefined sans rien à attendre) par une promesse mise en cache et réutilisée par
 // tout appelant, boot ou toggle, sans jamais déclencher un second fetch réseau.
+// ── Drapeau de vérification « sans BT » — ?no-bt=1 (2026-09-08) ───────────────
+// POURQUOI. Un boot complet coûte 2,11 Mo d'egress Supabase, dont 92,6 % pour les seules
+// 157 pages de bt_lines (mesuré sur le fil en gzip, en-têtes compris — un chiffre en octets
+// non compressés surestime d'un facteur 7). Sur 24 h de journaux edge le 2026-09-08,
+// 94,6 % AU MINIMUM de ce trafic venait de nous : vérifications en production, harnais CI,
+// sessions locales. Aucun visiteur tiers identifiable. Le quota du plan gratuit est de 5 Go
+// par cycle, la restriction Fair Use tombe le 2026-10-05.
+//
+// CE QUE LE DRAPEAU FAIT. Il neutralise le chargement de bt_lines, et lui seul. Aucun autre
+// jeu n'est touché. Il n'est jamais actif par défaut.
+//
+// CE QU'IL NE FAIT PAS — et c'est ce qui le rend acceptable. Il ne crée AUCUN état que
+// l'application ne sache déjà nommer. Sans bt_lines, BT_SEGMENTS_DATA reste nul, exactement
+// comme pendant les ≈136 s que dure le chargement au boot : les quatre surfaces étiquetées
+// par les briefs CI/CJ (popup carte, Mon lieu, indice composite, export CSV) affichent
+// « BT absente », et loadBT() rend `bt_indisponible` plutôt qu'une couche vide. Le drapeau
+// met l'application dans un état connu et étiqueté, jamais dans un état muet.
+//
+// POURQUOI UN BANDEAU DANS LE DOM, ET PAS SEULEMENT UNE LIGNE EN CONSOLE. Une vérification
+// se conclut souvent par une capture d'écran. Une capture prise sans BT et sans marque
+// serait indiscernable d'une capture normale : le drapeau ferait mesurer moins tout en
+// laissant croire qu'on mesure autant — le mode d'échec exact du zoom-gate qui retirait la
+// couche avant la mesure. Le bandeau est donc posé dans la page, visible sur toute capture.
+// Il n'est délibérément PAS internationalisé : il marque un mode de vérification, pas un
+// état de l'application destiné à un visiteur.
+const TELLUX_SANS_BT = /(?:^|&)no-bt=1(?:&|$)/.test(location.search.replace(/^\?/, ''));
+function _marqueurSansBT() {
+  if (!TELLUX_SANS_BT || !document.body || document.getElementById('tx-sans-bt')) return;
+  const d = document.createElement('div');
+  d.id = 'tx-sans-bt';
+  d.setAttribute('role', 'status');
+  d.textContent = 'Mode vérification — couche BT non chargée (?no-bt=1)';
+  // #7a2e00 sur blanc = 9,47:1, très au-dessus du 4,5:1 de WCAG 1.4.3.
+  d.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:100000;background:#7a2e00;'
+    + 'color:#fff;font:600 12px/1.35 system-ui,-apple-system,sans-serif;padding:6px 10px;'
+    + 'border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.4);pointer-events:none;'
+    + 'max-width:min(92vw,380px)';
+  document.body.appendChild(d);
+}
+if (TELLUX_SANS_BT) {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _marqueurSansBT);
+  else _marqueurSansBT();
+}
+
 let _btLinesPromise = null;
 function loadBTLinesAsync() {
+  if (TELLUX_SANS_BT) {
+    if (!_btLinesPromise) {
+      console.warn('[Tellux] bt_lines NON chargé — drapeau ?no-bt=1 actif (mode vérification). '
+        + 'Les surfaces ELF affichent l\'étiquette « BT absente », loadBT() rend bt_indisponible.');
+      _marqueurSansBT();
+      _btLinesPromise = Promise.resolve();
+    }
+    return _btLinesPromise;
+  }
   if (_btLinesPromise) return _btLinesPromise;
   if (BT_SEGMENTS_DATA) return Promise.resolve();
   _btLinesPromise = (async () => {
@@ -7965,6 +8018,16 @@ function btTermeInclus() {
 // tant que le terme manque. Direction de l'écart CONNUE et dite : minorée, jamais « incertaine ».
 // On n'estime pas le terme absent, on ne masque pas la valeur — on la déclare incomplète.
 function btIncompletNote() {
+  // Sous ?no-bt=1 (drapeau de vérification, cf. loadBTLinesAsync), la promesse « il s’ajoute
+  // dès que les données réseau sont disponibles » serait FAUSSE : le terme ne s’ajoutera
+  // jamais, puisqu’on a coupé son chargement. Une phrase vraie sur un chemin de calcul et
+  // fausse sur l’autre est exactement le défaut qu’on traque sur les surfaces publiques ; on
+  // la corrige ici plutôt que de compter sur le bandeau pour la rattraper. Français seul,
+  // comme le bandeau : c’est une marque de mode de vérification, pas un état visiteur.
+  if (typeof TELLUX_SANS_BT !== 'undefined' && TELLUX_SANS_BT) {
+    return 'Valeur incomplète : le terme basse tension n’est pas chargé (mode vérification, '
+      + '?no-bt=1). La valeur affichée est minorée et ne sera pas complétée dans ce mode.';
+  }
   return jt('elf_bt_incomplet',
     'Valeur incomplète : le terme basse tension n’est pas encore chargé, la valeur affichée est '
     + 'minorée. Il s’ajoute dès que les données réseau sont disponibles.');

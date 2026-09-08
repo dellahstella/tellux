@@ -132,6 +132,33 @@ jobs:
         working-directory: tests/blindage-harness
         run: npx playwright install --with-deps chromium
 
+      # ═══ Cache Supabase du harnais (brief BN) — restauration sur les runners ═══
+      # Le cache posé par la PR #1263 vit dans $XDG_CACHE_HOME/tellux/harness-supabase-cache,
+      # c'est-à-dire le disque ÉPHÉMÈRE du runner. Aucun workflow ne le restaurait : chaque run
+      # repartait d'un dossier vide et rechargeait tout depuis le réseau. Le cache réduisait
+      # donc le trafic en local et rien en CI, sans que rien ne le signale — les lignes « MISS »
+      # du module partent sur stdout, redirigé vers contrast-result.json, donc invisibles dans
+      # les journaux du job. Constaté le 2026-09-08 non par ces journaux mais par les journaux
+      # edge Supabase, qui comptaient les requêtes réellement arrivées.
+      #
+      # CLÉ À ROTATION HEBDOMADAIRE, alignée sur le TTL de 7 jours du module. Une clé fixe
+      # aurait un mode d'échec silencieux : au bout de 7 jours toutes les entrées expirent,
+      # repartent au réseau, et comme la clé exacte est trouvée le job ne ré-enregistre jamais
+      # rien — le cache resterait froid pour toujours en ayant l'air posé. Avec la rotation, le
+      # premier run de chaque semaine manque la clé exacte, restaure la semaine précédente par
+      # `restore-keys`, rafraîchit ce qui a expiré et ré-enregistre. Un seul enregistrement par
+      # semaine, jamais de dérive muette.
+      - name: Semaine ISO (clé de cache)
+        id: semaine
+        run: echo "cle=$(date -u +%G-S%V)" >> "$GITHUB_OUTPUT"
+
+      - name: Restaurer le cache Supabase du harnais
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/tellux/harness-supabase-cache
+          key: harness-supabase-cache-v1-${{ steps.semaine.outputs.cle }}
+          restore-keys: harness-supabase-cache-v1-
+
       - name: Run contrast-panels
         id: contrast
         working-directory: tests/blindage-harness

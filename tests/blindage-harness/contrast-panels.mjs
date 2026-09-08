@@ -422,7 +422,24 @@ async function main() {
   let appUrl = APP_URL_OVERRIDE;
   if (!appUrl) {
     server = await startStaticServer(REPO_ROOT, PORT);
-    appUrl = `http://127.0.0.1:${PORT}/app.html`;
+    // ?no-bt=1 — drapeau de vérification (app.html, 2026-09-08). Coupe le téléchargement de
+    // bt_lines, et lui seul.
+    //
+    // POURQUOI ICI. Mesuré le 2026-09-08 sur les journaux edge Supabase : ce workflow émettait
+    // 1 827 requêtes bt_lines par jour depuis 29 IP de runners, ≈26 Mo — 18 % de tout l'egress
+    // du projet, pour un quota gratuit de 5 Go par cycle.
+    //
+    // POURQUOI ÇA NE RETIRE RIEN DE CE QUI EST MESURÉ — la question qui décide, parce qu'un
+    // garde qui retire ce qu'on mesure rend un 0 rassurant et faux. Le chargement complet de
+    // bt_lines demande ≈136 s ; ce harnais ferme sa page après ≈28 s. BT_SEGMENTS_DATA était
+    // donc DÉJÀ nul au moment des mesures, sur tous les runs antérieurs : les panneaux
+    // mesurés portaient déjà l'étiquette « valeur incomplète » des briefs CI/CJ. Le drapeau
+    // ne change pas l'état mesuré, il supprime un téléchargement dont le résultat arrivait
+    // toujours trop tard pour être vu. Il ajoute en revanche le bandeau `#tx-sans-bt`, visible
+    // sur toute capture, pour qu'aucun run ne puisse passer pour un boot complet.
+    //
+    // APP_URL fourni de l'extérieur n'est PAS modifié : viser la production reste un boot réel.
+    appUrl = `http://127.0.0.1:${PORT}/app.html?no-bt=1`;
   }
 
   const browser = await chromium.launch({ headless: HEADLESS });
