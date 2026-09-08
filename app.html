@@ -3617,6 +3617,7 @@ var JS_STRINGS_EN = {
   myplace_ant_title: "ANFR antennas nearby",
   pill_declaratif: "Declarative — ANFR registry",
   myplace_hta_none: "No high-voltage line recorded within the search range (about 2 km).",
+  myplace_hta_indispo: "Electrical network not loaded yet: the distance could not be computed. This does not mean there is no line.",
   myplace_hta_prefix: "About ",
   myplace_hta_suffix: " m.",
   myplace_hta_title: "Nearest high-voltage line",
@@ -6591,8 +6592,17 @@ function distancePointToSegmentM(lat, lon, segLat1, segLon1, segLat2, segLon2) {
   const px = x1 + t*ux, py = y1 + t*uy;
   return Math.sqrt(px*px + py*py);
 }
+// `reason` ajouté le 2026-09-08 (audit brief CL). La fonction distinguait déjà ses deux sorties
+// négatives en commentaire — « hors portée de recherche, pas "aucune ligne" » — mais elle rendait
+// le MÊME objet pour les deux, et la fiche « Mon lieu » affichait donc la même phrase :
+// « Aucune ligne haute tension recensée dans le rayon de recherche (environ 2 km). »
+// Elle la servait aussi quand la grille HTA n'est pas chargée : pendant le préchargement (~2 min
+// au boot), après un échec durable, et en repli OSM (buildSegmentGrid n'y est jamais appelée).
+// Un habitant lisait « aucune ligne à 2 km » alors qu'aucune donnée n'avait été consultée — une
+// absence de donnée rendue comme une absence d'objet, sur la surface la plus grand public du site.
+// La distinction vit maintenant dans la valeur de retour, pas seulement dans un commentaire.
 function nearestHTADistanceM(lat, lon) {
-  if (!htaGridPrete()) return { known: false, distance_m: null };
+  if (!htaGridPrete()) return { known: false, reason: 'donnee_indisponible', distance_m: null };
   const nearby = getSegmentsNear(lat, lon);
   let minD = Infinity;
   nearby.forEach(idx => {
@@ -6601,8 +6611,8 @@ function nearestHTADistanceM(lat, lon) {
     const d = distancePointToSegmentM(lat, lon, s.lat1, s.lon1, s.lat2, s.lon2);
     if (d < minD) minD = d;
   });
-  if (minD === Infinity) return { known: false, distance_m: null }; // hors portée de recherche (~2 km), pas "aucune ligne"
-  return { known: true, distance_m: Math.round(minD) };
+  if (minD === Infinity) return { known: false, reason: 'hors_portee', distance_m: null };
+  return { known: true, reason: null, distance_m: Math.round(minD) };
 }
 
 // ─── Fiche « Mon lieu » — nombre d'antennes ANFR dans un rayon donné ───
@@ -12035,10 +12045,17 @@ function myPlaceRenderSummary(d){
     : (d.n500+jt('myplace_ant_500_suffix',' antenne(s) recensée(s) dans un rayon de 500 m (')+d.n1000+jt('myplace_ant_1000_suffix',' dans 1 km).'));
   var antRow=myPlaceRow(jt('myplace_ant_title','Antennes ANFR à proximité'),antHtml,jt('pill_declaratif','Déclaratif — registre ANFR'),'declaratif');
 
-  // Ligne HTA la plus proche — position déclarée EDF SEI, distance calculée
-  var htaHtml=!d.hta.known
-    ? jt('myplace_hta_none','Aucune ligne haute tension recensée dans le rayon de recherche (environ 2 km).')
-    : (jt('myplace_hta_prefix','Environ ')+d.hta.distance_m+jt('myplace_hta_suffix',' m.'));
+  // Ligne HTA la plus proche — position déclarée EDF SEI, distance calculée.
+  // Deux sorties négatives distinctes (cf. nearestHTADistanceM) : « la donnée n'est pas là » ne
+  // se dit pas « il n'y a pas de ligne ». Ne jamais refusionner ces deux branches.
+  var htaHtml;
+  if (d.hta.known) {
+    htaHtml = jt('myplace_hta_prefix','Environ ')+d.hta.distance_m+jt('myplace_hta_suffix',' m.');
+  } else if (d.hta.reason === 'donnee_indisponible') {
+    htaHtml = jt('myplace_hta_indispo','Réseau électrique non chargé pour le moment : la distance n\'a pas pu être calculée. Ce n\'est pas une absence de ligne.');
+  } else {
+    htaHtml = jt('myplace_hta_none','Aucune ligne haute tension recensée dans le rayon de recherche (environ 2 km).');
+  }
   var htaRow=myPlaceRow(jt('myplace_hta_title','Ligne électrique haute tension la plus proche'),htaHtml,jt('pill_modelise','Position déclarée — distance calculée'),'modelise');
 
   // Champ composite — mêmes seuils/libellés que l'ancien showInterp() (retiré le 2026-08-23,
