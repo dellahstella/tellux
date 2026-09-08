@@ -713,7 +713,21 @@ li ol {
     <tbody>
       <tr><td data-i18n-key="s13_r1c1">IGRF</td><td data-i18n-key="s13_r1c2">Tous les 5 ans (prochaine : 2030)</td><td data-i18n-key="s13_r1c3">IUGG</td></tr>
       <tr><td data-i18n-key="s13_r2c1">EMAG2v3 / LCS1</td><td data-i18n-key="s13_r2c2">Gelé (pas de mise à jour prévue)</td><td data-i18n-key="s13_r2c3">NOAA/NCEI</td></tr>
-      <tr><td data-i18n-key="s13_r3c1">INTERMAGNET</td><td data-i18n-key="s13_r3c2">Automatique (cadence variable, ≈56 % de disponibilité)</td><td data-i18n-key="s13_r3c3">API GIN BGS</td></tr>
+      <!-- Fréquence INTERMAGNET — amendement du 2026-09-08 (constat CM), postérieur à #1345
+           qui avait déjà retiré le « Temps réel (1h) » jamais tenu. Deux corrections :
+
+           1. Le « ≈56 % de disponibilité » mélange deux régimes. Les 21 échecs du cron sont
+              TOUS antérieurs au 2026-09-02 et résolus. Mesuré sur les mises à jour effectives
+              du fichier servi : 56,3 % sur les 13 j complets, mais 76,1 % sur le seul régime
+              post-02/09 et 76,7 % sur les 7 derniers jours. Publier 56 % comme état courant
+              décrit surtout une période de panne close.
+           2. Un taux de disponibilité périme au premier changement de régime, et la colonne
+              demande une FRÉQUENCE. La médiane, elle, est stable : 3,19 h / 3,19 h / 3,13 h
+              sur les trois mêmes fenêtres. C'est elle qu'on affiche.
+
+           Le repli est nommé parce que c'est le fait qui concerne le lecteur : au-delà de 3 h
+           d'âge, l'application n'utilise pas un delta obsolète, elle descend la cascade. -->
+      <tr><td data-i18n-key="s13_r3c1">INTERMAGNET</td><td data-i18n-key="s13_r3c2">Automatique, ≈3 h en pratique (planification best-effort) — au-delà de 3 h, repli sur Dst puis Kp</td><td data-i18n-key="s13_r3c3">API GIN BGS</td></tr>
       <tr><td data-i18n-key="s13_r4c1">Dst/Kp</td><td data-i18n-key="s13_r4c2">Temps réel (1h)</td><td data-i18n-key="s13_r4c3">NOAA SWPC (Dst : Kyoto WDC)</td></tr>
       <tr><td data-i18n-key="s13_r5c1">ANFR</td><td data-i18n-key="s13_r5c2">Mensuelle</td><td data-i18n-key="s13_r5c3">Cartoradio</td></tr>
       <tr><td data-i18n-key="s13_r6c1">IRSN</td><td data-i18n-key="s13_r6c2">Annuelle</td><td data-i18n-key="s13_r6c3">IRSN</td></tr>
@@ -803,6 +817,10 @@ function telluxGetEffectiveLang(){
   // I18N-DOC-PAGES-EN-001, qui reste entière pour tout le reste de la page (y compris
   // s7_p1/s7_p2, adjacentes).
   var EN_STRINGS = {
+    // s13_r3c2 (2026-09-08, constat CM) : même raison que les clés ci-dessus — cellule
+    // corrigée le jour même, donc traduite le jour même. Ne vaut pas début de résolution
+    // de I18N-DOC-PAGES-EN-001, qui reste entière pour le reste de la page.
+    s13_r3c2: 'Automatic, ≈3 h in practice (best-effort scheduling) — beyond 3 h, falls back to Dst then Kp',
     s2_4_p2: '<strong>Limit on this component:</strong> the decay law used here (1/d) is slower than what a compact source would dictate geometrically. The direction of the gap is established; its exponent is not. Values produced for this component should therefore be read as an upper bound rather than a central estimate on this term. For comparison, the source substations described above use a <strong>1/d³</strong> decay, consistent with their compact geometry.',
     s8_p1b: '<strong>Note:</strong> The measurement points used to derive <code>k</code> are for the most part located outside Corsica’s dense urban areas. The model does not separately model attenuation from built structures (walls, buildings). As this component is not accounted for, its effect would be to overestimate, rather than underestimate, the real RF field in dense urban areas. This possibility is neither quantified nor corrected today; it is mentioned here for transparency about the actual scope of the calibration.',
     s7_p3: '<strong>Reading scale — comparable anomalies:</strong> Corsica’s geomagnetic background (IGRF-14): 46,150–47,200 nT depending on location. High-end global reference, sourced value already used by the “Reference anomalies” layer: <strong>Kursk</strong> (Russia), banded iron formation, <strong>+3,000 nT</strong> (Krutikhovskaya et al., dedicated ground survey). Two Mediterranean anomalies of the same geological family, documented but with no published nT value — <strong>Elba Island</strong> (Tuscany, Italy; Cassano et al. 2001, <em>Ofioliti</em> 26(2a):153-160 — strong short-wavelength anomalies associated with ophiolitic bodies, two distinct belts) and the <strong>Catalan Sea</strong> (Spain; BRGM/OROGEN, digitized 1965 CGG airborne survey — “a very strong positive anomaly”, modelled as a gabbroic magmatic intrusion or crustal subplating). Four distinct locations, not to be confused: Monte Maggiore (Corsica), Elba (Tuscany), Catalan (Spain), Kursk (Russia). With no published nT value for Elba/Catalan, no figure is put forward for either site — same rule as for Monte Maggiore above. Elba and Catalan are not mapped in Tellux (unlike Monte Maggiore, a point on the “Reference anomalies” layer): cited here only as a comparative reading scale.',
