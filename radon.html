@@ -489,6 +489,30 @@ a{color:inherit;}
       </div>
       <p class="mr-etab-lead" data-i18n-key="depot_sub">Votre commune est détentrice de ses résultats de mesurage radon dans les établissements recevant du public dont elle est propriétaire (école, crèche…) — Tellux héberge, agrège et affiche ces résultats, il n'est à aucun moment autorité de mesure. Réservé aux établissements recevant du public institutionnels (écoles, crèches, mairies, établissements sanitaires/sociaux) : jamais un logement privé. Chaque dépôt est vérifié manuellement par Tellux avant toute publication.</p>
 
+      <p class="mr-etab-lead" id="rd-depot-suspendu" data-i18n-key="depot_suspendu"><strong>Dépôt temporairement suspendu.</strong> Le formulaire est fermé le temps de compléter la chaîne de traitement : l'envoi d'un rapport en pièce jointe n'aboutit pas, et le circuit de vérification avant publication doit être repris. Pour transmettre un résultat de mesurage d'ici là, utilisez l'adresse de contact indiquée dans les <a href="mentions-legales.html">mentions légales</a> : le dépôt sera enregistré et traité manuellement.</p>
+
+      <!-- FORMULAIRE DE DÉPÔT ERP SUSPENDU le 2026-09-08 (décision Soleil, sur constat).
+           Masqué, PAS supprimé — même patron que #b-hyd : réactivable en dé-commentant, une fois
+           les trois points ci-dessous levés. Le JS (drSubmit, drUploadDocument, validations,
+           renderDepotsCommune) reste intact et sans cible DOM : il ne s'applique simplement à rien.
+
+           Ce qui a motivé la suspension, établi le 2026-09-08 contre la base elle-même :
+           1. Le bucket `radon-depots-documents` répond 404 (NoSuchBucket). drUploadDocument()
+              lève sur !r.ok, donc TOUT dépôt accompagné d'un PDF échoue avant l'insertion. Un
+              dépôt sans pièce jointe, lui, aboutit.
+           2. Un dépôt réel attend depuis le 2026-08-14 (commune 2A004, statut `en_attente`),
+              soit 25 jours sans revue. Le circuit de vérification annoncé par le texte
+              ci-dessus n'a jamais fonctionné en pratique.
+           3. Les deux policies RLS protègent correctement la ligne tant qu'elle est en attente
+              (SELECT anon limité à statut_verification_tellux = 'publie'), MAIS elles ne
+              restreignent aucune COLONNE : `deposant_email` figure parmi les colonnes que le
+              rôle anon peut sélectionner. Le jour où un dépôt est publié, l'adresse de son
+              déposant devient lisible par quiconque possède la clé anon, publique côté client.
+              Aucune de ces policies n'est versionnée dans _migrations/.
+
+           Réactivation : bucket créé, revue effectivement tenue, et courriel soit retiré du
+           formulaire, soit protégé par une vue publique n'exposant pas la colonne. -->
+      <!--
       <div id="depot-radon-form-wrap" class="mr-depot-radon-wrap">
         <form id="depot-radon-form" novalidate>
 
@@ -605,6 +629,7 @@ a{color:inherit;}
           <button type="button" class="mr-btn-ghost" id="dr-new-deposit-btn" data-i18n-key="dr_success_new_btn">Effectuer un nouveau dépôt</button>
         </div>
       </div>
+      -->
       <datalist id="communes-corse"></datalist>
     </section>
 
