@@ -4554,7 +4554,30 @@ const LEGEND_HTML={
   // sous-titre, 2 couleurs, 3 lignes d'info, "why", source) à 1 seule ligne — état visuel
   // simple (2 couleurs) gardé "par souci de rigueur" (triage Soleil) mais plus un bloc. Promue
   // en Zone 1 "core" (cf. LEGEND_CORE_IDS plus haut) : n'apparaît plus en pastille flottante.
-  emag:'<div class="leg-block"><b class="leg-title" style="font-size:11px">Fond magnétique régional</b><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px"><span style="display:inline-block;width:8px;height:8px;background:#dc2626;border-radius:2px;vertical-align:middle;margin-right:2px"></span>Positif ·<span style="display:inline-block;width:8px;height:8px;background:#2563eb;border-radius:2px;vertical-align:middle;margin:0 2px 0 4px"></span>Négatif — socle profond, non lié à l\'homme (EMAG2v3 NOAA)</div></div>',
+  // Correspondance couleur RETIRÉE le 2026-09-08 (audit de vérité des légendes du 07/09).
+  // Le bloc affichait deux carrés plats — #dc2626 « Positif », #2563eb « Négatif ». Aucune de
+  // ces deux couleurs n'est produite par Tellux : la couche est une imageOverlay PRÉ-RENDUE
+  // par NOAA (wmsEmag, rasterFunction EMAG2_Color_Scale). On décrivait un rendu tiers sans
+  // l'avoir lu.
+  //
+  // Ce que la source déclare, relevé le 2026-09-08 sur /ImageServer/legend?f=json :
+  //   legendType « Stretched », bornes « High : 200 » et « Low : -200 » (nT), pastilles en
+  //   DÉGRADÉ (magenta → rouge → jaune pâle, puis bleu clair → bleu sombre).
+  // Soit une échelle CONTINUE, pas une partition en deux catégories. Le défaut n'était donc
+  // pas une teinte imprécise : on présentait un dégradé comme un choix binaire, en taisant
+  // les bornes.
+  //
+  // POURQUOI PAS LE PATRON `hyd` (embarquer la légende du serveur) — testé, pas supposé :
+  //   - la légende ArcGIS n'existe QU'EN base64 dans le JSON, il n'y a pas d'URL d'image.
+  //     /0/images/<id> et /legend/<id> répondent 200 mais en text/html, pas en image/png.
+  //     Le simple <img src="…"> de `hyd` (GetLegendGraphic du WMS BRGM) n'a pas d'équivalent ici.
+  //   - un fetch à l'exécution serait possible : CORS vérifié (access-control-allow-origin: *),
+  //     et la légende est IDENTIQUE avec et sans renderingRule=EMAG2_Color_Scale — le piège qui
+  //     avait touché `hyd`, une liste décrivant une autre classification que celle servie, ne se
+  //     pose pas ici. Non fait dans cette passe : ce endpoint a un historique documenté de
+  //     500/503 (cf. wmsEmag.on('error')) et LEGEND_HTML est une carte de chaînes statiques.
+  // Sortie retenue : dire la vérité, plutôt que copier des couleurs qui périmeraient en silence.
+  emag:'<div class="leg-block"><b class="leg-title" style="font-size:11px">Fond magnétique régional</b><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px">Échelle continue de &#x2212;200 à +200 nT — les couleurs sont celles de l\'image servie par NOAA, Tellux n\'en produit aucune. Socle profond, non lié à l\'homme (EMAG2v3 NOAA).</div></div>',
   // Entrée 'crustal' retirée le 2026-08-27 (brief "Panneau '?' sélectif", triage validé
   // Soleil) : "l'interactivité au clic donne déjà l'info par point" — chaque marqueur (5
   // mondiaux + 3 Corse, cf. buildCrustalLayer() plus bas) ouvre un popup détaillé au clic,
@@ -4660,7 +4683,7 @@ const LEGEND_HTML_EN={
     '</div>',
   hyd:'<div class="leg-block"><b class="leg-title">Groundwater</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Groundwater near the surface — BRGM visual layer; the calculation uses a separate dataset</div><img src="https://geoservices.brgm.fr/risques?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.1.1&FORMAT=image/png&LAYER=REMNAPPE_FR" style="max-width:260px;width:100%;display:block;margin:4px 0;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:4px;padding:4px;box-sizing:border-box" alt="Groundwater rise legend (BRGM REMNAPPE_FR)"><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Legend served live by the BRGM server — replaces the previous static list (\"Outcropping / Sub-outcropping\"), which described a different classification than the one actually rendered.</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
   ant:'<div class="leg-block"><b class="leg-title">ANFR Antennas</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">A dot marks a declared <b>site</b>, not a single antenna: several generations almost always coexist there, and often several operators. Tap or hover a point to see what is declared. Grouped into clusters (count) at low zoom; TDF transmitters keep their own colour and a corner badge even when clustered.</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a4f5e;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Declared transmission site — the colour encodes no technology</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;vertical-align:middle;margin-right:4px"></span><b style="color:#616874">Major radio/TV transmitter</b> (TDF)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Operators: Orange · SFR · Bouygues · Free<br><span id="leg-ant-count">—</span> antennas · Source: ANFR open data</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px">Regulatory compliance (legal threshold 28 V/m): see the <b>"Certified measurements (ANFR/EXEM)"</b> layer (Natural context menu).</div><div class="leg-src">ANFR</div></div>',
-  emag:'<div class="leg-block"><b class="leg-title" style="font-size:11px">Regional magnetic background</b><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px"><span style="display:inline-block;width:8px;height:8px;background:#dc2626;border-radius:2px;vertical-align:middle;margin-right:2px"></span>Positive ·<span style="display:inline-block;width:8px;height:8px;background:#2563eb;border-radius:2px;vertical-align:middle;margin:0 2px 0 4px"></span>Negative — deep basement, unrelated to human activity (NOAA EMAG2v3)</div></div>',
+  emag:'<div class="leg-block"><b class="leg-title" style="font-size:11px">Regional magnetic background</b><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px">Continuous scale from &#x2212;200 to +200 nT — the colours are those of the image served by NOAA; Tellux produces none of them. Deep basement, unrelated to human activity (NOAA EMAG2v3).</div></div>',
   res:'<div class="leg-block"><b class="leg-title">Electrical grid</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>Power line (single colour)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">The Supabase dataset (8,386 EDF SEI lines) carries no voltage field: HTA and HTB share the same colour in normal rendering (documented technical debt). An HTB &#x2265; 50 kV distinction only exists in an exceptional fallback mode (OSM lookup, when Supabase is unavailable), not shown here.</div><div class="leg-src">EDF SEI · Supabase · OSM (fallback)</div></div>',
   bt:'<div class="leg-block"><b class="leg-title">LV grid</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Street-level electrical distribution</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>Overhead BT</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>Underground BT</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 9</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Generation sites</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Corsican power grid generation plants</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydro dam</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Run-of-river hydro</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Wind</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogas</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Gas turbine (combustion turbine)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnection</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Size according to power output:</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
@@ -9006,11 +9029,21 @@ map.on('click',async e=>{
   //   • #c026d3  ->  #AD22BE (4,93) — le « C±n » crustal de la ligne Δ. Seul hex réellement neuf,
   //     assombrissement de 10 % à teinte conservée. ⚠️ Le swatch EMAG du menu Couches (b-emag) est
   //     assombri À L'IDENTIQUE, contrairement à la règle « on ne touche pas aux swatches » de
-  //     #1153 — délibérément : cette règle protège les couleurs partagées avec le RENDU CARTE, or
-  //     EMAG ne se rend PAS en magenta. Sa propre légende (LEGEND_HTML.emag) le dit — #dc2626 pour
-  //     le positif, #2563eb pour le négatif. #c026d3 n'existait qu'à deux endroits, tous deux de
-  //     l'UI : ce swatch et ce texte. Les assombrir ensemble préserve exactement leur
-  //     correspondance visuelle sans toucher à aucune couleur de signification cartographique.
+  //     #1153 — délibérément : cette règle protège les couleurs partagées avec le RENDU CARTE.
+  //     ⚠️ JUSTIFICATION CORRIGÉE le 2026-09-08 (audit de vérité des légendes). Elle disait :
+  //     « EMAG ne se rend PAS en magenta, sa propre légende le dit — #dc2626 positif, #2563eb
+  //     négatif ». DEUX défauts. (a) Elle s'appuyait sur LEGEND_HTML.emag comme sur une preuve,
+  //     alors que ce bloc n'était qu'une affirmation jamais vérifiée contre le rendu servi —
+  //     raisonnement circulaire, une décision adossée à une assertion de notre propre UI.
+  //     (b) Elle est FAUSSE : la légende publiée par NOAA (/ImageServer/legend?f=json, relevée
+  //     le 2026-09-08) donne une rampe continue dont le haut EST magenta (#ab2b8f), puis rouge,
+  //     jaune pâle, bleu clair, bleu sombre.
+  //     LA DÉCISION D'ASSOMBRIR RESTE, avec la vraie raison, plus solide que l'ancienne : le
+  //     swatch b-emag n'a JAMAIS échantillonné la rampe servie — ni #c026d3, ni #dc2626, ni
+  //     #2563eb n'y figurent. Ce n'est pas une couleur de signification cartographique, c'est
+  //     une vignette d'UI. La règle de #1153 ne s'y appliquait donc pas, quel que soit le rendu.
+  //     #c026d3 n'existait qu'à deux endroits, tous deux de l'UI : ce swatch et ce texte. Les
+  //     assombrir ensemble préserve exactement leur correspondance visuelle.
   //     Le dictionnaire GC des marqueurs ANFR, lui, garde #6b7280 : celui-là rend bien sur la
   //     carte, et la règle de #1153 s'y applique pleinement.
   //
