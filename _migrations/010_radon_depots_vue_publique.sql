@@ -127,15 +127,36 @@ REVOKE SELECT, UPDATE ON public.radon_depots_erp FROM authenticated;
 --          rejetée. Un 42501 aurait signalé un INSERT révoqué par erreur. Aucune ligne
 --          créée (table revérifiée à 0).
 --
--- 5. CE QUI RESTE ACCORDÉ, ET N'A PAS ÉTÉ TRANCHÉ — à arbitrer, rien d'exécuté.
---    Après le REVOKE ci-dessus, anon et authenticated détiennent encore sur la table :
---    DELETE, INSERT, REFERENCES, TRIGGER, TRUNCATE.
---    INSERT est voulu (ci-dessus). Les quatre autres relèvent du même raisonnement que
---    celui appliqué à UPDATE, et deux méritent d'être nommés :
+-- 5. RETRAIT DES QUATRE PRIVILÈGES RESTANTS — APPLIQUÉ le 2026-09-08, arbitrage Soleil.
+--    L'inventaire relevé avant le REVOKE de l'étape 4 en donnait SEPT, pas quatre :
+--    DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE. Le périmètre
+--    initialement convenu (SELECT + UPDATE) avait été fixé AVANT de connaître ce compte.
+--    Motif de l'élargissement, mot de Soleil : « on ne les laisse pas parce que le
+--    périmètre convenu était plus étroit — on le convenait avant de savoir qu'il y en
+--    avait sept ».
+--
 --      - DELETE n'est inerte que parce qu'aucune policy DELETE n'existe — même fragilité
 --        que UPDATE, à un `CREATE POLICY` près ;
---      - TRUNCATE n'est PAS filtré par la RLS. Le privilège n'est pas atteignable via
---        PostgREST (l'API n'émet jamais de TRUNCATE), donc la clé anon ne l'expose pas.
---        Mais il ne doit rien à la RLS : il ne tient qu'à l'absence de chemin.
---    Le périmètre du REVOKE (SELECT + UPDATE) est celui qui a été convenu ; l'élargir est
---    une décision, pas une correction mécanique. Consigné ici pour ne pas rester implicite.
+--      - TRUNCATE n'est PAS filtré par la RLS. Il n'est pas atteignable via PostgREST
+--        (l'API n'émet jamais de TRUNCATE), donc la clé anon ne l'exposait pas. Mais il
+--        ne devait rien à la RLS : il ne tenait qu'à l'absence de chemin ;
+--      - TRIGGER et REFERENCES ne servent aucun chemin du rôle anonyme.
+--
+--    INSERT est CONSERVÉ, seule fonction légitime du rôle anonyme sur cette table.
+--
+--    Exécutés UN PAR UN, avec la batterie de contrôle rejouée après chaque retrait —
+--    jamais en bloc : un retrait qui casse l'INSERT devait être imputable à sa ligne.
+
+REVOKE DELETE     ON public.radon_depots_erp FROM anon, authenticated;
+REVOKE TRUNCATE   ON public.radon_depots_erp FROM anon, authenticated;
+REVOKE TRIGGER    ON public.radon_depots_erp FROM anon, authenticated;
+REVOKE REFERENCES ON public.radon_depots_erp FROM anon, authenticated;
+
+-- CONTRÔLE APRÈS CHACUN DES QUATRE — les trois lignes identiques aux quatre passages :
+--   GET  radon_depots_publies?select=…          → 200                      ✓ ✓ ✓ ✓
+--   GET  radon_depots_erp?select=deposant_email → 401 / 42501              ✓ ✓ ✓ ✓
+--   POST radon_depots_erp (corps vide)          → 400 / 23502 (pas 42501)  ✓ ✓ ✓ ✓
+--
+-- ÉTAT FINAL relevé contre information_schema.role_table_grants :
+--   public.radon_depots_erp      → anon, authenticated : INSERT seul
+--   public.radon_depots_publies  → anon, authenticated : SELECT seul
