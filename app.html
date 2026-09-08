@@ -991,7 +991,11 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 /* Badge NC */
 .nc-badge{display:inline-block;background:#7c0000;color:#ffd700;font-family:var(--mono);font-size:9px;font-weight:500;padding:2px 6px;border-radius:4px;border:1px solid #ffd70055;letter-spacing:.03em;vertical-align:middle;}
 /* Panneau stats corpus */
-.stats-panel{background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-top:10px;display:none;}
+/* .stats-panel devient la CARTE de la modale #stats-modal (2026-09-08) — plus une visibilité
+   propre : display:none/flex est désormais porté par #stats-modal (le fond), pas par cette classe.
+   position:relative pour ancrer le bouton de fermeture ; max-height/overflow-y car le contenu
+   (titre + 2 grilles + graphique + note) dépasse 90vh sur les petits écrans. */
+.stats-panel{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:20px 22px 16px;position:relative;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:var(--font);}
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
 .stat-box{background:var(--pierre-ombre);border-radius:var(--r);padding:8px 10px;border:1px solid var(--border);text-align:center;}
 .stat-val{font-size:20px;font-weight:500;font-family:var(--mono);}
@@ -1919,6 +1923,10 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
          reecriture. Balisage retire et non commente, pour ne pas laisser un element que grep
          trouve et qu'on relit comme vivant. -->
     <button class="hdr-btn" onclick="openAboutModal()" title="À propos du projet">À propos</button>
+    <!-- Bouton ajouté le 2026-09-08 (arbitrage Soleil) : déclencheur du panneau stats corpus
+         CartoRadio, en modale (#stats-modal) — contenu vrai, jamais accessible avant ce jour
+         (cf. commentaire à l'emplacement du panneau, plus bas dans ce fichier). -->
+    <button class="hdr-btn" onclick="openStatsPanel()" title="Statistiques des mesures RF certifiées (CartoRadio EXEM)">Corpus RF</button>
     <span class="hdr-menu-sep" aria-hidden="true"></span>
     <!-- Lien "Radon" réintégré au menu sandwich le 2026-08-27 (brief "nettoyage Contexte
          naturel", décision Soleil) : le lien contextuel "Voir le volet radon →" qui le rendait
@@ -3138,23 +3146,28 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
 
 <!-- PANNEAU HYPOTHÈSES (tableau de bord Phase 1-4) → migré vers patrimoine.html -->
 
-<!-- PANNEAU STATS CORPUS — CONTENU CORRIGÉ le 2026-09-08 (arbitrage Soleil : « réactive-le »),
-     TOUJOURS display:none — la réactivation demandée s'est révélée plus qu'un toggle CSS.
-     `.map-col` (ancêtre de ce panneau) est en `position:absolute`, calée exactement sur le
-     viewport (top:0;left:0, largeur/hauteur = fenêtre), sur desktop ET mobile — vérifié en
-     navigateur aux deux tailles. Un enfant en flux normal qui dépasse cette boîte n'agrandit PAS
+<!-- PANNEAU STATS CORPUS — PLACÉ EN MODALE le 2026-09-08 (arbitrage Soleil : « réactive-le »,
+     préférence explicite pour la modale — « le contenu est dense, il se lit d'un bloc, il ne
+     demande pas de coexister avec la carte »).
+     Pourquoi une modale et pas le flux normal : `.map-col` (ancêtre historique de ce panneau) est
+     en `position:absolute`, calée exactement sur le viewport, sur desktop ET mobile — vérifié en
+     navigateur aux deux tailles. Un enfant en flux normal qui dépasse cette boîte n'agrandit pas
      le document (les éléments absolument positionnés ne comptent pas dans le scrollHeight du
-     parent) : ce panneau, une fois démasqué, rendait bien `display:block` et une géométrie
-     cohérente (getBoundingClientRect), mais AUCUN scroll de la page ne peut jamais l'atteindre —
-     invisible pour de vrai, pas seulement discret. L'architecture a migré vers une carte plein
-     viewport avec panneaux flottants (`position:fixed`, cf. #expert-modal/#contrib-level-modal/
-     #tellux-legends-context, tous fixed) depuis la construction de ce panneau ; `#geo-panel` retiré
-     plus haut aujourd'hui vivait dans la même impasse structurelle.
-     CE QUI EST FAIT, prêt dès qu'un hôte est choisi : contenu intégralement vérifié et un bug
-     corrigé (ci-dessous). CE QUI RESTE À DÉCIDER, hors périmètre de ce correctif : par quel
-     mécanisme existant (modal, panneau flottant Zone 2, nouvelle entrée de menu) le faire
-     apparaître — décision de placement, pas de contenu, non tranchée ici.
-     Recompté sur public/data/cartoradio_certified_corse.json avant tout :
+     parent) : simplement retirer `display:none` rendait `display:block` avec une géométrie
+     cohérente, mais RESTAIT INATTEIGNABLE par tout scroll — la première tentative de ce même jour
+     l'a démontré avant d'être annulée. L'architecture a migré vers une carte plein viewport avec
+     panneaux flottants (`position:fixed`) depuis la construction de ce panneau ; c'est ce patron
+     qui est repris ici, à l'identique de #expert-modal / #contrib-level-modal.
+     Déclencheur : bouton « Corpus RF » dans le menu ☰ (#hdr-menu), à côté de « Méthodologie » et
+     « À propos » — même famille de contenu (référence sur la donnée, pas une couche de carte).
+     openStatsPanel()/closeStatsPanel() juste après openContribLevelModal()/closeContribLevelModal()
+     plus bas dans ce fichier, même mécanique (style.display + aria-hidden, pas de piège focus).
+     STRUCTURE PRÉSERVÉE À DESSEIN : le bouton de fermeture ajouté ci-dessous est un élément
+     BUTTON, pas un DIV — `#stats-panel > div:last-of-type` (3 entrées I18N_ENTRIES, stats_labo_prefix et
+     suivantes) continue de cibler le même div (le footer), :last-of-type comptant par TYPE de
+     balise et ignorant les frères d'un autre type. Aucun sélecteur i18n existant n'a bougé.
+     Contenu recompté sur public/data/cartoradio_certified_corse.json le même jour, avant
+     placement — voir historique git pour le détail chiffré (commit du contenu, même jour) :
        - le titre (236/151/85/1 non-conformité) porte sur le CORPUS COMPLET, exact ;
        - la grille de stats (min/max/médiane/seuils) porte sur les 30 fiches D'ORIGINE
          (calib_eligible absent), 28 RF + 2 basse fréquence (protocole 9 kHz-100 kHz, ids 190593 et
@@ -3175,7 +3188,9 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
          San Quilico sont deux dates distinctes, pas un doublon : #192990 (20/03/2025, non
          conforme) et #193102 (01/04/2025, re-mesure après correctif opérateur, conforme) — la note
          de la fiche #192990 le confirme. -->
+<div id="stats-modal" role="dialog" aria-modal="true" aria-label="Statistiques du corpus CartoRadio EXEM" aria-hidden="true" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(31,35,41,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:2300;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeStatsPanel()">
 <div class="stats-panel" id="stats-panel">
+  <button id="stats-close-btn" onclick="closeStatsPanel()" aria-label="Fermer" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--tx3);line-height:1;padding:2px 6px;z-index:1">&#x2715;</button>
   <div class="mpanel-title">Corpus CartoRadio EXEM — 236 fiches ANFR/EXEM · Corse 2002–2026 · 1 non-conformité documentée (Monticello) · 151 en position exacte, 85 résidentielles agrégées au centroïde communal</div>
   <div id="stats-scope-note" style="font-size:10px;color:var(--tx3);margin:-4px 0 8px">Détail ci-dessous sur les 30 fiches d'origine (28 mesures RF + 2 basse fréquence), sous-ensemble du corpus complet — pas les 236.</div>
   <div class="stats-grid">
@@ -3208,6 +3223,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
     Laboratoire : <b>EXEM</b> · Protocole ANFR/DR 15-4 · Toutes mesures conformes sauf <span class="nc-badge">NON CONFORME</span> Monticello San Quilico #192990 (29.05 V/m · 20/03/2025) — rapport d'infraction établi
   </div>
 </div>
+</div><!-- /#stats-modal -->
 
 <!-- PANNEAU INTERPRÉTATION GRAND PUBLIC -->
 <!-- #interp retiré le 2026-08-23 (dette confirmée : display:none permanent, seul appelant
@@ -12128,6 +12144,20 @@ function chooseContribLevelN0(){
   startContribFromFAB();
 }
 
+// ═══ MODALE STATS CORPUS CARTORADIO (2026-09-08) ═══
+// Déclenchée depuis le bouton « Corpus RF » du menu ☰ (#hdr-menu). Même mécanique que
+// openContribLevelModal()/closeContribLevelModal() ci-dessus : style.display + aria-hidden,
+// pas de piège à focus (aucun autre modal de ce fichier n'en a). Contenu statique, rien à
+// initialiser à l'ouverture.
+function openStatsPanel(){
+  var m=document.getElementById('stats-modal');
+  if(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
+}
+function closeStatsPanel(){
+  var m=document.getElementById('stats-modal');
+  if(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); }
+}
+
 // ═══ FAB « + » — action de contribution ═══
 // Remplace toggleFabMenu() (2026-09-07, arbitrage Soleil) : #fab-menu ne contenait plus qu'un
 // item depuis la sortie de « Mon lieu », et un menu à un seul item n'est plus un menu.
@@ -13741,6 +13771,8 @@ function capCleanup(){
 ["nav_termes_tt",".hdr-actions button[onclick='openGlossaryDrawer()']","title","Glossaire & guides pratiques","Glussariu è guide pratiche","Glossary & practical guides"],
 ["nav_apropos",".hdr-actions button[onclick='openAboutModal()']","","À propos","À prupositu","About"],
 ["nav_apropos_tt",".hdr-actions button[onclick='openAboutModal()']","title","À propos du projet","À prupositu di u prugettu","About the project"],
+["nav_stats_corpus",".hdr-actions button[onclick='openStatsPanel()']","","Corpus RF","","RF corpus"],
+["nav_stats_corpus_tt",".hdr-actions button[onclick='openStatsPanel()']","title","Statistiques des mesures RF certifiées (CartoRadio EXEM)","","Statistics on certified RF measurements (CartoRadio EXEM)"],
 ["nav_patrimoine",".hdr-actions a[href='patrimoine.html']","","Patrimoine (bêta)","Patrimoniu (beta)","Heritage (beta)"],
 ["nav_patrimoine_tt",".hdr-actions a[href='patrimoine.html']","title","Cartographie patrimoniale de la Corse","Cartugrafia patrimuniale di a Corsica","Heritage mapping of Corsica"],
 ["nav_mairies",".hdr-actions a[href='mairies.html']","","Élu·e ? Outils mairie →","Elettu·a ? Strumenti merria →","Local official? Municipal tools →"],
@@ -14074,6 +14106,8 @@ function capCleanup(){
 ["mat_sep_legeres","#c-mats div@1","","— Parois légères —","","— Lightweight partitions —"],
 ["mat_sep_tuyauterie","#c-mats div@2","","— Tuyauterie (effet ELF local uniquement) —","","— Piping (local ELF effect only) —"],
 ["stats_scope_note","#stats-scope-note","","Détail ci-dessous sur les 30 fiches d'origine (28 mesures RF + 2 basse fréquence), sous-ensemble du corpus complet — pas les 236.","","Detail below covers the 30 original records (28 RF measurements + 2 low-frequency), a subset of the full corpus — not the 236."],
+["stats_modal_aria","#stats-modal","aria-label","Statistiques du corpus CartoRadio EXEM","","CartoRadio EXEM corpus statistics"],
+["stats_close_aria","#stats-close-btn","aria-label","Fermer","","Close"],
 ["stats_mpanel_title","#stats-panel .mpanel-title","","Corpus CartoRadio EXEM — 236 fiches ANFR/EXEM · Corse 2002–2026 · 1 non-conformité documentée (Monticello) · 151 en position exacte, 85 résidentielles agrégées au centroïde communal","","CartoRadio EXEM corpus — 236 ANFR/EXEM sheets · Corsica 2002–2026 · 1 documented non-compliance (Monticello) · 151 at exact position, 85 residential aggregated at commune centroid"],
 ["stats_bar_title",".stats-bar-title","","Top mesures par valeur (V/m) — limite légale 28–61 V/m · seuil atypique 9 V/m","","Top measurements by value (V/m) — legal limit 28–61 V/m · atypical threshold 9 V/m"],
 ["stats_labo_prefix","#stats-panel > div:last-of-type","","Laboratoire :","","Laboratory:"],
