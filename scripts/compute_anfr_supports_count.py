@@ -36,8 +36,14 @@ Source :
     5fa56156-bde6-4dd0-81e7-6dee1318f669, mise a disposition 2026-05-31).
     Audit de provenance fait le 2026-09-08 : mapping sup_id<-SUP_ID
     confirme, 590/656 supports mobiles retrouves a moins de 100 m d'une
-    position du socle antennas_corse (90 % de recoupement), ecart explique
-    par la difference de millesime entre les deux jeux.
+    position du socle antennas_corse (90 % de recoupement). Correctif du
+    meme jour (volet B, constat _drafts/) : l'ecart residuel n'est PAS
+    une difference de millesime — antennas_corse (CartoRadio) et
+    anfr_supports/anfr_secteurs (export national ANFR) sont deux
+    extractions ANFR INDEPENDANTES, pas une relation source/derive. 13
+    communes portent du mobile reel (ANFR, mis en service 2016-2024, pas
+    recent) absent du socle CartoRadio — divergence entre deux sources
+    de la meme autorite, non expliquee, non resolue.
 
 Requires:
     stdlib Python 3.10+ uniquement (json, urllib).
@@ -48,6 +54,18 @@ Result (recalcule en direct le 2026-09-08, cf. commit) :
     Export ANFR : mise a disposition 2026-05-31 (donnee externe, pas
     recalculee ici — la date figure dans ce script, pas dans une colonne
     de la table).
+
+⚠ AUCUN RAFRAICHISSEMENT AUTOMATIQUE (brief 2026-09-08, etape A.5) :
+    Ingestion PONCTUELLE du 2026-07-01 (chantier directivite). Aucun
+    workflow, aucun cron — contrairement a intermagnet-cron.yml ou
+    refresh-antennes.yml. Le nombre 976 restera fige a l'export du
+    31 mai 2026 jusqu'a decision explicite : (a) un workflow de
+    rafraichissement dedie, avec le cout de maintenance deja mesure sur
+    intermagnet-cron.yml (cf. INTERMAGNET-CRON-CADENCE-DEGRADEE-001,
+    registre prive), ou (b) assumer le gel et le documenter comme dette
+    ouverte — c'est l'option choisie ici par defaut, PAS un refresh
+    silencieux. Ne pas retirer cet avertissement sans avoir traite l'un
+    des deux. Dette privee : ANFR-SUPPORTS-EXTRACTION-GELEE-001.
 
 Usage:
     python3 scripts/compute_anfr_supports_count.py
