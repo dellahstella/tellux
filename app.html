@@ -707,10 +707,6 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 }
 .mtabs{display:flex;gap:6px;margin-bottom:8px;align-items:center;}
 .mtab{font-family:var(--mono);font-size:11px;padding:5px 13px;border-radius:20px;border:1px solid var(--border);background:var(--pierre-ombre);color:var(--ardoise-clair);cursor:pointer;transition:all .15s;}
-.geo-check{display:flex;align-items:flex-start;gap:6px;font-size:11px;color:var(--ardoise-clair);margin-bottom:4px;cursor:pointer;}
-.geo-check input{margin-top:2px;accent-color:var(--acc);}
-.geo-check input:checked+span{color:var(--acc);text-decoration:line-through;}
-.lbtn.on-geo-mode{background:#e8f5f2;color:var(--acc);border-color:var(--maquis-clair);font-weight:500;}
 .lbtn.on-perma{background:#dcfce7;color:#166534;border-color:#86efac;font-weight:500;}
 .lbtn.on-hypo{background:#e8eef8;color:var(--info);border-color:#6b8fd4;font-weight:500;}
 /* Etat actif partage (Option A — DA v2) pour couches sans variante dediee */
@@ -3124,51 +3120,21 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
      calcSimDelta (stub neutre, retournait 0) supprimé sans effet (audit R-M-I-C-C 2026-07-26) ;
      calcN_RF (20 antennes hardcodées) remplacé par RF_field/ANFR (refonte RF étape 2/3). -->
 
-<!-- PANNEAU MODE PROSPECTEUR TERRAIN -->
-<div class="geo-panel" id="geo-panel" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px">
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-    <span style="font-size:16px">🧭</span>
-    <span style="font-weight:500;font-size:14px">Mode Prospecteur terrain</span>
-    <span style="font-family:var(--mono);font-size:10px;color:var(--tx3);background:var(--bg3);padding:2px 8px;border-radius:10px">protocole terrain</span>
-    <button onclick="document.getElementById('geo-panel').style.display='none'" style="margin-left:auto;border:none;background:none;color:var(--tx3);cursor:pointer;font-size:14px">✕</button>
-  </div>
-
-  <!-- Checklist terrain -->
-  <div style="background:var(--pierre-ombre);border-radius:var(--r);padding:10px 12px;margin-bottom:10px">
-    <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Checklist mesure (5 min)</div>
-    <label class="geo-check"><input type="checkbox" id="gc1"> <span>1. App magnétomètre ouverte (Physics Toolbox / Sensor Kinetics)</span></label>
-    <label class="geo-check"><input type="checkbox" id="gc2"> <span>2. Point Tellux cliqué — valeur IGRF et Indice notés</span></label>
-    <label class="geo-check"><input type="checkbox" id="gc3"> <span>3. Téléphone à 1.5m du sol, bras tendu, loin de tout métal</span></label>
-    <label class="geo-check"><input type="checkbox" id="gc4"> <span>4. Valeur nT lue et comparée à l'estimation IGRF</span></label>
-    <label class="geo-check"><input type="checkbox" id="gc5"> <span>5. Mesure enregistrée via +Mesure (Δ calculé auto)</span></label>
-    <label class="geo-check"><input type="checkbox" id="gc6"> <span>6. Bonus : grille 2m×2m pour cartographier gradient local</span></label>
-  </div>
-
-  <!-- Interprétation rapide -->
-  <div style="background:var(--maquis-pale);border-radius:var(--r);padding:10px 12px;margin-bottom:10px">
-    <div style="font-family:var(--mono);font-size:10px;color:var(--acc);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Guide d'interprétation rapide</div>
-    <div style="font-size:11px;color:var(--ardoise-clair);line-height:1.6">
-      <b>Δ &lt; ±200 nT</b> — Normal, cohérent avec le modèle<br>
-      <b>Δ +200 à +500 nT</b> — Anomalie locale positive : source magnétique proche (naturelle ou artificielle) probable<br>
-      <b>Δ -200 à -500 nT</b> — Anomalie locale négative : contraste géologique possible<br>
-      <b>Δ &gt; ±500 nT</b> — Anomalie forte : source artificielle (métal, câble) ou structure géologique majeure<br>
-    </div>
-  </div>
-
-  <!-- Export rapport terrain -->
-  <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <button onclick="exportTerrainReport()" id="btn-export-terrain" style="font-size:11px;padding:6px 14px;border-radius:var(--r);border:1px solid var(--maquis-clair);background:var(--maquis-pale);color:var(--acc);cursor:pointer;font-weight:500">📋 Exporter rapport du point</button>
-    <button onclick="exportTerrainCSV()" id="btn-export-csv" style="font-size:11px;padding:6px 14px;border-radius:var(--r);border:1px solid var(--border);background:var(--pierre-ombre);color:var(--ardoise-clair);cursor:pointer">📊 Export CSV contributions</button>
-    <!-- bouton ⚙ retiré → module déplacé hors de ce fichier -->
-  </div>
-  <div style="font-size:10px;color:var(--tx3);margin-top:6px">Cliquez d'abord sur un point de la carte pour générer le rapport.</div>
-
-  <!-- Systèmes prédictifs internationaux -->
-  <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
-    <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Systèmes d'estimation RF — comparaison internationale</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="intl-systems-grid"></div>
-  </div>
-</div>
+<!-- PANNEAU MODE PROSPECTEUR TERRAIN — RETIRÉ le 2026-09-08 (arbitrage Soleil, DOM mort).
+     `#geo-panel` : display:none depuis le commit fondateur, aucun ouvreur nulle part dans le
+     fichier (le seul onclick le concernant est son propre bouton de fermeture, qui remet
+     display:none). Trois preuves supplémentaires que ce n'était pas une fonctionnalité
+     temporairement désactivée mais un démantèlement non tracé :
+       - exportTerrainReport() : fonction SUPPRIMÉE le 2026-04-20 (commit 3491bdd), le bouton qui
+         l'appelait est resté ;
+       - exportTerrainCSV() : fonction encore présente, mais son SEUL appelant était ce bouton
+         mort — orphelinée par ricochet, retirée avec le panneau ;
+       - #intl-systems-grid : jamais peuplé par aucun code ; gc1-gc6 : jamais lus par aucun code.
+     Ménage avec le dernier utilisateur : CSS .geo-check et .lbtn.on-geo-mode (orphelines, aucune
+     autre référence) retirées plus haut dans ce fichier ; 14 entrées I18N_ENTRIES (geo_*) retirées
+     plus bas. Balisage RETIRÉ et non commenté — cf. la même règle appliquée le 2026-09-08 au
+     délistage de guide-et-glossaire.html. Retrait tracé au registre technique privé, ce qui n'avait
+     jamais été fait lors du démantèlement d'avril. -->
 
 <!-- PANNEAU HYPOTHÈSES (tableau de bord Phase 1-4) → migré vers patrimoine.html -->
 
@@ -11080,20 +11046,9 @@ function _syncLandeMaquisZoom(fromToggle){
   }
 }
 
-function exportTerrainCSV(){
-  if(!contribsDB||contribsDB.length===0){alert('Aucune contribution en base.');return;}
-  const header='lat,lon,type,valeur,unite,note,igrf_nt,score_anomalie,kp,bz,created_at';
-  // Kp/Bz : c.kp!=null (pas c.kp||'') — même correctif que addMarker(), même dette
-  // KP-ZERO-FALLBACK-LIVE-ET-CONTRIB-001 : un export CSV qui vide Kp=0/Bz=0 en cellule
-  // vide serait indiscernable d'une valeur jamais mesurée pour quiconque analyse l'export.
-  const rows=contribsDB.map(c=>[c.lat,c.lon,c.type||'',c.valeur||'',c.unite||'','"'+(c.note||'').replace(/"/g,'""')+'"',c.igrf_nt||'',c.score_anomalie||'',c.kp!=null?c.kp:'',c.bz!=null?c.bz:'',c.created_at||''].join(','));
-  const csv=header+'\\n'+rows.join('\\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='tellux_contributions_'+new Date().toISOString().slice(0,10)+'.csv';
-  a.click();URL.revokeObjectURL(a.href);
-}
+// exportTerrainCSV() RETIRÉE le 2026-09-08 — son seul appelant était le bouton du panneau
+// Prospecteur terrain (#geo-panel), lui-même DOM mort (display:none sans ouvreur depuis le
+// commit fondateur). Fonction orpheline par ricochet, retirée avec le panneau.
 
 // ════════════════════════════════════════════════════════════════════════════
 // MODE EXPERTISE — UI : toggle, curseurs, recalcul (Tâches 4.3–4.5)
@@ -14013,20 +13968,8 @@ function capCleanup(){
 ["cform_btn_prev","#cform-btn-prev","","← Précédent","← Precedente","← Previous"],
 ["cform_btn_next","#cform-btn-next","","Suivant →","Seguente →","Next →"],
 ["cform_comment_mesurer","#link-comment-mesurer","","? Comment mesurer ?","? Cumu misurà ?","? How to measure?"],
-["geo_title","#geo-panel > div:first-child > span:nth-child(2)","","Mode Prospecteur terrain","Modu Pruspettore di terrenu","Field Prospector mode"],
-["geo_badge","#geo-panel > div:first-child > span:nth-child(3)","","protocole terrain","prutucollu di terrenu","field protocol"],
-["geo_checklist","#geo-panel > div:nth-child(2) > div:first-child","","Checklist mesure (5 min)","Lista di cuntrollu misura (5 min)","Measurement checklist (5 min)"],
-["geo_check1","#geo-panel .geo-check span@0","","1. App magnétomètre ouverte (Physics Toolbox / Sensor Kinetics)","1. App magnetometru aperta (Physics Toolbox / Sensor Kinetics)","1. Magnetometer app open (Physics Toolbox / Sensor Kinetics)"],
-["geo_check2","#geo-panel .geo-check span@1","","2. Point Tellux cliqué — valeur IGRF et Indice notés","2. Puntu Tellux cliccatu — valore IGRF è Indice nutati","2. Tellux point clicked — IGRF value and index noted"],
-["geo_check3","#geo-panel .geo-check span@2","","3. Téléphone à 1.5m du sol, bras tendu, loin de tout métal","3. Telefonu à 1,5 m da u solu, bracciu tesu, luntanu da ogni metallu","3. Phone at 1.5 m from the ground, arm extended, away from any metal"],
-["geo_check4","#geo-panel .geo-check span@3","","4. Valeur nT lue et comparée à l'estimation IGRF","4. Valore nT lettu è paragunatu à a stima IGRF","4. nT value read and compared to the IGRF estimate"],
-["geo_check5","#geo-panel .geo-check span@4","","5. Mesure enregistrée via +Mesure (Δ calculé auto)","5. Misura arregistrata via +Misura (Δ calculatu autumaticu)","5. Measurement recorded via +Measure (Δ calculated automatically)"],
-["geo_check6","#geo-panel .geo-check span@5","","6. Bonus : grille 2m×2m pour cartographier gradient local","6. Bonus : griglia 2m×2m per cartugrafià u gradiente lucale","6. Bonus: 2m×2m grid to map the local gradient"],
-["geo_guide","#geo-panel > div:nth-child(3) > div:first-child","","Guide d'interprétation rapide","Guida d'interpretazione rapida","Quick interpretation guide"],
-["geo_export_rapport","#btn-export-terrain","","📋 Exporter rapport du point","📋 Espurtà u raportu di u puntu","📋 Export point report"],
-["geo_export_csv","#btn-export-csv","","📊 Export CSV contributions","📊 Esportu CSV cuntribuzione","📊 Export contributions CSV"],
-["geo_hint","#geo-panel > div:nth-child(5)","","Cliquez d'abord sur un point de la carte pour générer le rapport.","Cliccate prima nant'à un puntu di a carta per generà u raportu.","Click a point on the map first to generate the report."],
-["geo_intl","#geo-panel > div:nth-child(6) > div:first-child","","Systèmes d'estimation RF — comparaison internationale","Sistemi di stima RF — paragone internaziunale","RF estimation systems — international comparison"],
+// 14 entrées geo_* (Panneau Prospecteur terrain) RETIRÉES le 2026-09-08 avec le panneau
+// #geo-panel — DOM mort, cf. commentaire à son ancien emplacement (app.html, ~ligne 3123).
 ["stat_rf",".stat-lbl@0","","mesures RF (+ 2 BF)","misure RF (+ 2 BF)","RF measurements (+ 2 LF)"],
 ["stat_mediane",".stat-lbl@3","","médiane V/m","mediana V/m","median V/m"],
 ["stat_depassement",".stat-lbl@4","","dépassement légal","supranamentu legale","legal exceedance"],
