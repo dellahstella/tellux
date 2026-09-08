@@ -39,6 +39,23 @@ name: intermagnet-cron
 #
 # Cadence : toutes les 30 minutes (aligne sur setInterval(loadAQU,...) cote
 # client). Declenchement manuel : Actions > intermagnet-cron > Run workflow.
+#
+# ⚠ PR ORPHELINES (constat 2026-09-08, PR publique #1184 restee ouverte 6 jours,
+# CONFLICTING, checks pourtant tous verts) : l'etape finale a DEUX chemins qui
+# quittent en succes (`exit 0`) sans merger — leak-guard pas materialise en 4 min,
+# ou checks requis pas verts en 5 min. Dans les deux cas la PR reste ouverte,
+# jamais mergee, et le run SUIVANT ouvre une NOUVELLE PR depuis une NOUVELLE
+# branche sans jamais revenir sur l'ancienne — aucune purge, aucun retry cible.
+# Une PR laissee ainsi devient rapidement CONFLICTING (le fichier qu'elle modifie
+# est reecrit par le run suivant qui, lui, merge), et le reste indefiniment :
+# gh pr merge echouerait de toute facon dessus (conflit), donc "le prochain cron
+# reessaie" (commentaire de l'avertissement ci-dessous) ne se produit jamais pour
+# CETTE PR precisement.
+# Parade (etape "Fermer toute PR bot precedente encore ouverte" ci-dessous) : une
+# PR de ce refresh n'a de sens que si elle est la PLUS RECENTE — toute PR bot
+# ouverte au moment d'en creer une nouvelle est par construction perimee des que
+# la nouvelle existe (memes donnees, plus fraiches). On la ferme donc AVANT
+# d'ouvrir la suivante plutot que de la laisser s'accumuler.
 
 on:
   schedule:
@@ -77,6 +94,25 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
             git diff --stat -- public/data/intermagnet_latest.json
           fi
+
+      - name: Fermer toute PR bot precedente encore ouverte
+        # Toujours execute (pas conditionne a "changed") : une PR bot ouverte est
+        # perimee des qu'ELLE-MEME est depassee par l'etat actuel de main, meme si
+        # ce run-ci ne detecte aucun changement supplementaire. Fermeture, jamais
+        # merge force : si elle etait encore mergeable et utile, gh pr merge
+        # l'aurait deja prise avant que ce run ne s'execute.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr list --state open --base main --search "head:bot/intermagnet-" \
+            --json number --jq '.[].number' 2>/dev/null \
+          | while read -r n; do
+              [ -n "$n" ] || continue
+              echo "Fermeture PR bot orpheline #$n (perimee par ce run)."
+              gh pr close "$n" --delete-branch \
+                --comment "Fermee automatiquement par le run suivant du cron intermagnet-cron : une PR de rafraichissement n'a de sens que la plus recente, celle-ci est perimee des qu'une nouvelle existe. Cf. commentaire en tete de .github/workflows/intermagnet-cron.yml (constat 2026-09-08, PR #1184)." \
+                || echo "::warning::Fermeture PR #$n echouee (deja fermee ou fusionnee entre-temps ?)."
+            done
 
       - name: Open PR if changed
         if: steps.diff.outputs.changed == 'true'
@@ -150,7 +186,7 @@ jobs:
             sleep 5
           done
           if [ "$leak_ok" != "true" ]; then
-            echo "::warning::Scan anti-fuite pas declenche sur PR #$PR apres 4 min — laissee ouverte (prochain cron reessaie)."
+            echo "::warning::Scan anti-fuite pas declenche sur PR #$PR apres 4 min — laissee ouverte. Pas un retry sur CETTE PR : le prochain run fermera celle-ci (perimee) et en ouvrira une neuve si les donnees ont encore change."
             exit 0
           fi
 
@@ -159,5 +195,5 @@ jobs:
           if timeout 300 gh pr checks "$PR" --required --watch --interval 15; then
             gh pr merge "$PR" --squash --delete-branch
           else
-            echo "::warning::Checks requis pas verts (echec ou timeout) sur PR #$PR — laissee ouverte, pas mergee."
+            echo "::warning::Checks requis pas verts (echec ou timeout) sur PR #$PR — laissee ouverte, pas mergee. Le prochain run la fermera (perimee) plutot que d'y revenir."
           fi
