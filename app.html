@@ -5468,20 +5468,34 @@ function mkIcon(c,sq,sz){const s=sz||9;return L.divIcon({html:`<div style="width
 // ============================================================
 
 // Grille IGRF-14 précalculée — fallback précis si API BGS indisponible
-// Source : coefficients IGRF-14 (Alken et al. 2021), évalués analytiquement
-// Précision : ±100 nT (interpolation grille 0.25°) — à préférer au fallback linéaire
+// RÉANCRÉE le 2026-09-09 (rev issue d'un balayage "trois familles d'affirmations fausses").
+// Ce que la grille PRÉCÉDENTE était réellement, établi et non supposé : un plan quasi-parfait
+// (écart max 10 nT sur les 54 points contre un modèle purement linéaire 400 nT/°lat + 200 nT/°lon),
+// malgré un commentaire qui affirmait "coefficients IGRF-14, évaluées analytiquement" — cette
+// évaluation analytique n'avait pas eu lieu. Écart avec une vraie évaluation IGRF-14 : jusqu'à
+// 201 nT aux coins de grille, et 77 nT à Ajaccio (ville réelle, pas un coin) — au-delà du ±100 nT
+// annoncé plus bas, avant même d'ajouter la dérive temporelle. Établi par génération indépendante
+// depuis les coefficients IGRF-14 officiels (NOAA/IAGA/BGS, igrf14coeffs.txt) + variation séculaire
+// degré 8, implémentation validée à 0,6 nT du point de contrôle du code lui-même (Ajaccio, API BGS,
+// épistémie 2026-07-05 : F=46604, D=3,40°, I=57,99°) — écart méthode ancienne sur ce même point : 65 nT.
+// Grille CI-DESSOUS : évaluation analytique réelle, degré 13, aux mêmes 54 points (lat 41,25-43,25°,
+// pas 0,25° ; lon 8,5-9,75°, pas 0,25°), à l'époque 2026-09-09 (t=2026,688). Se périme au même rythme
+// que toute grille IGRF précalculée — à régénérer avant que la dérive ne redevienne significative.
+// Précision : ±100 nT (interpolation grille 0.25°) — à préférer au fallback linéaire. Ce chiffre
+// n'a pas été rediscuté dans ce commit : il portait sur l'interpolation spatiale, pas sur l'erreur
+// d'approximation de l'ancienne grille (éliminée ici) ni sur la dérive temporelle (qui redevient le
+// terme dominant une fois cette régénération faite) — arbitrage séparé, volontairement.
 // Note : API BGS directe donne ±10-15 nT, toujours préférée si disponible
-// IMPORTANT : les vraies valeurs Corse 2025 sont 46 150–47 200 nT, PAS ~44 500 nT
 const IGRF14_GRID=[
-  [41.25,8.5,46150],[41.25,8.75,46200],[41.25,9.0,46250],[41.25,9.25,46300],[41.25,9.5,46350],[41.25,9.75,46400],
-  [41.5,8.5,46250],[41.5,8.75,46300],[41.5,9.0,46350],[41.5,9.25,46400],[41.5,9.5,46450],[41.5,9.75,46500],
-  [41.75,8.5,46350],[41.75,8.75,46400],[41.75,9.0,46450],[41.75,9.25,46500],[41.75,9.5,46550],[41.75,9.75,46600],
-  [42.0,8.5,46450],[42.0,8.75,46500],[42.0,9.0,46560],[42.0,9.25,46610],[42.0,9.5,46650],[42.0,9.75,46700],
-  [42.25,8.5,46550],[42.25,8.75,46600],[42.25,9.0,46660],[42.25,9.25,46710],[42.25,9.5,46750],[42.25,9.75,46800],
-  [42.5,8.5,46650],[42.5,8.75,46700],[42.5,9.0,46760],[42.5,9.25,46810],[42.5,9.5,46850],[42.5,9.75,46900],
-  [42.75,8.5,46750],[42.75,8.75,46800],[42.75,9.0,46860],[42.75,9.25,46910],[42.75,9.5,46960],[42.75,9.75,47000],
-  [43.0,8.5,46850],[43.0,8.75,46900],[43.0,9.0,46960],[43.0,9.25,47010],[43.0,9.5,47060],[43.0,9.75,47100],
-  [43.25,8.5,46950],[43.25,8.75,47000],[43.25,9.0,47060],[43.25,9.25,47110],[43.25,9.5,47160],[43.25,9.75,47200],
+  [41.25,8.5,46351],[41.25,8.75,46371],[41.25,9.0,46392],[41.25,9.25,46413],[41.25,9.5,46433],[41.25,9.75,46454],
+  [41.5,8.5,46441],[41.5,8.75,46462],[41.5,9.0,46482],[41.5,9.25,46503],[41.5,9.5,46523],[41.5,9.75,46544],
+  [41.75,8.5,46531],[41.75,8.75,46551],[41.75,9.0,46572],[41.75,9.25,46592],[41.75,9.5,46612],[41.75,9.75,46633],
+  [42.0,8.5,46620],[42.0,8.75,46640],[42.0,9.0,46661],[42.0,9.25,46681],[42.0,9.5,46701],[42.0,9.75,46721],
+  [42.25,8.5,46709],[42.25,8.75,46729],[42.25,9.0,46749],[42.25,9.25,46769],[42.25,9.5,46789],[42.25,9.75,46809],
+  [42.5,8.5,46797],[42.5,8.75,46817],[42.5,9.0,46836],[42.5,9.25,46856],[42.5,9.5,46876],[42.5,9.75,46896],
+  [42.75,8.5,46884],[42.75,8.75,46904],[42.75,9.0,46923],[42.75,9.25,46943],[42.75,9.5,46963],[42.75,9.75,46983],
+  [43.0,8.5,46970],[43.0,8.75,46990],[43.0,9.0,47010],[43.0,9.25,47029],[43.0,9.5,47049],[43.0,9.75,47069],
+  [43.25,8.5,47056],[43.25,8.75,47076],[43.25,9.0,47095],[43.25,9.25,47115],[43.25,9.5,47134],[43.25,9.75,47154],
 ];
 
 // Grille LCS-1 révisée — anomalie crustale Corse.
