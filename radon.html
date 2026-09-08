@@ -998,9 +998,23 @@ a{color:inherit;}
   var RADON_DEPOTS_ERP = [];
   var _depotsErpPromise = null;
   var DEPOTS_BY_INSEE = {};
+  // Lecture basculée sur la VUE `radon_depots_publies` le 2026-09-08 (suites audit brief CL).
+  //
+  // La table `radon_depots_erp` accorde SELECT au rôle anon sur ses 25 colonnes, dont
+  // `deposant_email`. Seule une policy RLS de LIGNE la protège (statut = 'publie') : le jour où un
+  // dépôt est publié, l'adresse de son déposant devient lisible par quiconque possède la clé anon,
+  // publique dans ce fichier. Une policy filtre des lignes, jamais des colonnes.
+  //
+  // La vue n'expose que les 13 colonnes publiables — ni courriel, ni rôle du déposant, ni chemin du
+  // document, ni traces de consentement — et PORTE ELLE-MÊME le filtre `statut = 'publie'`. D'où
+  // le retrait du paramètre `statut_verification_tellux=eq.publie` de cette URL : le filtre ne peut
+  // plus être oublié côté client, ni contourné en retirant un paramètre de l'adresse.
+  //
+  // Ne pas revenir à la table : ce fetch est le SEUL lecteur direct restant, et c'est lui qui
+  // retient le REVOKE SELECT sur la table (prévu une fois ce diff en production).
   function fetchRadonDepotsErp(){
     if (_depotsErpPromise) return _depotsErpPromise;
-    var url = SB_URL_PUBLIC + '/rest/v1/radon_depots_erp?select=nom_etablissement,categorie_erp,commune_insee,lat,lon,valeur_moyenne_bq_m3,date_mesurage,organisme_agree_nom,organisme_agree_numero,statut_action&statut_verification_tellux=eq.publie&order=date_mesurage.desc';
+    var url = SB_URL_PUBLIC + '/rest/v1/radon_depots_publies?select=nom_etablissement,categorie_erp,commune_insee,lat,lon,valeur_moyenne_bq_m3,date_mesurage,organisme_agree_nom,organisme_agree_numero,statut_action&order=date_mesurage.desc';
     _depotsErpPromise = fetch(url, { headers: { apikey: SB_ANON_KEY_PUBLIC, Authorization: 'Bearer ' + SB_ANON_KEY_PUBLIC } })
       .then(function(r){ if (!r.ok) throw new Error('depots radon HTTP ' + r.status); return r.json(); })
       .then(function(rows){
