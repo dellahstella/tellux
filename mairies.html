@@ -1742,6 +1742,46 @@ a{color:inherit;}
   }
   window.retryAntennes = retryAntennes;
 
+  // Périmètre réel du jeu d'antennes — dérivé de la donnée, pas écrit en dur.
+  //
+  // Posé le 2026-09-08. Les trois états vides de cette page annonçaient « aucune antenne ANFR »
+  // et, pour l'un d'eux, « aucune installation soumise à avis ou accord de l'ANFR », alors que
+  // antennes_par_commune_corse.json ne contient que les antennes de téléphonie mobile de quatre
+  // opérateurs. Ni les émetteurs de radiodiffusion (tdf_emitters_corse.json, jeu distinct que
+  // cette page ne lit pas), ni les faisceaux hertziens, ni les réseaux radio professionnels n'y
+  // figurent. Le message était servi aux 141 communes sans antenne mobile (360 - 219), à des
+  // mairies : un secrétaire de mairie qui sait qu'un relais existe sur son territoire en conclut
+  // que l'outil est faux.
+  //
+  // La liste des opérateurs est CALCULÉE sur le jeu chargé plutôt qu'énumérée dans la phrase :
+  // une énumération redevient fausse dès qu'un opérateur entre ou sort du jeu, et personne ne
+  // pense à relire un état vide. Ici la phrase suit la donnée. Même raisonnement que le marqueur
+  // posé sur la déclaration de polices de mentions-legales.html (#1324) : énoncer une propriété
+  // vérifiable, pas un inventaire figé.
+  var _operateursJeuCache = null;
+  function operateursDuJeu(){
+    if (_operateursJeuCache) return _operateursJeuCache;
+    var vus = {};
+    var communes = (antennesData && antennesData.communes) || {};
+    Object.keys(communes).forEach(function(k){
+      ((communes[k] && communes[k].supports) || []).forEach(function(s){
+        if (s && s.operateur) vus[s.operateur] = 1;
+      });
+    });
+    var liste = Object.keys(vus).sort();
+    if (liste.length) _operateursJeuCache = liste;
+    return liste;
+  }
+
+  // Phrase de périmètre commune aux trois états vides. Reste correcte si la liste est vide
+  // (jeu non chargé) : elle tombe alors sur la catégorie seule, qui est vraie sans le détail.
+  function perimetreJeuAntennesHtml(){
+    var ops = operateursDuJeu();
+    return 'Ce relevé couvre les antennes de téléphonie mobile déclarées à l\'ANFR'
+      + (ops.length ? ' par ' + ops.join(', ') : '')
+      + '. Il ne contient ni les émetteurs de radiodiffusion, ni les faisceaux hertziens, ni les réseaux radio professionnels : une installation de ces catégories n\'y figurerait pas.';
+  }
+
   function renderAntennesBody(){
     var body = document.getElementById('mr-antennes-body');
     var updated = document.getElementById('mr-antennes-updated');
@@ -1756,10 +1796,10 @@ a{color:inherit;}
     if (!commune){
       body.innerHTML =
         '<div class="mr-antennes-empty">' +
-        '<strong>Aucune antenne ANFR recensée sur cette commune</strong>' +
-        'Aucune installation soumise à avis ou accord de l\'ANFR n\'apparaît sur ce territoire dans le registre ' +
-        'extrait ' + (antennesData._meta && antennesData._meta.date_extraction ? 'le ' + antennesData._meta.date_extraction : '') + '. ' +
-        'Cette absence peut aussi resulter d\'un delai de mise a jour du dataset national.' +
+        '<strong>Aucune antenne mobile recensée sur cette commune</strong>' +
+        perimetreJeuAntennesHtml() + ' ' +
+        'Extraction ' + (antennesData._meta && antennesData._meta.date_extraction ? 'du ' + antennesData._meta.date_extraction : 'non datée') + ' : ' +
+        'cette absence peut aussi résulter d\'un délai de mise à jour du jeu national.' +
         '</div>';
       return;
     }
@@ -2153,9 +2193,9 @@ a{color:inherit;}
     if (supports.length === 0){
       body.innerHTML =
         '<div class="mr-etab-empty">' +
-          '<strong>Aucune antenne ANFR recensée sur votre commune</strong>' +
-          'Le calcul de proximité ne peut pas être effectué sans installation à situer. Si une antenne est absente du registre alors qu\'elle est visible sur le terrain, ' +
-          'consultez le modele de courrier " Signaler une antenne installee sans information publique " dans l\'onglet Generer un courrier.' +
+          '<strong>Aucune antenne mobile recensée sur votre commune</strong>' +
+          'Le calcul de proximité ne peut pas être effectué sans installation à situer. ' + perimetreJeuAntennesHtml() + ' ' +
+          'Si une antenne est visible sur le terrain sans figurer ici, le modèle « Demander à l\'ANFR le registre officiel des installations de la commune » permet d\'obtenir l\'état des lieux (onglet Générer un courrier).' +
         '</div>';
       return;
     }
@@ -2433,7 +2473,7 @@ a{color:inherit;}
 
     var supports = (antennesData && antennesData.communes[code_insee] && antennesData.communes[code_insee].supports) || [];
     if (supports.length === 0){
-      body.innerHTML = '<div class="mr-etab-empty"><strong>Aucune antenne ANFR recensée sur votre commune</strong>Le constat de mutualisation ne peut pas être établi sans installation à situer.</div>';
+      body.innerHTML = '<div class="mr-etab-empty"><strong>Aucune antenne mobile recensée sur votre commune</strong>Le constat de mutualisation ne peut pas être établi sans installation à situer. ' + perimetreJeuAntennesHtml() + '</div>';
       return;
     }
 
