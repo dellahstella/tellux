@@ -42,8 +42,4 @@
 alter table public.contributions
   add column if not exists bt_terme_inclus boolean;
 
-comment on column public.contributions.bt_terme_inclus is
-  'Le terme basse tension etait-il inclus dans perturbation_humaine_nt et delta_nt au moment '
-  'de l ecriture ? null = inconnu (ligne anterieure a la migration 011, non reconstituable) — '
-  'a traiter comme inconnu, jamais comme false. false = terme BT absent, valeurs minorees '
-  '(jusqu a x5,3 la ou le champ HTA est faible). true = terme BT inclus.';
+comment on column public.contributions.bt_terme_inclus is 'Le terme basse tension etait-il inclus dans perturbation_humaine_nt et delta_nt au moment de l ecriture ? null = inconnu (ligne anterieure a la migration 011, non reconstituable) : a traiter comme inconnu, jamais comme false. false = terme BT absent, valeurs minorees (jusqu a x5,3 la ou le champ HTA est faible). true = terme BT inclus.';
