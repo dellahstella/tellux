@@ -3345,12 +3345,13 @@ var JS_STRINGS_EN = {
   interp_lvl_intense: "Intense",
   gamma_label_terrestre: "ambient gamma dose (cosmic + terrestrial)",
   gamma_label_cosmique: "ground-level cosmic dose",
-  gamma_badge_ancre: "Anchored — terrestrial measured on the Corsican Variscan batholith (Verdoya 1998), Verdoya 2009 coefficients reviewed by a third-party physicist",
-  gamma_badge_extrapole: "Extrapolated — Alpine Corsica not measured, value carried over by analogy with Liguria (Verdoya 2009), wide uncertainty",
-  gamma_badge_encours: "In progress — cosmic only; terrestrial component not deployed for this lithotype (no quantified source)",
-  gamma_conf_ancre: "medium — anchored terrestrial + parametric cosmic",
-  gamma_conf_extrapole: "low — parametric cosmic + extrapolated terrestrial",
-  gamma_conf_encours: "low — parametric cosmic, terrestrial component unavailable for this lithotype",
+  // gamma_badge_ancre/extrapole/encours + gamma_conf_ancre/extrapole/encours RETIRÉES
+  // (2026-09-09, brief « note épistémique gamma par provenance ») : aucun appelant jt(...),
+  // même famille morte que gammaConfDots/Text (cf. commentaire ~L8865 ci-dessous). Contenaient
+  // un endossement Verdoya en dur (gamma_badge_ancre) qui serait repris sans revue au premier
+  // portage vers radon.html — cf. dette privée GAMMA-PROVENANCE-NOTE-PORTAGE-RADON-001.
+  // gamma_label_*/gamma_reperes_tooltip (ci-dessus/ci-dessous) restent : génériques, sans
+  // branchement par statut, hors périmètre de ce retrait.
   ph_label_tres_calme: "Very calm",
   ph_label_calme: "Calm",
   ph_label_modere: "Moderate",
@@ -8615,12 +8616,6 @@ function calcGammaAmbient(lat, lon, altitude_m) {
   }
   const total_nSv_h = Math.round((cosmic_nSv_h + (terrestrial_nSv_h || 0) + boost_ponctuel_nSv_h) * 10) / 10;
 
-  const epistemicTerrestre = terrestrialInfo.status === 'ancre'
-    ? 'Composante terrestre (NCRP 94) activée pour ce lithotype : « Estimation modélisée de la composante gamma terrestre (dose absorbée dans l\'air, nGy/h), calculée par la formule standard NCRP 94 avec les coefficients de Verdoya et al. (2009), à partir de concentrations U/Th/K mesurées sur les lithotypes du batholite varisque corse (Verdoya et al. 1998) ; jeu de coefficients relu et recommandé par un physicien externe (M. Verdoya, Università di Genova). Estimation par lithotype. Ne constitue pas une mesure certifiée. »'
-    : terrestrialInfo.status === 'extrapole'
-      ? 'Composante terrestre (NCRP 94) activée pour ce lithotype, en EXTRAPOLATION : couverture géologique partielle — la Corse alpine (schistes, ophiolites) n\'a pas de mesure U/Th/K directe ; valeur portée par analogue (Verdoya et al. 2009, Ligurie alpine, même auteur/méthode), incertitude nettement plus large que sur le batholite mesuré. Ne constitue pas une mesure certifiée.'
-      : 'Composante terrestre (NCRP 94) non déployée pour ce lithotype : aucune source quantifiée disponible (concentrations U/Th/K non ancrées ni extrapolables de façon défendable pour cette lithologie).';
-
   return {
     dose_rate_nSv_h: total_nSv_h, // cosmique + terrestre (si couvert) + boost ponctuel
     components: {
@@ -8638,8 +8633,21 @@ function calcGammaAmbient(lat, lon, altitude_m) {
     source: 'Approximation cosmique calée sur grille modélisée PARMA/EXPACS (Sato 2015) — H*(10), moyenne de cycle solaire · terrestre NCRP 94, coefficients Verdoya 2009 + concentrations Verdoya 1998 par lithotype · boost points chauds documentaires · Téléray ASNR (in_construction)',
     confidence: terrestrialInfo.status === 'ancre' ? 'medium' : 'low',
     under_review: true,          // Téléray manquant ; terrestre extrapolé pour partie du territoire
-    in_construction: true,
-    epistemic_note: 'Estimation issue d\'une grille modélisée (PARMA/EXPACS, Sato 2015), jamais d\'une mesure Tellux : dose cosmique au sol en H*(10) (équivalent de dose ambiant), toutes composantes ionisantes cosmiques (muons, composante électromagnétique, neutrons, protons) — distincte du gamma terrestre. Moyenne de cycle solaire ; la variation solaire (±15 %) n\'est pas modélisée. LIMITE HAUTE ALTITUDE : l\'approche cosmique n\'a pas été expertisée en altitude par le physicien tiers consulté sur le volet terrestre — à considérer prudemment. ' + epistemicTerrestre + ' Fond naturel Corse : 75–150 nSv/h (Téléray ASNR, gamma total — non directement comparable aux composantes modélisées séparément). Doses des points chauds documentaires, non mesurées par Tellux. Aucune implication sanitaire à ces niveaux de fond naturel.'
+    in_construction: true
+    // epistemic_note RETIRÉ (2026-09-09, brief « note épistémique gamma par provenance ») :
+    // champ sans aucun lecteur — vérifié par grep sur les accès de propriété (`.epistemic_note`),
+    // pas sur les définitions. Ni popup (rendu gamma retiré le 2026-09-01, cf. commentaire
+    // ci-dessous ~L8865), ni export CSV expert (exportExpertCSV n'exporte que dose_rate_nSv_h/
+    // confidence/under_review/source, jamais ce champ), ni radon.html (portage jamais commencé,
+    // aucune définition de calcGammaAmbient/epistemic_note/GAMMA_TERRESTRE_PAR_LITHOTYPE dans ce
+    // fichier). Il portait 3 variantes selon terrestrialInfo.status (ancre/extrapole/non
+    // modélisé), correctement scindées sur l'endossement Verdoya (nom cité SEULEMENT en 'ancre')
+    // MAIS la variante 'extrapole' affirmait à tort que schistes ET ophiolites étaient
+    // extrapolés — ophiolite est absente de GAMMA_TERRESTRE_PAR_LITHOTYPE (non_modélisé, dose
+    // null), jamais 'extrapole'. Retiré plutôt que corrigé : une chaîne morte inexacte, réparée,
+    // a l'air à jour et sera reprise sans revue au premier portage — cf. dette privée
+    // GAMMA-PROVENANCE-NOTE-PORTAGE-RADON-001. Le futur portage vers radon.html doit écrire ses
+    // notes de provenance contre la carte lithotype→statut d'alors, jamais réactiver ce texte.
   };
 }
 
@@ -8869,10 +8877,13 @@ map.on('click',async e=>{
   // gammaLabel, gammaBadgeTitle/Icon/Color (badge 3 états ancré/extrapolé/en cours),
   // gammaConfDots/Text (points de confiance) et gammaDetailLine (ligne « X nGy/h terrestre
   // (plage lithotype …) + Y nSv/h cosmique »). Tous étaient des dérivés d'affichage : aucun
-  // n'était lu par un calcul. Les clés i18n correspondantes (gamma_label_*, gamma_badge_*,
-  // gamma_conf_*, gamma_reperes_tooltip) sont CONSERVÉES telles quelles pour le portage vers
-  // radon.html — même patron que la couche b-openrad mutée le 2026-08-30 (code mort gardé
-  // pour migration, cf. son commentaire dans le menu Couches).
+  // n'était lu par un calcul. Les clés i18n gamma_label_* et gamma_reperes_tooltip sont
+  // CONSERVÉES telles quelles pour le portage vers radon.html — même patron que la couche
+  // b-openrad mutée le 2026-08-30 (code mort gardé pour migration, cf. son commentaire dans
+  // le menu Couches). gamma_badge_*/gamma_conf_* et le champ epistemic_note de
+  // calcGammaAmbient() ont en revanche été RETIRÉS le 2026-09-09 (pas conservés) : ils
+  // portaient un endossement Verdoya en dur / une variante inexacte, qui aurait été repris
+  // sans revue au premier portage — cf. dette privée GAMMA-PROVENANCE-NOTE-PORTAGE-RADON-001.
   const gamma_nSvh    = v2.domains.ionizing.gamma.dose_rate_nSv_h;
   // radon_class reste lu ici : alimente encore _geoLastPoint (plus bas) et l'export CSV expert
   // (via v2.domains.ionizing.radon directement, pas via cette const — mais gardée pour
