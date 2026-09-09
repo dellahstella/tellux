@@ -77,6 +77,24 @@ let js = [...html.matchAll(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/g)].ma
 js = js.replace(/\/\*[\s\S]*?\*\//g, (s) => s.replace(/[^\n]/g, ' '))
        .replace(/^([ \t]*)\/\/.*$/gm, (s, i) => i);
 
+// ⚠ CES DEUX FONCTIONS VONT PAR PAIRE. Si tu durcis `videChaines`, lis ceci d'abord.
+//
+// Les chaînes ne sont pas du code — SAUF le contenu des attributs gestionnaires `on…="…"`,
+// qui en est : cette application câble ses clics dans du HTML généré
+// (`'<button onclick="startCrustalCorseMeasurement(' + …`), et c'est le navigateur qui les
+// exécute. `gestionnairesDe` les rattrape AVANT que `videChaines` ne les efface ; les deux
+// résultats sont recollés en `corps` plus bas.
+//
+// SUPPRIMER OU DURCIR CE RATTRAPAGE FAIT DISPARAÎTRE DES FONCTIONS DU DÉCOMPTE — pas les
+// faire basculer d'un côté ou de l'autre, les faire SORTIR. Mesuré le 2026-09-09 :
+// `buildCrustalLayer` et `openPrescription` s'évaporaient, 33 captifs au lieu de 35. Une
+// fonction doit être captive ou couverte, jamais escamotée : un mauvais compte se voit, un
+// escamotage non.
+//
+// Vérification en une commande après toute retouche ici — les deux compteurs doivent rester
+// à 56 et 44, qui sont insensibles aux mécanismes de reprise et ne bougent QUE si le graphe
+// d'appels a changé :
+//     node perimetre-reprise.mjs | grep -E 'lecteurs réseau|sans argument'
 const videChaines = (s) => s.replace(/'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"/g,
   (x) => x[0] + x.slice(1, -1).replace(/[^\n]/g, ' ') + x[0]);
 const gestionnairesDe = (s) => [...s.matchAll(/\bon[a-z]+\s*=\s*(?:"([^"]*)|'([^']*))/gi)]
