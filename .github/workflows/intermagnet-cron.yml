@@ -13,7 +13,8 @@ name: intermagnet-cron
 # Architecture merge : `main` a une vraie protection de branche (PR obligatoire,
 # pas seulement des checks requis, cf. verification 2026-08-26) — ce workflow
 # n'ecrit donc JAMAIS directement sur main. Il ouvre une PR depuis une branche
-# dediee, attend les 2 checks requis (Cloudflare Pages + Scan anti-fuite), puis
+# dediee, attend les 3 checks requis (Cloudflare Pages + Scan anti-fuite + Contraste
+# panneaux (theme unique), le troisieme depuis le 2026-09-09), puis
 # la merge lui-meme (squash) UNIQUEMENT s'ils passent. Aucun contournement de la
 # protection de branche, aucun secret/token special au-dela du GITHUB_TOKEN par
 # defaut (contents:write + pull-requests:write + actions:write suffisent).
@@ -164,7 +165,7 @@ jobs:
           git push origin "$BRANCH"
           PR_URL=$(gh pr create --base main --head "$BRANCH" \
             --title "data: refresh intermagnet_latest.json (station=$STATION, delta=${DELTA}nT)" \
-            --body "Régénération automatique (workflow \`intermagnet-cron\`) — pas de contenu applicatif nouveau, uniquement les données du dernier cycle BGS GIN. Auto-merge après CI verte (2 checks requis).")
+            --body "Régénération automatique (workflow \`intermagnet-cron\`) — pas de contenu applicatif nouveau, uniquement les données du dernier cycle BGS GIN. Auto-merge après CI verte (3 checks requis).")
           echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
           echo "pr_number=$(basename "$PR_URL")" >> "$GITHUB_OUTPUT"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
@@ -200,27 +201,51 @@ jobs:
               done
           }
 
-          leak_ok=false
+          materialise () {
+            # $1 = fichier workflow ; vrai des que son run le plus recent sur la branche
+            # est sorti du gate. "" / "null/null" = pas encore de run ;
+            # "completed/action_required" = gate non approuve ; tout le reste
+            # (in_progress/null, completed/success…) = run approuve et lance.
+            row=$(gh run list --branch "$BRANCH" --workflow="$1" --limit 1 \
+                  --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion)"' 2>/dev/null || true)
+            case "$row" in
+              ""|"null/null"|"completed/action_required") return 1 ;;
+              *) return 0 ;;
+            esac
+          }
+
+          # DEUX workflows a attendre depuis le 2026-09-09, plus un seul. Le plancher de
+          # checks requis est passe de 2 a 3 (ADR-067, amendant ADR-045) et le troisieme,
+          # « Contraste panneaux (theme unique) », est produit par contrast-panels.yml —
+          # soumis au meme gate `action_required` que leak-guard.yml sur une PR ouverte
+          # par le bot. Sans son approbation ici, son check-run n'entrerait jamais dans le
+          # statusCheckRollup : `gh pr checks --required --watch` expirerait a 5 min et
+          # PLUS AUCUNE PR de rafraichissement INTERMAGNET ne se mergerait — panne muette,
+          # exactement celle du brief C1 (2026-08-28), rejouee sur un autre workflow.
+          # La boucle ne sort que quand les DEUX sont materialises : sortir sur le premier
+          # laisserait le second non approuve si son run apparait une seconde plus tard.
+          gha_ok=false
           for i in $(seq 1 48); do   # 48 * 5s = 4 min max d'attente de materialisation
             approve_wf leak-guard.yml
             approve_wf validate-code.yml
-            row=$(gh run list --branch "$BRANCH" --workflow=leak-guard.yml --limit 1 \
-                  --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion)"' 2>/dev/null || true)
-            # "" / "null/null" = pas encore de run ; "completed/action_required" = gate non approuve ;
-            # tout le reste (in_progress/null, completed/success…) = run approuve et lance
-            case "$row" in
-              ""|"null/null"|"completed/action_required") : ;;
-              *) leak_ok=true; break ;;
-            esac
+            approve_wf contrast-panels.yml
+            if materialise leak-guard.yml && materialise contrast-panels.yml; then
+              gha_ok=true; break
+            fi
             sleep 5
           done
-          if [ "$leak_ok" != "true" ]; then
-            echo "::warning::Scan anti-fuite pas declenche sur PR #$PR apres 4 min — laissee ouverte. Pas un retry sur CETTE PR : le prochain run fermera celle-ci (perimee) et en ouvrira une neuve si les donnees ont encore change."
+          if [ "$gha_ok" != "true" ]; then
+            echo "::warning::Workflows des checks requis pas tous declenches sur PR #$PR apres 4 min (leak-guard et/ou contrast-panels) — laissee ouverte. Pas un retry sur CETTE PR : le prochain run fermera celle-ci (perimee) et en ouvrira une neuve si les donnees ont encore change."
             exit 0
           fi
 
-          # Attente des 2 checks requis (Cloudflare Pages + Scan anti-fuite), pas les
-          # informatifs. Timeout 5 min avant abandon (PR laissee ouverte, pas de merge force).
+          # Attente des 3 checks requis (Cloudflare Pages + Scan anti-fuite + Contraste
+          # panneaux), pas les informatifs. Timeout 5 min avant abandon (PR laissee
+          # ouverte, pas de merge force). Marge mesuree le 2026-09-09 AVANT d'ajouter le
+          # troisieme : la PR bot #1373 mergeait 59 s apres son ouverture, et
+          # contrast-panels coute 72-93 s par run — soit ~150 s attendues, la moitie du
+          # timeout. Il n'est donc PAS releve. S'il commencait a expirer : mesurer d'abord,
+          # un timeout qu'on augmente sans mesure cache la cause au lieu de la traiter.
           if timeout 300 gh pr checks "$PR" --required --watch --interval 15; then
             gh pr merge "$PR" --squash --delete-branch
           else
