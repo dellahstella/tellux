@@ -163,8 +163,29 @@ tests/blindage-harness/
 ├── harness.mjs            # API du harness (createHarness, etc.)
 ├── non-regression.mjs     # boucle de comparaison sur la fixture
 ├── playground.mjs         # exemples WS2 (RF résiduels + sensibilité)
+├── perimetre-reprise.mjs  # mesure : lecteurs réseau captifs du boot (analyse statique)
 └── README.md              # ce fichier
 ```
+
+*(Cette arborescence n'est pas exhaustive — le dossier compte davantage de scripts
+`non-regression-*.mjs` et de collecteurs. Elle liste les points d'entrée.)*
+
+### `perimetre-reprise.mjs` — mesure, pas garde
+
+```bash
+node tests/blindage-harness/perimetre-reprise.mjs
+```
+
+Analyse statique de `app.html` : compte les fonctions qui lisent le réseau, ne prennent
+aucun argument et ne sont atteintes par **aucune** chaîne de reprise — le périmètre restant
+du chantier de politique de reprise. Ne lance pas de navigateur, ne touche à rien, **sort
+toujours 0** : aucune PR n'échoue dessus.
+
+Il imprime d'abord les mécanismes de reprise qu'il sait reconnaître, ensuite seulement son
+chiffre. Ce n'est pas de la verbosité : cette liste est une énumération, elle vieillira, et
+un quatrième mécanisme la rendra fausse en silence. La sortie met l'oubli sous les yeux du
+lecteur plutôt que dans une regex. Les biais résiduels connus sont déclarés en tête du
+fichier, chacun avec le sens dans lequel il fausse le compte.
 
 - **Aucune modification de `app.html`** ni des constantes `GELE-001` / `NCRP-001`.
 - **`node_modules/` gitignoré** (cf. `.gitignore` ligne 43, pattern relatif).
