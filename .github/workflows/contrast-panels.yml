@@ -145,9 +145,14 @@ jobs:
       # c'est-à-dire le disque ÉPHÉMÈRE du runner. Aucun workflow ne le restaurait : chaque run
       # repartait d'un dossier vide et rechargeait tout depuis le réseau. Le cache réduisait
       # donc le trafic en local et rien en CI, sans que rien ne le signale — les lignes « MISS »
-      # du module partent sur stdout, redirigé vers contrast-result.json, donc invisibles dans
-      # les journaux du job. Constaté le 2026-09-08 non par ces journaux mais par les journaux
-      # edge Supabase, qui comptaient les requêtes réellement arrivées.
+      # du module partaient alors sur stdout, redirigé vers contrast-result.json, donc invisibles
+      # dans les journaux du job. Constaté le 2026-09-08 non par ces journaux mais par les
+      # journaux edge Supabase, qui comptaient les requêtes réellement arrivées.
+      #
+      # CE N'EST PLUS LE CAS depuis le 2026-09-09, par deux correctifs indépendants du même jour :
+      # #1370 a fait passer ces lignes sur stderr, et #1371 a retiré la redirection (le script
+      # écrit son rapport lui-même). Les « MISS » sont désormais lisibles dans les journaux du
+      # job, et aucun écrivain sur stdout ne peut plus atterrir dans le rapport.
       #
       # CLÉ À ROTATION HEBDOMADAIRE, alignée sur le TTL de 7 jours du module. Une clé fixe
       # aurait un mode d'échec silencieux : au bout de 7 jours toutes les entrées expirent,
