@@ -10500,6 +10500,19 @@ async function saveContrib(){
     // facteur_eau_nt reste stocké tel quel (brut, diagnostic) pour un audit futur éventuel.
     score_anomalie:human,
     delta_nt:valeurPivot!==null?Math.round(valeurPivot-predicted):null,
+    // bt_terme_inclus (2026-09-09, migration 011) — enregistre si le terme basse tension
+    // était inclus dans les deux valeurs ci-dessus au moment de l'écriture.
+    // La garde d'attente plus haut interroge computeElfState(), qui rend 'ready' dès que HTA
+    // est prêt et ne consulte JAMAIS BT : elle couvre la fenêtre HTA, pas la fenêtre BT
+    // (~2 min à chaque visite). Pendant celle-ci, perturbation_humaine_nt et delta_nt sont
+    // minorés — jusqu'à ×5,3 là où le champ HTA est faible — et contrairement à un affichage,
+    // la ligne est écrite : rien ne se répare ensuite.
+    // On ENREGISTRE la condition plutôt que de l'étendre à computeElfState() (arbitrage du
+    // 2026-09-07, motif écrit) : une ligne minorée mais étiquetée reste interprétable, une
+    // ligne minorée et muette ne l'est pas. L'avertissement au contributeur est une surface
+    // publique, traitée séparément (btIncompletNote() promet un complément qui n'arrivera
+    // jamais pour une ligne en base — il lui faut une variante propre à l'écriture).
+    bt_terme_inclus:btTermeInclus(),
     session_id:sessionId,version_app:'2.4',
     // Nouveaux champs contexte bâtiment
     contexte:ctxContrib,
