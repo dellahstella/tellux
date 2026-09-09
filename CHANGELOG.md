@@ -7,6 +7,20 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [chargeFacteur retiré du calcul ELF — valeur affichée changée de −26 % à +150 % selon le lieu — 2026-09-09]
+
+### Changed
+- **`app.html`** (`loadChargeReseau()` et ses consommateurs) — la modulation horaire/saisonnière de la composante ELF (lignes HTA) par `chargeFacteur` est **retirée**. Ce facteur, jamais alimenté par une donnée réseau réelle (le chemin RTE tenté échoue systématiquement, endpoint national sans sélecteur région — cf. PR #1352), faisait varier la valeur affichée de ×0,40 à ×1,35 selon l'heure et la saison de consultation, sans aucun rapport avec l'état réel du réseau. `htFactor` est désormais fixé à 1,0 en permanence. **Effet visible pour qui compare** : un point qui affichait le plancher (×0,40) affiche désormais ~2,5× sa valeur précédente ; un point qui affichait le pic hivernal (×1,35) affiche désormais ~−26 % de sa valeur précédente.
+- **`cadre-scientifique.html`** — nouvelle note servie sur la composante BT (schéma à 3 paliers, 70/115/180 nT, fourchette instruite 50-200 nT) : non calibrée statistiquement, choix éditorial. Champ `epistemic_note` correspondant (`calcMagneticELF_v2`) sans lecteur depuis sa création — jamais servi jusqu'ici. `note_ICNIRP` (autre champ sans lecteur trouvé au passage) retiré : contenu déjà public (guide-et-glossaire.html:531).
+- **L'incertitude publiée sur les courants HTA reste à ±50 %**, inchangée par ce commit — valeur du canon. Un état intermédiaire de cette PR l'élargissait à −60 %/+100 % : retiré avant merge, la borne haute reposait sur une fourchette de courant (150-450 A) absente du canon et sans provenance valide.
+- **`app.html`** — le badge « Réseau » (`#badge-reseau`, résumé conditions live) et le panneau détaillé associé (`#cond-sec-reseau`, `#res-charge`, `#res-charge-s`, sparkline 24 h) sont **retirés** : un badge qui continuait d'afficher une charge sans qu'aucun calcul ne la consomme aurait gardé l'apparence d'un intrant du modèle alors qu'il n'en est plus un.
+
+### Notes
+- Décision retenue parmi trois options instruites (documenter/étiqueter, retirer et élargir l'incertitude, remplacer par une source réelle) : retirer et élargir l'incertitude — la seule qui supprime la classe de défaut (une valeur physique publique dépendant de l'horloge du visiteur) plutôt que de la déplacer.
+- PR [#1352](https://github.com/dellahstella/tellux/pull/1352).
+
+---
+
 ## [IGRF14_GRID réancrée — évaluation analytique validée à 0,6 nT — 2026-09-09]
 
 ### Changed
