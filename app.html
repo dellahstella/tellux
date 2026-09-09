@@ -3788,6 +3788,109 @@ async function sbGet(p,timeout=8000){
 }
 async function sbPost(p,b){const r=await fetch(SB_URL+p,{method:'POST',headers:{...sbH(),'Prefer':'return=representation'},body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
 
+// ════════════════════════════════════════════════════════════════════════════
+// POLITIQUE DE REPRISE — assistant partagé (2026-09-09, conception validée)
+// Traite DEUX dettes symétriques et indissociables :
+//   RETRY-AMPLIFICATION-001  — loadDB réessayait sans backoff ni plafond pendant
+//     qu'un setInterval démarrait une chaîne de plus à chaque tick. Les chaînes
+//     s'accumulaient : débit mesuré sur UN onglet, par tranche de 5 min,
+//     6 → 8 → 19 → 19 → 13. La charge d'un visiteur croissait avec la panne.
+//   BOOT-ONLY-SANS-REDECLENCHEUR-001 — les chargeurs de boot n'avaient AUCUNE
+//     reprise : un échec transitoire retirait la couche pour la vie de l'onglet.
+//
+// Le garde qui supprime l'amplification est `enVol`, PAS le backoff : une seule
+// tentative en vol ou programmée par clé. Le backoff ne choisit que la cadence.
+// TOUT chemin de reprise passe par `declenche()` — un re-déclencheur qui
+// court-circuiterait le garde recréerait l'amplification qu'on borne.
+//
+// Vérifier le succès par PRÉDICAT, pas par absence de rejet : loadHTADataOnly
+// avale son échec (catch → _htaPreloadState='failed' → return), donc sa promesse
+// résout même en échec. `verifie` est le seul signal fiable, à définir appelant
+// par appelant.
+// ════════════════════════════════════════════════════════════════════════════
+const REPRISE_CLASSES = {
+  // 6 tentatives ≈ 25 min : durée observée le 2026-09-09 entre l'échec et le
+  // retour utile de l'endpoint. Échec = valeur FAUSSE (repli v1), pas absente.
+  critique: { tentatives: 6, surOnline: true,  surVisible: true },
+  // Échec = couche absente, visible comme absence. Budget réduit.
+  contexte: { tentatives: 3, surOnline: false, surVisible: true }
+};
+const REPRISE_BASE_MS = 30000;   // délai déjà en place dans loadDB — inchangé sans motif
+const REPRISE_FACTEUR = 2;
+const REPRISE_PLAFOND_MS = 600000; // 10 min : au-delà, indiscernable d'un rafraîchissement normal
+const REPRISE_GIGUE = 0.2;       // ±20 % — sans elle, tous les onglets retombent sur le
+                                 // même tick au rétablissement : une salve synchronisée
+                                 // remplacerait l'amplification par visiteur par une
+                                 // amplification par flotte.
+const _reprises = new Map();
+
+function reprisesEtat(cle){ const r=_reprises.get(cle); return r ? r.etat : 'idle'; }
+
+function enregistrerReprise(cle, fn, opts){
+  opts = opts || {};
+  const classe = REPRISE_CLASSES[opts.classe] || REPRISE_CLASSES.contexte;
+  _reprises.set(cle, {
+    fn, classe, etat: 'idle', tentatives: 0, enVol: false, minuteur: null,
+    // verifie() : succès réel. Par défaut « pas d'exception », mais un appelant
+    // qui avale son échec DOIT en fournir un (cf. en-tête).
+    verifie: opts.verifie || (() => true)
+  });
+  return cle;
+}
+
+function _repriseDelai(n){
+  const brut = Math.min(REPRISE_BASE_MS * Math.pow(REPRISE_FACTEUR, n), REPRISE_PLAFOND_MS);
+  return Math.round(brut * (1 + (Math.random() * 2 - 1) * REPRISE_GIGUE));
+}
+
+async function declenche(cle, motif){
+  const r = _reprises.get(cle);
+  if (!r) return false;
+  // ── LE GARDE. Une tentative en vol ou déjà programmée : on ne fait rien.
+  if (r.enVol || r.minuteur !== null) return false;
+  if (r.etat === 'ok' || r.etat === 'abandoned') return false;
+  r.enVol = true; r.etat = 'pending';
+  let ok = false;
+  try { await r.fn(); ok = !!r.verifie(); }
+  catch (e) { ok = false; }
+  r.enVol = false;
+  if (ok) { r.etat = 'ok'; r.tentatives = 0; return true; }
+  r.tentatives++;
+  if (r.tentatives >= r.classe.tentatives) {
+    r.etat = 'abandoned';
+    // NOTE (carve-out #2) : l'état `abandoned` doit devenir VISIBLE — décision
+    // Soleil 2026-09-09. Non fait ici : c'est du contenu public, donc revue
+    // séparée. Motif précis : elfV1Note() promet « Elle sera recalculée avec les
+    // données réelles » — vrai tant qu'on réessaie, FAUX une fois abandonné.
+    console.warn('[Tellux] reprise ' + cle + ' : abandon après ' + r.tentatives + ' tentatives');
+    return false;
+  }
+  r.etat = 'error';
+  const d = _repriseDelai(r.tentatives - 1);
+  r.minuteur = setTimeout(() => { r.minuteur = null; declenche(cle, 'backoff'); }, d);
+  console.warn('[Tellux] reprise ' + cle + ' : échec ' + r.tentatives + '/'
+    + r.classe.tentatives + ' (' + (motif||'?') + '), nouvelle tentative dans ' + Math.round(d/1000) + ' s');
+  return false;
+}
+
+// Re-déclencheurs. Les minuteurs sont bridés dans un onglet masqué (observé le
+// 2026-09-09) : `visibilitychange` est donc indispensable, un backoff seul ne se
+// réveille pas de façon fiable. Les deux passent par declenche(), donc par le garde.
+window.addEventListener('online', () => {
+  _reprises.forEach((r, cle) => { if (r.etat === 'error' && r.classe.surOnline) declenche(cle, 'online'); });
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  _reprises.forEach((r, cle) => { if (r.etat === 'error' && r.classe.surVisible) declenche(cle, 'visible'); });
+});
+// Sortie de `abandoned` : action utilisateur explicite seulement.
+function repriseManuelle(cle){
+  const r = _reprises.get(cle);
+  if (!r) return false;
+  r.etat = 'idle'; r.tentatives = 0;
+  return declenche(cle, 'manuelle');
+}
+
 // Cached fetch wrapper — 5min TTL in sessionStorage
 async function fetchEnv(url,timeout=8000){
   const key='tc_'+url.replace(/[^a-z0-9]/gi,'').substring(0,60);
@@ -11810,7 +11913,23 @@ if(typeof loadCEM==='function')loadCEM();
 // le préchargement échoue silencieusement si Supabase est indisponible au boot, et
 // calcMagneticELF_v2 retombe sur v1 jusqu'à activation manuelle de la couche Réseau (cf.
 // commentaire de loadHTADataOnly()). Reste à remesurer en prod pour quantifier le gain réel.
-if(typeof loadHTADataOnly==='function')loadHTADataOnly();
+// Adoption de la politique de reprise — LOT 1, premier appelant (2026-09-09).
+// loadHTADataOnly d'abord parce qu'il est le seul dont l'échec produit une valeur
+// FAUSSE et non une couche absente : sans lui, htaGridPrete() reste faux et
+// calcMagneticELF_v2 délègue à v1, dont les 8 axes en dur décrivent le bassin
+// d'Ajaccio et se trompent DANS LES DEUX SENS ailleurs (mesuré le 2026-09-09,
+// f=1,0 : 18 nT contre 259 à 42,9500/9,4500 ; 30 contre 16 à 42,8000/9,4000).
+// `verifie` est obligatoire ici : la fonction avale son échec (catch interne,
+// _htaPreloadState='failed', return) — sa promesse résout même en échec, donc
+// l'absence de rejet ne prouve rien. htaGridPrete() est la question que le
+// calcul pose réellement, c'est donc le bon prédicat.
+if(typeof loadHTADataOnly==='function'){
+  enregistrerReprise('hta', loadHTADataOnly, {
+    classe: 'critique',
+    verifie: () => typeof htaGridPrete === 'function' && htaGridPrete()
+  });
+  declenche('hta', 'boot');
+}
 // buildHotRF() au boot (au lieu de buildHot()) — RF activé par défaut (ACTIVE.hotrf=true).
 // Pas d'équivalent loadChargeReseau() nécessaire : buildHotRF()/calcN_RF_calib() ne dépend
 // pas du facteur de charge RTE (spécifique au domaine ELF/magnétique de buildHot()).
