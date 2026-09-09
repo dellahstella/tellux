@@ -3345,12 +3345,13 @@ var JS_STRINGS_EN = {
   interp_lvl_intense: "Intense",
   gamma_label_terrestre: "ambient gamma dose (cosmic + terrestrial)",
   gamma_label_cosmique: "ground-level cosmic dose",
-  gamma_badge_ancre: "Anchored — terrestrial measured on the Corsican Variscan batholith (Verdoya 1998), Verdoya 2009 coefficients reviewed by a third-party physicist",
-  gamma_badge_extrapole: "Extrapolated — Alpine Corsica not measured, value carried over by analogy with Liguria (Verdoya 2009), wide uncertainty",
-  gamma_badge_encours: "In progress — cosmic only; terrestrial component not deployed for this lithotype (no quantified source)",
-  gamma_conf_ancre: "medium — anchored terrestrial + parametric cosmic",
-  gamma_conf_extrapole: "low — parametric cosmic + extrapolated terrestrial",
-  gamma_conf_encours: "low — parametric cosmic, terrestrial component unavailable for this lithotype",
+  // gamma_badge_ancre/extrapole/encours + gamma_conf_ancre/extrapole/encours RETIRÉES
+  // (2026-09-09, brief « note épistémique gamma par provenance ») : aucun appelant jt(...),
+  // même famille morte que gammaConfDots/Text (cf. commentaire ~L8865 ci-dessous). Contenaient
+  // un endossement Verdoya en dur (gamma_badge_ancre) qui serait repris sans revue au premier
+  // portage vers radon.html — cf. dette privée GAMMA-PROVENANCE-NOTE-PORTAGE-RADON-001.
+  // gamma_label_*/gamma_reperes_tooltip (ci-dessus/ci-dessous) restent : génériques, sans
+  // branchement par statut, hors périmètre de ce retrait.
   ph_label_tres_calme: "Very calm",
   ph_label_calme: "Calm",
   ph_label_modere: "Moderate",
@@ -3423,7 +3424,7 @@ var JS_STRINGS_EN = {
   v2_title_elf: "Anthropogenic ELF 50 Hz",
   v2_conf_elf: "Confidence: medium — Biot-Savart modeling, ±50%",
   v2_title_rf: "Radiofrequency (microwave links + background)",
-  v2_conf_rf: "Confidence: medium — FH_POINTS + CartoRadio background",
+  v2_conf_rf: "Confidence: low — FH_POINTS + CartoRadio background",
   rf_icnirp_note: "ICNIRP: ≈ 4,500,000 µW/m² (documentary reference point)",
   v2_title_ionisant: "Ionizing domain",
   v2_conf_prefix: "Confidence: ",
@@ -5468,20 +5469,34 @@ function mkIcon(c,sq,sz){const s=sz||9;return L.divIcon({html:`<div style="width
 // ============================================================
 
 // Grille IGRF-14 précalculée — fallback précis si API BGS indisponible
-// Source : coefficients IGRF-14 (Alken et al. 2021), évalués analytiquement
-// Précision : ±100 nT (interpolation grille 0.25°) — à préférer au fallback linéaire
+// RÉANCRÉE le 2026-09-09 (rev issue d'un balayage "trois familles d'affirmations fausses").
+// Ce que la grille PRÉCÉDENTE était réellement, établi et non supposé : un plan quasi-parfait
+// (écart max 10 nT sur les 54 points contre un modèle purement linéaire 400 nT/°lat + 200 nT/°lon),
+// malgré un commentaire qui affirmait "coefficients IGRF-14, évaluées analytiquement" — cette
+// évaluation analytique n'avait pas eu lieu. Écart avec une vraie évaluation IGRF-14 : jusqu'à
+// 201 nT aux coins de grille, et 77 nT à Ajaccio (ville réelle, pas un coin) — au-delà du ±100 nT
+// annoncé plus bas, avant même d'ajouter la dérive temporelle. Établi par génération indépendante
+// depuis les coefficients IGRF-14 officiels (NOAA/IAGA/BGS, igrf14coeffs.txt) + variation séculaire
+// degré 8, implémentation validée à 0,6 nT du point de contrôle du code lui-même (Ajaccio, API BGS,
+// épistémie 2026-07-05 : F=46604, D=3,40°, I=57,99°) — écart méthode ancienne sur ce même point : 65 nT.
+// Grille CI-DESSOUS : évaluation analytique réelle, degré 13, aux mêmes 54 points (lat 41,25-43,25°,
+// pas 0,25° ; lon 8,5-9,75°, pas 0,25°), à l'époque 2026-09-09 (t=2026,688). Se périme au même rythme
+// que toute grille IGRF précalculée — à régénérer avant que la dérive ne redevienne significative.
+// Précision : ±100 nT (interpolation grille 0.25°) — à préférer au fallback linéaire. Ce chiffre
+// n'a pas été rediscuté dans ce commit : il portait sur l'interpolation spatiale, pas sur l'erreur
+// d'approximation de l'ancienne grille (éliminée ici) ni sur la dérive temporelle (qui redevient le
+// terme dominant une fois cette régénération faite) — arbitrage séparé, volontairement.
 // Note : API BGS directe donne ±10-15 nT, toujours préférée si disponible
-// IMPORTANT : les vraies valeurs Corse 2025 sont 46 150–47 200 nT, PAS ~44 500 nT
 const IGRF14_GRID=[
-  [41.25,8.5,46150],[41.25,8.75,46200],[41.25,9.0,46250],[41.25,9.25,46300],[41.25,9.5,46350],[41.25,9.75,46400],
-  [41.5,8.5,46250],[41.5,8.75,46300],[41.5,9.0,46350],[41.5,9.25,46400],[41.5,9.5,46450],[41.5,9.75,46500],
-  [41.75,8.5,46350],[41.75,8.75,46400],[41.75,9.0,46450],[41.75,9.25,46500],[41.75,9.5,46550],[41.75,9.75,46600],
-  [42.0,8.5,46450],[42.0,8.75,46500],[42.0,9.0,46560],[42.0,9.25,46610],[42.0,9.5,46650],[42.0,9.75,46700],
-  [42.25,8.5,46550],[42.25,8.75,46600],[42.25,9.0,46660],[42.25,9.25,46710],[42.25,9.5,46750],[42.25,9.75,46800],
-  [42.5,8.5,46650],[42.5,8.75,46700],[42.5,9.0,46760],[42.5,9.25,46810],[42.5,9.5,46850],[42.5,9.75,46900],
-  [42.75,8.5,46750],[42.75,8.75,46800],[42.75,9.0,46860],[42.75,9.25,46910],[42.75,9.5,46960],[42.75,9.75,47000],
-  [43.0,8.5,46850],[43.0,8.75,46900],[43.0,9.0,46960],[43.0,9.25,47010],[43.0,9.5,47060],[43.0,9.75,47100],
-  [43.25,8.5,46950],[43.25,8.75,47000],[43.25,9.0,47060],[43.25,9.25,47110],[43.25,9.5,47160],[43.25,9.75,47200],
+  [41.25,8.5,46351],[41.25,8.75,46371],[41.25,9.0,46392],[41.25,9.25,46413],[41.25,9.5,46433],[41.25,9.75,46454],
+  [41.5,8.5,46441],[41.5,8.75,46462],[41.5,9.0,46482],[41.5,9.25,46503],[41.5,9.5,46523],[41.5,9.75,46544],
+  [41.75,8.5,46531],[41.75,8.75,46551],[41.75,9.0,46572],[41.75,9.25,46592],[41.75,9.5,46612],[41.75,9.75,46633],
+  [42.0,8.5,46620],[42.0,8.75,46640],[42.0,9.0,46661],[42.0,9.25,46681],[42.0,9.5,46701],[42.0,9.75,46721],
+  [42.25,8.5,46709],[42.25,8.75,46729],[42.25,9.0,46749],[42.25,9.25,46769],[42.25,9.5,46789],[42.25,9.75,46809],
+  [42.5,8.5,46797],[42.5,8.75,46817],[42.5,9.0,46836],[42.5,9.25,46856],[42.5,9.5,46876],[42.5,9.75,46896],
+  [42.75,8.5,46884],[42.75,8.75,46904],[42.75,9.0,46923],[42.75,9.25,46943],[42.75,9.5,46963],[42.75,9.75,46983],
+  [43.0,8.5,46970],[43.0,8.75,46990],[43.0,9.0,47010],[43.0,9.25,47029],[43.0,9.5,47049],[43.0,9.75,47069],
+  [43.25,8.5,47056],[43.25,8.75,47076],[43.25,9.0,47095],[43.25,9.25,47115],[43.25,9.5,47134],[43.25,9.75,47154],
 ];
 
 // Grille LCS-1 révisée — anomalie crustale Corse.
@@ -8615,12 +8630,6 @@ function calcGammaAmbient(lat, lon, altitude_m) {
   }
   const total_nSv_h = Math.round((cosmic_nSv_h + (terrestrial_nSv_h || 0) + boost_ponctuel_nSv_h) * 10) / 10;
 
-  const epistemicTerrestre = terrestrialInfo.status === 'ancre'
-    ? 'Composante terrestre (NCRP 94) activée pour ce lithotype : « Estimation modélisée de la composante gamma terrestre (dose absorbée dans l\'air, nGy/h), calculée par la formule standard NCRP 94 avec les coefficients de Verdoya et al. (2009), à partir de concentrations U/Th/K mesurées sur les lithotypes du batholite varisque corse (Verdoya et al. 1998) ; jeu de coefficients relu et recommandé par un physicien externe (M. Verdoya, Università di Genova). Estimation par lithotype. Ne constitue pas une mesure certifiée. »'
-    : terrestrialInfo.status === 'extrapole'
-      ? 'Composante terrestre (NCRP 94) activée pour ce lithotype, en EXTRAPOLATION : couverture géologique partielle — la Corse alpine (schistes, ophiolites) n\'a pas de mesure U/Th/K directe ; valeur portée par analogue (Verdoya et al. 2009, Ligurie alpine, même auteur/méthode), incertitude nettement plus large que sur le batholite mesuré. Ne constitue pas une mesure certifiée.'
-      : 'Composante terrestre (NCRP 94) non déployée pour ce lithotype : aucune source quantifiée disponible (concentrations U/Th/K non ancrées ni extrapolables de façon défendable pour cette lithologie).';
-
   return {
     dose_rate_nSv_h: total_nSv_h, // cosmique + terrestre (si couvert) + boost ponctuel
     components: {
@@ -8638,8 +8647,21 @@ function calcGammaAmbient(lat, lon, altitude_m) {
     source: 'Approximation cosmique calée sur grille modélisée PARMA/EXPACS (Sato 2015) — H*(10), moyenne de cycle solaire · terrestre NCRP 94, coefficients Verdoya 2009 + concentrations Verdoya 1998 par lithotype · boost points chauds documentaires · Téléray ASNR (in_construction)',
     confidence: terrestrialInfo.status === 'ancre' ? 'medium' : 'low',
     under_review: true,          // Téléray manquant ; terrestre extrapolé pour partie du territoire
-    in_construction: true,
-    epistemic_note: 'Estimation issue d\'une grille modélisée (PARMA/EXPACS, Sato 2015), jamais d\'une mesure Tellux : dose cosmique au sol en H*(10) (équivalent de dose ambiant), toutes composantes ionisantes cosmiques (muons, composante électromagnétique, neutrons, protons) — distincte du gamma terrestre. Moyenne de cycle solaire ; la variation solaire (±15 %) n\'est pas modélisée. LIMITE HAUTE ALTITUDE : l\'approche cosmique n\'a pas été expertisée en altitude par le physicien tiers consulté sur le volet terrestre — à considérer prudemment. ' + epistemicTerrestre + ' Fond naturel Corse : 75–150 nSv/h (Téléray ASNR, gamma total — non directement comparable aux composantes modélisées séparément). Doses des points chauds documentaires, non mesurées par Tellux. Aucune implication sanitaire à ces niveaux de fond naturel.'
+    in_construction: true
+    // epistemic_note RETIRÉ (2026-09-09, brief « note épistémique gamma par provenance ») :
+    // champ sans aucun lecteur — vérifié par grep sur les accès de propriété (`.epistemic_note`),
+    // pas sur les définitions. Ni popup (rendu gamma retiré le 2026-09-01, cf. commentaire
+    // ci-dessous ~L8865), ni export CSV expert (exportExpertCSV n'exporte que dose_rate_nSv_h/
+    // confidence/under_review/source, jamais ce champ), ni radon.html (portage jamais commencé,
+    // aucune définition de calcGammaAmbient/epistemic_note/GAMMA_TERRESTRE_PAR_LITHOTYPE dans ce
+    // fichier). Il portait 3 variantes selon terrestrialInfo.status (ancre/extrapole/non
+    // modélisé), correctement scindées sur l'endossement Verdoya (nom cité SEULEMENT en 'ancre')
+    // MAIS la variante 'extrapole' affirmait à tort que schistes ET ophiolites étaient
+    // extrapolés — ophiolite est absente de GAMMA_TERRESTRE_PAR_LITHOTYPE (non_modélisé, dose
+    // null), jamais 'extrapole'. Retiré plutôt que corrigé : une chaîne morte inexacte, réparée,
+    // a l'air à jour et sera reprise sans revue au premier portage — cf. dette privée
+    // GAMMA-PROVENANCE-NOTE-PORTAGE-RADON-001. Le futur portage vers radon.html doit écrire ses
+    // notes de provenance contre la carte lithotype→statut d'alors, jamais réactiver ce texte.
   };
 }
 
@@ -8869,10 +8891,13 @@ map.on('click',async e=>{
   // gammaLabel, gammaBadgeTitle/Icon/Color (badge 3 états ancré/extrapolé/en cours),
   // gammaConfDots/Text (points de confiance) et gammaDetailLine (ligne « X nGy/h terrestre
   // (plage lithotype …) + Y nSv/h cosmique »). Tous étaient des dérivés d'affichage : aucun
-  // n'était lu par un calcul. Les clés i18n correspondantes (gamma_label_*, gamma_badge_*,
-  // gamma_conf_*, gamma_reperes_tooltip) sont CONSERVÉES telles quelles pour le portage vers
-  // radon.html — même patron que la couche b-openrad mutée le 2026-08-30 (code mort gardé
-  // pour migration, cf. son commentaire dans le menu Couches).
+  // n'était lu par un calcul. Les clés i18n gamma_label_* et gamma_reperes_tooltip sont
+  // CONSERVÉES telles quelles pour le portage vers radon.html — même patron que la couche
+  // b-openrad mutée le 2026-08-30 (code mort gardé pour migration, cf. son commentaire dans
+  // le menu Couches). gamma_badge_*/gamma_conf_* et le champ epistemic_note de
+  // calcGammaAmbient() ont en revanche été RETIRÉS le 2026-09-09 (pas conservés) : ils
+  // portaient un endossement Verdoya en dur / une variante inexacte, qui aurait été repris
+  // sans revue au premier portage — cf. dette privée GAMMA-PROVENANCE-NOTE-PORTAGE-RADON-001.
   const gamma_nSvh    = v2.domains.ionizing.gamma.dose_rate_nSv_h;
   // radon_class reste lu ici : alimente encore _geoLastPoint (plus bas) et l'export CSV expert
   // (via v2.domains.ionizing.radon directement, pas via cette const — mais gardée pour
@@ -9252,7 +9277,7 @@ map.on('click',async e=>{
       '<div style="margin-top:3px;font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">'+jt('v2_title_rf','Radiofréquence (FH + fond)')+'</div>'+
       '<div style="display:flex;align-items:center;gap:4px">'+
         '<span style="font-size:12px;font-weight:700;color:#8E2F1F">'+rf_uWm2+' µW/m²</span>'+
-        '<span style="font-size:9px;color:#626774" title="'+jt('v2_conf_rf','Confiance : moyen — FH_POINTS + fond CartoRadio')+'">●●○</span>'+
+        '<span style="font-size:9px;color:#626774" title="'+jt('v2_conf_rf','Confiance : faible — FH_POINTS + fond CartoRadio')+'">●○○</span>'+
       '</div>'+
       '<div style="font-size:8px;color:#626774;font-style:italic">'+jt('rf_icnirp_note','ICNIRP : ≈ 4 500 000 µW/m² (repère documentaire)')+'</div>'+
       // ── Ionisant : bloc entier retiré le 2026-09-02 (décision Soleil, brief "retrait radon") ──
