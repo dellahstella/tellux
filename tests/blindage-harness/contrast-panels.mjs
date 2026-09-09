@@ -935,9 +935,18 @@ async function main() {
   // d'échec que ce balayage existe pour supprimer : il ne doit pas pouvoir se le réintroduire.
   for (const s of (rapport.cond_par_scenario || [])) {
     if (s.etat !== 'mesuré' || s.noeuds < COND_MIN_NOEUDS) {
-      depassements.push(`balayage #conditions-bar sous son plancher : scénario « ${s.scenario} »`
-        + ` (état : ${s.etat}, ${s.noeuds} nœud(s) < ${COND_MIN_NOEUDS}) — la barre ne s'est pas`
-        + ' peuplée sous fixture, les branches de couleur ne sont pas exercées');
+      // Le message énonce LA MESURE ET LE SEUIL, rien d'autre (2026-09-09). Il disait
+      // auparavant « la barre ne s'est pas peuplée sous fixture, les branches de couleur ne
+      // sont pas exercées » — une hypothèse de 2026-09-03 sur pourquoi un compte serait bas,
+      // figée et énoncée comme un constat. Vérifiée fausse le 2026-09-09 : la barre se
+      // peuplait (8 nœuds sous fixture, 8 à la passe live sans fixture), les 4 scénarios
+      // rendaient `état : mesuré` avec leurs violations calculées ; elle avait simplement
+      // perdu deux nœuds (retrait de `badge-reseau` par #1363). Qui lisait ce message partait
+      // chercher un défaut de fixture, pendant que le vrai signal — une surface a rétréci —
+      // n'était nulle part. Le contrôle mesurait juste, déclenchait juste, et racontait faux.
+      // L'hypothèse sur la cause appartient au lecteur, qui a les faits sous les yeux.
+      depassements.push(`balayage #conditions-bar sous son plancher : scénario « ${s.scenario} » `
+        + `(état : ${s.etat}, ${s.noeuds} nœud(s) mesuré(s) < ${COND_MIN_NOEUDS} attendus)`);
     }
   }
   if (!rapport.cond_par_scenario || rapport.cond_par_scenario.length !== COND_SCENARIOS.length) {
