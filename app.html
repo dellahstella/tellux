@@ -6623,6 +6623,17 @@ let SEGMENT_GRID = null;
 // Grille BT (chargement asynchrone, dette BT-ELF-001)
 let BT_SEGMENTS_DATA = null;
 let BT_SEGMENT_GRID  = null;
+// _btPaginationComplete — prédicat de succès pour la politique de reprise (2026-09-09, lot 2).
+// `BT_SEGMENT_GRID !== null` NE SUFFIT PAS : si une page revient vide en cours de pagination
+// (HTTP 200, tableau vide — ce que produit un RLS ou un incident partiel), la boucle sort, le
+// garde `all.length === 0` ne se déclenche pas, et la grille se construit sur un jeu TRONQUÉ.
+// Elle est alors non nulle et fausse. Le critère retenu n'est pas un plancher de segments (un
+// nombre magique qui dériverait avec la donnée) mais une IDENTITÉ : lignes reçues == total
+// déclaré par le serveur (`Content-Range: 0-999/156130`, obtenu via `Prefer: count=exact` sur
+// la première page seulement). Repli si l'en-tête manque : `page.length < PAGE`, qui est une
+// condition suffisante de complétude — mais pas nécessaire, car un total multiple exact de
+// PAGE se termine par une page vide et sortirait par l'autre branche.
+let _btPaginationComplete = false;
 // BT_LINES_RAW : lignes brutes groupées (pts + type), distinctes de BT_SEGMENTS_DATA
 // (aplatissement en segments élémentaires pour le calcul, cf. buildBTSegmentGrid). BT_LINES_RAW
 // sert UNIQUEMENT au rendu visuel statique (buildBTStaticLayer, couche lBT) — les deux structures
@@ -6907,22 +6918,40 @@ function loadBTLinesAsync() {
       // sans requête séparée — les deux besoins (calcul + rendu) partagent désormais ce seul fetch.
       const base = SB_URL + '/rest/v1/bt_lines?select=pts,type'
         + '&clat=gte.41.3&clat=lte.43.1&clon=gte.8.5&clon=lte.9.7';
-      let all = [], offset = 0;
+      let all = [], offset = 0, totalDeclare = null, finNormale = false;
       const PAGE = 1000;
       while (true) {
-        const r = await fetch(base + '&order=id&limit=' + PAGE + '&offset=' + offset,
-          { headers: { apikey: SB_KEY, 'Authorization': 'Bearer ' + SB_KEY,
-                       'Range': offset + '-' + (offset + PAGE - 1), 'Range-Unit': 'items' } });
+        const entetes = { apikey: SB_KEY, 'Authorization': 'Bearer ' + SB_KEY,
+                          'Range': offset + '-' + (offset + PAGE - 1), 'Range-Unit': 'items' };
+        // count=exact sur la PREMIÈRE page seulement : le serveur compte les lignes à chaque
+        // requête qui le demande, inutile de le refaire à chaque page.
+        if (offset === 0) entetes['Prefer'] = 'count=exact';
+        const r = await fetch(base + '&order=id&limit=' + PAGE + '&offset=' + offset, { headers: entetes });
         if (!r.ok) throw new Error('HTTP ' + r.status);
+        if (totalDeclare === null) {
+          const cr = r.headers.get('Content-Range');           // ex. « 0-999/156130 »
+          const m = cr && cr.match(/\/(\d+)\s*$/);
+          if (m) totalDeclare = parseInt(m[1], 10);
+        }
         const page = await r.json();
         if (!Array.isArray(page) || page.length === 0) break;
         all = all.concat(page);
-        if (page.length < PAGE) break;
+        if (page.length < PAGE) { finNormale = true; break; }
         offset += PAGE;
       }
+      // Complétude : identité si le serveur a déclaré un total, sinon repli sur la fin normale.
+      _btPaginationComplete = (totalDeclare !== null) ? (all.length === totalDeclare) : finNormale;
       if (all.length === 0) {
         console.warn('[Tellux] bt_lines calcul : 0 lignes reçues (RLS ou bbox vide)');
+        _btPaginationComplete = false;   // première page vide : échec, pas silence
+        _btLinesPromise = null;          // sans quoi la mémoïsation empêcherait toute reprise
         return;
+      }
+      if (!_btPaginationComplete) {
+        console.warn('[Tellux] bt_lines calcul : pagination INCOMPLÈTE — ' + all.length
+          + (totalDeclare !== null ? ' / ' + totalDeclare : '') + ' lignes. Grille non construite.');
+        _btLinesPromise = null;
+        return;                          // ne PAS construire la grille sur un jeu tronqué
       }
       BT_LINES_RAW = all;
       buildBTSegmentGrid(all);
@@ -6931,6 +6960,12 @@ function loadBTLinesAsync() {
         + ' segments en ' + elapsed.toFixed(0) + ' ms');
     } catch (e) {
       console.warn('[Tellux] loadBTLinesAsync echec : ' + e.message);
+      _btPaginationComplete = false;
+      // Mémoïsation relâchée sur échec (2026-09-09, lot 2) : sans ça, `_btLinesPromise`
+      // reste une promesse résolue et tout rappel retourne immédiatement sans refetch —
+      // la reprise serait impossible par construction, et l'assistant épuiserait ses six
+      // tentatives en quelques millisecondes sans qu'une seule requête parte.
+      _btLinesPromise = null;
     }
   })();
   return _btLinesPromise;
@@ -10954,7 +10989,7 @@ async function loadHTADataOnly() {
       return;
     }
     buildSegmentGrid(all);
-    setTimeout(loadBTLinesAsync, 200);
+    setTimeout(() => declenche('bt', 'apres-hta'), 200);
     _htaDataCache = all;
     _htaPreloadState = 'ready';
     console.log('[Tellux] HTA data préchargée : ' + all.length + ' lignes, grille prête.');
@@ -11005,7 +11040,7 @@ async function loadReseau(){
     if (typeof buildSegmentGrid === 'function' && !SEGMENT_GRID) {
       buildSegmentGrid(all);
       // Chargement asynchrone BT après HTA (dette BT-ELF-001)
-      setTimeout(loadBTLinesAsync, 200);
+      setTimeout(() => declenche('bt', 'apres-hta'), 200);
       // _htaPreloadState : ce chemin (activation manuelle couche Réseau) peut réussir même si
       // le préchargement automatique du boot a échoué — cf. son propre commentaire. Remis à
       // 'ready' ici pour rester exact (auto-guérison si la panne était transitoire).
@@ -11929,6 +11964,20 @@ if(typeof loadHTADataOnly==='function'){
     verifie: () => typeof htaGridPrete === 'function' && htaGridPrete()
   });
   declenche('hta', 'boot');
+}
+// LOT 2 (2026-09-09) — bt_lines, second membre du niveau critique. Son échec ne retire pas
+// une couche : il fait SAUTER la valeur affichée quand il finit par arriver (×5,3 mesuré à
+// 42,5680/8,7570 entre régime sans BT et avec — cf. ELF-SAUT-REGIME-BT-NON-ANNONCE-001).
+// Il n'est PAS déclenché ici : son point d'entrée reste le chemin de succès de HTA
+// (setTimeout(... 'apres-hta') plus haut), qui préserve l'ordre HTA puis BT.
+// Couverture conditionnelle à ne pas compter comme acquise : depuis #1366, BT hérite d'une
+// reprise seulement si HTA a lui-même échoué puis réussi. Si HTA passe du premier coup et
+// que BT seul échoue, la reprise de BT tient à son propre enregistrement, pas à celui de HTA.
+if(typeof loadBTLinesAsync==='function'){
+  enregistrerReprise('bt', loadBTLinesAsync, {
+    classe: 'critique',
+    verifie: () => _btPaginationComplete && BT_SEGMENT_GRID !== null
+  });
 }
 // buildHotRF() au boot (au lieu de buildHot()) — RF activé par défaut (ACTIVE.hotrf=true).
 // Pas d'équivalent loadChargeReseau() nécessaire : buildHotRF()/calcN_RF_calib() ne dépend
