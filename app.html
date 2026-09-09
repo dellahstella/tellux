@@ -2847,7 +2847,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
         <span class="cond-summary" id="cond-summary-reseau">—</span>
       </button>
       <div class="cond-body" id="cond-body-reseau" hidden>
-        <div class="cond-row"><span class="cond-key">Charge Corse</span><span class="cond-val" id="res-charge">—</span><span class="cond-src" id="res-charge-s">RTE (sandbox)</span></div>
+        <div class="cond-row"><span class="cond-key">Charge Corse</span><span class="cond-val" id="res-charge">—</span><span class="cond-src" id="res-charge-s">Profil horaire/saisonnier (bilans RTE 2020-2024)</span></div>
         <div class="cond-sparkline" id="cond-sparkline-reseau" aria-label="Profil horaire de la charge electrique corse sur 24 h"></div>
       </div>
     </div>
@@ -11036,7 +11036,11 @@ async function loadChargeReseau(){
   // Source : RTE bilans électriques Corse 2020-2024 (MW moyen par heure)
   const PROFIL_HORAIRE=[130,125,122,120,120,122,135,155,175,195,210,220,
                          225,228,230,228,222,218,220,225,225,215,200,165];
-  const now=new Date();
+  // Heure/mois indexés sur Europe/Paris (2026-09-09, arbitrage Soleil), pas l'horloge locale
+  // du visiteur : un profil de charge électrique corse évalué à l'heure de Tokyo n'a pas de
+  // sens. new Date(toLocaleString(...)) reformate l'instant courant comme vécu à Paris puis le
+  // reparse en heure « locale » — h/mois deviennent ceux de Paris quel que soit le fuseau client.
+  const now=new Date(new Date().toLocaleString('en-US',{timeZone:'Europe/Paris'}));
   const h=now.getHours();
   const mois=now.getMonth(); // 0=jan
   const coefSaison=mois>=5&&mois<=8?0.75:mois>=11||mois<=1?1.35:1.0; // été/hiver
@@ -11045,8 +11049,12 @@ async function loadChargeReseau(){
   chargeFactorSource='estime'; // par défaut ; repose à 'RTE' seulement si le fetch réussit ci-dessous — remis à 'estime' à chaque cycle pour ne pas rester figé sur un succès précédent si RTE échoue au cycle suivant
 
   try{
-    // RTE eco2mix API — production par région (Corse = région insulaire)
-    // Source : https://data.rte-france.com (API publique, CORS ok)
+    // Correctif 2026-09-09 (arbitrage Soleil) : ce commentaire annonçait « production par
+    // région (Corse = région insulaire) » — décrivait un sélecteur régional qui n'existe pas.
+    // L'endpoint appelé (consumption/v1/short_term) est la conso NATIONALE française, sans
+    // paramètre de région. Même si l'auth OAuth2 était résolue (cf. commentaire de fonction
+    // ci-dessus), cette branche ne renverrait jamais une valeur spécifiquement corse — elle
+    // est fausse par construction, pas seulement bloquée par l'authentification.
     const d=await fetchEnv(
       'https://digital.iservices.rte-france.com/open_api/consumption/v1/short_term?sandbox=true',
       6000
