@@ -2780,7 +2780,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
 <!-- Item 1 — Barre conditions permanente (post STOP A validation Soleil).
      Bas de carte full-width, summary 5 chips toujours visibles + details accordéon
      vers le bas avec les 4 sections live (solaire, atmo, réseau, contribs).
-     IDs internes (kp-v, sw-bz, sw-d, meteo-n, res-charge, lightning-v, cond-summary-*,
+     IDs internes (kp-v, sw-bz, sw-d, meteo-n, lightning-v, cond-summary-*,
      contrib-list, etc.) préservés pour ne pas casser les handlers existants. -->
 <aside id="conditions-bar" class="collapsed" aria-label="Conditions live et indicateurs temps réel">
   <button id="conditions-bar-toggle" type="button" aria-label="Déplier les détails conditions" aria-expanded="false">
@@ -2789,10 +2789,10 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
         <span class="badge-key">Kp</span>
         <span class="badge-val" id="badge-kp-val">—</span>
       </div>
-      <div class="cond-badge" id="badge-reseau" title="Charge réseau électrique Corse">
-        <span class="badge-key">Réseau</span>
-        <span class="badge-val" id="badge-reseau-val">—</span>
-      </div>
+      <!-- badge-reseau RETIRÉ (2026-09-09, arbitrage Soleil) : chargeFacteur ne module plus rien
+           (htFactor fixé à 1.0, cf. loadChargeReseau() retirée plus bas) — un badge qui affiche
+           une charge sans qu'aucun calcul ne la consomme aurait survécu à sa fonction en gardant
+           l'apparence d'un intrant du modèle. Retrait complet, pas relabellisation. -->
       <div class="cond-badge" id="badge-supabase" title="Statut connexion Supabase (contributions live)">
         <span class="badge-key">Live</span>
         <span class="badge-val">
@@ -2840,17 +2840,8 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
         <div class="cond-row" id="lightning-pc"><span class="cond-key">Activité orageuse</span><span class="cond-val" id="lightning-v">—</span><span class="cond-src" id="lightning-s">Open-Meteo</span></div>
       </div>
     </div>
-    <div class="cond-section" data-open="false" id="cond-sec-reseau">
-      <button class="cond-header" type="button" onclick="toggleCondSection('reseau')" aria-expanded="false" aria-controls="cond-body-reseau">
-        <span class="cond-chevron">▸</span>
-        <span class="cond-label">Réseau électrique</span>
-        <span class="cond-summary" id="cond-summary-reseau">—</span>
-      </button>
-      <div class="cond-body" id="cond-body-reseau" hidden>
-        <div class="cond-row"><span class="cond-key">Charge Corse</span><span class="cond-val" id="res-charge">—</span><span class="cond-src" id="res-charge-s">Profil horaire/saisonnier (bilans RTE 2020-2024)</span></div>
-        <div class="cond-sparkline" id="cond-sparkline-reseau" aria-label="Profil horaire de la charge electrique corse sur 24 h"></div>
-      </div>
-    </div>
+    <!-- cond-sec-reseau RETIRÉ (2026-09-09, arbitrage Soleil) — même geste que badge-reseau
+         ci-dessus, même raison : plus aucun calcul ne consomme chargeFacteur. -->
     <div class="cond-section" data-open="false" id="cond-sec-contribs">
       <button class="cond-header" type="button" onclick="toggleCondSection('contribs')" aria-expanded="false" aria-controls="cond-body-contribs">
         <span class="cond-chevron">▸</span>
@@ -3773,12 +3764,12 @@ function updateIgrfWmmDiff(lat, lon) {
 let curKp='—',curBz='—',curDensity='—',curFlux='—';
 let meteoData={pression:null,humidite:null,temp:null,precip:0,vent:0};
 let lightningNearby=0,chargeFacteur=1.0;
-// chargeFactorSource — provenance de chargeFacteur (2026-09-02, brief N, cf. brief K) :
-// 'estime' par défaut (valeur initiale ci-dessus = modèle horaire, jamais RTE avant le
-// premier appel de loadChargeReseau()) ; posé à 'RTE'/'estime' par loadChargeReseau()
-// elle-même à chaque cycle. Champ de PROVENANCE uniquement — chargeFacteur/htFactor ne
-// changent pas de valeur ni de plage [0.4,2.2], seule leur origine devient lisible par
-// tout consommateur (#cond-summary-reseau, chargeFactorApplied exporté).
+// chargeFactorSource — RETRAIT PARTIEL (2026-09-09, arbitrage Soleil) : plus jamais réassignée
+// depuis le retrait de loadChargeReseau() (cf. son commentaire de retrait) — reste 'estime' en
+// permanence, comme chargeFacteur reste 1.0 en permanence. Conservée : lue par
+// calcMagneticELF_v1/v2 (champ chargeFactorSource du retour, provenance) — devenue une constante
+// de fait plutôt qu'une variable, pas retirée pour ne pas toucher au contrat de retour de ces
+// deux fonctions dans ce même geste.
 let chargeFactorSource='estime';
 const sessionId='sx_'+Date.now().toString(36);
 
@@ -6912,11 +6903,11 @@ function calcBiotSavartSegmentVec(segLat1, segLon1, segLat2, segLon2, obsLat, ob
 function calcMagneticELF_v1(lat, lon, chargeFactor) {
   const htFactor = (chargeFactor !== undefined) ? chargeFactor
                  : (typeof chargeFacteur !== 'undefined' ? chargeFacteur : 1.0);
-  // Provenance (2026-09-02, brief N) : miroir exact de la dérivation de htFactor
-  // ci-dessus — 'parametre' si un appelant a explicitement passé chargeFactor
-  // (ex. runELFRegressionTest, valeur fixe de test), sinon la provenance réelle
-  // de la valeur globale (RTE/estimé, posée par loadChargeReseau()). Champ de
-  // provenance seul — htFactor ne change pas.
+  // Provenance (2026-09-02, brief N ; loadChargeReseau() retirée 2026-09-09, cf. son
+  // commentaire de retrait plus bas) : miroir exact de la dérivation de htFactor ci-dessus —
+  // 'parametre' si un appelant a explicitement passé chargeFactor (ex. runELFRegressionTest,
+  // valeur fixe de test), sinon 'estime' en permanence (chargeFactorSource n'est plus jamais
+  // réassignée). Champ de provenance seul — htFactor ne change pas.
   const htFactorSource = (chargeFactor !== undefined) ? 'parametre'
                  : (typeof chargeFactorSource !== 'undefined' ? chargeFactorSource : 'estime');
   const MU0_OVER_2PI = 2e-7; // µ0/(2π) en T·m/A
@@ -7019,7 +7010,8 @@ function calcMagneticELF_v1(lat, lon, chargeFactor) {
   return {
     B_total_nT: Math.round(B_total_nT),
     contributions,
-    note_ICNIRP: 'Rappel documentaire : limite ICNIRP grand public pour ELF 50 Hz est de 200 µT (200 000 nT).',
+    // note_ICNIRP RETIRÉ (2026-09-09) : champ sans lecteur (vérifié par grep), et son contenu
+    // (limite ICNIRP ELF 50 Hz = 200 µT) est déjà public — guide-et-glossaire.html:531.
     source: 'Biot-Savart sur lignes HTA EDF SEI + PROD_ELECTRIQUE + BT_ZONES + postes sources + éoliennes',
     confidence: 'medium',
     chargeFactorSource: htFactorSource,
@@ -7055,11 +7047,11 @@ function calcMagneticELF_v1(lat, lon, chargeFactor) {
 function calcMagneticELF_v2(lat, lon, chargeFactor) {
   const htFactor = (chargeFactor !== undefined) ? chargeFactor
                  : (typeof chargeFacteur !== 'undefined' ? chargeFacteur : 1.0);
-  // Provenance (2026-09-02, brief N) : miroir exact de la dérivation de htFactor
-  // ci-dessus — 'parametre' si un appelant a explicitement passé chargeFactor
-  // (ex. runELFRegressionTest, valeur fixe de test), sinon la provenance réelle
-  // de la valeur globale (RTE/estimé, posée par loadChargeReseau()). Champ de
-  // provenance seul — htFactor ne change pas.
+  // Provenance (2026-09-02, brief N ; loadChargeReseau() retirée 2026-09-09, cf. son
+  // commentaire de retrait plus bas) : miroir exact de la dérivation de htFactor ci-dessus —
+  // 'parametre' si un appelant a explicitement passé chargeFactor (ex. runELFRegressionTest,
+  // valeur fixe de test), sinon 'estime' en permanence (chargeFactorSource n'est plus jamais
+  // réassignée). Champ de provenance seul — htFactor ne change pas.
   const htFactorSource = (chargeFactor !== undefined) ? 'parametre'
                  : (typeof chargeFactorSource !== 'undefined' ? chargeFactorSource : 'estime');
   if (!htaGridPrete()) {
@@ -7201,7 +7193,8 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
   return {
     B_total_nT: Math.round(B_total_nT),
     contributions,
-    note_ICNIRP: 'Rappel documentaire : limite ICNIRP grand public pour ELF 50 Hz est de 200 µT (200 000 nT).',
+    // note_ICNIRP RETIRÉ (2026-09-09) : champ sans lecteur (vérifié par grep), et son contenu
+    // (limite ICNIRP ELF 50 Hz = 200 µT) est déjà public — guide-et-glossaire.html:531.
     epistemic_note: 'Composante BT : estimation par densité de zone, structure de calage définie (terciles réels), fonction segments→intensité non calibrée statistiquement — choix éditorial à l\'intérieur d\'une fourchette instruite (50-200 nT, ambiant de zone). Ne constitue pas une mesure certifiée. Relecture externe non encore sollicitée.',
     source: 'Biot-Savart vectoriel 2D — ' + HTA_SEGMENTS_DATA.length + ' seg HTA + BT densité de zone (' + btSrc + ') + PROD_ELECTRIQUE + postes + éoliennes',
     confidence: 'medium',
@@ -8568,8 +8561,13 @@ function calcRadonPotential(lat, lon, options) {
 //              corses, batholite) — voir GAMMA_TERRESTRE_PAR_LITHOTYPE
 //   Téléray ASNR : réseau public (in_construction — API à vérifier)
 //   Ordres de grandeur Corse : 75–150 nSv/h (mesures Téléray 2A/2B)
-// Limite haute altitude (guidance Massimo Verdoya, courriel 2026-07-29, point D1) :
-//   la variation dose/altitude n'est pas de sa compétence — signalée, non résolue.
+// Limite haute altitude (courriel du relecteur externe, 2026-08-03, réponse D1) :
+//   il indique n'avoir jamais traité ce sujet et suggère d'en signaler la limite.
+//   Corrigé le 2026-09-09 : ce commentaire disait « n'est pas de sa compétence » —
+//   affirmation fausse ET publique (app.html est servi), sur une personne nommable.
+//   La source dit ne pas avoir abordé la question, pas ne pas savoir la traiter.
+//   La date était également erronée (2026-07-29 ; D1 est du courriel du 3 août).
+//   Surface publique correspondante : cadre-scientifique.html, clé s6_cos_alt.
 // ════════════════════════════════════════════════════════════════════════════
 function calcGammaAmbient(lat, lon, altitude_m) {
   // Altitude par défaut : 200 m = altitude médiane côtière corse
@@ -10953,7 +10951,6 @@ async function loadReseau(){
     }catch(e2){}
     setStatus(jt('hta_indisponible', '⚠ HTA/HTB : aucune source disponible'),true);
   }
-  loadChargeReseau();
 }
 
 
@@ -11046,60 +11043,28 @@ function _syncBTZoom(fromToggle){
   }
 }
 
-// Charge réseau Corse — modèle horaire local (profil type Corse, calibré sur bilans RTE
-// 2020-2024, ±20% précision) — c'est la SEULE source qui aboutit aujourd'hui.
-// Correctif 2026-09-08 : cette fonction tentait aussi l'API RTE eco2mix ci-dessous ;
-// l'endpoint (digital.iservices.rte-france.com) exige un token OAuth2 même en sandbox
-// (vérifié : HTTP 400, WWW-Authenticate: Bearer, "Unable to find token in the message"),
-// jamais envoyé par ce dépôt statique — l'appel échoue donc systématiquement, chargeFactorSource
-// ne devient jamais 'RTE' en pratique. Le badge n'attribue plus ce fournisseur (cf. app.html
-// ~L2792). Appel conservé tel quel (pas retiré) : si RTE ouvre un jour un accès sans auth ou
-// qu'une clé est ajoutée hors dépôt, le chemin de succès (L~11050) redevient actif sans y
-// retoucher — mais tant que ce correctif n'est pas fait, considérer ce bloc comme mort.
-async function loadChargeReseau(){
-  // Fallback : modèle horaire type Corse
-  // Source : RTE bilans électriques Corse 2020-2024 (MW moyen par heure)
-  const PROFIL_HORAIRE=[130,125,122,120,120,122,135,155,175,195,210,220,
-                         225,228,230,228,222,218,220,225,225,215,200,165];
-  // Heure/mois indexés sur Europe/Paris (2026-09-09, arbitrage Soleil), pas l'horloge locale
-  // du visiteur : un profil de charge électrique corse évalué à l'heure de Tokyo n'a pas de
-  // sens. new Date(toLocaleString(...)) reformate l'instant courant comme vécu à Paris puis le
-  // reparse en heure « locale » — h/mois deviennent ceux de Paris quel que soit le fuseau client.
-  const now=new Date(new Date().toLocaleString('en-US',{timeZone:'Europe/Paris'}));
-  const h=now.getHours();
-  const mois=now.getMonth(); // 0=jan
-  const coefSaison=mois>=5&&mois<=8?0.75:mois>=11||mois<=1?1.35:1.0; // été/hiver
-  const consoEstimee=Math.round(PROFIL_HORAIRE[h]*coefSaison);
-  chargeFacteur=Math.max(0.4,Math.min(2.2,consoEstimee/230));
-  chargeFactorSource='estime'; // par défaut ; repose à 'RTE' seulement si le fetch réussit ci-dessous — remis à 'estime' à chaque cycle pour ne pas rester figé sur un succès précédent si RTE échoue au cycle suivant
-
-  try{
-    // Correctif 2026-09-09 (arbitrage Soleil) : ce commentaire annonçait « production par
-    // région (Corse = région insulaire) » — décrivait un sélecteur régional qui n'existe pas.
-    // L'endpoint appelé (consumption/v1/short_term) est la conso NATIONALE française, sans
-    // paramètre de région. Même si l'auth OAuth2 était résolue (cf. commentaire de fonction
-    // ci-dessus), cette branche ne renverrait jamais une valeur spécifiquement corse — elle
-    // est fausse par construction, pas seulement bloquée par l'authentification.
-    const d=await fetchEnv(
-      'https://digital.iservices.rte-france.com/open_api/consumption/v1/short_term?sandbox=true',
-      6000
-    );
-    if(d?.short_term?.[0]?.values?.[0]?.value){
-      const conso=d.short_term[0].values[0].value;
-      chargeFacteur=Math.max(0.4,Math.min(2.2,conso/230));
-      chargeFactorSource='RTE';
-      document.getElementById('res-charge').textContent=`${Math.round(conso)} MW · ×${chargeFacteur.toFixed(2)} (RTE)`;
-      document.getElementById('res-charge').style.color=chargeFacteur>1.3?'var(--danger)':chargeFacteur<0.7?'var(--acc)':'var(--ardoise-clair)';
-      return;
-    }
-  }catch(e){}
-
-  // Afficher l'estimation locale
-  document.getElementById('res-charge').textContent=
-    `~${consoEstimee} MW · ×${chargeFacteur.toFixed(2)} (estimé ${h}h)`;
-  document.getElementById('res-charge').style.color='var(--tx3)';
-}
-
+// loadChargeReseau() RETIRÉE (2026-09-09, arbitrage Soleil — lot chargeFacteur→ELF).
+// Elle dérivait chargeFacteur d'un profil horaire/saisonnier figé (estimation, jamais mesurée —
+// le chemin RTE échouait systématiquement, OAuth2 requis jamais fourni par ce dépôt statique ;
+// et l'endpoint appelé était de toute façon la conso nationale française, sans sélecteur région
+// — faux par construction, cf. PR #1352) et modulait le courant HTA utilisé par
+// calcMagneticELF_v1/v2 (chargeFacteur ∈ [0,40 ; 1,35] en pratique selon l'heure/saison de
+// visite, jamais [0,4 ; 2,2] comme l'ancien clamp le laissait supposer). chargeFacteur reste
+// déclaré (cf. plus haut, `let ... chargeFacteur=1.0`) et n'est plus jamais réassigné : sa valeur
+// de référence 1.0 devient permanente, sans modification de calcMagneticELF_v1/v2 elle-même (leur
+// fallback `chargeFactor !== undefined ? ... : 1.0` suffit).
+//
+// L'INCERTITUDE PUBLIÉE N'EST PAS TOUCHÉE PAR CE COMMIT (arbitrage Soleil, 2026-09-09) : elle
+// reste à ±50 %, valeur du canon (TELLUX_MODELE_CALCUL.md §3.2 et §6.2, registre privé — 4
+// occurrences concordantes). Une version antérieure de ce commit l'élargissait à −60 %/+100 %
+// en unissant le ±50 % avec la plage du facteur retiré ET avec « 150-450 A » (fourchette de
+// courant HTA citée par les commentaires de ce fichier, ~L6502, et par le texte du popup
+// méthodologie, ~L2201) : retiré. Cette fourchette n'existe PAS au canon, et sa provenance ne
+// tient pas — RTE n'exploite pas le réseau corse (EDF SEI en est l'opérateur unique), donc une
+// donnée RTE ne peut pas la fonder. Publier « +100 % » aurait affirmé une borne haute qu'on
+// venait d'établir comme inconnue, et mis les surfaces servies en avance sur leur canonique.
+// L'écart ±50 % (canon) vs 150-450 A (ce fichier) reste ouvert : cf. dette privée
+// HTA-COURANT-DISPERSION-SANS-SOURCE-001. Ne pas trancher ici — arbitrage Soleil sur le canon.
 
 // buildTourLayer / buildInduLayer / buildCastLayer / buildPontLayer migrés vers patrimoine.html
 // (Tours génoises, Mines, Châteaux médiévaux, Ponts génois).
@@ -11837,12 +11802,14 @@ function toggleLayersSheetExpand(){
 // Guard: loadNOAA/loadCEM may be absent post-v8 cleanup — ne pas bloquer le reste du chaînage init
 if(typeof loadNOAA==='function')loadNOAA();
 if(typeof loadCEM==='function')loadCEM();
-loadChargeReseau().then(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.elf)buildElf();}).catch(()=>{});
+// loadChargeReseau() RETIRÉE (2026-09-09) — cf. son commentaire de retrait plus haut. Son
+// .then() ne faisait que rebâtir hot/elf après une mise à jour de chargeFacteur, désormais
+// permanent : rebuild devenu sans objet, retiré avec elle.
 // loadHTADataOnly() sorti du Promise.all décalé de 1500ms ci-dessous (2026-09-04, brief AF
 // lot B, arbitrage Soleil, mesure en prod : la grille ELF v2 mettait 4-7s à être prête, pas
 // les 1,5s de l'hypothèse initiale, en partie parce qu'elle attendait son tour dans un lot de
-// 11 fetches concurrents). Démarrage immédiat, même pattern que loadNOAA/loadCEM/loadChargeReseau
-// ci-dessus (aucun n'attend le rendu complet de la carte). Fire-and-forget assumé (comme avant) :
+// 11 fetches concurrents). Démarrage immédiat, même pattern que loadNOAA/loadCEM ci-dessus
+// (aucun n'attend le rendu complet de la carte). Fire-and-forget assumé (comme avant) :
 // le préchargement échoue silencieusement si Supabase est indisponible au boot, et
 // calcMagneticELF_v2 retombe sur v1 jusqu'à activation manuelle de la couche Réseau (cf.
 // commentaire de loadHTADataOnly()). Reste à remesurer en prod pour quantifier le gain réel.
@@ -11880,7 +11847,8 @@ setTimeout(loadDst,5500); // Dst Kyoto via NOAA — correction externe niveau 2 
 setTimeout(loadLightning,5000); // Activité orageuse
 if(typeof loadNOAA==='function')setInterval(loadNOAA,15*60*1000);
 setInterval(loadDB,5*60*1000);
-setInterval(loadChargeReseau,15*60*1000); // Refresh charge réseau 15min
+// setInterval(loadChargeReseau,...) RETIRÉ (2026-09-09) — cf. commentaire de retrait de
+// loadChargeReseau() plus haut.
 setInterval(loadMeteo,30*60*1000);
 setInterval(loadAQU,30*60*1000); // Refresh INTERMAGNET 30min
 setInterval(loadDst,30*60*1000); // Refresh Dst 30min (latence Kyoto ~30min)
@@ -13037,9 +13005,9 @@ document.querySelectorAll('.accordion-cat-content.open').forEach(function(c){
 
 // ═══ Panneau "Conditions actuelles" ═══
 // Plies par defaut, chaque sous-section affiche un resume une ligne.
-// Les IDs internes (kp-v, sw-bz, sw-d, meteo-n, res-charge, lightning-v…)
-// sont preserves pour ne pas casser loadNOAA / loadMeteo / loadLightning
-// / loadChargeReseau.
+// Les IDs internes (kp-v, sw-bz, sw-d, meteo-n, lightning-v…)
+// sont preserves pour ne pas casser loadNOAA / loadMeteo / loadLightning.
+// res-charge/loadChargeReseau retirés (2026-09-09), n'en font plus partie.
 function toggleCondSection(id){
   const sec  = document.getElementById('cond-sec-' + id);
   const body = document.getElementById('cond-body-' + id);
@@ -13097,35 +13065,8 @@ window.addEventListener('resize', function(){
   _cbarResizeDebounce = setTimeout(setConditionsBarHeightVar, 150);
 });
 
-// Profil horaire type Corse (MW par heure, moyenne RTE 2020-2024)
-// Utilise par loadChargeReseau (fallback) + renderChargeSparkline.
-const PROFIL_HORAIRE_CORSE = [130,125,122,120,120,122,135,155,175,195,210,220,
-                              225,228,230,228,222,218,220,225,225,215,200,165];
-
-function renderChargeSparkline(){
-  const host = document.getElementById('cond-sparkline-reseau');
-  if(!host) return;
-  const W = 180, H = 40, pad = 4;
-  const data = PROFIL_HORAIRE_CORSE;
-  const minV = Math.min.apply(null, data);
-  const maxV = Math.max.apply(null, data);
-  const span = Math.max(1, maxV - minV);
-  const stepX = (W - 2*pad) / (data.length - 1);
-  const points = data.map((v,i) => {
-    const x = pad + i * stepX;
-    const y = H - pad - ((v - minV) / span) * (H - 2*pad);
-    return x.toFixed(1) + ',' + y.toFixed(1);
-  }).join(' ');
-  const h = new Date().getHours();
-  const cx = pad + h * stepX;
-  const cy = H - pad - ((data[h] - minV) / span) * (H - 2*pad);
-  host.innerHTML =
-    '<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img">' +
-      '<polyline points="'+points+'" fill="none" stroke="#C28533" stroke-width="1.2" stroke-linejoin="round"/>' +
-      '<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="3" fill="#8E2F1F"/>' +
-    '</svg>' +
-    '<div class="cond-sparkline-legend"><span>0 h</span><span>Profil 24 h · ' + h + ' h actuelle</span><span>23 h</span></div>';
-}
+// PROFIL_HORAIRE_CORSE / renderChargeSparkline() RETIRÉS (2026-09-09) — cf. commentaire de
+// retrait de loadChargeReseau() plus haut : cond-sparkline-reseau n'existe plus dans le DOM.
 
 function updateCondSummaries(){
   // --- Activite solaire ---
@@ -13171,28 +13112,8 @@ function updateCondSummaries(){
       atmoEl.style.color = 'var(--tx3)';
     }
   }
-  // --- Reseau electrique ---
-  const resEl = document.getElementById('cond-summary-reseau');
-  if(resEl){
-    const cf = (typeof chargeFacteur !== 'undefined') ? chargeFacteur : 1.0;
-    // Provenance (2026-09-02, brief N, cf. brief K) : #res-charge distinguait déjà
-    // RTE/estimé, pas ce résumé — même valeur cf, même code couleur, texte propagé
-    // depuis chargeFactorSource (posé par loadChargeReseau()). Aucun changement de cf
-    // ni de la plage [0.4,2.2] — seule la provenance devient lisible ici aussi.
-    const cfSrc = (typeof chargeFactorSource !== 'undefined' && chargeFactorSource === 'RTE')
-      ? jt('cond_reseau_suffix_rte', ' · RTE)')
-      : jt('cond_reseau_suffix_estime', ' · estimé)');
-    if(cf > 1.15){
-      resEl.textContent = jt('cond_heure_pleine_prefix', 'Heure pleine (×') + cf.toFixed(2) + cfSrc;
-      resEl.style.color = 'var(--warn-tx)';
-    } else if(cf < 0.85){
-      resEl.textContent = jt('cond_heure_creuse_prefix', 'Heure creuse (×') + cf.toFixed(2) + cfSrc;
-      resEl.style.color = 'var(--acc)';
-    } else {
-      resEl.textContent = jt('cond_charge_normale_prefix', 'Charge normale (×') + cf.toFixed(2) + cfSrc;
-      resEl.style.color = 'var(--ardoise-clair)';
-    }
-  }
+  // --- Reseau electrique --- RETIRÉ (2026-09-09) : cond-summary-reseau n'existe plus dans le
+  // DOM (cf. cond-sec-reseau retiré), chargeFacteur/chargeFactorSource ne varient plus.
 }
 
 // === UI avancée — sprint feat/ui-avancee-domaines-badges (mai 2026) ===
@@ -13220,9 +13141,9 @@ function filterByDomain(domain){
   });
 }
 
-// syncBadges : synchronise les valeurs des éléments sources (kp-v, res-charge, sb-status-dot, lightning-v)
+// syncBadges : synchronise les valeurs des éléments sources (kp-v, sb-status-dot, lightning-v)
 // vers les badges temps réel toujours visibles dans le panneau Conditions. Hooké dans updateCondSummaries
-// (rythme 30 s) et appelé aussi au setTimeout initial de renderChargeSparkline (2 s).
+// (rythme 30 s).
 function syncBadges(){
   var kpSrc = document.getElementById('kp-v');
   var kpBadge = document.getElementById('badge-kp-val');
@@ -13231,15 +13152,8 @@ function syncBadges(){
     kpBadge.textContent = kpTxt;
     kpBadge.style.color = kpSrc.style.color || '';
   }
-  var resSrc = document.getElementById('res-charge');
-  var resBadge = document.getElementById('badge-reseau-val');
-  if(resSrc && resBadge){
-    var resTxt = resSrc.textContent || '—';
-    // Compaction : la cellule détaillée affiche "1234 MW · ×1.05 (RTE)" ; le badge n'expose que "×1.05".
-    var m = resTxt.match(/×[0-9.]+/);
-    resBadge.textContent = m ? m[0] : resTxt;
-    resBadge.style.color = resSrc.style.color || '';
-  }
+  // res-charge/badge-reseau-val RETIRÉS (2026-09-09) — cf. commentaire de retrait de
+  // loadChargeReseau() plus haut.
   var sbSrc = document.getElementById('sb-status-dot');
   var sbBadge = document.getElementById('badge-sb-dot');
   if(sbSrc && sbBadge){
@@ -13271,8 +13185,8 @@ function syncBadges(){
 // === fin UI avancée ===
 
 // Render sparkline au chargement + refresh chaque heure (en cas de session longue)
-setTimeout(() => { renderChargeSparkline(); updateCondSummaries(); syncBadges(); }, 2000);
-setInterval(() => { renderChargeSparkline(); updateCondSummaries(); syncBadges(); }, 60*60*1000);
+setTimeout(() => { updateCondSummaries(); syncBadges(); }, 2000);
+setInterval(() => { updateCondSummaries(); syncBadges(); }, 60*60*1000);
 // Fallback periodique pour capter les valeurs temps reel meme si un load* oublie d'appeler
 setInterval(function(){ updateCondSummaries(); syncBadges(); }, 30*1000);
 
@@ -14112,8 +14026,6 @@ function capCleanup(){
 ["cbar_toggle_aria","#conditions-bar-toggle","aria-label","Déplier les détails conditions","Sviluppà i ditagli cundizione","Expand condition details"],
 ["cbar_summary_aria","#conditions-bar-summary","aria-label","Indicateurs temps réel résumé","Indicatori in tempu reale riassuntu","Real-time indicators summary"],
 ["badge_kp_tt","#badge-kp","title","Indice Kp d'activité géomagnétique (NOAA SWPC)","Indice Kp d'attività geomagnetica (NOAA SWPC)","Kp geomagnetic activity index (NOAA SWPC)"],
-["badge_reseau_tt","#badge-reseau","title","Charge réseau électrique Corse","Carica di a reta elettrica corsa","Corsican grid load"],
-["badge_reseau","#badge-reseau .badge-key","","Réseau","Reta","Grid"],
 ["badge_sb_tt","#badge-supabase","title","Statut connexion Supabase (contributions live)","Statu cunnessione Supabase (cuntribuzione live)","Supabase connection status (live contributions)"],
 ["badge_meteo_tt","#badge-meteo","title","Activité orageuse (Open-Meteo)","Attività timpurale (Open-Meteo)","Storm activity (Open-Meteo)"],
 ["badge_meteo","#badge-meteo .badge-key","","Orage","Timpurale","Storm"],
@@ -14130,9 +14042,9 @@ function capCleanup(){
 ["cond_key_acq",".cond-key@6","","Acquisition EM","Acquisizione EM","EM acquisition"],
 ["cond_key_refrac",".cond-key@7","","Réfractivité N","Rifrattività N","Refractivity N"],
 ["cond_key_orage",".cond-key@8","","Activité orageuse","Attività timpurale","Storm activity"],
-["cond_key_charge",".cond-key@9","","Charge Corse","Carica Corsica","Corsica load"],
+// cond_key_charge (.cond-key@9, "Charge Corse") RETIRÉ (2026-09-09) — cond-sec-reseau supprimé,
+// aucun décalage sur @1-@8 : aucun autre .cond-key n'a d'entrée i18n positionnelle après lui.
 ["acq_label","#acq-label","","vérification…","verificazione…","checking…"],
-["sparkline_aria","#cond-sparkline-reseau","aria-label","Profil horaire de la charge electrique corse sur 24 h","Prufilu orariu di a carica elettrica corsa nant'à 24 ore","24-hour hourly profile of the Corsican electrical load"],
 ["cert_header","#cert-download-block > div:first-child","","Sources certifiées","Fonti certificate","Certified sources"],
 ["cert_btn","#btn-cert-download span@1","tf","Télécharger les 236 fiches ANFR/EXEM","Scaricà e 236 schede ANFR/EXEM","Download the 236 ANFR/EXEM sheets"],
 ["cert_desc","#cert-download-block > div:nth-child(3)","","Mesures certifiées de laboratoire (ANFR · EXEM) extraites des PDFs CartoRadio. Déjà visibles sur la carte en losanges colorés.","Misure certificate di laburatoriu (ANFR · EXEM) estratte da i PDF CartoRadio. Dighjà visibule nant'à a carta in rombi culuriti.","Certified laboratory measurements (ANFR · EXEM) extracted from CartoRadio PDFs. Already visible on the map as colored diamonds."],
