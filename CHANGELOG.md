@@ -7,6 +7,35 @@ Versioning sémantique : [SemVer](https://semver.org/lang/fr/)
 
 ---
 
+## [chargeFacteur retiré du calcul ELF — valeur affichée changée de −24 % à +115 % selon le lieu — 2026-09-09]
+
+### Changed
+- **`app.html`** (`loadChargeReseau()` et ses consommateurs) — la modulation horaire/saisonnière de la composante ELF (lignes HTA) par `chargeFacteur` est **retirée**. Ce facteur, jamais alimenté par une donnée réseau réelle (le chemin RTE tenté échoue systématiquement, endpoint national sans sélecteur région — cf. PR #1352), faisait varier la valeur affichée de ×0,40 à ×1,35 selon l'heure et la saison de consultation, sans aucun rapport avec l'état réel du réseau. `htFactor` est désormais fixé à 1,0 en permanence. **Effet visible pour qui compare, mesuré sur le modèle v2 servi en production** (6 points, 2026-09-09, régime établi — terme BT chargé) : un point consulté au plancher (×0,40) affiche désormais **+10 % à +115 %** de plus, un point consulté au plafond réel (×1,35) affiche **−5 % à −24 %** de moins. Relevé brut, en nT :
+
+| point | HTA | total à f=1,0 | f=0,40 | f=1,3522 |
+|---|---|---|---|---|
+| Ajaccio | 2 552 | 3 149 | 1 618 | 4 048 |
+| Bastia | 46 | 251 | 224 | 267 |
+| Corte | 1 749 | 1 959 | 910 | 2 575 |
+| Bonifacio | 179 | 764 | 657 | 827 |
+| Calvi | 36 | 231 | 209 | 243 |
+| Porto-Vecchio | 414 | 606 | 358 | 752 |
+
+L'écart suit la part du champ HTA dans le total au point considéré — seule composante que le facteur multipliait (le terme BT, à paliers fixes, et les sites de production n'en dépendaient pas).
+
+**Ce que ce retrait apporte réellement n'est pas une hausse ni une baisse** : c'est que la valeur affichée cesse de dépendre de l'heure et de la saison de consultation. Le facteur passait au-dessus de 1 une bonne partie de l'année — sur ces périodes le retrait fait **baisser** les valeurs, pas monter. Les deux sens sont donnés ci-dessus pour cette raison.
+
+**Deux régimes, et c'est le régime établi qui est annoncé ci-dessus.** Le terme BT n'entre dans le calcul qu'une fois sa grille téléchargée et construite (`btTermeInclus()` = `USE_BT_SEGMENTS && BT_SEGMENT_GRID`) : les valeurs ci-dessus sont mesurées **après** cette construction. Avant elle — c'est-à-dire à l'état par défaut au chargement de chaque visite, mesuré à 119 s en production le 2026-09-09 — le terme BT est absent du total, la part HTA est donc plus grande et les écarts sont plus amples, jusqu'à **+144 % / −26 %** aux mêmes points. Ce n'est ni un réglage ni une couche à activer : c'est un état transitoire que traverse chaque session.
+- **`cadre-scientifique.html`** — nouvelle note servie sur la composante BT (schéma à 3 paliers, 70/115/180 nT, fourchette instruite 50-200 nT) : non calibrée statistiquement, choix éditorial. Champ `epistemic_note` correspondant (`calcMagneticELF_v2`) sans lecteur depuis sa création — jamais servi jusqu'ici. `note_ICNIRP` (autre champ sans lecteur trouvé au passage) retiré : contenu déjà public (guide-et-glossaire.html:531).
+- **L'incertitude publiée sur les courants HTA reste à ±50 %**, inchangée par ce commit — valeur du canon. Un état intermédiaire de cette PR l'élargissait à −60 %/+100 % : retiré avant merge, la borne haute reposait sur une fourchette de courant (150-450 A) absente du canon et sans provenance valide.
+- **`app.html`** — le badge « Réseau » (`#badge-reseau`, résumé conditions live) et le panneau détaillé associé (`#cond-sec-reseau`, `#res-charge`, `#res-charge-s`, sparkline 24 h) sont **retirés** : un badge qui continuait d'afficher une charge sans qu'aucun calcul ne la consomme aurait gardé l'apparence d'un intrant du modèle alors qu'il n'en est plus un. **Conséquence de portée à noter** : la ligne de résumé « Réseau électrique » du panneau Conditions (`#cond-summary-reseau`, qui affichait « Heure pleine / creuse / Charge normale ×N ») disparaît avec lui — elle dérivait du même facteur, elle n'a plus d'objet.
+
+### Notes
+- Décision retenue parmi trois options instruites (documenter/étiqueter, retirer et élargir l'incertitude, remplacer par une source réelle) : retirer et élargir l'incertitude — la seule qui supprime la classe de défaut (une valeur physique publique dépendant de l'horloge du visiteur) plutôt que de la déplacer.
+- PR [#1352](https://github.com/dellahstella/tellux/pull/1352).
+
+---
+
 ## [IGRF14_GRID réancrée — évaluation analytique validée à 0,6 nT — 2026-09-09]
 
 ### Changed
