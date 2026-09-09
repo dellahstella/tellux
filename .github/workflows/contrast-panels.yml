@@ -43,6 +43,32 @@ name: contrast-panels
 # celui-ci : 2 runs consécutifs identiques avant la clôture du 2026-09-02, et
 # 3 runs consécutifs identiques le 2026-09-03 après l'ajout du balayage.
 #
+# CE CHECK EST REQUIS SUR `main` DEPUIS LE 2026-09-09
+# --------------------------------------------------
+# Bloquant et requis ne sont pas le même mot. Bloquant depuis sa création : quand
+# il tourne et qu'il mesure une régression, il sort en échec. Requis depuis le
+# 2026-09-09 : sans lui, plus de merge. Ce qui change n'est pas sa sévérité, c'est
+# qu'on ne peut plus merger en son absence — et l'absence était jusqu'ici son mode
+# de défaillance le plus discret (filtre `paths` retiré le même jour, voir `on:`).
+#
+# Le plancher CI passe de 2 à 3 checks requis : Cloudflare Pages, Scan anti-fuite
+# (lecture seule), Contraste panneaux (thème unique). Amende ADR-045, qui avait
+# posé le plancher à 2.
+#
+# LE NOM ENREGISTRÉ DANS LA PROTECTION EST CELUI DU JOB, PAS CELUI DU WORKFLOW :
+# « Contraste panneaux (thème unique) », littéral statique du champ `name:` du job
+# ci-dessous — aucune expression `${{ }}`, donc identique sous `pull_request` et
+# sous `workflow_dispatch` (vérifié le 2026-09-09 sur les deux : tête de PR #1372
+# et main @118776c2). Renommer ce job casse silencieusement la protection : elle
+# attendrait un contexte que plus rien ne produit. Le nom du workflow
+# (`contrast-panels`, en tête de fichier) n'est PAS ce que la protection observe.
+#
+# Un `workflow_dispatch` NE PEUT PAS satisfaire la protection, même à nom égal :
+# son check-run apparaît bien sur le SHA de tête mais reste HORS du
+# statusCheckRollup de la PR (constaté le 2026-08-28, cf. en-tête d'
+# `intermagnet-cron.yml`). C'est une propriété souhaitable et non une limite : on
+# ne débloque pas une PR en déclenchant le check à la main.
+
 # UN CHECK QUI DÉPEND DE LA MÉTÉO SPATIALE NE PROTÈGE RIEN (2026-09-03)
 # ---------------------------------------------------------------------
 # La même PR (#1204) a produit un run ROUGE puis, 17 minutes plus tard et sans
@@ -84,18 +110,40 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - 'app.html'
-      - 'tests/blindage-harness/contrast-panels.mjs'
-      # supabase-cache.mjs ajouté le 2026-09-09 : ce module est importé par
-      # contrast-panels.mjs, et c'est lui qui a cassé le check pendant trois heures
-      # (ses MISS partaient sur stdout, où le workflow attend le JSON de résultat —
-      # run #34374902822). Le check ne surveillait pas une de ses propres dépendances :
-      # une modification du cache ne pouvait donc ni le casser visiblement, ni être
-      # validée par lui. Toute dépendance du harnais qui entre dans ce processus
-      # appartient à cette liste.
-      - 'tests/blindage-harness/supabase-cache.mjs'
-      - '.github/workflows/contrast-panels.yml'
+    # PAS de filtre `paths` — retiré le 2026-09-09, en même temps que ce check est
+    # devenu REQUIS sur main. Ce n'est pas un choix de confort : ADR-045 clause (4)
+    # l'exige, mot pour mot, « workflow sans filtre `paths` sur PR (sinon required
+    # check pending = PR gelée) ». Un check requis dont le workflow ne se déclenche
+    # pas ne rend AUCUN statut — GitHub ne le voit pas comme réussi ni comme échoué,
+    # il l'attend, indéfiniment, et la PR devient immergeable sans qu'aucun rouge
+    # n'apparaisse nulle part.
+    #
+    # Ce n'était pas une hypothèse. Mesuré le 2026-09-09 sur les 30 dernières PR
+    # mergées : 13 tombaient hors de l'ancien périmètre, dont 9 rafraîchissements
+    # automatiques de `public/data/intermagnet_latest.json` ouverts par
+    # `intermagnet-cron`. Le filtre conservé aurait gelé la chaîne de données
+    # magnétiques, à la première PR suivant la pose de la protection. Vérifié aussi
+    # dans l'autre sens sur la PR #1373 (données INTERMAGNET seules) : quatre checks
+    # ont rapporté, celui-ci n'en faisait pas partie.
+    #
+    # Prix de la levée, mesuré sur les 5 derniers runs : 72 à 93 s par PR — 33 s
+    # d'installation Chromium, 31 s de mesure, le reste en préparation. C'est le coût
+    # de mesurer sur toute PR plutôt que sur celles qu'une liste désigne.
+    # `leak-guard.yml` a pris la même décision le 2026-07-09, pour la même raison,
+    # et porte la même note dans son propre `on:`.
+    #
+    # CE QUE LE FILTRE PORTAIT, ET QUI NE DOIT PAS SE PERDRE AVEC LUI : il avait été
+    # élargi quelques heures plus tôt le 2026-09-09 à
+    # `tests/blindage-harness/supabase-cache.mjs`, module importé par
+    # `contrast-panels.mjs` et cause de la panne de trois heures du même jour (ses
+    # lignes « MISS » partaient sur stdout, où le workflow attendait le JSON de
+    # résultat — run #34374902822). Le check ne surveillait pas une de ses propres
+    # dépendances : une modification du cache ne pouvait ni le casser visiblement, ni
+    # être validée par lui. La règle qu'on en avait tirée — « toute dépendance du
+    # harnais qui entre dans ce processus appartient à cette liste » — survit à la
+    # liste : sans filtre, elle est tenue par construction, pour toute dépendance
+    # présente ou future, sans que personne ait à penser à l'y inscrire. Une liste,
+    # elle, redevient fausse au premier ajout, et en silence.
   workflow_dispatch:
 
 # Annule un run devenu obsolète quand un nouveau push arrive sur la même PR
