@@ -87,6 +87,14 @@ on:
     paths:
       - 'app.html'
       - 'tests/blindage-harness/contrast-panels.mjs'
+      # supabase-cache.mjs ajouté le 2026-09-09 : ce module est importé par
+      # contrast-panels.mjs, et c'est lui qui a cassé le check pendant trois heures
+      # (ses MISS partaient sur stdout, où le workflow attend le JSON de résultat —
+      # run #34374902822). Le check ne surveillait pas une de ses propres dépendances :
+      # une modification du cache ne pouvait donc ni le casser visiblement, ni être
+      # validée par lui. Toute dépendance du harnais qui entre dans ce processus
+      # appartient à cette liste.
+      - 'tests/blindage-harness/supabase-cache.mjs'
       - '.github/workflows/contrast-panels.yml'
   workflow_dispatch:
 

@@ -189,8 +189,25 @@ export async function installSupabaseCache(context, opts = {}) {
   const ttlMs = opts.ttlMs ?? (process.env.TELLUX_HARNESS_CACHE_TTL_MS ? Number(process.env.TELLUX_HARNESS_CACHE_TTL_MS) : DEFAULT_TTL_MS);
   const label = opts.label ? `[${opts.label}] ` : '';
 
+  // ═══ JOURNALISATION SUR stderr, JAMAIS stdout (2026-09-09) ═══
+  // Ce module est importé par des harnais dont stdout EST le contrat de résultat :
+  // `contrast-panels.yml` fait `node contrast-panels.mjs > contrast-result.json`, puis
+  // huit `jq` sur ce fichier. Un seul console.log ici atterrit DANS le JSON.
+  //
+  // Cas réel, run #34374902822 du 2026-09-09 : cache froid
+  // (`Cache not found for input keys: harness-supabase-cache-v1-2026-S37`), 16 lignes MISS
+  // écrites avant le JSON, les 8 jq échouent sur
+  // `Invalid numeric literal at line 1, column 17` — 17 étant exactement la longueur du
+  // préfixe `[contrast-panels]`. Le JSON était INTACT derrière la pollution : contraste
+  // 0 critique / 0 AA, et 4 dépassements réels que personne n'a pu lire pendant trois
+  // heures, le check rapportant une panne d'outillage à leur place.
+  //
+  // ⚠ CE CORRECTIF N'EST PAS STRUCTUREL, et il ne faut pas le croire tel : il protège
+  // contre CE module. Tout `console.log` d'un autre import romprait le contrat à
+  // nouveau. Le remède structurel est de sortir le JSON de stdout (option d'écriture
+  // vers un fichier dans contrast-panels.mjs) — non fait ici, arbitrage séparé.
   if (disabled) {
-    console.log(`${label}[supabase-cache] désactivé (TELLUX_HARNESS_CACHE=off) — réseau réel pour toutes les requêtes.`);
+    console.error(`${label}[supabase-cache] désactivé (TELLUX_HARNESS_CACHE=off) — réseau réel pour toutes les requêtes.`);
     return { disabled: true, cacheDir, ttlMs };
   }
 
@@ -236,7 +253,10 @@ export async function installSupabaseCache(context, opts = {}) {
       }
 
       // Miss ou entrée expirée — toujours logué, jamais silencieux (retour Soleil).
-      console.log(`${label}[supabase-cache] MISS/expiré — ${table} (${key.slice(0, 12)}…) → réseau réel.`);
+      // stderr et non stdout : cf. le bloc en tête de installSupabaseCache(). Le message
+      // reste visible dans les journaux du job, il cesse seulement de polluer un stdout
+      // qui, chez l'appelant, porte le résultat.
+      console.error(`${label}[supabase-cache] MISS/expiré — ${table} (${key.slice(0, 12)}…) → réseau réel.`);
 
       const response = await route.fetch();
       const body = await response.body();
