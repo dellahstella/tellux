@@ -230,9 +230,31 @@ const COND_SCENARIOS = [
   { nom: 'tempête', kp: 7.5, bz: -9.0, dens: 22.0, flux: 500, dst: -80, ducting: false, orageProb: 80, orage: true,  conso: 340 },
 ];
 // Plancher par scénario — même raison que `min_noeuds` sur les surfaces requises : un scénario
-// qui ne rend plus rien doit ÉCHOUER, pas rapporter zéro violation. 10 = l'effectif réel de la
-// barre repliée (5 puces × clé/valeur), mesuré le 2026-09-03.
-const COND_MIN_NOEUDS = 10;
+// qui ne rend plus rien doit ÉCHOUER, pas rapporter zéro violation.
+//
+// LA RÈGLE : COND_MIN_NOEUDS = nombre de puces `.cond-badge` de #conditions-bar REPLIÉ
+// × 2 (chaque puce porte un `.badge-key` et un `.badge-val`). Le tiroir déplié
+// `#conditions-bar-details` reste hors mesure, cf. l'en-tête du workflow.
+//
+// HISTORIQUE DE LA VALEUR — toute modification s'y ajoute, sur le modèle des plafonds
+// dans .github/workflows/contrast-panels.yml :
+//   • 2026-09-03 : 10 — 5 puces (kp, réseau, supabase, météo, contributions)
+//   • 2026-09-09 : 8  — 4 puces (badge-kp, badge-supabase, badge-meteo, badge-contribs).
+//     La cinquième, `badge-reseau`, a été retirée par la PR #1363 avec la ligne de résumé
+//     et la sparkline, `chargeFacteur` ne nourrissant plus aucun calcul. Retrait légitime :
+//     le plancher le suit parce que la RÈGLE le suit (n passe de 5 à 4), pas parce que le
+//     harnais mesure 8. Les deux donnent le même nombre ici — c'est précisément pourquoi
+//     la dérivation doit être écrite, sinon rien ne distingue les deux opérations après coup.
+//
+// POURQUOI CE NOMBRE RESTE UN LITTÉRAL, ET NE DOIT JAMAIS DEVENIR DYNAMIQUE
+// La tentation est d'écrire `document.querySelectorAll('.cond-badge').length * 2` et de
+// n'avoir plus rien à maintenir. Ce serait supprimer le contrôle en croyant l'améliorer :
+// un plancher qui se recalcule sur ce qu'il surveille suit le DOM au lieu de le garder, et
+// une puce qui disparaît ne ferait plus JAMAIS échouer le check — exactement le mode
+// d'échec que ce plancher existe pour attraper. Le littéral n'est pas une dette de
+// maintenance, c'est le mécanisme : il est censé casser quand le monde change, et sa mise
+// à jour délibérée est le moment où quelqu'un vérifie que le changement était voulu.
+const COND_MIN_NOEUDS = 8;
 
 // Stub de fetch — posé au boot, silencieux tant qu'aucune fixture n'est armée.
 const INSTALL_COND_FIXTURE = function () {
@@ -913,9 +935,18 @@ async function main() {
   // d'échec que ce balayage existe pour supprimer : il ne doit pas pouvoir se le réintroduire.
   for (const s of (rapport.cond_par_scenario || [])) {
     if (s.etat !== 'mesuré' || s.noeuds < COND_MIN_NOEUDS) {
-      depassements.push(`balayage #conditions-bar sous son plancher : scénario « ${s.scenario} »`
-        + ` (état : ${s.etat}, ${s.noeuds} nœud(s) < ${COND_MIN_NOEUDS}) — la barre ne s'est pas`
-        + ' peuplée sous fixture, les branches de couleur ne sont pas exercées');
+      // Le message énonce LA MESURE ET LE SEUIL, rien d'autre (2026-09-09). Il disait
+      // auparavant « la barre ne s'est pas peuplée sous fixture, les branches de couleur ne
+      // sont pas exercées » — une hypothèse de 2026-09-03 sur pourquoi un compte serait bas,
+      // figée et énoncée comme un constat. Vérifiée fausse le 2026-09-09 : la barre se
+      // peuplait (8 nœuds sous fixture, 8 à la passe live sans fixture), les 4 scénarios
+      // rendaient `état : mesuré` avec leurs violations calculées ; elle avait simplement
+      // perdu deux nœuds (retrait de `badge-reseau` par #1363). Qui lisait ce message partait
+      // chercher un défaut de fixture, pendant que le vrai signal — une surface a rétréci —
+      // n'était nulle part. Le contrôle mesurait juste, déclenchait juste, et racontait faux.
+      // L'hypothèse sur la cause appartient au lecteur, qui a les faits sous les yeux.
+      depassements.push(`balayage #conditions-bar sous son plancher : scénario « ${s.scenario} » `
+        + `(état : ${s.etat}, ${s.noeuds} nœud(s) mesuré(s) < ${COND_MIN_NOEUDS} attendus)`);
     }
   }
   if (!rapport.cond_par_scenario || rapport.cond_par_scenario.length !== COND_SCENARIOS.length) {
