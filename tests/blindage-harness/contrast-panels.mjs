@@ -64,6 +64,7 @@
 import { chromium } from 'playwright';
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { writeFileSync } from 'node:fs';
 import { extname, join, normalize, resolve as pathResolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { installSupabaseCache } from './supabase-cache.mjs';
@@ -954,11 +955,29 @@ async function main() {
     cond_par_scenario: rapport.cond_par_scenario,
     detail: rapport.panneaux,
   };
-  process.stdout.write(JSON.stringify(sortie, null, 2) + '\n');
+  ecrireRapport(sortie);
   process.exitCode = depassements.length > 0 ? 2 : 0;
 }
 
+// ─── Écriture du rapport (2026-09-09) ────────────────────────────────────────
+// Le rapport s'écrit DIRECTEMENT dans le fichier, il ne passe plus par stdout.
+// Motif : le workflow faisait `node contrast-panels.mjs > contrast-result.json`,
+// donc tout ce qu'un module imprimait sur stdout atterrissait DANS le JSON. Le
+// module de cache Supabase y écrit ses lignes « MISS/expiré » — le fichier
+// commençait par elles, `jq` échouait (« parse error: Invalid numeric literal at
+// line 1, column 17 ») et le check tombait AVANT toute mesure de contraste :
+// rouge sur toutes les branches, sans plus rien distinguer.
+// Le commentaire du workflow signalait déjà que ces lignes partaient sur stdout et
+// devenaient « invisibles dans les journaux du job ». C'est le même fait vu par
+// l'autre bout : elles n'étaient pas perdues, elles étaient dans le rapport.
+// Écrire nous-mêmes ferme le canal — plus rien ne peut polluer le JSON, et les
+// journaux des modules redeviennent visibles là où ils servent, dans le job.
+function ecrireRapport(objet) {
+  const chemin = process.env.CONTRAST_OUT || 'contrast-result.json';
+  writeFileSync(chemin, JSON.stringify(objet, null, 2) + '\n');
+}
+
 main().catch((e) => {
-  process.stdout.write(JSON.stringify({ outil: 'contrast-panels', erreur: String(e && e.stack || e) }, null, 2) + '\n');
+  ecrireRapport({ outil: 'contrast-panels', erreur: String(e && e.stack || e) });
   process.exitCode = 1;
 });
