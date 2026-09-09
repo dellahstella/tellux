@@ -145,9 +145,14 @@ jobs:
       # c'est-à-dire le disque ÉPHÉMÈRE du runner. Aucun workflow ne le restaurait : chaque run
       # repartait d'un dossier vide et rechargeait tout depuis le réseau. Le cache réduisait
       # donc le trafic en local et rien en CI, sans que rien ne le signale — les lignes « MISS »
-      # du module partent sur stdout, redirigé vers contrast-result.json, donc invisibles dans
-      # les journaux du job. Constaté le 2026-09-08 non par ces journaux mais par les journaux
-      # edge Supabase, qui comptaient les requêtes réellement arrivées.
+      # du module partaient alors sur stdout, redirigé vers contrast-result.json, donc invisibles
+      # dans les journaux du job. Constaté le 2026-09-08 non par ces journaux mais par les
+      # journaux edge Supabase, qui comptaient les requêtes réellement arrivées.
+      #
+      # CE N'EST PLUS LE CAS depuis le 2026-09-09, par deux correctifs indépendants du même jour :
+      # #1370 a fait passer ces lignes sur stderr, et #1371 a retiré la redirection (le script
+      # écrit son rapport lui-même). Les « MISS » sont désormais lisibles dans les journaux du
+      # job, et aucun écrivain sur stdout ne peut plus atterrir dans le rapport.
       #
       # CLÉ À ROTATION HEBDOMADAIRE, alignée sur le TTL de 7 jours du module. Une clé fixe
       # aurait un mode d'échec silencieux : au bout de 7 jours toutes les entrées expirent,
@@ -210,8 +215,26 @@ jobs:
           CONTRAST_MIN_NOEUDS: '75'
         run: |
           set +e
-          node contrast-panels.mjs > contrast-result.json
+          # Plus de redirection (2026-09-09) : le script écrit contrast-result.json
+          # lui-même. Avec `> contrast-result.json`, tout ce qu'un module imprimait sur
+          # stdout atterrissait DANS le JSON — le module de cache Supabase y déversait
+          # ses lignes « MISS/expiré », jq échouait en « parse error … line 1, column 17 »
+          # et le check tombait AVANT toute mesure de contraste. Il rougissait donc sur
+          # toutes les branches sans plus rien distinguer, y compris sur celles où le
+          # contraste était parfaitement bon. Effet de bord bienvenu : les journaux des
+          # modules redeviennent visibles ici, ce que le commentaire du cache ci-dessus
+          # regrettait explicitement.
+          node contrast-panels.mjs
           EXIT=$?
+          # Le rapport est-il seulement lisible ? Sans ce garde, un JSON invalide se
+          # manifeste par « jq: parse error » répété huit fois et un exit 2 — un message
+          # qui ne nomme ni la cause ni le fichier. C'est ce qui a permis à la panne du
+          # 2026-09-09 de durer cinq heures sur toutes les branches sans être diagnostiquée.
+          if ! jq -e . contrast-result.json >/dev/null 2>&1; then
+            echo "::error::contrast-result.json illisible — le rapport n'a pas été produit correctement (le contraste n'a PAS été mesuré). Premiers octets du fichier :"
+            head -c 300 contrast-result.json || true
+            exit 1
+          fi
           echo "exit_code=$EXIT" >> "$GITHUB_OUTPUT"
           CRIT=$(jq -r '.resume.critique' contrast-result.json)
           AA=$(jq -r '.resume.aa' contrast-result.json)
