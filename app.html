@@ -7538,6 +7538,12 @@ function loadPostesSources() {
       console.log('[Tellux] Postes sources charges : ' + POSTES_SOURCES.length);
     } catch (e) {
       console.warn('[Tellux] Postes sources indisponibles : ' + e.message);
+      // Mémoïsation relâchée sur échec (2026-09-10, lot ELF de la reprise) — même patron que
+      // loadBTLinesAsync au lot 2 : sans ça, `_postesLoadPromise` reste une promesse résolue et
+      // tout rappel retourne sans refetch, reprise impossible par construction. Sur SUCCÈS le
+      // mémo est conservé : togPostesSources() ne refetch pas une couche déjà chargée, et un
+      // appel direct concurrent d'une reprise partage sa requête au lieu d'en lancer une autre.
+      _postesLoadPromise = null;
     }
     return POSTES_SOURCES;
   })();
@@ -7561,6 +7567,10 @@ function loadEoliennesData() {
       console.log('[Tellux] Eoliennes chargees : ' + EOLIENNES_DATA.length);
     } catch (e) {
       console.warn('[Tellux] Eoliennes indisponibles : ' + e.message);
+      // Mémoïsation relâchée sur échec (2026-09-10, lot ELF de la reprise) — même patron et même
+      // raison que _postesLoadPromise ci-dessus. Sur SUCCÈS le mémo est conservé : loadProd() ne
+      // refetch pas des données déjà chargées.
+      _eolLoadPromise = null;
     }
     return EOLIENNES_DATA;
   })();
@@ -12078,6 +12088,30 @@ if(typeof indexRadonZonesOfficial==='function'){
     verifie: radonIndexComplet
   });
 }
+// REPRISE — postes sources et parcs éoliens (2026-09-10). Tous deux alimentent
+// calcMagneticELF_v1/v2 : jusqu'à 500 nT près de chacun des 21 postes (≤ 1 km), jusqu'à 300 nT
+// près de chacun des 3 parcs (≤ 0,5 km). Leur échec rend la valeur ELF affichée fausse, d'où la
+// classe critique. Pour les parcs, l'échec est total : le calcul saute sans condition les
+// entrées « Eolien » de PROD_ELECTRIQUE au motif qu'elles sont comptées via EOLIENNES_DATA —
+// sans elle, les parcs ne sont comptés nulle part.
+// Prédicat au seuil zéro, faute d'identité : aucun des deux JSON ne déclare de total. Un jeu vide
+// ou un schéma qui dérive (`d.postes` absent) se lit donc comme un échec, jamais comme un succès.
+// Les appels directs restants (togPostesSources, loadProd) passent par le mémo, qui garde son
+// rôle d'exclusion en vol : ils partagent la requête de l'assistant au lieu d'en lancer une autre.
+// Réfutation : tests/blindage-harness/non-regression-reprise-elf.mjs — exécutée AVANT ce lot sur
+// le code d'origine (S2/S3 en échec sur le mémo qui survivait à l'échec), puis après.
+if(typeof loadPostesSources==='function'){
+  enregistrerReprise('postes', loadPostesSources, {
+    classe: 'critique',
+    verifie: () => Array.isArray(POSTES_SOURCES) && POSTES_SOURCES.length > 0
+  });
+}
+if(typeof loadEoliennesData==='function'){
+  enregistrerReprise('eoliennes', loadEoliennesData, {
+    classe: 'critique',
+    verifie: () => Array.isArray(EOLIENNES_DATA) && EOLIENNES_DATA.length > 0
+  });
+}
 // buildHotRF() au boot (au lieu de buildHot()) — RF activé par défaut (ACTIVE.hotrf=true).
 // Pas d'équivalent loadChargeReseau() nécessaire : buildHotRF()/calcN_RF_calib() ne dépend
 // pas du facteur de charge RTE (spécifique au domaine ELF/magnétique de buildHot()).
@@ -12103,7 +12137,7 @@ map.on('zoomend',function(){ _syncBTZoom(false); });
 // forêt dense ci-dessus, cf. _syncForetOuverteZoom/_syncLandeMaquisZoom.
 map.on('zoomend',function(){ _syncForetOuverteZoom(false); });
 map.on('zoomend',function(){ _syncLandeMaquisZoom(false); });
-setTimeout(()=>Promise.all([loadAnt().then(function(){if(ACTIVE.ant)lAnt.addTo(map);}),calibrateRF(),loadDB(),declenche('radon','boot'),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.cert)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k). ant:true au boot (2026-09-02) : lAnt.addTo(map) conditionné à ACTIVE.ant, même pattern que lCert ci-après. loadHTADataOnly() RETIRÉ de ce lot (2026-09-04, brief AF lot B) — démarre désormais immédiatement, cf. commentaire plus haut.
+setTimeout(()=>Promise.all([loadAnt().then(function(){if(ACTIVE.ant)lAnt.addTo(map);}),calibrateRF(),loadDB(),declenche('radon','boot'),loadTDFEmitters(),declenche('postes','boot'),declenche('eoliennes','boot'),loadPointsChaudsRadio(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.cert)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k). ant:true au boot (2026-09-02) : lAnt.addTo(map) conditionné à ACTIVE.ant, même pattern que lCert ci-après. loadHTADataOnly() RETIRÉ de ce lot (2026-09-04, brief AF lot B) — démarre désormais immédiatement, cf. commentaire plus haut.
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET DUR/EBR/CLF (nom loadAQU conservé, cf. commentaire fonction) — correction externe réelle niveau 1
 setTimeout(loadDst,5500); // Dst Kyoto via NOAA — correction externe niveau 2 (Sprint astro 2026-05-25)
