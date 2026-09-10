@@ -44,6 +44,11 @@ jobs:
             anthropic \
             requests
 
+      # Hors ligne, sans secret : vérifie les bornes du corpus (2026-09-10) avant tout
+      # appel au modèle. Une borne cassée arrête le run ici, pas en 400 chez Anthropic.
+      - name: Contrôles hors ligne des bornes du corpus
+        run: python .github/scripts/test_veille_scholar.py
+
       - name: Run veille_scholar
         env:
           GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
