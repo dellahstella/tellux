@@ -106,12 +106,18 @@ LOOKBACK_DAYS = int(os.environ.get("LOOKBACK_DAYS", "7"))
 #     (messages.count_tokens) avant l'envoi, pas estimé.
 CORPS_MAX_CARACTERES = int(os.environ.get("CORPS_MAX_CARACTERES", "8000"))
 BUDGET_TOKENS_ENTREE = int(os.environ.get("BUDGET_TOKENS_ENTREE", "150000"))
-# Repli si le comptage par l'API échoue : le pire rapport mesuré, sur le run du 07/09
-# (1 174 133 caractères pour 496 893 tokens, soit 2,36), arrondi vers le prudent.
-CARACTERES_PAR_TOKEN_PIRE_CAS = 2.3
+# Repli si le comptage par l'API échoue : le pire rapport mesuré, arrondi vers le
+# prudent — 2,36 sur le HTML brut du 07/09 (1 174 133 caractères pour 496 893 tokens),
+# 2,38 sur le texte extrait du dry run du 10/09 (353 659 pour 148 766). Appliqué aux
+# OCTETS UTF-8 et non aux caractères : sur ce texte presque ASCII c'est la même chose,
+# et une écriture idéographique (3 octets, environ 1 token) n'est pas sous-estimée.
+OCTETS_PAR_TOKEN_PIRE_CAS = 2.3
 # En dessous de cette borne, on n'ampute plus les corps : on écarte les alertes les
 # plus anciennes, en les nommant.
 BORNE_PLANCHER = 500
+# Plafond de sortie de la synthèse. BUDGET_TOKENS_ENTREE + MAX_TOKENS_SORTIE doit rester
+# sous la fenêtre de contexte du modèle (200 000).
+MAX_TOKENS_SORTIE = 8192
 # Garde-fou cron : OUTPUT_DIR pointe sur la file inbox par défaut. Le commit
 # direct dans le corpus est interdit en cron — l'intégration au corpus est un
 # processus séparé, mensuel, gaté par scripts/verify_citation.py.
@@ -165,14 +171,20 @@ def build_gmail_credentials() -> Credentials:
 
 
 def _cible_de_lien(href: str | None) -> str | None:
-    """Cible réelle d'un lien d'alerte. Scholar enveloppe ses liens dans une
-    redirection (…/scholar_url?url=<cible>&…) : on garde <cible>, plus courte et
-    plus utile à citer que la redirection."""
+    """Cible réelle d'un lien d'alerte, ou None pour un lien sans information d'article.
+    Scholar enveloppe ses liens d'article dans une redirection (…/scholar_url?url=<cible>&…) :
+    on garde <cible>, plus courte et plus utile à citer que la redirection."""
     if not href or href.startswith(("mailto:", "#")):
         return None
     u = urlparse(href)
-    if u.netloc.startswith("scholar.google.") and u.path == "/scholar_url":
-        return parse_qs(u.query).get("url", [href])[0]
+    if u.netloc.startswith("scholar.google."):
+        if u.path == "/scholar_url":
+            return parse_qs(u.query).get("url", [href])[0]
+        # Les autres liens Scholar sont des actions (enregistrer, partager, gérer
+        # l'alerte), sans texte ni information d'article. Sur les 51 alertes réelles
+        # gardées au dépôt privé, ils faisaient les deux tiers du corps extrait (revue
+        # adversariale du 2026-09-10).
+        return None
     return href
 
 
@@ -185,10 +197,12 @@ def _derouler_liens_scholar(texte: str) -> str:
 
 
 class _TexteDeHtml(HTMLParser):
-    """Texte lisible d'un corps HTML : le texte, plus la cible de chaque lien.
-    Styles, scripts et en-tête écartés."""
+    """Texte lisible d'un corps HTML : le texte, plus la cible de chaque lien d'article.
+    Styles et scripts écartés."""
 
-    _IGNORES = {"style", "script", "head", "title"}
+    # Ni `head` ni `title` : leur balise de fin est facultative en HTML5 et HTMLParser n'en
+    # infère aucune — un `</head>` omis aurait vidé tout le corps (revue du 2026-09-10).
+    _IGNORES = {"style", "script"}
     _BLOCS = {"br", "p", "div", "tr", "li", "table", "h1", "h2", "h3", "h4", "h5", "h6"}
 
     def __init__(self) -> None:
@@ -225,16 +239,21 @@ class _TexteDeHtml(HTMLParser):
 
 
 def texte_de_html(html_brut: str) -> str:
-    """Texte d'un corps HTML. Si l'extraction échoue, le HTML est rendu tel quel :
-    il sera borné plus loin comme tout corps."""
+    """Texte d'un corps HTML. Si l'extraction échoue, ou si elle ne rend rien d'un HTML
+    qui n'est pas vide, le HTML est rendu tel quel, et le journal le dit : il sera borné
+    plus loin comme tout corps. Un corps vidé en silence serait une coupe silencieuse."""
     p = _TexteDeHtml()
     try:
         p.feed(html_brut)
         p.close()
     except Exception as e:  # noqa: BLE001 — un corps illisible ne doit pas tuer le run
-        print(f"[texte] WARN — extraction HTML échouée ({e}) ; corps gardé brut, borné plus loin")
+        print(f"[texte] WARN — extraction HTML échouée ({type(e).__name__}) ; corps gardé brut, borné plus loin")
         return html_brut
-    return p.texte()
+    texte = p.texte()
+    if not texte and html_brut.strip():
+        print("[texte] WARN — extraction HTML vide ; corps gardé brut, borné plus loin")
+        return html_brut
+    return texte
 
 
 def fetch_scholar_emails(service: Any, lookback_days: int) -> list[dict[str, str]]:
@@ -341,16 +360,16 @@ def construire_corpus(prompt: str, emails: list[dict[str, str]], borne: int) -> 
     return message, tronques
 
 
-def compter_tokens(client: Any, message: str) -> tuple[int, str]:
-    """Tokens de l'entrée, comptés par l'API (messages.count_tokens). Si le comptage
-    échoue, estimation prudente au pire rapport mesuré — et la méthode le dit."""
+def compter_tokens(client: Any, message: str) -> tuple[int, bool]:
+    """Tokens de l'entrée : (n, True) s'ils sont comptés par l'API (messages.count_tokens),
+    (estimation prudente, False) si le comptage échoue — voir OCTETS_PAR_TOKEN_PIRE_CAS."""
     try:
         r = client.messages.count_tokens(model=ANTHROPIC_MODEL, messages=[{"role": "user", "content": message}])
-        return int(r.input_tokens), "comptés par l'API"
+        return int(r.input_tokens), True
     except Exception as e:  # noqa: BLE001 — le comptage est un garde, pas une étape critique
-        estime = int(len(message) / CARACTERES_PAR_TOKEN_PIRE_CAS) + 1
-        print(f"[anthropic] WARN — count_tokens indisponible ({e}) ; estimation prudente : {estime} tokens")
-        return estime, f"estimés à {CARACTERES_PAR_TOKEN_PIRE_CAS} caractères par token, le comptage de l'API ayant échoué"
+        estime = int(len(message.encode("utf-8")) / OCTETS_PAR_TOKEN_PIRE_CAS) + 1
+        print(f"[anthropic] WARN — count_tokens indisponible ({str(e)[:200]}) ; estimation prudente : {estime} tokens")
+        return estime, False
 
 
 def _horodatage(e: dict[str, str]) -> float:
@@ -372,18 +391,26 @@ def ajuster_au_budget(client: Any, prompt: str, emails: list[dict[str, str]]) ->
        (une date illisible compte comme la plus ancienne) : d'abord en proportion de
        l'excès, puis au moins une par tour.
     Tout ce qui est coupé ou écarté est compté et rendu : rien ne disparaît en silence.
+    Une réduction décidée sur l'estimation de repli (comptage de l'API en échec) est
+    comptée à part : l'estimation est prudente, la coupe a pu être plus forte que
+    nécessaire, et le bilan le dit.
     """
     # Du plus récent au plus ancien. L'ordre de Gmail n'est pas garanti, on ne s'y fie
     # pas ; le tri est stable.
     retenus = sorted(emails, key=_horodatage, reverse=True)
     ecartes: list[dict[str, str]] = []
     borne = max(CORPS_MAX_CARACTERES, BORNE_PLANCHER)
+    sur_estimation = 0  # réductions décidées alors que l'API ne comptait pas
     while True:
         message, tronques = construire_corpus(prompt, retenus, borne)
-        n, methode = compter_tokens(client, message)
+        n, par_api = compter_tokens(client, message)
         if n <= BUDGET_TOKENS_ENTREE:
+            methode = ("comptés par l'API" if par_api else
+                       f"estimés à {OCTETS_PAR_TOKEN_PIRE_CAS} octets par token, le comptage de l'API ayant échoué")
             return message, {"tokens": n, "methode": methode, "borne": borne, "tronques": tronques,
-                             "retenus": len(retenus), "ecartes": ecartes}
+                             "retenus": len(retenus), "ecartes": ecartes, "sur_estimation": sur_estimation}
+        if not par_api:
+            sur_estimation += 1
         if borne > BORNE_PLANCHER:
             borne = max(BORNE_PLANCHER, borne // 2)
             continue
@@ -407,21 +434,36 @@ def decrire_bilan(bilan: dict[str, Any], n_recus: int) -> str:
     if bilan["ecartes"]:
         morceaux.append(f"{len(bilan['ecartes'])} écartés faute de place, les plus anciens "
                         f"(liste en fin de synthèse)")
+    if bilan["sur_estimation"]:
+        morceaux.append(f"{bilan['sur_estimation']} réduction(s) décidée(s) sur estimation, le comptage de "
+                        f"l'API ayant échoué : la coupe a pu être plus forte que nécessaire")
     morceaux.append(f"entrée de {bilan['tokens']} tokens, {bilan['methode']}")
+    if bilan.get("arret") not in (None, "end_turn"):
+        morceaux.append(f"SYNTHÈSE INTERROMPUE (stop_reason={bilan['arret']}, "
+                        f"{bilan.get('tokens_sortie')} tokens de sortie) : elle s'arrête en cours de texte")
     return " · ".join(morceaux)
 
 
 def pied_ecartes(bilan: dict[str, Any]) -> str:
-    """Section de fin de synthèse qui nomme chaque alerte écartée ; vide sinon.
-
-    Placée en FIN de document : l'aperçu de DRY_RUN imprime dans le journal public les
-    300 premiers caractères de la synthèse, c'est-à-dire l'en-tête, jamais cette section."""
+    """Section de fin de synthèse qui nomme chaque alerte écartée ; vide sinon. Elle ne va
+    que dans le dépôt privé : l'aperçu de DRY_RUN n'imprime que l'en-tête."""
     if not bilan["ecartes"]:
         return ""
     lignes = "\n".join(f"- {e['date']} — {e['subject']}" for e in bilan["ecartes"])
+    cause = (f"le budget d'entrée ({BUDGET_TOKENS_ENTREE} tokens) était atteint"
+             + (", selon une estimation prudente (comptage de l'API en échec) qui a pu exagérer"
+                if bilan["sur_estimation"] else ""))
     return (f"\n\n---\n\n## Alertes écartées faute de place ({len(bilan['ecartes'])})\n\n"
-            f"Le modèle ne les a pas lues : le budget d'entrée ({BUDGET_TOKENS_ENTREE} tokens) "
-            f"était atteint.\n\n{lignes}\n")
+            f"Le modèle ne les a pas lues : {cause}.\n\n{lignes}\n")
+
+
+def pied_interruption(bilan: dict[str, Any]) -> str:
+    """Avertissement de fin de synthèse si le modèle s'est arrêté avant la fin ; vide sinon."""
+    if bilan.get("arret") in (None, "end_turn"):
+        return ""
+    return (f"\n\n---\n\n**⚠ Synthèse interrompue** (`stop_reason` = `{bilan['arret']}`, "
+            f"{bilan.get('tokens_sortie')} tokens de sortie sur {MAX_TOKENS_SORTIE}) : "
+            f"le texte ci-dessus s'arrête en cours de route.\n")
 
 
 def call_anthropic(prompt: str, emails: list[dict[str, str]]) -> tuple[str, dict[str, Any]]:
@@ -433,9 +475,19 @@ def call_anthropic(prompt: str, emails: list[dict[str, str]]) -> tuple[str, dict
           f"{decrire_bilan(bilan, len(emails))}")
     msg = client.messages.create(
         model=ANTHROPIC_MODEL,
-        max_tokens=8192,
+        max_tokens=MAX_TOKENS_SORTIE,
         messages=[{"role": "user", "content": user_message}],
     )
+    # Une sortie coupée se déclare comme une entrée coupée (2026-09-10). Jusque-là,
+    # stop_reason n'était jamais lu : une synthèse arrêtée à max_tokens au milieu d'une
+    # phrase était commitée comme complète.
+    bilan["arret"] = msg.stop_reason
+    bilan["tokens_sortie"] = msg.usage.output_tokens
+    if msg.stop_reason != "end_turn":
+        print(f"[anthropic] WARN — synthèse interrompue : stop_reason={msg.stop_reason}, "
+              f"{msg.usage.output_tokens} tokens de sortie sur {MAX_TOKENS_SORTIE}")
+    else:
+        print(f"[anthropic] Synthèse complète : {msg.usage.output_tokens} tokens de sortie sur {MAX_TOKENS_SORTIE}")
     return "".join(block.text for block in msg.content if block.type == "text"), bilan
 
 
@@ -457,8 +509,11 @@ def commit_synthesis(content: str, today: dt.date) -> None:
 
     if DRY_RUN:
         print(f"[dry-run] PUT {url} ({len(content)} chars)")
-        print("--- Aperçu (300 premiers caractères) ---")
-        print(content[:300])
+        # L'en-tête seul, qui ne contient que des nombres : le journal est public. Jusqu'au
+        # 2026-09-10, les 300 premiers caractères partaient, et avec eux le début de la
+        # synthèse privée (113 caractères avant le correctif de troncature, 11 au dry run).
+        print("--- Aperçu (en-tête seul) ---")
+        print(content.split("\n---\n\n", 1)[0])
         return
 
     # Preflight GET pour recuperer le SHA si le fichier existe deja.
@@ -884,7 +939,7 @@ def main() -> int:
         f"**Prompt source** : `{PROMPT_PATH}`\n\n"
         f"---\n\n"
     )
-    synthesis_full = synthesis_header + synthesis + pied_ecartes(bilan)
+    synthesis_full = synthesis_header + synthesis + pied_interruption(bilan) + pied_ecartes(bilan)
     commit_synthesis(synthesis_full, today)
     synthesis_path = f"{OUTPUT_DIR}/synthese_{today.isoformat()}.md"
 
