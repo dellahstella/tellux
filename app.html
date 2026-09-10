@@ -3361,6 +3361,7 @@ var JS_STRINGS_EN = {
   detail_delta_loading: "not yet available (preloading in progress)",
   btn_save_finalizing: "Finalizing calculation…",
   save_elf_fallback_notice: "Measurement saved with a simplified estimate of the electromagnetic field (grid data unavailable).",
+  save_envoi_sans_reponse: "The server hasn't answered yet. You can cancel, but the measurement may already have been saved.",
   elf_loading_label: "ELF field (nT) — loading…",
   // Étiquetage du terme BT manquant (2026-09-07, brief CJ). Direction de l'écart connue et dite.
   elf_bt_incomplet: "Incomplete value: the low-voltage term has not loaded yet, so the value shown is too low. It is included as soon as the network data is available.",
@@ -3706,7 +3707,13 @@ let contribsDB=[],pending=null,_contribClickHandler=null;
 // écriture partie ne se rappelle pas : les gestes qui retirent le point (Annuler, clic hors du formulaire,
 // bouton « + », « Repositionner ») sont refusés tant qu'elle est en vol. Avant ce drapeau, Annuler pendant
 // l'enregistrement laissait la mesure s'écrire, puis affichait une fausse erreur (cf. saveContrib()).
+// Le refus est BORNÉ (revue du 2026-09-10) : sbPost n'a pas de délai d'expiration, et un envoi sans réponse
+// enfermait l'utilisateur dans le formulaire. Passé CONTRIB_ENVOI_REFUS_MS, les gestes redeviennent
+// possibles, avec un avertissement : l'envoi continue, et son issue reste inconnue.
 let _contribEnvoiEnCours=false;
+// 15 s : littéral choisi, pas calculé — au-delà d'un envoi normal, en deçà d'une attente qu'on ne distingue
+// plus d'un blocage. Même ordre de grandeur que les 20 s de l'attente du calcul ELF dans saveContrib().
+const CONTRIB_ENVOI_REFUS_MS=15000;
 // Fiche « Mon lieu » (2026-08-20) — positions antennes ANFR retenues en agrégat pur,
 // en plus des marqueurs Leaflet déjà créés par loadAnt() (aucune modification de la
 // boucle de rendu existante). Sert uniquement countAntennasWithinRadius().
@@ -10647,6 +10654,12 @@ async function saveContrib(){
   // Le point a été retiré ou remplacé pendant l'attente : l'enregistrement est abandonné, rien n'est écrit.
   // Le geste qui l'a retiré a déjà dit ce qu'il faisait (« Mesure annulée. », repositionnement).
   if(pending!==pendingAuDepart){btn.textContent='Enregistrer dans Supabase';btn.disabled=false;return;}
+  // Consentement et saisie relus après l'attente (revue du 2026-09-10). Pendant « Finalisation du calcul… »,
+  // l'utilisateur peut décocher le consentement ou vider la valeur ; seul le point était figé au clic, et la
+  // ligne partait quand même — contre un consentement retiré. Mêmes contrôles et mêmes messages qu'au clic.
+  if(!document.getElementById('c-rgpd').checked){info('⚠ Veuillez accepter les conditions de stockage des donnees.','error',5000);btn.textContent='Enregistrer dans Supabase';btn.disabled=false;return;}
+  const vCheckApres=validateContrib();
+  if(!vCheckApres.ok){info('⚠ '+vCheckApres.msg,'error',5000);btn.textContent='Enregistrer dans Supabase';btn.disabled=false;return;}
   // Jamais silencieux (même principe que le popup) : si la valeur écrite reste basée sur le
   // repli v1 (panne durable OU timeout ci-dessus sans résolution), le contributeur en est informé.
   if (computeElfState() !== 'ready') {
@@ -10767,29 +10780,43 @@ async function saveContrib(){
   const btnAnnuler=document.querySelector('#cform .btn-cancel'), btnRepos=document.getElementById('btn-reposition');
   if(btnAnnuler)btnAnnuler.disabled=true;
   if(btnRepos)btnRepos.disabled=true;
+  // Refus borné : passé CONTRIB_ENVOI_REFUS_MS sans réponse, Annuler et Repositionner redeviennent possibles,
+  // et l'utilisateur est prévenu que la mesure a peut-être été enregistrée. Enregistrer reste désactivé
+  // jusqu'à la réponse : pas de second envoi de la même mesure tant que l'issue du premier est inconnue.
+  const minuteurRefus=setTimeout(function(){
+    if(!_contribEnvoiEnCours) return;
+    _contribEnvoiEnCours=false;
+    if(btnAnnuler)btnAnnuler.disabled=false;
+    if(btnRepos)btnRepos.disabled=false;
+    info(jt('save_envoi_sans_reponse','Le serveur ne répond pas encore. Vous pouvez annuler, mais la mesure a peut-être déjà été enregistrée.'),'warn',8000);
+  },CONTRIB_ENVOI_REFUS_MS);
   try{
     const saved=await sbPost('/rest/v1/contributions',[row]);
     contribsDB.unshift(saved[0]||row);addMarker(saved[0]||row);
-    // Garde conservée même avec le drapeau : removeLayer(null) lève dans Leaflet, et c'est ce qui affichait
-    // « Erreur : … » après une écriture réussie.
-    if(pending){map.removeLayer(pending);pending=null;}
-    document.getElementById('cform').style.display='none';
-    cformOverlayHide();
-    document.getElementById('c-val').value='';document.getElementById('c-note').value='';
-    window._csvStats=null;
-    const protoChk=document.getElementById('c-protocole');if(protoChk)protoChk.checked=false;
-    var airplaneChk=document.getElementById('c-airplane-mode');if(airplaneChk)airplaneChk.checked=false;
-    var usbChk=document.getElementById('c-usb-off');if(usbChk)usbChk.checked=false;
-    var metalChk=document.getElementById('c-no-metal');if(metalChk)metalChk.checked=false;
-    var durInp=document.getElementById('c-duration-s');if(durInp)durInp.value='';
-    var igrfBox=document.getElementById('c-igrf-box');if(igrfBox)igrfBox.style.display='none';
-    window._nativeCaptureUsed = false;
-    var csvSum=document.getElementById('csv-summary');if(csvSum)csvSum.style.display='none';
-    var csvInp=document.getElementById('csv-phyphox-input');if(csvInp)csvInp.value='';
-    document.querySelectorAll('#c-mats input:checked,#c-appareils input:checked').forEach(function(cb){cb.checked=false;});
-    var etageSel2=document.getElementById('c-etage');if(etageSel2)etageSel2.value='';
-    setCtx('exterieur',document.getElementById('ctx-ext'));
-    cformShowStep(1);
+    // Le formulaire n'est remis à zéro que s'il est encore celui de CETTE mesure (revue du 2026-09-10) : passé
+    // le délai de refus, l'utilisateur a pu annuler puis ouvrir une autre mesure, et la réponse tardive de
+    // celle-ci ne doit ni retirer le nouveau point ni effacer sa saisie. La garde sur pending reste :
+    // removeLayer(null) lève dans Leaflet, et c'est ce qui affichait « Erreur : … » après une écriture réussie.
+    if(pending&&pending===pendingAuDepart){
+      map.removeLayer(pending);pending=null;
+      document.getElementById('cform').style.display='none';
+      cformOverlayHide();
+      document.getElementById('c-val').value='';document.getElementById('c-note').value='';
+      window._csvStats=null;
+      const protoChk=document.getElementById('c-protocole');if(protoChk)protoChk.checked=false;
+      var airplaneChk=document.getElementById('c-airplane-mode');if(airplaneChk)airplaneChk.checked=false;
+      var usbChk=document.getElementById('c-usb-off');if(usbChk)usbChk.checked=false;
+      var metalChk=document.getElementById('c-no-metal');if(metalChk)metalChk.checked=false;
+      var durInp=document.getElementById('c-duration-s');if(durInp)durInp.value='';
+      var igrfBox=document.getElementById('c-igrf-box');if(igrfBox)igrfBox.style.display='none';
+      window._nativeCaptureUsed = false;
+      var csvSum=document.getElementById('csv-summary');if(csvSum)csvSum.style.display='none';
+      var csvInp=document.getElementById('csv-phyphox-input');if(csvInp)csvInp.value='';
+      document.querySelectorAll('#c-mats input:checked,#c-appareils input:checked').forEach(function(cb){cb.checked=false;});
+      var etageSel2=document.getElementById('c-etage');if(etageSel2)etageSel2.value='';
+      setCtx('exterieur',document.getElementById('ctx-ext'));
+      cformShowStep(1);
+    }
     const n=contribsDB.length;
     updateSupabaseStatusDot('ok',n);
     const eTot2=document.getElementById('db-total');if(eTot2)eTot2.textContent=n+' contribution'+(n>1?'s':'')+' en base';
@@ -10801,6 +10828,7 @@ async function saveContrib(){
     const fabEl=document.getElementById('fab-mesure');if(fabEl)fabEl.classList.remove('fab-active');
   }catch(err){info('Erreur : '+err.message,'error',5000);}
   finally{
+    clearTimeout(minuteurRefus);
     _contribEnvoiEnCours=false;
     if(btnAnnuler)btnAnnuler.disabled=false;
     if(btnRepos)btnRepos.disabled=false;
