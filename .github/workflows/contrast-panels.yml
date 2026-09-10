@@ -187,6 +187,16 @@ jobs:
           cache: 'npm'
           cache-dependency-path: tests/blindage-harness/package-lock.json
 
+      # Contrôle du VERDICT (2026-09-10) : ce que l'étape « Run contrast-panels » DIT d'un
+      # rapport (annotations, résumé, code de sortie), exécuté sur des rapports connus AVANT la
+      # mesure réelle. Le 2026-09-09, 17 rouges sont sortis en exit 2 sans que le journal ni le
+      # résumé nomment un seul des dépassements qui les causaient. Ce contrôle exécute le vrai
+      # bloc `run:` de cette étape : un verdict qui redevient muet le fait échouer. Sans
+      # navigateur, quelques secondes ; exige bash et jq, présents sur le runner.
+      - name: Contrôle du verdict (rapports connus, sans navigateur)
+        working-directory: tests/blindage-harness
+        run: node contrast-verdict.test.mjs
+
       - name: Install npm deps (tests/blindage-harness)
         working-directory: tests/blindage-harness
         run: npm ci
