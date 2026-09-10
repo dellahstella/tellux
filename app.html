@@ -7636,6 +7636,11 @@ function loadSitesApp() {
       console.log('[Tellux] sites_app.json chargé : ' + SITES_REMARQUABLES.length + ' EM / ' + POINTS_CHAUDS_RADIO.length + ' U·Th / ' + THERMAL_SOURCES_CORSE.length + ' thermales');
     } catch (e) {
       console.warn('[Tellux] sites_app.json indisponible : ' + e.message);
+      // Mémoïsation relâchée sur échec (2026-09-10, lot contexte de la reprise) — même patron que
+      // loadTDFEmitters au lot RF : l'IIFE avale l'échec, la remise à zéro est donc ICI. Sans elle,
+      // `_sitesAppPromise` reste une promesse résolue et la reprise 'sites' retourne sans refetch.
+      // Sur SUCCÈS le mémo est conservé.
+      _sitesAppPromise = null;
     }
   })();
   return _sitesAppPromise;
@@ -7712,11 +7717,12 @@ function adaptSiteUthFromApp(s) {
   const p = s.properties || {};
   return { id: s.slug, nom: s.nom, lat: s.lat, lon: s.lon, dose_gamma_estimee_nSv_h: p.dose_gamma_estimee_nSv_h != null ? p.dose_gamma_estimee_nSv_h : null, rayon_influence_m: p.rayon_influence_m || 500, statut: p.statut_mesure || 'indice_documente_non_mesure', precision_coord: s.precision_coord || null, note: s.description || '' };
 }
-// Alias historique — depuis le 2026-08-19, n'est plus appelé QUE depuis le boot
-// (Promise.all plus bas dans ce fichier) : la couche carte « Sites U/Th à mesurer »
-// (bouton, layer group, tooltip) a été retirée (risque nocebo A.4, décision Soleil,
-// contenu transposé en fiche documentaire cadre-scientifique.html). Ce chargement
-// reste nécessaire et volontairement inconditionnel : POINTS_CHAUDS_RADIO alimente
+// Alias historique — depuis le 2026-08-19, n'est plus appelé QUE depuis le boot : la couche
+// carte « Sites U/Th à mesurer » (bouton, layer group, tooltip) a été retirée (risque nocebo
+// A.4, décision Soleil, contenu transposé en fiche documentaire cadre-scientifique.html).
+// Depuis le 2026-09-10 (lot contexte de la reprise), le boot l'atteint par declenche('sites') :
+// c'est la fonction inscrite sous cette clé, gardée comme point d'entrée unique du chargement.
+// Ce chargement reste nécessaire et volontairement inconditionnel : POINTS_CHAUDS_RADIO alimente
 // le boost ponctuel de calcGammaAmbient (~L.5330) indépendamment de toute UI —
 // le retirer casserait silencieusement ce calcul.
 function loadPointsChaudsRadio() { return loadSitesApp(); }
@@ -7956,6 +7962,9 @@ function loadSoilGridsGrid(){
       console.log('[Tellux] soilgrids_grid_corse.json chargé : ' + SOILGRIDS_CORSE.length + ' points');
     } catch (e) {
       console.warn('[Tellux] soilgrids_grid_corse.json indisponible : ' + e.message);
+      // Mémoïsation relâchée sur échec (2026-09-10, lot contexte de la reprise) — même patron et même
+      // raison que loadSitesApp() plus haut. Sur SUCCÈS le mémo est conservé.
+      _soilGridsPromise = null;
     }
   })();
   return _soilGridsPromise;
@@ -10080,30 +10089,47 @@ async function loadAnt(){try{
       published_at: Date.now(),
     });
   } catch (_e) { /* hook best-effort, ne doit pas casser le boot */ }
-  // Emetteurs broadcast TDF — dataset-driven (public/data/tdf_emitters_corse.json)
-  // Icone pictogramme (carré), info-bulle listant PAR + services + notes.
-  // Clusterisés À PART depuis brief AH (2026-09-04, cf. lTDFCluster ci-dessus) : dataset sparse
-  // (quelques dizaines de sites), l'icône distincte doit rester visible individuellement
-  // au zoom individuel — l'intention d'origine (ne PAS fondre ce signal dans le comptage ANFR)
-  // est préservée par un cluster dédié, pas par l'absence de clustering (qui superposait les
-  // marqueurs sur la bulle ANFR au dézoom max, défaut brief AH).
-  // Glyphe changé croix nue → carré dans un badge rond (brief BM, 2026-09-05, révisé après un
-  // premier essai triangle refusé en revue). La croix d'origine (deux barres perpendiculaires,
-  // sans fond, posée directement sur la carte) était géométriquement un signe "+", confondu en
-  // usage réel avec une affordance d'ajout cliquable (constat Soleil) — d'autant plus ambigu ici
-  // qu'aucun cercle/contour ne la distinguait d'un bouton flottant. Un triangle pointe-en-haut
-  // avait été essayé en premier : écarté avant merge, brief AL (2026-09-04, _certClusterIcon)
-  // documentant que Soleil a déjà refusé cette forme pour lCert (pictogramme d'alerte, à
-  // contre-courant du refus d'alarmisme de l'interface). Repris dans un badge rond (même
-  // convention que mkIcon() pour tout autre marqueur individuel de la carte : fond coloré,
-  // bordure blanche, ombre) avec un carré à l'intérieur — forme non revendiquée par aucun autre
-  // marqueur/cluster de la carte (cercle=défaut, carré à coins arrondis=lCert cluster,
-  // losange=lCert extérieur), sans connotation d'alerte. Couleur alignée sur GC.infra (#6b7280,
-  // celle déjà utilisée par le badge de cluster lTDFCluster ci-dessus) au lieu du #5f5e5a
-  // d'origine — supprime au passage une incohérence de teinte préexistante entre les deux
-  // représentations du même émetteur (groupé/isolé), et réutilise le contraste blanc/#6b7280
-  // déjà vérifié (4,8:1) plutôt que d'en établir un nouveau.
+  // Émetteurs broadcast TDF : rendus par dessinerMarqueursTDF(), juste après cette fonction
+  // (2026-09-10, lot contexte de la reprise).
   await loadTDFEmitters();
+  dessinerMarqueursTDF();
+}catch(e){console.error('❌ loadAnt erreur:',e.message);}}
+
+// ═══ Marqueurs des émetteurs TDF — dessinerMarqueursTDF() ═══
+// Sortie de loadAnt() le 2026-09-10 (lot contexte de la reprise). Le rendu y vivait APRÈS les
+// antennes, dans le même try : sauté quand Supabase échouait, jamais refait quand la reprise 'tdf'
+// ramenait les émetteurs, et refait en entier à chaque rappel de loadAnt() — un lot de marqueurs de
+// plus par rappel. Appelée désormais par loadAnt() et par repriseTDF(). Ne dessine que dans un groupe
+// vide, et seulement si les émetteurs sont là : un second appel ne double rien, un appel sans
+// émetteurs ne pose rien. Ne lit pas le réseau — l'appeler depuis repriseTDF() ne fait donc rien
+// couvrir de plus au détecteur de périmètre (tests/blindage-harness/perimetre-reprise.mjs).
+//
+// Emetteurs broadcast TDF — dataset-driven (public/data/tdf_emitters_corse.json)
+// Icone pictogramme (carré), info-bulle listant PAR + services + notes.
+// Clusterisés À PART depuis brief AH (2026-09-04, cf. lTDFCluster ci-dessus) : dataset sparse
+// (quelques dizaines de sites), l'icône distincte doit rester visible individuellement
+// au zoom individuel — l'intention d'origine (ne PAS fondre ce signal dans le comptage ANFR)
+// est préservée par un cluster dédié, pas par l'absence de clustering (qui superposait les
+// marqueurs sur la bulle ANFR au dézoom max, défaut brief AH).
+// Glyphe changé croix nue → carré dans un badge rond (brief BM, 2026-09-05, révisé après un
+// premier essai triangle refusé en revue). La croix d'origine (deux barres perpendiculaires,
+// sans fond, posée directement sur la carte) était géométriquement un signe "+", confondu en
+// usage réel avec une affordance d'ajout cliquable (constat Soleil) — d'autant plus ambigu ici
+// qu'aucun cercle/contour ne la distinguait d'un bouton flottant. Un triangle pointe-en-haut
+// avait été essayé en premier : écarté avant merge, brief AL (2026-09-04, _certClusterIcon)
+// documentant que Soleil a déjà refusé cette forme pour lCert (pictogramme d'alerte, à
+// contre-courant du refus d'alarmisme de l'interface). Repris dans un badge rond (même
+// convention que mkIcon() pour tout autre marqueur individuel de la carte : fond coloré,
+// bordure blanche, ombre) avec un carré à l'intérieur — forme non revendiquée par aucun autre
+// marqueur/cluster de la carte (cercle=défaut, carré à coins arrondis=lCert cluster,
+// losange=lCert extérieur), sans connotation d'alerte. Couleur alignée sur GC.infra (#6b7280,
+// celle déjà utilisée par le badge de cluster lTDFCluster ci-dessus) au lieu du #5f5e5a
+// d'origine — supprime au passage une incohérence de teinte préexistante entre les deux
+// représentations du même émetteur (groupé/isolé), et réutilise le contraste blanc/#6b7280
+// déjà vérifié (4,8:1) plutôt que d'en établir un nouveau.
+function dessinerMarqueursTDF(){
+  if (!Array.isArray(TDF_EMITTERS) || TDF_EMITTERS.length === 0) return;
+  if (lTDFCluster.getLayers().length > 0) return;
   TDF_EMITTERS.forEach(em => {
     const shape='<div style="width:14px;height:14px;background:'+GC.infra+';border:1.5px solid rgba(255,255,255,.9);border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center"><div style="width:6px;height:6px;background:white"></div></div>';
     const icon=L.divIcon({html:shape,className:'',iconSize:[17,17],iconAnchor:[8.5,8.5]});
@@ -10130,7 +10156,7 @@ async function loadAnt(){try{
       null, 6000
     )).addTo(lTDFCluster);
   });
-}catch(e){console.error('❌ loadAnt erreur:',e.message);}}
+}
 
 // ── NOAA SWPC — vent solaire + Kp + Bz + flux proton ──
 // Restauré post-v8 (régression cleanup). Alimente panneau Kp/Bz/densité/flux + calibration externe.
@@ -12235,6 +12261,10 @@ if(typeof loadEoliennesData==='function'){
 // code d'origine : 27 échecs prédits (mémos morts, bascule sans fetch, affichage non rafraîchi).
 async function repriseTDF() {
   await loadTDFEmitters();
+  // Marqueurs TDF (2026-09-10, lot contexte) : dessinés ici aussi, et non plus dans loadAnt() seulement,
+  // qui les sautait quand Supabase échouait et ne les refaisait pas au retour des émetteurs. Sans effet
+  // s'ils sont déjà dessinés ou si les émetteurs manquent — cf. dessinerMarqueursTDF().
+  if (typeof dessinerMarqueursTDF === 'function' && typeof lTDFCluster !== 'undefined') dessinerMarqueursTDF();
   // Retour tardif seulement : calibration réussie (RF_CALIB_STATS posé), donc carte déjà construite,
   // peut-être sans TDF. Au démarrage nominal, c'est calibrateRF() qui la construira — la construire
   // ici, avant, l'afficherait un instant à k = 1. Limite : calibration ÉCHOUÉE, RF_CALIB_STATS reste
@@ -12292,6 +12322,49 @@ if(typeof calibrateRF==='function'){
     verifie: () => anfrGrillePrete() && rfCalibre()
   });
 }
+// REPRISE — chargeurs de contexte (2026-09-10, lot contexte). Leur échec retire une couche ou un repère
+// sans fausser de valeur affichée : classe contexte (3 tentatives, pas de réveil sur `online`).
+// · 'sols' — SOILGRIDS_CORSE n'entre que dans soil_conductivity, champ descriptif du retour de
+//   RF_field(), jamais dans S_total ni E_total.
+// · 'sites' — POINTS_CHAUDS_RADIO alimente le boost de calcGammaAmbient, mais tous les sites U/Th y
+//   portent une dose nulle : contribution nulle, d'où le reclassement en contexte (2026-09-10).
+//   SITES_REMARQUABLES fournit les sites ophiolitiques de la couche crustale. Inscrit sous l'alias
+//   loadPointsChaudsRadio(), point d'entrée unique de ce chargement (cf. son commentaire).
+//   LIMITE DÉCLARÉE : si la couche crustale est allumée PENDANT la panne, ses marqueurs ophiolitiques
+//   restent absents quand les sites reviennent, car tog() ne reconstruit qu'une couche vide. C'est la
+//   tolérance déjà écrite dans buildCrustalLayer() pour les 1,5 premières secondes. La reconstruire
+//   d'ici fausserait le détecteur de périmètre : les popups de ces sites portent un bouton
+//   onclick="startCrustalCorseMeasurement(…)", et appeler buildCrustalLayer() depuis une reprise fait
+//   compter comme couverts 11 captifs qui ne le sont pas (mesuré le 2026-09-10, inscription fictive).
+// · 'ant' — marqueurs ANFR, compteurs, « Mon lieu ». loadAnt() avale son échec (try/catch global) : le
+//   prédicat est le seul signal. Le bouton ne la rappelle pas, parce que loadAnt() pose ses groupes de
+//   grappes avant de charger et que la couche n'est donc plus vide : c'est la reprise qui s'en charge.
+//   Les lignes Supabase sont partagées avec la reprise 'anfr' (fetchAntennasCorseRaw), si bien qu'un
+//   retour obtenu par l'une sert aussi à l'autre.
+// · 'cert' — inscrite dans le script suivant, à côté de loadMesuresCertifiees(), qui n'existe pas encore
+//   quand ce bloc s'exécute.
+// Prédicats au seuil zéro, comme au lot ELF : un jeu vide se lit comme un échec, jamais comme un succès.
+// Réfutation : tests/blindage-harness/non-regression-reprise-contexte.mjs, exécutée AVANT ce lot sur le
+// code d'origine : mémos morts, verrou de rendu des mesures certifiées, marqueurs TDF absents ou
+// doublés, boot sans reprise.
+if(typeof loadSoilGridsGrid==='function'){
+  enregistrerReprise('sols', loadSoilGridsGrid, {
+    classe: 'contexte',
+    verifie: () => Array.isArray(SOILGRIDS_CORSE) && SOILGRIDS_CORSE.length > 0
+  });
+}
+if(typeof loadPointsChaudsRadio==='function'){
+  enregistrerReprise('sites', loadPointsChaudsRadio, {
+    classe: 'contexte',
+    verifie: () => SITES_REMARQUABLES.length > 0 && POINTS_CHAUDS_RADIO.length > 0
+  });
+}
+if(typeof loadAnt==='function'){
+  enregistrerReprise('ant', loadAnt, {
+    classe: 'contexte',
+    verifie: () => ANFR_ONSHORE_COUNT !== null && ANFR_ONSHORE_COUNT > 0
+  });
+}
 // buildHotRF() au boot (au lieu de buildHot()) — RF activé par défaut (ACTIVE.hotrf=true).
 // Pas d'équivalent loadChargeReseau() nécessaire : buildHotRF()/calcN_RF_calib() ne dépend
 // pas du facteur de charge RTE (spécifique au domaine ELF/magnétique de buildHot()).
@@ -12299,10 +12372,12 @@ buildHotRF();
 showLegend('hotrf',true);
 // ant:true au boot (décision Soleil 2026-09-02, remplace cert:true du 2026-08-29 ci-dessus en
 // commentaire) — antennes ANFR + TDF visibles + légende au démarrage, en complément de la
-// grille RF (hotrf). lAnt.addTo(map) est fait dans le Promise.all décalé ci-dessous (après
-// loadAnt(), même pattern que l'ex-lCert.addTo(map) après loadMesuresCertifiees()). Mesures
-// certifiées (cert) toujours chargées au boot (calibrateRF() en dépend), simplement plus
-// affichées ni légendées par défaut — cert:false, showLegend('cert',...) désormais piloté par
+// grille RF (hotrf). lAnt.addTo(map) est fait dans le Promise.all décalé ci-dessous (après la
+// première tentative de la reprise 'ant', lot contexte 2026-09-10). Mesures certifiées (cert)
+// toujours chargées au boot. calibrateRF() n'en
+// dépend PAS : elle lit le même fichier par son propre fetch. L'ancienne mention « calibrateRF() en
+// dépend » était fausse, et corrigée le 2026-09-10 parce qu'elle aurait classé ce chargeur en critique.
+// Toujours non affichées ni légendées par défaut — cert:false, showLegend('cert',...) désormais piloté par
 // tog() au 1er clic comme contrib:false l'était déjà.
 showLegend('ant',true);
 // Démarrage : anomalies EM (couche RF + mesures terrain par défaut, cf. arbitrage 2026-08-23)
@@ -12317,7 +12392,7 @@ map.on('zoomend',function(){ _syncBTZoom(false); });
 // forêt dense ci-dessus, cf. _syncForetOuverteZoom/_syncLandeMaquisZoom.
 map.on('zoomend',function(){ _syncForetOuverteZoom(false); });
 map.on('zoomend',function(){ _syncLandeMaquisZoom(false); });
-setTimeout(()=>Promise.all([loadAnt().then(function(){if(ACTIVE.ant)lAnt.addTo(map);}),declenche('anfr','boot'),loadDB(),declenche('radon','boot'),declenche('tdf','boot'),declenche('postes','boot'),declenche('eoliennes','boot'),loadPointsChaudsRadio(),loadSoilGridsGrid(),declenche('foretdense','boot'),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.cert)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k). ant:true au boot (2026-09-02) : lAnt.addTo(map) conditionné à ACTIVE.ant, même pattern que lCert ci-après. loadHTADataOnly() RETIRÉ de ce lot (2026-09-04, brief AF lot B) — démarre désormais immédiatement, cf. commentaire plus haut.
+setTimeout(()=>Promise.all([declenche('ant','boot').then(function(){if(ACTIVE.ant)lAnt.addTo(map);}),declenche('anfr','boot'),loadDB(),declenche('radon','boot'),declenche('tdf','boot'),declenche('postes','boot'),declenche('eoliennes','boot'),declenche('sites','boot'),declenche('sols','boot'),declenche('foretdense','boot'),declenche('cert','boot')]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k). ant:true au boot (2026-09-02) : lAnt.addTo(map) conditionné à ACTIVE.ant, après la première tentative — une réussite plus tardive de la reprise 'ant' dessine dans lAnt, déjà sur la carte. Mesures certifiées : rendu et lCert.addTo(map) dans repriseMesuresCertifiees() (lot contexte, 2026-09-10). loadHTADataOnly() RETIRÉ de ce lot (2026-09-04, brief AF lot B) — démarre désormais immédiatement, cf. commentaire plus haut.
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET DUR/EBR/CLF (nom loadAQU conservé, cf. commentaire fonction) — correction externe réelle niveau 1
 setTimeout(loadDst,5500); // Dst Kyoto via NOAA — correction externe niveau 2 (Sprint astro 2026-05-25)
@@ -13138,10 +13213,35 @@ function loadMesuresCertifiees() {
     } catch (e) {
       console.warn('[Tellux] Mesures certifiees indisponibles : ' + e.message);
       MESURES_CERTIFIEES = [];
+      // Mémoïsation relâchée sur échec (2026-09-10, lot contexte de la reprise) — même patron que
+      // loadSitesApp(). Sans elle, la reprise 'cert' comme la bascule du bouton retournent le tableau
+      // vide sans refetch. Sur SUCCÈS le mémo est conservé.
+      _certLoadPromise = null;
     }
     return MESURES_CERTIFIEES;
   })();
   return _certLoadPromise;
+}
+// REPRISE — mesures certifiées (2026-09-10, lot contexte). Les trois autres chargeurs de contexte sont
+// inscrits dans le script précédent, avec le commentaire d'ensemble ; celui-ci l'est ICI parce que
+// loadMesuresCertifiees() n'existe pas encore quand le script précédent s'exécute. Le boot le déclenche
+// après 1,5 s, une fois les deux scripts exécutés.
+// Classe contexte : ces fiches ne servent qu'à leur couche et à leur téléchargement. calibrateRF() lit
+// le même fichier, mais par son propre fetch : leur échec ne touche pas k.
+// Enrobage nommé, parce que le rendu doit suivre un retour tardif : au boot, la couche n'était rendue
+// qu'une fois, après la première tentative, et _renderMesuresCertifiees() se verrouillait même sur un
+// jeu vide.
+async function repriseMesuresCertifiees() {
+  await loadMesuresCertifiees();
+  if (!Array.isArray(MESURES_CERTIFIEES) || MESURES_CERTIFIEES.length === 0) return;
+  _renderMesuresCertifiees();
+  if (ACTIVE.cert) lCert.addTo(map);
+}
+if (typeof enregistrerReprise === 'function') {
+  enregistrerReprise('cert', repriseMesuresCertifiees, {
+    classe: 'contexte',
+    verifie: () => Array.isArray(MESURES_CERTIFIEES) && MESURES_CERTIFIEES.length > 0
+  });
 }
 
 // Telechargement des fiches certifiees ANFR/EXEM en JSON (236 depuis le 2026-09-02, wrapper avec metadata source/licence)
@@ -13361,6 +13461,10 @@ function _certOffsetPositions(mesures) {
 
 function _renderMesuresCertifiees() {
   if (_certRendered) return;
+  // Pas de verrou sur un jeu vide (2026-09-10, lot contexte de la reprise). Le verrou était posé avant
+  // tout test : une couche rendue pendant une panne (bascule du bouton, MESURES_CERTIFIEES = []) le
+  // posait sans rien dessiner, et la donnée ramenée ensuite n'était plus jamais rendue.
+  if (!MESURES_CERTIFIEES || MESURES_CERTIFIEES.length === 0) return;
   _certRendered = true;
   const _certPositions = _certOffsetPositions(MESURES_CERTIFIEES || []);
   (MESURES_CERTIFIEES || []).forEach((m, _certIdx) => {
