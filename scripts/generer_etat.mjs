@@ -43,6 +43,12 @@
 //       cherche une forme trouve la forme, pas le sens — rapprochement de nom, dit comme tel.
 //   (e) « 3 appels Supabase dynamiques » : la définition de `sbGet` elle-même, et deux
 //       `Array.from(…)`. Il n'y en avait aucun.
+// v2 (2026-09-10), première génération depuis `main` :
+//   (f) trois fichiers de workflow « illisibles », sans code HTTP : la raison était donnée à
+//       moitié. Non reproductible au rejeu (36 lectures, toutes 200) — la tête avait 9 s, et
+//       une réf toute fraîche ou une limite secondaire suffisent. Un second essai après 2,5 s,
+//       et le code HTTP écrit dans la raison quand il échoue aussi. Le compte de D8 devient un
+//       minimum dès qu'un fichier est illisible, au lieu d'un total qui n'en était pas un.
 //
 // ─── CE QUI VIEILLIRA, ET COMMENT ON LE VERRA ─────────────────────────────────────────────
 // Trois extractions reposent sur des FORMES de code : le registre `const LAYERS = {…}`, les
@@ -124,7 +130,7 @@ async function http(url, { headers = {}, method = 'GET', redirect = 'follow', ti
     return { ok: false, status: 0, erreur: e?.name === 'TimeoutError' ? `délai dépassé (${timeout / 1000} s)` : (e?.cause?.code || e?.message || String(e)) };
   }
 }
-const echec = (r) => (r.status ? `HTTP ${r.status}` : r.erreur);
+const echec = (r) => (r.status ? `HTTP ${r.status}` : r.erreur) + (r.essais === 2 ? ' après 2 essais' : '');
 const dernierRun = (runs, nom) => runs.filter((r) => r.name === nom).sort((a, b) => b.id - a.id)[0] || null;
 
 // ─── ce que le générateur sait collecter — imprimé AVANT les valeurs ──────────────────────
@@ -160,14 +166,22 @@ const DEPOT = ARGS.depot || (() => {
 })();
 const JETON = process.env.GH_TOKEN || process.env.GITHUB_TOKEN || cmd('gh', ['auth', 'token'], ICI) || null;
 const AUTH = process.env.GH_TOKEN ? 'jeton GH_TOKEN' : process.env.GITHUB_TOKEN ? 'jeton GITHUB_TOKEN' : JETON ? 'jeton de « gh auth token »' : 'aucune (quota public : 60 requêtes/h)';
-function gh(p, brut = false) {
+// Un échec qui ressemble à un aléa (réseau, limite secondaire, réf toute fraîche pas encore
+// répliquée) est retenté une fois après 2,5 s. S'il échoue encore, son code est écrit dans la
+// raison : une raison sans code est une raison donnée à moitié (défaut f).
+const ALEAS = [0, 403, 404, 409, 429, 500, 502, 503, 504];
+async function gh(p, brut = false) {
   const h = { Accept: brut ? 'application/vnd.github.raw+json' : 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
   if (JETON) h.Authorization = `Bearer ${JETON}`;
-  return http(`https://api.github.com${p}`, { headers: h, corps: brut ? 'texte' : 'json' });
+  const essai = () => http(`https://api.github.com${p}`, { headers: h, corps: brut ? 'texte' : 'json' });
+  const r = await essai();
+  if (r.ok || !ALEAS.includes(r.status) || /not protected/i.test(r.body?.message || '')) return r;
+  await attendre(2500);
+  return { ...(await essai()), essais: 2 };
 }
 
 // ─── dépôt ────────────────────────────────────────────────────────────────────────────────
-let REPO = null, BRANCHE = null, TETE = null, ARBRE = null, ARBRE_TRONQUE = false, REQUIS = null, MERGEES = null, PROBA = null;
+let REPO = null, BRANCHE = null, TETE = null, ARBRE = null, ARBRE_TRONQUE = false, REQUIS = null, MERGEES = null, PROBA = null, ERREUR_ARBRE = null;
 
 async function collecterDepot() {
   if (!DEPOT) {
@@ -271,9 +285,9 @@ async function collecterDepot() {
   else {
     const vus = await parLots(MERGEES, 4, async (p) => {
       const k = await gh(`/repos/${DEPOT}/commits/${p.head.sha}/check-runs?per_page=100`);
-      return { p, ok: k.ok, runs: k.ok ? (k.body.check_runs || []) : [] };
+      return { p, ok: k.ok, err: k.ok ? null : echec(k), runs: k.ok ? (k.body.check_runs || []) : [] };
     });
-    const illisibles = vus.filter((x) => !x.ok).map((x) => `#${x.p.number}`);
+    const illisibles = vus.filter((x) => !x.ok).map((x) => `#${x.p.number} (${x.err})`);
     const lus = vus.filter((x) => x.ok);
     const lignes = REQUIS.map((ctx) => {
       const avec = lus.filter((x) => dernierRun(x.runs, ctx));
@@ -314,28 +328,29 @@ async function collecterDepot() {
       const wfs = w.body.workflows || [];
       const res = await parLots(wfs, 4, async (wf) => {
         const src = await gh(`/repos/${DEPOT}/contents/${wf.path}?ref=${TETE.sha}`, true);
-        if (!src.ok) return { wf, lisible: false };
+        if (!src.ok) return { wf, lisible: false, err: echec(src) };
         if (!/^[ \t]*schedule[ \t]*:/m.test(src.body)) return { wf, lisible: true, planifie: false };
         const crons = [...new Set([...src.body.matchAll(/^[ \t]*-?[ \t]*cron[ \t]*:[ \t]*['"]([^'"]+)['"]/gm)].map((m) => m[1]))];
         const run = await gh(`/repos/${DEPOT}/actions/workflows/${wf.id}/runs?event=schedule&per_page=1`);
-        return { wf, lisible: true, planifie: true, crons, dernier: run.ok ? run.body.workflow_runs?.[0] || null : undefined };
+        return { wf, lisible: true, planifie: true, crons, dernier: run.ok ? run.body.workflow_runs?.[0] || null : undefined, errRun: run.ok ? null : echec(run) };
       });
       const plan = res.filter((x) => x.planifie);
       const illisibles = res.filter((x) => !x.lisible);
       let corps = plan.length
         ? '| workflow | cron déclaré | état | dernier run planifié | conclusion |\n|---|---|---|---|---|\n'
-          + plan.map(({ wf, crons, dernier }) => `| \`${wf.path.split('/').pop()}\` | ${crons.map((x) => `\`${x}\``).join(', ') || '—'} | ${wf.state} | ${dernier === undefined ? 'illisible' : dernier ? iso(dernier.created_at) : 'aucun'} | ${dernier ? (dernier.conclusion ?? dernier.status) : '—'} |`).join('\n')
+          + plan.map(({ wf, crons, dernier, errRun }) => `| \`${wf.path.split('/').pop()}\` | ${crons.map((x) => `\`${x}\``).join(', ') || '—'} | ${wf.state} | ${dernier === undefined ? `illisible (${errRun})` : dernier ? iso(dernier.created_at) : 'aucun'} | ${dernier ? (dernier.conclusion ?? dernier.status) : '—'} |`).join('\n')
         : 'aucun workflow ne déclare `schedule:` à la tête.';
-      corps += `\n\n${wfs.length} workflow(s) au total, dont ${plan.length} planifié(s). Un cron déclaré n’est pas une cadence tenue : GitHub retarde ou saute des déclenchements planifiés — comparer avec la date du dernier run.`;
-      if (illisibles.length) corps += ` Fichier illisible pour : ${illisibles.map((x) => `\`${x.wf.path}\``).join(', ')}.`;
-      champ('D8', illisibles.length ? 'INCERTAIN' : 'OK', corps, { requete: q, raison: illisibles.length ? 'au moins un fichier de workflow illisible : sa planification est inconnue' : null });
+      const runsIllisibles = plan.filter((x) => x.dernier === undefined);
+      corps += `\n\n${wfs.length} workflow(s) au total, dont ${illisibles.length ? 'au moins ' : ''}${plan.length} planifié(s). Un cron déclaré n’est pas une cadence tenue : GitHub retarde ou saute des déclenchements planifiés — comparer avec la date du dernier run.`;
+      if (illisibles.length) corps += ` Fichier illisible, planification inconnue : ${illisibles.map((x) => `\`${x.wf.path}\` (${x.err})`).join(', ')}.`;
+      champ('D8', illisibles.length || runsIllisibles.length ? 'INCERTAIN' : 'OK', corps, { requete: q, raison: illisibles.length ? `${illisibles.length} fichier(s) de workflow illisible(s) : le compte des planifiés est un minimum` : runsIllisibles.length ? 'dernier run planifié illisible pour au moins un workflow' : null });
     }
   }
 
   // arbre de la tête (pour P1/P2)
   if (TETE) {
     const t = await gh(`/repos/${DEPOT}/git/trees/${TETE.sha}?recursive=1`);
-    if (t.ok) { ARBRE = t.body.tree || []; ARBRE_TRONQUE = !!t.body.truncated; }
+    if (t.ok) { ARBRE = t.body.tree || []; ARBRE_TRONQUE = !!t.body.truncated; } else ERREUR_ARBRE = echec(t);
   }
 }
 
@@ -366,7 +381,7 @@ async function collecterProd() {
   else indispo('P5', `la page d’accueil n’envoie ni ETag ni Last-Modified${xs.length ? ` (en-têtes x-* présents : ${xs.join(', ')})` : ''} — l’identité de contenu (P1, P2) tient lieu de version`, `GET ${PROD}/ (en-têtes)`);
 
   if (!ARBRE) {
-    for (const id of ['P1', 'P2']) indispo(id, 'arbre Git de la tête inconnu (API GitHub) : pas de liste de fichiers ni de SHA à comparer — la prod n’est pas sondée à l’aveugle');
+    for (const id of ['P1', 'P2']) indispo(id, `arbre Git de la tête inconnu (API GitHub${ERREUR_ARBRE ? ` : ${ERREUR_ARBRE}` : ''}) : pas de liste de fichiers ni de SHA à comparer — la prod n’est pas sondée à l’aveugle`);
   } else {
     // P1 — pages
     const pages = ARBRE.filter((e) => e.type === 'blob' && !e.path.includes('/') && e.path.endsWith('.html'));
