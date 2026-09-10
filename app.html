@@ -2321,7 +2321,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            donc non concernées par ce second correctif. -->
       <button class="lbtn" id="b-hot" data-domains="statique elf" title="Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. N'inclut pas le champ géomagnétique terrestre total (~46 000-47 500 nT en Corse, l'ordre de grandeur qu'un magnétomètre de smartphone mesure) : ce sont deux grandeurs physiques distinctes, jamais additionnées ici — le champ géomagnétique n'entre dans ce nombre à aucun titre. Estimation du modèle Tellux, pas une mesure. La composante ELF entre dans le score Indice Tellux affiché ; la composante substrat reste une donnée de contexte, sans consommateur dans ce score." onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ magnétique composite (nT)<span class="layer-badge layer-badge--domain">Statique + ELF</span></button>
       <div class="mlegend-inline" id="mleg-hot"></div>
-      <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)<span class="layer-badge layer-badge--domain">RF</span></button>
+      <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 21 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)<span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-hotrf"></div>
       <!-- Champ ELF (nT) — brief BH, 2026-09-05 : couche ELF PURE (data-domains="elf" seul),
            distincte de b-hot (composite human+geo, cf. brief BF — conservé, non touché ici).
@@ -3392,6 +3392,7 @@ var JS_STRINGS_EN = {
   detail_local_label: "local geological susceptibility, same value as susc_nT above — feeds axesTotal internally, unscored in this popup since ADR-064",
   detail_human_label: "total anthropic ELF field, same value shown above — feeds the Disturbance score",
   detail_rf_label: "calibrated RF field — a separate calculation from the µW/m² value above (never forest-attenuated) — feeds the displayed score",
+  detail_rf_label_noncal: "RF field NOT calibrated at the moment (the internal calibration is waiting for its data) — a separate calculation from the µW/m² value above (never forest-attenuated) — feeds the displayed score",
   detail_alt_label: "Altitude (IGN RGE Alti, ~1 m resolution)",
   detail_elf_liste_title: "Full ELF contributions (",
   detail_elf_liste_title_suffix: "):",
@@ -3414,8 +3415,8 @@ var JS_STRINGS_EN = {
   v2_conf_statique: "Confidence: medium — IGRF-14 + LCS1/EMAG2v3, ±100 nT",
   v2_title_elf: "Anthropogenic ELF 50 Hz",
   v2_conf_elf: "Confidence: medium — Biot-Savart modeling, ±50%",
-  v2_title_rf: "Radiofrequency (microwave links + background)",
-  v2_conf_rf: "Confidence: low — FH_POINTS + CartoRadio background",
+  v2_title_rf: "Radiofrequency (ANFR antennas, TDF, microwave links)",
+  v2_conf_rf: "Confidence: low — propagation model (ANFR antennas, TDF transmitters, microwave links)",
   rf_icnirp_note: "ICNIRP: ≈ 4,500,000 µW/m² (documentary reference point)",
   v2_title_ionisant: "Ionizing domain",
   v2_conf_prefix: "Confidence: ",
@@ -3657,6 +3658,7 @@ var JS_STRINGS_EN = {
   leg_group_anthropique: "Human-made sources",
   mleg_sub_hot: "Tellux model combining the electrical grid and substrate, in nT — excludes the total geomagnetic field (~46,000-47,500 nT in Corsica), not a measurement. Only the electrical-grid component feeds the displayed score.",
   mleg_sub_hotrf: "Tellux model, internally calibrated against certified ANFR/EXEM measurements — order-of-magnitude estimate, not a measurement.",
+  mleg_sub_hotrf_noncal: "Tellux model, NOT calibrated at the moment — the internal calibration is waiting for its data (ANFR antennas or certified measurements); raw model values, not a measurement.",
   mleg_sub_elf: "Tellux model, 50 Hz electrical grid only — no substrate, no total geomagnetic field. Shows nothing below 300 nT (IARC class 2B reference point — a display choice, not a risk threshold).",
   mleg_sub_emag: "Deep Corsican basement anomalies (NOAA EMAG2v3, display) — the internal grid actually used (distinct, computed permanently as the badge indicates) is not part of any publicly displayed score.",
   mleg_sub_foretdense: "Tall-canopy species (IGN BD Forêt V2), excluding scrub-forest mosaic — modulates the µW/m² value at map click; neither the heatmap nor the displayed score depends on it.",
@@ -4564,6 +4566,9 @@ const LAYER_SUBTITLE_FR={
   // laisser lire ce seuil comme une évaluation du risque à ce niveau précis).
   elf:  'Modèle Tellux, réseau électrique 50 Hz seul — sans le substrat, sans le champ géomagnétique total. N\'affiche rien sous 300 nT (repère IARC classe 2B — un choix d\'affichage, pas un seuil de risque).',
   hotrf:'Modèle Tellux, calibration interne sur mesures certifiées ANFR/EXEM — estimation d’ordre de grandeur, pas une mesure.',
+  // hotrf_noncal (2026-09-10, lot B) : variante lue quand k n'est pas calibré (rfCalibre() faux) —
+  // cf. updateInlineLegendMobile(). Pas une couche : aucun bouton, aucune clé d'activation.
+  hotrf_noncal:'Modèle Tellux NON calibré pour l’instant — la calibration interne attend ses données (antennes ANFR ou mesures certifiées) ; valeurs brutes du modèle, pas une mesure.',
   // emag (2026-09-03, brief AB) : corrigé — la donnée NOAA EMAG2v3 VISIBLE (ce bouton) n'est pas
   // celle qui pèse sur le calcul. Le calcul (calcLCS1 ~L4798/calcMagneticStatic ~L5641) lit une
   // grille interne figée LCS1_GRID (24 points), chemin de fuite EMAG2_CACHE→score fermé le
@@ -4662,6 +4667,19 @@ const LEGEND_HTML={
     '<div class="leg-row" style="font-size:8.5px;color:#4a4f5e;line-height:1.35"><span style="display:inline-block;width:10px;height:8px;background:#3f007d;border-radius:2px;vertical-align:middle;margin-right:4px"></span><b style="color:#3f007d">&gt; 1,5 V/m</b> — hors échelle ambiante typique : zone à vérifier par mesure, pas un seuil sanitaire.</div>'+
     '<div class="leg-row" style="margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4">Estimation du champ radiofréquence <b>extérieur</b>, calée sur les antennes ANFR et des mesures certifiées. Ne remplace pas une mesure.</div>'+
     '<div class="leg-src">Friis · ~3000 antennes ANFR · calibration interne — <a href="/cadre-scientifique.html#radiofrequences" target="_blank" rel="noopener" style="color:var(--maquis-clair)">modèle, calibration &amp; repères de lecture ↗</a></div>'+
+    '</div>',
+  // hotrf_noncal (2026-09-10, lot B) : la même légende quand k n'est pas calibré (rfCalibre() faux),
+  // choisie par legendHtmlFor(). Deux lignes diffèrent : l'avertissement (au lieu de « calée sur les
+  // antennes ANFR et des mesures certifiées ») et la source (sans « ~3000 antennes ANFR », qui peuvent
+  // manquer, ni « calibration interne »). Pas une couche : aucun bouton ne l'active.
+  hotrf_noncal:'<div class="leg-block"><b class="leg-title">Champ électrique RF (V/m)</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofréquences — estimation extérieure, modèle Tellux</div>'+
+    '<div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:8px;color:#616874;width:140px;margin-bottom:2px"><span>plus faible</span><span>plus marqué ▸</span></div>'+
+    '<div style="font-size:8px;color:#626774;width:140px;margin-bottom:4px;line-height:1.3">Échelle <b>relative</b> au modèle (bins 0,40 · 0,55 · 0,85 · 1,5 V/m).</div>'+
+    '<div class="leg-row" style="font-size:8.5px;color:#4a4f5e;line-height:1.35"><span style="display:inline-block;width:10px;height:8px;background:#3f007d;border-radius:2px;vertical-align:middle;margin-right:4px"></span><b style="color:#3f007d">&gt; 1,5 V/m</b> — hors échelle ambiante typique : zone à vérifier par mesure, pas un seuil sanitaire.</div>'+
+    '<div class="leg-row" style="margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><b>Non calibré pour l’instant</b> : la calibration interne attend ses données (antennes ANFR ou mesures certifiées). Valeurs brutes du modèle, qui peuvent différer nettement des valeurs calibrées. Ne remplace pas une mesure.</div>'+
+    '<div class="leg-src">Friis · non calibré pour l’instant — <a href="/cadre-scientifique.html#radiofrequences" target="_blank" rel="noopener" style="color:var(--maquis-clair)">modèle, calibration &amp; repères de lecture ↗</a></div>'+
     '</div>',
   // Entrée 'foretdense' retirée le 2026-08-27 (brief "Panneau '?' sélectif", triage validé
   // Soleil) : état visuel unique (une seule teinte, pas d'échelle ni de catégories à
@@ -4826,6 +4844,15 @@ const LEGEND_HTML_EN={
     '<div class="leg-row" style="font-size:8.5px;color:#4a4f5e;line-height:1.35"><span style="display:inline-block;width:10px;height:8px;background:#3f007d;border-radius:2px;vertical-align:middle;margin-right:4px"></span><b style="color:#3f007d">&gt; 1.5 V/m</b> — outside the typical ambient range: an area to verify by measurement, not a health threshold.</div>'+
     '<div class="leg-row" style="margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><b>Outdoor</b> RF field estimate, anchored on ANFR antennas and certified measurements. Does not replace a measurement.</div>'+
     '<div class="leg-src">Friis · ~3,000 ANFR antennas · internal calibration — <a href="/cadre-scientifique.html#radiofrequences" target="_blank" rel="noopener" style="color:var(--maquis-clair)">model, calibration &amp; reading references ↗</a></div>'+
+    '</div>',
+  hotrf_noncal:'<div class="leg-block"><b class="leg-title">RF electric field (V/m)</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofrequency — outdoor estimate, Tellux model</div>'+
+    '<div style="height:12px;width:140px;background:linear-gradient(90deg,#9ecae1,#4292c6,#2171b5,#08306b);border-radius:3px;margin-bottom:4px"></div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:8px;color:#616874;width:140px;margin-bottom:2px"><span>weaker</span><span>more pronounced ▸</span></div>'+
+    '<div style="font-size:8px;color:#626774;width:140px;margin-bottom:4px;line-height:1.3">Scale <b>relative</b> to the model (bins 0.40 · 0.55 · 0.85 · 1.5 V/m).</div>'+
+    '<div class="leg-row" style="font-size:8.5px;color:#4a4f5e;line-height:1.35"><span style="display:inline-block;width:10px;height:8px;background:#3f007d;border-radius:2px;vertical-align:middle;margin-right:4px"></span><b style="color:#3f007d">&gt; 1.5 V/m</b> — outside the typical ambient range: an area to verify by measurement, not a health threshold.</div>'+
+    '<div class="leg-row" style="margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><b>Not calibrated at the moment</b>: the internal calibration is waiting for its data (ANFR antennas or certified measurements). Raw model values, which may differ markedly from calibrated values. Does not replace a measurement.</div>'+
+    '<div class="leg-src">Friis · not calibrated at the moment — <a href="/cadre-scientifique.html#radiofrequences" target="_blank" rel="noopener" style="color:var(--maquis-clair)">model, calibration &amp; reading references ↗</a></div>'+
     '</div>',
   hyd:'<div class="leg-block"><b class="leg-title">Groundwater</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Groundwater near the surface — BRGM visual layer; the calculation uses a separate dataset</div><img src="https://geoservices.brgm.fr/risques?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.1.1&FORMAT=image/png&LAYER=REMNAPPE_FR" style="max-width:260px;width:100%;display:block;margin:4px 0;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:4px;padding:4px;box-sizing:border-box" alt="Groundwater rise legend (BRGM REMNAPPE_FR)"><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Legend served live by the BRGM server — replaces the previous static list (\"Outcropping / Sub-outcropping\"), which described a different classification than the one actually rendered.</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
   ant:'<div class="leg-block"><b class="leg-title">ANFR Antennas</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">A dot marks a declared <b>site</b>, not a single antenna: several generations almost always coexist there, and often several operators. Tap or hover a point to see what is declared. Grouped into clusters (count) at low zoom; TDF transmitters keep their own colour and a corner badge even when clustered.</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a4f5e;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Declared transmission site — the colour encodes no technology</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;vertical-align:middle;margin-right:4px"></span><b style="color:#616874">Major radio/TV transmitter</b> (TDF)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Operators: Orange · SFR · Bouygues · Free<br><span id="leg-ant-count">—</span> antennas · Source: ANFR open data</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px">Regulatory compliance (legal threshold 28 V/m): see the <b>"Certified measurements (ANFR/EXEM)"</b> layer (Natural context menu).</div><div class="leg-src">ANFR</div></div>',
@@ -5111,6 +5138,8 @@ function validateContrib(){
 // tant que leur traduction n'est pas fournie, même principe
 // anti-drift que jt()/I18N_ENTRIES : jamais de DOM cassé faute de traduction.
 function legendHtmlFor(id){
+  // hotrf : variante « non calibré » tant que k ne l'est pas (2026-09-10, lot B) — cf. rfCalibre().
+  if(id==='hotrf'&&typeof rfCalibre==='function'&&!rfCalibre()) id='hotrf_noncal';
   return (document.documentElement.lang === 'en' && typeof LEGEND_HTML_EN !== 'undefined' && LEGEND_HTML_EN[id]) ? LEGEND_HTML_EN[id] : LEGEND_HTML[id];
 }
 function updateLegendPanel(){
@@ -5237,7 +5266,9 @@ function updateInlineLegendMobile(id,show){
   // seule fois ici plutôt que dans le <details> — pas de lien dupliqué entre les deux. jt()
   // résolu ici, au rendu réel (piège de timing documenté en tête de fichier respecté : ni
   // LAYER_SUBTITLE_FR ni JS_STRINGS_EN ne sont évalués via jt() au chargement du script).
-  const subFr=(show&&LAYER_SUBTITLE_FR[id])?jt('mleg_sub_'+id,LAYER_SUBTITLE_FR[id]):'';
+  // hotrf : sous-titre conditionnel à l'état de calibration (2026-09-10, lot B).
+  const cleSub=(id==='hotrf'&&typeof rfCalibre==='function'&&!rfCalibre())?'hotrf_noncal':id;
+  const subFr=(show&&LAYER_SUBTITLE_FR[cleSub])?jt('mleg_sub_'+cleSub,LAYER_SUBTITLE_FR[cleSub]):'';
   const subHtml=(subFr||docHtml)?'<div class="mleg-subtitle">'+subFr+docHtml+'</div>':'';
   if(legHtml||subHtml){
     const btn=document.getElementById(btnIdFor(id));
@@ -7516,6 +7547,11 @@ function loadTDFEmitters() {
       console.log('[Tellux] TDF emetteurs charges : ' + TDF_EMITTERS.length + ' (dont ' + withPAR + ' avec PAR connue)');
     } catch (e) {
       console.warn('[Tellux] TDF emetteurs indisponibles : ' + e.message);
+      // Mémoïsation relâchée sur échec (2026-09-10, lot RF de la reprise) — même patron que
+      // loadBTLinesAsync au lot 2 et loadPostesSources au lot ELF : sans ça, `_tdfLoadPromise`
+      // reste une promesse résolue et tout rappel — la reprise comme loadAnt() — retourne sans
+      // refetch. Sur SUCCÈS le mémo est conservé.
+      _tdfLoadPromise = null;
     }
     return TDF_EMITTERS;
   })();
@@ -7698,7 +7734,11 @@ let RF_CALIB_K = 1;          // calibration interne Tellux : facteur scalaire E_
 let RF_CALIB_STATS = null;   // {k_med,k_geo,disp_geo,iqr,n_used,n_excl_nonconf,n_excl_oor,n_excl_indoor,
                               //  n_excl_ineligible,k_res,pen_dB,n_total,n_fichier_total,bands} — commentaire
                               // complété 2026-09-04 (brief AG), manquait 5 champs réellement présents.
-                              // Assignée une fois au boot (calibrateRF()), jamais relue ailleurs — le
+                              // Assignée par une calibration RÉUSSIE (calibrateRF(), au boot ou par la
+                              // reprise 'anfr' — lot B, 2026-09-10). Relue comme drapeau « calibration
+                              // réussie » par repriseTDF() (lot RF) et par rfCalibre(), source des
+                              // libellés « calibré / non calibré » (lot B) — elle reste null tant que k
+                              // n'est pas calibré. Le
                               // console.log adjacent recalcule son propre texte depuis des variables
                               // locales, pas depuis cet objet. Conservée : ses valeurs sont publiées sur
                               // methode-limites-transparence.html (brief AE) et elle sert de point de
@@ -7744,6 +7784,10 @@ async function fetchAntennasCorseRaw(){
   _antennasCorseRawPromise.catch(()=>{ _antennasCorseRawPromise = null; });
   return _antennasCorseRawPromise;
 }
+// anfrGrillePrete() (2026-09-10, lot B de la reprise) — la grille est-elle chargée ET non vide ? Seule
+// condition sous laquelle calibrateRF() dérive k. Un succès Supabase à zéro ligne donne {} : vrai pour
+// `if (ANFR_GRID)`, faux ici.
+function anfrGrillePrete(){ return ANFR_GRID !== null && typeof ANFR_GRID === 'object' && Object.keys(ANFR_GRID).length > 0; }
 async function loadANFRForField(){
   if (ANFR_GRID) return;
   if (_anfrLoadPromise) return _anfrLoadPromise;
@@ -7755,7 +7799,16 @@ async function loadANFRForField(){
       ANFR_GRID={};
       rows.forEach(a=>{ if(a.lat==null||a.lon==null) return; const k=Math.floor(a.lat/0.05)+'_'+Math.floor(a.lon/0.05); (ANFR_GRID[k]=ANFR_GRID[k]||[]).push(a); });
       console.log('[Tellux] RF_field : '+rows.length+' antennes ANFR indexées');
-    } catch(e){ ANFR_GRID=ANFR_GRID||{}; console.warn('[Tellux] loadANFRForField échec : '+e.message+' (RF_field = TDF+FH seuls)'); }
+    } catch(e){
+      // Grille NON empoisonnée sur échec (2026-09-10, lot B de la reprise). Avant : `ANFR_GRID=ANFR_GRID||{}`
+      // — un objet vide, donc VRAI : le `if (ANFR_GRID) return;` d'entrée court-circuitait tout rappel,
+      // la grille ne revenait plus de la session, et calibrateRF() dérivait k sur TDF et faisceaux seuls
+      // (k = 22,2 → 96,4 V/m à 41,7347 / 8,7926, mesuré). Désormais : grille absente = null, et mémo
+      // relâché — même patron que le lot RF (l'IIFE avale son échec : la remise à zéro est ICI).
+      ANFR_GRID = null;
+      _anfrLoadPromise = null;
+      console.warn('[Tellux] loadANFRForField échec : '+e.message+' (RF_field = TDF+FH seuls)');
+    }
   })();
   return _anfrLoadPromise;
 }
@@ -8022,6 +8075,13 @@ function loadForetDenseGrid(){
       console.log('[Tellux] foret_dense_corse.geojson chargé : ' + FORET_DENSE_PARTS.length + ' parties');
     } catch (e) {
       console.warn('[Tellux] foret_dense_corse.geojson indisponible : ' + e.message);
+      // Mémoïsation relâchée sur échec (2026-09-10, lot RF de la reprise). L'IIFE ne rejette jamais
+      // (ce catch avale tout), donc le patron `.catch(() => mémo = null)` de fetchAntennasCorseRaw
+      // n'y ferait rien : la remise à zéro doit se faire ICI. Sans elle, rebasculer la couche
+      // rappelait loadForetDenseGrid(), qui rendait le mémo mort — aucun fetch, couche vide, et la
+      // promesse « module la valeur µW/m² au clic » fausse jusqu'au rechargement de la page.
+      // Sur SUCCÈS le mémo est conservé.
+      _foretDensePromise = null;
     }
   })();
   return _foretDensePromise;
@@ -8105,8 +8165,18 @@ function calcRF(lat, lon, applyVegetation){
 // Label honnête : calibration INTERNE (extérieurs seuls), relecture physicien en cours ;
 // couche = estimation centrale d'ordre de grandeur (S2/S5/S6, PAS un majorant).
 async function calibrateRF(){
+  // Lot B de la reprise (2026-09-10) — deux gardes, et calibrateRF() devient la fonction de reprise de
+  // la clé 'anfr' (inscription plus bas) :
+  //  · k n'est JAMAIS dérivé sur une grille ANFR vide : sans elle, la prédiction se réduit à TDF +
+  //    faisceaux et le rapport mesure / prédiction explose (k = 22,2 au lieu de 0,361, mesuré). k reste
+  //    alors ce qu'il était — 1 au démarrage, c'est-à-dire NON calibré, et les libellés le disent
+  //    (rfCalibre()) ;
+  //  · une recalibration sans point exploitable n'écrase pas un k valide (kAvant) : le fichier des
+  //    mesures servi en 200 mais vide est le cas qui ressemble le plus à un succès.
+  const kAvant=RF_CALIB_K;
   try{
     await loadANFRForField();
+    if(!anfrGrillePrete()){ console.warn('[Tellux] calibration RF refusée : grille ANFR absente — k inchangé ('+kAvant+'), valeurs RF non calibrées'); return; }
     const r=await fetch('public/data/cartoradio_certified_corse.json',{signal:AbortSignal.timeout(5000)});
     const d=await r.json(); const mes=d.mesures||[];
     RF_CALIB_K=1; // IDEMPOTENCE : calibrer sur le champ BRUT (E_pred non calibré, indépendant
@@ -8132,7 +8202,7 @@ async function calibrateRF(){
       ratios.push(ratio);
       if(m.valeurs_par_bande){ for(const b in m.valeurs_par_bande){ const v=+m.valeurs_par_bande[b]; if(v>0) bandE2[b]=(bandE2[b]||0)+v*v; } }
     });
-    if(!ratios.length){ console.warn('[Tellux] calibration RF : 0 point exploitable — k reste 1'); return; }
+    if(!ratios.length){ RF_CALIB_K=kAvant; console.warn('[Tellux] calibration RF : 0 point exploitable — k inchangé ('+kAvant+')'); return; }
     const s=ratios.slice().sort((a,b)=>a-b);
     const med=a=>a.length%2?a[(a.length-1)/2]:(a[a.length/2-1]+a[a.length/2])/2;
     const q=p=>{const i=(s.length-1)*p,lo=Math.floor(i),hi=Math.ceil(i);return s[lo]+(s[hi]-s[lo])*(i-lo);};
@@ -8156,8 +8226,24 @@ async function calibrateRF(){
     RF_CALIB_STATS={k_med:+k_med.toFixed(3),k_geo:+k_geo.toFixed(3),disp_geo:+disp_geo.toFixed(2),iqr:[+q(0.25).toFixed(3),+q(0.75).toFixed(3)],n_used:ratios.length,n_excl_nonconf:nNC,n_excl_oor:nOOR,n_excl_indoor:nIndoor,n_excl_ineligible:nIneligible,k_res:k_res!=null?+k_res.toFixed(3):null,pen_dB,n_total:nCalibCorpus,n_fichier_total:mes.length,bands};
     console.log('[Tellux] calibration RF : k='+k_med.toFixed(3)+' (méd) / '+k_geo.toFixed(3)+' (géo) · dispersion ×÷'+disp_geo.toFixed(2)+' · IQR ['+q(0.25).toFixed(2)+'–'+q(0.75).toFixed(2)+'] · n='+ratios.length+'/'+nCalibCorpus+(nIneligible?' (+'+nIneligible+' hors pool, fichier='+mes.length+')':'')+' (exclus : '+nNC+' non-conf, '+nOOR+' hors-portée, '+nIndoor+' résidentiel) · pénétration intérieur ≈'+(pen_dB!=null?pen_dB:'?')+' dB');
     if(disp_geo>5) console.warn('[Tellux] calibration RF : dispersion large (×÷'+disp_geo.toFixed(1)+') — k médian = compromis central, incertitude locale élevée (constat qualité modèle, non masqué).');
-    if(typeof ACTIVE!=='undefined'&&ACTIVE.hotrf&&typeof lHotRF!=='undefined'&&typeof buildHotRF==='function'){ lHotRF.clearLayers(); buildHotRF(); }
-  }catch(e){ console.warn('[Tellux] calibration RF échec : '+e.message+' — k reste 1'); }
+    // Carte RF : reconstruite si elle est allumée ; ÉTEINTE, vidée — tog() ne reconstruit qu'une couche
+    // vide, et la carte d'avant (construite non calibrée) réapparaîtrait au rallumage (lot B, S7).
+    if(typeof lHotRF!=='undefined'&&typeof buildHotRF==='function'){ lHotRF.clearLayers(); if(typeof ACTIVE!=='undefined'&&ACTIVE.hotrf) buildHotRF(); }
+    if(typeof rafraichirLibellesRF==='function') rafraichirLibellesRF();
+  }catch(e){ RF_CALIB_K=kAvant; console.warn('[Tellux] calibration RF échec : '+e.message+' — k inchangé ('+kAvant+')'); }
+}
+// rfCalibre() (2026-09-10, lot B) — la source des libellés « calibré / non calibré ». RF_CALIB_STATS
+// n'est posé que par une calibration RÉUSSIE (grille chargée, au moins un point exploitable) : tant
+// qu'il est null, k n'est pas calibré — au démarrage avant la calibration, pendant une panne, ou après
+// abandon de la reprise.
+function rfCalibre(){ return typeof RF_CALIB_STATS !== 'undefined' && RF_CALIB_STATS !== null; }
+// Rafraîchit la seule surface d'état qui ne se recalcule pas d'elle-même : la légende RF, rendue au
+// démarrage (showLegend('hotrf',true)) AVANT la calibration. Le popup, la note Expert et l'export
+// lisent rfCalibre() au moment où ils sont produits.
+function rafraichirLibellesRF(){
+  if(typeof ACTIVE==='undefined'||!ACTIVE.hotrf) return;
+  if(typeof updateLegendPanel==='function') updateLegendPanel();
+  if(typeof updateInlineLegendMobile==='function') updateInlineLegendMobile('hotrf',true);
 }
 
 // ─── calcWater — Contexte hydrologique ──────────────────────────────────────
@@ -8424,6 +8510,12 @@ const EXPERT_WEIGHTS_DEFAULT = { M: 0.4, RF: 0.4, I: 0.2 }; // GELÉ-001a
 const EXPERT_BOUNDS_DEFAULT  = { ELF_nT: [0, 1000], RF_uW_m2: [0, 1500], GAMMA_nSv_h: [50, 250] };
 const EXPERT_EPISTEMIC_NOTE  = 'Indice composite conventionnel, sans signification physique ni sanitaire directe. Composante RF = modèle Tellux, calibration interne sur mesures certifiées ANFR/EXEM extérieures — estimation centrale, non un majorant : elle sous-estime les points les plus exposés (dynamique comprimée, dispersion typique x/÷3,3) et représente le champ extérieur (surestime l\'intérieur des bâtiments ~12 dB). Correction de pente testée et écartée (ne généralise pas, n=29) ; redressement physique (directivité antennes) en conception, sous condition de validation. Pondérations (w_M/w_RF/w_I) et bornes de normalisation provisoires et documentées. Relecture physicien en cours. Usage exploratoire pour comparer la composition du paysage physique entre zones. Source : AUDIT_TELLUX_NIVEAU3 §5. Depuis le 2026-09-01, la composante ionisante (gamma, pondérée à 0,20) n\'est plus affichée dans l\'application : elle reste calculée, pondérée et exportée dans ce fichier, mais sa valeur n\'apparaît dans aucune interface — le présent export et la console sont les seuls endroits où elle est lisible.';
 
+// Variante lue quand la composante RF a été calculée avec un k NON calibré (2026-09-10, lot B) : la
+// phrase « calibration interne sur mesures certifiées » serait fausse pour ce calcul. Stockée dans le
+// résultat (epistemic_note) et reprise telle quelle par l'export : la note suit le calcul qu'elle décrit,
+// pas l'état de la page au moment de l'export. Construite par remplacement d'une phrase ancre : si
+// l'ancre change, replace() rendrait la note d'origine SANS erreur — la réfutation du lot B le vérifie.
+const EXPERT_EPISTEMIC_NOTE_NONCAL = EXPERT_EPISTEMIC_NOTE.replace('Composante RF = modèle Tellux, calibration interne sur mesures certifiées ANFR/EXEM extérieures — estimation centrale, non un majorant', 'Composante RF = modèle Tellux NON calibré au moment de ce calcul (la calibration interne attendait ses données) — valeurs brutes du modèle, non ajustées sur les mesures certifiées ; même calibrée, la composante est une estimation centrale, non un majorant');
 function computeExpertComposite(v2, weights, bounds) {
   weights = weights || EXPERT_WEIGHTS_DEFAULT;
   bounds  = bounds  || EXPERT_BOUNDS_DEFAULT;
@@ -8438,7 +8530,7 @@ function computeExpertComposite(v2, weights, bounds) {
     index: idx, normalized: { M: n_M, RF: n_RF, I: n_I },
     weights, bounds,
     inputs: { elf_nT, rf_uW, gamma_nSv_h: gamma },
-    epistemic_note: EXPERT_EPISTEMIC_NOTE,
+    epistemic_note: (typeof rfCalibre==='function'&&!rfCalibre()) ? EXPERT_EPISTEMIC_NOTE_NONCAL : EXPERT_EPISTEMIC_NOTE,
     under_review: true
   };
 }
@@ -9470,7 +9562,9 @@ map.on('click',async e=>{
         (elfState==='loading'
           ? '<div>H : '+jt('detail_human_loading','champ ELF anthropique — pas encore disponible cette visite (préchargement en cours, cf. bloc ELF ci-dessus)')+'</div>'
           : '<div>H ('+jt('detail_human_label','champ ELF anthropique total, valeur identique à celle affichée plus haut — alimente le score Perturbation')+') : +'+human+' nT'+(elfState==='failed'?' <span style="color:#8A5E22">('+elfV1Badge()+')</span>':'')+'</div>')+
-        (nRFcalib>0.01?'<div>RF ('+jt('detail_rf_label','champ RF calibré — calcul distinct de la valeur µW/m² ci-dessus (jamais atténué par la forêt) — alimente le score affiché')+') : '+nRFcalib.toFixed(1)+' V/m</div>':'')+
+        // Libellé conditionnel à l'état de calibration (2026-09-10, lot B) : « calibré » n'est dit que si k
+        // l'est (rfCalibre()) — sinon le même chiffre porte « NON calibré pour l'instant ».
+        (nRFcalib>0.01?'<div>RF ('+(rfCalibre()?jt('detail_rf_label','champ RF calibré — calcul distinct de la valeur µW/m² ci-dessus (jamais atténué par la forêt) — alimente le score affiché'):jt('detail_rf_label_noncal','champ RF NON calibré pour l’instant (la calibration interne attend ses données) — calcul distinct de la valeur µW/m² ci-dessus (jamais atténué par la forêt) — alimente le score affiché'))+') : '+nRFcalib.toFixed(1)+' V/m</div>':'')+
         (typeof altitude_m==='number' && isFinite(altitude_m)?'<div>'+jt('detail_alt_label','Altitude (IGN RGE Alti, résolution ~1 m)')+' : '+altitude_m+' m</div>':'')+
       '</div>'+
       elfContribsFullHTML+
@@ -9489,10 +9583,10 @@ map.on('click',async e=>{
       '<div style="margin-top:3px;font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">'+jt('v2_title_elf','ELF anthropique 50 Hz')+'</div>'+
       elfBlockHTML+
       // ── RF ──
-      '<div style="margin-top:3px;font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">'+jt('v2_title_rf','Radiofréquence (FH + fond)')+'</div>'+
+      '<div style="margin-top:3px;font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">'+jt('v2_title_rf','Radiofréquence (antennes ANFR, TDF, faisceaux)')+'</div>'+
       '<div style="display:flex;align-items:center;gap:4px">'+
         '<span style="font-size:12px;font-weight:700;color:#8E2F1F">'+rf_uWm2+' µW/m²</span>'+
-        '<span style="font-size:9px;color:#626774" title="'+jt('v2_conf_rf','Confiance : faible — FH_POINTS + fond CartoRadio')+'">●○○</span>'+
+        '<span style="font-size:9px;color:#626774" title="'+jt('v2_conf_rf','Confiance : faible — modèle de propagation (antennes ANFR, émetteurs TDF, faisceaux hertziens)')+'">●○○</span>'+
       '</div>'+
       '<div style="font-size:8px;color:#626774;font-style:italic">'+jt('rf_icnirp_note','ICNIRP : ≈ 4 500 000 µW/m² (repère documentaire)')+'</div>'+
       // ── Ionisant : bloc entier retiré le 2026-09-02 (décision Soleil, brief "retrait radon") ──
@@ -11609,7 +11703,7 @@ function exportExpertCSV() {
     ['expert_borne_ELF_max', comp.bounds.ELF_nT[1], 'nT', '', '1', '', ts],
     ['expert_borne_RF_min', comp.bounds.RF_uW_m2[0], 'uW/m2', '', '1', '', ts],
     ['expert_borne_RF_max', comp.bounds.RF_uW_m2[1], 'uW/m2', '', '1', '', ts],
-    ['expert_note_epistemique', '"' + EXPERT_EPISTEMIC_NOTE.replace(/"/g, '""') + '"', '', '', '1', '', ts],
+    ['expert_note_epistemique', '"' + (comp.epistemic_note || EXPERT_EPISTEMIC_NOTE).replace(/"/g, '""') + '"', '', '', '1', '', ts],
   ];
   var bom = '\uFEFF';
   var csv = bom + rows.map(function(r) { return r.join(';'); }).join('\r\n');
@@ -12112,6 +12206,92 @@ if(typeof loadEoliennesData==='function'){
     verifie: () => Array.isArray(EOLIENNES_DATA) && EOLIENNES_DATA.length > 0
   });
 }
+// REPRISE — émetteurs TDF et forêt dense (2026-09-10, lot RF).
+// TDF : RF_field additionne sans condition le terme des émetteurs à puissance connue (8 sur 10,
+// jusqu'à 197 kW). Mesuré à 41,7347 / 8,7926, à 300 m de l'émetteur Ajaccio Coti-Chiavari :
+// 6 650 µW/m² avec, 148 sans — un facteur 45. Classe critique.
+// La calibration n'a PAS à être refaite quand TDF revient, GRILLE ANFR CHARGÉE : k est la médiane des
+// rapports sur les points éligibles, dont aucun n'est dominé par TDF — Δk/k mesuré à 6 × 10⁻⁵ sur les
+// 21 points. tests/blindage-harness/verif-calibration-rf-sans-tdf.mjs le re-mesure et échoue au-delà
+// de 1 % (manuel, pas en CI). Grille ANFR VIDE (échec Supabase), c'est faux : loadANFRForField pose
+// alors {} sans jamais retenter, k est dérivé sur TDF et faisceaux seuls, et le retour de TDF porte ce
+// k sur la carte et le popup. Défaut hors de ce lot, dont ce lot ne protège pas.
+// Ce qu'il faut refaire, c'est l'AFFICHAGE : calibrateRF() reconstruit la carte de chaleur RF une
+// seule fois, en fin de calibration, avec les émetteurs présents à cet instant. Un retour tardif de
+// TDF serait dans le popup mais pas dans la carte, jusqu'au prochain zoom. D'où repriseTDF().
+// Forêt dense : n'agit qu'au clic, couche activée (RF_field avec applyVegetation). Rapport valeur non
+// atténuée / atténuée mesuré sur 48 points tirés dans les polygones (centre de boîte d'un polygone sur
+// 100, retenu s'il est en forêt) : médiane 29, quartiles 15 et 58, de 1,0 à 965. Si le chargement a
+// échoué, le popup affiche la valeur NON atténuée alors que l'interface promet « module la valeur
+// µW/m² au clic ». Une couche activée PENDANT la panne reste vide quand la donnée arrive, tog() ayant
+// tenté le dessin sur une couche vide — d'où repriseForetDense().
+// Classe critique, alors que la valeur n'est fausse que couche activée : une classe ne se conditionne
+// pas (enregistrerReprise ne lit que classe et verifie), donc les reprises partent AUSSI couche éteinte.
+// Coût en panne persistante : jusqu'à 6 tentatives sur un fichier statique de 1,98 Mo (délai 8 s),
+// payé par le visiteur, hors quota Supabase. Sans panne : un seul chargement, comme avant.
+// Enrobages NOMMÉS, pas des fonctions fléchées : le détecteur de périmètre reconnaît une racine de
+// reprise par son nom, puis couvre le chargeur par transitivité.
+// Réfutation : tests/blindage-harness/non-regression-reprise-rf.mjs — exécutée AVANT ce lot sur le
+// code d'origine : 27 échecs prédits (mémos morts, bascule sans fetch, affichage non rafraîchi).
+async function repriseTDF() {
+  await loadTDFEmitters();
+  // Retour tardif seulement : calibration réussie (RF_CALIB_STATS posé), donc carte déjà construite,
+  // peut-être sans TDF. Au démarrage nominal, c'est calibrateRF() qui la construira — la construire
+  // ici, avant, l'afficherait un instant à k = 1. Limite : calibration ÉCHOUÉE, RF_CALIB_STATS reste
+  // null et la carte attend le prochain zoom (scénario S9f).
+  // Reconstruction CIBLÉE, comme en fin de calibrateRF() : rebuildHotDebounced() redessinerait aussi
+  // composite et ELF, sans rapport avec TDF. Couche éteinte : on la VIDE seulement, pour que tog() la
+  // reconstruise au rallumage — il ne reconstruit qu'une couche vide, sans quoi la carte d'avant,
+  // sans TDF, réapparaîtrait.
+  if (Array.isArray(TDF_EMITTERS) && TDF_EMITTERS.length > 0
+      && typeof RF_CALIB_STATS !== 'undefined' && RF_CALIB_STATS
+      && typeof lHotRF !== 'undefined' && typeof buildHotRF === 'function') {
+    lHotRF.clearLayers();
+    if (typeof ACTIVE !== 'undefined' && ACTIVE.hotrf) buildHotRF();
+  }
+}
+async function repriseForetDense() {
+  await loadForetDenseGrid();
+  if (typeof ACTIVE !== 'undefined' && ACTIVE.foretdense
+      && Array.isArray(FORET_DENSE_PARTS) && FORET_DENSE_PARTS.length > 0
+      && typeof lForetDense !== 'undefined' && lForetDense.getLayers().length === 0
+      && typeof buildForetDenseLayer === 'function') {
+    buildForetDenseLayer();
+  }
+}
+if(typeof loadTDFEmitters==='function'){
+  enregistrerReprise('tdf', repriseTDF, {
+    classe: 'critique',
+    verifie: () => Array.isArray(TDF_EMITTERS) && TDF_EMITTERS.length > 0
+  });
+}
+if(typeof loadForetDenseGrid==='function'){
+  enregistrerReprise('foretdense', repriseForetDense, {
+    classe: 'critique',
+    verifie: () => Array.isArray(FORET_DENSE_PARTS) && FORET_DENSE_PARTS.length > 0
+  });
+}
+// REPRISE — grille ANFR et calibration RF (2026-09-10, lot B).
+// La fonction de reprise est calibrateRF() elle-même : elle charge la grille (loadANFRForField), refuse
+// de calibrer si la grille manque, calibre sinon, et reconstruit la carte. Le prédicat exige les deux —
+// grille chargée ET calibration réussie : une calibration ratée sur une grille chargée (mesures
+// certifiées indisponibles) est retentée elle aussi.
+// Mesuré le 2026-09-10 en navigateur, avant ce lot, à 41,3888 / 9,1595 (valeur dominée par ANFR) :
+// grille vide calibrée 1,33 V/m ; grille revenue SANS recalibrer 132,8 V/m (terme ANFR × k² ≈ 493) ;
+// grille revenue PUIS recalibrée 2,16 V/m, k identique au bit. Recharger la grille sans recalibrer
+// serait pire que ne rien faire : la reprise passe donc par la calibration.
+// Limite déclarée : Supabase répondant 200 avec zéro ligne donne une grille vide que
+// fetchAntennasCorseRaw() met en cache (partagé avec loadAnt) — la reprise ne la refait pas ; la
+// calibration reste refusée et les libellés disent « non calibré » (réfutation, S4).
+// Réfutation : tests/blindage-harness/non-regression-reprise-anfr.mjs — exécutée AVANT ce lot sur le
+// code d'origine : 25 échecs prédits (carte construite sur un k dérivé de la grille vide, grille jamais
+// rechargée, k valide écrasé, carte éteinte périmée, libellés sans état).
+if(typeof calibrateRF==='function'){
+  enregistrerReprise('anfr', calibrateRF, {
+    classe: 'critique',
+    verifie: () => anfrGrillePrete() && rfCalibre()
+  });
+}
 // buildHotRF() au boot (au lieu de buildHot()) — RF activé par défaut (ACTIVE.hotrf=true).
 // Pas d'équivalent loadChargeReseau() nécessaire : buildHotRF()/calcN_RF_calib() ne dépend
 // pas du facteur de charge RTE (spécifique au domaine ELF/magnétique de buildHot()).
@@ -12137,7 +12317,7 @@ map.on('zoomend',function(){ _syncBTZoom(false); });
 // forêt dense ci-dessus, cf. _syncForetOuverteZoom/_syncLandeMaquisZoom.
 map.on('zoomend',function(){ _syncForetOuverteZoom(false); });
 map.on('zoomend',function(){ _syncLandeMaquisZoom(false); });
-setTimeout(()=>Promise.all([loadAnt().then(function(){if(ACTIVE.ant)lAnt.addTo(map);}),calibrateRF(),loadDB(),declenche('radon','boot'),loadTDFEmitters(),declenche('postes','boot'),declenche('eoliennes','boot'),loadPointsChaudsRadio(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.cert)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k). ant:true au boot (2026-09-02) : lAnt.addTo(map) conditionné à ACTIVE.ant, même pattern que lCert ci-après. loadHTADataOnly() RETIRÉ de ce lot (2026-09-04, brief AF lot B) — démarre désormais immédiatement, cf. commentaire plus haut.
+setTimeout(()=>Promise.all([loadAnt().then(function(){if(ACTIVE.ant)lAnt.addTo(map);}),declenche('anfr','boot'),loadDB(),declenche('radon','boot'),declenche('tdf','boot'),declenche('postes','boot'),declenche('eoliennes','boot'),loadPointsChaudsRadio(),loadSoilGridsGrid(),declenche('foretdense','boot'),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.cert)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k). ant:true au boot (2026-09-02) : lAnt.addTo(map) conditionné à ACTIVE.ant, même pattern que lCert ci-après. loadHTADataOnly() RETIRÉ de ce lot (2026-09-04, brief AF lot B) — démarre désormais immédiatement, cf. commentaire plus haut.
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET DUR/EBR/CLF (nom loadAQU conservé, cf. commentaire fonction) — correction externe réelle niveau 1
 setTimeout(loadDst,5500); // Dst Kyoto via NOAA — correction externe niveau 2 (Sprint astro 2026-05-25)
@@ -14268,7 +14448,7 @@ function capCleanup(){
 ["lyr_hot_tt","#b-hot","title","Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. N'inclut pas le champ géomagnétique terrestre total (~46 000-47 500 nT en Corse, l'ordre de grandeur qu'un magnétomètre de smartphone mesure) : ce sont deux grandeurs physiques distinctes, jamais additionnées ici — le champ géomagnétique n'entre dans ce nombre à aucun titre. Estimation du modèle Tellux, pas une mesure. La composante ELF entre dans le score Indice Tellux affiché ; la composante substrat reste une donnée de contexte, sans consommateur dans ce score.","","Composite magnetic field — ELF 50 Hz (electrical grid) + substrate susceptibility, expressed in nT. Does not include the total terrestrial geomagnetic field (~46,000-47,500 nT in Corsica, the order of magnitude a smartphone magnetometer measures): these are two distinct physical quantities, never added together here — the geomagnetic field plays no part whatsoever in this number. Tellux model estimate, not a measurement. The ELF component feeds the displayed Indice Tellux score; the substrate component remains contextual data, with no consumer in that score."],
 ["lyr_hotrf","#b-hot-rf","","Champ électrique RF (V/m)","Campu elettricu RF (V/m)","RF electric field (V/m)"],
 ["lyr_elf","#b-elf","","Champ ELF (nT)","","ELF field (nT)"],
-["lyr_hotrf_tt","#b-hot-rf","title","Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 30 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte.","Campu elettricu radiufrequenza (V/m) — mudellu Tellux — calibrazione interna nantu à 30 misure certificate ANFR/EXEM (propagazione da ~3000 antenne ANFR reale). Stima centrale d'ordine di grandezza (campu esternu ; sott'ivaluta i siti più esposti, sopravaluta l'internu di i fabbricati). Rilettura fisicu in corsu ; ùn rimpiazza micca una misura certificata. Riferimenti ICNIRP indicativi, micca soglia d'alerta.","Radiofrequency electric field (V/m) — Tellux model — internal calibration on 30 certified ANFR/EXEM measurements (propagation from ~3,000 actual ANFR antennas). Central order-of-magnitude estimate (outdoor field; underestimates highly exposed sites, overestimates indoor levels). Physicist review underway; does not replace a certified measurement. ICNIRP reference points are indicative, not an alert threshold."],
+["lyr_hotrf_tt","#b-hot-rf","title","Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 21 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte.","Campu elettricu radiufrequenza (V/m) — mudellu Tellux — calibrazione interna nantu à 21 misure certificate ANFR/EXEM (propagazione da ~3000 antenne ANFR reale). Stima centrale d'ordine di grandezza (campu esternu ; sott'ivaluta i siti più esposti, sopravaluta l'internu di i fabbricati). Rilettura fisicu in corsu ; ùn rimpiazza micca una misura certificata. Riferimenti ICNIRP indicativi, micca soglia d'alerta.","Radiofrequency electric field (V/m) — Tellux model — internal calibration on 21 certified ANFR/EXEM measurements (propagation from ~3,000 actual ANFR antennas). Central order-of-magnitude estimate (outdoor field; underestimates highly exposed sites, overestimates indoor levels). Physicist review underway; does not replace a certified measurement. ICNIRP reference points are indicative, not an alert threshold."],
 // lyr_elf_tt (brief BH, 2026-09-05) : CO laissée vide à dessein — pas de traduction improvisée
 // sans validation locuteur natif (même discipline que chip_label_tt/brief AV, dom_hot/brief BA).
 ["lyr_elf_tt","#b-elf","title","Champ magnétique ELF 50 Hz (réseau électrique), exprimé en nT — composante anthropique seule du modèle Tellux, sans la susceptibilité du substrat (distincte de « Champ magnétique composite », qui combine les deux). Estimation, pas une mesure. N'affiche rien sous 300 nT : seuil réutilisant le repère documentaire IARC classe 2B, une classification épidémiologique de long terme — un choix éditorial d'affichage, pas une évaluation du risque à ce niveau précis.","","ELF magnetic field 50 Hz (electrical grid), expressed in nT — anthropic component only of the Tellux model, without substrate susceptibility (distinct from \"Composite magnetic field\", which combines both). Estimate, not a measurement. Shows nothing below 300 nT: a threshold reusing the IARC class 2B documentary reference point, a long-term epidemiological classification — an editorial display choice, not a risk evaluation at this precise level."],
