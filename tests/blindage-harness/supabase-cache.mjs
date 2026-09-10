@@ -189,23 +189,27 @@ export async function installSupabaseCache(context, opts = {}) {
   const ttlMs = opts.ttlMs ?? (process.env.TELLUX_HARNESS_CACHE_TTL_MS ? Number(process.env.TELLUX_HARNESS_CACHE_TTL_MS) : DEFAULT_TTL_MS);
   const label = opts.label ? `[${opts.label}] ` : '';
 
-  // ═══ JOURNALISATION SUR stderr, JAMAIS stdout (2026-09-09) ═══
-  // Ce module est importé par des harnais dont stdout EST le contrat de résultat :
-  // `contrast-panels.yml` fait `node contrast-panels.mjs > contrast-result.json`, puis
-  // huit `jq` sur ce fichier. Un seul console.log ici atterrit DANS le JSON.
+  // ═══ JOURNALISATION SUR stderr, JAMAIS stdout (2026-09-09, #1370) ═══
+  // Ce module est importé par des harnais dont stdout peut être le contrat de
+  // résultat. Le 2026-09-09, `contrast-panels.yml` faisait encore
+  // `node contrast-panels.mjs > contrast-result.json`, puis des `jq` sur ce fichier :
+  // un seul console.log ici atterrissait DANS le JSON.
   //
-  // Cas réel, run #34374902822 du 2026-09-09 : cache froid
+  // Cas réel, run 34374902822 du 2026-09-09 : cache froid
   // (`Cache not found for input keys: harness-supabase-cache-v1-2026-S37`), 16 lignes MISS
-  // écrites avant le JSON, les 8 jq échouent sur
+  // écrites avant le JSON, les jq échouent sur
   // `Invalid numeric literal at line 1, column 17` — 17 étant exactement la longueur du
   // préfixe `[contrast-panels]`. Le JSON était INTACT derrière la pollution : contraste
-  // 0 critique / 0 AA, et 4 dépassements réels que personne n'a pu lire pendant trois
-  // heures, le check rapportant une panne d'outillage à leur place.
+  // 0 critique / 0 AA, et 4 dépassements réels du plancher de #conditions-bar (8 nœuds
+  // < 10, après #1363). La première version de ce commentaire disait que personne
+  // n'avait pu les lire « pendant trois heures, le check rapportant une panne
+  // d'outillage à leur place » : c'est inexact. Le rouge venait d'eux, pas du cache,
+  // et même les rapports propres ne les affichaient ni dans le journal ni dans le
+  // résumé du job.
   //
-  // ⚠ CE CORRECTIF N'EST PAS STRUCTUREL, et il ne faut pas le croire tel : il protège
-  // contre CE module. Tout `console.log` d'un autre import romprait le contrat à
-  // nouveau. Le remède structurel est de sortir le JSON de stdout (option d'écriture
-  // vers un fichier dans contrast-panels.mjs) — non fait ici, arbitrage séparé.
+  // Ce correctif protège contre CE module. Le remède structurel — sortir le JSON de
+  // stdout — a été fait le même jour par #1371 : contrast-panels.mjs écrit désormais
+  // le rapport dans un fichier.
   if (disabled) {
     console.error(`${label}[supabase-cache] désactivé (TELLUX_HARNESS_CACHE=off) — réseau réel pour toutes les requêtes.`);
     return { disabled: true, cacheDir, ttlMs };

@@ -52,7 +52,9 @@
 //   rapport dit exactement quels nœuds sont concernés, pour que l'approximation
 //   reste auditable.
 //
-// SORTIE : JSON sur stdout. Exit 0 si aucune violation, 2 sinon.
+// SORTIE : JSON écrit dans le fichier désigné par CONTRAST_OUT (défaut :
+// contrast-result.json) — plus sur stdout depuis le 2026-09-09 (#1371).
+// Exit 0 si aucune violation, 2 sinon.
 //
 // USAGE :
 //   cd tests/blindage-harness
@@ -994,14 +996,14 @@ async function main() {
 // Le rapport s'écrit DIRECTEMENT dans le fichier, il ne passe plus par stdout.
 // Motif : le workflow faisait `node contrast-panels.mjs > contrast-result.json`,
 // donc tout ce qu'un module imprimait sur stdout atterrissait DANS le JSON. Le
-// module de cache Supabase y écrit ses lignes « MISS/expiré » — le fichier
-// commençait par elles, et `jq` échouait (« parse error: Invalid numeric literal
-// at line 1, column 17 »). Cela ne changeait pas la couleur du check : le
-// workflow capture le code de sortie de ce script avant tout `jq`. Cela détruisait
-// l'explication — résumé du job et artefact illisibles —, si bien que le rouge du
-// 2026-09-09, dû au plancher de #conditions-bar après #1363, est resté sans
-// diagnostic. La première version de ce commentaire disait que le check « tombait
-// AVANT toute mesure » : c'est faux (ADR-067, *Réfutation*).
+// module de cache Supabase y écrivait alors ses lignes « MISS/expiré » — le
+// fichier commençait par elles, et `jq` échouait (« parse error: Invalid numeric
+// literal at line 1, column 17 »). Cela ne changeait pas la couleur du check — le
+// workflow capture le code de sortie de ce script avant tout `jq` — ni ce que le
+// rouge disait : même propre, il n'affichait pas les dépassements qui le
+// causaient. Le JSON restait intact derrière la pollution ; `jq` ne pouvait plus
+// le lire. La première version de ce commentaire disait que le check « tombait
+// AVANT toute mesure » : c'est faux.
 // Le commentaire du workflow signalait déjà que ces lignes partaient sur stdout et
 // devenaient « invisibles dans les journaux du job ». C'est le même fait vu par
 // l'autre bout : elles n'étaient pas perdues, elles étaient dans le rapport.
