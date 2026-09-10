@@ -8675,6 +8675,27 @@ async function indexRadonZonesOfficial() {
   }
 }
 
+// Prédicat de succès de indexRadonZonesOfficial() pour l'assistant de reprise (2026-09-10).
+// POURQUOI UN PRÉDICAT : indexRadonZonesOfficial() AVALE son échec (catch → console.warn), sa
+// promesse résout dans tous les cas. Sans prédicat, l'assistant la croirait réussie dès le
+// premier échec et ne relancerait jamais — une adoption d'apparence.
+// PAR IDENTITÉ, PAS PAR SEUIL : l'index est complet quand CHAQUE commune cat. 3 du GeoJSON en
+// cache figure dans RADON_L3_INSEE_SET. Vrai à 216 aujourd'hui comme si l'arrêté change
+// demain — aucun nombre à maintenir.
+// `attendus.size === 0 → false` n'est pas décoratif : every() sur un ensemble vide rend VRAI,
+// et un GeoJSON vide ou tronqué passerait pour un index complet.
+// Colocalisé avec le chargeur, pas au site d'inscription : qui modifie
+// indexRadonZonesOfficial() a son prédicat sous les yeux.
+function radonIndexComplet() {
+  if (!_radonGeojsonCache) return false;
+  const attendus = new Set((_radonGeojsonCache.features || [])
+    .filter(f => f.properties && f.properties.categorie === 3 && f.properties.code_insee)
+    .map(f => f.properties.code_insee));
+  if (attendus.size === 0) return false;
+  for (const c of attendus) if (!RADON_L3_INSEE_SET.has(c)) return false;
+  return true;
+}
+
 // Retourne {matched_by, nom, code_insee} si la commune est classée L3, sinon null.
 function isCommuneRadonL3(commune) {
   if (!commune) return null;
@@ -12043,6 +12064,20 @@ if(typeof loadBTLinesAsync==='function'){
     verifie: () => _btPaginationComplete && BT_SEGMENT_GRID !== null
   });
 }
+// REPRISE — radon (2026-09-10). RADON_L3_INSEE_SET démarre vide et indexRadonZonesOfficial()
+// est son SEUL écrivain ; RADON_2A_APPLIES_ALL vaut false. Son échec ne retire donc pas une
+// couche : calcRadonPotential() rend la classe LITHOLOGIQUE pour toute commune classée L3 par
+// l'arrêté du 27 juin 2018 — 2 ou 1 au lieu de 3, avec confidence:'high'. Une valeur fausse,
+// d'où la classe critique. Déclenché depuis le lot de boot différé ci-dessous, pour garder son
+// instant d'origine (t+1,5 s). Aucun mémo d'échec à relâcher : _radonGeojsonCache n'est posé
+// que sur succès, un rappel refetch réellement.
+// Réfutation : tests/blindage-harness/non-regression-reprise-radon.mjs.
+if(typeof indexRadonZonesOfficial==='function'){
+  enregistrerReprise('radon', indexRadonZonesOfficial, {
+    classe: 'critique',
+    verifie: radonIndexComplet
+  });
+}
 // buildHotRF() au boot (au lieu de buildHot()) — RF activé par défaut (ACTIVE.hotrf=true).
 // Pas d'équivalent loadChargeReseau() nécessaire : buildHotRF()/calcN_RF_calib() ne dépend
 // pas du facteur de charge RTE (spécifique au domaine ELF/magnétique de buildHot()).
@@ -12068,7 +12103,7 @@ map.on('zoomend',function(){ _syncBTZoom(false); });
 // forêt dense ci-dessus, cf. _syncForetOuverteZoom/_syncLandeMaquisZoom.
 map.on('zoomend',function(){ _syncForetOuverteZoom(false); });
 map.on('zoomend',function(){ _syncLandeMaquisZoom(false); });
-setTimeout(()=>Promise.all([loadAnt().then(function(){if(ACTIVE.ant)lAnt.addTo(map);}),calibrateRF(),loadDB(),indexRadonZonesOfficial(),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.cert)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k). ant:true au boot (2026-09-02) : lAnt.addTo(map) conditionné à ACTIVE.ant, même pattern que lCert ci-après. loadHTADataOnly() RETIRÉ de ce lot (2026-09-04, brief AF lot B) — démarre désormais immédiatement, cf. commentaire plus haut.
+setTimeout(()=>Promise.all([loadAnt().then(function(){if(ACTIVE.ant)lAnt.addTo(map);}),calibrateRF(),loadDB(),declenche('radon','boot'),loadTDFEmitters(),loadPostesSources(),loadEoliennesData(),loadPointsChaudsRadio(),loadSoilGridsGrid(),loadForetDenseGrid(),loadMesuresCertifiees().then(function(){_renderMesuresCertifiees();if(ACTIVE.cert)lCert.addTo(map);})]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k). ant:true au boot (2026-09-02) : lAnt.addTo(map) conditionné à ACTIVE.ant, même pattern que lCert ci-après. loadHTADataOnly() RETIRÉ de ce lot (2026-09-04, brief AF lot B) — démarre désormais immédiatement, cf. commentaire plus haut.
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET DUR/EBR/CLF (nom loadAQU conservé, cf. commentaire fonction) — correction externe réelle niveau 1
 setTimeout(loadDst,5500); // Dst Kyoto via NOAA — correction externe niveau 2 (Sprint astro 2026-05-25)
