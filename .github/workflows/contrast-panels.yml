@@ -290,9 +290,12 @@ jobs:
           # Le rapport est-il seulement lisible ? Sans ce garde, un JSON invalide ne
           # changeait pas la couleur : jq échouait sept fois (huit sur un rouge) et le
           # résumé sortait aux valeurs vides, sous un titre ✅/❌ fidèle au vrai code de
-          # sortie. Désormais,
-          # un rapport illisible fait échouer l'étape avec son propre message, qui donne
-          # le code de sortie du script : il ne peut plus accompagner un vert.
+          # sortie. Désormais, un rapport illisible fait échouer l'étape avec son propre
+          # message, qui donne le code de sortie du script : il ne peut plus accompagner
+          # un vert. La première version de ce commentaire (#1371) disait qu'un JSON
+          # invalide produisait un exit 2 et avait laissé la panne du 2026-09-09 « durer
+          # cinq heures […] sans être diagnostiquée » : c'est faux. L'exit 2 était celui
+          # du script, sur le plancher de #conditions-bar.
           if ! jq -e . contrast-result.json >/dev/null 2>&1; then
             echo "::error::contrast-result.json illisible — le rapport n'est pas exploitable (code de sortie du script : $EXIT — 2 : dépassement mesuré, 0 : aucun, autre : échec du script). Premiers octets du fichier :"
             head -c 300 contrast-result.json || true
