@@ -919,9 +919,13 @@ async function main() {
     const p = rapport.panneaux.find((x) => x.panel === nom);
     const noeuds = p && p.etat === 'mesuré' ? (p.noeuds || 0) : 0;
     if (!p || p.etat !== 'mesuré' || noeuds < seuil) {
+      // Le message énonce LA MESURE ET LE SEUIL, rien d'autre (2026-09-10) : la correction que
+      // #1372 a faite pour #conditions-bar, appliquée à son jumeau. Il ajoutait « — son flux
+      // d'ouverture ne fonctionne plus ou rend un état dégradé, le résultat n'est pas
+      // exploitable » : deux hypothèses sur la cause et une conclusion, qu'aucune mesure ne
+      // calcule. L'état et le compte suffisent ; l'hypothèse appartient au lecteur.
       depassements.push(`surface requise sous son plancher : « ${nom} » (état : ${p ? p.etat : 'introuvable'}`
-        + `${p && p.etat === 'mesuré' ? `, ${noeuds} nœud(s) < ${seuil}` : ''}) — son flux d'ouverture`
-        + ' ne fonctionne plus ou rend un état dégradé, le résultat n\'est pas exploitable');
+        + `${p && p.etat === 'mesuré' ? `, ${noeuds} nœud(s) mesuré(s) < ${seuil} attendus` : ''})`);
     }
   }
   // Plancher de couverture — AVANT les cliquets, et pour la même raison qu'axe-core a été
@@ -958,8 +962,10 @@ async function main() {
   }
   const MIN_NOEUDS = Number(process.env.CONTRAST_MIN_NOEUDS ?? 75);
   if (noeudsMesures < MIN_NOEUDS) {
-    depassements.push(`couverture insuffisante : ${noeudsMesures} nœuds mesurés < plancher ${MIN_NOEUDS}`
-      + ' — les panneaux ne se sont probablement pas peuplés, le résultat n\'est pas exploitable');
+    // Même correction (2026-09-10) : le message ajoutait « — les panneaux ne se sont
+    // probablement pas peuplés, le résultat n'est pas exploitable », une hypothèse et une
+    // conclusion que la mesure ne porte pas. Le compte et le plancher suffisent.
+    depassements.push(`couverture insuffisante : ${noeudsMesures} nœuds mesurés < plancher ${MIN_NOEUDS}`);
   }
   if (critiques.length > MAX_CRITIQUE) {
     depassements.push(`critique : ${critiques.length} > plafond ${MAX_CRITIQUE}`);
