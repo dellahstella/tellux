@@ -124,7 +124,7 @@ const CRITIQUE = rapport({ violations: 2, critique: 2, depassements: ['critique 
 ]);
 const DOUZE = rapport({ depassements: Array.from({ length: 12 }, (_, i) => `surface requise sous son plancher : `
   + `« Surface ${String(i + 1).padStart(2, '0')} » (état : introuvable)`) });
-const ECHAPPEMENT = rapport({ depassements: ['couverture insuffisante : 42 nœuds (100 % visés)\nseconde ligne'] });
+const ECHAPPEMENT = rapport({ depassements: ['couverture insuffisante : 42 nœuds (100 % visés)\r\nseconde ligne'] });
 const POLLUE = '[contrast-panels] [supabase-cache] MISS/expiré — https://exemple.invalid → réseau réel.\n'
   + JSON.stringify(ROUGE_0909);
 
@@ -205,8 +205,23 @@ function verifie(cas, cond, msg) {
 {
   const cas = 'échappement des annotations';
   const r = executer(ECHAPPEMENT, 2);
-  verifie(cas, r.erreurs.some((e) => e.includes('100 %25 visés)%0Aseconde ligne')),
-    'le % et le retour à la ligne sont échappés : l\'annotation ne se coupe pas');
+  verifie(cas, r.erreurs.some((e) => e.includes('100 %25 visés)%0D%0Aseconde ligne')),
+    'le %, le retour chariot et le retour à la ligne sont échappés : l\'annotation ne se coupe pas');
+}
+
+{
+  const cas = 'script sorti en 0 avec des dépassements dans son rapport';
+  const r = executer(ROUGE_0909, 0);
+  verifie(cas, r.code !== 0, `un désaccord entre le code et le rapport ne passe pas au vert (obtenu : ${r.code})`);
+  verifie(cas, !r.resume.includes('✅'), 'le résumé n\'est pas au vert');
+  verifie(cas, DEP_0909.every((d) => r.resume.includes(d)), 'le résumé nomme les dépassements');
+}
+{
+  const cas = 'rapport lisible sans dépassement, script en échec (exit 1)';
+  const r = executer(VERT, 1);
+  verifie(cas, r.code === 1, `l'étape sort sur le code du script (obtenu : ${r.code})`);
+  verifie(cas, !r.resume.includes('✅'), 'le résumé n\'est pas au vert');
+  verifie(cas, /code de sortie\D{0,12}1/i.test(r.resume), 'le résumé donne le code de sortie');
 }
 
 console.log(`\n${total} contrôles, ${echecs.length} échec(s).`);
