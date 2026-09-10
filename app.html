@@ -3702,6 +3702,11 @@ function jt(key, fr){
 }
 
 let contribsDB=[],pending=null,_contribClickHandler=null;
+// _contribEnvoiEnCours (2026-09-10) — vrai pendant l'INSERT de saveContrib(), et seulement pendant lui. Une
+// écriture partie ne se rappelle pas : les gestes qui retirent le point (Annuler, clic hors du formulaire,
+// bouton « + », « Repositionner ») sont refusés tant qu'elle est en vol. Avant ce drapeau, Annuler pendant
+// l'enregistrement laissait la mesure s'écrire, puis affichait une fausse erreur (cf. saveContrib()).
+let _contribEnvoiEnCours=false;
 // Fiche « Mon lieu » (2026-08-20) — positions antennes ANFR retenues en agrégat pur,
 // en plus des marqueurs Leaflet déjà créés par loadAnt() (aucune modification de la
 // boucle de rendu existante). Sert uniquement countAntennasWithinRadius().
@@ -10454,6 +10459,7 @@ function _placeContribMarker(lat,lng){
   }
 }
 function repositionMarker(){
+  if(_contribEnvoiEnCours) return; // refusé pendant l'envoi — cf. _contribEnvoiEnCours (2026-09-10)
   if(pending){map.removeLayer(pending);pending=null;}
   var posInfo=document.getElementById('c-position-info');
   if(posInfo)posInfo.textContent=jt('cform_position_js', 'Cliquez sur la carte pour placer le point');
@@ -10553,6 +10559,10 @@ function cformOverlayHide(){
 }
 
 function cancelContrib(){
+  // Refusé pendant l'envoi (2026-09-10) : l'INSERT est parti, l'annuler ici n'empêcherait pas l'écriture et
+  // ferait mentir « Mesure annulée. ». Le bouton Annuler est désactivé pendant ce temps (saveContrib()) ;
+  // ce garde couvre aussi le clic hors du formulaire.
+  if(_contribEnvoiEnCours) return;
   if(_nativeMag) stopNativeMagCapture(false);
   const protoChk=document.getElementById('c-protocole');if(protoChk)protoChk.checked=false;
   window._nativeCaptureUsed=false;
@@ -10611,6 +10621,10 @@ async function saveContrib(){
     map.removeLayer(pending);pending=null;return;
   }
   const btn=document.getElementById('btn-save');btn.textContent='Sauvegarde…';btn.disabled=true;
+  // Le point tel qu'il est au clic (2026-09-10). L'attente ci-dessous peut durer jusqu'à 20 s, et pendant ce
+  // temps l'utilisateur peut annuler, refermer par « + », repositionner ou replacer le point. Avant ce
+  // contrôle, l'INSERT partait quand même avec la position lue ici : une mesure annulée était écrite.
+  const pendingAuDepart=pending;
   // Attendre la résolution de elfState avant de calculer predicted (2026-09-04, brief AF lot B
   // suite, arbitrage Soleil — même sujet que le lot A/AO : « une formule qui écrit sans savoir
   // sur quoi elle s'appuie »). Avant ce correctif, une contribution soumise pendant la fenêtre
@@ -10630,6 +10644,9 @@ async function saveContrib(){
     }
     btn.textContent = 'Sauvegarde…';
   }
+  // Le point a été retiré ou remplacé pendant l'attente : l'enregistrement est abandonné, rien n'est écrit.
+  // Le geste qui l'a retiré a déjà dit ce qu'il faisait (« Mesure annulée. », repositionnement).
+  if(pending!==pendingAuDepart){btn.textContent='Enregistrer dans Supabase';btn.disabled=false;return;}
   // Jamais silencieux (même principe que le popup) : si la valeur écrite reste basée sur le
   // repli v1 (panne durable OU timeout ci-dessus sans résolution), le contributeur en est informé.
   if (computeElfState() !== 'ready') {
@@ -10744,10 +10761,18 @@ async function saveContrib(){
   };
   // Filtrer les champs null/undefined pour éviter PGRST204 si colonne manquante
   Object.keys(row).forEach(k=>{if(row[k]===null||row[k]===undefined)delete row[k];});
+  // L'envoi part : il ne se rappelle pas. Les gestes qui retireraient le point sont refusés jusqu'à la
+  // réponse (cf. _contribEnvoiEnCours), et les boutons Annuler et Repositionner sont désactivés.
+  _contribEnvoiEnCours=true;
+  const btnAnnuler=document.querySelector('#cform .btn-cancel'), btnRepos=document.getElementById('btn-reposition');
+  if(btnAnnuler)btnAnnuler.disabled=true;
+  if(btnRepos)btnRepos.disabled=true;
   try{
     const saved=await sbPost('/rest/v1/contributions',[row]);
     contribsDB.unshift(saved[0]||row);addMarker(saved[0]||row);
-    map.removeLayer(pending);pending=null;
+    // Garde conservée même avec le drapeau : removeLayer(null) lève dans Leaflet, et c'est ce qui affichait
+    // « Erreur : … » après une écriture réussie.
+    if(pending){map.removeLayer(pending);pending=null;}
     document.getElementById('cform').style.display='none';
     cformOverlayHide();
     document.getElementById('c-val').value='';document.getElementById('c-note').value='';
@@ -10775,6 +10800,11 @@ async function saveContrib(){
     // Desactiver le FAB active state apres sauvegarde
     const fabEl=document.getElementById('fab-mesure');if(fabEl)fabEl.classList.remove('fab-active');
   }catch(err){info('Erreur : '+err.message,'error',5000);}
+  finally{
+    _contribEnvoiEnCours=false;
+    if(btnAnnuler)btnAnnuler.disabled=false;
+    if(btnRepos)btnRepos.disabled=false;
+  }
   btn.textContent='Enregistrer dans Supabase';btn.disabled=false;
 }
 
@@ -12487,6 +12517,7 @@ function startContribFromFAB(){
   // annuler/fermer (couvre le nouvel etat intermediaire "carte en mode placement,
   // #cform pas encore affiche" — cf. bloc "Open" plus bas).
   if((form&&form.style.display==='block')||_contribAwaitingFirstPlacement){
+    if(_contribEnvoiEnCours) return; // refermer pendant l'envoi est refusé — cf. _contribEnvoiEnCours (2026-09-10)
     form.style.display='none';
     cformOverlayHide();
     if(pending){map.removeLayer(pending);pending=null;}
