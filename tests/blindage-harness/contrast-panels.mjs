@@ -995,9 +995,13 @@ async function main() {
 // Motif : le workflow faisait `node contrast-panels.mjs > contrast-result.json`,
 // donc tout ce qu'un module imprimait sur stdout atterrissait DANS le JSON. Le
 // module de cache Supabase y écrit ses lignes « MISS/expiré » — le fichier
-// commençait par elles, `jq` échouait (« parse error: Invalid numeric literal at
-// line 1, column 17 ») et le check tombait AVANT toute mesure de contraste :
-// rouge sur toutes les branches, sans plus rien distinguer.
+// commençait par elles, et `jq` échouait (« parse error: Invalid numeric literal
+// at line 1, column 17 »). Cela ne changeait pas la couleur du check : le
+// workflow capture le code de sortie de ce script avant tout `jq`. Cela détruisait
+// l'explication — résumé du job et artefact illisibles —, si bien que le rouge du
+// 2026-09-09, dû au plancher de #conditions-bar après #1363, est resté sans
+// diagnostic. La première version de ce commentaire disait que le check « tombait
+// AVANT toute mesure » : c'est faux (ADR-067, *Réfutation*).
 // Le commentaire du workflow signalait déjà que ces lignes partaient sur stdout et
 // devenaient « invisibles dans les journaux du job ». C'est le même fait vu par
 // l'autre bout : elles n'étaient pas perdues, elles étaient dans le rapport.

@@ -135,15 +135,20 @@ on:
     # CE QUE LE FILTRE PORTAIT, ET QUI NE DOIT PAS SE PERDRE AVEC LUI : il avait été
     # élargi quelques heures plus tôt le 2026-09-09 à
     # `tests/blindage-harness/supabase-cache.mjs`, module importé par
-    # `contrast-panels.mjs` et cause de la panne de trois heures du même jour (ses
-    # lignes « MISS » partaient sur stdout, où le workflow attendait le JSON de
-    # résultat — run #34374902822). Le check ne surveillait pas une de ses propres
-    # dépendances : une modification du cache ne pouvait ni le casser visiblement, ni
-    # être validée par lui. La règle qu'on en avait tirée — « toute dépendance du
-    # harnais qui entre dans ce processus appartient à cette liste » — survit à la
-    # liste : sans filtre, elle est tenue par construction, pour toute dépendance
-    # présente ou future, sans que personne ait à penser à l'y inscrire. Une liste,
-    # elle, redevient fausse au premier ajout, et en silence.
+    # `contrast-panels.mjs`, dont les lignes « MISS » partaient sur stdout, où le
+    # workflow attendait le JSON de résultat (run #34374902822). Cette pollution n'a
+    # fait rougir aucun run — l'étape tourne sous `set +e` et capture le code de
+    # sortie avant tout `jq` — mais elle rendait le rapport illisible : le rouge du
+    # même jour, dû au plancher de `#conditions-bar` après #1363 (corrigé par #1372),
+    # est resté 3 h 31 sans diagnostic. La première version de ce commentaire (#1374)
+    # imputait ce rouge aux lignes MISS : c'est faux (ADR-067, *Réfutation*).
+    # Le check ne surveillait pas une de ses propres dépendances : une modification
+    # du cache ne pouvait ni le casser visiblement, ni être validée par lui. La règle
+    # qu'on en avait tirée — « toute dépendance du harnais qui entre dans ce
+    # processus appartient à cette liste » — survit à la liste : sans filtre, elle
+    # est tenue par construction, pour toute dépendance présente ou future, sans que
+    # personne ait à penser à l'y inscrire. Une liste, elle, redevient fausse au
+    # premier ajout, et en silence.
   workflow_dispatch:
 
 # Annule un run devenu obsolète quand un nouveau push arrive sur la même PR
@@ -263,21 +268,27 @@ jobs:
           CONTRAST_MIN_NOEUDS: '75'
         run: |
           set +e
-          # Plus de redirection (2026-09-09) : le script écrit contrast-result.json
+          # Plus de redirection (2026-09-09, #1371) : le script écrit contrast-result.json
           # lui-même. Avec `> contrast-result.json`, tout ce qu'un module imprimait sur
           # stdout atterrissait DANS le JSON — le module de cache Supabase y déversait
-          # ses lignes « MISS/expiré », jq échouait en « parse error … line 1, column 17 »
-          # et le check tombait AVANT toute mesure de contraste. Il rougissait donc sur
-          # toutes les branches sans plus rien distinguer, y compris sur celles où le
-          # contraste était parfaitement bon. Effet de bord bienvenu : les journaux des
-          # modules redeviennent visibles ici, ce que le commentaire du cache ci-dessus
-          # regrettait explicitement.
+          # ses lignes « MISS/expiré » et jq échouait en « parse error … line 1, column
+          # 17 ». Cela n'a jamais fait rougir un run : EXIT est capturé juste après le
+          # script, avant le premier jq, et l'étape tourne sous `set +e`. La pollution
+          # détruisait l'explication — résumé du job et artefact illisibles —, pas la
+          # mesure. Le rouge du 2026-09-09 (17 runs, exit 2) venait du plancher de
+          # #conditions-bar après #1363 ; la pollution l'a rendu muet pendant 3 h 31.
+          # La première version de ce commentaire disait que le check « tombait AVANT
+          # toute mesure » : c'est faux (ADR-067, *Réfutation*). Effet de bord bienvenu :
+          # les journaux des modules redeviennent visibles ici, ce que le commentaire du
+          # cache ci-dessus regrettait explicitement.
           node contrast-panels.mjs
           EXIT=$?
-          # Le rapport est-il seulement lisible ? Sans ce garde, un JSON invalide se
-          # manifeste par « jq: parse error » répété huit fois et un exit 2 — un message
-          # qui ne nomme ni la cause ni le fichier. C'est ce qui a permis à la panne du
-          # 2026-09-09 de durer cinq heures sur toutes les branches sans être diagnostiquée.
+          # Le rapport est-il seulement lisible ? Sans ce garde, un JSON invalide ne
+          # changeait pas la couleur : il produisait « jq: parse error » huit fois et un
+          # résumé vide, à côté du vrai code de sortie — un défaut muet, qui a laissé le
+          # rouge du 2026-09-09 sans diagnostic. Désormais, un rapport illisible fait
+          # échouer l'étape avec son propre message : il ne peut plus cacher la cause
+          # d'un rouge, ni accompagner un vert.
           if ! jq -e . contrast-result.json >/dev/null 2>&1; then
             echo "::error::contrast-result.json illisible — le rapport n'a pas été produit correctement (le contraste n'a PAS été mesuré). Premiers octets du fichier :"
             head -c 300 contrast-result.json || true
