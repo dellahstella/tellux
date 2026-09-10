@@ -49,6 +49,17 @@
 //       une réf toute fraîche ou une limite secondaire suffisent. Un second essai après 2,5 s,
 //       et le code HTTP écrit dans la raison quand il échoue aussi. Le compte de D8 devient un
 //       minimum dès qu'un fichier est illisible, au lieu d'un total qui n'en était pas un.
+// v3 (2026-09-10), à la lecture du premier ETAT.md :
+//   (g) P4 s'intitulait « tables lues » et rangeait sous ce titre `radon_depots_erp`, où la page
+//       ne fait qu'ÉCRIRE — par un formulaire suspendu, commenté. Son « non lisible par un
+//       visiteur (401) », exact, se lisait alors comme un affichage cassé possible. Titre
+//       « citées », colonne « usage », citations en commentaire HTML écartées. Le premier jet de
+//       ce correctif, relu à son tour, sortait `contributions` en « lecture » : l'app y écrit par
+//       `sbPost`, dont la méthode vit dans SA définition, pas à l'appel. L'usage se lit donc dans
+//       le corps de l'utilitaire appelé. Trouvé en lisant la sortie, pas en la générant.
+//   (h) Le compte de `bt_lines` (156 130 lignes, compte exact) est sorti une fois en HTTP 500
+//       dans un champ resté OK. Second essai sur un échec réseau ou 5xx, et le champ passe
+//       INCERTAIN dès qu'un compte manque : un trou dans un tableau n'est pas un résultat.
 //
 // ─── CE QUI VIEILLIRA, ET COMMENT ON LE VERRA ─────────────────────────────────────────────
 // Trois extractions reposent sur des FORMES de code : le registre `const LAYERS = {…}`, les
@@ -146,7 +157,7 @@ const CATALOGUE = [
   ['P1', 'Pages servies', 'prod + arbre Git de la tête', 'chaque `*.html` à la racine, demandé à son URL propre ; identité par SHA de blob Git', 'les pages hors racine'],
   ['P2', 'Données servies', 'prod + arbre Git de la tête', 'chaque fichier de `public/data/`, demandé en prod ; identité par SHA de blob ; `generated_at` s’il existe', 'les données chargées d’ailleurs (Supabase : P4)'],
   ['P3', 'Couches déclarées par les pages servies', 'prod', 'clés de `const LAYERS = {…}` ; bouton `id="b-<clé>"` hors commentaires HTML, au besoin par rapprochement de nom (tirets et soulignés ignorés)', 'l’écran : un bouton créé en JS ou masqué en CSS échappe — « présent » n’est pas « visible »'],
-  ['P4', 'Tables Supabase lues par les pages servies', 'Supabase — hôte et clé lus dans les pages servies', 'tables nommées littéralement dans `sbGet(…)`, `.from(…)` ou une URL `/rest/v1/<table>` ; lignes visibles avec la clé anon servie (HEAD, aucun corps)', 'ce qu’un visiteur ne voit pas : 0 visible ne prouve pas une table vide ; une requête qui ne passe par aucune de ces trois formes'],
+  ['P4', 'Tables Supabase citées par les pages servies', 'Supabase — hôte et clé lus dans les pages servies', 'tables nommées littéralement dans `sbGet(…)`, `.from(…)` ou une URL `/rest/v1/<table>`, hors commentaires HTML ; usage — lecture ou écriture — lu sur l’appel, ou dans la définition de l’utilitaire appelé ; lignes visibles avec la clé anon servie (HEAD, aucun corps)', 'ce qu’un visiteur ne voit pas : 0 visible ne prouve pas une table vide ; si une écriture est atteignable (un formulaire commenté écrit encore sur le papier) ; une requête qui ne passe par aucune de ces trois formes'],
   ['P5', 'Identifiant de version servi', 'prod, en-têtes HTTP', 'ETag, Last-Modified et en-têtes `x-*` de la page d’accueil', '—'],
   ['R1', 'Dernier ADR pris', 'registre fourni par --registre', 'plus grand `### ADR-NNN` sur la réf distante suivie ; fraîcheur par `git ls-remote`', 'sans --registre, rien : sort INDISPONIBLE'],
 ];
@@ -467,39 +478,78 @@ async function collecterSupabase(pagesServies) {
     const jetons = [...new Set(s.match(/eyJ[\w-]{10,}\.[\w-]{10,}\.[\w-]{10,}/g) || [])];
     let cleAnon = null;
     for (const j of jetons) { const r = roleJeton(j); if (r === 'anon') cleAnon ??= j; else if (r) alertes.push(`jeton de rôle \`${r}\` présent dans la page servie \`${p}\` — non utilisé ici`); }
-    const noms = [...s.matchAll(/\bsbGet\(\s*['"`]([a-z0-9_]+)|\.from\(\s*['"`]([a-z0-9_]+)|\/rest\/v1\/([a-z0-9_]+)/g)].map((m) => m[1] || m[2] || m[3]);
+    // hors commentaires HTML (défaut g) ; l'usage se lit sur l'appel : `sbGet` lit, un `fetch` porteur
+    // d'une méthode d'écriture écrit, un `.from(…)` suivi de insert/update/upsert/delete écrit.
+    const zones = [...s.matchAll(/<!--[\s\S]*?-->/g)].map((m) => [m.index, m.index + m[0].length]);
+    const cites = []; let commentees = 0;
+    // Un utilitaire (sbGet, sbPost…) porte sa méthode dans SA définition, pas à l'appel : on la lit
+    // dans le corps de la fonction nommée, borné à la fonction suivante.
+    const methodeDe = (nom) => {
+      const d = s.match(new RegExp(String.raw`function\s+${nom.split('$').join('[$]')}\s*\(`));
+      if (!d) return undefined;
+      const fin = s.indexOf('function ', d.index + 9);
+      const corps = s.slice(d.index, fin > 0 ? Math.min(fin, d.index + 1500) : d.index + 1500);
+      return corps.match(/method\s*:\s*['"](POST|PATCH|PUT|DELETE)['"]/i)?.[1]?.toUpperCase() || null;
+    };
+    for (const m of s.matchAll(/\bsbGet\(\s*['"`]([a-z0-9_]+)|\.from\(\s*['"`]([a-z0-9_]+)|\/rest\/v1\/([a-z0-9_]+)/g)) {
+      if (zones.some(([a, b]) => a <= m.index && m.index < b)) { commentees++; continue; }
+      const fin = s.indexOf('fetch(', m.index + 1);
+      const suite = s.slice(m.index, fin > 0 ? Math.min(fin, m.index + 300) : m.index + 300);
+      let usage;
+      if (m[2]) { const w = suite.match(/\.(insert|update|upsert|delete)\s*\(/)?.[1]; usage = w ? `écriture (${w})` : 'lecture'; }
+      else {
+        const appele = m[1] ? 'sbGet' : s.slice(Math.max(0, m.index - 160), m.index).match(/([A-Za-z_$][\w$]*)\s*\(\s*(?:[A-Za-z_$][\w$.]*\s*\+\s*)?['"`][^'"`]*$/)?.[1];
+        const methode = !appele || appele === 'fetch'
+          ? suite.match(/method\s*:\s*['"](POST|PATCH|PUT|DELETE)['"]/i)?.[1]?.toUpperCase() || null
+          : methodeDe(appele);
+        usage = methode === undefined ? `indéterminé (\`${appele}\` non défini dans la page)` : methode ? `écriture (${methode})` : 'lecture';
+      }
+      cites.push({ t: m[1] || m[2] || m[3], usage });
+    }
+    const noms = cites.map((x) => x.t);
     // appel dont le premier argument n'est pas une chaîne littérale — la définition de sbGet exclue
     const dyn = (s.match(/(?<!function\s+)\bsbGet\(\s*(?!['"]|`[a-z0-9_]|\))/g) || []).length;
     for (const h of hotes) {
-      if (!parHote.has(h)) parHote.set(h, { cle: null, tables: new Map(), dyn: 0, pagesSansTable: [] });
-      const e = parHote.get(h); e.cle ??= cleAnon; e.dyn += dyn;
+      if (!parHote.has(h)) parHote.set(h, { cle: null, tables: new Map(), dyn: 0, pagesSansTable: [], commentees: 0 });
+      const e = parHote.get(h); e.cle ??= cleAnon; e.dyn += dyn; e.commentees += commentees;
       if (!noms.length) e.pagesSansTable.push(p);
-      for (const t of noms) { if (!e.tables.has(t)) e.tables.set(t, new Set()); e.tables.get(t).add(p); }
+      for (const { t, usage } of cites) {
+        if (!e.tables.has(t)) e.tables.set(t, { pages: new Set(), usages: new Set() });
+        e.tables.get(t).pages.add(p); e.tables.get(t).usages.add(usage);
+      }
     }
   }
   if (!parHote.size) { SOURCES.push(['Supabase', 'sans objet', 'aucune page servie ne cite d’hôte Supabase']); champ('P4', 'OK', 'aucune page servie ne cite d’hôte Supabase.'); return; }
-  const blocs = []; let incertain = alertes.length > 0; let joint = false;
+  const blocs = []; let incertain = alertes.length > 0; let joint = false; const douteux = [];
   for (const [h, e] of parHote) {
     if (!e.cle) { blocs.push(`**${h}** — aucune clé \`anon\` dans les pages qui le citent : comptes non demandés.`); incertain = true; continue; }
     const rows = await parLots([...e.tables.keys()].sort(), 4, async (t) => {
-      const r = await http(`${h}/rest/v1/${t}?select=*`, { method: 'HEAD', headers: { apikey: e.cle, Authorization: `Bearer ${e.cle}`, Prefer: 'count=exact' } });
+      const tete = () => http(`${h}/rest/v1/${t}?select=*`, { method: 'HEAD', headers: { apikey: e.cle, Authorization: `Bearer ${e.cle}`, Prefer: 'count=exact' } });
+      let r = await tete();
+      if (!r.status || r.status >= 500) { await attendre(2500); r = { ...(await tete()), essais: 2 }; }
       if (r.status) joint = true;
       const n = r.headers?.get?.('content-range')?.match(/\/(\d+)$/)?.[1];
       let vis;
-      if (r.status === 200 || r.status === 206) vis = n === undefined ? 'compte non renvoyé' : n === '0' ? '**0 visible** — ne prouve pas une table vide' : `**${n}**`;
+      if (r.status === 200 || r.status === 206) { if (n === undefined) douteux.push(t); vis = n === undefined ? '**compte non renvoyé**' : n === '0' ? '**0 visible** — ne prouve pas une table vide' : `**${n}**`; }
       else if (r.status === 401 || r.status === 403) vis = `**non lisible par un visiteur** (HTTP ${r.status})`;
       else if (r.status === 404) vis = '**absente de l’API** (HTTP 404)';
-      else vis = r.status ? `HTTP ${r.status}` : `injoignable (${r.erreur})`;
-      return `| \`${t}\` | ${[...e.tables.get(t)].map((x) => `\`${x}\``).join(', ')} | ${vis} |`;
+      else { vis = `**compte non obtenu** (${echec(r)})`; douteux.push(t); }
+      const c = e.tables.get(t);
+      return `| \`${t}\` | ${[...c.pages].map((x) => `\`${x}\``).join(', ')} | ${[...c.usages].sort().join(' + ')} | ${vis} |`;
     });
-    blocs.push(`**${h}**\n\n| table | citée par | lignes visibles avec la clé anon servie |\n|---|---|---|\n${rows.join('\n')}`
+    blocs.push(`**${h}**\n\n| table | citée par | usage dans la page | lignes visibles avec la clé anon servie |\n|---|---|---|---|\n${rows.join('\n')}`
+      + '\n\nPour une table où la page ne fait qu’écrire, un refus de lecture ne dit rien d’un affichage : la page ne l’affiche pas.'
+      + (e.commentees ? `\n\nCitations dans des commentaires HTML, écartées : ${e.commentees}.` : '')
       + `\n\nAppels \`sbGet(…)\` dont la table n’est pas une chaîne littérale : ${e.dyn}${e.dyn ? ' — leurs tables échappent à cette liste' : ''}.`
       + (e.pagesSansTable.length ? `\n\nPages citant l’hôte sans table nommée : ${e.pagesSansTable.map((x) => `\`${x}\``).join(', ')}.` : ''));
   }
   if (alertes.length) blocs.push(`**⚠ ${alertes.join(' ; ')}.**`);
   SOURCES.push(['Supabase', joint ? 'joignable' : 'ÉCHEC', `hôte(s) lu(s) dans les pages servies : ${[...parHote.keys()].join(', ')} · clé : celle servie aux visiteurs (rôle anon), jamais imprimée`]);
   if (!joint) indispo('P4', 'Supabase injoignable (voir Sources)');
-  else champ('P4', incertain ? 'INCERTAIN' : 'OK', blocs.join('\n\n'), { requete: 'HEAD <hôte>/rest/v1/<table>?select=* avec Prefer: count=exact — aucun corps transféré', raison: incertain ? (alertes.length ? 'jeton non anon présent dans une page servie' : 'un hôte sans clé anon') : null });
+  else {
+    const raisons = [alertes.length && 'jeton non anon présent dans une page servie', incertain && !alertes.length && 'un hôte sans clé anon', douteux.length && `compte non obtenu pour ${douteux.join(', ')}, même après un second essai`].filter(Boolean);
+    champ('P4', raisons.length ? 'INCERTAIN' : 'OK', blocs.join('\n\n'), { requete: 'HEAD <hôte>/rest/v1/<table>?select=* avec Prefer: count=exact — aucun corps transféré ; second essai sur échec réseau ou 5xx', raison: raisons.join(' ; ') || null });
+  }
 }
 
 // ─── registre ADR ─────────────────────────────────────────────────────────────────────────
