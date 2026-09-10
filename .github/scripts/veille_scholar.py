@@ -39,6 +39,11 @@ Variables d'env optionnelles :
     RUN_INTEGRATION       — si "1", exécute l'étape d'intégration corpus
                             (défaut "0" ; cron ne déclenche jamais l'intégration)
     DRY_RUN               — si "1", n'écrit rien dans le dépôt cible (debug)
+    CORPS_MAX_CARACTERES  — longueur maximale d'un corps d'alerte, après extraction
+                            du texte (défaut : 8000) ; au-delà, le corps est tronqué
+                            et la coupe est écrite dans le corps
+    BUDGET_TOKENS_ENTREE  — plafond de l'entrée envoyée au modèle, compté par l'API
+                            avant l'envoi (défaut : 150000, pour 200 000 de contexte)
 """
 
 from __future__ import annotations
@@ -52,8 +57,11 @@ import subprocess
 import sys
 from email import message_from_bytes
 from email.policy import default as email_default_policy
+from email.utils import parsedate_to_datetime
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 import anthropic
 import requests
@@ -86,6 +94,30 @@ INTEGRATION_PROMPT_PATH = os.environ.get(
 PRIVATE_REPO = os.environ.get("PRIVATE_REPO", "")
 ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5")
 LOOKBACK_DAYS = int(os.environ.get("LOOKBACK_DAYS", "7"))
+# Bornes du corpus envoyé au modèle (2026-09-10). Jusque-là, le script concaténait le
+# corps entier de chaque alerte, sans borne. C'était juste tant qu'arrivaient 5 à 8
+# alertes par semaine (58 k à 117 k caractères). C'est devenu faux quand le volume a
+# changé : 47 puis 48 alertes, 1,05 M puis 1,17 M caractères, et « prompt is too long »
+# (439 250 puis 496 893 tokens pour 200 000) les 31/08 et 07/09. Le script n'avait pas
+# changé ; le monde autour de lui, si. Deux bornes, et chacune se déclare dans la
+# synthèse et dans l'issue de notification :
+#   - CORPS_MAX_CARACTERES : longueur maximale d'un corps, APRÈS extraction du texte ;
+#   - BUDGET_TOKENS_ENTREE : plafond de l'entrée complète, compté par l'API elle-même
+#     (messages.count_tokens) avant l'envoi, pas estimé.
+CORPS_MAX_CARACTERES = int(os.environ.get("CORPS_MAX_CARACTERES", "8000"))
+BUDGET_TOKENS_ENTREE = int(os.environ.get("BUDGET_TOKENS_ENTREE", "150000"))
+# Repli si le comptage par l'API échoue : le pire rapport mesuré, arrondi vers le
+# prudent — 2,36 sur le HTML brut du 07/09 (1 174 133 caractères pour 496 893 tokens),
+# 2,38 sur le texte extrait du dry run du 10/09 (353 659 pour 148 766). Appliqué aux
+# OCTETS UTF-8 et non aux caractères : sur ce texte presque ASCII c'est la même chose,
+# et une écriture idéographique (3 octets, environ 1 token) n'est pas sous-estimée.
+OCTETS_PAR_TOKEN_PIRE_CAS = 2.3
+# En dessous de cette borne, on n'ampute plus les corps : on écarte les alertes les
+# plus anciennes, en les nommant.
+BORNE_PLANCHER = 500
+# Plafond de sortie de la synthèse. BUDGET_TOKENS_ENTREE + MAX_TOKENS_SORTIE doit rester
+# sous la fenêtre de contexte du modèle (200 000).
+MAX_TOKENS_SORTIE = 8192
 # Garde-fou cron : OUTPUT_DIR pointe sur la file inbox par défaut. Le commit
 # direct dans le corpus est interdit en cron — l'intégration au corpus est un
 # processus séparé, mensuel, gaté par scripts/verify_citation.py.
@@ -138,14 +170,112 @@ def build_gmail_credentials() -> Credentials:
     return creds
 
 
+def _cible_de_lien(href: str | None) -> str | None:
+    """Cible réelle d'un lien d'alerte, ou None pour un lien sans information d'article.
+    Scholar enveloppe ses liens d'article dans une redirection (…/scholar_url?url=<cible>&…) :
+    on garde <cible>, plus courte et plus utile à citer que la redirection."""
+    if not href or href.startswith(("mailto:", "#")):
+        return None
+    u = urlparse(href)
+    if u.netloc.startswith("scholar.google."):
+        if u.path == "/scholar_url":
+            return parse_qs(u.query).get("url", [href])[0]
+        # Les autres liens Scholar sont des actions (enregistrer, partager, gérer
+        # l'alerte), sans texte ni information d'article. Sur les 51 alertes réelles
+        # gardées au dépôt privé, ils faisaient les deux tiers du corps extrait (revue
+        # adversariale du 2026-09-10).
+        return None
+    return href
+
+
+_REDIRECTION_SCHOLAR = re.compile(r"https?://scholar\.google\.[a-z.]+/scholar_url\?[^\s<>\"')\]]+")
+
+
+def _derouler_liens_scholar(texte: str) -> str:
+    """Remplace, dans un texte, chaque redirection Scholar par sa cible."""
+    return _REDIRECTION_SCHOLAR.sub(lambda m: _cible_de_lien(m.group(0)) or m.group(0), texte)
+
+
+class _TexteDeHtml(HTMLParser):
+    """Texte lisible d'un corps HTML : le texte, plus la cible de chaque lien d'article.
+    Styles et scripts écartés."""
+
+    # Ni `head` ni `title` : leur balise de fin est facultative en HTML5 et HTMLParser n'en
+    # infère aucune — un `</head>` omis aurait vidé tout le corps (revue du 2026-09-10).
+    _IGNORES = {"style", "script"}
+    _BLOCS = {"br", "p", "div", "tr", "li", "table", "h1", "h2", "h3", "h4", "h5", "h6"}
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._morceaux: list[str] = []
+        self._ignore = 0
+        self._liens: list[str | None] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in self._IGNORES:
+            self._ignore += 1
+        elif tag == "a":
+            self._liens.append(dict(attrs).get("href"))
+        elif tag in self._BLOCS:
+            self._morceaux.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in self._IGNORES:
+            self._ignore = max(0, self._ignore - 1)
+        elif tag == "a" and self._liens:
+            cible = _cible_de_lien(self._liens.pop())
+            if cible and not self._ignore:
+                self._morceaux.append(f" <{cible}>")
+        elif tag in self._BLOCS:
+            self._morceaux.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if not self._ignore:
+            self._morceaux.append(data)
+
+    def texte(self) -> str:
+        lignes = (re.sub(r"[ \t\xa0 ]+", " ", ligne).strip() for ligne in "".join(self._morceaux).splitlines())
+        return "\n".join(ligne for ligne in lignes if ligne)
+
+
+def texte_de_html(html_brut: str) -> str:
+    """Texte d'un corps HTML. Si l'extraction échoue, ou si elle ne rend rien d'un HTML
+    qui n'est pas vide, le HTML est rendu tel quel, et le journal le dit : il sera borné
+    plus loin comme tout corps. Un corps vidé en silence serait une coupe silencieuse."""
+    p = _TexteDeHtml()
+    try:
+        p.feed(html_brut)
+        p.close()
+    except Exception as e:  # noqa: BLE001 — un corps illisible ne doit pas tuer le run
+        print(f"[texte] WARN — extraction HTML échouée ({type(e).__name__}) ; corps gardé brut, borné plus loin")
+        return html_brut
+    texte = p.texte()
+    if not texte and html_brut.strip():
+        print("[texte] WARN — extraction HTML vide ; corps gardé brut, borné plus loin")
+        return html_brut
+    return texte
+
+
 def fetch_scholar_emails(service: Any, lookback_days: int) -> list[dict[str, str]]:
     """Récupère les emails Scholar Alerts des N derniers jours."""
     after_date = (dt.date.today() - dt.timedelta(days=lookback_days)).strftime("%Y/%m/%d")
     query = f"from:{SCHOLAR_FROM} after:{after_date}"
     print(f"[gmail] Requête : {query}")
 
-    resp = service.users().messages().list(userId="me", q=query, maxResults=200).execute()
-    messages = resp.get("messages", [])
+    # Toutes les pages. Jusqu'au 2026-09-10, seule la première était lue (200 messages
+    # au plus) et le surplus disparaissait sans un mot. Le volume est désormais borné
+    # plus loin, à l'entrée du modèle, où chaque coupe se déclare.
+    messages: list[dict[str, Any]] = []
+    page: str | None = None
+    while True:
+        params: dict[str, Any] = {"userId": "me", "q": query, "maxResults": 200}
+        if page:
+            params["pageToken"] = page
+        resp = service.users().messages().list(**params).execute()
+        messages.extend(resp.get("messages", []))
+        page = resp.get("nextPageToken")
+        if not page:
+            break
     print(f"[gmail] {len(messages)} message(s) trouvé(s)")
 
     out: list[dict[str, str]] = []
@@ -162,21 +292,26 @@ def fetch_scholar_emails(service: Any, lookback_days: int) -> list[dict[str, str
         subject = parsed.get("Subject", "(sans sujet)")
         date_hdr = parsed.get("Date", "")
 
-        # Préfère le contenu text/plain, sinon text/html dépouillé
+        # Préfère le contenu text/plain, sinon le texte extrait du text/html. Jusqu'au
+        # 2026-09-10, ce commentaire annonçait déjà un HTML « dépouillé », mais le code
+        # l'envoyait brut, styles compris. Les redirections Scholar sont déroulées
+        # dans les deux cas : elles gonflent un corps sans rien lui apporter.
         body = ""
         if parsed.is_multipart():
             for part in parsed.walk():
-                ctype = part.get_content_type()
-                if ctype == "text/plain":
+                if part.get_content_type() == "text/plain":
                     body = part.get_content()
                     break
             if not body:
                 for part in parsed.walk():
                     if part.get_content_type() == "text/html":
-                        body = part.get_content()
+                        body = texte_de_html(part.get_content())
                         break
         else:
             body = parsed.get_content()
+            if parsed.get_content_type() == "text/html":
+                body = texte_de_html(body)
+        body = _derouler_liens_scholar(body)
 
         out.append({"subject": subject, "date": date_hdr, "body": body})
 
@@ -205,32 +340,155 @@ def fetch_prompt_from_private_repo(path: str = PROMPT_PATH) -> str:
     return r.text
 
 
-def call_anthropic(prompt: str, emails: list[dict[str, str]]) -> str:
-    """Appelle l'API Anthropic pour synthétiser les emails selon le prompt."""
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-
-    emails_md = "\n\n---\n\n".join(
-        f"## Email {i + 1}\n\n"
-        f"**Sujet** : {e['subject']}\n"
-        f"**Date** : {e['date']}\n\n"
-        f"{e['body']}"
-        for i, e in enumerate(emails)
-    )
-
-    user_message = (
+def construire_corpus(prompt: str, emails: list[dict[str, str]], borne: int) -> tuple[str, int]:
+    """Message complet, chaque corps borné à `borne` caractères ; la coupe est écrite
+    dans le corps lui-même. Rend (message, nombre de corps tronqués)."""
+    tronques = 0
+    blocs = []
+    for i, e in enumerate(emails):
+        corps = e["body"]
+        if len(corps) > borne:
+            corps = corps[:borne] + f"\n\n[… corps tronqué : {borne} caractères gardés sur {len(e['body'])}]"
+            tronques += 1
+        blocs.append(f"## Email {i + 1}\n\n**Sujet** : {e['subject']}\n**Date** : {e['date']}\n\n{corps}")
+    message = (
         f"{prompt}\n\n"
         f"---\n\n"
         f"# Corpus à synthétiser ({len(emails)} emails Scholar Alerts)\n\n"
-        f"{emails_md}"
+        + "\n\n---\n\n".join(blocs)
     )
+    return message, tronques
 
-    print(f"[anthropic] Modèle {ANTHROPIC_MODEL}, {len(user_message)} caractères en input")
+
+def compter_tokens(client: Any, message: str) -> tuple[int, bool]:
+    """Tokens de l'entrée : (n, True) s'ils sont comptés par l'API (messages.count_tokens),
+    (estimation prudente, False) si le comptage échoue — voir OCTETS_PAR_TOKEN_PIRE_CAS."""
+    try:
+        r = client.messages.count_tokens(model=ANTHROPIC_MODEL, messages=[{"role": "user", "content": message}])
+        return int(r.input_tokens), True
+    except Exception as e:  # noqa: BLE001 — le comptage est un garde, pas une étape critique
+        estime = int(len(message.encode("utf-8")) / OCTETS_PAR_TOKEN_PIRE_CAS) + 1
+        print(f"[anthropic] WARN — count_tokens indisponible ({str(e)[:200]}) ; estimation prudente : {estime} tokens")
+        return estime, False
+
+
+def _horodatage(e: dict[str, str]) -> float:
+    """Horodatage d'une alerte d'après son en-tête Date ; illisible, elle compte comme
+    la plus ancienne."""
+    try:
+        return parsedate_to_datetime(e["date"]).timestamp()
+    except (TypeError, ValueError, IndexError, OverflowError):
+        return float("-inf")
+
+
+def ajuster_au_budget(client: Any, prompt: str, emails: list[dict[str, str]]) -> tuple[str, dict[str, Any]]:
+    """Construit un message qui tient dans BUDGET_TOKENS_ENTREE.
+
+    1. Chaque corps est borné à CORPS_MAX_CARACTERES.
+    2. Si l'entrée dépasse encore le budget, la borne est divisée par deux, jusqu'à
+       BORNE_PLANCHER caractères : on garde toutes les alertes, moins profondément.
+    3. Au-delà, les alertes les plus anciennes sont écartées, d'après leur en-tête Date
+       (une date illisible compte comme la plus ancienne) : d'abord en proportion de
+       l'excès, puis au moins une par tour.
+    Tout ce qui est coupé ou écarté est compté et rendu : rien ne disparaît en silence.
+    Une réduction décidée sur l'estimation de repli (comptage de l'API en échec) est
+    comptée à part : l'estimation est prudente, la coupe a pu être plus forte que
+    nécessaire, et le bilan le dit.
+    """
+    # Du plus récent au plus ancien. L'ordre de Gmail n'est pas garanti, on ne s'y fie
+    # pas ; le tri est stable.
+    retenus = sorted(emails, key=_horodatage, reverse=True)
+    ecartes: list[dict[str, str]] = []
+    borne = max(CORPS_MAX_CARACTERES, BORNE_PLANCHER)
+    sur_estimation = 0  # réductions décidées alors que l'API ne comptait pas
+    while True:
+        message, tronques = construire_corpus(prompt, retenus, borne)
+        n, par_api = compter_tokens(client, message)
+        if n <= BUDGET_TOKENS_ENTREE:
+            methode = ("comptés par l'API" if par_api else
+                       f"estimés à {OCTETS_PAR_TOKEN_PIRE_CAS} octets par token, le comptage de l'API ayant échoué")
+            return message, {"tokens": n, "methode": methode, "borne": borne, "tronques": tronques,
+                             "retenus": len(retenus), "ecartes": ecartes, "sur_estimation": sur_estimation}
+        if not par_api:
+            sur_estimation += 1
+        if borne > BORNE_PLANCHER:
+            borne = max(BORNE_PLANCHER, borne // 2)
+            continue
+        if len(retenus) <= 1:
+            fail(f"Même une seule alerte bornée à {borne} caractères dépasse le budget "
+                 f"({n} > {BUDGET_TOKENS_ENTREE} tokens) : le prompt seul est-il trop long ?")
+        garder = max(1, min(len(retenus) - 1, int(len(retenus) * BUDGET_TOKENS_ENTREE / n)))
+        ecartes = retenus[garder:] + ecartes
+        retenus = retenus[:garder]
+
+
+def decrire_bilan(bilan: dict[str, Any], n_recus: int) -> str:
+    """Une ligne, en nombres seulement : ce que le modèle a réellement reçu.
+
+    Cette ligne part dans le journal du workflow, qui est PUBLIC (dépôt public) : elle
+    ne contient aucun sujet d'alerte. Les sujets écartés sont nommés par pied_ecartes,
+    qui ne va que dans le dépôt privé."""
+    morceaux = [f"{n_recus} reçus", f"{bilan['retenus']} retenus"]
+    if bilan["tronques"]:
+        morceaux.append(f"{bilan['tronques']} corps tronqués à {bilan['borne']} caractères")
+    if bilan["ecartes"]:
+        morceaux.append(f"{len(bilan['ecartes'])} écartés faute de place, les plus anciens "
+                        f"(liste en fin de synthèse)")
+    if bilan["sur_estimation"]:
+        morceaux.append(f"{bilan['sur_estimation']} réduction(s) décidée(s) sur estimation, le comptage de "
+                        f"l'API ayant échoué : la coupe a pu être plus forte que nécessaire")
+    morceaux.append(f"entrée de {bilan['tokens']} tokens, {bilan['methode']}")
+    if bilan.get("arret") not in (None, "end_turn"):
+        morceaux.append(f"SYNTHÈSE INTERROMPUE (stop_reason={bilan['arret']}, "
+                        f"{bilan.get('tokens_sortie')} tokens de sortie) : elle s'arrête en cours de texte")
+    return " · ".join(morceaux)
+
+
+def pied_ecartes(bilan: dict[str, Any]) -> str:
+    """Section de fin de synthèse qui nomme chaque alerte écartée ; vide sinon. Elle ne va
+    que dans le dépôt privé : l'aperçu de DRY_RUN n'imprime que l'en-tête."""
+    if not bilan["ecartes"]:
+        return ""
+    lignes = "\n".join(f"- {e['date']} — {e['subject']}" for e in bilan["ecartes"])
+    cause = (f"le budget d'entrée ({BUDGET_TOKENS_ENTREE} tokens) était atteint"
+             + (", selon une estimation prudente (comptage de l'API en échec) qui a pu exagérer"
+                if bilan["sur_estimation"] else ""))
+    return (f"\n\n---\n\n## Alertes écartées faute de place ({len(bilan['ecartes'])})\n\n"
+            f"Le modèle ne les a pas lues : {cause}.\n\n{lignes}\n")
+
+
+def pied_interruption(bilan: dict[str, Any]) -> str:
+    """Avertissement de fin de synthèse si le modèle s'est arrêté avant la fin ; vide sinon."""
+    if bilan.get("arret") in (None, "end_turn"):
+        return ""
+    return (f"\n\n---\n\n**⚠ Synthèse interrompue** (`stop_reason` = `{bilan['arret']}`, "
+            f"{bilan.get('tokens_sortie')} tokens de sortie sur {MAX_TOKENS_SORTIE}) : "
+            f"le texte ci-dessus s'arrête en cours de route.\n")
+
+
+def call_anthropic(prompt: str, emails: list[dict[str, str]]) -> tuple[str, dict[str, Any]]:
+    """Synthétise les alertes, l'entrée bornée par ajuster_au_budget.
+    Rend (texte, bilan) : le bilan dit ce qui a été tronqué ou écarté."""
+    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    user_message, bilan = ajuster_au_budget(client, prompt, emails)
+    print(f"[anthropic] Modèle {ANTHROPIC_MODEL}, {len(user_message)} caractères en input · "
+          f"{decrire_bilan(bilan, len(emails))}")
     msg = client.messages.create(
         model=ANTHROPIC_MODEL,
-        max_tokens=8192,
+        max_tokens=MAX_TOKENS_SORTIE,
         messages=[{"role": "user", "content": user_message}],
     )
-    return "".join(block.text for block in msg.content if block.type == "text")
+    # Une sortie coupée se déclare comme une entrée coupée (2026-09-10). Jusque-là,
+    # stop_reason n'était jamais lu : une synthèse arrêtée à max_tokens au milieu d'une
+    # phrase était commitée comme complète.
+    bilan["arret"] = msg.stop_reason
+    bilan["tokens_sortie"] = msg.usage.output_tokens
+    if msg.stop_reason != "end_turn":
+        print(f"[anthropic] WARN — synthèse interrompue : stop_reason={msg.stop_reason}, "
+              f"{msg.usage.output_tokens} tokens de sortie sur {MAX_TOKENS_SORTIE}")
+    else:
+        print(f"[anthropic] Synthèse complète : {msg.usage.output_tokens} tokens de sortie sur {MAX_TOKENS_SORTIE}")
+    return "".join(block.text for block in msg.content if block.type == "text"), bilan
 
 
 def commit_synthesis(content: str, today: dt.date) -> None:
@@ -251,8 +509,11 @@ def commit_synthesis(content: str, today: dt.date) -> None:
 
     if DRY_RUN:
         print(f"[dry-run] PUT {url} ({len(content)} chars)")
-        print("--- Aperçu (300 premiers caractères) ---")
-        print(content[:300])
+        # L'en-tête seul, qui ne contient que des nombres : le journal est public. Jusqu'au
+        # 2026-09-10, les 300 premiers caractères partaient, et avec eux le début de la
+        # synthèse privée (113 caractères avant le correctif de troncature, 11 au dry run).
+        print("--- Aperçu (en-tête seul) ---")
+        print(content.split("\n---\n\n", 1)[0])
         return
 
     # Preflight GET pour recuperer le SHA si le fichier existe deja.
@@ -563,6 +824,7 @@ def notify_run_complete(
     integration_path: str | None,
     gate_failed: bool = False,
     gate_error_message: str = "",
+    bilan_texte: str = "",
 ) -> None:
     """Ouvre une issue dans le repo prive pour signaler la production du run.
 
@@ -625,7 +887,7 @@ def notify_run_complete(
         f"Run veille hebdomadaire terminé pour le **{today.isoformat()}**.\n\n"
         f"## Synthèse veille\n\n"
         f"- **Fenêtre** : {LOOKBACK_DAYS} jours\n"
-        f"- **Emails analysés** : {n_emails}\n"
+        f"- **Emails analysés** : {bilan_texte or n_emails}\n"
         f"- **Modèle** : `{ANTHROPIC_MODEL}`\n"
         f"- **Fichier** : `{synthesis_path}`\n"
         f"- **Lien** : {synthesis_url}\n"
@@ -666,17 +928,18 @@ def main() -> int:
 
     # Etape 1 — Synthese veille (etape critique, fail si KO)
     prompt = fetch_prompt_from_private_repo()
-    synthesis = call_anthropic(prompt, emails)
+    synthesis, bilan = call_anthropic(prompt, emails)
+    bilan_ligne = decrire_bilan(bilan, len(emails))
 
     synthesis_header = (
         f"# Synthèse veille Scholar — {today.isoformat()}\n\n"
         f"**Modèle** : {ANTHROPIC_MODEL}\n"
         f"**Fenêtre** : {LOOKBACK_DAYS} jours\n"
-        f"**Emails analysés** : {len(emails)}\n"
+        f"**Emails analysés** : {bilan_ligne}\n"
         f"**Prompt source** : `{PROMPT_PATH}`\n\n"
         f"---\n\n"
     )
-    synthesis_full = synthesis_header + synthesis
+    synthesis_full = synthesis_header + synthesis + pied_interruption(bilan) + pied_ecartes(bilan)
     commit_synthesis(synthesis_full, today)
     synthesis_path = f"{OUTPUT_DIR}/synthese_{today.isoformat()}.md"
 
@@ -699,6 +962,7 @@ def main() -> int:
                 notify_run_complete(
                     today, len(emails), synthesis_path, None,
                     gate_failed=True, gate_error_message=str(e),
+                    bilan_texte=bilan_ligne,
                 )
             except Exception as notify_exc:
                 print(f"[notify] WARN — notification gate-fail échouée : {notify_exc}")
@@ -708,7 +972,7 @@ def main() -> int:
               "le cron ne fait que collecter ; l'intégration est manuelle et gatée.")
 
     # Etape 3 — Notification issue (best-effort, lie synthese + integration)
-    notify_run_complete(today, len(emails), synthesis_path, integration_path)
+    notify_run_complete(today, len(emails), synthesis_path, integration_path, bilan_texte=bilan_ligne)
 
     print("[done]")
     return 0
