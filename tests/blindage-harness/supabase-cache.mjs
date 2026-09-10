@@ -208,8 +208,10 @@ export async function installSupabaseCache(context, opts = {}) {
   // résumé du job.
   //
   // Ce correctif protège contre CE module. Le remède structurel — sortir le JSON de
-  // stdout — a été fait le même jour par #1371 : contrast-panels.mjs écrit désormais
-  // le rapport dans un fichier.
+  // stdout — a été fait le même jour pour contrast-panels, par #1371 : contrast-panels.mjs
+  // écrit désormais le rapport dans un fichier. Mais eval-app-rubric.mjs, qui importe
+  // aussi ce module, écrit toujours son JSON sur stdout (eval-app-rubric.yml,
+  // `> eval-result.json`) : tout console.log d'un import y romprait le contrat.
   if (disabled) {
     console.error(`${label}[supabase-cache] désactivé (TELLUX_HARNESS_CACHE=off) — réseau réel pour toutes les requêtes.`);
     return { disabled: true, cacheDir, ttlMs };

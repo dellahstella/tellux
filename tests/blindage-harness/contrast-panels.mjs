@@ -54,7 +54,8 @@
 //
 // SORTIE : JSON écrit dans le fichier désigné par CONTRAST_OUT (défaut :
 // contrast-result.json) — plus sur stdout depuis le 2026-09-09 (#1371).
-// Exit 0 si aucune violation, 2 sinon.
+// Exit 0 si resume.depassements est vide, 2 sinon — y compris sans violation de
+// contraste (planchers, surfaces requises, balayage) ; 1 si le script échoue.
 //
 // USAGE :
 //   cd tests/blindage-harness
@@ -1000,8 +1001,8 @@ async function main() {
 // fichier commençait par elles, et `jq` échouait (« parse error: Invalid numeric
 // literal at line 1, column 17 »). Cela ne changeait pas la couleur du check — le
 // workflow capture le code de sortie de ce script avant tout `jq` — ni ce que le
-// rouge disait : même propre, il n'affichait pas les dépassements qui le
-// causaient. Le JSON restait intact derrière la pollution ; `jq` ne pouvait plus
+// rouge disait de sa cause : même propre, il n'affichait pas les dépassements
+// qui le causaient. Le JSON restait intact derrière la pollution ; `jq` ne pouvait plus
 // le lire. La première version de ce commentaire disait que le check « tombait
 // AVANT toute mesure » : c'est faux.
 // Le commentaire du workflow signalait déjà que ces lignes partaient sur stdout et

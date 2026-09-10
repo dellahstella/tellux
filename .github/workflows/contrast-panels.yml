@@ -140,7 +140,8 @@ on:
     # n'a fait rougir aucun run : l'étape tourne sous `set +e` et capture le code de
     # sortie du script avant tout `jq` (version 1c18f51, l.204, 206 et 242). Le rouge
     # du même jour venait du plancher de `#conditions-bar` après #1363 (corrigé par
-    # #1372) : 17 runs en exit 2, dont 4 aux rapports propres, et un run vert pollué.
+    # #1372) : 17 runs en exit 2, dont 4 aux rapports propres ; le même jour, quatre
+    # runs verts portaient la pollution.
     # La première version de ce commentaire (#1374), reprise de celui que #1370 avait
     # posé ici, imputait ce rouge au cache : c'est faux.
     # Le check ne surveillait pas une de ses propres dépendances : une modification
@@ -288,7 +289,8 @@ jobs:
           EXIT=$?
           # Le rapport est-il seulement lisible ? Sans ce garde, un JSON invalide ne
           # changeait pas la couleur : jq échouait sept fois (huit sur un rouge) et le
-          # résumé sortait aux valeurs vides, à côté du vrai code de sortie. Désormais,
+          # résumé sortait aux valeurs vides, sous un titre ✅/❌ fidèle au vrai code de
+          # sortie. Désormais,
           # un rapport illisible fait échouer l'étape avec son propre message, qui donne
           # le code de sortie du script : il ne peut plus accompagner un vert.
           if ! jq -e . contrast-result.json >/dev/null 2>&1; then
