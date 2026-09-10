@@ -18,12 +18,24 @@
 // Contre le code d'avant le lot, S0 et, par clé, S2, S3 et S8 (sols, sites, mesures certifiées), C1,
 // C2, T2 et T4 DOIVENT échouer.
 //
+// SUITE DU LOT (2026-09-10, même harnais) — la queue du Brief 2 et quatre défauts relevés au lot contexte
+//   · E : saveContrib() et capSubmitMeasurement() ÉCRIVENT ; une reprise automatique doublerait
+//     l'écriture. Jamais inscrites, et leur motif est écrit au site (marqueur « HORS REPRISE »).
+//   · F : preloadEMAG2() et startContrib(), sans appelant, sont retirées — avec emag2Loaded, qui n'avait
+//     que preloadEMAG2() pour écrivain.
+//   · La bascule « Mesures certifiées » ne dit plus « 0 fiches » pendant une panne.
+//   · Supabase à zéro ligne n'affiche plus « 0 antennes » : l'en-tête et le panneau disent
+//     l'indisponibilité, comme après une panne réseau, au lieu de laisser « chargement… » en place.
+// Contre le code d'avant cette suite, les contrôles E et F, C4, T3 (en-tête pendant la panne), T4
+// (affichage) et T6 DOIVENT échouer.
+//
 // CE QUI EST SIMULÉ, ET POURQUOI
 //   · fetch : les quatre fichiers statiques sont les VRAIS fichiers du dépôt (sols, sites, mesures
 //     certifiées, émetteurs TDF) ; Supabase `antennas_corse` rend quatre lignes fictives à trois
 //     positions distinctes. setTimeout : temps compressé.
 //   · Leaflet (marqueurs, groupes, carte) : des boîtes qui comptent ce qu'on y met. On teste ce qui est
-//     dessiné et combien de fois, pas le rendu.
+//     dessiné et combien de fois, pas le rendu. L'en-tête et le panneau : deux éléments dont on lit le
+//     texte. jt() rend sa clé devant le texte : on vérifie la clé, pas la phrase.
 //   · Sans effet sur la reprise, donc remplacés : l'audit des champs de sites_app.json, l'agrégation
 //     des fiches résidentielles (identité ici), la dispersion des marqueurs certifiés, les infobulles.
 // Le reste est EXTRAIT d'app.html — assistant, chargeurs, rendu des mesures certifiées, loadAnt,
@@ -42,6 +54,10 @@ const ICI = dirname(fileURLToPath(import.meta.url));
 const RACINE = join(ICI, '..', '..');
 const html = readFileSync(process.argv[2] || join(RACINE, 'app.html'), 'utf8');
 const js = [...html.matchAll(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]).join('\n');
+// Le code sans ses commentaires (même neutralisation que perimetre-reprise.mjs) : un commentaire qui
+// nomme une fonction retirée n'en est pas un appel.
+const code = js.replace(/\/\*[\s\S]*?\*\//g, (s) => s.replace(/[^\n]/g, ' ')).replace(/^([ \t]*)\/\/.*$/gm, (s, i) => i);
+const horsScripts = html.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<!--[\s\S]*?-->/g, '');
 const lire = (f) => readFileSync(join(RACINE, 'public', 'data', f), 'utf8');
 const FICHIERS = {
   sols: lire('soilgrids_grid_corse.json'),
@@ -69,6 +85,15 @@ function extraireDeclaration(nom) {
   if (!m) throw new Error('déclaration introuvable dans app.html : ' + nom);
   return m[0].trim();
 }
+// Le bloc de commentaires CONTIGU juste au-dessus d'une définition — là où vit un motif « au site ».
+function commentaireAuDessus(nom) {
+  const lignes = js.split('\n');
+  const i = lignes.findIndex((l) => new RegExp('^\\s*(?:async\\s+)?function\\s+' + nom + '\\s*\\(').test(l));
+  if (i < 0) return null;
+  const bloc = [];
+  for (let j = i - 1; j >= 0 && /^\s*\/\//.test(lignes[j]); j--) bloc.unshift(lignes[j]);
+  return bloc.join('\n');
+}
 const debut = js.indexOf('const REPRISE_CLASSES');
 const fin = js.indexOf('// Cached fetch wrapper');
 if (debut < 0 || fin < 0 || fin < debut) throw new Error('bloc assistant introuvable — marqueurs changés ?');
@@ -93,6 +118,7 @@ const LIGNES_ANFR = [
 ];
 N.antPositions = new Set(LIGNES_ANFR.map((l) => l.lat.toFixed(5) + ',' + l.lon.toFixed(5))).size;
 if (Object.values(N).some((n) => !(n > 0))) { console.error('TÉMOIN — un fichier de données est vide : ' + JSON.stringify(N)); process.exit(2); }
+const INDISPO = 'antennes indisponibles';
 
 // ─── S0 — câblage ────────────────────────────────────────────────────────────────────────────────
 console.log('S0 — câblage dans app.html');
@@ -112,11 +138,30 @@ const TOG_ANT = "if(id==='ant'&&lAnt.getLayers().length===0)loadAnt();";
 verifier("tog('ant') ne rappelle loadAnt() que sur une couche vide — condition simulée", js.includes(TOG_ANT));
 const TOG_CERT = /if\(id==='cert'\)\{[\s\S]{0,400}?loadMesuresCertifiees\(\)\.then\(function\(\)\{\s*_renderMesuresCertifiees\(\);/;
 verifier("tog('cert') charge puis rend, sans l’assistant — chemin simulé", TOG_CERT.test(js));
+verifier("tog('cert') annonce le résultat par annoncerMesuresCertifiees() — chemin simulé",
+  existeFonction('annoncerMesuresCertifiees') && /if\(id==='cert'\)\{[\s\S]{0,600}?annoncerMesuresCertifiees\(\)/.test(js));
 verifier('rendu des marqueurs TDF sorti de loadAnt() : dessinerMarqueursTDF() existe', existeFonction('dessinerMarqueursTDF'));
 verifier('loadAnt() délègue le rendu TDF, sans boucle propre', existeFonction('loadAnt')
   && extraireFonction('loadAnt').includes('dessinerMarqueursTDF()') && !extraireFonction('loadAnt').includes('TDF_EMITTERS.forEach'));
 verifier('repriseTDF() redessine les marqueurs', existeFonction('repriseTDF') && extraireFonction('repriseTDF').includes('dessinerMarqueursTDF()'));
 verifier('enrobage repriseMesuresCertifiees() présent', existeFonction('repriseMesuresCertifiees'));
+
+// ─── E — les deux écrivains restent hors reprise, et le disent au site ───────────────────────────
+console.log('\nE — saveContrib() et capSubmitMeasurement() : hors reprise, motif au site');
+for (const f of ['saveContrib', 'capSubmitMeasurement']) {
+  verifier(`${f}() existe`, existeFonction(f));
+  verifier(`${f}() n’est inscrite dans aucune reprise`, !new RegExp("enregistrerReprise\\(\\s*'[^']*'\\s*,\\s*" + f + '\\b').test(code));
+  const bloc = commentaireAuDessus(f) || '';
+  verifier(`${f}() : motif d’exclusion écrit au site (« HORS REPRISE »)`, bloc.includes('HORS REPRISE'), bloc ? `${bloc.split('\n').length} ligne(s) de commentaire` : 'aucun commentaire au-dessus');
+}
+
+// ─── F — les deux fonctions sans appelant sont sorties du dépôt ──────────────────────────────────
+console.log('\nF — preloadEMAG2() et startContrib() retirées');
+for (const f of ['preloadEMAG2', 'startContrib']) {
+  verifier(`${f} : ni définition ni appel dans le code`, !new RegExp('\\b' + f + '\\b').test(code));
+  verifier(`${f} : aucun gestionnaire HTML ne la nomme`, !new RegExp('\\b' + f + '\\b').test(horsScripts));
+}
+verifier('emag2Loaded retirée avec son seul écrivain', !/\bemag2Loaded\b/.test(code));
 
 const PREVUES = {
   sols: "enregistrerReprise('sols', loadSoilGridsGrid, {\n    classe: 'contexte',\n    verifie: () => Array.isArray(SOILGRIDS_CORSE) && SOILGRIDS_CORSE.length > 0\n  });",
@@ -175,12 +220,20 @@ const ctx = {
 const declarations = ['SOILGRIDS_CORSE', '_soilGridsPromise', 'POINTS_CHAUDS_RADIO', '_sitesAppPromise', 'SITES_REMARQUABLES',
   'THERMAL_SOURCES_CORSE', 'MESURES_CERTIFIEES', '_certLoadPromise', '_certRendered', 'ANFR_ONSHORE_COUNT', 'ANTENNES_LOCATIONS',
   '_antennasCorseRawRows', '_antennasCorseRawPromise', 'TDF_EMITTERS', '_tdfLoadPromise', 'RF_CALIB_STATS'].map(extraireDeclaration);
-const duLot = ['dessinerMarqueursTDF'].filter(existeFonction).map(extraireFonction);
+const duLot = ['dessinerMarqueursTDF', 'annoncerMesuresCertifiees'].filter(existeFonction).map(extraireFonction);
 const corps = [
   'const { window, document, fetch, setTimeout, clearTimeout, console, AbortSignal } = ctx;',
   "const SB_URL = 'https://stub.invalid'; function sbH(){ return {}; }",
   ...declarations,
   'const ACTIVE = { ant: true, cert: false };',
+  // Surfaces qui portent une valeur (suite du lot, 2026-09-10) : l'en-tête, le panneau « Statistiques du
+  // modèle », les messages. jt() rend sa CLÉ devant le texte, pour qu'on vérifie la clé et pas la phrase.
+  'const __elements = { "hdr-status": { textContent: "chargement…" }, "anfr-count": { textContent: "chargement…" } };',
+  'document.getElementById = (id) => __elements[id] || null;',
+  'let __statuts = [], __infos = [];',
+  'function jt(k, fr){ return "[" + k + "]" + fr; }',
+  'function setStatus(t){ __elements["hdr-status"].textContent = t; __statuts.push(t); }',
+  'function info(h, type){ __infos.push({ h: String(h), type }); }',
   // Leaflet : des boîtes qui comptent.
   'function __groupe(nom){ const g = { nom, _l: [], addLayer(x){ if (!g._l.includes(x)) g._l.push(x); return g; },',
   '  getLayers(){ return g._l.slice(); }, clearLayers(){ g._l = []; return g; }, addTo(m){ m.addLayer(g); return g; } }; return g; }',
@@ -189,7 +242,7 @@ const corps = [
   'const L = { divIcon(o){ return o; }, marker(ll, o){ return { ll, o, bindTooltip(){ return this; }, bindPopup(){ return this; },',
   '  on(){ return this; }, addTo(g){ g.addLayer(this); return this; } }; } };',
   "const GC = { default: '#000', infra: '#000', infraText: '#000' };",
-  'function mkIcon(){ return {}; } function _antTooltipHtml(){ return ""; } function setStatus(){} function syncAntCount(){} function info(){}',
+  'function mkIcon(){ return {}; } function _antTooltipHtml(){ return ""; } function syncAntCount(){}',
   'function auditChampsSitesApp(){ return []; } function _certAggregateResidentialCoords(m){ return m; }',
   'function _certOffsetPositions(ms){ return ms.map((m) => ({ lat: m.lat, lon: m.lon })); } function _certIconHtml(){ return ""; }',
   'function _certFormatPopup(){ return ""; } function _certOpenCross(){} const _certMarkerById = {};',
@@ -211,17 +264,22 @@ const corps = [
   '    THERMAL_SOURCES_CORSE = []; _sitesAppPromise = null; MESURES_CERTIFIEES = []; _certLoadPromise = null; _certRendered = false;',
   '    ANFR_ONSHORE_COUNT = null; ANTENNES_LOCATIONS = []; _antennasCorseRawRows = null; _antennasCorseRawPromise = null;',
   '    TDF_EMITTERS = []; _tdfLoadPromise = null; RF_CALIB_STATS = null; _reprises.clear();',
+  '    __elements["hdr-status"].textContent = "chargement…"; __elements["anfr-count"].textContent = "chargement…";',
+  '    __statuts = []; __infos = [];',
   '    [map, lAnt, lAntCluster, lTDFCluster, lCert].forEach((g) => g.clearLayers()); ACTIVE.ant = true; ACTIVE.cert = false; },',
   '  actif(o){ Object.assign(ACTIVE, o); },',
   // Chemins HORS assistant, recopiés d'app.html — S0 vérifie qu'ils n'y ont pas changé.
   '  bootAnt(){ return declenche("ant", "boot").then(function(){ if (ACTIVE.ant) lAnt.addTo(map); }); },',
   '  togAnt(){ if (lAnt.getLayers().length === 0) loadAnt(); },',
-  '  togCert(){ map.addLayer(lCert); ACTIVE.cert = true; return loadMesuresCertifiees().then(function(){ _renderMesuresCertifiees(); }); },',
+  '  togCert(){ map.addLayer(lCert); ACTIVE.cert = true; return loadMesuresCertifiees().then(function(){ _renderMesuresCertifiees();',
+  '    if (typeof annoncerMesuresCertifiees === "function") annoncerMesuresCertifiees(); }); },',
+  '  dernierMessage(){ return __infos.length ? __infos[__infos.length - 1] : null; },',
   '  taille(cle){ return ({ sols: SOILGRIDS_CORSE === null ? null : SOILGRIDS_CORSE.length,',
   '    sites: SITES_REMARQUABLES.length + "/" + POINTS_CHAUDS_RADIO.length, cert: MESURES_CERTIFIEES.length,',
   '    ant: lAntCluster.getLayers().length })[cle]; },',
   '  compte(){ return { antennes: lAntCluster.getLayers().length, tdf: lTDFCluster.getLayers().length, cert: lCert.getLayers().length,',
-  '    lieux: ANTENNES_LOCATIONS.length, onshore: ANFR_ONSHORE_COUNT, antSurCarte: map.hasLayer(lAnt), certSurCarte: map.hasLayer(lCert) }; } };',
+  '    lieux: ANTENNES_LOCATIONS.length, onshore: ANFR_ONSHORE_COUNT, antSurCarte: map.hasLayer(lAnt), certSurCarte: map.hasLayer(lCert),',
+  '    hdr: __elements["hdr-status"].textContent, anfr: __elements["anfr-count"].textContent, statuts: __statuts.slice() }; } };',
 ].join('\n');
 const api = new Function('ctx', corps)(ctx);
 
@@ -323,6 +381,22 @@ c = api.compte();
 console.log('\nC3 — nominal, puis la couche allumée : pas de second rendu');
 verifier(`${N.cert} marqueurs, pas le double`, c.cert === N.cert, `${c.cert}`);
 
+remettre({ cert: (n) => (n <= 2 ? 'reseau' : 'ok') });
+api.__inscrire('cert');
+await api.declenche('cert', 'boot');
+await api.togCert();
+let m = api.dernierMessage();
+console.log('\nC4 — le message de la bascule, pendant une panne puis en nominal');
+verifier('pendant la panne : il dit l’indisponibilité (clé cert_unavailable)', !!m && m.h.includes('[cert_unavailable]'), m ? m.h : 'aucun message');
+verifier('pendant la panne : il ne donne pas de compte (« 0 fiches »)', !!m && !m.h.includes('[cert_toast_prefix]'), m ? m.h : 'aucun message');
+await attendreTerminal(['cert']);
+remettre();
+api.__inscrire('cert');
+await api.declenche('cert', 'boot');
+await api.togCert();
+m = api.dernierMessage();
+verifier(`en nominal : il donne le compte (${N.cert} fiches)`, !!m && m.h.includes('[cert_toast_prefix]') && m.h.includes(String(N.cert)), m ? m.h : 'aucun message');
+
 // ─── T — antennes et marqueurs TDF, lancés ensemble comme au boot ────────────────────────────────
 async function boot(p) {
   remettre(p);
@@ -336,6 +410,7 @@ console.log('\nT1 — nominal : antennes et émetteurs TDF');
 verifier(`${N.antPositions} marqueurs d’antennes, ${N.antPositions} lieux pour « Mon lieu »`, t.antennes === N.antPositions && t.lieux === N.antPositions, `${t.antennes} / ${t.lieux}`);
 verifier(`${N.tdf} marqueurs TDF, pas le double`, t.tdf === N.tdf, `${t.tdf}`);
 verifier('la couche antennes est sur la carte', t.antSurCarte === true);
+verifier(`en-tête et panneau : « ${LIGNES_ANFR.length} antennes »`, t.hdr === `${LIGNES_ANFR.length} antennes` && t.anfr === `${LIGNES_ANFR.length} antennes`, `${t.hdr} / ${t.anfr}`);
 
 t = await boot({ tdf: (n) => (n === 1 ? 'reseau' : 'ok') });
 console.log('\nT2 — émetteurs TDF en échec au boot, puis ramenés par la reprise « tdf »');
@@ -348,12 +423,17 @@ verifier(`${N.antPositions} marqueurs d’antennes au retour`, t.antennes === N.
 verifier(`compte des antennes posé (${LIGNES_ANFR.length} lignes à terre)`, t.onshore === LIGNES_ANFR.length, `${t.onshore}`);
 verifier(`${N.tdf} marqueurs TDF, pas le double`, t.tdf === N.tdf, `${t.tdf}`);
 verifier('la couche antennes est sur la carte', t.antSurCarte === true);
+verifier(`pendant la panne, l’en-tête a dit « ${INDISPO} »`, t.statuts[0] === INDISPO, JSON.stringify(t.statuts));
+verifier(`au retour : « ${LIGNES_ANFR.length} antennes » dans l’en-tête et le panneau`, t.hdr === `${LIGNES_ANFR.length} antennes` && t.anfr === `${LIGNES_ANFR.length} antennes`, `${t.hdr} / ${t.anfr}`);
 
 t = await boot({ anfr: () => 'vide' });
 console.log('\nT4 — Supabase répond 200 avec zéro antenne : loadAnt() est rappelée par la reprise');
 verifier("jamais 'ok'", api.reprisesEtat('ant') !== 'ok', api.reprisesEtat('ant'));
 verifier(`${N.tdf} marqueurs TDF, pas un lot de plus à chaque rappel`, t.tdf === N.tdf, `${t.tdf}`);
 verifier('une seule requête Supabase — le vide est en cache, rien ne part en rafale', appels.anfr === 1, `${appels.anfr}`);
+verifier('aucun « 0 antennes » affiché — ni en-tête, ni panneau', !t.statuts.includes('0 antennes') && t.anfr !== '0 antennes', `${JSON.stringify(t.statuts)} / ${t.anfr}`);
+verifier('compte des antennes non posé : un zéro rendu par une réponse vide n’est pas un résultat', t.onshore === null, `${t.onshore}`);
+verifier(`en-tête et panneau disent « ${INDISPO} »`, t.hdr === INDISPO && t.anfr === INDISPO, `${t.hdr} / ${t.anfr}`);
 
 remettre({ anfr: () => 'reseau' });
 api.__inscrire('ant');
@@ -362,6 +442,11 @@ api.togAnt();
 await attendreTerminal(['ant']);
 console.log('\nT5 — le bouton, pendant la panne : il ne rappelle pas loadAnt(), la reprise le fait');
 verifier(`${TENTATIVES} requêtes Supabase, toutes de la reprise`, appels.anfr === TENTATIVES, `${appels.anfr}`);
+
+t = await boot({ anfr: () => 'reseau' });
+console.log('\nT6 — Supabase en panne permanente : ce que disent l’en-tête et le panneau');
+verifier("'abandoned'", api.reprisesEtat('ant') === 'abandoned', api.reprisesEtat('ant'));
+verifier(`« ${INDISPO} », pas « chargement… » laissé en place`, t.hdr === INDISPO && t.anfr === INDISPO, `${t.hdr} / ${t.anfr}`);
 
 console.log(`\n${echecs === 0 ? 'TOUT VERT' : echecs + ' ÉCHEC(S)'}${modeAvant.length ? '  (mode avant-lot)' : ''}`);
 process.exit(echecs === 0 ? 0 : 1);

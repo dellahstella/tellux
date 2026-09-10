@@ -5560,8 +5560,7 @@ function tog(id,cls,btn){
       // map.addLayer(LAYERS.cert) ci-dessus ; _renderMesuresCertifiees le peuple).
       loadMesuresCertifiees().then(function(){
         _renderMesuresCertifiees();
-        var nCert=(MESURES_CERTIFIEES||[]).length;
-        info(jt('cert_toast_prefix','Mesures certifiées — ')+nCert+jt('cert_toast_suffix',' fiches ANFR/EXEM (2002–2026).'),null,4000);
+        annoncerMesuresCertifiees();
       });
     }
     if(id==='contrib'){
@@ -5716,7 +5715,6 @@ function interpIDW(grid, lat, lon, n=4){
 // Résolution 2 arc-minutes (~3.7 km) · Source : Meyer, Saltus & Chulliat 2017
 // API : ArcGIS ImageServer identify · Remplace le LCS1 estimé quand disponible
 const EMAG2_CACHE={};
-let emag2Loaded=false;
 // _emag2ServiceDown (repro Soleil 2026-08-23 : message "indisponible à cette position"
 // figé en permanence, y compris en Corse, y compris après refresh à froid). Root cause
 // investiguée AVANT ce fix : le endpoint NOAA identify (même service que exportImage,
@@ -5745,27 +5743,12 @@ async function fetchEMAG2(lat,lon){
   }
   return null;
 }
-// Pré-charger une grille EMAG2v3 couvrant la Corse (step 0.1° ≈ 11km)
-async function preloadEMAG2(){
-  const pts=[];
-  for(let lat=41.3;lat<=43.1;lat+=0.1){
-    for(let lon=8.5;lon<=9.6;lon+=0.1){pts.push([lat,lon]);}
-  }
-  let loaded=0;
-  // Charger par lots de 4 pour ne pas saturer
-  for(let i=0;i<pts.length;i+=4){
-    const batch=pts.slice(i,i+4);
-    await Promise.all(batch.map(async([la,lo])=>{
-      const v=await fetchEMAG2(la,lo);
-      if(v!==null)loaded++;
-    }));
-  }
-  if(loaded>10){
-    emag2Loaded=true;
-    const st=document.getElementById('emag2-status');
-    if(st)st.textContent='EMAG2v3 '+loaded+'/'+pts.length+' pts';
-  }
-}
+// preloadEMAG2() retirée le 2026-09-10 (Brief 2 « reprise », point F). Elle pré-chargeait une grille
+// EMAG2v3 sur la Corse (pas de 0,1°, par lots de 4 requêtes NOAA) et n'était appelée nulle part : aucun
+// appel dans app.html depuis sa création sous ce nom (commit 3c15032, 2026-04-18), aucun ailleurs dans le
+// dépôt. Le détecteur de périmètre la comptait captive, sans qu'aucun chemin ne puisse l'atteindre.
+// Retirée avec emag2Loaded, qu'elle était seule à écrire et que personne ne lisait, et avec sa mention
+// de l'élément #emag2-status, absent du HTML. EMAG2_CACHE reste peuplé par fetchEMAG2(), au survol.
 
 function calcLCS1(lat,lon){
   // Anomalie crustale = grille LCS1 estimée (24 points, ~0,3° lat × 0,5° lon), interpolée IDW.
@@ -7614,7 +7597,9 @@ function loadEoliennesData() {
 }
 
 // ═══ Sites ponctuels unifiés — loader M2 (2026-05-13) ═══
-// Source unique : public/data/sites_app.json (61 sites, 3 types).
+// Source unique : public/data/sites_app.json, trois types (site_em, site_uth, source_thermale). Le compte
+// n'est pas écrit ici : le log de chargement ci-dessous le calcule depuis la donnée. (Le compte écrit ici
+// jusqu'au 2026-09-10 était faux.)
 // Remplace : points_chauds_radio_corse.json + docs/data/sites_em.json + THERMAL_SOURCES_CORSE hardcodé.
 let POINTS_CHAUDS_RADIO = [];
 let _sitesAppPromise = null;
@@ -10063,6 +10048,11 @@ async function loadAnt(){try{
       seenPos.add(posKey);
     }
   });
+  // Réponse vide, ou sans antenne à terre (2026-09-10, suite du lot contexte) : ce n'est pas un résultat.
+  // Avant, ce cas écrivait « 0 antennes » dans l'en-tête et le panneau, et un compte de 0 dans la légende :
+  // un zéro affiché comme mesure sur une réponse qui n'avait rien rendu. Traité désormais comme un échec :
+  // le catch de fin affiche l'indisponibilité, et le prédicat de la reprise 'ant' reste faux.
+  if(nOnshore===0) throw new Error('aucune antenne à terre dans la réponse ('+rows.length+' ligne(s))');
   console.log('Antennes : '+nOnshore+' onshore individuelles ('+seenPos.size+' positions distinctes, '+nOffshore+' offshore commune-null, '+nSeaFiltered+' hors bbox)');
   const hdr=document.getElementById('hdr-status');
   if(hdr)setStatus(nOnshore+' antennes',true);
@@ -10093,7 +10083,17 @@ async function loadAnt(){try{
   // (2026-09-10, lot contexte de la reprise).
   await loadTDFEmitters();
   dessinerMarqueursTDF();
-}catch(e){console.error('❌ loadAnt erreur:',e.message);}}
+}catch(e){
+  console.error('❌ loadAnt erreur:',e.message);
+  // Échec, réseau ou réponse sans antenne à terre (2026-09-10, suite du lot contexte) : l'en-tête et le
+  // panneau disent l'indisponibilité. Avant, « chargement… » restait en place pour la session : un état
+  // d'attente neutre qui masquait l'échec. Une reprise réussie les réécrit ensuite avec le compte. La
+  // légende garde « — » : ANFR_ONSHORE_COUNT reste null.
+  const hdr=document.getElementById('hdr-status');
+  if(hdr)setStatus('antennes indisponibles',true);
+  const anfrC=document.getElementById('anfr-count');
+  if(anfrC)anfrC.textContent='antennes indisponibles';
+}}
 
 // ═══ Marqueurs des émetteurs TDF — dessinerMarqueursTDF() ═══
 // Sortie de loadAnt() le 2026-09-10 (lot contexte de la reprise). Le rendu y vivait APRÈS les
@@ -10341,16 +10341,11 @@ async function loadDB(){
   }
 }
 
-function startContrib(){
-  document.getElementById('cform').style.display='block';
-  cformOverlayShow();
-  const _bcontrib=document.getElementById('b-contrib');
-  if(!ACTIVE.contrib){if(_bcontrib){tog('contrib','on-contrib',_bcontrib);}else{ACTIVE.contrib=true;map.addLayer(LAYERS.contrib);}}
-  // Initialiser l'etat du formulaire selon l'instrument selectionne par defaut
-  if(typeof onInstrumentChange==='function')onInstrumentChange();
-  info(jt('click_to_place_measurement', 'Cliquez sur la carte pour placer votre mesure.'),'warn');
-  _armContribClick();
-}
+// startContrib() retirée le 2026-09-10 (Brief 2 « reprise », point F) : aucun appel dans app.html depuis
+// sa création sous ce nom (commit 3c15032, 2026-04-18), aucun gestionnaire HTML, aucune autre page. Elle
+// ouvrait le formulaire tout de suite ; le flux de mesure passe par startContribFromFAB(), qui place le
+// point d'abord (2026-08-19, cf. son commentaire). Ses appelées gardent d'autres appelants :
+// _armContribClick(), cformOverlayShow(), onInstrumentChange().
 function _armContribClick(){
   // Retirer un éventuel handler précédent pour éviter les doublons
   if(_contribClickHandler){map.off('click',_contribClickHandler);_contribClickHandler=null;}
@@ -10587,6 +10582,13 @@ function cancelContrib(){
   info('Mesure annulée.','warn',5000);
 }
 
+// HORS REPRISE — saveContrib() n'est inscrite dans aucune reprise automatique, et ne doit pas l'être
+// (2026-09-10, Brief 2 « reprise », point E). Elle ÉCRIT : un INSERT Supabase dans contributions, via
+// sbPost, non idempotent. Si une requête aboutit côté serveur et que sa réponse se perd, une reprise
+// automatique enregistrerait la même mesure deux fois. Elle part d'un geste de l'utilisateur (le bouton
+// d'enregistrement du formulaire) ; en cas d'échec, le formulaire reste ouvert, l'erreur est affichée et
+// le bouton réactivé : c'est l'utilisateur qui relance. Le détecteur de périmètre
+// (tests/blindage-harness/perimetre-reprise.mjs) la compte donc captive, et c'est voulu.
 async function saveContrib(){
   if(_nativeMag) stopNativeMagCapture(false);
   if(!document.getElementById('c-rgpd').checked){info('⚠ Veuillez accepter les conditions de stockage des donnees.','error',5000);return;}
@@ -13243,6 +13245,19 @@ if (typeof enregistrerReprise === 'function') {
     verifie: () => Array.isArray(MESURES_CERTIFIEES) && MESURES_CERTIFIEES.length > 0
   });
 }
+// annoncerMesuresCertifiees() (2026-09-10, suite du lot contexte) — le message de la bascule du bouton
+// « Mesures certifiées ». Il affichait un compte même quand le chargement avait échoué : « Mesures
+// certifiées — 0 fiches ANFR/EXEM (2002–2026). », un zéro présenté comme résultat sur une réponse qui
+// n'avait rien rendu. Un jeu vide dit désormais l'indisponibilité, avec le message que le téléchargement
+// des fiches emploie déjà ; un jeu chargé garde son compte.
+function annoncerMesuresCertifiees() {
+  const nCert = (MESURES_CERTIFIEES || []).length;
+  if (nCert === 0) {
+    info(jt('cert_unavailable', 'Fiches certifiées non disponibles — réessayer dans quelques instants.'), 'warn', 5000);
+    return;
+  }
+  info(jt('cert_toast_prefix','Mesures certifiées — ')+nCert+jt('cert_toast_suffix',' fiches ANFR/EXEM (2002–2026).'),null,4000);
+}
 
 // Telechargement des fiches certifiees ANFR/EXEM en JSON (236 depuis le 2026-09-02, wrapper avec metadata source/licence)
 function downloadCertifiedJSON() {
@@ -14069,6 +14084,12 @@ function capRequestGeolocation(){
   );
 }
 
+// HORS REPRISE — capSubmitMeasurement() n'est inscrite dans aucune reprise automatique, et ne doit pas
+// l'être (2026-09-10, Brief 2 « reprise », point E). Même motif que saveContrib() : elle ÉCRIT (INSERT
+// Supabase dans contributions, via sbPost), et une reprise automatique doublerait l'écriture si une
+// requête aboutie perdait sa réponse. Geste de l'utilisateur (bouton « Envoyer la mesure ») ; son échec
+// est affiché (« Envoi échoué : … ») et le bouton réactivé, pour qu'il relance lui-même. Comptée captive
+// par le détecteur de périmètre, et c'est voulu.
 async function capSubmitMeasurement(){
   if(!window.capLastMeasurement){alert(jt('cap_no_measurement', 'Aucune mesure à soumettre'));return;}
   // Triple verrou final : refuser tout envoi en mode degres / DeviceOrientation.
