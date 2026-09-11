@@ -837,6 +837,11 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .btn-cancel:hover{background:var(--pierre-ombre);}
 .btn-reposition{background:none;border:1px solid var(--info);color:var(--info);font-size:11px;padding:5px 10px;border-radius:var(--r);cursor:pointer;font-family:var(--font);margin-bottom:8px;transition:all .15s;}
 .btn-reposition:hover{background:rgba(31,58,95,0.08);}
+/* Repositionner désactivé pendant l'envoi d'une contribution (2026-09-10, cf. _contribEnvoiEnVol) : sans ces
+   règles, le bouton désactivé gardait l'aspect, le survol et le curseur d'un bouton actif, et un clic sans
+   effet se lisait comme une panne. Même traitement que .lbtn:disabled. */
+.btn-reposition:disabled{opacity:.45;cursor:not-allowed;}
+.btn-reposition:disabled:hover{background:none;}
 .contrib-list{margin-top:10px;max-height:180px;overflow-y:auto;}
 .contrib-item{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:12px;}
 .contrib-item:last-child{border-bottom:none;}
@@ -3361,6 +3366,9 @@ var JS_STRINGS_EN = {
   detail_delta_loading: "not yet available (preloading in progress)",
   btn_save_finalizing: "Finalizing calculation…",
   save_elf_fallback_notice: "Measurement saved with a simplified estimate of the electromagnetic field (grid data unavailable).",
+  contrib_envoi_detache: "Form closed. The measurement had already been sent: it may still be saved.",
+  contrib_envoi_detache_ok: "The measurement sent before the form was closed has been saved.",
+  contrib_envoi_detache_incertain: "The measurement sent before the form was closed could not be confirmed: it may have been saved.",
   elf_loading_label: "ELF field (nT) — loading…",
   // Étiquetage du terme BT manquant (2026-09-07, brief CJ). Direction de l'écart connue et dite.
   elf_bt_incomplet: "Incomplete value: the low-voltage term has not loaded yet, so the value shown is too low. It is included as soon as the network data is available.",
@@ -3702,6 +3710,23 @@ function jt(key, fr){
 }
 
 let contribsDB=[],pending=null,_contribClickHandler=null;
+// _contribEnvoiEnVol (2026-09-10) — l'INSERT de saveContrib() en cours, ou null. Une écriture partie ne se
+// rappelle pas. Fermer le formulaire pendant l'envoi (Annuler, clic hors du formulaire, bouton « + ») ne
+// l'annule donc pas : cela le DÉTACHE du formulaire (_detacherEnvoiContrib), et le message le dit. La réponse
+// d'un envoi détaché ne touche plus au formulaire suivant ni à ses boutons, et annonce sa propre issue.
+// Refuser la fermeture pendant l'envoi a été essayé et écarté à la revue : sbPost n'a pas de délai
+// d'expiration, et ce refus enfermait l'utilisateur (borné, il reportait le blocage sur la mesure suivante).
+// Avant tout cela, Annuler pendant l'enregistrement laissait la mesure s'écrire, puis affichait une fausse
+// erreur.
+let _contribEnvoiEnVol=null;
+function _detacherEnvoiContrib(){
+  if(!_contribEnvoiEnVol||_contribEnvoiEnVol.detache) return false;
+  _contribEnvoiEnVol.detache=true;
+  // Les boutons redeviennent ceux du formulaire suivant : l'envoi détaché ne les touchera plus.
+  const btn=document.getElementById('btn-save');if(btn){btn.textContent='Enregistrer dans Supabase';btn.disabled=false;}
+  const repos=document.getElementById('btn-reposition');if(repos)repos.disabled=false;
+  return true;
+}
 // Fiche « Mon lieu » (2026-08-20) — positions antennes ANFR retenues en agrégat pur,
 // en plus des marqueurs Leaflet déjà créés par loadAnt() (aucune modification de la
 // boucle de rendu existante). Sert uniquement countAntennasWithinRadius().
@@ -10454,6 +10479,7 @@ function _placeContribMarker(lat,lng){
   }
 }
 function repositionMarker(){
+  if(_contribEnvoiEnVol&&!_contribEnvoiEnVol.detache) return; // refusé pendant l'envoi : la position envoyée ne change plus (cf. _contribEnvoiEnVol)
   if(pending){map.removeLayer(pending);pending=null;}
   var posInfo=document.getElementById('c-position-info');
   if(posInfo)posInfo.textContent=jt('cform_position_js', 'Cliquez sur la carte pour placer le point');
@@ -10553,6 +10579,10 @@ function cformOverlayHide(){
 }
 
 function cancelContrib(){
+  // Pendant l'envoi (2026-09-10) : l'INSERT est parti, fermer ne l'annule pas. L'envoi est détaché du
+  // formulaire et le message le dit, au lieu d'un « Mesure annulée. » qui précéderait une écriture. Couvre
+  // aussi le clic hors du formulaire.
+  const envoiDetache=_detacherEnvoiContrib();
   if(_nativeMag) stopNativeMagCapture(false);
   const protoChk=document.getElementById('c-protocole');if(protoChk)protoChk.checked=false;
   window._nativeCaptureUsed=false;
@@ -10589,7 +10619,8 @@ function cancelContrib(){
   setCtx('exterieur',document.getElementById('ctx-ext'));
   // Reset stepper a l'etape 1
   cformShowStep(1);
-  info('Mesure annulée.','warn',5000);
+  if(envoiDetache) info(jt('contrib_envoi_detache','Formulaire fermé. La mesure était déjà envoyée : elle peut encore être enregistrée.'),'warn',8000);
+  else info('Mesure annulée.','warn',5000);
 }
 
 // HORS REPRISE — saveContrib() n'est inscrite dans aucune reprise automatique, et ne doit pas l'être
@@ -10611,6 +10642,10 @@ async function saveContrib(){
     map.removeLayer(pending);pending=null;return;
   }
   const btn=document.getElementById('btn-save');btn.textContent='Sauvegarde…';btn.disabled=true;
+  // Le point tel qu'il est au clic (2026-09-10). L'attente ci-dessous peut durer jusqu'à 20 s, et pendant ce
+  // temps l'utilisateur peut annuler, refermer par « + », repositionner ou replacer le point. Avant ce
+  // contrôle, l'INSERT partait quand même avec la position lue ici : une mesure annulée était écrite.
+  const pendingAuDepart=pending;
   // Attendre la résolution de elfState avant de calculer predicted (2026-09-04, brief AF lot B
   // suite, arbitrage Soleil — même sujet que le lot A/AO : « une formule qui écrit sans savoir
   // sur quoi elle s'appuie »). Avant ce correctif, une contribution soumise pendant la fenêtre
@@ -10630,6 +10665,15 @@ async function saveContrib(){
     }
     btn.textContent = 'Sauvegarde…';
   }
+  // Le point a été retiré ou remplacé pendant l'attente : l'enregistrement est abandonné, rien n'est écrit.
+  // Le geste qui l'a retiré a déjà dit ce qu'il faisait (« Mesure annulée. », repositionnement).
+  if(pending!==pendingAuDepart){btn.textContent='Enregistrer dans Supabase';btn.disabled=false;return;}
+  // Consentement et saisie relus après l'attente (revue du 2026-09-10). Pendant « Finalisation du calcul… »,
+  // l'utilisateur peut décocher le consentement ou vider la valeur ; seul le point était figé au clic, et la
+  // ligne partait quand même — contre un consentement retiré. Mêmes contrôles et mêmes messages qu'au clic.
+  if(!document.getElementById('c-rgpd').checked){info('⚠ Veuillez accepter les conditions de stockage des donnees.','error',5000);btn.textContent='Enregistrer dans Supabase';btn.disabled=false;return;}
+  const vCheckApres=validateContrib();
+  if(!vCheckApres.ok){info('⚠ '+vCheckApres.msg,'error',5000);btn.textContent='Enregistrer dans Supabase';btn.disabled=false;return;}
   // Jamais silencieux (même principe que le popup) : si la valeur écrite reste basée sur le
   // repli v1 (panne durable OU timeout ci-dessus sans résolution), le contributeur en est informé.
   if (computeElfState() !== 'ready') {
@@ -10744,38 +10788,70 @@ async function saveContrib(){
   };
   // Filtrer les champs null/undefined pour éviter PGRST204 si colonne manquante
   Object.keys(row).forEach(k=>{if(row[k]===null||row[k]===undefined)delete row[k];});
+  // L'envoi part : il ne se rappelle pas (cf. _contribEnvoiEnVol). Tant qu'il est attaché au formulaire,
+  // Repositionner est refusé et désactivé : la position envoyée ne change plus. Fermer le formulaire reste
+  // possible à tout moment, et détache l'envoi.
+  const envoi={detache:false};
+  _contribEnvoiEnVol=envoi;
+  const btnRepos=document.getElementById('btn-reposition');
+  if(btnRepos)btnRepos.disabled=true;
   try{
     const saved=await sbPost('/rest/v1/contributions',[row]);
     contribsDB.unshift(saved[0]||row);addMarker(saved[0]||row);
-    map.removeLayer(pending);pending=null;
-    document.getElementById('cform').style.display='none';
-    cformOverlayHide();
-    document.getElementById('c-val').value='';document.getElementById('c-note').value='';
-    window._csvStats=null;
-    const protoChk=document.getElementById('c-protocole');if(protoChk)protoChk.checked=false;
-    var airplaneChk=document.getElementById('c-airplane-mode');if(airplaneChk)airplaneChk.checked=false;
-    var usbChk=document.getElementById('c-usb-off');if(usbChk)usbChk.checked=false;
-    var metalChk=document.getElementById('c-no-metal');if(metalChk)metalChk.checked=false;
-    var durInp=document.getElementById('c-duration-s');if(durInp)durInp.value='';
-    var igrfBox=document.getElementById('c-igrf-box');if(igrfBox)igrfBox.style.display='none';
-    window._nativeCaptureUsed = false;
-    var csvSum=document.getElementById('csv-summary');if(csvSum)csvSum.style.display='none';
-    var csvInp=document.getElementById('csv-phyphox-input');if(csvInp)csvInp.value='';
-    document.querySelectorAll('#c-mats input:checked,#c-appareils input:checked').forEach(function(cb){cb.checked=false;});
-    var etageSel2=document.getElementById('c-etage');if(etageSel2)etageSel2.value='';
-    setCtx('exterieur',document.getElementById('ctx-ext'));
-    cformShowStep(1);
+    // Le formulaire n'est remis à zéro que si l'envoi y est encore attaché. Détaché, l'utilisateur l'a fermé
+    // et a pu commencer une autre mesure, dont ni le point ni la saisie ne doivent être effacés. La garde sur
+    // pending reste : removeLayer(null) lève dans Leaflet, ce qui affichait « Erreur : … » après une écriture.
+    if(!envoi.detache&&pending&&pending===pendingAuDepart){
+      map.removeLayer(pending);pending=null;
+      document.getElementById('cform').style.display='none';
+      cformOverlayHide();
+      document.getElementById('c-val').value='';document.getElementById('c-note').value='';
+      window._csvStats=null;
+      const protoChk=document.getElementById('c-protocole');if(protoChk)protoChk.checked=false;
+      var airplaneChk=document.getElementById('c-airplane-mode');if(airplaneChk)airplaneChk.checked=false;
+      var usbChk=document.getElementById('c-usb-off');if(usbChk)usbChk.checked=false;
+      var metalChk=document.getElementById('c-no-metal');if(metalChk)metalChk.checked=false;
+      var durInp=document.getElementById('c-duration-s');if(durInp)durInp.value='';
+      var igrfBox=document.getElementById('c-igrf-box');if(igrfBox)igrfBox.style.display='none';
+      window._nativeCaptureUsed = false;
+      var csvSum=document.getElementById('csv-summary');if(csvSum)csvSum.style.display='none';
+      var csvInp=document.getElementById('csv-phyphox-input');if(csvInp)csvInp.value='';
+      document.querySelectorAll('#c-mats input:checked,#c-appareils input:checked').forEach(function(cb){cb.checked=false;});
+      var etageSel2=document.getElementById('c-etage');if(etageSel2)etageSel2.value='';
+      setCtx('exterieur',document.getElementById('ctx-ext'));
+      cformShowStep(1);
+    }
     const n=contribsDB.length;
     updateSupabaseStatusDot('ok',n);
     const eTot2=document.getElementById('db-total');if(eTot2)eTot2.textContent=n+' contribution'+(n>1?'s':'')+' en base';
     const ePanel2=document.getElementById('contrib-panel');if(ePanel2)ePanel2.style.display='block';
     updateContribSummary();
     renderList();
-    info('Mesure sauvegardee dans Supabase. Score : '+row.score_anomalie+' · Delta : '+(row.delta_nt!==null&&row.delta_nt!==undefined?row.delta_nt+' nT':'—'),'success',5000);
-    // Desactiver le FAB active state apres sauvegarde
-    const fabEl=document.getElementById('fab-mesure');if(fabEl)fabEl.classList.remove('fab-active');
-  }catch(err){info('Erreur : '+err.message,'error',5000);}
-  btn.textContent='Enregistrer dans Supabase';btn.disabled=false;
+    if(envoi.detache){
+      // Envoi détaché : le formulaire a été fermé avant la réponse. On annonce l'issue de CET envoi, sans
+      // toucher au formulaire suivant ni au « + ».
+      info(jt('contrib_envoi_detache_ok','La mesure envoyée avant la fermeture du formulaire a été enregistrée.'),'success',8000);
+    }else{
+      info('Mesure sauvegardee dans Supabase. Score : '+row.score_anomalie+' · Delta : '+(row.delta_nt!==null&&row.delta_nt!==undefined?row.delta_nt+' nT':'—'),'success',5000);
+      // Desactiver le FAB active state apres sauvegarde
+      const fabEl=document.getElementById('fab-mesure');if(fabEl)fabEl.classList.remove('fab-active');
+    }
+  }catch(err){
+    // Un rejet ne prouve pas l'absence d'écriture (revue du 2026-09-11) : la connexion peut tomber après que le
+    // serveur a validé l'INSERT, ou le corps d'une réponse 201 arriver tronqué. L'issue reste inconnue, et le
+    // message le dit au lieu d'affirmer « n'a pas été enregistrée ».
+    if(envoi.detache) info(jt('contrib_envoi_detache_incertain','La mesure envoyée avant la fermeture du formulaire n’a pas pu être confirmée : elle a peut-être été enregistrée.'),'warn',8000);
+    else info('Erreur : '+err.message,'error',5000);
+  }
+  finally{
+    if(_contribEnvoiEnVol===envoi) _contribEnvoiEnVol=null;
+    // Les boutons ne sont rendus que si l'envoi est encore attaché. Détaché, ils appartiennent déjà au
+    // formulaire suivant (réinitialisés par _detacherEnvoiContrib), peut-être à un autre envoi en cours.
+    if(!envoi.detache){
+      if(btnRepos)btnRepos.disabled=false;
+      btn.textContent='Enregistrer dans Supabase';btn.disabled=false;
+    }
+  }
 }
 
 // ═══ HIÉRARCHIE DE CONFIANCE DES CONTRIBUTIONS ═══
@@ -12487,6 +12563,7 @@ function startContribFromFAB(){
   // annuler/fermer (couvre le nouvel etat intermediaire "carte en mode placement,
   // #cform pas encore affiche" — cf. bloc "Open" plus bas).
   if((form&&form.style.display==='block')||_contribAwaitingFirstPlacement){
+    const envoiDetache=_detacherEnvoiContrib(); // refermer pendant l'envoi le détache — cf. _contribEnvoiEnVol
     form.style.display='none';
     cformOverlayHide();
     if(pending){map.removeLayer(pending);pending=null;}
@@ -12495,7 +12572,8 @@ function startContribFromFAB(){
     _pendingPrescription=null;
     _setContribPlacementHint(false);
     if(fab)fab.classList.remove('fab-active');
-    info('');
+    if(envoiDetache) info(jt('contrib_envoi_detache','Formulaire fermé. La mesure était déjà envoyée : elle peut encore être enregistrée.'),'warn',8000);
+    else info('');
     return;
   }
   // Open — activer la couche contributions smartphone sans la toggler deux fois
