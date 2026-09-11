@@ -191,9 +191,85 @@ jobs:
         working-directory: tests/blindage-harness
         run: npm ci
 
+      # Contrôle du LANCEMENT (2026-09-11) : lancé sans navigateur, le script doit sortir en 1
+      # avec le rapport de l'exception, que le verdict sait lire. Relevé par la seconde
+      # relecture adverse de #1397 : le serveur statique démarre avant chromium.launch, et
+      # seul le finally de la mesure le fermait. Le rapport va dans RUNNER_TEMP, pour ne pas
+      # pouvoir passer pour celui de la vraie mesure.
+      - name: Contrôle du lancement (navigateur absent)
+        working-directory: tests/blindage-harness
+        run: |
+          set +e
+          F="$RUNNER_TEMP/lancement.json"
+          PLAYWRIGHT_BROWSERS_PATH="$RUNNER_TEMP/aucun-navigateur" CONTRAST_OUT="$F" timeout 120 node contrast-panels.mjs
+          CODE=$?
+          PREMIERE=$(jq -r '.erreur | split("\n") | map(select(length > 0)) | first // ""' "$F" 2>/dev/null | tr -d '\r')
+          if [ "$CODE" = "124" ]; then
+            MSG="contrast-panels.mjs n'est pas sorti en 120 s (lancé sans navigateur) : tué par timeout."
+          elif [ "$CODE" != "1" ]; then
+            MSG="attendu : sortie en 1 avec le rapport de l'exception ; obtenu : code $CODE."
+          elif [ ! -s "$F" ]; then
+            MSG="sortie en 1, mais aucun rapport écrit : le script n'a pas atteint son catch. Voir le journal de l'étape."
+          elif [ -z "$PREMIERE" ]; then
+            MSG="sortie en 1, mais le rapport ne porte pas d'exception lisible. Premiers octets : $(head -c 200 "$F" | tr '\r\n' '  ')"
+          elif ! printf '%s' "$PREMIERE" | grep -q -E 'browserType\.launch'; then
+            MSG="sortie en 1, mais l'exception rapportée n'est pas celle du lancement : $PREMIERE"
+          else
+            echo "ok : sortie en 1, exception rapportée : $PREMIERE"
+            exit 0
+          fi
+          echo "::error title=Contrôle du lancement::$(printf '%s' "$MSG" | sed 's/%/%25/g')"
+          { echo "## Contrôle du lancement"; echo ""; echo "### ❌ $MSG"; } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+      # Contrôle du VERDICT (2026-09-10) : ce que l'étape « Run contrast-panels » DIT d'un
+      # rapport (annotations, résumé, code de sortie), exécuté sur des rapports connus AVANT la
+      # mesure réelle. Le 2026-09-09, 17 rouges sont sortis en exit 2 sans que le journal ni le
+      # résumé nomment un seul des dépassements qui les causaient. Ce contrôle exécute le vrai
+      # bloc `run:` de cette étape : un verdict qui redevient muet le fait échouer. Sans
+      # navigateur, quelques secondes ; exige bash et jq, présents sur le runner. Il tourne
+      # même quand le contrôle du lancement a échoué : il ne dépend que de node et de jq.
+      - name: Contrôle du verdict (rapports connus, sans navigateur)
+        if: ${{ !cancelled() }}
+        working-directory: tests/blindage-harness
+        run: node contrast-verdict.test.mjs
+
       - name: Install Chromium for Playwright
         working-directory: tests/blindage-harness
         run: npx playwright install --with-deps chromium
+
+      # Contrôle du lancement, second temps (2026-09-11) : une exception APRÈS le démarrage du
+      # navigateur doit, elle aussi, fermer le navigateur et le serveur, et faire sortir le
+      # script en 1 avec son rapport. Ici, le dossier du cache Supabase ne peut pas être créé
+      # (TELLUX_HARNESS_CACHE_DIR sous un fichier), ce qui fait lever installSupabaseCache.
+      # Le premier temps ne l'exerce pas : sans navigateur, chromium.launch lève avant tout.
+      # Relevé par la passe ciblée de #1397.
+      - name: Contrôle du lancement (exception après le démarrage du navigateur)
+        working-directory: tests/blindage-harness
+        run: |
+          set +e
+          F="$RUNNER_TEMP/lancement-2.json"
+          : > "$RUNNER_TEMP/pas-un-dossier"
+          TELLUX_HARNESS_CACHE_DIR="$RUNNER_TEMP/pas-un-dossier/cache" CONTRAST_OUT="$F" timeout 120 node contrast-panels.mjs
+          CODE=$?
+          PREMIERE=$(jq -r '.erreur | split("\n") | map(select(length > 0)) | first // ""' "$F" 2>/dev/null | tr -d '\r')
+          if [ "$CODE" = "124" ]; then
+            MSG="contrast-panels.mjs n'est pas sorti en 120 s (exception après le démarrage du navigateur) : tué par timeout."
+          elif [ "$CODE" != "1" ]; then
+            MSG="attendu : sortie en 1 avec le rapport de l'exception ; obtenu : code $CODE."
+          elif [ ! -s "$F" ]; then
+            MSG="sortie en 1, mais aucun rapport écrit : le script n'a pas atteint son catch. Voir le journal de l'étape."
+          elif [ -z "$PREMIERE" ]; then
+            MSG="sortie en 1, mais le rapport ne porte pas d'exception lisible. Premiers octets : $(head -c 200 "$F" | tr '\r\n' '  ')"
+          elif ! printf '%s' "$PREMIERE" | grep -q -E 'ENOTDIR|EEXIST|mkdir'; then
+            MSG="sortie en 1, mais l'exception rapportée n'est pas celle du dossier de cache : $PREMIERE"
+          else
+            echo "ok : sortie en 1, exception rapportée : $PREMIERE"
+            exit 0
+          fi
+          echo "::error title=Contrôle du lancement::$(printf '%s' "$MSG" | sed 's/%/%25/g')"
+          { echo "## Contrôle du lancement"; echo ""; echo "### ❌ $MSG"; } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
 
       # ═══ Cache Supabase du harnais (brief BN) — restauration sur les runners ═══
       # Le cache posé par la PR #1263 vit dans $XDG_CACHE_HOME/tellux/harness-supabase-cache,
@@ -279,7 +355,8 @@ jobs:
           # rendu le rouge muet : même propre, un rouge n'affichait ni dans le journal ni
           # dans le résumé les dépassements qui le causaient — le 2026-09-09, 17 runs en
           # exit 2 sur le plancher de #conditions-bar après #1363, dont 4 aux rapports
-          # propres, aussi silencieux que les 13 autres. La pollution rendait seulement
+          # propres, aussi silencieux que les 13 autres (corrigé par #1397 : voir
+          # VERDICT ci-dessous). La pollution rendait seulement
           # l'artefact inexploitable par jq (le JSON restait intact derrière elle) et
           # vidait les valeurs du résumé. La première version de ce commentaire disait
           # que le check « tombait AVANT toute mesure » : c'est faux. Effet de bord
@@ -287,36 +364,163 @@ jobs:
           # commentaire du cache ci-dessus regrettait explicitement.
           node contrast-panels.mjs
           EXIT=$?
-          # Le rapport est-il seulement lisible ? Sans ce garde, un JSON invalide ne
-          # changeait pas la couleur : jq échouait sept fois (huit sur un rouge) et le
-          # résumé sortait aux valeurs vides, sous un titre ✅/❌ fidèle au vrai code de
-          # sortie. Désormais, un rapport illisible fait échouer l'étape avec son propre
-          # message, qui donne le code de sortie du script : il ne peut plus accompagner
-          # un vert. La première version de ce commentaire (#1371) disait qu'un JSON
-          # invalide produisait un exit 2 et avait laissé la panne du 2026-09-09 « durer
-          # cinq heures […] sans être diagnostiquée » : c'est faux. L'exit 2 était celui
-          # du script, sur le plancher de #conditions-bar.
-          if ! jq -e . contrast-result.json >/dev/null 2>&1; then
-            echo "::error::contrast-result.json illisible — le rapport n'est pas exploitable (code de sortie du script : $EXIT — 2 : dépassement mesuré, 0 : aucun, autre : échec du script). Premiers octets du fichier :"
-            head -c 300 contrast-result.json || true
-            exit 1
-          fi
           echo "exit_code=$EXIT" >> "$GITHUB_OUTPUT"
+          # VERDICT (2026-09-10) — un rouge doit dire ce qui a échoué. Le 2026-09-09, 17 runs
+          # sont sortis en exit 2 sur le plancher de #conditions-bar sans que le journal ni le
+          # résumé nomment un seul dépassement : le résumé ne lisait pas resume.depassements et
+          # titrait « Régression de contraste », à 0/0 sur un rapport propre, aux valeurs vides
+          # sur un rapport pollué ; neuf PR ont été mergées sur un check qui a fini rouge.
+          # Désormais, chaque dépassement devient une ligne du résumé et, jusqu'à 9, une
+          # annotation d'erreur (onglet Checks de la PR ; au-delà, une annotation compte les
+          # autres). Le titre dit ce qui a échoué ; une exception du script est rapportée avec sa
+          # pile ; un rapport dont la forme a dérivé est refusé au lieu d'être lu à vide ; un
+          # rapport illisible garde le code du script. Contrôlé AVANT la mesure, sur des rapports
+          # connus, par contrast-verdict.test.mjs (étape « Contrôle du verdict » plus haut).
+          #
+          # Le rapport est-il seulement lisible ? Sans ce garde, un JSON invalide ne changeait
+          # pas la couleur : jq échouait sept fois (huit sur un rouge) et le résumé sortait aux
+          # valeurs vides, sous un titre ✅/❌ fidèle au vrai code de sortie. Depuis #1371, un
+          # rapport illisible fait échouer l'étape ; depuis #1397, il garde en plus le
+          # code du script (il le remplaçait par 1) et écrit le résumé (il le sautait). Un
+          # script sorti en 0 sur un rapport illisible donne 1 : un rapport qu'on ne peut pas
+          # lire n'accompagne jamais un vert. La première version de ce commentaire (#1371)
+          # disait qu'un JSON invalide produisait un exit 2 et avait laissé la panne du
+          # 2026-09-09 « durer cinq heures […] sans être diagnostiquée » : c'est faux. L'exit 2
+          # était celui du script, sur le plancher de #conditions-bar.
+          if ! jq -e . contrast-result.json >/dev/null 2>&1; then
+            CODE=$EXIT
+            [ "$CODE" = "0" ] && CODE=1
+            if [ -f contrast-result.json ]; then ETAT=illisible; VOIR="Voir le journal de l'étape et l'artefact."; else ETAT=absent; VOIR="Voir le journal de l'étape."; fi
+            echo "::error title=Contraste — rapport $ETAT::contrast-result.json $ETAT : le verdict ne peut pas être lu. Code de sortie du script : $EXIT (2 : dépassement mesuré, 0 : aucun, autre : échec du script)."
+            if [ -f contrast-result.json ]; then
+              echo "Premiers octets du fichier :"
+              head -c 300 contrast-result.json
+              echo ""
+            fi
+            {
+              echo "## Contraste des panneaux flottants"
+              echo ""
+              echo "### ❌ Rapport $ETAT — code de sortie du script : $EXIT"
+              echo ""
+              echo "\`contrast-result.json\` est $ETAT : aucun dépassement ne peut être lu. Code de sortie du script : $EXIT (2 : dépassement mesuré, 0 : aucun, autre : échec du script). $VOIR"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit $CODE
+          fi
+          # Un rapport lisible peut ne porter aucun verdict lisible. Le catch de
+          # contrast-panels.mjs écrit { outil, erreur } quand une exception interrompt le script
+          # (page qui ne charge pas, navigateur qui ne démarre pas), sans resume et sans rien
+          # imprimer. Le verdict titrait alors « ❌ Régression de contraste » et conseillait de
+          # corriger le contraste, au-dessus d'un tableau de « null ». Et un verdict qui lit les
+          # dépassements les lirait à vide si le format du rapport dérivait (clé renommée,
+          # dépassements devenus des objets) : le rouge redeviendrait muet, comme le 2026-09-09
+          # (relectures adverses du 2026-09-10).
+          # Désormais, l'exception est dans une annotation, le journal et le résumé ; un resume
+          # qui n'a pas la forme lue ci-dessous est refusé, et sa forme réelle affichée. Même
+          # règle que le garde : le code du script est gardé, et 0 devient 1.
+          ERREUR=$(jq -r 'if type == "object" and .erreur != null and .erreur != false then (.erreur | tostring | ((split("\n") | map(select(length > 0)) | first) // "(exception sans message)") | gsub("%"; "%25") | gsub("\r"; "%0D")) else empty end' contrast-result.json 2>/dev/null)
+          FORME_OK=$(jq -r '(.resume | type) == "object" and (.resume.depassements | type) == "array" and all(.resume.depassements[]; type == "string") and all(.resume.critique, .resume.aa, .resume.plafond_critique, .resume.plafond_aa, .resume.noeuds_mesures, .resume.panneaux_mesures, .resume.plancher_noeuds; type == "number")' contrast-result.json 2>/dev/null)
+          if [ -n "$ERREUR" ] || [ "$FORME_OK" != "true" ]; then
+            CODE=$EXIT
+            [ "$CODE" = "0" ] && CODE=1
+            if [ -n "$ERREUR" ]; then
+              NPILE=$(jq -r '.erreur | tostring' contrast-result.json | wc -l)
+              echo "::error title=Contraste — échec du script::$ERREUR (code de sortie $EXIT). Aucune mesure rapportée : la pile est dans le journal et le résumé du job (40 premières lignes), et entière dans l'artefact."
+              echo "Exception rapportée par le script ($NPILE ligne(s)) :"
+              jq -r '.erreur | tostring' contrast-result.json | head -40
+              [ "$NPILE" -gt 40 ] && echo "… $((NPILE - 40)) ligne(s) de plus dans l'artefact contrast-result.json."
+            else
+              FORME=$(jq -r 'def forme: if type == "array" then "array<" + ([.[] | type] | unique | join("|")) + ">" else type end; if type != "object" then "racine du rapport : " + type elif (.resume | type) == "object" then "resume = " + (.resume | with_entries(.value |= forme) | tojson) elif .resume == null then "resume absent" else "resume : " + (.resume | forme) end' contrast-result.json 2>/dev/null)
+              NLISIBLES=$(jq -r 'if type == "object" and (.resume | type) == "object" and (.resume.depassements | type) == "array" then [.resume.depassements[] | select(type == "string")] | length else 0 end' contrast-result.json 2>/dev/null)
+              NLISIBLES=${NLISIBLES:-0}
+              if [ "$NLISIBLES" != "0" ]; then LU="$NLISIBLES dépassement(s) s'y lisent néanmoins, listés dans le résumé du job"; else LU="aucun dépassement ne peut en être lu"; fi
+              echo "::error title=Contraste — rapport sans verdict lisible::contrast-result.json se lit, mais n'a pas la forme que ce verdict lit : $LU. Forme lue : $FORME. Code de sortie du script : $EXIT."
+            fi
+            {
+              echo "## Contraste des panneaux flottants"
+              echo ""
+              if [ -n "$ERREUR" ]; then
+                echo "### ❌ Échec du script — code de sortie $EXIT, aucune mesure rapportée"
+                echo ""
+                echo "Une exception a interrompu le script avant son verdict. Pile rapportée dans \`contrast-result.json\` (artefact) :"
+                echo ""
+                echo '```'
+                jq -r '.erreur | tostring' contrast-result.json | head -40
+                echo '```'
+                if [ "$NPILE" -gt 40 ]; then
+                  echo ""
+                  echo "… $((NPILE - 40)) ligne(s) de plus dans l'artefact."
+                fi
+              else
+                echo "### ❌ Rapport sans verdict lisible — code de sortie du script : $EXIT"
+                echo ""
+                echo "\`contrast-result.json\` se lit, mais n'a pas la forme que ce verdict lit : un objet dont le champ \`resume\` porte \`depassements\` (tableau de chaînes) et \`critique\`, \`aa\`, plafonds, plancher et comptes (nombres). Voir le journal de l'étape et l'artefact."
+                echo ""
+                echo "Forme lue : \`$FORME\`"
+                echo ""
+                if [ "$NLISIBLES" != "0" ]; then
+                  echo "Dépassements qui s'y lisent néanmoins :"
+                  echo ""
+                  jq -r '.resume.depassements[] | select(type == "string") | "- " + .' contrast-result.json
+                else
+                  echo "Aucun dépassement ne peut en être lu."
+                fi
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit $CODE
+          fi
+          NDEP=$(jq -r '.resume.depassements | length' contrast-result.json)
+          CONTRASTE=$(jq -r '(.resume.critique > .resume.plafond_critique) or (.resume.aa > .resume.plafond_aa)' contrast-result.json)
+          FINAL=$EXIT
+          # Le runner ne garde que 10 annotations d'erreur par étape, la sienne comprise
+          # (« Process completed with exit code N. », émise après le bloc, donc écartée quand
+          # les 10 places sont prises) : actions/runner, ExecutionContext.cs,
+          # _maxCountPerIssueType = 10.
+          MAXDEP=9
+          # Le script sort en 2 si et seulement s'il a des dépassements : un désaccord est un
+          # défaut du check, et il ne passe pas au vert. Annoncé EN PREMIER, pour tenir dans
+          # les 10 : les dépassements n'ont alors que 8 annotations. Dans l'autre sens, un code
+          # non nul sans dépassement garde son code, et l'annotation dit le désaccord au lieu de
+          # renvoyer à un journal où le verdict n'a rien écrit.
+          if [ "$EXIT" = "0" ] && [ "$NDEP" != "0" ]; then
+            echo "::error title=Contraste — incohérence::le script est sorti en 0 avec $NDEP dépassement(s) dans son rapport."
+            FINAL=1
+            MAXDEP=8
+          elif [ "$EXIT" != "0" ] && [ "$NDEP" = "0" ]; then
+            echo "::error title=Contraste — incohérence::le script est sorti en $EXIT sans aucun dépassement dans son rapport."
+          fi
+          # Une annotation par dépassement, MAXDEP au plus, et une de plus qui compte les
+          # autres. Tous restent nommés dans le résumé.
+          jq -r --argjson n "$MAXDEP" '.resume.depassements[:$n][] | gsub("%"; "%25") | gsub("\r"; "%0D") | gsub("\n"; "%0A")' contrast-result.json \
+            | while IFS= read -r DEP; do echo "::error title=Contraste — dépassement::$DEP"; done
+          if [ "$NDEP" -gt "$MAXDEP" ]; then
+            echo "::error title=Contraste — dépassements::… et $((NDEP - MAXDEP)) autre(s), tous nommés dans le résumé du job."
+          fi
           CRIT=$(jq -r '.resume.critique' contrast-result.json)
           AA=$(jq -r '.resume.aa' contrast-result.json)
           PCRIT=$(jq -r '.resume.plafond_critique' contrast-result.json)
           PAA=$(jq -r '.resume.plafond_aa' contrast-result.json)
           NOEUDS=$(jq -r '.resume.noeuds_mesures' contrast-result.json)
           PANS=$(jq -r '.resume.panneaux_mesures' contrast-result.json)
+          PNOE=$(jq -r '.resume.plancher_noeuds' contrast-result.json)
           {
             echo "## Contraste des panneaux flottants"
             echo ""
-            if [ "$EXIT" = "0" ]; then
-              echo "### ✅ Aucune régression"
-            else
-              echo "### ❌ Régression de contraste"
+            if [ "$FINAL" = "0" ]; then
+              echo "### ✅ Aucun dépassement"
+            elif [ "$EXIT" = "0" ]; then
+              echo "### ❌ Incohérence — script sorti en 0 avec $NDEP dépassement(s) dans son rapport"
+            elif [ "$NDEP" = "0" ]; then
+              echo "### ❌ Incohérence — code de sortie $EXIT sans dépassement dans le rapport"
+            elif [ "$CONTRASTE" = "true" ]; then
+              echo "### ❌ Régression de contraste — $NDEP dépassement(s)"
               echo ""
               echo "> Corriger le contraste. **Ne pas remonter les plafonds** pour faire passer la PR."
+            else
+              echo "### ❌ $NDEP dépassement(s) — aucun plafond de contraste dépassé"
+            fi
+            if [ "$NDEP" != "0" ]; then
+              echo ""
+              jq -r '.resume.depassements[] | "- " + .' contrast-result.json
             fi
             echo ""
             echo "| Tranche | Mesuré | Plafond |"
@@ -324,19 +528,64 @@ jobs:
             echo "| Critique (ratio < 3,0 — illisible) | $CRIT | $PCRIT |"
             echo "| AA (sous le seuil WCAG applicable) | $AA | $PAA |"
             echo ""
-            PNOE=$(jq -r '.resume.plancher_noeuds' contrast-result.json)
             echo "_$NOEUDS nœuds de texte mesurés (plancher $PNOE) sur $PANS panneaux._"
             echo ""
-            if [ "$EXIT" != "0" ]; then
+            # Les textes en cause, critiques et AA : une régression AA doit nommer ses textes
+            # comme une régression critique (seconde relecture adverse). 25 lignes au plus par
+            # tableau, et ce qui manque est annoncé. Un tableau ne s'affiche que sur la forme que
+            # le script écrit, un tableau d'objets : toute autre forme est dite, au lieu d'un
+            # tableau vide sous son en-tête, et une tranche comptée dans le resume sans détail
+            # aussi (passe ciblée de #1397).
+            FCRIT=$(jq -r '.violations_critiques | if type == "array" then (if all(.[]; type == "object") then "ok" else "array<" + ([.[] | type] | unique | join("|")) + ">" end) elif . == null then "absent" else type end' contrast-result.json 2>/dev/null)
+            NCRIT=$(jq -r 'if (.violations_critiques | type) == "array" then (.violations_critiques | length) else 0 end' contrast-result.json 2>/dev/null)
+            if [ "$FCRIT" = "ok" ] && [ "${NCRIT:-0}" != "0" ]; then
               echo "#### Violations critiques"
               echo ""
               echo '| Panneau | Ratio | Couleur | Fond effectif | Texte |'
               echo '|---|---|---|---|---|'
-              jq -r '.violations_critiques[] | "| \(.panel) | \(.ratio) | `\(.couleur)` | `\(.fond_effectif)` | \(.texte) |"' contrast-result.json | head -25
+              jq -r '.violations_critiques[:25][] | "| \(.panel) | \(.ratio) | `\(.couleur)` | `\(.fond_effectif)` | \(.texte) |"' contrast-result.json
+              if [ "$NCRIT" -gt 25 ]; then
+                echo ""
+                echo "… et $((NCRIT - 25)) autre(s) dans l'artefact."
+              fi
+              echo ""
+            elif [ "$FCRIT" != "ok" ] && [ "$FCRIT" != "absent" ]; then
+              echo "#### Violations critiques"
+              echo ""
+              echo "\`violations_critiques\` n'a pas la forme que ce verdict lit (un tableau d'objets) : forme lue \`$FCRIT\`. Voir l'artefact."
+              echo ""
+            elif [ "$CRIT" != "0" ]; then
+              echo "#### Violations critiques"
+              echo ""
+              echo "Le résumé compte $CRIT violation(s) critique(s), mais le rapport n'en détaille aucune. Voir l'artefact."
+              echo ""
+            fi
+            FAA=$(jq -r '.violations_aa | if type == "array" then (if all(.[]; type == "object") then "ok" else "array<" + ([.[] | type] | unique | join("|")) + ">" end) elif . == null then "absent" else type end' contrast-result.json 2>/dev/null)
+            NAA=$(jq -r 'if (.violations_aa | type) == "array" then (.violations_aa | length) else 0 end' contrast-result.json 2>/dev/null)
+            if [ "$FAA" = "ok" ] && [ "${NAA:-0}" != "0" ]; then
+              echo "#### Violations AA"
+              echo ""
+              echo '| Panneau | Ratio | Seuil | Couleur | Fond effectif | Texte |'
+              echo '|---|---|---|---|---|---|'
+              jq -r '.violations_aa[:25][] | "| \(.panel) | \(.ratio) | \(.seuil) | `\(.couleur)` | `\(.fond_effectif)` | \(.texte) |"' contrast-result.json
+              if [ "$NAA" -gt 25 ]; then
+                echo ""
+                echo "… et $((NAA - 25)) autre(s) dans l'artefact."
+              fi
+              echo ""
+            elif [ "$FAA" != "ok" ] && [ "$FAA" != "absent" ]; then
+              echo "#### Violations AA"
+              echo ""
+              echo "\`violations_aa\` n'a pas la forme que ce verdict lit (un tableau d'objets) : forme lue \`$FAA\`. Voir l'artefact."
+              echo ""
+            elif [ "$AA" != "0" ]; then
+              echo "#### Violations AA"
+              echo ""
+              echo "Le résumé compte $AA violation(s) AA, mais le rapport n'en détaille aucune. Voir l'artefact."
               echo ""
             fi
           } >> "$GITHUB_STEP_SUMMARY"
-          exit $EXIT
+          exit $FINAL
 
       - name: Upload rapport JSON
         if: always()

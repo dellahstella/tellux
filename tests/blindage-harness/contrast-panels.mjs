@@ -468,14 +468,27 @@ async function main() {
     appUrl = `http://127.0.0.1:${PORT}/app.html?no-bt=1`;
   }
 
-  const browser = await chromium.launch({ headless: HEADLESS });
-  // newContext() explicitement : newPage() direct suffit ici, mais on garde la
-  // même forme que les autres harnais du dossier.
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  await installSupabaseCache(context, { label: 'contrast-panels' }); // brief BN
-  const page = await context.newPage();
-
-  await page.addInitScript(INSTALL_COND_FIXTURE);
+  // Le lancement et la préparation de la page ont leur propre garde (2026-09-11). Le serveur
+  // statique tourne déjà, et le finally plus bas ne couvre que la mesure. Une exception ici
+  // (navigateur absent ou qui ne démarre pas, contexte, cache) laissait le serveur ouvert :
+  // Node ne sortait pas, et l'étape tombait sur le timeout du job avant que le verdict lise
+  // le rapport de l'exception (seconde relecture adverse de #1397). Contrôlé par l'étape
+  // « Contrôle du lancement » du workflow.
+  let browser = null;
+  let page;
+  try {
+    browser = await chromium.launch({ headless: HEADLESS });
+    // newContext() explicitement : newPage() direct suffit ici, mais on garde la
+    // même forme que les autres harnais du dossier.
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    await installSupabaseCache(context, { label: 'contrast-panels' }); // brief BN
+    page = await context.newPage();
+    await page.addInitScript(INSTALL_COND_FIXTURE);
+  } catch (e) {
+    if (browser) await browser.close().catch(() => {});
+    if (server) server.close();
+    throw e;
+  }
 
   const rapport = { url: appUrl, panneaux: null, popup_par_point: null, cond_par_scenario: null };
   const POPUP_PANEL = PANELS.find((p) => p.sel === '.leaflet-popup-content');
@@ -919,9 +932,13 @@ async function main() {
     const p = rapport.panneaux.find((x) => x.panel === nom);
     const noeuds = p && p.etat === 'mesuré' ? (p.noeuds || 0) : 0;
     if (!p || p.etat !== 'mesuré' || noeuds < seuil) {
+      // Le message énonce LA MESURE ET LE SEUIL, rien d'autre (2026-09-10) : la correction que
+      // #1372 a faite pour #conditions-bar, appliquée à son jumeau. Il ajoutait « — son flux
+      // d'ouverture ne fonctionne plus ou rend un état dégradé, le résultat n'est pas
+      // exploitable » : deux hypothèses sur la cause et une conclusion, qu'aucune mesure ne
+      // calcule. L'état et le compte suffisent ; l'hypothèse appartient au lecteur.
       depassements.push(`surface requise sous son plancher : « ${nom} » (état : ${p ? p.etat : 'introuvable'}`
-        + `${p && p.etat === 'mesuré' ? `, ${noeuds} nœud(s) < ${seuil}` : ''}) — son flux d'ouverture`
-        + ' ne fonctionne plus ou rend un état dégradé, le résultat n\'est pas exploitable');
+        + `${p && p.etat === 'mesuré' ? `, ${noeuds} nœud(s) mesuré(s) < ${seuil} attendus` : ''})`);
     }
   }
   // Plancher de couverture — AVANT les cliquets, et pour la même raison qu'axe-core a été
@@ -958,8 +975,10 @@ async function main() {
   }
   const MIN_NOEUDS = Number(process.env.CONTRAST_MIN_NOEUDS ?? 75);
   if (noeudsMesures < MIN_NOEUDS) {
-    depassements.push(`couverture insuffisante : ${noeudsMesures} nœuds mesurés < plancher ${MIN_NOEUDS}`
-      + ' — les panneaux ne se sont probablement pas peuplés, le résultat n\'est pas exploitable');
+    // Même correction (2026-09-10) : le message ajoutait « — les panneaux ne se sont
+    // probablement pas peuplés, le résultat n'est pas exploitable », une hypothèse et une
+    // conclusion que la mesure ne porte pas. Le compte et le plancher suffisent.
+    depassements.push(`couverture insuffisante : ${noeudsMesures} nœuds mesurés < plancher ${MIN_NOEUDS}`);
   }
   if (critiques.length > MAX_CRITIQUE) {
     depassements.push(`critique : ${critiques.length} > plafond ${MAX_CRITIQUE}`);
