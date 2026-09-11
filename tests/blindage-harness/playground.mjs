@@ -5,7 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 //
 // Ce fichier n'est pas un test : il sert d'exemple exécutable pour :
-//   1. Charger les mesures certifiées ANFR/EXEM (toutes les fiches du fichier) et calculer le résidu vs
+//   1. Charger les mesures certifiées Cartoradio (toutes les fiches du fichier) et calculer le résidu vs
 //      calcRF du moteur (boucle WS2 validation RF).
 //   2. Variation des EXPERT_WEIGHTS / EXPERT_BOUNDS en sandbox (sans toucher
 //      les constantes GELE-001 de prod) sur quelques points représentatifs
@@ -26,7 +26,7 @@ const __filename = fileURLToPath(import.meta.url);
 const HARNESS_DIR = pathResolve(__filename, '..');
 const REPO_ROOT = pathResolve(HARNESS_DIR, '..', '..');
 
-// ─── WS2 — Résidus RF sur les mesures certifiées EXEM (toutes les fiches) ───
+// ─── WS2 — Résidus RF sur les mesures certifiées Cartoradio (toutes les fiches) ─
 
 async function modeRfResiduals() {
   const fp = join(REPO_ROOT, 'public', 'data', 'cartoradio_certified_corse.json');
@@ -134,7 +134,7 @@ if (!mode) {
   console.log('Tellux blindage harness — playground (exemples WS2)');
   console.log('');
   console.log('Modes disponibles :');
-  console.log('  node playground.mjs rf-residuals    Résidus RF sur toutes les fiches EXEM/ANFR');
+  console.log('  node playground.mjs rf-residuals    Écarts RF (%) sur toutes les fiches certifiées');
   console.log('  node playground.mjs sensitivity     Sweep EXPERT_WEIGHTS sur 5 points');
   process.exit(0);
 } else if (mode === 'rf-residuals') {

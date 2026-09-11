@@ -118,7 +118,7 @@ Aucune prétention de précision statistique — écarts de 0,75× à 1,69× la 
 ## [Calibration RF interne en production + refonte landing + alignement docs — 2026-07-03]
 
 ### Added
-- **`app.html`** — couche radiofréquence reconstruite sur les émetteurs réels : ~3 000 antennes ANFR (2G/3G/4G/5G) + faisceaux hertziens + radiodiffusion TDF, propagation Friis champ libre, **calibration interne** sur les 30 mesures certifiées ANFR/EXEM extérieures. Présentée comme **« estimation centrale d'ordre de grandeur du champ extérieur »** (jamais « calibré / validé / majorant »), relecture physicien externe annoncée en cours (PR [#901](https://github.com/dellahstella/tellux/pull/901), [#898](https://github.com/dellahstella/tellux/pull/898)). Remplace le proxy 20 antennes + fond départemental + facteur ×25.
+- **`app.html`** — couche radiofréquence reconstruite sur les émetteurs réels : ~3 000 antennes ANFR (2G/3G/4G/5G) + faisceaux hertziens + radiodiffusion TDF, propagation Friis champ libre, **calibration interne** sur les mesures certifiées ANFR/EXEM extérieures (21 fiches conformes parmi les 30 d'origine). Présentée comme **« estimation centrale d'ordre de grandeur du champ extérieur »** (jamais « calibré / validé / majorant »), relecture physicien externe annoncée en cours (PR [#901](https://github.com/dellahstella/tellux/pull/901), [#898](https://github.com/dellahstella/tellux/pull/898)). Remplace le proxy 20 antennes + fond départemental + facteur ×25.
 - **`app.html`** — séparation de la heatmap composite en deux couches à grandeur/unité homogène (magnétique nT / RF V/m), une couche = une unité (PR [#897](https://github.com/dellahstella/tellux/pull/897)).
 
 ### Changed

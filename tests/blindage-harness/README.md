@@ -4,7 +4,7 @@ Exécution programmatique des fonctions `calc*` du moteur Tellux à des entrées
 
 Le harness est le véhicule pour :
 - **WS2 sensibilité** : varier `EXPERT_WEIGHTS` / `EXPERT_BOUNDS` en sandbox **sans modifier les constantes `GELE-001` de prod** (la fonction `computeExpertComposite` accepte ces paramètres en argument).
-- **WS2 validation RF** : comparer `calcRF(lat, lon)` aux mesures certifiées ANFR/EXEM de `public/data/cartoradio_certified_corse.json` — toutes les fiches du fichier, sans filtre d'éligibilité (236 au 2026-09-11, dont les 30 fiches d'origine).
+- **WS2 validation RF** : comparer `calcRF(lat, lon)` aux mesures certifiées Cartoradio de `public/data/cartoradio_certified_corse.json` — toutes les fiches du fichier, sans filtre d'éligibilité (236 au 2026-09-11, dont les 30 fiches d'origine).
 - **WS3 non-régression** : vérifier qu'aucun changement de code ou de données n'a fait dériver les sorties du moteur sur les 25 points de référence de la fixture.
 
 `app.html` n'est jamais modifié. Les constantes `GELE-001` / `NCRP-001` ne sont jamais touchées.
@@ -66,7 +66,7 @@ node tests/blindage-harness/playground.mjs rf-residuals
 node tests/blindage-harness/playground.mjs sensitivity
 ```
 
-- `rf-residuals` : calcule `predicted - measured` (en V/m) sur toutes les fiches de `public/data/cartoradio_certified_corse.json`, sans filtre d'éligibilité (236 au 2026-09-11, dont les 30 fiches d'origine).
+- `rf-residuals` : calcule l'écart relatif `(predicted - measured) / measured`, en %, sur toutes les fiches de `public/data/cartoradio_certified_corse.json`, sans filtre d'éligibilité (236 au 2026-09-11, dont les 30 fiches d'origine). Les fiches à valeur mesurée nulle s'affichent « N/A » et sortent des statistiques.
 - `sensitivity` : sweep `EXPERT_WEIGHTS` sur 5 combinaisons × 5 points représentatifs. Lit les constantes `GELE-001` **en read-only** (pour affichage), puis passe des poids explicites à `computeExpertComposite` (sans modifier le défaut).
 
 ---
