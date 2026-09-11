@@ -36,10 +36,15 @@
 // l'INSERT mais AVANT sa réponse y a déjà mis la ligne. saveContrib() ne doit ni l'ajouter une seconde fois,
 // ni redessiner son marqueur, ni la compter deux fois. Dédoublonnage sur l'id que renvoie l'INSERT. Contre le
 // code d'avant ce lot, H1 DOIT échouer ; H2 (sans rafraîchissement) et H3 (réponse sans ligne, donc sans id)
-// sont des témoins, et H4 une garde : deux lignes sans id ne sont jamais prises pour la même. Revue adverse du
-// 2026-09-11 : le rafraîchissement de H1 REMPLACE la liste, comme loadDB(), et la ligne n'y est pas en tête ;
-// les deux lignes sans id de H4 sont au même point. Sans cela, une lecture de la liste d'avant l'envoi, une
-// comparaison de la seule tête et un dédoublonnage par position passaient.
+// sont des témoins ; H4 et H5 sont des gardes. Revue adverse du 2026-09-11, deux passes :
+//   · H1 : le rafraîchissement REMPLACE la liste, comme loadDB(), la ligne étant tour à tour en tête et hors de
+//     la tête ;
+//   · H5 : la liste relue pendant l'envoi ne contient pas encore la ligne, qui doit être ajoutée ;
+//   · H4 : deux vrais enregistrements identiques successifs, réponses sans ligne ; deux lignes sans id ne sont
+//     jamais prises pour la même.
+// Chaque version plus étroite laissait passer un mutant : lecture de la liste d'avant l'envoi, comparaison de la
+// seule tête ou exclusion de la tête, dédoublonnage par position, par session ou par contenu, liste remplacée
+// prise pour une preuve de présence.
 //
 // Usage : node tests/blindage-harness/non-regression-savecontrib-annulation.mjs [app.html]   (sort 1 si un ✘)
 
@@ -318,21 +323,44 @@ for (const [id, etat, deja] of [['G1', 'attente', 0], ['G2', 'echec', 0], ['G3',
 // Le serveur valide l'INSERT ; avant que sa réponse arrive, loadDB() (toutes les 5 min, ou 30 s après un échec)
 // relit la table : la ligne est déjà dans contribsDB, avec son marqueur. La réponse arrive ensuite.
 const avecId = (liste, id) => liste.filter((c) => c && c.id === id).length;
-// Le rafraîchissement est simulé comme le fait le vrai loadDB() : il REMPLACE contribsDB par un tableau neuf, où
-// la ligne n'est pas en tête (un autre contributeur a écrit après nous).
+// Le rafraîchissement est simulé comme le fait le vrai loadDB() : il REMPLACE contribsDB par un tableau neuf, trié
+// du plus récent au plus ancien. Deux positions : la ligne en tête (le cas courant) et hors de la tête (un autre
+// contributeur a écrit après nous). Ne tester qu'une position laissait passer son miroir.
+let marques, pointsH;
+for (const [position, liste] of [
+  ['en tête', "[{ id: 1, lat: 41.92, lon: 8.74 }, { id: 'autre', lat: 42.00, lon: 9.00 }, { id: 'plus-ancienne', lat: 42.10, lon: 9.10 }]"],
+  ['hors de la tête', "[{ id: 'autre', lat: 42.00, lon: 9.00 }, { id: 1, lat: 41.92, lon: 8.74 }, { id: 'plus-ancienne', lat: 42.10, lon: 9.10 }]"],
+]) {
+  s = monter({ sbManuel: true });
+  vm.runInContext("_contribsListe = 'ok'", s.ctx);
+  p = s.lancer();
+  await attendre(50);
+  vm.runInContext('contribsDB = ' + liste, s.ctx);
+  s.liberer(0, 'ok');
+  await p;
+  marques = s.ctx.__marqueurs || [];
+  pointsH = s.ctx.__points || [];
+  console.log(`\nH1 [${position}] — la liste est relue (remplacée) entre la validation de l’INSERT et sa réponse`);
+  verifier('la ligne n’est présente qu’une fois dans la liste relue', avecId(s.ctx.contribsDB, 1) === 1, `${avecId(s.ctx.contribsDB, 1)} fois`);
+  verifier('aucun second marqueur pour elle', marques.filter((x) => x === 1).length === 0, JSON.stringify(marques));
+  verifier('le point d’état compte les lignes de la liste relue (3), sans la doubler', pointsH.length > 0 && pointsH[pointsH.length - 1].n === 3, JSON.stringify(pointsH[pointsH.length - 1]));
+}
+
+// H5 — le rafraîchissement a lu la table AVANT la validation de l'INSERT et s'applique pendant l'envoi : la liste
+// relue ne contient pas la ligne, qui doit être ajoutée une fois, avec son marqueur.
 s = monter({ sbManuel: true });
 vm.runInContext("_contribsListe = 'ok'", s.ctx);
 p = s.lancer();
 await attendre(50);
-vm.runInContext("contribsDB = [{ id: 'autre', lat: 42.00, lon: 9.00 }, { id: 1, lat: 41.92, lon: 8.74 }, { id: 'plus-ancienne', lat: 42.10, lon: 9.10 }]", s.ctx);
+vm.runInContext("contribsDB = [{ id: 'autre', lat: 42.00, lon: 9.00 }, { id: 'plus-ancienne', lat: 42.10, lon: 9.10 }]", s.ctx);
 s.liberer(0, 'ok');
 await p;
-let marques = s.ctx.__marqueurs || [];
-let pointsH = s.ctx.__points || [];
-console.log('\nH1 — la liste est relue (remplacée) entre la validation de l’INSERT et sa réponse ; la ligne n’y est pas en tête');
-verifier('la ligne n’est présente qu’une fois dans la liste relue', avecId(s.ctx.contribsDB, 1) === 1, `${avecId(s.ctx.contribsDB, 1)} fois`);
-verifier('aucun second marqueur pour elle', marques.filter((x) => x === 1).length === 0, JSON.stringify(marques));
-verifier('le point d’état compte les lignes de la liste relue (3), sans la doubler', pointsH.length > 0 && pointsH[pointsH.length - 1].n === 3, JSON.stringify(pointsH[pointsH.length - 1]));
+marques = s.ctx.__marqueurs || [];
+pointsH = s.ctx.__points || [];
+console.log('\nH5 — garde : la liste relue pendant l’envoi ne contient pas encore la ligne');
+verifier('la ligne est ajoutée une fois, avec son marqueur', avecId(s.ctx.contribsDB, 1) === 1 && marques.filter((x) => x === 1).length === 1,
+  `${avecId(s.ctx.contribsDB, 1)} / ${JSON.stringify(marques)}`);
+verifier('le point d’état compte 3 lignes', pointsH.length > 0 && pointsH[pointsH.length - 1].n === 3, JSON.stringify(pointsH[pointsH.length - 1]));
 
 s = monter({});
 vm.runInContext("_contribsListe = 'ok'", s.ctx);
@@ -352,15 +380,23 @@ console.log('\nH3 — témoin : la réponse ne porte pas la ligne (pas d’id), 
 verifier('la ligne envoyée est ajoutée une fois, avec un marqueur', s.ctx.contribsDB.length === 1 && marques.length === 1,
   `${s.ctx.contribsDB.length} / ${JSON.stringify(marques)}`);
 
+// Deux VRAIS enregistrements successifs, au même point et avec la même valeur, dont les réponses ne portent pas la
+// ligne : deux lignes en base, donc deux dans la liste. Une ligne de départ fabriquée, réduite à trois champs,
+// laissait passer un dédoublonnage des lignes sans id sur la session ou sur le contenu.
 s = monter({ sbManuel: true });
-// Une ligne locale sans id, d'une réponse sans ligne plus tôt, AU MÊME POINT que la nouvelle mesure.
-vm.runInContext('contribsDB.push({ lat: 41.92, lon: 8.74, valeur: 48000 })', s.ctx);
 p = s.lancer();
 await attendre(50);
 s.liberer(0, 'sans-ligne');
 await p;
-console.log('\nH4 — garde : une réponse sans ligne, alors que la liste porte déjà une ligne sans id au même point');
-verifier('la nouvelle ligne est ajoutée — deux lignes sans id ne sont pas « la même »', s.ctx.contribsDB.length === 2, `${s.ctx.contribsDB.length}`);
+s.appeler('_placeContribMarker', 41.92, 8.74); s.remplir('48000');
+p = s.lancer();
+await attendre(50);
+s.liberer(1, 'sans-ligne');
+await p;
+marques = s.ctx.__marqueurs || [];
+console.log('\nH4 — garde : deux enregistrements identiques successifs, réponses sans ligne');
+verifier('deux lignes en base, deux dans la liste, deux marqueurs — des lignes sans id ne sont jamais « la même »',
+  s.base.length === 2 && s.ctx.contribsDB.length === 2 && marques.length === 2, `base ${s.base.length}, liste ${s.ctx.contribsDB.length}, marqueurs ${marques.length}`);
 
 console.log(`\n${echecs === 0 ? 'TOUT VERT' : echecs + ' ÉCHEC(S)'}`);
 process.exit(echecs === 0 ? 0 : 1);
