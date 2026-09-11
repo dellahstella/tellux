@@ -4661,7 +4661,8 @@ const LAYER_SUBTITLE_FR={
   // "forêt fermée" tout court aurait repris la définition BD Forêt V2 brute (~59% de la Corse,
   // rejetée justement pour ce motif). Point distinct non résolu par cette reformulation,
   // signalé séparément à Soleil : RF_CALIB_K (calibrateRF()) est dérivé SANS applyVegetation
-  // sur les 30 points certifiés — risque de double-comptage si un point calibré était en forêt
+  // sur les points de calibration (mesures certifiées conformes, prises en extérieur) — risque de
+  // double-comptage si un point calibré était en forêt
   // réelle, jamais examiné par PR #1068 ni par la dette privée RF-FOREST-TERRAIN-PLACEHOLDER-001
   // (elle-même à jour ni sur l'état du code ni sur ce PR).
   // foretdense (2026-09-03, brief AB, suite audit) : reformulé une 2e fois après PR #1155/#1068 —
@@ -7962,7 +7963,8 @@ function RF_field(lat, lon, applyVegetation){
   FH_POINTS.forEach(([a,b,name,intensity])=>{ const d=dist(lat,lon,a,b); let c=0; if(d<1.5)c=intensity*(1-d/1.5); else if(d<4)c=intensity*0.2*(1-(d-1.5)/2.5); if(c>0){ S_total+=c; } });
   // (4) PLUS de fond départemental DENSITY[dept].fh×8 (supprimé — unification §2.1/§3.A)
   // (5) CALIBRATION INTERNE Tellux : facteur scalaire k sur le champ E (k dérivé au boot par
-  // calibrateRF() sur 30 mesures certifiées). k porte sur E (E_cal=k·E_raw) ⇒ S ∝ E² ⇒ S_cal=k²·S_raw.
+  // calibrateRF() sur les mesures certifiées éligibles, conformes et prises en extérieur). k porte sur E
+  // (E_cal=k·E_raw) ⇒ S ∝ E² ⇒ S_cal=k²·S_raw.
   // On échelle S par k² : E_total (dérivé de S ci-dessous) devient automatiquement k·E_raw. Défaut k=1.
   S_total *= RF_CALIB_K*RF_CALIB_K;
   const E_total_V_m=Math.round(Math.sqrt(S_total*1e-6*377)*1000)/1000;
@@ -8247,7 +8249,7 @@ function calcRF(lat, lon, applyVegetation){
   const f = RF_field(lat, lon, applyVegetation);
   return { S_total_uW_m2:f.S_total_uW_m2, E_total_V_m:f.E_total_V_m, terrain_correction_dB:0, source:f.source, confidence:f.confidence };
 }
-// ═══ Calibration RF interne Tellux — facteur scalaire k sur 30 mesures certifiées (ADR-028) ═══
+// ═══ Calibration RF interne Tellux — facteur scalaire k sur les mesures certifiées extérieures (ADR-028) ═══
 // k = médiane(mesuré/prédit). Applique E_cal=k·E_raw (⇒ S_cal=k²·S_raw, via RF_field). Exclut
 // les mesures non conformes (conforme=false : San Quilico 29,05) et hors-portée modèle (E_pred≈0).
 // Reporte médiane, moyenne géométrique, dispersion (σ géo ×÷), IQR, n. §3 : part quadratique par

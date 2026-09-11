@@ -28,7 +28,7 @@ tellux/
 │       ├── eoliennes_corse.json
 │       ├── points_chauds_radio_corse.json        # Label UI : « Sites U/Th à mesurer »
 │       ├── sites_remarquables_corse.json         # [DEPRECATED depuis Brief 29 — non fetché par app.html, gardé pour archive]
-│       └── cartoradio_certified_corse.json       # 30 mesures RF certifiées ANFR/EXEM
+│       └── cartoradio_certified_corse.json       # mesures RF certifiées ANFR/EXEM (30 fiches d'origine + ingestion élargie, hors calibration)
 ├── docs/
 │   ├── data/                  # Données runtime patrimoine.html (cf. § 3.bis)
 │   │   ├── sites_patrimoine.json         # SOURCE CANON runtime patrimoine.html (Brief 33 split)
@@ -176,7 +176,7 @@ Sparkline : SVG 180×40 px, `PROFIL_HORAIRE_CORSE` (24 valeurs MW), marqueur rou
 | `eoliennes_corse.json` | Parcs éoliens | Observatoire éolien / ANFR | `calcMagneticELF_v2` |
 | `sites_app.json` | Sites ponctuels unifiés, trois types : `site_em` (sites EM remarquables, dont les sites ophiolitiques de la couche crustale), `site_uth` (entrées documentaires U/Th, dose nulle sur toutes — sans effet sur `calcGammaAmbient`), `source_thermale` (chargées, sans usage à l'écran dans `app.html`) | Consolidation du 2026-05-13 (`sites_em.json`, l'ancien `points_chauds_radio_corse.json`, l'ancienne liste en dur des sources thermales) — cf. `_meta` du fichier | `loadSitesApp()`, au démarrage, par la reprise `sites` (point d'entrée `loadPointsChaudsRadio()`) |
 | `sites_remarquables_corse.json` | **DEPRECATED (Brief 29, 2026-05-06)** — 10 sites géophysiques remarquables en 3 catégories (ophiolite / minier / surveillance radiologique). Données intégralement absorbées dans `docs/data/sites_corse.json` (pipeline `consolidate_sites.py`). Le fichier reste pour archive historique mais n'est plus fetché par `app.html` ni `patrimoine.html`. | Consolidation Cowork 2026-04-23 (archive) | **Plus chargé** — voir `docs/data/sites_corse.json` |
-| `cartoradio_certified_corse.json` | 30 mesures RF certifiées ANFR/EXEM (29 conformes, 1 dépassement Monticello 29,05 V/m avec re-inspection conformité) | Extraction Cowork 2026-04-23 depuis 30 PDFs ANFR/EXEM | Couche Mesures EM unifiée, layer `lCert` |
+| `cartoradio_certified_corse.json` | Mesures RF certifiées ANFR/EXEM. Les 30 fiches d'origine (29 conformes, 1 dépassement Monticello 29,05 V/m avec re-inspection de conformité) sont les seules éligibles à la calibration ; les fiches de l'ingestion élargie du 2026-09-02 portent `calib_eligible: false` (236 fiches au total au 2026-09-11) | Extraction Cowork 2026-04-23 depuis 30 PDFs ANFR/EXEM ; ingestion élargie du 2026-09-02 (`scripts/carto_ingest_elargi.cjs`) | Couche Mesures EM unifiée, layer `lCert` |
 
 Règles pour les nouveaux fichiers `public/data/` :
 - JSON compact (pas de whitespace inutile pour > 100 ko)
