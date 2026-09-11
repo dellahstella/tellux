@@ -28,6 +28,10 @@
 // scriptée), validateContrib (valeur vide = invalide), jt() (rend sa clé devant le texte). Les fonctions en
 // cause sont EXTRAITES d'app.html telles quelles, avec les déclarations et _detacherEnvoiContrib().
 //
+// SUITE (2026-09-11, lot ant/anfr) — G : un enregistrement réussi sur une liste des contributions jamais
+// chargée ne transmet pas de compte au point d'état, parce que la liste locale n'est pas un total. Contre
+// le code d'avant ce lot, G1 et G2 DOIVENT échouer.
+//
 // Usage : node tests/blindage-harness/non-regression-savecontrib-annulation.mjs [app.html]   (sort 1 si un ✘)
 
 import { readFileSync } from 'node:fs';
@@ -59,7 +63,8 @@ const NOMS = ['saveContrib', 'cancelContrib', 'repositionMarker', 'startContribF
 const FONCTIONS = NOMS.map((n) => extraire(js, n));
 // Déclarations de l'état d'envoi, quelle que soit la version : rejouées telles quelles.
 const DECLS = [/^\s*let\s+_contribEnvoiEnVol\s*=\s*null\s*;/m, /^\s*let\s+_contribEnvoiEnCours\s*=\s*false\s*;/m,
-  /^\s*const\s+CONTRIB_ENVOI_REFUS_MS\s*=\s*\d+\s*;/m].map((re) => (code.match(re) || [''])[0].trim()).filter(Boolean);
+  /^\s*const\s+CONTRIB_ENVOI_REFUS_MS\s*=\s*\d+\s*;/m, /^\s*let\s+_contribsListe\s*=\s*'[a-z]+'\s*;/m]
+  .map((re) => (code.match(re) || [''])[0].trim()).filter(Boolean);
 
 // ─── S0 — câblage, lu dans le code SANS ses commentaires ─────────────────────────────────────────
 console.log('S0 — câblage dans app.html');
@@ -120,7 +125,8 @@ function monter({ elfLoadingMs = 0, sbDelayMs = 150, sbEchec = false, sbManuel =
     },
     contribsDB: [], addMarker() {},
     cformOverlayHide() {}, setCtx() {}, cformShowStep() {}, cformUpdateStep1NextState() {},
-    updateSupabaseStatusDot() {}, updateContribSummary() {}, renderList() {},
+    // Le point d'état est ENREGISTRÉ (scénario G) : état et compte transmis.
+    updateSupabaseStatusDot(e, n) { (ctx.__points = ctx.__points || []).push({ e, n }); }, updateContribSummary() {}, renderList() {},
     _armContribClick() {}, _setContribPlacementHint() {}, _scrollMapIntoViewIfMobile() {}, tog() {},
     ACTIVE: { contrib: true },
     _contribClickHandler: null, _contribAwaitingFirstPlacement: false, _pendingPrescription: null,
@@ -276,6 +282,22 @@ for (const [id, geste, motif] of [['F1', (x) => { x.els['c-rgpd'].checked = fals
   console.log(`\n${id} — ${id === 'F1' ? 'consentement décoché' : 'valeur vidée'} pendant « Finalisation du calcul… »`);
   verifier('aucune ligne écrite', s.base.length === 0, `${s.base.length}`);
   verifier('le message habituel est affiché', erreurs(s.journal).some((m) => motif.test(m)), JSON.stringify(s.journal));
+}
+
+// ─── G — un enregistrement réussi ne donne pas le total d'une liste jamais chargée (2026-09-11) ────
+// Lot ant/anfr. contribsDB est vide qu'elle soit chargée vide ou jamais chargée : l'enregistrement y ajoute sa
+// ligne, et le point d'état affichait « Supabase connecté · 1 contribution » comme un total. Le compte n'est
+// transmis que d'une liste chargée (_contribsListe === 'ok') ; sinon null, et le point dit « connecté » seul.
+for (const [id, etat, deja] of [['G1', 'attente', 0], ['G2', 'echec', 0], ['G3', 'ok', 2]]) {
+  s = monter({});
+  vm.runInContext(`_contribsListe = '${etat}'; for (let i = 0; i < ${deja}; i++) contribsDB.push({ id: 'd' + i });`, s.ctx);
+  await s.lancer();
+  const points = s.ctx.__points || [];
+  const dernier = points[points.length - 1];
+  console.log(`\n${id} — enregistrement réussi, liste des contributions : ${etat}${deja ? `, ${deja} déjà chargées` : ''}`);
+  verifier('le point d’état passe à « connecté » — l’écriture a réussi', !!dernier && dernier.e === 'ok', JSON.stringify(dernier));
+  verifier(etat === 'ok' ? `compte transmis : ${deja + 1}` : 'aucun compte transmis (null) — la liste locale n’est pas un total',
+    !!dernier && dernier.n === (etat === 'ok' ? deja + 1 : null), JSON.stringify(dernier));
 }
 
 console.log(`\n${echecs === 0 ? 'TOUT VERT' : echecs + ' ÉCHEC(S)'}`);

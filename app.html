@@ -3703,13 +3703,29 @@ var JS_STRINGS_EN = {
   // Infobulle d'une position ANFR (2026-09-07) — liste ce qui est déclaré à la position, pas la
   // première ligne. Espace final volontaire : concaténé directement à la liste.
   ant_tt_generations: "Generations: ",
-  ant_tt_operateurs: "Operators: "
+  ant_tt_operateurs: "Operators: ",
+
+  // Lot ant/anfr (2026-09-11). Compte et état des antennes ANFR, dans l'en-tête et le panneau (#anfr-count) :
+  // le compte n'était pas traduit. Espace initial volontaire : le suffixe est concaténé au nombre.
+  ant_compte_suffixe: " antennas",
+  ant_statut_indisponibles: "antennas unavailable",
+  // Bascule « Contributions » tant que la liste n'est pas chargée : « 0 relevé(s) » y était un faux zéro.
+  contrib_toast_chargement: "Smartphone contributions — loading… · outside the calculation.",
+  contrib_toast_non_chargees: "Smartphone contributions — not loaded (Supabase unavailable) · outside the calculation."
 };
 function jt(key, fr){
   return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
 }
 
 let contribsDB=[],pending=null,_contribClickHandler=null;
+// _contribsListe (2026-09-11, lot ant/anfr) — l'état de la liste des contributions, que lisent les comptes
+// affichés. contribsDB est vide qu'elle soit chargée vide ou jamais chargée : la bascule disait donc
+// « 0 relevé(s) » pendant le chargement et pendant une panne de Supabase ; et un enregistrement réussi, qui y
+// ajoute sa ligne, faisait afficher « 1 contribution » comme un total (résumé, infobulle du point d'état).
+//   'attente' — aucun chargement n'a encore abouti ni échoué ;
+//   'ok'      — un chargement a réussi : le compte est celui du dernier chargement réussi ;
+//   'echec'   — les chargements ont échoué, sans succès antérieur.
+let _contribsListe='attente';
 // _contribEnvoiEnVol (2026-09-10) — l'INSERT de saveContrib() en cours, ou null. Une écriture partie ne se
 // rappelle pas. Fermer le formulaire pendant l'envoi (Annuler, clic hors du formulaire, bouton « + ») ne
 // l'annule donc pas : cela le DÉTACHE du formulaire (_detacherEnvoiContrib), et le message le dit. La réponse
@@ -3961,12 +3977,37 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   _reprises.forEach((r, cle) => { if (r.classe.surVisible) reveille(cle, 'visible'); });
 });
-// Sortie de `abandoned` : action utilisateur explicite seulement.
+// Sortie de `abandoned` par action utilisateur explicite. Sans appelant au 2026-09-11 : jusque-là, cette sortie
+// n'existait que sur le papier, et `abandoned` était définitif pour la vie de l'onglet. L'autre sortie, par la
+// source, est repriseParSource() ci-dessous.
 function repriseManuelle(cle){
   const r = _reprises.get(cle);
   if (!r) return false;
   r.etat = 'idle'; r.tentatives = 0;
   return declenche(cle, 'manuelle');
+}
+
+// ══ repriseParSource() — SORTIE D'`abandoned` SANS GESTE UTILISATEUR (2026-09-11, lot ant/anfr) ══
+// Changement de contrat, validé par Soleil le 2026-09-11. 'ant' (contexte : 3 tentatives, pas de réveil sur
+// `online`) et 'anfr' (critique : 6, réveil sur `online`) lisent les mêmes lignes Supabase
+// (fetchAntennasCorseRaw) sans avoir le même budget. 'ant' abandonne la première : si Supabase revient ensuite,
+// les valeurs RF reviennent avec 'anfr', les antennes jamais. Le succès de l'une prouve que la source de l'autre
+// est revenue, et la fait sortir d'`abandoned`.
+// Ce qui en fait une sortie, et pas une nouvelle boucle :
+//   · UNE tentative : depuis `abandoned`, le compteur n'est pas remis à zéro (il est déjà au bout de sa classe),
+//     et un échec y ramène directement, sans minuteur ni nouvelle série ;
+//   · depuis `error`, le minuteur en attente est préempté, comme dans reveille(), sans attendre le plancher ;
+//   · en vol ou `ok` : rien. La tentative passe par declenche(), et `enVol` borne toujours seul la concurrence ;
+//   · un seul appelant, la fin du chemin de succès de calibrateRF(), pour 'ant'. calibrateRF() ne s'exécute que
+//     par la clé 'anfr', dont `ok` est terminal : le déclencheur part au plus une fois par onglet. Un appel
+//     direct de calibrateRF() ferait tomber cette borne ; la réfutation contrôle qu'il n'en existe aucun
+//     (tests/blindage-harness/non-regression-reprise-ant-anfr.mjs, S0).
+function repriseParSource(cle, motif){
+  const r = _reprises.get(cle);
+  if (!r || r.enVol || r.etat === 'ok') return false;
+  if (r.minuteur !== null) { clearTimeout(r.minuteur); r.minuteur = null; }   // préemption, comme reveille()
+  if (r.etat === 'abandoned') r.etat = 'error';   // une tentative : le compteur est au bout de sa classe
+  return declenche(cle, motif);
 }
 
 // Cached fetch wrapper — 5min TTL in sessionStorage
@@ -5589,8 +5630,16 @@ function tog(id,cls,btn){
       });
     }
     if(id==='contrib'){
-      var nC=(typeof contribsDB!=='undefined')?contribsDB.length:0;
-      info(jt('contrib_toast_prefix','Contributions smartphone — ')+nC+jt('contrib_toast_suffix',' relevé(s) · hors du calcul.'),null,4000);
+      // Le compte ne se dit que d'une liste chargée (2026-09-11, lot ant/anfr) : avant, « 0 relevé(s) »
+      // s'affichait pendant le chargement et pendant une panne de Supabase. Cf. _contribsListe.
+      if(_contribsListe==='ok'){
+        var nC=(typeof contribsDB!=='undefined')?contribsDB.length:0;
+        info(jt('contrib_toast_prefix','Contributions smartphone — ')+nC+jt('contrib_toast_suffix',' relevé(s) · hors du calcul.'),null,4000);
+      }else if(_contribsListe==='echec'){
+        info(jt('contrib_toast_non_chargees','Contributions smartphone — non chargées (Supabase indisponible) · hors du calcul.'),null,4000);
+      }else{
+        info(jt('contrib_toast_chargement','Contributions smartphone — chargement… · hors du calcul.'),null,4000);
+      }
     }
 
     // align/egl/intl : couches patrimoniales migrées vers patrimoine.html (intl : dette INTL-CRUSTAL-001)
@@ -8205,6 +8254,7 @@ async function calibrateRF(){
   //  · une recalibration sans point exploitable n'écrase pas un k valide (kAvant) : le fichier des
   //    mesures servi en 200 mais vide est le cas qui ressemble le plus à un succès.
   const kAvant=RF_CALIB_K;
+  let calibree=false;   // succès complet — lu par le couplage avec 'ant', en fin de fonction
   try{
     await loadANFRForField();
     if(!anfrGrillePrete()){ console.warn('[Tellux] calibration RF refusée : grille ANFR absente — k inchangé ('+kAvant+'), valeurs RF non calibrées'); return; }
@@ -8261,7 +8311,14 @@ async function calibrateRF(){
     // vide, et la carte d'avant (construite non calibrée) réapparaîtrait au rallumage (lot B, S7).
     if(typeof lHotRF!=='undefined'&&typeof buildHotRF==='function'){ lHotRF.clearLayers(); if(typeof ACTIVE!=='undefined'&&ACTIVE.hotrf) buildHotRF(); }
     if(typeof rafraichirLibellesRF==='function') rafraichirLibellesRF();
+    calibree=true;
   }catch(e){ RF_CALIB_K=kAvant; console.warn('[Tellux] calibration RF échec : '+e.message+' — k inchangé ('+kAvant+')'); }
+  // Couplage avec la clé 'ant' (2026-09-11, lot ant/anfr) : les lignes Supabase sont revenues, et en cache
+  // (fetchAntennasCorseRaw) ; la reprise 'ant' a pu abandonner avant. Cf. repriseParSource(). Hors du try : une
+  // exception ici ne doit pas passer par le catch, qui remettrait k à sa valeur d'avant une calibration réussie.
+  // LIMITE DÉCLARÉE : le déclencheur est le succès de la calibration, pas le retour de la grille. Si la grille
+  // revient et que le fichier des mesures certifiées échoue jusqu'à l'abandon de 'anfr', 'ant' n'est pas réveillée.
+  if(calibree&&typeof repriseParSource==='function') repriseParSource('ant','anfr');
 }
 // rfCalibre() (2026-09-10, lot B) — la source des libellés « calibré / non calibré ». RF_CALIB_STATS
 // n'est posé que par une calibration RÉUSSIE (grille chargée, au moins un point exploitable) : tant
@@ -10091,10 +10148,12 @@ async function loadAnt(){try{
   // rien n'est écrit (en-tête, panneau, légende), et le prédicat de la reprise 'ant' reste faux.
   if(nOnshore===0) throw new Error('aucune antenne à terre dans la réponse ('+rows.length+' ligne(s))');
   console.log('Antennes : '+nOnshore+' onshore individuelles ('+seenPos.size+' positions distinctes, '+nOffshore+' offshore commune-null, '+nSeaFiltered+' hors bbox)');
+  // Compte traduit (2026-09-11, lot ant/anfr) : « N antennes » restait en français sur la page anglaise.
+  const texteCompte=nOnshore+jt('ant_compte_suffixe',' antennes');
   const hdr=document.getElementById('hdr-status');
-  if(hdr)statutAntennes(nOnshore+' antennes');
+  if(hdr)statutAntennes(texteCompte);
   const anfrC=document.getElementById('anfr-count');
-  if(anfrC)anfrC.textContent=nOnshore+' antennes';
+  if(anfrC)anfrC.textContent=texteCompte;
   ANFR_ONSHORE_COUNT=nOnshore; syncAntCount(); // cf. déclaration ANFR_ONSHORE_COUNT plus haut
   // Hook de debug léger pour les sondes d'évaluation (Playwright § Axe APP)
   // — publie le compteur de chaque couche en lecture seule. Suggéré §8
@@ -10122,12 +10181,17 @@ async function loadAnt(){try{
   dessinerMarqueursTDF();
 }catch(e){
   console.error('❌ loadAnt erreur:',e.message);
-  // Sur échec, l'en-tête et le panneau gardent leur texte d'avant (« chargement… » au premier essai). Écrire
-  // ici « antennes indisponibles » a été essayé puis retiré à la revue du 2026-09-10, pour deux raisons :
-  //   · la phrase deviendrait fausse quand la reprise 'anfr' ramène les lignes Supabase après l'abandon de
-  //     la reprise 'ant', car rien ne rappelle alors loadAnt() ;
-  //   · l'en-tête n'a qu'une case persistante, et l'échec y effaçait l'avertissement du secours OSM
-  //     (loadReseau), qui qualifie une donnée affichée.
+  // Sur échec, l'en-tête et le panneau disent l'indisponibilité (2026-09-11, lot ant/anfr). La phrase avait été
+  // retirée à la revue du 2026-09-10 pour deux raisons, levées depuis :
+  //   · elle devenait fausse quand la reprise 'anfr' ramenait les lignes Supabase après l'abandon de la reprise
+  //     'ant', car rien ne rappelait alors loadAnt() : c'est désormais repriseParSource(), à la fin de
+  //     calibrateRF(), qui la rappelle — sauf dans la limite déclarée à cet endroit ;
+  //   · l'en-tête n'a qu'une case persistante : statutAntennes() n'y écrit que si elle est libre ou déjà à elle,
+  //     jamais par-dessus l'avertissement du secours OSM (loadReseau), qui qualifie une donnée affichée.
+  // Au retour, le compte remplace la phrase, dans l'en-tête comme dans le panneau.
+  const indispo=jt('ant_statut_indisponibles','antennes indisponibles');
+  if(document.getElementById('hdr-status'))statutAntennes(indispo);
+  const anfrC=document.getElementById('anfr-count');if(anfrC)anfrC.textContent=indispo;
 }}
 
 // ═══ Marqueurs des émetteurs TDF — dessinerMarqueursTDF() ═══
@@ -10342,8 +10406,10 @@ function updateSupabaseStatusDot(state,contribCount){
   dot.classList.remove('status-dot--pending','status-dot--ok','status-dot--error');
   if(state==='ok'){
     dot.classList.add('status-dot--ok');
-    const n=contribCount||0;
-    dot.title='Supabase connecté · '+n+' contribution'+(n>1?'s':'');
+    // Compte absent (null) : Supabase répond, mais la liste n'a jamais été chargée, donc son total est inconnu
+    // (2026-09-11, lot ant/anfr). Avant, `contribCount||0` en faisait un compte.
+    if(contribCount==null){ dot.title='Supabase connecté'; }
+    else{ const n=contribCount; dot.title='Supabase connecté · '+n+' contribution'+(n>1?'s':''); }
   }else if(state==='error'){
     dot.classList.add('status-dot--error');
     dot.title='Supabase hors ligne — données locales uniquement';
@@ -10358,6 +10424,7 @@ async function loadDB(){
   try{
     const data=await sbGet('/rest/v1/contributions?excluded_from_public=eq.false&order=created_at.desc&limit=100');
     contribsDB=data||[];
+    _contribsListe='ok';
     lCon.clearLayers();
     contribsDB.forEach(addMarker);
     const n=contribsDB.length;
@@ -10370,6 +10437,7 @@ async function loadDB(){
     // Ne pas écraser info() — l'utilisateur peut être en train de lire autre chose
   }catch(err){
     updateSupabaseStatusDot('error');
+    if(_contribsListe!=='ok')_contribsListe='echec';   // une liste déjà chargée garde son compte
     const eTot=document.getElementById('db-total');if(eTot)eTot.textContent='contributions non chargées';
     // Retry silencieux dans 30s
     setTimeout(loadDB,30000);
@@ -10822,7 +10890,9 @@ async function saveContrib(){
       cformShowStep(1);
     }
     const n=contribsDB.length;
-    updateSupabaseStatusDot('ok',n);
+    // Le compte n'est transmis que d'une liste chargée (2026-09-11, lot ant/anfr) : sinon, la liste locale ne
+    // porte que cette ligne, et le point d'état l'aurait affichée comme un total. Cf. _contribsListe.
+    updateSupabaseStatusDot('ok',_contribsListe==='ok'?n:null);
     const eTot2=document.getElementById('db-total');if(eTot2)eTot2.textContent=n+' contribution'+(n>1?'s':'')+' en base';
     const ePanel2=document.getElementById('contrib-panel');if(ePanel2)ePanel2.style.display='block';
     updateContribSummary();
@@ -10905,6 +10975,9 @@ function instrumentLabel(type){
 function updateContribSummary(){
   const el = document.getElementById('cond-summary-contribs');
   if(!el) return;
+  // Pas de total d'une liste jamais chargée (2026-09-11, lot ant/anfr) : un enregistrement réussi y ajoute sa
+  // ligne, et le résumé affichait « 1 contribution ». Le tiret d'origine reste. Cf. _contribsListe.
+  if(_contribsListe !== 'ok'){ el.textContent = '—'; return; }
   const n = (typeof contribsDB !== 'undefined' && Array.isArray(contribsDB)) ? contribsDB.length : 0;
   if(n === 0){
     el.textContent = jt('contrib_summary_zero','Aucune contribution');
