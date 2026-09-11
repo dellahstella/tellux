@@ -32,6 +32,12 @@
 // chargée ne transmet pas de compte au point d'état, parce que la liste locale n'est pas un total. Contre
 // le code d'avant ce lot, G1 et G2 DOIVENT échouer.
 //
+// SUITE (2026-09-11, lot D2) — H : un rafraîchissement de la liste qui relit la table APRÈS la validation de
+// l'INSERT mais AVANT sa réponse y a déjà mis la ligne. saveContrib() ne doit ni l'ajouter une seconde fois,
+// ni redessiner son marqueur, ni la compter deux fois. Dédoublonnage sur l'id que renvoie l'INSERT. Contre le
+// code d'avant ce lot, H1 DOIT échouer ; H2 (sans rafraîchissement) et H3 (réponse sans ligne, donc sans id)
+// sont des témoins, et H4 une garde : deux lignes sans id ne sont jamais prises pour la même.
+//
 // Usage : node tests/blindage-harness/non-regression-savecontrib-annulation.mjs [app.html]   (sort 1 si un ✘)
 
 import { readFileSync } from 'node:fs';
@@ -120,10 +126,13 @@ function monter({ elfLoadingMs = 0, sbDelayMs = 150, sbEchec = false, sbManuel =
       if (issue === 'echec') throw new Error('Failed to fetch');
       // Le serveur a validé l'INSERT, puis la connexion tombe : la ligne existe, fetch rejette.
       if (issue === 'ecrit-perdu') { base.push(ligne); throw new TypeError('Failed to fetch'); }
+      // La réponse ne porte pas la ligne (scénario H3) : pas d'id à lire.
+      if (issue === 'sans-ligne') { base.push(ligne); return []; }
       base.push(ligne);
       return [{ id: base.length, ...ligne }];
     },
-    contribsDB: [], addMarker() {},
+    // Les marqueurs posés sont ENREGISTRÉS (scénario H) : l'id de chaque ligne dessinée.
+    contribsDB: [], addMarker(c) { (ctx.__marqueurs = ctx.__marqueurs || []).push(c && c.id); },
     cformOverlayHide() {}, setCtx() {}, cformShowStep() {}, cformUpdateStep1NextState() {},
     // Le point d'état est ENREGISTRÉ (scénario G) : état et compte transmis.
     updateSupabaseStatusDot(e, n) { (ctx.__points = ctx.__points || []).push({ e, n }); }, updateContribSummary() {}, renderList() {},
@@ -301,6 +310,51 @@ for (const [id, etat, deja] of [['G1', 'attente', 0], ['G2', 'echec', 0], ['G3',
   const etatApres = vm.runInContext('_contribsListe', s.ctx);
   verifier('l’écriture ne change pas l’état de la liste (_contribsListe)', etatApres === etat, etatApres);
 }
+
+// ─── H — une ligne déjà relue par un rafraîchissement n'est pas ajoutée deux fois (2026-09-11, lot D2) ──
+// Le serveur valide l'INSERT ; avant que sa réponse arrive, loadDB() (toutes les 5 min, ou 30 s après un échec)
+// relit la table : la ligne est déjà dans contribsDB, avec son marqueur. La réponse arrive ensuite.
+const avecId = (liste, id) => liste.filter((c) => c && c.id === id).length;
+s = monter({ sbManuel: true });
+vm.runInContext("_contribsListe = 'ok'", s.ctx);
+p = s.lancer();
+await attendre(50);
+vm.runInContext('contribsDB.unshift({ id: 1, lat: 41.92, lon: 8.74 })', s.ctx);   // le rafraîchissement
+s.liberer(0, 'ok');
+await p;
+let marques = s.ctx.__marqueurs || [];
+let pointsH = s.ctx.__points || [];
+console.log('\nH1 — la liste est rafraîchie entre la validation de l’INSERT et sa réponse');
+verifier('la ligne n’est présente qu’une fois dans la liste', avecId(s.ctx.contribsDB, 1) === 1, `${avecId(s.ctx.contribsDB, 1)} fois`);
+verifier('aucun second marqueur pour elle', marques.filter((x) => x === 1).length === 0, JSON.stringify(marques));
+verifier('le point d’état compte une contribution, pas deux', pointsH.length > 0 && pointsH[pointsH.length - 1].n === 1, JSON.stringify(pointsH[pointsH.length - 1]));
+
+s = monter({});
+vm.runInContext("_contribsListe = 'ok'", s.ctx);
+await s.lancer();
+marques = s.ctx.__marqueurs || [];
+console.log('\nH2 — témoin : aucun rafraîchissement pendant l’envoi');
+verifier('la ligne est ajoutée une fois, avec son marqueur', avecId(s.ctx.contribsDB, 1) === 1 && marques.filter((x) => x === 1).length === 1,
+  `${avecId(s.ctx.contribsDB, 1)} / ${JSON.stringify(marques)}`);
+
+s = monter({ sbManuel: true });
+p = s.lancer();
+await attendre(50);
+s.liberer(0, 'sans-ligne');
+await p;
+marques = s.ctx.__marqueurs || [];
+console.log('\nH3 — témoin : la réponse ne porte pas la ligne (pas d’id), l’ajout se fait comme avant');
+verifier('la ligne envoyée est ajoutée une fois, avec un marqueur', s.ctx.contribsDB.length === 1 && marques.length === 1,
+  `${s.ctx.contribsDB.length} / ${JSON.stringify(marques)}`);
+
+s = monter({ sbManuel: true });
+vm.runInContext('contribsDB.push({ lat: 41.93, lon: 8.75 })', s.ctx);   // une ligne locale sans id, d'une réponse sans ligne plus tôt
+p = s.lancer();
+await attendre(50);
+s.liberer(0, 'sans-ligne');
+await p;
+console.log('\nH4 — garde : une réponse sans ligne, alors que la liste porte déjà une ligne sans id');
+verifier('la nouvelle ligne est ajoutée — deux lignes sans id ne sont pas « la même »', s.ctx.contribsDB.length === 2, `${s.ctx.contribsDB.length}`);
 
 console.log(`\n${echecs === 0 ? 'TOUT VERT' : echecs + ' ÉCHEC(S)'}`);
 process.exit(echecs === 0 ? 0 : 1);
