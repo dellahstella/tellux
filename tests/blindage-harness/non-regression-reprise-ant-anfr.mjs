@@ -97,17 +97,42 @@ const dictEN = new Function(blocEN + '\nreturn JS_STRINGS_EN;')();
 console.log('S0 — câblage dans app.html');
 const codeAssistant = code.slice(code.indexOf('const REPRISE_CLASSES'), code.indexOf('async function fetchEnv'));
 verifier('repriseParSource() définie dans l’assistant', existeFonction('repriseParSource', codeAssistant));
-// Deux SIGNAUX statiques (revue du 2026-09-11) : chaque identifiant n'est mentionné qu'aux endroits connus, dans
-// le code sans commentaires ET dans le balisage hors scripts (gestionnaires onclick). Une référence passée à un
-// minuteur, un .bind ou un gestionnaire HTML est une mention de plus. Ce ne sont PAS la borne : elle est tenue
-// par construction dans repriseParSource() et vérifiée par son comportement (A7).
-// Limite de ce signal : la neutralisation des commentaires par expression régulière ignore les chaînes ; une
-// chaîne contenant « /* » masquerait la suite (aucune dans app.html au 2026-09-11).
+// Deux SIGNAUX statiques (revue du 2026-09-11). Chaque identifiant n'apparaît que sous les formes attendues, dans
+// le code sans commentaires ET dans le balisage hors scripts (gestionnaires onclick). Chaque occurrence est classée :
+// définition, appel, garde typeof, ou référence (passée en valeur : minuteur, écouteur, .bind, ?.()). On exige un
+// nombre exact PAR FORME : un compte global se laisse tromper par deux éditions qui s'équilibrent, comme retirer
+// une garde typeof et ajouter un écouteur (revue, passe 2). Ce ne sont PAS la borne : elle est tenue par
+// construction dans repriseParSource() et vérifiée par son comportement (A7, A7bis).
+// Limites de ce signal : la neutralisation des commentaires par expression régulière ignore les chaînes, si bien
+// qu'une chaîne contenant « /* » masquerait la suite (aucune dans app.html au 2026-09-11) ; une chaîne qui nomme
+// l'identifiant (un message de journal) compterait comme une référence, soit un faux rouge, dans le sens prudent.
 const horsScripts = html.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<!--[\s\S]*?-->/g, '');
-const mentions = (nom) => { const re = new RegExp('\\b' + nom + '\\b', 'g'); return [...code.matchAll(re)].length + [...horsScripts.matchAll(re)].length; };
-const dansCalib = existeFonction('calibrateRF', code) && /\brepriseParSource\s*\(\s*'ant'/.test(extraireFonction('calibrateRF', code));
-verifier('repriseParSource n’est mentionnée qu’à sa définition, sa garde typeof et son appel pour \'ant\' dans calibrateRF()', mentions('repriseParSource') === 3 && dansCalib, `${mentions('repriseParSource')} mention(s) ; dans calibrateRF : ${dansCalib}`);
-verifier('calibrateRF n’est mentionnée qu’à sa définition, sa garde typeof et l’inscription \'anfr\' — la calibration ne passe que par la clé', mentions('calibrateRF') === 3, `${mentions('calibrateRF')} mention(s)`);
+function formes(nom) {
+  const f = { definitions: 0, appels: [], gardes: 0, references: [], balisage: 0 };
+  for (const m of code.matchAll(new RegExp('\\b' + nom + '\\b', 'g'))) {
+    const avant = code.slice(Math.max(0, m.index - 30), m.index);
+    const apres = code.slice(m.index + nom.length, m.index + nom.length + 4);
+    if (/function\s+$/.test(avant)) f.definitions++;
+    else if (/typeof\s+$/.test(avant)) f.gardes++;
+    else if (/^\s*\(/.test(apres)) f.appels.push(m.index);
+    else f.references.push(code.slice(Math.max(0, m.index - 40), m.index + nom.length + 8).replace(/\s+/g, ' '));
+  }
+  f.balisage = [...horsScripts.matchAll(new RegExp('\\b' + nom + '\\b', 'g'))].length;
+  return f;
+}
+const calibSource = existeFonction('calibrateRF', code) ? extraireFonction('calibrateRF', code) : '';
+const debutCalib = calibSource ? code.indexOf(calibSource) : -1, finCalib = debutCalib + calibSource.length;
+const rps = formes('repriseParSource');
+const rpsDansCalib = rps.appels.length === 1 && rps.appels[0] > debutCalib && rps.appels[0] < finCalib
+  && /\brepriseParSource\s*\(\s*'ant'/.test(calibSource);
+verifier('repriseParSource : une définition, un seul appel (pour \'ant\', dans calibrateRF()), aucune référence, rien dans le balisage',
+  rps.definitions === 1 && rpsDansCalib && rps.references.length === 0 && rps.balisage === 0,
+  `${rps.definitions} définition(s), ${rps.appels.length} appel(s) (dans calibrateRF : ${rpsDansCalib}), ${rps.references.length} référence(s), ${rps.balisage} dans le balisage`);
+const cal = formes('calibrateRF');
+const seuleRefInscription = cal.references.length === 1 && /enregistrerReprise\(\s*'anfr'\s*,\s*calibrateRF/.test(cal.references[0]);
+verifier('calibrateRF : une définition, aucun appel, une seule référence (l’inscription \'anfr\'), rien dans le balisage — la calibration ne passe que par la clé',
+  cal.definitions === 1 && cal.appels.length === 0 && seuleRefInscription && cal.balisage === 0,
+  `${cal.definitions} définition(s), ${cal.appels.length} appel(s), ${cal.references.length} référence(s) ${JSON.stringify(cal.references)}, ${cal.balisage} dans le balisage`);
 verifier('repriseManuelle() est toujours là — la sortie par geste utilisateur n’est pas retirée', existeFonction('repriseManuelle', codeAssistant));
 verifier('le contrat écrit au site ne dit plus « action utilisateur explicite seulement »',
   !/Sortie de `abandoned` : action utilisateur explicite seulement/.test(js));
@@ -383,6 +408,20 @@ console.log('\nA7 — calibrateRF() relancée hors de la clé, après un réveil
 verifier("aucune tentative de plus pour 'ant' : au plus une par clé et par source dans l’onglet",
   apresAppelDirect === apresReveil && apresManuelle === apresReveil && api.reprisesEtat('ant') === 'abandoned',
   `${avant.echecs} → réveil ${apresReveil} → appel direct ${apresAppelDirect} → repriseManuelle ${apresManuelle}, ${api.reprisesEtat('ant')}`);
+
+// A7bis — « une fois par onglet », et non « une fois par abandon » (revue, passe 2). Suite d'A7 : 'ant' est remise
+// à zéro par repriseManuelle('ant') (un geste utilisateur), abandonne de nouveau, puis calibrateRF() est relancée.
+// Une garde par compteur de tentatives accorderait là une seconde tentative par la source ; la garde par clé et
+// par source, non.
+await api.repriseManuelle('ant');
+await calme();
+await epuiser('ant');
+const avant7bis = nb('loadAnt erreur');
+await api.calibrateRF();
+await calme(); await calme();
+console.log('\nA7bis — \'ant\' remise à zéro par un geste, abandonnée de nouveau, puis calibrateRF() relancée');
+verifier('toujours aucune tentative par la source : la borne vaut pour l’onglet, pas pour un abandon',
+  api.reprisesEtat('ant') === 'abandoned' && nb('loadAnt erreur') === avant7bis, `${avant7bis} → ${nb('loadAnt erreur')}, ${api.reprisesEtat('ant')}`);
 
 avant = await antAbandonnee({ carto: () => 'reseau' });
 plans.anfr = () => 'ok';
