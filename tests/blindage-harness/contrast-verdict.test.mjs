@@ -230,6 +230,26 @@ const CRITIQUE_30 = rapport({ violations: 30, critique: 30, depassements: ['crit
     panel: `Panneau ${String(i + 1).padStart(2, '0')}`, ratio: 2.5, couleur: '#999999', fond_effectif: '#ffffff',
     texte: `Texte ${String(i + 1).padStart(2, '0')}`,
   })));
+const AA_30 = structuredClone(AA);
+Object.assign(AA_30.resume, { violations: 30, aa: 30, depassements: ['aa : 30 > plafond 0'] });
+AA_30.violations_aa = Array.from({ length: 30 }, (_, i) => ({
+  panel: `Panneau AA ${String(i + 1).padStart(2, '0')}`, ratio: 4.2, seuil: 4.5, couleur: 'rgb(120, 120, 120)',
+  fond_effectif: 'rgb(255, 255, 255)', texte: `Texte AA ${String(i + 1).padStart(2, '0')}`,
+}));
+const MIXTE = rapport({ depassements: ['critique : 1 > plafond 0', { type: 'plancher' }] });
+const RESUME_TABLEAU = { outil: 'contrast-panels', resume: [{ depassements: ['critique : 1 > plafond 0'] }] };
+const PILE_40 = {
+  outil: 'contrast-panels',
+  erreur: ['Error: boom', ...Array.from({ length: 39 }, (_, i) => `    at g${i} (contrast-panels.mjs:${i + 1}:1)`)].join('\n'),
+};
+// Le détail des violations dont la forme a dérivé : le verdict doit le dire, pas afficher un
+// tableau vide sous son en-tête ni le faire disparaître.
+const AA_OBJET = structuredClone(AA);
+AA_OBJET.violations_aa = { 'Mon lieu': AA.violations_aa };
+const AA_SANS_DETAIL = structuredClone(AA);
+delete AA_SANS_DETAIL.violations_aa;
+const CRIT_NOMBRE = structuredClone(CRITIQUE);
+CRIT_NOMBRE.violations_critiques = 2;
 
 // ─── Contrôles ───────────────────────────────────────────────────────────────
 const echecs = [];
@@ -298,6 +318,7 @@ function verifie(cas, cond, msg) {
   verifie(cas, r.code === 0, `l'étape passe (obtenu : ${r.code})`);
   verifie(cas, r.erreurs.length === 0, 'aucune annotation d\'erreur');
   verifie(cas, r.resume.includes('✅'), 'le résumé est au vert');
+  verifie(cas, !r.resume.includes('#### Violations'), 'aucun tableau de violations sur un vert');
 }
 {
   const cas = 'régression de contraste, critique 2 > 0';
@@ -308,6 +329,7 @@ function verifie(cas, cond, msg) {
     'le résumé liste les violations critiques');
   verifie(cas, r.resume.includes('Régression de contraste'), 'le résumé titre « Régression de contraste »');
   verifie(cas, r.erreurs.some((e) => e.includes('critique : 2 > plafond 0')), 'le dépassement devient une annotation');
+  verifie(cas, !/autre\(s\)/.test(r.resume), 'un tableau court n\'annonce aucune coupe');
 }
 {
   const cas = '12 dépassements';
@@ -374,6 +396,7 @@ function verifie(cas, cond, msg) {
   verifie(cas, r.journal.includes('contrast-panels.mjs:512:14'), 'le journal de l\'étape donne la pile');
   verifie(cas, !/\bnull\b/.test(r.resume), 'le résumé n\'affiche aucun « null » en guise de mesure');
   verifie(cas, /exit_code=1/.test(r.sorties), 'la sortie exit_code vaut 1');
+  verifie(cas, !/ligne\(s\) de plus/.test(r.resume + r.journal), 'une pile courte n\'annonce aucune coupe');
 }
 {
   const cas = 'rapport lisible sans resume ni erreur, exit 1';
@@ -405,6 +428,8 @@ for (const [nom, rap] of [['clé depassements renommée', CLE_RENOMMEE], ['dépa
   const r = executer(OBJETS, 2);
   verifie(cas, r.erreurs.some((e) => e.includes('array<object>')),
     'l\'annotation montre des objets là où le verdict lit des chaînes');
+  verifie(cas, r.erreurs.some((e) => e.includes('aucun dépassement ne peut en être lu')), 'l\'annotation dit qu\'aucun ne se lit');
+  verifie(cas, r.resume.includes('Aucun dépassement ne peut en être lu.'), 'le résumé aussi');
 }
 {
   const cas = 'racine du rapport qui n\'est pas un objet, exit 2';
@@ -443,6 +468,8 @@ for (const [nom, rap] of [['clé depassements renommée', CLE_RENOMMEE], ['dépa
   verifie(cas, /21 ligne\(s\) de plus/.test(r.resume), 'le résumé dit combien de lignes il ne montre pas');
   verifie(cas, !r.erreurs.some((e) => /pile complète dans le résumé/.test(e)),
     'l\'annotation ne promet pas une pile complète dans le résumé');
+  verifie(cas, r.erreurs.some((e) => e.includes('40 premières lignes')), 'l\'annotation annonce la coupe');
+  verifie(cas, r.journal.includes('21 ligne(s) de plus'), 'le journal dit combien de lignes il ne montre pas');
 }
 {
   const cas = 'régression AA : les textes en cause';
@@ -450,6 +477,7 @@ for (const [nom, rap] of [['clé depassements renommée', CLE_RENOMMEE], ['dépa
   verifie(cas, /^#### Violations AA$/m.test(r.resume), 'le résumé a un tableau des violations AA');
   verifie(cas, AA.violations_aa.every((v) => r.resume.includes(`| ${v.texte} |`) && r.resume.includes(`| ${v.panel} |`)),
     'le résumé nomme chaque texte AA et son panneau');
+  verifie(cas, r.resume.includes('| 4.21 | 4.5 |'), 'la ligne porte le ratio et le seuil');
 }
 {
   const cas = '30 violations critiques';
@@ -541,6 +569,90 @@ if (!process.env.CONTRAST_VERDICT_ENFANT) {
   verifie(cas, (r.stdout || '').split('\n').some((l) => l.startsWith('::error') && l.includes('introuvable')),
     'une annotation dit que l\'étape est introuvable');
   verifie(cas, readFileSync(resume, 'utf8').includes('introuvable'), 'le résumé du job le dit aussi');
+}
+{
+  const cas = 'détail AA rangé dans un objet, exit 2';
+  const r = executer(AA_OBJET, 2);
+  verifie(cas, r.resume.includes('forme lue `object`'), 'le résumé dit la forme du détail AA');
+  verifie(cas, !/jq: error/.test(r.journal), 'aucune erreur brute de jq dans le journal');
+}
+{
+  const cas = 'détail AA absent alors que le résumé compte 3 violations AA';
+  const r = executer(AA_SANS_DETAIL, 2);
+  verifie(cas, /compte 3 violation\(s\) AA/.test(r.resume), 'le résumé dit que le détail manque');
+}
+{
+  const cas = 'détail critique réduit à un nombre, exit 2';
+  const r = executer(CRIT_NOMBRE, 2);
+  verifie(cas, r.resume.includes('forme lue `number`'), 'le résumé dit la forme du détail critique');
+  verifie(cas, !/jq: error/.test(r.journal), 'aucune erreur brute de jq dans le journal');
+}
+{
+  const cas = '30 violations AA';
+  const r = executer(AA_30, 2);
+  verifie(cas, r.resume.includes('| Texte AA 25 |') && !r.resume.includes('| Texte AA 26 |'), 'le tableau AA montre les 25 premières');
+  verifie(cas, /… et 5 autre\(s\)/.test(r.resume), 'le résumé dit combien il n\'en montre pas');
+}
+{
+  const cas = 'dépassements mêlés (une chaîne, un objet), exit 2';
+  const r = executer(MIXTE, 2);
+  verifie(cas, r.erreurs.some((e) => e.includes('1 dépassement(s) s\'y lisent')), 'l\'annotation compte le dépassement lisible');
+  verifie(cas, r.resume.includes('- critique : 1 > plafond 0'), 'le résumé le liste');
+  verifie(cas, !/jq: error/.test(r.journal), 'aucune erreur brute de jq dans le journal');
+}
+{
+  const cas = 'resume devenu un tableau, exit 2';
+  const r = executer(RESUME_TABLEAU, 2);
+  verifie(cas, r.erreurs.some((e) => e.includes('resume : array<object>')), 'l\'annotation dit la forme du resume');
+}
+{
+  const cas = 'rapport lisible sans dépassement, script sorti en 2';
+  const r = executer(VERT, 2);
+  verifie(cas, r.code === 2, `l'étape garde le code du script (obtenu : ${r.code})`);
+  verifie(cas, /^### ❌ Incohérence — code de sortie 2 sans dépassement dans le rapport$/m.test(r.resume),
+    'le titre dit l\'incohérence, avec le code');
+}
+{
+  const cas = 'pile de 40 lignes exactement';
+  const r = executer(PILE_40, 1);
+  verifie(cas, !/ligne\(s\) de plus/.test(r.resume + r.journal), 'aucune coupe annoncée');
+}
+{
+  const cas = 'le contrôle du verdict tourne même après un échec du lancement';
+  verifie(cas, /- name: Contrôle du verdict \(rapports connus, sans navigateur\)\n\s+if: \$\{\{ !cancelled\(\) \}\}/
+    .test(readFileSync(WORKFLOW, 'utf8')), 'son étape porte if: ${{ !cancelled() }}');
+}
+if (!process.env.CONTRAST_VERDICT_ENFANT) {
+  const cas = 'bloc cassé dans le workflow : le contrôle nomme l\'erreur de bash en premier';
+  const dir = mkdtempSync(join(tmpdir(), 'contrast-verdict-casse-'));
+  const casse = join(dir, 'workflow.yml');
+  const resume = join(dir, 'resume.md');
+  const texte = readFileSync(WORKFLOW, 'utf8');
+  const texteCasse = texte.replace(/(id: contrast\n[\s\S]*?run: \|\n)( +)/,
+    (_m, avant, retrait) => `${avant}${retrait}if true; then\n${retrait}`);
+  writeFileSync(casse, texteCasse);
+  writeFileSync(resume, '');
+  const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url)], {
+    encoding: 'utf8',
+    env: { ...process.env, CONTRAST_WORKFLOW: casse, CONTRAST_VERDICT_ENFANT: '1', GITHUB_ACTIONS: 'true', GITHUB_STEP_SUMMARY: resume },
+  });
+  const annotations = (r.stdout || '').split('\n').filter((l) => l.startsWith('::error'));
+  verifie(cas, texteCasse !== texte && r.status === 1, `le workflow cassé fait échouer le contrôle (obtenu : ${r.status})`);
+  verifie(cas, (annotations[0] || '').startsWith('::error title=Contrôle du verdict::erreur du bloc')
+    && /syntax error/.test(annotations[0] || ''), `la première annotation nomme l'erreur de bash (obtenu : ${(annotations[0] || '').slice(0, 120)})`);
+  verifie(cas, readFileSync(resume, 'utf8').includes('Erreurs du bloc lui-même'), 'le résumé la donne aussi');
+}
+if (!process.env.CONTRAST_VERDICT_ENFANT) {
+  const cas = 'jq absent : l\'échec du contrôle est aussi dans le résumé';
+  const dir = mkdtempSync(join(tmpdir(), 'contrast-verdict-sans-jq-'));
+  const resume = join(dir, 'resume.md');
+  writeFileSync(resume, '');
+  const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url)], {
+    encoding: 'utf8',
+    env: { ...process.env, PATH: dirname(process.execPath), CONTRAST_VERDICT_ENFANT: '1', GITHUB_ACTIONS: 'true', GITHUB_STEP_SUMMARY: resume },
+  });
+  verifie(cas, r.status === 2, `le contrôle sort en 2 (obtenu : ${r.status})`);
+  verifie(cas, readFileSync(resume, 'utf8').includes('jq introuvable'), 'le résumé du job le dit');
 }
 {
   const cas = '12 dépassements, script sorti en 0';

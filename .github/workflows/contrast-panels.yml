@@ -200,17 +200,27 @@ jobs:
         working-directory: tests/blindage-harness
         run: |
           set +e
-          PLAYWRIGHT_BROWSERS_PATH="$RUNNER_TEMP/aucun-navigateur" CONTRAST_OUT="$RUNNER_TEMP/lancement.json" timeout 120 node contrast-panels.mjs
+          F="$RUNNER_TEMP/lancement.json"
+          PLAYWRIGHT_BROWSERS_PATH="$RUNNER_TEMP/aucun-navigateur" CONTRAST_OUT="$F" timeout 120 node contrast-panels.mjs
           CODE=$?
+          PREMIERE=$(jq -r '.erreur | split("\n") | map(select(length > 0)) | first // ""' "$F" 2>/dev/null | tr -d '\r')
           if [ "$CODE" = "124" ]; then
-            echo "::error title=Contrôle du lancement::contrast-panels.mjs, lancé sans navigateur, n'est pas sorti en 120 s : tué par timeout."
-            exit 1
+            MSG="contrast-panels.mjs n'est pas sorti en 120 s (lancé sans navigateur) : tué par timeout."
+          elif [ "$CODE" != "1" ]; then
+            MSG="attendu : sortie en 1 avec le rapport de l'exception ; obtenu : code $CODE."
+          elif [ ! -s "$F" ]; then
+            MSG="sortie en 1, mais aucun rapport écrit : le script n'a pas atteint son catch. Voir le journal de l'étape."
+          elif [ -z "$PREMIERE" ]; then
+            MSG="sortie en 1, mais le rapport ne porte pas d'exception lisible. Premiers octets : $(head -c 200 "$F" | tr '\r\n' '  ')"
+          elif ! printf '%s' "$PREMIERE" | grep -q -E 'browserType\.launch'; then
+            MSG="sortie en 1, mais l'exception rapportée n'est pas celle du lancement : $PREMIERE"
+          else
+            echo "ok : sortie en 1, exception rapportée : $PREMIERE"
+            exit 0
           fi
-          if [ "$CODE" != "1" ] || ! jq -e '(.erreur | type) == "string"' "$RUNNER_TEMP/lancement.json" >/dev/null 2>&1; then
-            echo "::error title=Contrôle du lancement::attendu : sortie en 1 avec le rapport de l'exception ; obtenu : code $CODE."
-            exit 1
-          fi
-          echo "ok : sortie en 1, exception rapportée : $(jq -r '.erreur | split("\n")[0]' "$RUNNER_TEMP/lancement.json")"
+          echo "::error title=Contrôle du lancement::$(printf '%s' "$MSG" | sed 's/%/%25/g')"
+          { echo "## Contrôle du lancement"; echo ""; echo "### ❌ $MSG"; } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
 
       # Contrôle du VERDICT (2026-09-10) : ce que l'étape « Run contrast-panels » DIT d'un
       # rapport (annotations, résumé, code de sortie), exécuté sur des rapports connus AVANT la
@@ -227,6 +237,39 @@ jobs:
       - name: Install Chromium for Playwright
         working-directory: tests/blindage-harness
         run: npx playwright install --with-deps chromium
+
+      # Contrôle du lancement, second temps (2026-09-11) : une exception APRÈS le démarrage du
+      # navigateur doit, elle aussi, fermer le navigateur et le serveur, et faire sortir le
+      # script en 1 avec son rapport. Ici, le dossier du cache Supabase ne peut pas être créé
+      # (TELLUX_HARNESS_CACHE_DIR sous un fichier), ce qui fait lever installSupabaseCache.
+      # Le premier temps ne l'exerce pas : sans navigateur, chromium.launch lève avant tout.
+      # Relevé par la passe ciblée de #1397.
+      - name: Contrôle du lancement (exception après le démarrage du navigateur)
+        working-directory: tests/blindage-harness
+        run: |
+          set +e
+          F="$RUNNER_TEMP/lancement-2.json"
+          : > "$RUNNER_TEMP/pas-un-dossier"
+          TELLUX_HARNESS_CACHE_DIR="$RUNNER_TEMP/pas-un-dossier/cache" CONTRAST_OUT="$F" timeout 120 node contrast-panels.mjs
+          CODE=$?
+          PREMIERE=$(jq -r '.erreur | split("\n") | map(select(length > 0)) | first // ""' "$F" 2>/dev/null | tr -d '\r')
+          if [ "$CODE" = "124" ]; then
+            MSG="contrast-panels.mjs n'est pas sorti en 120 s (exception après le démarrage du navigateur) : tué par timeout."
+          elif [ "$CODE" != "1" ]; then
+            MSG="attendu : sortie en 1 avec le rapport de l'exception ; obtenu : code $CODE."
+          elif [ ! -s "$F" ]; then
+            MSG="sortie en 1, mais aucun rapport écrit : le script n'a pas atteint son catch. Voir le journal de l'étape."
+          elif [ -z "$PREMIERE" ]; then
+            MSG="sortie en 1, mais le rapport ne porte pas d'exception lisible. Premiers octets : $(head -c 200 "$F" | tr '\r\n' '  ')"
+          elif ! printf '%s' "$PREMIERE" | grep -q -E 'ENOTDIR|EEXIST|mkdir'; then
+            MSG="sortie en 1, mais l'exception rapportée n'est pas celle du dossier de cache : $PREMIERE"
+          else
+            echo "ok : sortie en 1, exception rapportée : $PREMIERE"
+            exit 0
+          fi
+          echo "::error title=Contrôle du lancement::$(printf '%s' "$MSG" | sed 's/%/%25/g')"
+          { echo "## Contrôle du lancement"; echo ""; echo "### ❌ $MSG"; } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
 
       # ═══ Cache Supabase du harnais (brief BN) — restauration sur les runners ═══
       # Le cache posé par la PR #1263 vit dans $XDG_CACHE_HOME/tellux/harness-supabase-cache,
