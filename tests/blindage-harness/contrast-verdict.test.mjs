@@ -34,7 +34,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ICI = dirname(fileURLToPath(import.meta.url));
-const WORKFLOW = join(ICI, '..', '..', '.github', 'workflows', 'contrast-panels.yml');
+const WORKFLOW = process.env.CONTRAST_WORKFLOW
+  || join(ICI, '..', '..', '.github', 'workflows', 'contrast-panels.yml');
 const EN_CI = Boolean(process.env.GITHUB_ACTIONS);
 
 /** En CI, une annotation d'erreur ; `%`, CR et LF échappés comme dans le workflow. */
@@ -45,8 +46,8 @@ function annoter(msg) {
 }
 
 /** Le bloc `run: |` de l'étape `id: contrast`, désindenté. */
-function blocRun() {
-  const lignes = readFileSync(WORKFLOW, 'utf8').split('\n');
+function blocRun(texte = readFileSync(WORKFLOW, 'utf8')) {
+  const lignes = texte.split('\n');
   const i = lignes.findIndex((l) => /^\s+id:\s*contrast\s*$/.test(l));
   if (i < 0) throw new Error('étape « id: contrast » introuvable dans le workflow');
   // Le `run: |` est cherché DANS l'étape : une ligne moins indentée que ses clés la termine.
@@ -99,7 +100,7 @@ if (jq.error || jq.status !== 0) {
  * Exécute le bloc : le faux `node` dépose `rapport` (objet → JSON, chaîne → telle quelle,
  * null → aucun fichier) dans contrast-result.json et sort en `codeScript`.
  */
-function executer(rapport, codeScript) {
+function executer(rapport, codeScript, bloc = BLOC) {
   const dir = mkdtempSync(join(tmpdir(), 'contrast-verdict-'));
   const bin = join(dir, 'bin');
   const travail = join(dir, 'travail');
@@ -117,7 +118,7 @@ function executer(rapport, codeScript) {
   const sorties = join(dir, 'sorties.txt');
   writeFileSync(resume, '');
   writeFileSync(sorties, '');
-  const r = spawnSync('bash', ['-e', '-c', BLOC], {
+  const r = spawnSync('bash', ['-e', '-c', bloc], {
     cwd: travail,
     encoding: 'utf8',
     env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, GITHUB_STEP_SUMMARY: resume, GITHUB_OUTPUT: sorties },
@@ -177,6 +178,36 @@ CLE_RENOMMEE.resume.alertes = CLE_RENOMMEE.resume.depassements;
 delete CLE_RENOMMEE.resume.depassements;
 const OBJETS = structuredClone(ROUGE_0909);
 OBJETS.resume.depassements = DEP_0909.map((message) => ({ type: 'plancher', message }));
+// Un JSON valide dont la racine n'est pas un objet : il passe `jq -e .`.
+const RACINE_TABLEAU = '[]';
+// Des exceptions que le catch peut écrire : `throw ''`, un message qui commence par un saut de
+// ligne, une pile plus longue que ce que le résumé en montre.
+const EXCEPTION_VIDE = { outil: 'contrast-panels', erreur: '' };
+const EXCEPTION_LIGNE_VIDE = {
+  outil: 'contrast-panels',
+  erreur: '\nError: le navigateur ne répond plus\n    at main (contrast-panels.mjs:40:3)',
+};
+const PILE_LONGUE = {
+  outil: 'contrast-panels',
+  erreur: ['Error: boom', ...Array.from({ length: 60 }, (_, i) => `    at f${i} (contrast-panels.mjs:${i + 1}:1)`)].join('\n'),
+};
+// Un compte manque, mais les dépassements restent des chaînes lisibles.
+const COMPTE_DERIVE = structuredClone(ROUGE_0909);
+delete COMPTE_DERIVE.resume.plancher_noeuds;
+const NEUF = rapport({ depassements: DOUZE.resume.depassements.slice(0, 9) });
+const EXCEPTION_ECHAPPEMENT = { outil: 'contrast-panels', erreur: 'Error: 100 % ok\r\n    at main (contrast-panels.mjs:7:1)' };
+// Les textes d'une régression AA, que le verdict doit nommer comme ceux d'une régression critique.
+AA.violations_aa = [
+  { panel: 'Mon lieu', ratio: 4.21, seuil: 4.5, couleur: 'rgb(118, 118, 118)', fond_effectif: 'rgb(247, 244, 238)', texte: 'Sources' },
+  { panel: 'Popup au clic', ratio: 3.9, seuil: 4.5, couleur: 'rgb(125, 125, 125)', fond_effectif: 'rgb(255, 255, 255)', texte: 'Confiance' },
+  { panel: 'Barre de conditions', ratio: 4.33, seuil: 4.5, couleur: 'rgb(120, 118, 110)', fond_effectif: 'rgb(250, 248, 243)', texte: 'Kp' },
+];
+// 30 violations critiques : le tableau n'en montre que 25, et doit le dire.
+const CRITIQUE_30 = rapport({ violations: 30, critique: 30, depassements: ['critique : 30 > plafond 0'] },
+  Array.from({ length: 30 }, (_, i) => ({
+    panel: `Panneau ${String(i + 1).padStart(2, '0')}`, ratio: 2.5, couleur: '#999999', fond_effectif: '#ffffff',
+    texte: `Texte ${String(i + 1).padStart(2, '0')}`,
+  })));
 
 // ─── Contrôles ───────────────────────────────────────────────────────────────
 const echecs = [];
@@ -279,6 +310,8 @@ function verifie(cas, cond, msg) {
   verifie(cas, r.code === 1, `l'étape sort sur le code du script (obtenu : ${r.code})`);
   verifie(cas, !r.resume.includes('✅'), 'le résumé n\'est pas au vert');
   verifie(cas, /code de sortie\D{0,12}1/i.test(r.resume), 'le résumé donne le code de sortie');
+  verifie(cas, r.erreurs.some((e) => /incohérence/i.test(e)), 'une annotation dit l\'incohérence (code non nul, aucun dépassement)');
+  verifie(cas, !/voir le journal/i.test(r.resume), 'le résumé ne renvoie pas à un journal où le verdict n\'a rien écrit');
 }
 
 {
@@ -303,7 +336,8 @@ function verifie(cas, cond, msg) {
   const tete = 'TimeoutError: page.goto: Timeout 30000ms exceeded.';
   verifie(cas, r.code === 1, `l'étape sort sur le code du script (obtenu : ${r.code})`);
   verifie(cas, r.erreurs.some((e) => e.includes(tete)), 'une annotation nomme l\'exception');
-  verifie(cas, /^### ❌ Échec du script/m.test(r.resume), 'le titre du résumé dit l\'échec du script');
+  verifie(cas, /^### ❌ Échec du script — code de sortie 1, aucune mesure rapportée$/m.test(r.resume),
+    'le titre du résumé dit l\'échec du script, avec son code');
   verifie(cas, r.resume.includes(tete) && r.resume.includes('contrast-panels.mjs:512:14'), 'le résumé donne la pile');
   verifie(cas, r.journal.includes('contrast-panels.mjs:512:14'), 'le journal de l\'étape donne la pile');
   verifie(cas, !/\bnull\b/.test(r.resume), 'le résumé n\'affiche aucun « null » en guise de mesure');
@@ -314,13 +348,17 @@ function verifie(cas, cond, msg) {
   const r = executer(SANS_RESUME, 1);
   verifie(cas, r.code === 1, `l'étape sort sur le code du script (obtenu : ${r.code})`);
   verifie(cas, r.erreurs.some((e) => /sans verdict/i.test(e)), 'une annotation dit que le rapport ne porte pas de verdict');
-  verifie(cas, /^### ❌ Rapport sans verdict/m.test(r.resume), 'le titre du résumé le dit');
+  verifie(cas, /^### ❌ Rapport sans verdict lisible — code de sortie du script : 1$/m.test(r.resume), 'le titre du résumé le dit, avec le code du script');
+  verifie(cas, r.erreurs.some((e) => e.includes('resume absent')), 'l\'annotation dit que le champ resume est absent');
   verifie(cas, !/\bnull\b/.test(r.resume), 'le résumé n\'affiche aucun « null » en guise de mesure');
 }
 {
   const cas = 'rapport lisible sans resume ni erreur, exit 0';
   const r = executer(SANS_RESUME, 0);
   verifie(cas, r.code !== 0, `un rapport sans verdict n'accompagne pas un vert (obtenu : ${r.code})`);
+  verifie(cas, /^### ❌ Rapport sans verdict lisible — code de sortie du script : 0$/m.test(r.resume),
+    'le titre donne le code du script (0), pas celui de l\'étape');
+  verifie(cas, r.erreurs.some((e) => e.includes('Code de sortie du script : 0.')), 'l\'annotation aussi');
   verifie(cas, !r.resume.includes('✅'), 'le résumé n\'est pas au vert');
 }
 for (const [nom, rap] of [['clé depassements renommée', CLE_RENOMMEE], ['dépassements en objets', OBJETS]]) {
@@ -328,7 +366,149 @@ for (const [nom, rap] of [['clé depassements renommée', CLE_RENOMMEE], ['dépa
   const r = executer(rap, 2);
   verifie(cas, r.code === 2, `l'étape sort sur le code du script (obtenu : ${r.code})`);
   verifie(cas, r.erreurs.some((e) => /sans verdict/i.test(e)), 'une annotation dit que le rapport ne se lit pas');
-  verifie(cas, /^### ❌ Rapport sans verdict/m.test(r.resume), 'le titre du résumé le dit');
+  verifie(cas, /^### ❌ Rapport sans verdict lisible — code de sortie du script : 2$/m.test(r.resume), 'le titre du résumé le dit, avec le code du script');
+}
+{
+  const cas = 'format dérivé : dépassements en objets, forme affichée';
+  const r = executer(OBJETS, 2);
+  verifie(cas, r.erreurs.some((e) => e.includes('array<object>')),
+    'l\'annotation montre des objets là où le verdict lit des chaînes');
+}
+{
+  const cas = 'racine du rapport qui n\'est pas un objet, exit 2';
+  const r = executer(RACINE_TABLEAU, 2);
+  verifie(cas, r.code === 2, `l'étape sort sur le code du script (obtenu : ${r.code})`);
+  verifie(cas, r.erreurs.some((e) => /sans verdict/i.test(e) && e.includes('racine du rapport : array')),
+    'l\'annotation dit la forme de la racine');
+  verifie(cas, !/jq: error/.test(r.journal), 'aucune erreur brute de jq dans le journal');
+}
+{
+  const cas = 'exception au message vide, exit 1';
+  const r = executer(EXCEPTION_VIDE, 1);
+  verifie(cas, /^### ❌ Échec du script/m.test(r.resume), 'le titre dit l\'échec du script, pas un rapport sans verdict');
+  verifie(cas, r.erreurs.some((e) => e.includes('exception sans message')), 'l\'annotation dit que l\'exception n\'a pas de message');
+  verifie(cas, !/jq: error/.test(r.journal), 'aucune erreur brute de jq dans le journal');
+}
+{
+  const cas = 'exception à première ligne vide, exit 1';
+  const r = executer(EXCEPTION_LIGNE_VIDE, 1);
+  verifie(cas, r.erreurs.some((e) => e.includes('Error: le navigateur ne répond plus')),
+    'l\'annotation porte la première ligne non vide');
+}
+{
+  const cas = 'format dérivé : un compte manque, dépassements lisibles, exit 2';
+  const r = executer(COMPTE_DERIVE, 2);
+  verifie(cas, r.code === 2, `l'étape sort sur le code du script (obtenu : ${r.code})`);
+  verifie(cas, /^### ❌ Rapport sans verdict/m.test(r.resume), 'le titre dit que le verdict ne lit pas ce rapport');
+  verifie(cas, DEP_0909.every((d) => r.resume.includes(d)), 'le résumé nomme quand même les dépassements lisibles');
+  verifie(cas, !r.erreurs.some((e) => /aucun dépassement ne peut en être lu/.test(e)),
+    'l\'annotation ne dit pas qu\'aucun dépassement ne se lit');
+}
+{
+  const cas = 'pile de 61 lignes, exit 1';
+  const r = executer(PILE_LONGUE, 1);
+  verifie(cas, r.resume.includes('at f38 ') && !r.resume.includes('at f39 '), 'le résumé montre les 40 premières lignes');
+  verifie(cas, /21 ligne\(s\) de plus/.test(r.resume), 'le résumé dit combien de lignes il ne montre pas');
+  verifie(cas, !r.erreurs.some((e) => /pile complète dans le résumé/.test(e)),
+    'l\'annotation ne promet pas une pile complète dans le résumé');
+}
+{
+  const cas = 'régression AA : les textes en cause';
+  const r = executer(AA, 2);
+  verifie(cas, /^#### Violations AA$/m.test(r.resume), 'le résumé a un tableau des violations AA');
+  verifie(cas, AA.violations_aa.every((v) => r.resume.includes(`| ${v.texte} |`) && r.resume.includes(`| ${v.panel} |`)),
+    'le résumé nomme chaque texte AA et son panneau');
+}
+{
+  const cas = '30 violations critiques';
+  const r = executer(CRITIQUE_30, 2);
+  verifie(cas, r.resume.includes('| Texte 25 |') && !r.resume.includes('| Texte 26 |'), 'le tableau montre les 25 premières');
+  verifie(cas, /5 autre\(s\)/.test(r.resume), 'le résumé dit combien il n\'en montre pas');
+}
+{
+  const cas = 'bloc cassé (un if sans fi) : le contrôle montre l\'erreur de bash';
+  const r = executer(VERT, 0, `if true; then\n${BLOC}`);
+  verifie(cas, r.code !== 0, `le bloc cassé échoue (obtenu : ${r.code})`);
+  verifie(cas, /syntax error/.test(r.diagnostic || ''), `le diagnostic porte l'erreur de bash (obtenu : « ${r.diagnostic} »)`);
+}
+for (const cle of ['critique', 'aa', 'plafond_critique', 'plafond_aa', 'noeuds_mesures', 'panneaux_mesures', 'plancher_noeuds']) {
+  const cas = `format dérivé : ${cle} à null, exit 0`;
+  const r = executer(rapport({ [cle]: null }), 0);
+  verifie(cas, r.code !== 0, `un compte ou un plafond non numérique n'accompagne pas un vert (obtenu : ${r.code})`);
+  verifie(cas, /^### ❌ Rapport sans verdict lisible — code de sortie du script : 0$/m.test(r.resume), 'le titre le dit, avec le code du script');
+}
+{
+  const cas = 'format dérivé : plafond en chaîne, exit 2';
+  const r = executer(rapport({ plafond_critique: '0', depassements: ['critique : 1 > plafond 0'] }), 2);
+  verifie(cas, r.code === 2, `l'étape sort sur le code du script (obtenu : ${r.code})`);
+  verifie(cas, r.erreurs.some((e) => /sans verdict/i.test(e)), 'une annotation dit que le rapport ne se lit pas');
+}
+{
+  const cas = 'format dérivé : dépassements rangés dans un objet, exit 0';
+  const r = executer(rapport({ depassements: {} }), 0);
+  verifie(cas, r.code !== 0, `l'étape ne passe pas au vert (obtenu : ${r.code})`);
+  verifie(cas, /^### ❌ Rapport sans verdict lisible — code de sortie du script : 0$/m.test(r.resume), 'le titre le dit');
+}
+{
+  const cas = 'format dérivé : clé renommée, forme affichée';
+  const r = executer(CLE_RENOMMEE, 2);
+  verifie(cas, r.erreurs.some((e) => e.includes('"alertes":"array<string>"')), 'l\'annotation montre la clé qui porte les dépassements');
+}
+{
+  const cas = '9 dépassements, script sorti en 0';
+  const r = executer(NEUF, 0);
+  const annotes = NEUF.resume.depassements.filter((d) => r.erreurs.some((e) => e.includes(d))).length;
+  const reste = r.erreurs.map((e) => e.match(/(\d+) autre/)).find(Boolean);
+  verifie(cas, r.erreurs.length === 10, `10 annotations : l'incohérence, 8 nommés, 1 compté (obtenu : ${r.erreurs.length})`);
+  verifie(cas, annotes === 8 && reste && Number(reste[1]) === 1,
+    `8 nommés et 1 compté (nommés : ${annotes}, comptés : ${reste ? reste[1] : 'aucun'})`);
+}
+{
+  const cas = 'exception : %, retour chariot, clôture de la pile';
+  const r = executer(EXCEPTION_ECHAPPEMENT, 1);
+  verifie(cas, r.erreurs.some((e) => e.startsWith('::error title=Contraste — échec du script::Error: 100 %25 ok%0D (code de sortie 1).')),
+    'l\'annotation porte la première ligne échappée, sous le titre « échec du script »');
+  verifie(cas, (r.resume.match(/^```$/gm) || []).length === 2, 'la pile est entre deux clôtures de code');
+}
+{
+  const cas = 'lecture du bloc : un commentaire en colonne 0 dans l\'étape';
+  const yaml = ['jobs:', '  j:', '    steps:', '      - name: a', '        id: contrast', '# commentaire',
+    '        run: |', '          echo un', '      - name: b', '        uses: x/y@v1'].join('\n');
+  let bloc = null;
+  try {
+    bloc = blocRun(yaml);
+  } catch {
+    bloc = null;
+  }
+  verifie(cas, bloc === 'echo un\n', `le bloc est trouvé (obtenu : ${JSON.stringify(bloc)})`);
+}
+{
+  const cas = 'lecture du bloc : un run: d\'une autre forme ne fait pas lire l\'étape suivante';
+  const yaml = ['jobs:', '  j:', '    steps:', '      - name: a', '        id: contrast', '        run: >',
+    '          echo un', '      - name: b', '        run: |', '          echo deux'].join('\n');
+  let erreur = null;
+  try {
+    blocRun(yaml);
+  } catch (e) {
+    erreur = e.message;
+  }
+  verifie(cas, /introuvable/.test(erreur || ''), `la lecture lève « introuvable » (obtenu : ${erreur})`);
+}
+if (!process.env.CONTRAST_VERDICT_ENFANT) {
+  const cas = 'workflow sans étape contrast : l\'échec du contrôle est aussi dans le résumé';
+  const dir = mkdtempSync(join(tmpdir(), 'contrast-verdict-enfant-'));
+  const faux = join(dir, 'workflow.yml');
+  const resume = join(dir, 'resume.md');
+  writeFileSync(faux, 'jobs:\n  j:\n    steps:\n      - name: a\n        run: echo rien\n');
+  writeFileSync(resume, '');
+  const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url)], {
+    encoding: 'utf8',
+    env: { ...process.env, CONTRAST_WORKFLOW: faux, CONTRAST_VERDICT_ENFANT: '1', GITHUB_ACTIONS: 'true', GITHUB_STEP_SUMMARY: resume },
+  });
+  verifie(cas, r.status !== 0, `le contrôle échoue (obtenu : ${r.status})`);
+  verifie(cas, (r.stdout || '').split('\n').some((l) => l.startsWith('::error') && l.includes('introuvable')),
+    'une annotation dit que l\'étape est introuvable');
+  verifie(cas, readFileSync(resume, 'utf8').includes('introuvable'), 'le résumé du job le dit aussi');
 }
 {
   const cas = '12 dépassements, script sorti en 0';
@@ -336,11 +516,11 @@ for (const [nom, rap] of [['clé depassements renommée', CLE_RENOMMEE], ['dépa
   const noms = DOUZE.resume.depassements;
   const gardees = r.erreurs.slice(0, 10);
   verifie(cas, r.code !== 0, `un désaccord entre le code et le rapport ne passe pas au vert (obtenu : ${r.code})`);
-  verifie(cas, r.erreurs.length <= 10, `au plus 10 annotations, au-delà le runner les jette (obtenu : ${r.erreurs.length})`);
+  verifie(cas, r.erreurs.length === 10, `10 annotations, la limite du runner (obtenu : ${r.erreurs.length})`);
   verifie(cas, gardees.some((e) => /incohérence/i.test(e)), 'l\'incohérence est parmi les 10 annotations gardées');
   const annotes = noms.filter((d) => gardees.some((e) => e.includes(d))).length;
   const reste = gardees.map((e) => e.match(/(\d+) autre/)).find(Boolean);
-  verifie(cas, annotes > 0 && reste && annotes + Number(reste[1]) === 12,
+  verifie(cas, annotes === 8 && reste && annotes + Number(reste[1]) === 12,
     `les annotations gardées nomment ou comptent les 12 (nommés : ${annotes}, comptés : ${reste ? reste[1] : 'aucun'})`);
   verifie(cas, /incohérence/i.test(r.resume), 'le résumé dit l\'incohérence');
 }

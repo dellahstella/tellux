@@ -187,19 +187,42 @@ jobs:
           cache: 'npm'
           cache-dependency-path: tests/blindage-harness/package-lock.json
 
+      - name: Install npm deps (tests/blindage-harness)
+        working-directory: tests/blindage-harness
+        run: npm ci
+
+      # Contrôle du LANCEMENT (2026-09-11) : lancé sans navigateur, le script doit sortir en 1
+      # avec le rapport de l'exception, que le verdict sait lire. Relevé par la seconde
+      # relecture adverse de #1397 : le serveur statique démarre avant chromium.launch, et
+      # seul le finally de la mesure le fermait. Le rapport va dans RUNNER_TEMP, pour ne pas
+      # pouvoir passer pour celui de la vraie mesure.
+      - name: Contrôle du lancement (navigateur absent)
+        working-directory: tests/blindage-harness
+        run: |
+          set +e
+          PLAYWRIGHT_BROWSERS_PATH="$RUNNER_TEMP/aucun-navigateur" CONTRAST_OUT="$RUNNER_TEMP/lancement.json" timeout 120 node contrast-panels.mjs
+          CODE=$?
+          if [ "$CODE" = "124" ]; then
+            echo "::error title=Contrôle du lancement::contrast-panels.mjs, lancé sans navigateur, n'est pas sorti en 120 s : tué par timeout."
+            exit 1
+          fi
+          if [ "$CODE" != "1" ] || ! jq -e '(.erreur | type) == "string"' "$RUNNER_TEMP/lancement.json" >/dev/null 2>&1; then
+            echo "::error title=Contrôle du lancement::attendu : sortie en 1 avec le rapport de l'exception ; obtenu : code $CODE."
+            exit 1
+          fi
+          echo "ok : sortie en 1, exception rapportée : $(jq -r '.erreur | split("\n")[0]' "$RUNNER_TEMP/lancement.json")"
+
       # Contrôle du VERDICT (2026-09-10) : ce que l'étape « Run contrast-panels » DIT d'un
       # rapport (annotations, résumé, code de sortie), exécuté sur des rapports connus AVANT la
       # mesure réelle. Le 2026-09-09, 17 rouges sont sortis en exit 2 sans que le journal ni le
       # résumé nomment un seul des dépassements qui les causaient. Ce contrôle exécute le vrai
       # bloc `run:` de cette étape : un verdict qui redevient muet le fait échouer. Sans
-      # navigateur, quelques secondes ; exige bash et jq, présents sur le runner.
+      # navigateur, quelques secondes ; exige bash et jq, présents sur le runner. Il tourne
+      # même quand le contrôle du lancement a échoué : il ne dépend que de node et de jq.
       - name: Contrôle du verdict (rapports connus, sans navigateur)
+        if: ${{ !cancelled() }}
         working-directory: tests/blindage-harness
         run: node contrast-verdict.test.mjs
-
-      - name: Install npm deps (tests/blindage-harness)
-        working-directory: tests/blindage-harness
-        run: npm ci
 
       - name: Install Chromium for Playwright
         working-directory: tests/blindage-harness
