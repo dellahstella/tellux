@@ -289,7 +289,7 @@ jobs:
           # rendu le rouge muet : même propre, un rouge n'affichait ni dans le journal ni
           # dans le résumé les dépassements qui le causaient — le 2026-09-09, 17 runs en
           # exit 2 sur le plancher de #conditions-bar après #1363, dont 4 aux rapports
-          # propres, aussi silencieux que les 13 autres (corrigé le 2026-09-10 : voir
+          # propres, aussi silencieux que les 13 autres (corrigé par #1397 : voir
           # VERDICT ci-dessous). La pollution rendait seulement
           # l'artefact inexploitable par jq (le JSON restait intact derrière elle) et
           # vidait les valeurs du résumé. La première version de ce commentaire disait
@@ -302,16 +302,19 @@ jobs:
           # VERDICT (2026-09-10) — un rouge doit dire ce qui a échoué. Le 2026-09-09, 17 runs
           # sont sortis en exit 2 sur le plancher de #conditions-bar sans que le journal ni le
           # résumé nomment un seul dépassement : le résumé ne lisait pas resume.depassements et
-          # titrait « Régression de contraste » à 0/0 ; neuf PR ont été mergées sur ce rouge
-          # muet. Désormais, chaque dépassement devient une annotation d'erreur (visible sur la
-          # PR) et une ligne du résumé, le titre dit ce qui a échoué, et un rapport illisible
-          # garde le code du script. Contrôlé AVANT la mesure, sur des rapports connus, par
-          # contrast-verdict.test.mjs (étape « Contrôle du verdict » plus haut).
+          # titrait « Régression de contraste », à 0/0 sur un rapport propre, aux valeurs vides
+          # sur un rapport pollué ; neuf PR ont été mergées sur un check qui a fini rouge.
+          # Désormais, chaque dépassement devient une ligne du résumé et, jusqu'à 9, une
+          # annotation d'erreur (onglet Checks de la PR ; au-delà, une annotation compte les
+          # autres). Le titre dit ce qui a échoué ; une exception du script est rapportée avec sa
+          # pile ; un rapport dont la forme a dérivé est refusé au lieu d'être lu à vide ; un
+          # rapport illisible garde le code du script. Contrôlé AVANT la mesure, sur des rapports
+          # connus, par contrast-verdict.test.mjs (étape « Contrôle du verdict » plus haut).
           #
           # Le rapport est-il seulement lisible ? Sans ce garde, un JSON invalide ne changeait
           # pas la couleur : jq échouait sept fois (huit sur un rouge) et le résumé sortait aux
           # valeurs vides, sous un titre ✅/❌ fidèle au vrai code de sortie. Depuis #1371, un
-          # rapport illisible fait échouer l'étape ; depuis le 2026-09-10, il garde en plus le
+          # rapport illisible fait échouer l'étape ; depuis #1397, il garde en plus le
           # code du script (il le remplaçait par 1) et écrit le résumé (il le sautait). Un
           # script sorti en 0 sur un rapport illisible donne 1 : un rapport qu'on ne peut pas
           # lire n'accompagne jamais un vert. La première version de ce commentaire (#1371)
@@ -321,7 +324,7 @@ jobs:
           if ! jq -e . contrast-result.json >/dev/null 2>&1; then
             CODE=$EXIT
             [ "$CODE" = "0" ] && CODE=1
-            if [ -f contrast-result.json ]; then ETAT=illisible; else ETAT=absent; fi
+            if [ -f contrast-result.json ]; then ETAT=illisible; VOIR="Voir le journal de l'étape et l'artefact."; else ETAT=absent; VOIR="Voir le journal de l'étape."; fi
             echo "::error title=Contraste — rapport $ETAT::contrast-result.json $ETAT : le verdict ne peut pas être lu. Code de sortie du script : $EXIT (2 : dépassement mesuré, 0 : aucun, autre : échec du script)."
             if [ -f contrast-result.json ]; then
               echo "Premiers octets du fichier :"
@@ -333,25 +336,76 @@ jobs:
               echo ""
               echo "### ❌ Rapport $ETAT — code de sortie du script : $EXIT"
               echo ""
-              echo "\`contrast-result.json\` est $ETAT : aucun dépassement ne peut être lu. Code de sortie du script : $EXIT (2 : dépassement mesuré, 0 : aucun, autre : échec du script). Voir le journal de l'étape et l'artefact."
+              echo "\`contrast-result.json\` est $ETAT : aucun dépassement ne peut être lu. Code de sortie du script : $EXIT (2 : dépassement mesuré, 0 : aucun, autre : échec du script). $VOIR"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit $CODE
+          fi
+          # Un rapport lisible peut ne porter aucun verdict lisible. Le catch de
+          # contrast-panels.mjs écrit { outil, erreur } quand une exception interrompt le script
+          # (page qui ne charge pas, navigateur qui ne démarre pas), sans resume et sans rien
+          # imprimer : le verdict disait alors « aucun dépassement » au-dessus d'un tableau de
+          # « null », et renvoyait à un journal qui ne contenait pas la cause. Et un rapport dont
+          # le format a dérivé (clé renommée, dépassements devenus des objets) était lu à vide :
+          # le rouge redevenait muet, comme le 2026-09-09 (relectures adverses du 2026-09-10).
+          # Désormais, l'exception est dans une annotation, le journal et le résumé ; un resume
+          # qui n'a pas la forme lue ci-dessous est refusé, et sa forme réelle affichée. Même
+          # règle que le garde : le code du script est gardé, et 0 devient 1.
+          ERREUR=$(jq -r '(.erreur // empty) | tostring | split("\n")[0] | gsub("%"; "%25") | gsub("\r"; "%0D")' contrast-result.json)
+          FORME_OK=$(jq -r '(.resume | type) == "object" and (.resume.depassements | type) == "array" and all(.resume.depassements[]; type == "string") and all(.resume.critique, .resume.aa, .resume.plafond_critique, .resume.plafond_aa, .resume.noeuds_mesures, .resume.panneaux_mesures, .resume.plancher_noeuds; type == "number")' contrast-result.json 2>/dev/null)
+          if [ -n "$ERREUR" ] || [ "$FORME_OK" != "true" ]; then
+            CODE=$EXIT
+            [ "$CODE" = "0" ] && CODE=1
+            if [ -n "$ERREUR" ]; then
+              echo "::error title=Contraste — échec du script::$ERREUR (code de sortie $EXIT). Aucune mesure rapportée : pile complète dans le résumé du job et dans l'artefact."
+              echo "Exception rapportée par le script :"
+              jq -r '.erreur | tostring' contrast-result.json | head -40
+            else
+              FORME=$(jq -r 'if (.resume | type) == "object" then (.resume | with_entries(.value |= type) | tojson) elif .resume == null then "absent" else (.resume | type) end' contrast-result.json 2>/dev/null)
+              echo "::error title=Contraste — rapport sans verdict lisible::contrast-result.json se lit, mais son champ resume n'a pas la forme que ce verdict lit : aucun dépassement ne peut en être lu. Champ resume : $FORME. Code de sortie du script : $EXIT."
+            fi
+            {
+              echo "## Contraste des panneaux flottants"
+              echo ""
+              if [ -n "$ERREUR" ]; then
+                echo "### ❌ Échec du script — code de sortie $EXIT, aucune mesure rapportée"
+                echo ""
+                echo "Une exception a interrompu le script avant son verdict. Pile rapportée dans \`contrast-result.json\` (artefact) :"
+                echo ""
+                echo '```'
+                jq -r '.erreur | tostring' contrast-result.json | head -40
+                echo '```'
+              else
+                echo "### ❌ Rapport sans verdict lisible — code de sortie du script : $EXIT"
+                echo ""
+                echo "\`contrast-result.json\` se lit, mais son champ \`resume\` n'a pas la forme que ce verdict lit (\`depassements\` : tableau de chaînes ; \`critique\`, \`aa\`, plafonds, plancher et comptes : nombres). Aucun dépassement ne peut en être lu. Voir le journal de l'étape et l'artefact."
+                echo ""
+                echo "Champ \`resume\` : \`$FORME\`"
+              fi
             } >> "$GITHUB_STEP_SUMMARY"
             exit $CODE
           fi
           NDEP=$(jq -r '.resume.depassements | length' contrast-result.json)
           CONTRASTE=$(jq -r '(.resume.critique > .resume.plafond_critique) or (.resume.aa > .resume.plafond_aa)' contrast-result.json)
           FINAL=$EXIT
-          # Une annotation par dépassement. GitHub n'en affiche que 10 par étape : 9 au plus,
-          # et une dixième qui compte les autres. Tous restent nommés dans le résumé.
-          jq -r '.resume.depassements[:9][] | gsub("%"; "%25") | gsub("\r"; "%0D") | gsub("\n"; "%0A")' contrast-result.json \
-            | while IFS= read -r DEP; do echo "::error title=Contraste — dépassement::$DEP"; done
-          if [ "$NDEP" -gt 9 ]; then
-            echo "::error title=Contraste — dépassements::… et $((NDEP - 9)) autre(s), tous nommés dans le résumé du job."
-          fi
+          # Le runner ne garde que 10 annotations d'erreur par étape, la sienne comprise
+          # (« Process completed with exit code N. », émise après le bloc, donc écartée quand
+          # les 10 places sont prises) : actions/runner, ExecutionContext.cs,
+          # _maxCountPerIssueType = 10.
+          MAXDEP=9
           # Le script sort en 2 si et seulement s'il a des dépassements : un désaccord est un
-          # défaut du check, et il ne passe pas au vert.
+          # défaut du check, et il ne passe pas au vert. Annoncé EN PREMIER, pour tenir dans
+          # les 10 : les dépassements n'ont alors que 8 annotations.
           if [ "$EXIT" = "0" ] && [ "$NDEP" != "0" ]; then
             echo "::error title=Contraste — incohérence::le script est sorti en 0 avec $NDEP dépassement(s) dans son rapport."
             FINAL=1
+            MAXDEP=8
+          fi
+          # Une annotation par dépassement, MAXDEP au plus, et une de plus qui compte les
+          # autres. Tous restent nommés dans le résumé.
+          jq -r --argjson n "$MAXDEP" '.resume.depassements[:$n][] | gsub("%"; "%25") | gsub("\r"; "%0D") | gsub("\n"; "%0A")' contrast-result.json \
+            | while IFS= read -r DEP; do echo "::error title=Contraste — dépassement::$DEP"; done
+          if [ "$NDEP" -gt "$MAXDEP" ]; then
+            echo "::error title=Contraste — dépassements::… et $((NDEP - MAXDEP)) autre(s), tous nommés dans le résumé du job."
           fi
           CRIT=$(jq -r '.resume.critique' contrast-result.json)
           AA=$(jq -r '.resume.aa' contrast-result.json)
@@ -365,6 +419,8 @@ jobs:
             echo ""
             if [ "$FINAL" = "0" ]; then
               echo "### ✅ Aucun dépassement"
+            elif [ "$EXIT" = "0" ]; then
+              echo "### ❌ Incohérence — script sorti en 0 avec $NDEP dépassement(s) dans son rapport"
             elif [ "$NDEP" = "0" ]; then
               echo "### ❌ Code de sortie $EXIT, aucun dépassement dans le rapport — voir le journal de l'étape"
             elif [ "$CONTRASTE" = "true" ]; then

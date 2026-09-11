@@ -7,9 +7,10 @@
  *
  * POURQUOI : le 2026-09-09, 17 runs sont sortis en exit 2 sur les quatre mêmes dépassements
  * du plancher de #conditions-bar. Ni le journal ni le résumé ne les nommaient : le résumé ne
- * lisait pas resume.depassements et titrait « Régression de contraste » à 0/0. Neuf PR ont été
- * mergées sur un check qui a fini rouge, sans que ce rouge dise pourquoi. Et quand le rapport
- * était illisible, le garde remplaçait l'exit 2 du script par un exit 1 et sautait le résumé.
+ * lisait pas resume.depassements et titrait « Régression de contraste », à 0/0 sur un rapport
+ * propre, aux valeurs vides sur un rapport pollué. Neuf PR ont été mergées sur un check qui a
+ * fini rouge, sans que ce rouge dise pourquoi. Et le garde posé par #1371 remplaçait, sur un
+ * rapport illisible, l'exit 2 du script par un exit 1 et sautait le résumé.
  *
  * COMMENT : il lit le VRAI bloc `run:` de l'étape dans le workflow et l'exécute sous
  * `bash -e -c` (le shell par défaut d'un `run:` sous Linux), avec un faux `node` placé en tête
