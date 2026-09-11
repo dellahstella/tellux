@@ -366,25 +366,31 @@ jobs:
           # Un rapport lisible peut ne porter aucun verdict lisible. Le catch de
           # contrast-panels.mjs écrit { outil, erreur } quand une exception interrompt le script
           # (page qui ne charge pas, navigateur qui ne démarre pas), sans resume et sans rien
-          # imprimer : le verdict disait alors « aucun dépassement » au-dessus d'un tableau de
-          # « null », et renvoyait à un journal qui ne contenait pas la cause. Et un rapport dont
-          # le format a dérivé (clé renommée, dépassements devenus des objets) était lu à vide :
-          # le rouge redevenait muet, comme le 2026-09-09 (relectures adverses du 2026-09-10).
+          # imprimer. Le verdict titrait alors « ❌ Régression de contraste » et conseillait de
+          # corriger le contraste, au-dessus d'un tableau de « null ». Et un verdict qui lit les
+          # dépassements les lirait à vide si le format du rapport dérivait (clé renommée,
+          # dépassements devenus des objets) : le rouge redeviendrait muet, comme le 2026-09-09
+          # (relectures adverses du 2026-09-10).
           # Désormais, l'exception est dans une annotation, le journal et le résumé ; un resume
           # qui n'a pas la forme lue ci-dessous est refusé, et sa forme réelle affichée. Même
           # règle que le garde : le code du script est gardé, et 0 devient 1.
-          ERREUR=$(jq -r '(.erreur // empty) | tostring | split("\n")[0] | gsub("%"; "%25") | gsub("\r"; "%0D")' contrast-result.json)
+          ERREUR=$(jq -r 'if type == "object" and .erreur != null and .erreur != false then (.erreur | tostring | ((split("\n") | map(select(length > 0)) | first) // "(exception sans message)") | gsub("%"; "%25") | gsub("\r"; "%0D")) else empty end' contrast-result.json 2>/dev/null)
           FORME_OK=$(jq -r '(.resume | type) == "object" and (.resume.depassements | type) == "array" and all(.resume.depassements[]; type == "string") and all(.resume.critique, .resume.aa, .resume.plafond_critique, .resume.plafond_aa, .resume.noeuds_mesures, .resume.panneaux_mesures, .resume.plancher_noeuds; type == "number")' contrast-result.json 2>/dev/null)
           if [ -n "$ERREUR" ] || [ "$FORME_OK" != "true" ]; then
             CODE=$EXIT
             [ "$CODE" = "0" ] && CODE=1
             if [ -n "$ERREUR" ]; then
-              echo "::error title=Contraste — échec du script::$ERREUR (code de sortie $EXIT). Aucune mesure rapportée : pile complète dans le résumé du job et dans l'artefact."
-              echo "Exception rapportée par le script :"
+              NPILE=$(jq -r '.erreur | tostring' contrast-result.json | wc -l)
+              echo "::error title=Contraste — échec du script::$ERREUR (code de sortie $EXIT). Aucune mesure rapportée : la pile est dans le journal et le résumé du job (40 premières lignes), et entière dans l'artefact."
+              echo "Exception rapportée par le script ($NPILE ligne(s)) :"
               jq -r '.erreur | tostring' contrast-result.json | head -40
+              [ "$NPILE" -gt 40 ] && echo "… $((NPILE - 40)) ligne(s) de plus dans l'artefact contrast-result.json."
             else
-              FORME=$(jq -r 'if (.resume | type) == "object" then (.resume | with_entries(.value |= type) | tojson) elif .resume == null then "absent" else (.resume | type) end' contrast-result.json 2>/dev/null)
-              echo "::error title=Contraste — rapport sans verdict lisible::contrast-result.json se lit, mais son champ resume n'a pas la forme que ce verdict lit : aucun dépassement ne peut en être lu. Champ resume : $FORME. Code de sortie du script : $EXIT."
+              FORME=$(jq -r 'def forme: if type == "array" then "array<" + ([.[] | type] | unique | join("|")) + ">" else type end; if type != "object" then "racine du rapport : " + type elif (.resume | type) == "object" then "resume = " + (.resume | with_entries(.value |= forme) | tojson) elif .resume == null then "resume absent" else "resume : " + (.resume | forme) end' contrast-result.json 2>/dev/null)
+              NLISIBLES=$(jq -r 'if type == "object" and (.resume | type) == "object" and (.resume.depassements | type) == "array" then [.resume.depassements[] | select(type == "string")] | length else 0 end' contrast-result.json 2>/dev/null)
+              NLISIBLES=${NLISIBLES:-0}
+              if [ "$NLISIBLES" != "0" ]; then LU="$NLISIBLES dépassement(s) s'y lisent néanmoins, listés dans le résumé du job"; else LU="aucun dépassement ne peut en être lu"; fi
+              echo "::error title=Contraste — rapport sans verdict lisible::contrast-result.json se lit, mais n'a pas la forme que ce verdict lit : $LU. Forme lue : $FORME. Code de sortie du script : $EXIT."
             fi
             {
               echo "## Contraste des panneaux flottants"
@@ -397,12 +403,24 @@ jobs:
                 echo '```'
                 jq -r '.erreur | tostring' contrast-result.json | head -40
                 echo '```'
+                if [ "$NPILE" -gt 40 ]; then
+                  echo ""
+                  echo "… $((NPILE - 40)) ligne(s) de plus dans l'artefact."
+                fi
               else
                 echo "### ❌ Rapport sans verdict lisible — code de sortie du script : $EXIT"
                 echo ""
-                echo "\`contrast-result.json\` se lit, mais son champ \`resume\` n'a pas la forme que ce verdict lit (\`depassements\` : tableau de chaînes ; \`critique\`, \`aa\`, plafonds, plancher et comptes : nombres). Aucun dépassement ne peut en être lu. Voir le journal de l'étape et l'artefact."
+                echo "\`contrast-result.json\` se lit, mais n'a pas la forme que ce verdict lit : un objet dont le champ \`resume\` porte \`depassements\` (tableau de chaînes) et \`critique\`, \`aa\`, plafonds, plancher et comptes (nombres). Voir le journal de l'étape et l'artefact."
                 echo ""
-                echo "Champ \`resume\` : \`$FORME\`"
+                echo "Forme lue : \`$FORME\`"
+                echo ""
+                if [ "$NLISIBLES" != "0" ]; then
+                  echo "Dépassements qui s'y lisent néanmoins :"
+                  echo ""
+                  jq -r '.resume.depassements[] | select(type == "string") | "- " + .' contrast-result.json
+                else
+                  echo "Aucun dépassement ne peut en être lu."
+                fi
               fi
             } >> "$GITHUB_STEP_SUMMARY"
             exit $CODE
@@ -417,11 +435,15 @@ jobs:
           MAXDEP=9
           # Le script sort en 2 si et seulement s'il a des dépassements : un désaccord est un
           # défaut du check, et il ne passe pas au vert. Annoncé EN PREMIER, pour tenir dans
-          # les 10 : les dépassements n'ont alors que 8 annotations.
+          # les 10 : les dépassements n'ont alors que 8 annotations. Dans l'autre sens, un code
+          # non nul sans dépassement garde son code, et l'annotation dit le désaccord au lieu de
+          # renvoyer à un journal où le verdict n'a rien écrit.
           if [ "$EXIT" = "0" ] && [ "$NDEP" != "0" ]; then
             echo "::error title=Contraste — incohérence::le script est sorti en 0 avec $NDEP dépassement(s) dans son rapport."
             FINAL=1
             MAXDEP=8
+          elif [ "$EXIT" != "0" ] && [ "$NDEP" = "0" ]; then
+            echo "::error title=Contraste — incohérence::le script est sorti en $EXIT sans aucun dépassement dans son rapport."
           fi
           # Une annotation par dépassement, MAXDEP au plus, et une de plus qui compte les
           # autres. Tous restent nommés dans le résumé.
@@ -445,7 +467,7 @@ jobs:
             elif [ "$EXIT" = "0" ]; then
               echo "### ❌ Incohérence — script sorti en 0 avec $NDEP dépassement(s) dans son rapport"
             elif [ "$NDEP" = "0" ]; then
-              echo "### ❌ Code de sortie $EXIT, aucun dépassement dans le rapport — voir le journal de l'étape"
+              echo "### ❌ Incohérence — code de sortie $EXIT sans dépassement dans le rapport"
             elif [ "$CONTRASTE" = "true" ]; then
               echo "### ❌ Régression de contraste — $NDEP dépassement(s)"
               echo ""
@@ -465,12 +487,33 @@ jobs:
             echo ""
             echo "_$NOEUDS nœuds de texte mesurés (plancher $PNOE) sur $PANS panneaux._"
             echo ""
-            if [ "$(jq -r '.violations_critiques | length' contrast-result.json)" != "0" ]; then
+            # Les textes en cause, critiques et AA : une régression AA doit nommer ses textes
+            # comme une régression critique (seconde relecture adverse). 25 lignes au plus par
+            # tableau, et ce qui manque est annoncé.
+            NCRIT=$(jq -r '.violations_critiques | length' contrast-result.json 2>/dev/null)
+            if [ "${NCRIT:-0}" != "0" ]; then
               echo "#### Violations critiques"
               echo ""
               echo '| Panneau | Ratio | Couleur | Fond effectif | Texte |'
               echo '|---|---|---|---|---|'
-              jq -r '.violations_critiques[] | "| \(.panel) | \(.ratio) | `\(.couleur)` | `\(.fond_effectif)` | \(.texte) |"' contrast-result.json | head -25
+              jq -r '.violations_critiques[:25][] | "| \(.panel) | \(.ratio) | `\(.couleur)` | `\(.fond_effectif)` | \(.texte) |"' contrast-result.json
+              if [ "$NCRIT" -gt 25 ]; then
+                echo ""
+                echo "… et $((NCRIT - 25)) autre(s) dans l'artefact."
+              fi
+              echo ""
+            fi
+            NAA=$(jq -r '.violations_aa | length' contrast-result.json 2>/dev/null)
+            if [ "${NAA:-0}" != "0" ]; then
+              echo "#### Violations AA"
+              echo ""
+              echo '| Panneau | Ratio | Seuil | Couleur | Fond effectif | Texte |'
+              echo '|---|---|---|---|---|---|'
+              jq -r '.violations_aa[:25][] | "| \(.panel) | \(.ratio) | \(.seuil) | `\(.couleur)` | `\(.fond_effectif)` | \(.texte) |"' contrast-result.json
+              if [ "$NAA" -gt 25 ]; then
+                echo ""
+                echo "… et $((NAA - 25)) autre(s) dans l'artefact."
+              fi
               echo ""
             fi
           } >> "$GITHUB_STEP_SUMMARY"

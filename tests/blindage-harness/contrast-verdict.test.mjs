@@ -19,10 +19,12 @@
  *
  * Exige bash et jq, présents sur les runners GitHub, pas sur tous les postes.
  *
- * En CI (GITHUB_ACTIONS), chacun de ses échecs devient aussi une annotation d'erreur et une
- * ligne du résumé du job : un rouge de ce contrôle dit ce qui a échoué, comme ceux qu'il
- * contrôle. Son premier rouge (run 34532236088) ne montrait, dans l'onglet Checks, que
- * « Process completed with exit code 1. ».
+ * En CI (GITHUB_ACTIONS), chacun de ses échecs devient une ligne du résumé du job et, jusqu'à
+ * 9, une annotation d'erreur (au-delà, une annotation compte les autres) : un rouge de ce
+ * contrôle dit ce qui a échoué, comme ceux qu'il contrôle. Son premier rouge (run
+ * 34532236088) n'avait qu'une annotation d'erreur, « Process completed with exit code 1. » ;
+ * ses 15 échecs n'étaient que dans le journal de l'étape. Quand bash ou jq cassent le bloc
+ * lui-même, leur message passe en premier.
  *
  *     node contrast-verdict.test.mjs              # les contrôles
  *     node contrast-verdict.test.mjs --montrer-bloc   # le bloc tel qu'il sera exécuté
@@ -45,18 +47,28 @@ function annoter(msg) {
   console.log(`::error title=Contrôle du verdict::${m}`);
 }
 
+/** Un échec qui arrête le contrôle avant ses cas : une annotation, et une ligne du résumé. */
+function echouer(msg) {
+  annoter(msg);
+  if (EN_CI && process.env.GITHUB_STEP_SUMMARY) {
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, ['## Contrôle du verdict de contraste', '', `### ❌ ${msg}`, ''].join('\n'));
+  }
+}
+
 /** Le bloc `run: |` de l'étape `id: contrast`, désindenté. */
 function blocRun(texte = readFileSync(WORKFLOW, 'utf8')) {
   const lignes = texte.split('\n');
   const i = lignes.findIndex((l) => /^\s+id:\s*contrast\s*$/.test(l));
   if (i < 0) throw new Error('étape « id: contrast » introuvable dans le workflow');
   // Le `run: |` est cherché DANS l'étape : une ligne moins indentée que ses clés la termine.
-  // Sans cette borne, un `run:` d'une autre forme ici faisait lire en silence le bloc de
-  // l'étape suivante (relecture adverse du 2026-09-10).
+  // Un commentaire ne termine rien, même en colonne 0 (YAML l'autorise).
+  // Sans cette borne, un `run:` d'une autre forme ici aurait fait lire en silence le bloc
+  // d'une étape `run: |` ajoutée plus bas (relecture adverse du 2026-09-10).
   const retraitCles = lignes[i].match(/^\s*/)[0].length;
   let j = -1;
   for (let k = i + 1; k < lignes.length; k++) {
     const l = lignes[k];
+    if (/^\s*#/.test(l)) continue;
     if (l.trim() !== '' && l.match(/^\s*/)[0].length < retraitCles) break;
     if (/^\s+run:\s*\|[-+]?\s*$/.test(l)) {
       j = k;
@@ -80,7 +92,7 @@ let BLOC;
 try {
   BLOC = blocRun();
 } catch (e) {
-  annoter(e.message);
+  echouer(e.message);
   throw e;
 }
 if (process.argv.includes('--montrer-bloc')) {
@@ -92,9 +104,11 @@ const jq = spawnSync('jq', ['--version'], { encoding: 'utf8' });
 if (jq.error || jq.status !== 0) {
   console.error('ÉCHEC : jq introuvable. Ce contrôle exécute le vrai bloc du workflow, qui utilise jq '
     + '(présent sur les runners GitHub).');
-  annoter('jq introuvable : ce contrôle exécute le vrai bloc du workflow, qui utilise jq.');
+  echouer('jq introuvable : ce contrôle exécute le vrai bloc du workflow, qui utilise jq.');
   process.exit(2);
 }
+
+let dernier = null;
 
 /**
  * Exécute le bloc : le faux `node` dépose `rapport` (objet → JSON, chaîne → telle quelle,
@@ -124,13 +138,21 @@ function executer(rapport, codeScript, bloc = BLOC) {
     env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, GITHUB_STEP_SUMMARY: resume, GITHUB_OUTPUT: sorties },
   });
   const journal = `${r.stdout || ''}${r.stderr || ''}`;
-  return {
+  const stderr = r.stderr || '';
+  // Ce que bash et jq ont dit du bloc lui-même, hors commandes de workflow : c'est la cause
+  // quand le bloc est cassé, et le contrôle l'affiche avec ses échecs (seconde relecture).
+  const diagnostic = stderr.split('\n').find((l) => l.trim() && !l.startsWith('::')) || '';
+  dernier = {
     code: r.status,
     journal,
+    stderr,
+    diagnostic,
     erreurs: journal.split('\n').filter((l) => l.startsWith('::error')),
     resume: readFileSync(resume, 'utf8'),
     sorties: readFileSync(sorties, 'utf8'),
+    montre: false,
   };
+  return dernier;
 }
 
 // ─── Rapports connus ─────────────────────────────────────────────────────────
@@ -211,6 +233,7 @@ const CRITIQUE_30 = rapport({ violations: 30, critique: 30, depassements: ['crit
 
 // ─── Contrôles ───────────────────────────────────────────────────────────────
 const echecs = [];
+const causes = [];
 let total = 0;
 function verifie(cas, cond, msg) {
   total += 1;
@@ -219,6 +242,15 @@ function verifie(cas, cond, msg) {
   } else {
     console.log(`ÉCHEC  : [${cas}] ${msg}`);
     echecs.push(`[${cas}] ${msg}`);
+    if (dernier && !dernier.montre) {
+      dernier.montre = true;
+      const lignes = dernier.stderr.split('\n').filter((l) => l.trim() && !l.startsWith('::')).slice(0, 10);
+      if (lignes.length) {
+        console.log(`         erreurs du bloc (code ${dernier.code}) :`);
+        for (const l of lignes) console.log(`         | ${l}`);
+        causes.push(`[${cas}] ${lignes[0]}`);
+      }
+    }
   }
 }
 
@@ -531,12 +563,16 @@ if (echecs.length) {
   for (const e of echecs) console.log(`  - ${e}`);
   // Même règle que pour le verdict contrôlé : 9 annotations au plus, une dixième qui compte
   // les autres, et la liste entière dans le résumé du job.
-  for (const e of echecs.slice(0, 9)) annoter(e);
-  if (echecs.length > 9) annoter(`… et ${echecs.length - 9} autre(s), tous listés dans le résumé du job.`);
+  // Une erreur du bloc lui-même (bash, jq) passe en premier : c'est la cause des échecs.
+  if (causes.length) annoter(`erreur du bloc ${causes[0]}`);
+  const places = causes.length ? 8 : 9;
+  for (const e of echecs.slice(0, places)) annoter(e);
+  if (echecs.length > places) annoter(`… et ${echecs.length - places} autre(s), tous listés dans le résumé du job.`);
   if (EN_CI && process.env.GITHUB_STEP_SUMMARY) {
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
       '## Contrôle du verdict de contraste', '',
       `### ❌ ${echecs.length} échec(s) sur ${total} contrôles — le verdict ne rapporte pas ce qu'il doit`, '',
+      ...(causes.length ? ['Erreurs du bloc lui-même (bash, jq) :', '', ...causes.map((c) => `- ${c}`), ''] : []),
       ...echecs.map((e) => `- ${e}`), '',
     ].join('\n'));
   }
