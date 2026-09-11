@@ -15,17 +15,18 @@
 //     l'enregistrement est ABANDONNÉ, rien n'est écrit.
 //   · Pendant l'envoi : fermer le formulaire (Annuler, « + ») reste possible à tout moment ; l'envoi est
 //     détaché et le message le dit. Repositionner est refusé et désactivé tant que l'envoi est attaché.
-//   · La réponse d'un envoi détaché ne touche ni au formulaire suivant, ni à ses boutons, ni au « + » ; elle
-//     annonce sa propre issue (enregistrée / non enregistrée), jamais « Erreur : … » après une écriture.
+//   · La réponse d'un envoi détaché ne touche ni au formulaire suivant, ni à ses boutons, ni au « + », ni à
+//     l'envoi suivant ; elle annonce sa propre issue : enregistrée, ou NON CONFIRMÉE (un rejet ne prouve pas
+//     l'absence d'écriture : la connexion peut tomber après la validation côté serveur) — jamais « Erreur : ».
 // Deux conceptions précédentes ont été écartées par la revue adverse : refuser Annuler pendant l'envoi
 // enfermait l'utilisateur (sbPost n'a pas de délai) ; borner ce refus reportait le blocage sur la mesure
 // suivante et laissait « Mesure annulée. » précéder une écriture. Ce fichier les fait donc échouer aussi.
 //
 // CE QUI EST SIMULÉ : le DOM (éléments qui retiennent leur état), la carte (removeLayer LÈVE sur null,
 // comme Leaflet 1.9.4), sbPost (délai et issue scriptés, ou réponse libérée par le scénario, une base en
-// mémoire), computeElfState (« loading » pendant une durée scriptée), validateContrib (valeur vide =
-// invalide), jt() (rend sa clé devant le texte). Les fonctions en cause sont EXTRAITES d'app.html telles
-// quelles, avec les déclarations et _detacherEnvoiContrib() si elles existent.
+// mémoire — y compris « écrit, puis réponse perdue »), computeElfState (« loading » pendant une durée
+// scriptée), validateContrib (valeur vide = invalide), jt() (rend sa clé devant le texte). Les fonctions en
+// cause sont EXTRAITES d'app.html telles quelles, avec les déclarations et _detacherEnvoiContrib().
 //
 // Usage : node tests/blindage-harness/non-regression-savecontrib-annulation.mjs [app.html]   (sort 1 si un ✘)
 
@@ -112,6 +113,8 @@ function monter({ elfLoadingMs = 0, sbDelayMs = 150, sbEchec = false, sbManuel =
       if (sbManuel) issue = await new Promise((r) => { reponses.push(r); });
       else await new Promise((r) => setTimeout(r, sbDelayMs));
       if (issue === 'echec') throw new Error('Failed to fetch');
+      // Le serveur a validé l'INSERT, puis la connexion tombe : la ligne existe, fetch rejette.
+      if (issue === 'ecrit-perdu') { base.push(ligne); throw new TypeError('Failed to fetch'); }
       base.push(ligne);
       return [{ id: base.length, ...ligne }];
     },
@@ -138,6 +141,7 @@ const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
 const erreurs = (j) => j.filter((e) => e.type === 'error').map((e) => e.msg);
 const succes = (j) => j.filter((e) => e.type === 'success').map((e) => e.msg);
 const annonce = (j, motif) => j.some((e) => e.msg.includes(motif));
+const compte = (j, motif) => j.filter((e) => e.msg.includes(motif)).length;
 
 // ─── T0 — témoin : aucun geste pendant l'enregistrement ─────────────────────────────────────────
 let s = monter({});
@@ -179,13 +183,15 @@ for (const [id, f] of [['B1', 'cancelContrib'], ['B2', 'startContribFromFAB']]) 
   await attendre(50);
   const reposPendant = s.els['btn-reposition'].disabled;
   s.appeler(f);
-  const apresGeste = { form: s.els.cform.style.display, pending: s.ctx.pending, btnSave: s.els['btn-save'].disabled };
+  const apresGeste = { form: s.els.cform.style.display, pending: s.ctx.pending, btnSave: s.els['btn-save'].disabled,
+    texteSave: s.els['btn-save'].textContent, repos: s.els['btn-reposition'].disabled };
   s.liberer(0, 'ok');
   await p;
   console.log(`\n${id} — ${f}() pendant l’envoi, puis l’envoi aboutit`);
   verifier('Repositionner était désactivé pendant l’envoi', reposPendant === true, `${reposPendant}`);
   verifier('le formulaire se ferme tout de suite — pas de blocage', apresGeste.form === 'none' && apresGeste.pending === null, JSON.stringify(apresGeste));
-  verifier('Enregistrer est rendu au formulaire suivant dès la fermeture', apresGeste.btnSave === false);
+  verifier('Enregistrer est rendu au formulaire suivant dès la fermeture, avec son libellé', apresGeste.btnSave === false && apresGeste.texteSave === 'Enregistrer dans Supabase', JSON.stringify(apresGeste));
+  verifier('Repositionner est rendu aussi', apresGeste.repos === false, `${apresGeste.repos}`);
   verifier('le message dit que l’envoi était parti (clé contrib_envoi_detache), pas « Mesure annulée. »', annonce(s.journal, '[contrib_envoi_detache]') && !annonce(s.journal, 'Mesure annulée'), JSON.stringify(s.journal));
   verifier('l’issue est annoncée pour ce qu’elle est (clé contrib_envoi_detache_ok)', annonce(s.journal, '[contrib_envoi_detache_ok]'), JSON.stringify(s.journal));
   verifier('une ligne écrite, aucune erreur', s.base.length === 1 && erreurs(s.journal).length === 0, JSON.stringify(erreurs(s.journal)));
@@ -202,14 +208,17 @@ verifier('refusé : le point est intact, le formulaire ouvert', b3.pendingIntact
 verifier('une ligne écrite, succès annoncé, aucune erreur', s.base.length === 1 && succes(s.journal).length === 1 && erreurs(s.journal).length === 0, JSON.stringify(s.journal));
 verifier('Repositionner et Enregistrer réactivés après', s.els['btn-reposition'].disabled === false && s.els['btn-save'].disabled === false);
 
-s = monter({ sbManuel: true });
-p = s.lancer();
-await attendre(50); s.appeler('cancelContrib');
-s.liberer(0, 'echec');
-await p;
-console.log('\nB4 — fermé pendant l’envoi, puis l’envoi échoue');
-verifier('aucune ligne écrite', s.base.length === 0, `${s.base.length}`);
-verifier('l’échec est annoncé pour ce qu’il est (clé contrib_envoi_detache_echec), sans « Erreur : »', annonce(s.journal, '[contrib_envoi_detache_echec]') && erreurs(s.journal).length === 0, JSON.stringify(s.journal));
+for (const [id, issue, lignes] of [['B4', 'echec', 0], ['B5', 'ecrit-perdu', 1]]) {
+  s = monter({ sbManuel: true });
+  p = s.lancer();
+  await attendre(50); s.appeler('cancelContrib');
+  s.liberer(0, issue);
+  await p;
+  console.log(`\n${id} — fermé pendant l’envoi, puis l’envoi est rejeté (${issue === 'echec' ? 'rien n’est écrit' : 'la ligne est écrite, la réponse se perd'})`);
+  verifier(`${lignes} ligne(s) en base`, s.base.length === lignes, `${s.base.length}`);
+  verifier('l’issue est dite INCONNUE (clé contrib_envoi_detache_incertain), sans « Erreur : »', annonce(s.journal, '[contrib_envoi_detache_incertain]') && erreurs(s.journal).length === 0, JSON.stringify(s.journal));
+  verifier('aucun message n’affirme que la mesure n’a pas été enregistrée', !s.journal.some((e) => /n.a pas été enregistrée|has not been saved/.test(e.msg)), JSON.stringify(s.journal));
+}
 
 // ─── C — un vrai échec, envoi attaché : annoncé, formulaire ouvert, les gestes refonctionnent ────
 s = monter({ sbEchec: true, sbDelayMs: 80 });
@@ -231,7 +240,7 @@ s.appeler('cancelContrib');
 console.log('\nD — Annuler hors enregistrement');
 verifier('« Mesure annulée. », sans message d’envoi détaché', annonce(s.journal, 'Mesure annulée') && !annonce(s.journal, '[contrib_envoi_detache]'), JSON.stringify(s.journal.slice(-1)));
 
-// ─── E — deux envois : l'ancien, détaché, ne touche pas au nouveau ──────────────────────────────
+// ─── E — deux envois : l'ancien, détaché, ne touche pas au nouveau — ni à son SUIVI ─────────────
 s = monter({ sbManuel: true });
 const p1 = s.lancer();
 await attendre(50); s.appeler('cancelContrib');                 // envoi 1 détaché
@@ -248,9 +257,13 @@ verifier('Repositionner reste désactivé pour le nouvel envoi', s.els['btn-repo
 verifier('le nouveau point et la nouvelle saisie sont intacts', s.ctx.pending === nouveau && s.els['c-val'].value === '51000', `${s.els['c-val'].value}`);
 verifier('le « + » garde son état « en cours »', s.els['fab-mesure'].classList.contains('fab-active'));
 verifier('le message parle de la mesure envoyée avant (clé contrib_envoi_detache_ok), pas du score d’une autre', annonce(s.journal, '[contrib_envoi_detache_ok]') && !succes(s.journal).some((m) => m.includes('Score')), JSON.stringify(s.journal));
+// Le nouvel envoi est-il toujours SUIVI ? Fermer maintenant doit le détacher, pas l'« annuler ».
+const detachesAvant = compte(s.journal, '[contrib_envoi_detache]');
+s.appeler('cancelContrib');
+verifier('fermer pendant le nouvel envoi le détache aussi — pas de « Mesure annulée. » avant une écriture', compte(s.journal, '[contrib_envoi_detache]') === detachesAvant + 1 && !annonce(s.journal, 'Mesure annulée'), JSON.stringify(s.journal));
 s.liberer(1, 'ok');
 await p2;
-verifier('le nouvel envoi aboutit normalement : deux lignes, les bonnes positions, formulaire refermé', s.base.length === 2 && s.base[0].lat === 41.92 && s.base[1].lat === 42.15 && s.els.cform.style.display === 'none', JSON.stringify(s.base.map((r) => r.lat)));
+verifier('le nouvel envoi aboutit, détaché : deux lignes, les bonnes positions, son issue annoncée', s.base.length === 2 && s.base[0].lat === 41.92 && s.base[1].lat === 42.15 && compte(s.journal, '[contrib_envoi_detache_ok]') === 2, JSON.stringify(s.base.map((r) => r.lat)));
 verifier('aucune erreur de bout en bout', erreurs(s.journal).length === 0, JSON.stringify(erreurs(s.journal)));
 
 // ─── F — consentement et saisie relus après l'attente du calcul ─────────────────────────────────

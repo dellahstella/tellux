@@ -3368,7 +3368,7 @@ var JS_STRINGS_EN = {
   save_elf_fallback_notice: "Measurement saved with a simplified estimate of the electromagnetic field (grid data unavailable).",
   contrib_envoi_detache: "Form closed. The measurement had already been sent: it may still be saved.",
   contrib_envoi_detache_ok: "The measurement sent before the form was closed has been saved.",
-  contrib_envoi_detache_echec: "The measurement sent before the form was closed has not been saved.",
+  contrib_envoi_detache_incertain: "The measurement sent before the form was closed could not be confirmed: it may have been saved.",
   elf_loading_label: "ELF field (nT) — loading…",
   // Étiquetage du terme BT manquant (2026-09-07, brief CJ). Direction de l'écart connue et dite.
   elf_bt_incomplet: "Incomplete value: the low-voltage term has not loaded yet, so the value shown is too low. It is included as soon as the network data is available.",
@@ -10837,7 +10837,10 @@ async function saveContrib(){
       const fabEl=document.getElementById('fab-mesure');if(fabEl)fabEl.classList.remove('fab-active');
     }
   }catch(err){
-    if(envoi.detache) info(jt('contrib_envoi_detache_echec','La mesure envoyée avant la fermeture du formulaire n’a pas été enregistrée.'),'warn',8000);
+    // Un rejet ne prouve pas l'absence d'écriture (revue du 2026-09-11) : la connexion peut tomber après que le
+    // serveur a validé l'INSERT, ou le corps d'une réponse 201 arriver tronqué. L'issue reste inconnue, et le
+    // message le dit au lieu d'affirmer « n'a pas été enregistrée ».
+    if(envoi.detache) info(jt('contrib_envoi_detache_incertain','La mesure envoyée avant la fermeture du formulaire n’a pas pu être confirmée : elle a peut-être été enregistrée.'),'warn',8000);
     else info('Erreur : '+err.message,'error',5000);
   }
   finally{
