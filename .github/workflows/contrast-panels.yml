@@ -532,9 +532,13 @@ jobs:
             echo ""
             # Les textes en cause, critiques et AA : une régression AA doit nommer ses textes
             # comme une régression critique (seconde relecture adverse). 25 lignes au plus par
-            # tableau, et ce qui manque est annoncé.
-            NCRIT=$(jq -r '.violations_critiques | length' contrast-result.json 2>/dev/null)
-            if [ "${NCRIT:-0}" != "0" ]; then
+            # tableau, et ce qui manque est annoncé. Un tableau ne s'affiche que sur la forme que
+            # le script écrit, un tableau d'objets : toute autre forme est dite, au lieu d'un
+            # tableau vide sous son en-tête, et une tranche comptée dans le resume sans détail
+            # aussi (passe ciblée de #1397).
+            FCRIT=$(jq -r '.violations_critiques | if type == "array" then (if all(.[]; type == "object") then "ok" else "array<" + ([.[] | type] | unique | join("|")) + ">" end) elif . == null then "absent" else type end' contrast-result.json 2>/dev/null)
+            NCRIT=$(jq -r 'if (.violations_critiques | type) == "array" then (.violations_critiques | length) else 0 end' contrast-result.json 2>/dev/null)
+            if [ "$FCRIT" = "ok" ] && [ "${NCRIT:-0}" != "0" ]; then
               echo "#### Violations critiques"
               echo ""
               echo '| Panneau | Ratio | Couleur | Fond effectif | Texte |'
@@ -545,9 +549,20 @@ jobs:
                 echo "… et $((NCRIT - 25)) autre(s) dans l'artefact."
               fi
               echo ""
+            elif [ "$FCRIT" != "ok" ] && [ "$FCRIT" != "absent" ]; then
+              echo "#### Violations critiques"
+              echo ""
+              echo "\`violations_critiques\` n'a pas la forme que ce verdict lit (un tableau d'objets) : forme lue \`$FCRIT\`. Voir l'artefact."
+              echo ""
+            elif [ "$CRIT" != "0" ]; then
+              echo "#### Violations critiques"
+              echo ""
+              echo "Le résumé compte $CRIT violation(s) critique(s), mais le rapport n'en détaille aucune. Voir l'artefact."
+              echo ""
             fi
-            NAA=$(jq -r '.violations_aa | length' contrast-result.json 2>/dev/null)
-            if [ "${NAA:-0}" != "0" ]; then
+            FAA=$(jq -r '.violations_aa | if type == "array" then (if all(.[]; type == "object") then "ok" else "array<" + ([.[] | type] | unique | join("|")) + ">" end) elif . == null then "absent" else type end' contrast-result.json 2>/dev/null)
+            NAA=$(jq -r 'if (.violations_aa | type) == "array" then (.violations_aa | length) else 0 end' contrast-result.json 2>/dev/null)
+            if [ "$FAA" = "ok" ] && [ "${NAA:-0}" != "0" ]; then
               echo "#### Violations AA"
               echo ""
               echo '| Panneau | Ratio | Seuil | Couleur | Fond effectif | Texte |'
@@ -557,6 +572,16 @@ jobs:
                 echo ""
                 echo "… et $((NAA - 25)) autre(s) dans l'artefact."
               fi
+              echo ""
+            elif [ "$FAA" != "ok" ] && [ "$FAA" != "absent" ]; then
+              echo "#### Violations AA"
+              echo ""
+              echo "\`violations_aa\` n'a pas la forme que ce verdict lit (un tableau d'objets) : forme lue \`$FAA\`. Voir l'artefact."
+              echo ""
+            elif [ "$AA" != "0" ]; then
+              echo "#### Violations AA"
+              echo ""
+              echo "Le résumé compte $AA violation(s) AA, mais le rapport n'en détaille aucune. Voir l'artefact."
               echo ""
             fi
           } >> "$GITHUB_STEP_SUMMARY"
