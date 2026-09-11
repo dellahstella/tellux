@@ -3711,7 +3711,7 @@ var JS_STRINGS_EN = {
   ant_statut_indisponibles: "antennas unavailable",
   // Bascule « Contributions » tant que la liste n'est pas chargée : « 0 relevé(s) » y était un faux zéro.
   contrib_toast_chargement: "Smartphone contributions — loading… · outside the calculation.",
-  contrib_toast_non_chargees: "Smartphone contributions — not loaded (Supabase unavailable) · outside the calculation."
+  contrib_toast_non_chargees: "Smartphone contributions — not loaded · outside the calculation."
 };
 function jt(key, fr){
   return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
@@ -3723,7 +3723,8 @@ let contribsDB=[],pending=null,_contribClickHandler=null;
 // « 0 relevé(s) » pendant le chargement et pendant une panne de Supabase ; et un enregistrement réussi, qui y
 // ajoute sa ligne, faisait afficher « 1 contribution » comme un total (résumé, infobulle du point d'état).
 //   'attente' — aucun chargement n'a encore abouti ni échoué ;
-//   'ok'      — un chargement a réussi : le compte est celui du dernier chargement réussi ;
+//   'ok'      — un chargement a réussi : la liste est celle du dernier chargement réussi, plus les
+//               enregistrements réussis depuis dans l'onglet (saveContrib() les y ajoute) ;
 //   'echec'   — les chargements ont échoué, sans succès antérieur.
 let _contribsListe='attente';
 // _contribEnvoiEnVol (2026-09-10) — l'INSERT de saveContrib() en cours, ou null. Une écriture partie ne se
@@ -3979,7 +3980,8 @@ document.addEventListener('visibilitychange', () => {
 });
 // Sortie de `abandoned` par action utilisateur explicite. Sans appelant au 2026-09-11 : jusque-là, cette sortie
 // n'existait que sur le papier, et `abandoned` était définitif pour la vie de l'onglet. L'autre sortie, par la
-// source, est repriseParSource() ci-dessous.
+// source, est repriseParSource() ci-dessous. repriseManuelle() ne filtre pas l'état : appelée sur une clé en
+// `ok`, elle la relance aussi.
 function repriseManuelle(cle){
   const r = _reprises.get(cle);
   if (!r) return false;
@@ -3998,15 +4000,22 @@ function repriseManuelle(cle){
 //     et un échec y ramène directement, sans minuteur ni nouvelle série ;
 //   · depuis `error`, le minuteur en attente est préempté, comme dans reveille(), sans attendre le plancher ;
 //   · en vol ou `ok` : rien. La tentative passe par declenche(), et `enVol` borne toujours seul la concurrence ;
-//   · un seul appelant, la fin du chemin de succès de calibrateRF(), pour 'ant'. calibrateRF() ne s'exécute que
-//     par la clé 'anfr', dont `ok` est terminal : le déclencheur part au plus une fois par onglet. Un appel
-//     direct de calibrateRF() ferait tomber cette borne ; la réfutation contrôle qu'il n'en existe aucun
-//     (tests/blindage-harness/non-regression-reprise-ant-anfr.mjs, S0).
+//   · AU PLUS UNE TENTATIVE PAR CLÉ ET PAR SOURCE dans la vie de l'onglet, par construction
+//     (_reprisesParSource), et non parce que calibrateRF() n'aurait qu'un chemin d'exécution. La revue du
+//     2026-09-11 a montré qu'un inventaire de ces chemins ne se contrôle pas de façon fiable : une référence
+//     passée à un minuteur, un gestionnaire HTML, ou repriseManuelle('anfr') — qui sort une clé de `ok` —
+//     relanceraient calibrateRF() sans que rien ne rougisse. La garde tient quel que soit le chemin
+//     (réfutation : tests/blindage-harness/non-regression-reprise-ant-anfr.mjs, A7).
+//   · Un seul appelant au 2026-09-11 : la fin du chemin de succès de calibrateRF(), pour 'ant'.
+const _reprisesParSource = new Set();
 function repriseParSource(cle, motif){
   const r = _reprises.get(cle);
   if (!r || r.enVol || r.etat === 'ok') return false;
+  const servie = cle + '←' + motif;
+  if (_reprisesParSource.has(servie)) return false;   // déjà servie dans cet onglet
   if (r.minuteur !== null) { clearTimeout(r.minuteur); r.minuteur = null; }   // préemption, comme reveille()
   if (r.etat === 'abandoned') r.etat = 'error';   // une tentative : le compteur est au bout de sa classe
+  _reprisesParSource.add(servie);
   return declenche(cle, motif);
 }
 
@@ -5636,7 +5645,9 @@ function tog(id,cls,btn){
         var nC=(typeof contribsDB!=='undefined')?contribsDB.length:0;
         info(jt('contrib_toast_prefix','Contributions smartphone — ')+nC+jt('contrib_toast_suffix',' relevé(s) · hors du calcul.'),null,4000);
       }else if(_contribsListe==='echec'){
-        info(jt('contrib_toast_non_chargees','Contributions smartphone — non chargées (Supabase indisponible) · hors du calcul.'),null,4000);
+        // Sans cause dans le texte : l'échec d'une lecture ne prouve pas que Supabase est indisponible. Une
+        // écriture peut réussir juste après, et une erreur HTTP est une réponse (revue du 2026-09-11).
+        info(jt('contrib_toast_non_chargees','Contributions smartphone — non chargées · hors du calcul.'),null,4000);
       }else{
         info(jt('contrib_toast_chargement','Contributions smartphone — chargement… · hors du calcul.'),null,4000);
       }
@@ -10145,7 +10156,9 @@ async function loadAnt(){try{
   // Réponse vide, ou sans antenne à terre (2026-09-10, suite du lot contexte) : ce n'est pas un résultat.
   // Avant, ce cas écrivait « 0 antennes » dans l'en-tête et le panneau, et un compte de 0 dans la légende :
   // un zéro affiché comme mesure sur une réponse qui n'avait rien rendu. Traité désormais comme un échec :
-  // rien n'est écrit (en-tête, panneau, légende), et le prédicat de la reprise 'ant' reste faux.
+  // aucun compte n'est écrit, et le prédicat de la reprise 'ant' reste faux. Depuis le lot ant/anfr
+  // (2026-09-11), le catch dit l'indisponibilité dans le panneau, et dans l'en-tête si sa case est libre ; la
+  // légende n'est pas touchée.
   if(nOnshore===0) throw new Error('aucune antenne à terre dans la réponse ('+rows.length+' ligne(s))');
   console.log('Antennes : '+nOnshore+' onshore individuelles ('+seenPos.size+' positions distinctes, '+nOffshore+' offshore commune-null, '+nSeaFiltered+' hors bbox)');
   // Compte traduit (2026-09-11, lot ant/anfr) : « N antennes » restait en français sur la page anglaise.
@@ -13941,8 +13954,10 @@ function syncBadges(){
   var contribBadge = document.getElementById('badge-contribs-val');
   var contribListEl = document.getElementById('contrib-list');
   if(contribBadge && contribListEl){
+    // Pas de compte d'une liste jamais chargée (2026-09-11, lot ant/anfr) : un enregistrement réussi y ajoute
+    // sa ligne (renderList), et la puce affichait « 1 » comme un total. Cf. _contribsListe.
     var n = contribListEl.children.length;
-    contribBadge.textContent = n > 0 ? String(n) : '—';
+    contribBadge.textContent = (_contribsListe === 'ok' && n > 0) ? String(n) : '—';
   }
 }
 // === fin UI avancée ===

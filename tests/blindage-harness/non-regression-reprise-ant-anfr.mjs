@@ -17,13 +17,17 @@
 // LE CONTRAT CHANGÉ (GO de Soleil, 2026-09-11) — une seconde sortie d'`abandoned`, sans geste utilisateur :
 // quand une clé qui partage la source d'une autre vient de réussir, l'autre sort d'`abandoned` pour UNE
 // tentative ; un échec l'y ramène directement. Vérifié ici : la sortie (A1), la préemption depuis `error`
-// (A2), la borne d'une tentative (A3), l'absence de doublon (A4), et ce qui borne le déclencheur à une fois
-// par onglet — calibrateRF() sans appel direct (S0) et `ok` terminal pour 'anfr' (A5).
+// (A2), la borne d'une tentative (A3), l'absence de doublon (A4), et la borne AU PLUS UNE TENTATIVE PAR CLÉ
+// ET PAR SOURCE DANS L'ONGLET, tenue par construction quel que soit le chemin qui relance calibrateRF() —
+// appel direct ajouté, ou repriseManuelle('anfr'), qui sort une clé de `ok` (A7). La première version du lot
+// s'en remettait à un inventaire statique de ces chemins ; la revue du 2026-09-11 en a contourné six formes.
+// S0 garde cet inventaire, renforcé, comme signal et non comme borne.
 //
 // Contre le code d'avant le lot DOIVENT échouer : S0 (fonction, appelant, contrat écrit, clés, état de la
-// liste), A1, A2, A3, B1, B2 (panneau), B3 [en], B4, C1, C2, C6, C7. Le chemin d'enregistrement (point
-// d'état après un enregistrement réussi sur une liste jamais chargée) est vérifié dans
-// non-regression-savecontrib-annulation.mjs, scénario G.
+// liste), A1, A2, A3, B1, B2 (panneau), B3 [en], B4, B5 (indisponibilité dite), C1, C2, C6, C7, C8 (puce
+// « Contribs »). A4, A5, A6, A7 et L1 sont des gardes, vraies sur main faute de couplage. Le chemin
+// d'enregistrement (point d'état après un enregistrement réussi sur une liste jamais chargée, état de la liste
+// inchangé par l'écriture) est vérifié dans non-regression-savecontrib-annulation.mjs, scénario G.
 //
 // CE QUI EST SIMULÉ, ET POURQUOI
 //   · fetch : Supabase `antennas_corse` (lignes fictives) ; le VRAI fichier des mesures certifiées et le VRAI
@@ -93,13 +97,17 @@ const dictEN = new Function(blocEN + '\nreturn JS_STRINGS_EN;')();
 console.log('S0 — câblage dans app.html');
 const codeAssistant = code.slice(code.indexOf('const REPRISE_CLASSES'), code.indexOf('async function fetchEnv'));
 verifier('repriseParSource() définie dans l’assistant', existeFonction('repriseParSource', codeAssistant));
-const appelsRPS = [...code.matchAll(/\brepriseParSource\s*\(/g)].length - (existeFonction('repriseParSource', code) ? 1 : 0);
+// Deux SIGNAUX statiques (revue du 2026-09-11) : chaque identifiant n'est mentionné qu'aux endroits connus, dans
+// le code sans commentaires ET dans le balisage hors scripts (gestionnaires onclick). Une référence passée à un
+// minuteur, un .bind ou un gestionnaire HTML est une mention de plus. Ce ne sont PAS la borne : elle est tenue
+// par construction dans repriseParSource() et vérifiée par son comportement (A7).
+// Limite de ce signal : la neutralisation des commentaires par expression régulière ignore les chaînes ; une
+// chaîne contenant « /* » masquerait la suite (aucune dans app.html au 2026-09-11).
+const horsScripts = html.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<!--[\s\S]*?-->/g, '');
+const mentions = (nom) => { const re = new RegExp('\\b' + nom + '\\b', 'g'); return [...code.matchAll(re)].length + [...horsScripts.matchAll(re)].length; };
 const dansCalib = existeFonction('calibrateRF', code) && /\brepriseParSource\s*\(\s*'ant'/.test(extraireFonction('calibrateRF', code));
-verifier('un seul appel de repriseParSource(), pour \'ant\', dans calibrateRF()', appelsRPS === 1 && dansCalib, `${appelsRPS} appel(s) ; dans calibrateRF : ${dansCalib}`);
-// LA BORNE « une fois par onglet » : calibrateRF() ne s'exécute que par la clé 'anfr', dont `ok` est terminal.
-// Un appel direct la ferait tomber sans bruit — c'est ce contrôle qui rougit.
-const appelsCalib = [...code.matchAll(/\bcalibrateRF\s*\(/g)].length - (existeFonction('calibrateRF', code) ? 1 : 0);
-verifier('calibrateRF() n’a aucun appel direct — seule la clé \'anfr\' l’exécute', appelsCalib === 0, `${appelsCalib} appel(s) direct(s)`);
+verifier('repriseParSource n’est mentionnée qu’à sa définition, sa garde typeof et son appel pour \'ant\' dans calibrateRF()', mentions('repriseParSource') === 3 && dansCalib, `${mentions('repriseParSource')} mention(s) ; dans calibrateRF : ${dansCalib}`);
+verifier('calibrateRF n’est mentionnée qu’à sa définition, sa garde typeof et l’inscription \'anfr\' — la calibration ne passe que par la clé', mentions('calibrateRF') === 3, `${mentions('calibrateRF')} mention(s)`);
 verifier('repriseManuelle() est toujours là — la sortie par geste utilisateur n’est pas retirée', existeFonction('repriseManuelle', codeAssistant));
 verifier('le contrat écrit au site ne dit plus « action utilisateur explicite seulement »',
   !/Sortie de `abandoned` : action utilisateur explicite seulement/.test(js));
@@ -165,7 +173,7 @@ const declarations = ['ANFR_GRID', '_anfrLoadPromise', 'RF_CALIB_K', 'RF_CALIB_S
   '_persistentStatus', 'contribsDB', ...['_statutAntennes', '_contribsListe'].filter(existeDeclaration)].map(extraireDeclaration);
 // repriseParSource(), si elle existe, vit dans le bloc de l'assistant : elle vient avec lui.
 const fonctions = ['fetchAntennasCorseRaw', 'loadANFRForField', 'calibrateRF', 'anfrGrillePrete', 'rfCalibre', 'loadTDFEmitters',
-  'dessinerMarqueursTDF', 'loadAnt', 'setStatus', 'statutAntennes', 'loadDB', 'updateContribSummary', 'updateSupabaseStatusDot', 'jt']
+  'dessinerMarqueursTDF', 'loadAnt', 'setStatus', 'statutAntennes', 'loadDB', 'updateContribSummary', 'updateSupabaseStatusDot', 'syncBadges', 'jt']
   .map((n) => extraireFonction(n));
 const brancheContrib = extraireBranche("if(id==='contrib'){");
 const insAnt = inscriptionDe('ant'), insAnfr = inscriptionDe('anfr');
@@ -189,6 +197,8 @@ const corps = [
   '  __el["contrib-panel"] = { style: { display: "none" } };',
   '  __el["sb-status-dot"] = { title: "Supabase connexion en cours…", _c: new Set(["status-dot--pending"]),',
   '    classList: { remove(...c){ c.forEach((x) => __el["sb-status-dot"]._c.delete(x)); }, add(c){ __el["sb-status-dot"]._c.add(c); } } };',
+  // La puce « Contribs » du panneau Conditions, et la liste dont syncBadges() compte les lignes rendues.
+  '  __el["badge-contribs-val"] = { textContent: "—" }; __el["contrib-list"] = { children: { length: 0 } };',
   '}',
   '__reinit();',
   // db-total : ABSENT, comme dans la page (aucun élément, aucun gabarit ne porte cet id).
@@ -217,13 +227,15 @@ const corps = [
   `    case 'ant': ${insAnt[0]} break;`,
   `    case 'anfr': ${insAnfr[0]} break;`,
   '  } }',
-  'return { declenche, reprisesEtat, _reprises, __inscrire, loadDB,',
+  'return { declenche, reprisesEtat, _reprises, __inscrire, loadDB, calibrateRF, repriseManuelle,',
+  '  listeRendue(n){ __el["contrib-list"].children.length = n; }, etatListe(e){ _contribsListe = e; },',
+  '  puce(){ syncBadges(); return __el["badge-contribs-val"].textContent; },',
   '  vider(){ ANFR_GRID = null; _anfrLoadPromise = null; RF_CALIB_K = 1; RF_CALIB_STATS = null;',
   '    _antennasCorseRawRows = null; _antennasCorseRawPromise = null; ANFR_ONSHORE_COUNT = null; ANTENNES_LOCATIONS = [];',
   '    TDF_EMITTERS = []; _tdfLoadPromise = null; _persistentStatus = ""; contribsDB = []; __infos = []; __hotrf = [];',
   '    if (typeof _statutAntennes !== "undefined") _statutAntennes = null;',
   '    if (typeof _contribsListe !== "undefined") _contribsListe = "attente";',
-  '    _reprises.clear(); __reinit(); [map, lAnt, lAntCluster, lTDFCluster].forEach((g) => g.clearLayers());',
+  '    _reprises.clear(); if (typeof _reprisesParSource !== "undefined") _reprisesParSource.clear(); __reinit(); [map, lAnt, lAntCluster, lTDFCluster].forEach((g) => g.clearLayers());',
   '    ACTIVE.ant = true; ACTIVE.hotrf = true; document.documentElement.lang = "fr"; },',
   '  langue(l){ document.documentElement.lang = l; },',
   '  osm(t){ setStatus(t, true); },',
@@ -354,6 +366,24 @@ await calme();
 console.log('\nA6 — \'anfr\' échoue aussi : rien ne sort \'ant\' d’`abandoned`');
 verifier("'ant' reste en `abandoned`, aucune tentative", api.reprisesEtat('ant') === 'abandoned' && nb('loadAnt erreur') === avant.echecs, `${api.reprisesEtat('ant')}, ${nb('loadAnt erreur')}`);
 
+// A7 — la borne tient par construction : calibrateRF() relancée hors de la clé (un appel direct ajouté, puis
+// repriseManuelle('anfr'), qui sort 'anfr' de `ok`) ne vaut pas une seconde tentative pour 'ant'.
+avant = await antAbandonnee();
+lignes = LIGNES_MER; plans.anfr = () => 'ok';
+await api.declenche('anfr', 'boot');
+await calme(); await calme();
+const apresReveil = nb('loadAnt erreur');
+await api.calibrateRF();
+await calme(); await calme();
+const apresAppelDirect = nb('loadAnt erreur');
+api.repriseManuelle('anfr');
+await calme(); await calme();
+const apresManuelle = nb('loadAnt erreur');
+console.log('\nA7 — calibrateRF() relancée hors de la clé, après un réveil qui a échoué');
+verifier("aucune tentative de plus pour 'ant' : au plus une par clé et par source dans l’onglet",
+  apresAppelDirect === apresReveil && apresManuelle === apresReveil && api.reprisesEtat('ant') === 'abandoned',
+  `${avant.echecs} → réveil ${apresReveil} → appel direct ${apresAppelDirect} → repriseManuelle ${apresManuelle}, ${api.reprisesEtat('ant')}`);
+
 avant = await antAbandonnee({ carto: () => 'reseau' });
 plans.anfr = () => 'ok';
 await api.declenche('anfr', 'boot');
@@ -404,8 +434,8 @@ verifier('l’indisponibilité est dite, en-tête et panneau', c.hdr === INDISPO
 // ─── C — les comptes de contributions ne se disent que d'une liste chargée ─────────────────────────
 const TOAST = {
   chargement: { fr: 'Contributions smartphone — chargement… · hors du calcul.', en: 'Smartphone contributions — loading… · outside the calculation.' },
-  echec: { fr: 'Contributions smartphone — non chargées (Supabase indisponible) · hors du calcul.',
-    en: 'Smartphone contributions — not loaded (Supabase unavailable) · outside the calculation.' },
+  echec: { fr: 'Contributions smartphone — non chargées · hors du calcul.',
+    en: 'Smartphone contributions — not loaded · outside the calculation.' },
 };
 const faux0 = /\b0 relevé|\b0 reading/;
 for (const langue of ['fr', 'en']) {
@@ -424,7 +454,10 @@ for (const langue of ['fr', 'en']) {
   console.log(`\nC2 [${langue}] — Supabase en panne au chargement de la liste`);
   verifier('pas de « 0 relevé(s) »', !!m && !faux0.test(m), m);
   verifier('le message dit que la liste n’est pas chargée', m === TOAST.echec[langue], m);
-  verifier('résumé des conditions : le tiret reste, pas « Aucune contribution »', c.resume === '—', c.resume);
+  // Le résumé n'est recalculé que par updateContribSummary() : on l'appelle après une ligne ajoutée localement,
+  // comme le fait un enregistrement réussi. Sans cet appel, ce contrôle ne testerait rien (revue du 2026-09-11).
+  api.ajouterLocal({ id: 'local' }); api.resume();
+  verifier('résumé des conditions, après une ligne ajoutée localement : le tiret reste, pas « 1 contribution »', api.compte().resume === '—', api.compte().resume);
   verifier('point d’état : hors ligne', c.point === 'Supabase hors ligne — données locales uniquement', c.point);
 }
 remettre();
@@ -456,6 +489,17 @@ api.ajouterLocal({ id: 'local' });
 api.resume();
 console.log('\nC7 — liste jamais chargée, une ligne ajoutée localement (enregistrement réussi)');
 verifier('résumé : le tiret reste, pas « 1 contribution »', api.compte().resume === '—', api.compte().resume);
+
+// ─── C8 — la puce « Contribs » du panneau Conditions (syncBadges, toutes les 30 s) ─────────────────
+// Elle compte les lignes rendues dans #contrib-list. Un enregistrement réussi y rend sa ligne même quand la liste
+// n'a jamais été chargée : la puce affichait alors « 1 » comme un total (revue du 2026-09-11).
+console.log('\nC8 — puce « Contribs » : le nombre de lignes rendues n’est un compte que d’une liste chargée');
+for (const [etat, rendues, attendu] of [['attente', 1, '—'], ['echec', 1, '—'], ['ok', 3, '3'], ['ok', 0, '—']]) {
+  remettre();
+  api.etatListe(etat); api.listeRendue(rendues);
+  const p = api.puce();
+  verifier(`liste « ${etat} », ${rendues} ligne(s) rendue(s) → « ${attendu} »`, p === attendu, p);
+}
 
 console.log(`\n${echecs === 0 ? 'TOUT VERT' : echecs + ' ÉCHEC(S)'}`);
 process.exit(echecs === 0 ? 0 : 1);

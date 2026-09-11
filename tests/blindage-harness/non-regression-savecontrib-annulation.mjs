@@ -298,6 +298,8 @@ for (const [id, etat, deja] of [['G1', 'attente', 0], ['G2', 'echec', 0], ['G3',
   verifier('le point d’état passe à « connecté » — l’écriture a réussi', !!dernier && dernier.e === 'ok', JSON.stringify(dernier));
   verifier(etat === 'ok' ? `compte transmis : ${deja + 1}` : 'aucun compte transmis (null) — la liste locale n’est pas un total',
     !!dernier && dernier.n === (etat === 'ok' ? deja + 1 : null), JSON.stringify(dernier));
+  const etatApres = vm.runInContext('_contribsListe', s.ctx);
+  verifier('l’écriture ne change pas l’état de la liste (_contribsListe)', etatApres === etat, etatApres);
 }
 
 console.log(`\n${echecs === 0 ? 'TOUT VERT' : echecs + ' ÉCHEC(S)'}`);
