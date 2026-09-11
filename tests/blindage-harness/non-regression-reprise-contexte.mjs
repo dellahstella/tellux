@@ -32,6 +32,11 @@
 //     chargeur (secours OSM). setStatus() est le VRAI, extrait d'app.html, drapeau « persistant » compris.
 // Contre origin/main d'avant cette suite, E (motif), F, C4, S4 [cert], T4 (affichage) et T7 DOIVENT échouer.
 //
+// LOT ANT/ANFR (2026-09-11) — deux attentes suivent le comportement voulu, sans rien retirer de ce qu'elles
+// protègent : les comptes d'antennes se comparent sans la clé que jt() pose devant (le compte est désormais
+// traduit) ; et T4 attend l'indisponibilité écrite, là où elle attendait « chargement… » intact — l'échec
+// n'est plus muet, parce que le couplage avec la reprise 'anfr' le rend vrai (non-regression-reprise-ant-anfr.mjs).
+//
 // CE QUI EST SIMULÉ, ET POURQUOI
 //   · fetch : les quatre fichiers statiques sont les VRAIS fichiers du dépôt (sols, sites, mesures
 //     certifiées, émetteurs TDF) ; Supabase `antennas_corse` rend quatre lignes fictives à trois
@@ -77,6 +82,9 @@ const verifier = (libelle, ok, detail = '') => {
   console.log(`  ${ok ? '✔' : '✘'} ${libelle}${detail ? ' — ' + detail : ''}`);
   if (!ok) echecs++;
 };
+// Le texte sans les clés que jt() pose devant (« [clé]texte ») : ce harnais vérifie que le compte est écrit,
+// pas par quelle clé il passe — depuis le lot ant/anfr (2026-09-11), le compte est traduit.
+const net = (s) => String(s).replace(/\[[a-z_]+\]/g, '');
 
 const existeFonction = (nom) => new RegExp('(?:async\\s+)?function\\s+' + nom + '\\s*\\(').test(js);
 function extraireFonction(nom) {
@@ -448,7 +456,7 @@ console.log('\nT1 — nominal : antennes et émetteurs TDF');
 verifier(`${N.antPositions} marqueurs d’antennes, ${N.antPositions} lieux pour « Mon lieu »`, t.antennes === N.antPositions && t.lieux === N.antPositions, `${t.antennes} / ${t.lieux}`);
 verifier(`${N.tdf} marqueurs TDF, pas le double`, t.tdf === N.tdf, `${t.tdf}`);
 verifier('la couche antennes est sur la carte', t.antSurCarte === true);
-verifier(`en-tête et panneau : « ${LIGNES_ANFR.length} antennes »`, t.hdr === `${LIGNES_ANFR.length} antennes` && t.anfr === `${LIGNES_ANFR.length} antennes`, `${t.hdr} / ${t.anfr}`);
+verifier(`en-tête et panneau : « ${LIGNES_ANFR.length} antennes »`, net(t.hdr) === `${LIGNES_ANFR.length} antennes` && net(t.anfr) === `${LIGNES_ANFR.length} antennes`, `${t.hdr} / ${t.anfr}`);
 
 t = await boot({ tdf: (n) => (n === 1 ? 'reseau' : 'ok') });
 console.log('\nT2 — émetteurs TDF en échec au boot, puis ramenés par la reprise « tdf »');
@@ -461,16 +469,19 @@ verifier(`${N.antPositions} marqueurs d’antennes au retour`, t.antennes === N.
 verifier(`compte des antennes posé (${LIGNES_ANFR.length} lignes à terre)`, t.onshore === LIGNES_ANFR.length, `${t.onshore}`);
 verifier(`${N.tdf} marqueurs TDF, pas le double`, t.tdf === N.tdf, `${t.tdf}`);
 verifier('la couche antennes est sur la carte', t.antSurCarte === true);
-verifier(`au retour : « ${LIGNES_ANFR.length} antennes » dans l’en-tête et le panneau`, t.hdr === `${LIGNES_ANFR.length} antennes` && t.anfr === `${LIGNES_ANFR.length} antennes`, `${t.hdr} / ${t.anfr}`);
+verifier(`au retour : « ${LIGNES_ANFR.length} antennes » dans l’en-tête et le panneau`, net(t.hdr) === `${LIGNES_ANFR.length} antennes` && net(t.anfr) === `${LIGNES_ANFR.length} antennes`, `${t.hdr} / ${t.anfr}`);
 
 t = await boot({ anfr: () => 'vide' });
 console.log('\nT4 — Supabase répond 200 avec zéro antenne : loadAnt() est rappelée par la reprise');
 verifier("jamais 'ok'", api.reprisesEtat('ant') !== 'ok', api.reprisesEtat('ant'));
 verifier(`${N.tdf} marqueurs TDF, pas un lot de plus à chaque rappel`, t.tdf === N.tdf, `${t.tdf}`);
 verifier('une seule requête Supabase — le vide est en cache, rien ne part en rafale', appels.anfr === 1, `${appels.anfr}`);
-verifier('aucun « 0 antennes » affiché — ni en-tête, ni panneau', t.hdr !== '0 antennes' && t.anfr !== '0 antennes', `${t.hdr} / ${t.anfr}`);
+verifier('aucun « 0 antennes » affiché — ni en-tête, ni panneau', !/\b0 antennes/.test(net(t.hdr) + ' ' + net(t.anfr)), `${t.hdr} / ${t.anfr}`);
 verifier('compte des antennes non posé : un zéro rendu par une réponse vide n’est pas un résultat', t.onshore === null, `${t.onshore}`);
-verifier('en-tête et panneau non touchés — aucun compte écrit', t.hdr === 'chargement…' && t.anfr === 'chargement…', `${t.hdr} / ${t.anfr}`);
+// Changé au lot ant/anfr (2026-09-11) : l'échec n'est plus muet. L'en-tête et le panneau disent
+// l'indisponibilité (clé ant_statut_indisponibles) ; le couplage avec la reprise 'anfr' la rend vraie.
+verifier('en-tête et panneau disent l’indisponibilité (clé ant_statut_indisponibles) — aucun compte écrit',
+  t.hdr.includes('[ant_statut_indisponibles]') && t.anfr.includes('[ant_statut_indisponibles]'), `${t.hdr} / ${t.anfr}`);
 
 remettre({ anfr: () => 'reseau' });
 api.__inscrire('ant');
@@ -489,7 +500,7 @@ t = api.compte();
 console.log('\nT7 — une reprise « ant » qui réussit APRÈS l’avertissement persistant d’un autre chargeur');
 verifier("'ok'", api.reprisesEtat('ant') === 'ok', api.reprisesEtat('ant'));
 verifier('l’en-tête garde l’avertissement du secours OSM', t.hdr === OSM, t.hdr);
-verifier(`le panneau porte le compte (${LIGNES_ANFR.length} antennes)`, t.anfr === `${LIGNES_ANFR.length} antennes`, t.anfr);
+verifier(`le panneau porte le compte (${LIGNES_ANFR.length} antennes)`, net(t.anfr) === `${LIGNES_ANFR.length} antennes`, t.anfr);
 
 console.log(`\n${echecs === 0 ? 'TOUT VERT' : echecs + ' ÉCHEC(S)'}${modeAvant.length ? '  (mode avant-lot)' : ''}`);
 process.exit(echecs === 0 ? 0 : 1);
