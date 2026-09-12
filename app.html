@@ -3724,7 +3724,10 @@ let contribsDB=[],pending=null,_contribClickHandler=null;
 // ajoute sa ligne, faisait afficher « 1 contribution » comme un total (résumé, infobulle du point d'état).
 //   'attente' — aucun chargement n'a encore abouti ni échoué ;
 //   'ok'      — un chargement a réussi : la liste est celle du dernier chargement réussi, plus les
-//               enregistrements réussis depuis dans l'onglet (saveContrib() les y ajoute) ;
+//               enregistrements réussis depuis dans l'onglet (saveContrib() les y ajoute). Exception,
+//               antérieure et non corrigée : un rafraîchissement lu avant la validation d'un INSERT mais
+//               appliqué après sa réponse remplace la liste par un instantané qui ne contient pas la ligne,
+//               jusqu'au rafraîchissement suivant ;
 //   'echec'   — les chargements ont échoué, sans succès antérieur.
 let _contribsListe='attente';
 // _contribEnvoiEnVol (2026-09-10) — l'INSERT de saveContrib() en cours, ou null. Une écriture partie ne se
@@ -10880,7 +10883,14 @@ async function saveContrib(){
   if(btnRepos)btnRepos.disabled=true;
   try{
     const saved=await sbPost('/rest/v1/contributions',[row]);
-    contribsDB.unshift(saved[0]||row);addMarker(saved[0]||row);
+    // D2 (2026-09-11) : un rafraîchissement de la liste (loadDB, toutes les 5 min ou 30 s après un échec) peut
+    // relire la table après que le serveur a validé l'INSERT, mais avant que sa réponse arrive. La ligne est alors
+    // déjà dans contribsDB, avec son marqueur : l'ajouter de nouveau la comptait deux fois et doublait le marqueur.
+    // Dédoublonnage sur l'id que renvoie l'INSERT (return=representation). Une réponse sans ligne n'a pas d'id :
+    // l'ajout se fait alors comme avant.
+    const ligne=saved[0]||row;
+    const dejaChargee=ligne.id!=null&&contribsDB.some(function(c){return c&&c.id===ligne.id;});
+    if(!dejaChargee){contribsDB.unshift(ligne);addMarker(ligne);}
     // Le formulaire n'est remis à zéro que si l'envoi y est encore attaché. Détaché, l'utilisateur l'a fermé
     // et a pu commencer une autre mesure, dont ni le point ni la saisie ne doivent être effacés. La garde sur
     // pending reste : removeLayer(null) lève dans Leaflet, ce qui affichait « Erreur : … » après une écriture.
