@@ -2335,7 +2335,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            dans la légende de b-hot (repère documentaire, PAS une recommandation de seuil
            cartographique) — arbitrage Soleil explicite, réserve reprise ici dans le title= et
            la légende, pas seulement en commentaire de code. -->
-      <button class="lbtn" id="b-elf" data-domains="elf" title="Champ magnétique ELF 50 Hz (réseau électrique), exprimé en nT — composante anthropique seule du modèle Tellux, sans la susceptibilité du substrat (distincte de « Champ magnétique composite », qui combine les deux). Estimation, pas une mesure. N'affiche rien sous 300 nT : seuil réutilisant le repère documentaire IARC classe 2B, une classification épidémiologique de long terme — un choix éditorial d'affichage, pas une évaluation du risque à ce niveau précis." onclick="tog('elf','on-elf',this)"><span class="dot" style="background:#5c3a9b"></span>Champ ELF (nT)<span class="layer-badge layer-badge--domain">ELF</span></button>
+      <button class="lbtn on-elf" id="b-elf" data-domains="elf" title="Champ magnétique ELF 50 Hz (réseau électrique), exprimé en nT — composante anthropique seule du modèle Tellux, sans la susceptibilité du substrat (distincte de « Champ magnétique composite », qui combine les deux). Estimation, pas une mesure. N'affiche rien sous 300 nT : seuil réutilisant le repère documentaire IARC classe 2B, une classification épidémiologique de long terme — un choix éditorial d'affichage, pas une évaluation du risque à ce niveau précis." onclick="tog('elf','on-elf',this)"><span class="dot" style="background:#5c3a9b"></span>Champ ELF (nT)<span class="layer-badge layer-badge--domain">ELF</span></button>
       <div class="mlegend-inline" id="mleg-elf"></div>
       <!-- L'ex-bouton unique b-con (« Mesures EM ») vit désormais dans GROUPE 3 « Contexte
            naturel » / sous-groupe « Repères et mesures externes », SCINDÉ le 2026-08-29 (brief
@@ -2352,7 +2352,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
       <span>Sources anthropiques</span>
     </div>
     <div class="accordion-cat-content">
-      <button class="lbtn on-ant" id="b-ant" data-domains="rf" title="Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR + TDF<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
+      <button class="lbtn" id="b-ant" data-domains="rf" title="Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR + TDF<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-ant"></div>
       <button class="lbtn" id="b-res" data-domains="elf" title="Lignes électriques HTA — moyenne tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HTA<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">ELF</span></button>
       <div class="mlegend-inline" id="mleg-res"></div>
@@ -4482,7 +4482,14 @@ const WMS={hyd:wmsHyd,emag:wmsEmag};
 // ci-dessus) : les antennes ANFR + TDF s'affichent par défaut à la place des mesures certifiées,
 // en complément de la grille RF (hotrf, déjà true). Mesures certifiées toujours chargées et
 // disponibles au clic (bouton b-cert), simplement plus affichées au premier rendu.
-const ACTIVE={bt:false,ant:true,hyd:false,emag:false,hot:false,hotrf:true,elf:false,res:false,prod:false,cert:false,contrib:false,crustal:false,openrad:false};
+// ant:false / elf:true au boot (brief S1 mobile-ui, lot e, 2026-09-12 — remplace l'arbitrage du
+// 2026-09-02 ci-dessus) : la grille ELF (nT) remplace les antennes ANFR+TDF par défaut, toujours
+// en complément de hotrf. loadAnt()/la reprise 'ant' restent inchangés — ANFR_ONSHORE_COUNT et
+// « Mon lieu » dépendent du CHARGEMENT des antennes, pas de leur affichage ; seul .addTo(map) est
+// conditionné par ACTIVE.ant, cf. le bloc Promise.all décalé plus bas, non touché ici. Antennes
+// toujours chargées et disponibles au clic (bouton b-ant), simplement plus affichées au premier
+// rendu — même mécanique que cert:false ci-dessus.
+const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,elf:true,res:false,prod:false,cert:false,contrib:false,crustal:false,openrad:false};
 
 // 'con' (scindé depuis en 'cert'+'contrib', 2026-08-29 item C) et 'emag' promues en Zone 1
 // "core" le 2026-08-27 (brief "Panneau '?' sélectif",
@@ -12555,16 +12562,21 @@ if(typeof loadAnt==='function'){
 // pas du facteur de charge RTE (spécifique au domaine ELF/magnétique de buildHot()).
 buildHotRF();
 showLegend('hotrf',true);
-// ant:true au boot (décision Soleil 2026-09-02, remplace cert:true du 2026-08-29 ci-dessus en
-// commentaire) — antennes ANFR + TDF visibles + légende au démarrage, en complément de la
-// grille RF (hotrf). lAnt.addTo(map) est fait dans le Promise.all décalé ci-dessous (après la
-// première tentative de la reprise 'ant', lot contexte 2026-09-10). Mesures certifiées (cert)
-// toujours chargées au boot. calibrateRF() n'en
+// ant:false / elf:true au boot (brief S1 mobile-ui, lot e, 2026-09-12 — remplace l'arbitrage du
+// 2026-09-02 en commentaire ci-dessus, cf. aussi ACTIVE plus haut) — grille ELF visible + légendée
+// au démarrage, à la place des antennes, en complément de la grille RF (hotrf). lAnt.addTo(map)
+// reste conditionné à ACTIVE.ant dans le Promise.all décalé plus bas (désormais false, donc
+// n'ajoute plus lAnt à la carte) — chargement des antennes (loadAnt, reprise 'ant') inchangé,
+// seul l'affichage change (cf. commentaire à ACTIVE). Mesures certifiées (cert) toujours chargées
+// au boot. calibrateRF() n'en
 // dépend PAS : elle lit le même fichier par son propre fetch. L'ancienne mention « calibrateRF() en
 // dépend » était fausse, et corrigée le 2026-09-10 parce qu'elle aurait classé ce chargeur en critique.
 // Toujours non affichées ni légendées par défaut — cert:false, showLegend('cert',...) désormais piloté par
-// tog() au 1er clic comme contrib:false l'était déjà.
-showLegend('ant',true);
+// tog() au 1er clic comme contrib:false l'était déjà. Même règle appliquée à ant ci-dessus depuis
+// aujourd'hui : chargée, disponible au clic (b-ant), plus affichée ni légendée au premier rendu.
+lElf.addTo(map);
+buildElf();
+showLegend('elf',true);
 // Démarrage : anomalies EM (couche RF + mesures terrain par défaut, cf. arbitrage 2026-08-23)
 let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.hotrf){lHotRF.clearLayers();buildHotRF();}if(ACTIVE.elf)buildElf();},300);}
