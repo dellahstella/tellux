@@ -5,9 +5,28 @@ name: Veille Scholar hebdomadaire
 # Brief : .github/scripts/veille_scholar.py
 
 on:
-  schedule:
-    # Tous les lundis à 8h UTC (~9h Paris hiver / 10h Paris été)
-    - cron: '0 8 * * 1'
+  # SCHEDULE SUSPENDU LE 2026-09-12 — le cron ne tirait plus que des rouges. Deux causes
+  # distinctes, dont la première masque la seconde :
+  #   - « Your credit balance is too low to access the Anthropic API » (400), dry run manuel
+  #     du 2026-09-10 à 15:05Z : un solde à recharger. Tant qu'il bloque, aucun run ne peut
+  #     révéler autre chose.
+  #   - « prompt is too long » (400), run programmé du 2026-09-07 à 13:49Z : le corpus
+  #     d'entrée a dépassé la fenêtre du modèle. Le script MESURE pourtant son entrée avant
+  #     l'appel (count_tokens, .github/scripts/veille_scholar.py) et l'envoie quand même :
+  #     un compteur, pas un garde. C'est le vrai défaut, et il reviendra au premier run
+  #     redevenu possible — probablement plus gros, la fenêtre de 7 jours ayant accumulé
+  #     les alertes non traitées depuis.
+  # Le mécanisme n'est pas mort : cinq runs programmés verts d'affilée du 2026-07-27 au
+  # 2026-08-24, puis rouges les 31/08 et 07/09. On l'arrête pour que le lundi ne produise
+  # pas un rouge de plus, on ne le supprime pas : `workflow_dispatch` reste, avec ses
+  # entrées, et la récolte à la main est inchangée.
+  # RÉTABLIR — décommenter les deux lignes ci-dessous, dans cet ordre : crédit rechargé
+  # (avec une alerte de seuil), puis count_tokens devenu un garde (au-delà du seuil :
+  # tronquer, découper, ou échouer en disant combien et de quoi), puis vérifier le premier
+  # run programmé.
+  # schedule:
+  #   # Tous les lundis à 8h UTC (~9h Paris hiver / 10h Paris été)
+  #   - cron: '0 8 * * 1'
   workflow_dispatch:
     inputs:
       lookback_days:
