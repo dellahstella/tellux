@@ -213,10 +213,19 @@ done
 # enregistrement JSON est délimité par sa clé d'identifiant ("id":/"numero":, les deux schémas
 # rencontrés le 2026-09-02) — pas un vrai parseur JSON, une segmentation par ligne-marqueur
 # suffisante pour ce format (un enregistrement par bloc, jamais imbriqué).
-# Coordonnées GPS (« >3 décimales hors couche de référence ») délibérément absentes : testé
-# mentalement contre les couches géo légitimes du repo (antennes ANFR, radon, patrimoine — toutes
-# précises par nature), écarté comme trop bruyant pour rester exploitable. Non implémentée plutôt
-# que livrée peu fiable — cf. dette CARTORADIO-INGESTION-PERSO-CONVENTION-001 (registre privé).
+# Coordonnées GPS (« >3 décimales hors couche de référence ») : hors de cette classe, et la raison
+# est MESURÉE, et non estimée, depuis le 2026-09-12.
+# Règle candidate '"(lat|lon|latitude|longitude)"[ \t]*:[ \t]*-?[0-9]+\.[0-9]{4,}' passée sur la
+# surface PERSO (14 fichiers suivis) : 2 455 lignes signalées, dans 6 fichiers, TOUS des couches géo
+# légitimes — antennes ANFR, mesures certifiées, éoliennes, postes sources, sites, émetteurs TDF.
+# Sur un gate bloquant, c'est le dépôt gelé : le motif d'écartement tient.
+# Ce que la mesure CORRIGE dans la raison d'origine : le bruit n'est pas diffus, il est concentré
+# sur 6 fichiers — is_allowed + leak_guard_allowlist.txt le tairaient sans peine. Mais la règle
+# n'émettrait alors plus rien aujourd'hui (0 finding hors de ces 6) : tout son signal porterait sur
+# des fichiers NON listés, donc à venir, au prix d'une liste à tenir — et une liste périmée ne se
+# signale pas. Elle reste donc dehors pour ce coût-là, pas pour du bruit.
+# Arbitrage ouvert (règle + allowlist, ou exclusion par propriété déclarée plutôt que par liste) :
+# cf. dette CARTORADIO-INGESTION-PERSO-CONVENTION-001 (registre privé).
 # Vérifié avant merge (pas supposé) sur les deux fichiers réels de l'incident (copies hors dépôt) :
 # 8/8 puis 77/77 détectés sur les versions AVANT correctif ; 0/0 sur la version corrigée.
 scan_perso_coocurrence() { # label field_regex context_regex filelist
