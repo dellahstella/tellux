@@ -2187,9 +2187,9 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
   <strong>Ancrage normatif (RF) :</strong> les mesures RF suivent les recommandations <strong>ITU-T K.113</strong> (cartographie de l'exposition RF) et <strong>EN 62232</strong>/lignes directrices ICNIRP : moyenne quadratique (RMS) sur <strong>6 minutes</strong> par point, capteur à <strong>~1,5 m du sol</strong>, à distance de toute masse métallique proche. Incertitudes assumées et affichées : <strong>±20–25 %</strong> (étalonnage) pour un exposimètre porté (PEM) — davantage en usage porté, effet du corps —, <strong>±3–6 dB au mieux</strong> pour un capteur smartphone — la mesure contributive est positionnée comme <em>émergente et indicative</em>, jamais comme équivalente à une mesure certifiée (protocole ANFR, laboratoires accrédités).
 </p>
 <p style="margin:6px 0 0 0;font-size:10px;color:var(--tx-mica);font-style:italic">
-  <!-- TEXTE NEUF, EN ATTENTE DE REVUE SOLEIL (brief S1 lot h, étape 2) : reformulation sans
-       référence au protocole retiré. Ne pas merger sans confirmation de ce libellé. -->
-  Les mesures saisies via le bouton « + Mesure » sont conservées comme observations indicatives, distinctes des mesures répondant aux critères de validation les plus stricts.
+  <!-- Texte validé par Soleil (brief S1 lot h, revue du 2026-09-13) — remplace la proposition
+       initiale, qui renvoyait encore à des "critères de validation" retirés par cette même PR. -->
+  Les mesures saisies via le bouton « + Mesure » sont conservées comme observations indicatives.
 </p>
 <ul style="margin:6px 0 6px 16px;padding:0">
   <li style="margin-bottom:3px"><strong>Courants HTA</strong> : charges nominales, incertitude estimée à ±50 %. EDF SEI Corse ne publie pas de données de courant en temps réel.</li>
@@ -3084,17 +3084,15 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
     <div class="cform-step">Etape 6 — Validation et envoi</div>
     <div id="cform-recap" style="font-size:11px;color:var(--ardoise-clair);background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:10px;line-height:1.6"></div>
 
-    <div style="margin-bottom:10px;padding:8px 10px;background:var(--pierre-ombre);border:1px solid var(--border);border-radius:var(--r)">
-      <label style="display:flex;align-items:flex-start;gap:6px;font-size:11px;color:var(--ardoise-clair);cursor:pointer">
-        <input type="checkbox" id="c-protocole" style="margin-top:2px;accent-color:var(--acc)">
-        <span>
-          <b>&#9733;&#9733;&#9733; Mesure en protocole aveugle parall&#232;le</b>
-          <span style="display:block;font-size:10px;color:var(--tx3);margin-top:2px;line-height:1.3">
-            Ne cocher que si la mesure a &#233;t&#233; prise simultan&#233;ment par 3 op&#233;rateurs ind&#233;pendants sans communication entre eux pendant la prise. Les mesures hors protocole sont trait&#233;es comme indicatives.
-          </span>
-        </span>
-      </label>
-    </div>
+    <!-- Checkbox #c-protocole (« Mesure en protocole aveugle parallèle ») RETIRÉE (brief S1
+         lot h, ajout de périmètre, 2026-09-13) : répétait l'affirmation à 3 opérateurs retirée
+         du panneau Méthodologie par cette même PR, et sa valeur n'était persistée nulle part
+         (colonne protocole_aveugle absente du schéma Supabase vivant, vérifié lot g). Effet de
+         bord positif identifié en vérifiant : le champ ne cassait PAS silencieusement — cocher
+         cette case envoyait protocole_aveugle:true, seule valeur non filtrée par le garde-fou
+         null/undefined de saveContrib() (ligne ci-dessous, "éviter PGRST204 si colonne
+         manquante") ; cette case était donc la SEULE façon de faire échouer l'INSERT en base
+         depuis ce formulaire. Ce retrait corrige ce chemin, il ne l'introduit pas. -->
 
     <div class="rgpd-row">
       <input type="checkbox" id="c-rgpd">
@@ -10680,7 +10678,6 @@ function cancelContrib(){
   // aussi le clic hors du formulaire.
   const envoiDetache=_detacherEnvoiContrib();
   if(_nativeMag) stopNativeMagCapture(false);
-  const protoChk=document.getElementById('c-protocole');if(protoChk)protoChk.checked=false;
   window._nativeCaptureUsed=false;
   // Nettoyer le pin violet si présent
   if(pending){map.removeLayer(pending);pending=null;}
@@ -10875,7 +10872,11 @@ async function saveContrib(){
     // attenPrevue est toujours un nombre fini (reduce sur MAT_DB, base 0) — 0 signifie
     // "aucun matériau sélectionné", jamais NaN/undefined ; plus de ||null nécessaire.
     attenuation_prevue_db:attenPrevue,
-    protocole_aveugle: document.getElementById('c-protocole')?.checked ? true : null,
+    // protocole_aveugle RETIRÉ (brief S1 lot h, 2026-09-13) avec le checkbox #c-protocole —
+    // cf. commentaire à son ancien emplacement HTML. N'a jamais correspondu à une colonne du
+    // schéma Supabase vivant ; seule valeur du payload que le filtre null/undefined ci-dessous
+    // ne pouvait pas absorber quand elle valait true, donc seul chemin d'échec PGRST204 connu
+    // pour cet INSERT.
     native_capture: window._nativeCaptureUsed === true ? true : null,
     airplane_mode_on: document.getElementById('c-airplane-mode')?.checked ? true : null,
     usb_charging_off: document.getElementById('c-usb-off')?.checked ? true : null,
@@ -10910,7 +10911,6 @@ async function saveContrib(){
       cformOverlayHide();
       document.getElementById('c-val').value='';document.getElementById('c-note').value='';
       window._csvStats=null;
-      const protoChk=document.getElementById('c-protocole');if(protoChk)protoChk.checked=false;
       var airplaneChk=document.getElementById('c-airplane-mode');if(airplaneChk)airplaneChk.checked=false;
       var usbChk=document.getElementById('c-usb-off');if(usbChk)usbChk.checked=false;
       var metalChk=document.getElementById('c-no-metal');if(metalChk)metalChk.checked=false;
@@ -14969,7 +14969,6 @@ function capCleanup(){
 ["cform_note_hint","#c-note-hint-span","","(optionnel)","(ozzionale)","(optional)"],
 ["cform_note_ph","#c-note","placeholder","Éléments visibles à proximité : lignes électriques, antennes, structures métalliques…","Elementi visibili vicinu : linee elettriche, antenne, strutture metalliche…","Elements visible nearby: power lines, antennas, metal structures…"],
 ["cform_privacy","#c-note + div","","Merci de ne pas inclure de données personnelles (nom, adresse, téléphone).","Ùn mittite micca dati persunali (nome, indirizzu, telefonu).","Please do not include personal data (name, address, phone number)."],
-["cform_protocole","#c-protocole + span > b","","★★★ Mesure en protocole aveugle parallèle","★★★ Misura in prutucollu cecu parallelu","★★★ Measurement under parallel blind protocol"],
 ["btn_save","#btn-save","","Enregistrer","Arregistrà","Save"],
 ["btn_cancel",".cform .btn-cancel","","Annuler","Annullà","Cancel"],
 ["cform_btn_prev","#cform-btn-prev","","← Précédent","← Precedente","← Previous"],
@@ -15180,13 +15179,11 @@ function capCleanup(){
       ["#methodology-panel p@3",
         "Ancrage normatif (RF) : les mesures RF suivent les recommandations ITU-T K.113 (cartographie de l'exposition RF) et EN 62232/lignes directrices ICNIRP : moyenne quadratique (RMS) sur 6 minutes par point, capteur à ~1,5 m du sol, à distance de toute masse métallique proche. Incertitudes assumées et affichées : ±20–25 % (étalonnage) pour un exposimètre porté (PEM) — davantage en usage porté, effet du corps —, ±3–6 dB au mieux pour un capteur smartphone — la mesure contributive est positionnée comme émergente et indicative, jamais comme équivalente à une mesure certifiée (protocole ANFR, laboratoires accrédités).",
         "<strong>Normative anchoring (RF):</strong> RF measurements follow the <strong>ITU-T K.113</strong> recommendations (RF exposure mapping) and <strong>EN 62232</strong>/ICNIRP guidelines: root-mean-square (RMS) average over <strong>6 minutes</strong> per point, sensor at <strong>~1.5 m above ground</strong>, away from any nearby metal mass. Assumed and displayed uncertainties: <strong>±20–25%</strong> (calibration) for a worn exposimeter (PEM) — more with body-worn use, body effect — <strong>±3–6 dB at best</strong> for a smartphone sensor — the contributed measurement is positioned as <em>emerging and indicative</em>, never as equivalent to a certified measurement (ANFR protocol, accredited laboratories)."],
-      // TEXTE NEUF, EN ATTENTE DE REVUE SOLEIL (brief S1 lot h, étape 2) : reformulation
-      // FR ET sa traduction EN ci-dessous — ne pas merger sans confirmation du libellé FR
-      // (cf. commentaire jumeau dans le HTML). La traduction EN suit le FR proposé, pas
-      // encore un texte approuvé.
+      // Texte validé par Soleil (brief S1 lot h, revue du 2026-09-13) — remplace la
+      // proposition initiale, cf. commentaire jumeau dans le HTML.
       ["#methodology-panel p@4",
-        "Les mesures saisies via le bouton « + Mesure » sont conservées comme observations indicatives, distinctes des mesures répondant aux critères de validation les plus stricts.",
-        "Measurements entered via the \"+ Measure\" button are kept as indicative observations, distinct from measurements meeting the strictest validation criteria."],
+        "Les mesures saisies via le bouton « + Mesure » sont conservées comme observations indicatives.",
+        "Measurements entered via the \"+ Measure\" button are kept as indicative observations."],
       ["#methodology-panel li@3",
         "Courants HTA : charges nominales, incertitude estimée à ±50 %. EDF SEI Corse ne publie pas de données de courant en temps réel.",
         "<strong>HTA currents</strong>: nominal loads, uncertainty estimated at ±50%. EDF SEI Corsica does not publish real-time current data."],
