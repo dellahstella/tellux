@@ -3,7 +3,8 @@
 // Création : 2026-06-06 · feat/blindage-harness (WS2)
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// Pour chacune des 30 mesures certifiées ANFR/EXEM :
+// Pour chaque fiche de cartoradio_certified_corse.json, sans filtre d'éligibilité (236 au 2026-09-11, dont
+// les 30 fiches d'origine) :
 //   - charge le harness une seule fois (mode local)
 //   - appelle calcAll_v2(lat, lon) → récupère domains.rf
 //   - calcule predicted (E en V/m) − measured (valeur_max_vm)
@@ -12,7 +13,7 @@
 //
 // Sortie : un objet JSON sur stdout avec :
 //   - meta : version harness, n mesures, scope analyse
-//   - per_point : 30 entrées détaillées
+//   - per_point : une entrée détaillée par fiche
 //   - stats : globales + par strate
 //
 // USAGE : node rf-residuals-collect.mjs > /tmp/rf-residuals.json
