@@ -1,8 +1,11 @@
 -- 014_contributions_grant_explicite.sql
--- NON APPLIQUÉE — décision Soleil requise avant exécution en production
+-- APPLIQUÉE le 2026-09-13 (GO Soleil) PUIS PARTIELLEMENT ANNULÉE LE MÊME JOUR — voir constat
+-- daté en fin de fichier. État actuel en production : GRANT SELECT table entière restauré
+-- (rollback exécuté), le SELECT colonne par colonne ci-dessous N'EST PLUS en vigueur.
 -- Préparée 2026-09-13, session Code (brief Soleil, en suite directe de la dette
 -- `CONTRIBUTIONS-GRANT-TABLE-REVOKE-COLONNE-INOPERANT-001`). Aucun REVOKE ni GRANT exécuté par
--- cette session : ce fichier est écrit, pas joué. Même régime que 012/013.
+-- cette session AU MOMENT DE LA PRÉPARATION : ce fichier a été écrit avant d'être joué. Même
+-- régime que 012/013 jusqu'à l'application.
 --
 -- POURQUOI
 -- `anon`/`authenticated` détiennent un GRANT SELECT au niveau TABLE ENTIÈRE sur
@@ -219,3 +222,53 @@ grant select (
 -- parallèle le même jour, non appliqué non plus). `list_migrations` (ledger Supabase) ne
 -- correspond pas nom à nom aux fichiers locaux (précédent documenté, migration 008) — `014` reste
 -- le nom de fichier local correct, l'application réelle portera son propre horodatage Supabase.
+--
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- CONSTAT DU 2026-09-13, APRÈS APPLICATION RÉELLE (GO Soleil) — le SELECT colonne par colonne a
+-- pris effet (contrairement à la 012 et à la 013 : ni no-op, ni barrière de propriété), MAIS a
+-- cassé la lecture publique en production, pour une raison non anticipée par ce fichier. Corrigé
+-- en urgence par rollback (GRANT SELECT table entière restauré), vérifié, PAS encore résolu au
+-- sens où le vrai correctif (§ ci-dessous) n'a pas été appliqué.
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+--
+-- CE QUI A ÉTÉ VÉRIFIÉ, DANS L'ORDRE :
+-- 1) Droits en base après application : exactement les 16 colonnes attendues, pour `anon` ET
+--    `authenticated` (`information_schema.column_privileges`) — le GRANT colonne a bien pris,
+--    la vérification section 1 de ce fichier était correcte.
+-- 2) Chemin client réel (clé anon publique) avec une liste de colonnes EXPLICITE
+--    (`select=id,type,lat,lon`) : `200`, données correctes. Les colonnes accordées SONT lisibles
+--    une par une.
+-- 3) Chemin client réel avec `select=*` : `401` `{"code":"42501","message":"permission denied
+--    for table contributions"}`.
+-- 4) Chemin client réel avec LA REQUÊTE RÉELLE de `loadDB()` (`app.html:10451`, AUCUN paramètre
+--    `select=`) : **même erreur, `401`/`42501`**. C'est la requête que l'application exécute au
+--    chargement de chaque page publique — confirmé cassée, pas seulement un cas de test
+--    artificiel.
+-- 5) `NOTIFY pgrst, 'reload schema';` exécuté, requête ré-essayée : même erreur. Écarte
+--    l'hypothèse d'un cache de schéma PostgREST simplement pas rafraîchi.
+--
+-- MÉCANISME (constaté, pas encore documenté ailleurs dans ce dépôt avant aujourd'hui) : quand un
+-- rôle ne détient AUCUN GRANT SELECT au niveau table sur une relation — seulement des GRANT
+-- colonne par colonne — PostgREST échoue sur toute requête qui n'énumère pas explicitement les
+-- colonnes dans `select=` (absence du paramètre, ou `select=*` littéral). Une liste de colonnes
+-- explicite fonctionne ; l'absence de liste ou `*` ne fonctionne pas. Troisième mécanisme
+-- distinct dans cette seule journée où un changement de droits sur ce projet ne produit pas
+-- l'effet attendu naïvement — ni le no-op silencieux de la 012 (GRANT table qui rend le REVOKE
+-- colonne inopérant), ni la barrière de propriété de la 013 (REVOKE sans autorité) : ici, le
+-- GRANT colonne EST effectif, mais le chemin client par défaut de l'application ne le sollicite
+-- pas de la façon qui fonctionne.
+--
+-- ACTION D'URGENCE EXÉCUTÉE (hors du régime « ne rien appliquer » de ce fichier — restauration
+-- de service, pas une nouvelle décision de droits) : `grant select on public.contributions to
+-- anon, authenticated;` — la ligne de rollback ci-dessus, jouée telle quelle. Revérifié
+-- immédiatement : la requête réelle de `loadDB()` répond de nouveau `200` avec les 36 colonnes.
+-- Service public restauré. **Le durcissement de cette migration n'est donc plus en vigueur** :
+-- retour à l'état d'avant le brief (36 colonnes publiques), pas un état intermédiaire.
+--
+-- CE QUI RESTE À FAIRE POUR OBTENIR LES DEUX (durcissement ET service qui marche), PAS FAIT ICI
+-- CAR ÇA TOUCHE `app.html` (hors périmètre de ce fichier, règle explicite du brief) : modifier
+-- l'appel de `loadDB()` (`app.html:10451`) pour qu'il énumère explicitement les 16 colonnes dans
+-- `select=`, au lieu d'aucun paramètre. Avec cette seule modification, le GRANT colonne par
+-- colonne ci-dessus refonctionnerait sans le symptôme constaté aujourd'hui — vérifié dans
+-- l'ordre inverse (point 2 ci-dessus) avant de l'affirmer. Proposé, pas appliqué : nécessite un
+-- GO explicite pour toucher `app.html`, distinct du GO déjà donné pour ce fichier SQL.
