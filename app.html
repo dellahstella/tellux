@@ -3443,14 +3443,12 @@ var JS_STRINGS_EN = {
   v2_title_ionisant: "Ionizing domain",
   v2_conf_prefix: "Confidence: ",
   gamma_reperes_tooltip: "Reference points (outside the Tellux model): world average ~59 nGy/h absorbed dose in air, outdoor terrestrial gamma radiation (UNSCEAR 2000); granites typically ~70–200 nGy/h. Distinct units: nGy/h = absorbed dose in air (the models' physical quantity); nSv/h = ambient dose equivalent (the quantity displayed by ASNR Téléray stations) — these are different physical quantities, not numerically interchangeable; do not compare directly.",
-  // Clés gamma_jrc_* (lot C3 phase 2, 2026-09-13) — distinctes de gamma_reperes_tooltip
-  // ci-dessus, qui reste réservée telle quelle au portage du gamma vers radon.html (cf. son
-  // commentaire de conservation près de calcGammaAmbient()) : ne pas la réutiliser ici, même si
-  // le contenu se recoupe en partie.
-  gamma_jrc_title: "Regional terrestrial gamma background (JRC)",
-  gamma_jrc_unit_note: "nGy/h = absorbed dose in air — NOT the ambient dose equivalent (nSv/h) shown elsewhere on this site. Two distinct physical quantities, not directly comparable.",
-  gamma_jrc_epistemic: "Modeled European grid, 10 km resolution — JRC/EANR, third-party source. Outside the Tellux calculation model; not part of any composite index.",
-  gamma_jrc_attrib: "© European Union, JRC — European Atlas of Natural Radiation. Licence CC BY 4.0.",
+  // gamma_jrc_title/unit_note/epistemic/attrib (lot C3 phase 2) RETIRÉES le 2026-09-14 avec le
+  // popup par cellule qui les utilisait seul (interactive:false, cf. buildGammaJRCLayer) —
+  // orphelines dès son retrait, aucun autre appelant. Pas conservées : contrairement à
+  // gamma_reperes_tooltip (ci-dessus, réservée au portage radon.html), aucune destination future
+  // identifiée pour celles-ci. Contenu non perdu : la légende (LEGEND_HTML_EN.gammajrc) porte
+  // déjà la même substance en dur, en FR comme en EN.
   v2_title_radon: "Radon (potential)",
   v2_conf_radon: "Confidence: high — official classification (order of June 27, 2018) or lithological estimate (2018 radon mapping — IRSN, now ASNR)",
   radon_commune_z3: "Municipality classified zone 3 (order of June 27, 2018)",
@@ -11980,26 +11978,23 @@ function loadGammaJRC(){
 function buildGammaJRCLayer(geojson){
   lGammaJRC.clearLayers();
   if(!geojson || !geojson.features || !geojson.features.length) return;
+  // interactive:false (arbitrage Soleil, 2026-09-14, suite au constat INS-021) — PAS un style,
+  // une nécessité fonctionnelle : un Path Leaflet interactif avec bindPopup() arrête la
+  // propagation du clic vers la carte, donc vers map.on('click',...) qui pilote le calcul
+  // principal (_geoLastPoint). Constaté ici avec interactive:true : sur une cellule JRC (donc sur
+  // la quasi-totalité du territoire corse), le clic n'ouvrait QUE le popup JRC et le calcul du
+  // point ne s'exécutait pas du tout — pas une coïncidence d'affichage, une régression
+  // fonctionnelle sur le clic central. Même patron que buildForetOuverteLayer/
+  // buildLandeMaquisLayer juste au-dessus dans ce fichier, qui posent interactive:false pour
+  // exactement cette raison — non identifié en écrivant cette couche, d'où le constat consigné.
+  // Popup par cellule RETIRÉ avec ce changement (un Path non-interactif ne peut plus en ouvrir) :
+  // la légende (LEGEND_HTML.gammajrc / LEGEND_HTML_EN.gammajrc, ci-dessous) porte déjà seule la
+  // grandeur, la non-comparabilité nGy/h vs nSv/h, l'étiquette plafond, les repères et
+  // l'attribution — rien à déplacer, elle était déjà complète en autonomie.
   L.geoJSON(geojson,{
     style:function(feature){
       const v=feature.properties.tgdr_ngyh;
-      return {color:'#6B4A1F',weight:0.5,opacity:0.5,fillColor:gammaJrcColor(v),fillOpacity:0.55,interactive:true};
-    },
-    onEachFeature:function(feature,layer){
-      const v=feature.properties.tgdr_ngyh;
-      // Popup — le point de lecture le plus proche du risque nommé au brief (l'utilisateur croit
-      // lire une valeur du modèle Tellux) : la distinction d'unité et le statut hors-calcul sont
-      // répétés ICI, pas seulement dans la légende du tiroir Couches (qu'une partie des
-      // utilisateurs n'ouvre jamais avant de cliquer une cellule).
-      layer.bindPopup(
-        '<div style="font-family:var(--font);min-width:175px">'+
-          '<div style="font-size:9px;font-weight:600;color:#1F2329;margin-bottom:2px">'+jt('gamma_jrc_title','Fond gamma terrestre régional (JRC)')+'</div>'+
-          '<div style="font-size:14px;font-weight:700;color:#6B4A1F">'+v+' nGy/h</div>'+
-          '<div style="font-size:8px;color:#626774;margin-top:2px">'+jt('gamma_jrc_unit_note','nGy/h = dose absorbée dans l\'air — PAS l\'équivalent de dose ambiant (nSv/h) affiché ailleurs sur ce site. Deux grandeurs distinctes, non comparables directement.')+'</div>'+
-          '<div style="font-size:8px;color:#626774;font-style:italic;margin-top:3px">'+jt('gamma_jrc_epistemic','Grille modélisée européenne, résolution 10 km — JRC/EANR, source tierce. Hors modèle de calcul Tellux ; n\'entre dans aucun indice composite.')+'</div>'+
-          '<div style="font-size:8px;color:#626774;margin-top:2px">'+jt('gamma_jrc_attrib','© Union européenne, JRC — European Atlas of Natural Radiation. Licence CC BY 4.0.')+'</div>'+
-        '</div>'
-      );
+      return {color:'#6B4A1F',weight:0.5,opacity:0.5,fillColor:gammaJrcColor(v),fillOpacity:0.55,interactive:false};
     }
   }).addTo(lGammaJRC);
 }
