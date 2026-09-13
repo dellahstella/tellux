@@ -10960,15 +10960,17 @@ async function saveContrib(){
 }
 
 // ═══ HIÉRARCHIE DE CONFIANCE DES CONTRIBUTIONS ═══
-// 3 niveaux :
-//   1 — Protocole aveugle parallèle (c.protocole_aveugle === true)
+// Numérotation historique conservée (palier 1 retiré, pas renuméroté) :
+//   1 — RETIRÉ (brief S1, 2026-09-13) : protocole aveugle parallèle jamais mis en
+//       production (checkbox #c-protocole retiré par PR #1424) ; computeContribTier()
+//       ne retourne plus 1. tierBadge(1)/tierLabel(1) restent définies mais ne sont
+//       plus jamais invoquées par cette fonction.
 //   2 — Automatique/traçable : smartphone_mag avec csv_stats OU native_capture
 //   3 — Déclaratif/autre (tout le reste)
-// Transitoire : étoiles ★★★ ★★ ★ dans l'UI. Sera remplacé par pondération modèle
-// dans une session ultérieure (zone GELÉ-001).
+// Transitoire : étoiles ★★★ ★★ ★ dans l'UI (★★★ désormais inutilisée). Sera remplacé
+// par pondération modèle dans une session ultérieure (zone GELÉ-001).
 function computeContribTier(c){
   if(!c) return 3;
-  if(c.protocole_aveugle === true) return 1;
   if(c.type === 'smartphone_mag' && (c.csv_stats || c.native_capture === true)) return 2;
   return 3;
 }
