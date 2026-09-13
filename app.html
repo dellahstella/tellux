@@ -874,13 +874,22 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    pour ne plus jamais faire apparaître cette séquence de fermeture avant la fin voulue. */
 /* === Glossary drawer (right-side tabbed drawer with search) === */
 .glossary-drawer{
-  position:fixed;top:0;right:0;width:380px;max-width:90vw;height:100vh;
+  position:fixed;top:0;right:0;width:380px;max-width:90vw;height:100vh;height:100dvh;
   background:var(--tx-pierre);border-left:1px solid var(--border);
   box-shadow:-4px 0 20px rgba(31,35,41,0.12);
   transform:translateX(100%);transition:transform 0.25s ease;
   z-index:2100;display:flex;flex-direction:column;
   font-family:var(--font);
 }
+/* height:100dvh (2026-09-13, lot mobile-ui S1) : 100vh seul ne retranche pas la barre
+   d'adresse mobile -- le bas du tiroir (dont la derniere entree du corps scrollable,
+   cf. .glossary-drawer-body ci-dessous) peut alors se retrouver sous le chrome du
+   navigateur, hors d'atteinte du doigt meme si scrollHeight l'autoriserait (mesure
+   scrollHeight/clientHeight/scroll par molette : container OK dans CE pane, qui n'a pas
+   de chrome mobile reel a reproduire -- mecanisme exact non confirme sur materiel iOS/
+   Android reel, cf. rapport). 100vh reste en cascade juste avant comme repli pour les
+   navigateurs sans support de dvh (Can I Use : large mais pas 100%) -- dvh l'emporte
+   partout ou il est reconnu, sans rien casser ailleurs. */
 .glossary-drawer.open{transform:translateX(0);}
 .glossary-backdrop{
   position:fixed;top:0;left:0;right:0;bottom:0;
@@ -925,7 +934,14 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
 .glossary-drawer-search input:focus{
   outline:none;border-color:var(--tx-maquis);
 }
-.glossary-drawer-body{flex:1;overflow-y:auto;padding:8px 0;}
+.glossary-drawer-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:8px 0;}
+/* -webkit-overflow-scrolling:touch (2026-09-13, lot mobile-ui S1, brief "scroll bloque
+   entree losange") : sans repro directe (cf. commentaire height:100dvh juste au-dessus --
+   meme brief, meme incertitude de mecanisme exact hors materiel reel), mitigation standard
+   pour un overflow-y:auto imbrique dans un position:fixed sur WebKit mobile ancien (defaut
+   documente de cette exact combinaison : molette/JS voient un scroll possible,
+   glisser-doigt reste saccade voire figeant avant la fin du contenu). Inoffensif partout
+   ailleurs (propriete ignoree hors WebKit, non depreciee dessus). */
 .glossary-entry{
   padding:10px 20px;border-bottom:0.5px solid var(--border);
 }
@@ -5686,6 +5702,27 @@ function info(h, type, duration){
   }
   body.innerHTML = h;
   inf.style.display = '';  // revient au display par defaut (block)
+  // Recouvrement #info / popup de mesure (Soleil, lot mobile-ui S1, 2026-09-13 ; capture
+  // mobile 31/08 -- "Relais Monte Cecu" masquait la moitie haute du popup) : #info (fixed,
+  // top:16/right:16, cf. sa regle CSS) ignorait totalement le popup de mesure carte
+  // (.delta-popup, map.on('click',...) plus haut) -- deux systemes de positionnement
+  // independants, aucun au courant de l'autre, pouvant occuper le meme coin haut-droit.
+  // Defaut distinct du lot (a) (accumulation de handlers) : le recouvrement resterait un
+  // defaut meme si l'ouverture du site etait parfaitement legitime -- corrige ici quel que
+  // soit le sort de (a). Fix cible : si un popup de mesure est ouvert au moment ou #info
+  // doit s'afficher, #info se pose sous son bord bas plutot que de lui chevaucher le
+  // sommet (clamp a l'ecran). Les ~19 autres sites d'appel de info() ne voient aucun popup
+  // de mesure ouvert dans leur flux -> inf.style.top reste '' (defaut CSS, comportement
+  // inchange). Sens inverse (toast deja affiche, popup qui s'ouvre ensuite pres du meme
+  // coin) non traite ici -- l'autoPan du popup (plus haut) reserve deja 120px pour
+  // #hdr/#expert-bandeau, jamais pense pour #info ; a surveiller separement si constate.
+  const openCalcPopup = document.querySelector('.leaflet-popup.delta-popup');
+  if(openCalcPopup){
+    const belowPopup = openCalcPopup.getBoundingClientRect().bottom + 8;
+    inf.style.top = Math.min(belowPopup, window.innerHeight - 80) + 'px';
+  }else{
+    inf.style.top = '';
+  }
   // Styles par type de message (DA v2)
   if(type==='error'){
     inf.style.background='#F5E6E3';inf.style.borderColor='var(--danger)';inf.style.color='var(--danger)';
