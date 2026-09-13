@@ -240,7 +240,7 @@ Le tableau ci-dessous reprend les limites techniques principales à date pour pe
 | GELÉ-001 | `EXPERT_WEIGHTS_DEFAULT`, `EXPERT_BOUNDS_DEFAULT`, formule NCRP : constantes gelées | Relecture physicien tiers — document de soumission transmis en avril 2026 (cf. `ROADMAP.md` section 7) |
 | TÉLÉ-001 | API Téléray ASNR (gamma temps réel) non intégrée | Accès API ASNR (courrier transmis en avril 2026, cf. `ROADMAP.md` section 7) |
 | NCRP-001 | Fond naturel terrestre NCRP 94 dans `calcGammaAmbient` gelé | Relecture physicien tiers (lié GELÉ-001) |
-| BT-CALIBRATION-001 | Calcul BT segments désactivé (flag `USE_BT_SEGMENTS = false`), proxy `BT_ZONES` legacy actif | Recalibration physique du modèle Biot-Savart BT, session dédiée |
+| BT-CALIBRATION-001 | Composante BT calculée par densité de segments réels par zone (approche 3.3, schéma à paliers), `USE_BT_SEGMENTS = true` depuis le 2026-08-08 (`d3f38e5`) ; proxy `BT_ZONES` retiré du chemin actif | Résolu par l'approche 3.3 — une recalibration plus fine (retour au Biot-Savart vectoriel par segment, écarté pour inadéquation de géométrie) resterait une session dédiée si jugée utile |
 | HTA-TENSION-001 | Dataset `hta_lines` sans champ voltage, courant uniforme 225 A | Migration SQL + enrichissement dataset |
 | MIGN-001 | ~6 appelants legacy `calcAll` non migrés vers `calcAll_v2` | Session dédiée (non bloquant) |
 | CORPUS-PILIERS-001 (ex H1-H88-ELF-001, reformulée 2026-04-23) | Relecture des fiches du Pilier A (S1-S14) et du Pilier B (P1-P20) post-migration Biot-Savart. La formulation H1-H88 est obsolète depuis la scission du 2026-04-21 ; la correspondance H-numéro → S/P reste consultable dans le corpus interne | Session dédiée post-merge Biot-Savart, par pilier |
