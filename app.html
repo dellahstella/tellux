@@ -5718,8 +5718,15 @@ function info(h, type, duration){
   // #hdr/#expert-bandeau, jamais pense pour #info ; a surveiller separement si constate.
   const openCalcPopup = document.querySelector('.leaflet-popup.delta-popup');
   if(openCalcPopup){
+    // Borne basse ajoutee (2026-09-13, trouvee en verifiant CE fix en prod avant de le
+    // declarer bon) : openCalcPopup.getBoundingClientRect().bottom peut etre negatif si le
+    // popup est lui-meme positionne au-dessus du viewport (edge case autoPan pres des bords
+    // de carte, cf. commentaire "Maximum call stack size exceeded" plus haut) -- sans
+    // Math.max(8,...), #info se retrouvait hors ecran (top negatif), invisible au lieu de
+    // simplement chevauche. Math.max(8, ...) garantit #info toujours visible, quitte a ne
+    // plus etre strictement "sous" le popup dans ce cas extreme.
     const belowPopup = openCalcPopup.getBoundingClientRect().bottom + 8;
-    inf.style.top = Math.min(belowPopup, window.innerHeight - 80) + 'px';
+    inf.style.top = Math.max(8, Math.min(belowPopup, window.innerHeight - 80)) + 'px';
   }else{
     inf.style.top = '';
   }
