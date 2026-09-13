@@ -3724,6 +3724,17 @@ function jt(key, fr){
 }
 
 let contribsDB=[],pending=null,_contribClickHandler=null;
+// CONTRIB_SELECT_COLS (2026-09-13, brief « GRANT explicite ») — liste unique des colonnes de
+// `contributions` réellement lues quelque part dans ce fichier : addMarker() (type, valeur, unite,
+// note, igrf_nt, score_anomalie, kp, bz, lat, lon), computeContribTier() (type, csv_stats,
+// native_capture), renderList() (excluded_from_public, created_at, unite_saisie, + les précédents),
+// dédoublonnage post-sauvegarde (id). Réutilisée sur les 3 appels réseau qui touchent cette table
+// (GET loadDB, POST saveContrib, POST capSubmitMeasurement) : une seule liste à corriger si un
+// futur lecteur ajoute un champ, jamais trois copies qui peuvent diverger. Sans `select=` explicite
+// ici, un GRANT SELECT colonne par colonne côté Supabase (migration 014, non appliquée au moment
+// d'écrire ceci) casse la lecture ET l'écriture (Prefer: return=representation sans select= échoue
+// de la même façon) — silencieusement pour l'affichage, en erreur dure pour l'écriture.
+const CONTRIB_SELECT_COLS='bz,created_at,csv_stats,excluded_from_public,id,igrf_nt,kp,lat,lon,native_capture,note,score_anomalie,type,unite,unite_saisie,valeur';
 // _contribsListe (2026-09-11, lot ant/anfr) — l'état de la liste des contributions, que lisent les comptes
 // affichés. contribsDB est vide qu'elle soit chargée vide ou jamais chargée : la bascule disait donc
 // « 0 relevé(s) » pendant le chargement et pendant une panne de Supabase ; et un enregistrement réussi, qui y
@@ -10492,7 +10503,7 @@ function updateSupabaseStatusDot(state,contribCount){
 async function loadDB(){
   // Entièrement silencieux — ne bloque pas l'UI, ne touche pas à info()
   try{
-    const data=await sbGet('/rest/v1/contributions?excluded_from_public=eq.false&order=created_at.desc&limit=100');
+    const data=await sbGet('/rest/v1/contributions?select='+CONTRIB_SELECT_COLS+'&excluded_from_public=eq.false&order=created_at.desc&limit=100');
     contribsDB=data||[];
     _contribsListe='ok';
     lCon.clearLayers();
@@ -10942,7 +10953,7 @@ async function saveContrib(){
   const btnRepos=document.getElementById('btn-reposition');
   if(btnRepos)btnRepos.disabled=true;
   try{
-    const saved=await sbPost('/rest/v1/contributions',[row]);
+    const saved=await sbPost('/rest/v1/contributions?select='+CONTRIB_SELECT_COLS,[row]);
     // D2 (2026-09-11) : un rafraîchissement de la liste (loadDB, toutes les 5 min ou 30 s après un échec) peut
     // relire la table après que le serveur a validé l'INSERT, mais avant que sa réponse arrive. La ligne est alors
     // déjà dans contribsDB, avec son marqueur : l'ajouter de nouveau la comptait deux fois et doublait le marqueur.
@@ -14394,7 +14405,7 @@ async function capSubmitMeasurement(){
   };
   Object.keys(row).forEach(k=>{if(row[k]===null||row[k]===undefined)delete row[k];});
   try{
-    await sbPost('/rest/v1/contributions',[row]);
+    await sbPost('/rest/v1/contributions?select='+CONTRIB_SELECT_COLS,[row]);
     if(typeof info==='function')info(jt('cap_sent_success', 'Mesure envoyée — merci pour votre contribution Tellux !'),null,5000);
     closeContribLevelModal();
   }catch(e){
