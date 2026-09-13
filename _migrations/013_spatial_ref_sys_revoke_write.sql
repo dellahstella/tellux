@@ -63,9 +63,46 @@
 -- le périmètre de cette migration (droits sur UNE table) et n'est pas instruit ici — signalé pour
 -- ne pas être perdu, pas traité.
 
-revoke insert, update, delete, truncate, references, trigger
-  on public.spatial_ref_sys
-  from anon, authenticated;
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- CONSTAT DU 2026-09-13, APRÈS TENTATIVE D'APPLICATION — le REVOKE ci-dessous s'exécute SANS
+-- ERREUR et SANS EFFET, pour une raison structurelle, pas la même que le REVOKE colonne de la
+-- migration 012.
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- `public.spatial_ref_sys` appartient à `supabase_admin` (`pg_tables.tableowner`), et chacun de
+-- ses privilèges actuels vers `anon`/`authenticated` a été accordé PAR `supabase_admin`
+-- (`information_schema.role_table_grants.grantor`). `supabase_admin` est un authentique
+-- superutilisateur (`pg_roles.rolsuper = true`) — le rôle interne de la plateforme Supabase,
+-- jamais exposé aux projets. Le rôle `postgres`, celui que ce fichier s'attend à voir exécuter
+-- cette migration (MCP, SQL Editor, ou toute connexion `psql` standard fournie par Supabase),
+-- **n'est PAS superutilisateur** (`rolsuper = false`) et **n'est membre d'aucun rôle nommé
+-- `supabase_admin`** (`pg_auth_members`, vérifié). En PostgreSQL, seul le propriétaire d'un objet,
+-- le rôle qui a effectué un GRANT (ou un rôle qui en hérite), ou un superutilisateur peut REVOKE
+-- ce GRANT. `postgres` n'étant aucun des trois ici, PostgreSQL n'annule silencieusement RIEN — pas
+-- d'erreur, pas d'avertissement remonté par l'outil d'application, juste un REVOKE qui ne retranche
+-- rien à personne.
+--
+-- VÉRIFIÉ PAR LE CHEMIN CLIENT RÉEL, PAS SEULEMENT DÉDUIT DE LA TABLE DES PRIVILÈGES : après
+-- application de ce fichier, `POST /rest/v1/spatial_ref_sys` avec la seule clé anon publique a
+-- répondu `201 Created` — un visiteur anonyme peut toujours écrire dans cette table. Ligne de test
+-- supprimée immédiatement par connexion privilégiée (`anon` n'a pas de policy RLS DELETE ici non
+-- plus ; RLS reste désactivée sur cette table, cf. fichier ci-dessus — seul le GRANT était visé).
+--
+-- CONSÉQUENCE — CE QUE CE FICHIER NE PEUT PAS FAIRE, PAR AUCUNE VOIE STANDARD : ni cette session,
+-- ni Soleil depuis le SQL Editor du tableau de bord Supabase (qui se connecte sous le même rôle
+-- `postgres`) ne peuvent exécuter ce REVOKE avec effet, en l'état. Ce n'est pas une question
+-- d'outil ou de méthode d'exécution — c'est une frontière de propriété PostgreSQL que le rôle
+-- `postgres` ne franchit pas sur ce projet. Toute remédiation réelle demande soit une intervention
+-- côté support Supabase (seul `supabase_admin` peut REVOKE ce qu'il a accordé), soit une autre
+-- voie non instruite ici (ex. `ALTER TABLE ... OWNER TO postgres` — qui échouerait pour la MÊME
+-- raison : cette commande exige aussi d'être propriétaire ou superutilisateur). Aucune des deux
+-- n'est tentée par ce fichier.
+--
+-- Ligne conservée ci-dessous, commentée et non supprimée, plutôt que le fichier n'affirme un
+-- retrait qui n'a pas eu lieu — même règle que la ligne REVOKE de la migration 012.
+--
+-- revoke insert, update, delete, truncate, references, trigger
+--   on public.spatial_ref_sys
+--   from anon, authenticated;
 
 -- ROLLBACK — non exécuté, écrit avec la migration comme demandé.
 -- Chaque privilège listé explicitement, dans le même ordre : un ROLLBACK qui dirait juste
@@ -77,17 +114,19 @@ revoke insert, update, delete, truncate, references, trigger
 --   to anon, authenticated;
 --
 -- ═══════════════════════════════════════════════════════════════════════════════════════
--- VÉRIFICATION APRÈS APPLICATION — à lancer une fois la migration jouée, PAS avant.
--- Écrite ici pour rester avec la migration qu'elle vérifie ; rien ci-dessous n'a été exécuté
--- par la session qui a préparé ce fichier.
+-- VÉRIFICATION APRÈS APPLICATION — écrite pour être lancée une fois la migration jouée.
+-- Points 1 et 5 : DÉJÀ JOUÉS, le 2026-09-13, contre l'échec d'application ci-dessus documenté —
+-- résultat rapporté dans chaque point, pas une attente. Points 2/3/4 : non rejoués (SELECT n'a
+-- jamais été touché, rien ne les distingue d'avant la tentative) — laissés tels quels, prêts si
+-- une application réelle finit par avoir lieu.
 -- ═══════════════════════════════════════════════════════════════════════════════════════
 --
 -- 1) Droits : `select grantee, privilege_type from information_schema.role_table_grants
 --    where table_schema='public' and table_name='spatial_ref_sys' and grantee in
 --    ('anon','authenticated');`
---    ATTENDU : seul SELECT (et REFERENCES/USAGE hérités du propriétaire ne s'appliquent pas ici,
---    ce ne sont que des grants de rôle) reste listé pour les deux rôles — plus de DELETE/INSERT/
---    REFERENCES/TRIGGER/TRUNCATE/UPDATE.
+--    ATTENDU : seul SELECT reste listé pour les deux rôles.
+--    OBTENU LE 2026-09-13 : les 7 privilèges d'origine, identiques, pour les deux rôles — le
+--    REVOKE n'a rien retranché (cf. constat d'échec d'application ci-dessus).
 --
 -- 2) Lecture spatiale directe, chemin privilégié (prouve que SELECT + les données restent
 --    intactes, ne prouve PAS le chemin client) :
@@ -114,7 +153,9 @@ revoke insert, update, delete, truncate, references, trigger
 -- 5) Contrôle négatif, confirme que le retrait a un effet réel (pas un no-op comme le REVOKE
 --    colonne de la migration 012) : depuis une connexion authentifiée en `anon` (pas privilégiée),
 --    `INSERT INTO public.spatial_ref_sys (srid, auth_name, auth_srid) VALUES (900001, 'test',
---    900001);` — ATTENDU : rejet `permission denied for table spatial_ref_sys` (42501). Si
---    l'INSERT réussit, la migration n'a pas eu l'effet voulu — à ne PAS nettoyer par une
---    connexion privilégiée sans d'abord comprendre pourquoi le REVOKE n'a pas tenu (même classe
---    de vérification que celle qui a révélé l'échec du REVOKE colonne en migration 012).
+--    900001);` — ATTENDU : rejet `permission denied for table spatial_ref_sys` (42501).
+--    OBTENU LE 2026-09-13, chemin client réel (`POST /rest/v1/spatial_ref_sys`, clé anon
+--    publique) : `201 Created`. L'INSERT a réussi — la migration n'a pas eu l'effet voulu, cf.
+--    constat d'échec d'application ci-dessus (barrière de propriété `supabase_admin`/`postgres`,
+--    pas une répétition du défaut de la 012). Ligne de test nettoyée par connexion privilégiée
+--    immédiatement après ce constat, comme prescrit ici.
