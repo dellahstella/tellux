@@ -1,0 +1,194 @@
+-- 012_contributions_native_capture.sql
+-- NON APPLIQUÉE — décision Soleil requise avant exécution en production
+-- Préparée 2026-09-13, session Code (brief Soleil). Aucun ALTER TABLE exécuté par cette
+-- session : ce fichier est écrit, pas joué.
+--
+-- POURQUOI
+-- `saveContrib()` (app.html:10885) envoie `native_capture:true` dès que le bouton de capture
+-- magnétomètre natif a été utilisé (`window._nativeCaptureUsed = true`, app.html:5132). La
+-- colonne n'existe pas sur `contributions` (35 colonnes vivantes au 2026-09-13, vérifié par
+-- `information_schema.columns`, aucune ne s'appelle `native_capture`). PostgREST construit
+-- l'INSERT depuis les clés du payload : une clé sans colonne ne « manque » pas, elle **fait
+-- échouer l'INSERT ENTIER** (`ERROR 42703` côté Postgres direct, `PGRST204` côté API réelle —
+-- les deux vus, cf. INS-018/INS-019, `tellux-corpus-internal`). Toute contribution soumise
+-- avec ce bouton utilisé est perdue en entier, pas seulement le champ. Confirmé ce soir comme
+-- SEULE clé orpheline restante sur `contributions` par la garde CI
+-- (`schema-payload-guard.mjs`, run 34754227360 : `capSubmitMeasurement()` et
+-- `radon_depots_erp` ressortent propres, seul `saveContrib()` nomme `native_capture`).
+--
+-- `protocole_aveugle` (même origine, commit `7be75f4`, même défaut) N'EST PAS traité ici :
+-- son producteur client a été retiré par S1 (PR #1424, checkbox `#c-protocole` supprimé du
+-- HTML, du JS et du payload) — vérifié le jour même, pas supposé : `grep -in
+-- protocole_aveugle app.html` ne renvoie plus que trois commentaires expliquant le retrait
+-- (lignes ~3090, ~3092, ~10880), aucune ligne de code vivant. Sa colonne n'a donc plus de
+-- raison d'être créée.
+--
+-- TYPE DE COLONNE — DÉRIVÉ DU CODE CLIENT LU, PAS SUPPOSÉ
+-- Trois sites lus dans app.html (`main` public, `dcb770b`), pas devinés :
+--   * app.html:5061 et 10681 — `window._nativeCaptureUsed = false;` (réinitialisations)
+--   * app.html:5132            — `window._nativeCaptureUsed = true;` (seul site qui le lève)
+--   * app.html:10885           — `native_capture: window._nativeCaptureUsed === true ? true : null,`
+-- `_nativeCaptureUsed` n'est jamais assigné à autre chose qu'un littéral booléen JS ; le
+-- ternaire `=== true ? true : null` ne peut produire que `true` ou `null` — jamais `false`
+-- explicite, jamais une chaîne, jamais un nombre. Le garde `Object.keys().forEach(k=>{if
+-- (row[k]===null...) delete row[k]})` (app.html:10936) retire la clé quand elle vaut `null` :
+-- **le payload envoyé ne porte donc jamais que `native_capture:true`, ou n'envoie pas la clé
+-- du tout.** Les deux sites de lecture (app.html:10979, 11047) comparent tous deux par
+-- `=== true` strict, cohérent avec ce qui est réellement écrit. D'où : colonne booléenne,
+-- nullable, sans valeur par défaut autre que NULL — même choix que `bt_terme_inclus`
+-- (migration 011).
+--
+-- CONTRAINTE — dérivée du même constat, pas seulement le type. Le brief demande la
+-- contrainte, pas seulement le type : `CHECK (native_capture IS NOT FALSE)` autorise NULL et
+-- TRUE, rejette FALSE — l'exact reflet de ce que le code envoie aujourd'hui, ni plus ni
+-- moins. **Décision à confirmer, pas neutre** : elle grave dans le schéma que `false` explicite
+-- n'a aucun usage prévu. Si un futur code voulait un jour écrire `false` (« capture native
+-- disponible mais refusée/échouée », distinct de l'actuel NULL muet), cette contrainte devra
+-- être retirée dans une migration dédiée avant que ce code ne puisse écrire quoi que ce soit —
+-- un coût faible (une ligne `DROP CONSTRAINT`) mais réel, à mettre en balance avec la garantie
+-- gagnée aujourd'hui.
+--
+-- BACKFILL — AUCUN, MÊME RAISON QU'EN 011
+-- Les 11 lignes existantes (vérifié : `count(*)=11` sur `public.contributions`, 2026-09-13)
+-- ont toutes été écrites avant l'existence de cette colonne. Rien ne permet de reconstituer
+-- a posteriori si le bouton de capture native avait été utilisé pour chacune — le
+-- renseigner serait l'inventer, pas le mesurer. Elles reçoivent NULL par défaut de colonne,
+-- sans instruction UPDATE séparée.
+--
+-- EXPOSITION PUBLIQUE — NON PAR DÉFAUT, ET C'EST UN ÉCART DÉLIBÉRÉ AUX COLONNES VOISINES
+-- La politique RLS de lecture (`lecture publique`, SELECT, rôle public) filtre par LIGNE
+-- (`NOT excluded_from_public`), pas par colonne — vérifié via `pg_policies`, pas supposé.
+-- Ça veut dire qu'ajouter une colonne ordinaire la rend visible à `anon`/`authenticated` sur
+-- toute ligne non exclue, PAR DÉFAUT : c'est exactement ce qui s'est passé pour
+-- `airplane_mode_on`/`usb_charging_off`/`no_metal_proximity` (vérifié via
+-- `information_schema.column_privileges` : `anon` y a SELECT). Consigne du brief : « par
+-- défaut NON, sauf démonstration du contraire ». Aucune démonstration apportée ici qu'une
+-- exposition publique serve un usage réel (rien dans `app.html` ne lit `native_capture`
+-- depuis une ligne relue par un tiers ; les deux lecteurs, `computeContribTier`/badge,
+-- s'exécutent sur des lignes du contributeur lui-même dans la même session). Cette migration
+-- retire donc explicitement le SELECT colonne par colonne pour `anon`/`authenticated` — un
+-- geste que la table ne fait pour AUCUNE de ses colonnes existantes aujourd'hui.
+--   * Conséquence à trancher séparément, pas ici : `airplane_mode_on`, `usb_charging_off`,
+--     `no_metal_proximity` restent, elles, publiquement lisibles après cette migration —
+--     l'écart entre elles et `native_capture` devient visible et pourrait interroger un futur
+--     relecteur. Aligner les trois anciennes sur ce nouveau défaut (ou l'inverse : exposer
+--     aussi `native_capture`) est un arbitrage Soleil distinct, non pris ici.
+--   * `service_role` n'est pas touché (accès interne/analytique conservé).
+--
+-- ORDRE D'APPLICATION — PAS DE FENÊTRE À RESPECTER, À LA DIFFÉRENCE DE LA MIGRATION 011
+-- Le code client envoie déjà `native_capture` depuis 4,5 mois (`7be75f4`, 2026-04-23) : il
+-- n'y a AUCUN correctif applicatif à séquencer avec cette migration, dans un sens ou dans
+-- l'autre. Appliquer cette migration seule suffit à faire réussir, immédiatement et sans
+-- déploiement supplémentaire, toute soumission qui échouait jusqu'ici sur ce seul motif.
+--
+-- RÈGLE DE LECTURE DE LA COLONNE — dans le commentaire de colonne, pour survivre à ce fichier
+--   null  = pas de capture native confirmée pour cette ligne (bouton non utilisé, OU ligne
+--           antérieure à cette migration — les deux se lisent pareil, et c'est voulu : le
+--           code ne distingue pas les deux cas aujourd'hui).
+--   true  = capture native confirmée au moment de l'écriture.
+--   false = valeur jamais écrite par le code client actuel (2026-09-13) ; réservée si un
+--           futur code voulait un jour affirmer explicitement l'absence plutôt que le silence.
+
+alter table public.contributions
+  add column if not exists native_capture boolean;
+
+-- PostgreSQL ne supporte pas `ADD CONSTRAINT ... IF NOT EXISTS` (contrairement à `ADD COLUMN`
+-- et à `DROP CONSTRAINT`, qui le supportent tous deux) : ce fichier n'a pas pu être testé
+-- contre une vraie base, par construction (« aucun ALTER TABLE exécuté » — un test en
+-- transaction annulée exécute quand même le DDL et prend un verrou, ce n'est pas anodin comme
+-- le serait un DML). Cette ligne n'est donc PAS ré-exécutable sans erreur si la migration a
+-- déjà été appliquée une fois — à la différence de tout le reste de ce fichier. Qui l'applique
+-- doit le savoir avant de la rejouer par précaution.
+alter table public.contributions
+  add constraint native_capture_not_false check (native_capture is not false);
+
+comment on column public.contributions.native_capture is 'Le bouton de capture magnetometre natif a-t-il ete utilise pour cette contribution ? null = non confirme (bouton non utilise, ou ligne anterieure a la migration 012 -- indistinguable aujourd hui) : a traiter comme non confirme, jamais comme false. true = capture native confirmee. false : interdit par contrainte native_capture_not_false -- jamais ecrit par le code client au 2026-09-13, voir commentaire de migration si un futur usage le justifie.';
+
+revoke select (native_capture) on public.contributions from anon, authenticated;
+
+-- ROLLBACK — non exécuté, écrit avec la migration comme demandé.
+-- DROP COLUMN retire avec elle la contrainte, le commentaire et le REVOKE ci-dessus : rien à
+-- défaire séparément. Si l'intention est de garder la colonne mais de lever seulement la
+-- contrainte (cf. « décision à confirmer » plus haut), la deuxième ligne isolée le permet.
+--
+-- alter table public.contributions drop column if exists native_capture;
+-- alter table public.contributions drop constraint if exists native_capture_not_false;
+--
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- VÉRIFICATION APRÈS APPLICATION — à lancer une fois la migration jouée, PAS avant.
+-- Écrite ici pour rester avec la migration qu'elle vérifie ; rien ci-dessous n'a été exécuté
+-- par la session qui a préparé ce fichier.
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+--
+-- 1) Schéma : `select column_name, data_type, is_nullable from information_schema.columns
+--    where table_schema='public' and table_name='contributions' and column_name='native_capture';`
+--    Attendu : une ligne, `boolean`, `YES` (nullable).
+--
+-- 2) INSERT SQL direct (privilégié — `execute_sql` ou équivalent), avec nettoyage explicite,
+--    PAS un rollback de transaction : un rollback de DDL est sans risque (rien n'est écrit),
+--    un rollback d'INSERT sur une table de prod interagit avec des séquences/déclencheurs
+--    réels pour rien de plus qu'un test aurait besoin ; INSERT puis DELETE réels sont plus
+--    honnêtes sur ce qu'ils font.
+--      insert into public.contributions (lat, lon, type, native_capture, excluded_from_public)
+--      values (41.9, 8.7, 'test_verif_migration_012', true, true)
+--      returning id;
+--    -- puis, avec l'id retourné :
+--      delete from public.contributions where id = '<id retourné>';
+--    `excluded_from_public: true` dès l'insertion : la ligne de test n'apparaît jamais en
+--    lecture publique, même dans la fenêtre entre les deux commandes.
+--    **Ce test ne passe PAS par PostgREST ni par les policies RLS** (une connexion SQL
+--    privilégiée les contourne, comme `postgres`/`service_role` le font par construction) :
+--    il vérifie la colonne et la contrainte, pas le chemin réel du client — exactement la
+--    distinction 42703/PGRST204 déjà tracée en INS-018/INS-019. Ne PAS le prendre pour une
+--    preuve que le client fonctionne : c'est l'objet du point 3.
+--    ATTENDU SI ÇA MARCHE : l'INSERT réussit, la ligne est retournée avec `native_capture: true`.
+--    ATTENDU SI ÇA RATE : `ERROR 42703` (colonne toujours absente — migration pas appliquée,
+--    ou appliquée sur le mauvais projet/schéma) ; ou une violation de la contrainte si une
+--    valeur `false` est testée par erreur (`new row violates check constraint
+--    "native_capture_not_false"` — attendu et correct dans CE cas précis, pas un incident).
+--
+-- 3) Chemin réel du client, celui qui compte : soit un appel PostgREST direct avec la clé
+--    anon (`POST /rest/v1/contributions`, en-tête `Prefer: return=representation`, body
+--    incluant `native_capture:true`, `excluded_from_public:true` et un `session_id` valide
+--    pour passer `check_contribution_rate_limit` — ce test-ci, à la différence du point 2,
+--    traverse la policy INSERT réelle), soit, plus fidèle encore, le bouton de capture
+--    magnétomètre natif sur `app.html` en production. ATTENDU SI ÇA MARCHE : réponse `201`
+--    (API) ou soumission réussie avec toast de succès et insigne 📱 (`nativeBadge`,
+--    app.html:11047) dans l'UI. ATTENDU SI ÇA RATE : `PGRST204` (API) ou message d'erreur au
+--    contributeur (`Envoi échoué : …`) — même symptôme qu'avant cette migration, signe
+--    qu'elle n'a pas réglé le défaut qu'elle visait.
+--
+-- 4) La garde CI (`tests/blindage-harness/schema-payload-guard.mjs`, check « Clés payload vs
+--    colonnes schéma », non requis) : relancer en `workflow_dispatch` sur `main`. ATTENDU SI ÇA
+--    MARCHE : les deux auto-tests passent comme aujourd'hui (ils ne dépendent pas du schéma
+--    vivant), puis le résumé ne nomme plus AUCUNE clé orpheline sur `contributions` — job vert,
+--    exit 0. C'est ce vert-là, précisément, qui est le signal proposé (pas câblé ici, brief §4)
+--    pour envisager de rendre ce check requis : avant cette migration, le vert serait un vert
+--    qui n'a rien mesuré de plus qu'aujourd'hui ; après, un vert dirait vraiment « aucune clé
+--    orpheline connue ». ATTENDU SI ÇA RATE : le job reste rouge, nommant `native_capture` —
+--    signe que la migration n'a pas atteint le projet que la garde interroge
+--    (`knckulwghgfrxmbweada`), ou que le REVOKE colonne a interféré avec la lecture du schéma
+--    par le jeton `SUPABASE_MGMT_PAT` (à distinguer : `information_schema.columns` liste une
+--    colonne existante indépendamment des privilèges de lecture sur ses valeurs — un REVOKE
+--    SELECT ne devrait pas la faire disparaître de cette vue, mais ce n'est pas vérifié ici).
+--
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- RÉSERVE SUR LA NUMÉROTATION — la dérive list_migrations/_migrations ne change ni le
+-- numéro ni l'ordre de CE fichier, pour une raison précise, pas par confiance.
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- `list_migrations` (registre Supabase des migrations réellement appliquées) s'arrête au
+-- 2026-07-29 et n'inclut, pour plusieurs fichiers locaux (001, 005, 006, 010, 011), aucune
+-- entrée dont le nom corresponde au numéro du fichier — cf. INS-018/FAIT-007 pour le cas
+-- documenté de la migration 008. Ce que ça établit : **le numéro d'un fichier dans
+-- `_migrations/` n'a jamais été, et n'est toujours pas, ce qui détermine son nom ou son rang
+-- dans le registre Supabase** — l'outil d'application (CLI, tableau de bord) choisit son
+-- propre horodatage/nom au moment où il joue la migration, indépendamment du nom de fichier
+-- local. La numérotation locale (`001` à `011`, et ce fichier `012`) est une convention de
+-- CE dépôt pour l'ordre de LECTURE humaine et pour éviter les collisions de nom de fichier —
+-- elle n'a jamais prétendu refléter l'ordre ni les noms d'application réels, et la dérive
+-- documentée ne change donc rien à la légitimité de `012` comme nom de fichier suivant : il
+-- n'entre en collision avec aucun fichier existant (vérifié : `011` est le dernier présent au
+-- 2026-09-13), et son application réelle portera de toute façon son propre horodatage,
+-- quel qu'il soit. **Ce que la dérive change réellement** : personne ne doit s'attendre à
+-- retrouver littéralement « 012 » dans `list_migrations` après application — chercher plutôt
+-- par nom de colonne (`native_capture`) ou par date d'application la plus récente.
