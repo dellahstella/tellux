@@ -214,21 +214,32 @@ jobs:
             esac
           }
 
-          # DEUX workflows a attendre depuis le 2026-09-09, plus un seul. Le plancher de
-          # checks requis est passe de 2 a 3 (ADR-067, amendant ADR-045) et le troisieme,
-          # « Contraste panneaux (theme unique) », est produit par contrast-panels.yml —
-          # soumis au meme gate `action_required` que leak-guard.yml sur une PR ouverte
-          # par le bot. Sans son approbation ici, son check-run n'entrerait jamais dans le
-          # statusCheckRollup : `gh pr checks --required --watch` expirerait a 5 min et
-          # PLUS AUCUNE PR de rafraichissement INTERMAGNET ne se mergerait — panne muette,
-          # exactement celle du brief C1 (2026-08-28), rejouee sur un autre workflow.
-          # La boucle ne sort que quand les DEUX sont materialises : sortir sur le premier
-          # laisserait le second non approuve si son run apparait une seconde plus tard.
+          # DEUX workflows a attendre depuis le 2026-09-09 -- prepare pour un TROISIEME
+          # candidat au requis (schema-payload-guard.yml, pas encore requis au 2026-09-13,
+          # ajoute ici par prudence AVANT qu'il ne le devienne -- cf. brief "rendre le
+          # check requis"). Le plancher de checks requis est passe de 2 a 3 (ADR-067,
+          # amendant ADR-045) avec « Contraste panneaux (theme unique) », produit par
+          # contrast-panels.yml -- soumis au meme gate `action_required` que leak-guard.yml
+          # sur une PR ouverte par le bot. Sans son approbation ici, son check-run
+          # n'entrerait jamais dans le statusCheckRollup : `gh pr checks --required --watch`
+          # expirerait a 5 min et PLUS AUCUNE PR de rafraichissement INTERMAGNET ne se
+          # mergerait -- panne muette, exactement celle du brief C1 (2026-08-28), rejouee
+          # sur un autre workflow. Meme raisonnement applique par avance a
+          # schema-payload-guard.yml, ajoute ci-dessous a `approve_wf` SEUL (pas a la
+          # condition de sortie `materialise` : il n'est pas requis aujourd'hui, rien
+          # n'attend sa materialisation). Cout : un appel API d'approbation de plus par run,
+          # inoffensif tant qu'il n'est pas requis. Benefice : le jour ou il rejoint la
+          # liste requise (Cran C, arbitrage Soleil), il suffit de l'ajouter AUSSI a la
+          # condition `materialise` ci-dessous -- pas de C1 rejoue une troisieme fois faute
+          # d'avoir prepare l'approbation a l'avance. La boucle ne sort que quand les checks
+          # actuellement requis sont tous materialises : sortir plus tot laisserait l'un
+          # d'eux non approuve si son run apparait une seconde plus tard.
           gha_ok=false
           for i in $(seq 1 48); do   # 48 * 5s = 4 min max d'attente de materialisation
             approve_wf leak-guard.yml
             approve_wf validate-code.yml
             approve_wf contrast-panels.yml
+            approve_wf schema-payload-guard.yml
             if materialise leak-guard.yml && materialise contrast-panels.yml; then
               gha_ok=true; break
             fi
