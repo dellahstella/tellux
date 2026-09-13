@@ -2495,6 +2495,14 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
                par couche). Titre INCHANGÉ. -->
           <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#AD22BE"></span>Fond magnétique régional<span class="layer-badge layer-badge--context">Contexte</span><span class="layer-badge layer-badge--domain">Statique</span></button>
           <div class="mlegend-inline" id="mleg-emag"></div>
+          <!-- Couche « Fond gamma terrestre JRC » (b-gammajrc) — lot C3 phase 2 (rendu, 2026-09-13).
+               Phase 1 (acquisition, PR #926) a livré gamma_jrc_corse.geojson sans rendu. CONTENU
+               PUBLIC NEUF : revue anti-fuite/factuelle Claude (web) requise avant tout merge
+               (carve-out #2). Option "côté à côté" (arbitrage Soleil) : couche de contexte
+               indépendante, n'entre dans aucun calcul — voir commentaire complet à la déclaration
+               de lGammaJRC/buildGammaJRCLayer plus bas dans ce fichier. -->
+          <button class="lbtn" id="b-gammajrc" data-domains="ionisant" title="Fond gamma terrestre régional JRC/EANR — grille modélisée européenne 10 km, débit de dose absorbée dans l'air (nGy/h), source tierce CC BY 4.0, hors calcul Tellux" onclick="tog('gammajrc','on-gammajrc',this)"><span class="sq" style="background:#C28533"></span>Fond gamma terrestre (JRC)<span class="layer-badge layer-badge--context">Contexte</span><span class="layer-badge layer-badge--domain">Ionisant</span></button>
+          <div class="mlegend-inline" id="mleg-gammajrc"></div>
           <!-- Couche « Forêt dense » (b-foretdense) ajoutée le 2026-08-27 (brief "nettoyage Contexte
                naturel" point 5, dette FORET-DENSE-LAYER-001 close par ce diff) : jusqu'ici
                foret_dense_corse.geojson (BD Forêt V2, #1038) alimentait calcVegetationAttenuation()
@@ -3435,6 +3443,14 @@ var JS_STRINGS_EN = {
   v2_title_ionisant: "Ionizing domain",
   v2_conf_prefix: "Confidence: ",
   gamma_reperes_tooltip: "Reference points (outside the Tellux model): world average ~59 nGy/h absorbed dose in air, outdoor terrestrial gamma radiation (UNSCEAR 2000); granites typically ~70–200 nGy/h. Distinct units: nGy/h = absorbed dose in air (the models' physical quantity); nSv/h = ambient dose equivalent (the quantity displayed by ASNR Téléray stations) — these are different physical quantities, not numerically interchangeable; do not compare directly.",
+  // Clés gamma_jrc_* (lot C3 phase 2, 2026-09-13) — distinctes de gamma_reperes_tooltip
+  // ci-dessus, qui reste réservée telle quelle au portage du gamma vers radon.html (cf. son
+  // commentaire de conservation près de calcGammaAmbient()) : ne pas la réutiliser ici, même si
+  // le contenu se recoupe en partie.
+  gamma_jrc_title: "Regional terrestrial gamma background (JRC)",
+  gamma_jrc_unit_note: "nGy/h = absorbed dose in air — NOT the ambient dose equivalent (nSv/h) shown elsewhere on this site. Two distinct physical quantities, not directly comparable.",
+  gamma_jrc_epistemic: "Modeled European grid, 10 km resolution — JRC/EANR, third-party source. Outside the Tellux calculation model; not part of any composite index.",
+  gamma_jrc_attrib: "© European Union, JRC — European Atlas of Natural Radiation. Licence CC BY 4.0.",
   v2_title_radon: "Radon (potential)",
   v2_conf_radon: "Confidence: high — official classification (order of June 27, 2018) or lithological estimate (2018 radon mapping — IRSN, now ASNR)",
   radon_commune_z3: "Municipality classified zone 3 (order of June 27, 2018)",
@@ -4363,6 +4379,15 @@ function _certClusterIcon(cluster) {
 // reduits (montre les traces / la couverture citoyenne). Chargee au 1er toggle (loadOpenRad).
 const _openRadCanvas=L.canvas({padding:0.5});
 const lOpenRad=L.layerGroup();
+// Fond gamma terrestre régional JRC/EANR (lot C3, phase 2 — rendu, 2026-09-13). Phase 1
+// (acquisition, PR #926) a produit public/data/gamma_jrc_corse.geojson — provenance complète
+// (DOI, licence CC BY 4.0, méthode Bossew et al. 2017) dans docs/data-sources/
+// gamma_jrc_corse_notes.md. Couche de CONTEXTE INDÉPENDANTE (option "côté à côté" arbitrée par
+// Soleil) : n'alimente NI calcAll() NI computeExpertComposite() — le composite continue de lire
+// le seul ancrage lithotype (GAMMA_TERRESTRE_PAR_LITHOTYPE, calcGammaAmbient() plus haut).
+// NCRP-001 et GELÉ-001a non touchés. Voir buildGammaJRCLayer()/loadGammaJRC() près des autres
+// couches contextuelles GeoJSON (buildForetOuverteLayer et sq.).
+const lGammaJRC=L.layerGroup();
 // lForetDense — couche visuelle réelle pour foret_dense_corse.geojson (BD Forêt V2, #1038),
 // ajoutée le 2026-08-27 (brief "nettoyage Contexte naturel" point 5, dette FORET-DENSE-LAYER-001
 // close par ce diff) : jusqu'ici cette source alimentait calcVegetationAttenuation() (RF, clic
@@ -4472,7 +4497,7 @@ let _landeMaquisZoomHintShown=false;
 const VEG_GROUP=['foretdense','foretouverte','landemaquis'];
 // SCISSION 2026-08-29 (brief « exécution groupée », item C) : con → cert (lCert, fiches
 // certifiées ANFR/EXEM) + contrib (lCon, contributions citoyennes). Deux boutons, deux toggles.
-const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,elf:lElf,cert:lCert,contrib:lCon,foretdense:lForetDense,foretouverte:lForetOuverte,landemaquis:lLandeMaquis,crustal:lCrustal,openrad:lOpenRad};
+const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,elf:lElf,cert:lCert,contrib:lCon,foretdense:lForetDense,foretouverte:lForetOuverte,landemaquis:lLandeMaquis,crustal:lCrustal,openrad:lOpenRad,gammajrc:lGammaJRC};
 const WMS={hyd:wmsHyd,emag:wmsEmag};
 // hot:false/hotrf:true — modèle RF activé par défaut à la place du champ magnétique
 // composite (arbitrage Soleil 2026-08-23). Swap symétrique avec la déclaration lHot/lHotRF
@@ -4506,7 +4531,7 @@ const WMS={hyd:wmsHyd,emag:wmsEmag};
 // conditionné par ACTIVE.ant, cf. le bloc Promise.all décalé plus bas, non touché ici. Antennes
 // toujours chargées et disponibles au clic (bouton b-ant), simplement plus affichées au premier
 // rendu — même mécanique que cert:false ci-dessus.
-const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,elf:true,res:false,prod:false,cert:false,contrib:false,crustal:false,openrad:false};
+const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,elf:true,res:false,prod:false,cert:false,contrib:false,crustal:false,openrad:false,gammajrc:false};
 
 // 'con' (scindé depuis en 'cert'+'contrib', 2026-08-29 item C) et 'emag' promues en Zone 1
 // "core" le 2026-08-27 (brief "Panneau '?' sélectif",
@@ -4845,6 +4870,22 @@ const LEGEND_HTML={
   //     500/503 (cf. wmsEmag.on('error')) et LEGEND_HTML est une carte de chaînes statiques.
   // Sortie retenue : dire la vérité, plutôt que copier des couleurs qui périmeraient en silence.
   emag:'<div class="leg-block"><b class="leg-title" style="font-size:11px">Fond magnétique régional</b><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px">Échelle continue de &#x2212;200 à +200 nT — les couleurs sont celles de l\'image servie par NOAA, Tellux n\'en produit aucune. Socle profond, non lié à l\'homme (EMAG2v3 NOAA).</div></div>',
+  // gammajrc (lot C3 phase 2, 2026-09-13) — 4 blocs DISCRETS, pas un dégradé lisse : la fonction
+  // de style (gammaJrcColor()) affecte l'une de 4 couleurs à chaque cellule par palier de
+  // quartile réel (60,4/73,3/83,9/89,8/108,8 nGy/h, recalculés depuis le fichier source le
+  // 2026-09-13 — pas le champ classe_indicative du GeoJSON, cf. commentaire à la déclaration de
+  // GAMMA_JRC_COLOR_STOPS). Un dégradé continu affirmerait une granularité que le rendu n'a pas
+  // — même défaut, sens inverse, que la légende ANFR/EMAG déjà corrigée ailleurs (partition
+  // binaire pour échelle continue) : ici l'inverse, échelle continue affichée pour une partition
+  // réellement discrète.
+  gammajrc:'<div class="leg-block"><b class="leg-title" style="font-size:11px">Fond gamma terrestre régional (JRC)</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Grille modélisée européenne, résolution 10 km — contexte, hors calcul Tellux</div>'+
+    '<div style="display:flex;gap:2px;width:140px;margin-bottom:2px"><div style="flex:1;height:12px;background:#F0DFC0;border-radius:3px 0 0 3px"></div><div style="flex:1;height:12px;background:#DDB877"></div><div style="flex:1;height:12px;background:#C28533"></div><div style="flex:1;height:12px;background:#6B4A1F;border-radius:0 3px 3px 0"></div></div>'+
+    '<div style="display:flex;width:140px;font-size:7px;color:#4a4f5e;margin-bottom:1px"><span style="flex:1">60–73</span><span style="flex:1">73–84</span><span style="flex:1">84–90</span><span style="flex:1">90–109</span></div>'+
+    '<div style="font-size:8px;color:#4a4f5e;margin-bottom:4px">nGy/h (quartiles réels, 88 cellules)</div>'+
+    '<div class="leg-row" style="font-size:9px;color:var(--tx3)">nGy/h = dose absorbée dans l\'air — PAS l\'équivalent de dose ambiant (nSv/h) affiché ailleurs sur ce site. Deux grandeurs distinctes, non comparables directement.</div>'+
+    '<div class="leg-row" style="font-size:8px;color:#626774;margin-top:2px">Repères hors modèle Tellux : ~59 nGy/h moyenne mondiale (UNSCEAR) · 70–200 nGy/h terrains granitiques.</div>'+
+    '<div class="leg-src">© Union européenne, JRC — European Atlas of Natural Radiation. CC BY 4.0. N\'entre dans aucun calcul ni indice composite.</div></div>',
   // Entrée 'crustal' retirée le 2026-08-27 (brief "Panneau '?' sélectif", triage validé
   // Soleil) : "l'interactivité au clic donne déjà l'info par point" — chaque marqueur (5
   // mondiaux + 3 Corse, cf. buildCrustalLayer() plus bas) ouvre un popup détaillé au clic,
@@ -4960,6 +5001,14 @@ const LEGEND_HTML_EN={
   hyd:'<div class="leg-block"><b class="leg-title">Groundwater</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Groundwater near the surface — BRGM visual layer; the calculation uses a separate dataset</div><img src="https://geoservices.brgm.fr/risques?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.1.1&FORMAT=image/png&LAYER=REMNAPPE_FR" style="max-width:260px;width:100%;display:block;margin:4px 0;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:4px;padding:4px;box-sizing:border-box" alt="Groundwater rise legend (BRGM REMNAPPE_FR)"><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Legend served live by the BRGM server — replaces the previous static list (\"Outcropping / Sub-outcropping\"), which described a different classification than the one actually rendered.</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
   ant:'<div class="leg-block"><b class="leg-title">ANFR Antennas</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">A dot marks a declared <b>site</b>, not a single antenna: several generations almost always coexist there, and often several operators. Tap or hover a point to see what is declared. Grouped into clusters (count) at low zoom; TDF transmitters keep their own colour and a corner badge even when clustered.</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a4f5e;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Declared transmission site — the colour encodes no technology</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;vertical-align:middle;margin-right:4px"></span><b style="color:#616874">Major radio/TV transmitter</b> (TDF)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Operators: Orange · SFR · Bouygues · Free<br><span id="leg-ant-count">—</span> antennas · Source: ANFR open data</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px">Regulatory compliance (legal threshold 28 V/m): see the <b>"Certified measurements (ANFR/EXEM)"</b> layer (Natural context menu).</div><div class="leg-src">ANFR</div></div>',
   emag:'<div class="leg-block"><b class="leg-title" style="font-size:11px">Regional magnetic background</b><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px">Continuous scale from &#x2212;200 to +200 nT — the colours are those of the image served by NOAA; Tellux produces none of them. Deep basement, unrelated to human activity (NOAA EMAG2v3).</div></div>',
+  gammajrc:'<div class="leg-block"><b class="leg-title" style="font-size:11px">Regional terrestrial gamma background (JRC)</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Modeled European grid, 10 km resolution — context, outside the Tellux calculation</div>'+
+    '<div style="display:flex;gap:2px;width:140px;margin-bottom:2px"><div style="flex:1;height:12px;background:#F0DFC0;border-radius:3px 0 0 3px"></div><div style="flex:1;height:12px;background:#DDB877"></div><div style="flex:1;height:12px;background:#C28533"></div><div style="flex:1;height:12px;background:#6B4A1F;border-radius:0 3px 3px 0"></div></div>'+
+    '<div style="display:flex;width:140px;font-size:7px;color:#4a4f5e;margin-bottom:1px"><span style="flex:1">60–73</span><span style="flex:1">73–84</span><span style="flex:1">84–90</span><span style="flex:1">90–109</span></div>'+
+    '<div style="font-size:8px;color:#4a4f5e;margin-bottom:4px">nGy/h (real quartiles, 88 cells)</div>'+
+    '<div class="leg-row" style="font-size:9px;color:var(--tx3)">nGy/h = absorbed dose in air — NOT the ambient dose equivalent (nSv/h) shown elsewhere on this site. Two distinct physical quantities, not directly comparable.</div>'+
+    '<div class="leg-row" style="font-size:8px;color:#626774;margin-top:2px">Reference points outside the Tellux model: ~59 nGy/h world average (UNSCEAR) · 70–200 nGy/h typical granitic terrain.</div>'+
+    '<div class="leg-src">© European Union, JRC — European Atlas of Natural Radiation. CC BY 4.0. Not part of any calculation or composite index.</div></div>',
   res:'<div class="leg-block"><b class="leg-title">Electrical grid</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>Power line (single colour)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">The Supabase dataset (8,386 EDF SEI lines) carries no voltage field: HTA and HTB share the same colour in normal rendering (documented technical debt). An HTB &#x2265; 50 kV distinction only exists in an exceptional fallback mode (OSM lookup, when Supabase is unavailable), not shown here.</div><div class="leg-src">EDF SEI · Supabase · OSM (fallback)</div></div>',
   bt:'<div class="leg-block"><b class="leg-title">LV grid</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Street-level electrical distribution</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>Overhead BT</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>Underground BT</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 9</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Generation sites</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Corsican power grid generation plants</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydro dam</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Run-of-river hydro</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Wind</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogas</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Gas turbine (combustion turbine)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnection</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Size according to power output:</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
@@ -5650,6 +5699,7 @@ function tog(id,cls,btn){
     }
     if(id==='crustal'){if(lCrustal.getLayers().length===0)buildCrustalLayer();showCrustalGauge(true);}
     if(id==='openrad'&&lOpenRad.getLayers().length===0)loadOpenRad();
+    if(id==='gammajrc'&&lGammaJRC.getLayers().length===0)loadGammaJRC();
     // tour/indu/cast/pont : couches patrimoniales migrées vers patrimoine.html
     if(id==='res'&&lRes.getLayers().length===0)loadReseau();
     if(id==='prod'&&lProd.getLayers().length===0)loadProd();
@@ -11875,6 +11925,85 @@ function _syncLandeMaquisZoom(fromToggle){
   }
 }
 
+// ═══ Fond gamma terrestre régional JRC/EANR — lot C3 phase 2 (rendu, 2026-09-13) ═══
+// Phase 1 (acquisition, PR #926, mergée le jour même) a produit public/data/
+// gamma_jrc_corse.geojson : 88 cellules, 10 km, CRS84, propriétés tgdr_ngyh (nGy/h) et
+// classe_indicative. Provenance complète (DOI 10.2905/JRC.SBESAC0, licence CC BY 4.0, méthode
+// Bossew et al. 2017) : docs/data-sources/gamma_jrc_corse_notes.md.
+//
+// Option retenue (arbitrage Soleil) : CÔTÉ À CÔTÉ. Couche de contexte visuelle indépendante —
+// AUCUNE valeur d'ici n'alimente calcAll()/computeExpertComposite() (vérifié : ni
+// gammaJrcColor() ni GAMMA_JRC_COLOR_STOPS ni lGammaJRC ne sont référencés dans ces deux
+// fonctions ni dans la construction de v2 — balayage exhaustif fait avant ce commit). Le
+// composite continue de lire le seul ancrage lithotype (GAMMA_TERRESTRE_PAR_LITHOTYPE,
+// calcGammaAmbient() plus haut, poids 0,20, GELÉ-001a). NCRP-001 non touché : cette couche
+// n'entre dans aucun modèle de calibration/dose Tellux.
+//
+// Unités — piège nommé au brief : nGy/h (dose absorbée dans l'air, JRC) et nSv/h (équivalent de
+// dose ambiant, calcGammaAmbient()) sont deux grandeurs physiques distinctes. AUCUNE conversion
+// n'est appliquée ici, dans un sens ou l'autre, et aucune valeur nSv/h n'est affichée à
+// proximité d'une valeur JRC pour comparaison — le seul endroit où l'app affiche encore une
+// valeur gamma nSv/h est l'export CSV expert (popup public : rien depuis le 2026-09-01, #1164,
+// cf. commentaire à la construction du popup v2.domains.ionizing.gamma). Pas de risque de
+// juxtaposition à ce jour ; à revérifier si un affichage gamma nSv/h revient dans le popup.
+//
+// Échelle : 4 paliers DISCRETS (pas un dégradé continu — cf. commentaire à LEGEND_HTML.gammajrc)
+// dérivés des quartiles RÉELS des 88 cellules (recalculés le 2026-09-13 depuis le fichier
+// source, PAS repris d'une analyse antérieure) : min 60,4 · Q1 73,3 · médiane 83,9 · Q3 89,8 ·
+// max 108,8 nGy/h. PAS le champ classe_indicative du GeoJSON : sur la Corse il ne prend que 2
+// valeurs sur les 4 possibles de l'échelle JRC (n=24 en classe 2, n=64 en classe 3),
+// sous-différenciant la vraie variation locale — la légende ne montre que ce que la fonction de
+// style utilise réellement, pas un champ fourni mais plus grossier que la donnée elle-même.
+const GAMMA_JRC_COLOR_STOPS=[
+  {max:73.3,     color:'#F0DFC0'},  // ≤ Q1
+  {max:83.9,     color:'#DDB877'},  // ≤ médiane
+  {max:89.8,     color:'#C28533'},  // ≤ Q3 — Ocre DA v2, teinte existante réemployée comme palier
+                                     // d'un dégradé (pas une nouvelle couleur de palette ; déjà
+                                     // partagée par plusieurs usages ponctuels dans ce fichier,
+                                     // ex. lLandeMaquis, sans lien thématique avec cette couche)
+  {max:Infinity, color:'#6B4A1F'}   // > Q3
+];
+function gammaJrcColor(v){
+  for(const s of GAMMA_JRC_COLOR_STOPS){ if(v<=s.max) return s.color; }
+  return GAMMA_JRC_COLOR_STOPS[GAMMA_JRC_COLOR_STOPS.length-1].color;
+}
+let _gammaJRCLoadPromise=null;
+function loadGammaJRC(){
+  if(_gammaJRCLoadPromise) return _gammaJRCLoadPromise;
+  _gammaJRCLoadPromise=fetch('public/data/gamma_jrc_corse.geojson',{signal:AbortSignal.timeout(8000)})
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(geojson){ buildGammaJRCLayer(geojson); })
+    .catch(function(e){ console.warn('[Tellux] gamma_jrc_corse.geojson indisponible : '+e.message); })
+    .finally(function(){ _gammaJRCLoadPromise=null; });
+  return _gammaJRCLoadPromise;
+}
+function buildGammaJRCLayer(geojson){
+  lGammaJRC.clearLayers();
+  if(!geojson || !geojson.features || !geojson.features.length) return;
+  L.geoJSON(geojson,{
+    style:function(feature){
+      const v=feature.properties.tgdr_ngyh;
+      return {color:'#6B4A1F',weight:0.5,opacity:0.5,fillColor:gammaJrcColor(v),fillOpacity:0.55,interactive:true};
+    },
+    onEachFeature:function(feature,layer){
+      const v=feature.properties.tgdr_ngyh;
+      // Popup — le point de lecture le plus proche du risque nommé au brief (l'utilisateur croit
+      // lire une valeur du modèle Tellux) : la distinction d'unité et le statut hors-calcul sont
+      // répétés ICI, pas seulement dans la légende du tiroir Couches (qu'une partie des
+      // utilisateurs n'ouvre jamais avant de cliquer une cellule).
+      layer.bindPopup(
+        '<div style="font-family:var(--font);min-width:175px">'+
+          '<div style="font-size:9px;font-weight:600;color:#1F2329;margin-bottom:2px">'+jt('gamma_jrc_title','Fond gamma terrestre régional (JRC)')+'</div>'+
+          '<div style="font-size:14px;font-weight:700;color:#6B4A1F">'+v+' nGy/h</div>'+
+          '<div style="font-size:8px;color:#626774;margin-top:2px">'+jt('gamma_jrc_unit_note','nGy/h = dose absorbée dans l\'air — PAS l\'équivalent de dose ambiant (nSv/h) affiché ailleurs sur ce site. Deux grandeurs distinctes, non comparables directement.')+'</div>'+
+          '<div style="font-size:8px;color:#626774;font-style:italic;margin-top:3px">'+jt('gamma_jrc_epistemic','Grille modélisée européenne, résolution 10 km — JRC/EANR, source tierce. Hors modèle de calcul Tellux ; n\'entre dans aucun indice composite.')+'</div>'+
+          '<div style="font-size:8px;color:#626774;margin-top:2px">'+jt('gamma_jrc_attrib','© Union européenne, JRC — European Atlas of Natural Radiation. Licence CC BY 4.0.')+'</div>'+
+        '</div>'
+      );
+    }
+  }).addTo(lGammaJRC);
+}
+
 // exportTerrainCSV() RETIRÉE le 2026-09-08 — son seul appelant était le bouton du panneau
 // Prospecteur terrain (#geo-panel), lui-même DOM mort (display:none sans ouvreur depuis le
 // commit fondateur). Fonction orpheline par ricochet, retirée avec le panneau.
@@ -14923,6 +15052,11 @@ function capCleanup(){
 ["lyr_postes_tt","#b-postes","title","Postes sources EDF SEI (transformateurs HTB/HTA) — 21 postes OSM","Posti surgente EDF SEI (trasfurmatori HTB/HTA) — 21 posti OSM","EDF SEI substations (HTB/HTA transformers) — 21 OSM substations"],
 ["lyr_emag","#b-emag","","Fond magnétique régional","Fondu magneticu regiunale","Regional magnetic background"],
 ["lyr_emag_tt","#b-emag","title","Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse","Fondu magneticu regiunale NOAA EMAG2v3 — anumalie di u zoccalu prufondu corsu","NOAA EMAG2v3 regional magnetic background — deep basement anomalies of Corsica"],
+// lyr_gammajrc* (lot C3 phase 2, 2026-09-13) — colonne CO = copie du FR, PAS une traduction
+// corse vérifiée (hors compétence de cette session, contrairement aux autres entrées CO de
+// cette table qui semblent être de vraies traductions) : à corriger par un locuteur natif.
+["lyr_gammajrc","#b-gammajrc","","Fond gamma terrestre (JRC)","Fond gamma terrestre (JRC)","Regional terrestrial gamma background (JRC)"],
+["lyr_gammajrc_tt","#b-gammajrc","title","Fond gamma terrestre régional JRC/EANR — grille modélisée européenne 10 km, débit de dose absorbée dans l'air (nGy/h), source tierce CC BY 4.0, hors calcul Tellux","Fond gamma terrestre régional JRC/EANR — grille modélisée européenne 10 km, débit de dose absorbée dans l'air (nGy/h), source tierce CC BY 4.0, hors calcul Tellux","Regional terrestrial gamma background, JRC/EANR — modeled European grid, 10 km resolution, absorbed dose rate in air (nGy/h), third-party source CC BY 4.0, outside the Tellux calculation"],
 ["lyr_foretdense","#b-foretdense","","Forêt dense (atténuation RF)","Fureste densa (attenuazione RF)","Dense forest (RF attenuation)"],
 ["lyr_foretdense_tt","#b-foretdense","title","BD Forêt V2 IGN — forêt fermée à essence haute (chênes, hêtre, châtaignier, pins laricio/maritime, sapin…), hors classes de feuillus indifférenciés qui recouvrent surtout le maquis-forêt corse (~28 % de la Corse). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6). Ce calque module la valeur en µW/m² du bloc Radiofréquence. Il ne modifie ni la heatmap, ni le score affiché en haut du popup.","BD Fureste V2 IGN — fureste chjinta à essenza alta (querce, fau, castagnu, pini laricio/marittimu, abetu…), fora di e classi di latifogli indifferenziati chì cuprenu sopratuttu u machja-fureste corsu (~28 % di a Corsica). Attivà stu buttone include l'attenuazione RF di a canopea (mudellu ITU-R P.833-6) in u calculu à u cliccu carta ; disattivallu a caccia.","IGN BD Forêt V2 — closed forest of tall species (oaks, beech, chestnut, laricio/maritime pine, fir…), excluding undifferentiated broadleaf classes that mostly map to Corsican maquis-forest (~28% of Corsica). Enabling this button includes canopy RF attenuation (ITU-R P.833-6 model). This layer modulates the µW/m² value in the Radiofrequency block. It changes neither the heatmap nor the score shown at the top of the popup."],
 ["lyr_foretouverte","#b-foretouverte","","Forêt ouverte (2016-2017)","Fureste aperta (2016-2017)","Open forest (2016-2017)"],
