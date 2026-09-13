@@ -6,16 +6,22 @@ build_gamma_jrc_geojson.py — Pipeline d'acquisition C3 (couche « fond gamma t
 Source : JRC European Atlas of Natural Radiation (EANR) — « 07. Terrestrial gamma dose »
          Dataset ID : jrc-eanr-07_terrestrial-gamma-dose · DOI : 10.2905/JRC.SBESAC0
          Fichier    : tgdrngyh.zip (ESRI ArcInfo Binary Grid, unité nGy/h)
-         Grille     : 10 km × 10 km, GISCO/EEA reference grid, CRS natif EPSG:3035 (ETRS89-LAEA)
+         Grille     : 10 km × 10 km, GISCO/EEA reference grid, CRS natif LAEA ETRS89 custom
+                      (PAS EPSG:3035 — cf. SRC_CRS ci-dessous)
          Licence    : Creative Commons Attribution 4.0 International (CC BY 4.0)
 
 Produit : public/data/gamma_jrc_corse.geojson — cellules 10 km de la fenêtre Corse,
           reprojetées en WGS84 (CRS84), valeur `tgdr_ngyh` par cellule + classe indicative.
 
-GARDE-FOUS (NCRP-001 GELÉ, garde-fous A.4) :
+GARDE-FOUS (NCRP-001 GELÉ, garde-fous A.4 — position épistémique Tellux : « pas un substitut
+à mesure certifiée », chaque donnée porte sa nature) :
   - Couche de CONTEXTE affichée uniquement — HORS de tout modèle de calibration/dose Tellux.
-  - Grandeur = débit de dose absorbée dans l'air (nGy/h), 10 km : INDICATIF, NON métrologique,
+  - Grandeur = débit de dose absorbée dans l'air (nGy/h), 10 km, lue sur une grille MODÉLISÉE
+    JRC : INDICATIF, NON métrologique, pas une mesure Tellux, pas une mesure certifiée locale,
     aucune lecture sanitaire. La classe est un repère de lecture, pas un seuil.
+  - nGy/h (dose absorbée air, ici) et nSv/h H*(10) (dose équivalente ambiante, Téléray/ASNR)
+    sont deux grandeurs distinctes, non interchangeables par une approximation ≈ 1 : aucune
+    conversion n'est appliquée, chaque site affiche sa grandeur native explicitement.
   - Ne fabrique aucune valeur : lit la donnée JRC telle quelle, filtre nodata, arrondit.
 
 Exécution (aucune dépendance système ; GDAL embarqué dans la wheel rasterio) :
@@ -70,7 +76,7 @@ def main():
         nodata = ds.nodata
         H, W = band.shape
 
-        # Fenêtre Corse exprimée dans le CRS natif (EPSG:3035).
+        # Fenêtre Corse exprimée dans le CRS natif (LAEA ETRS89 custom — PAS EPSG:3035, cf. SRC_CRS plus haut).
         x0, y0, x1, y1 = transform_bounds(
             DST_CRS, SRC_CRS,
             CORSE_BBOX["lon_min"], CORSE_BBOX["lat_min"],
@@ -118,7 +124,7 @@ def main():
         "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:OGC:1.3:CRS84"}},
         "metadata": {
             "description": "Fond gamma terrestre régional (débit de dose absorbée air) — fenêtre Corse, maille 10 km",
-            "grandeur": "Débit de dose gamma terrestre absorbée dans l'air (nGy/h). NB : Téléray/ASNR affiche du nSv/h (H*(10)) ; JRC/Euratom assimilent ≈ 1 mais la grandeur est explicitée ici.",
+            "grandeur": "Débit de dose gamma terrestre absorbée dans l'air (nGy/h). NB : Téléray/ASNR affiche du nSv/h (H*(10), dose équivalente ambiante) — grandeur physique distincte, non interchangeable par une approximation ≈ 1 ; aucune conversion appliquée, chaque site affiche sa grandeur native.",
             "statut": "INDICATIF, NON métrologique, aucune lecture sanitaire — couche de contexte hors modèle Tellux (NCRP-001 gelé).",
             "source": "JRC European Atlas of Natural Radiation (EANR) — 07. Terrestrial gamma dose",
             "source_dataset_id": "jrc-eanr-07_terrestrial-gamma-dose",
@@ -126,7 +132,7 @@ def main():
             "source_fichier": "tgdrngyh.zip (ESRI ArcInfo Grid, LAEA ETRS89 centre 48N/9E, 10 km) — reprojeté WGS84",
             "attribution": "© European Union, JRC — European Atlas of Natural Radiation (Tollefsen, De Cort, Cinelli, Gruber, Bossew). Licence CC BY 4.0.",
             "licence": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
-            "reference_methode": "Bossew et al. 2016, DOI 10.1016/j.jenvrad.2016.02.013",
+            "reference_methode": "Bossew et al. 2017, J. Environ. Radioact. 166, 296-308, DOI 10.1016/j.jenvrad.2016.02.013",
             "reperes_lecture_ngyh": "~59 (moyenne mondiale UNSCEAR) · 70-200 (terrains granitiques) — repères, pas des seuils",
             "classe_indicative_bornes_ngyh": CLASS_BREAKS,
             "date_production": "2026-07-05",

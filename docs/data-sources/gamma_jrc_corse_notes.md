@@ -17,7 +17,7 @@
 - **Licence** : **Creative Commons Attribution 4.0 International (CC BY 4.0)** — confirmée par le `copyright.txt` du dossier JRC (« Any copyright and/or sui generis right on the dataset is licensed under CC BY 4.0 »).
 - **Attribution UI** :
   > © European Union, JRC — *European Atlas of Natural Radiation* (Tollefsen, De Cort, Cinelli, Gruber, Bossew). Licence CC BY 4.0.
-- **Méthode** : Bossew et al. 2016, DOI [10.1016/j.jenvrad.2016.02.013](https://doi.org/10.1016/j.jenvrad.2016.02.013).
+- **Méthode** : Bossew et al. **2017** — *J. Environ. Radioact.* **166**, 296–308, DOI [10.1016/j.jenvrad.2016.02.013](https://doi.org/10.1016/j.jenvrad.2016.02.013) (le « 2016 » du DOI reflète la mise en ligne anticipée chez l'éditeur ; l'article est cité sous son année de publication effective, 2017 — vérifié indépendamment, ScienceDirect/Sciencescape).
 
 ## Spécifications techniques
 
@@ -38,8 +38,8 @@
 ## Garde-fous (impératifs à l'intégration)
 
 - **NCRP-001 GELÉ** : couche de **contexte affichée uniquement**, **hors** de tout modèle de calibration / dose Tellux. Ne pas la brancher dans `calcAll` ni dans l'indice composite.
-- **Indicatif ≠ métrologique** (garde-fous A.4) : 10 km, grandeur = débit de dose absorbée **dans l'air** (nGy/h). **Jamais de lecture sanitaire.**
-- **Piège d'unités** : Téléray/ASNR affiche du **nSv/h** (H\*(10)) ; JRC/Euratom assimilent ≈ 1, mais **afficher la grandeur explicitement** (nGy/h) dans la légende.
+- **Indicatif ≠ métrologique** (garde-fous A.4 — position épistémique Tellux : « Tellux N'EST PAS un substitut à mesure certifiée » ; chaque donnée doit porter sa nature) : maille 10 km, grandeur = débit de dose absorbée **dans l'air** (nGy/h), lue telle quelle sur une grille **modélisée** JRC — **pas une mesure Tellux, pas une mesure certifiée locale**. **Jamais de lecture sanitaire.**
+- **Piège d'unités** : Téléray/ASNR affiche du **nSv/h** (H\*(10), dose équivalente ambiante) ; JRC/EANR affiche du **nGy/h** (dose absorbée dans l'air). **Ce sont deux grandeurs physiques distinctes, non interchangeables par une approximation ≈ 1** — aucune conversion n'est appliquée dans ce pipeline. **Afficher la grandeur explicitement** (nGy/h) dans la légende, sans comparaison numérique directe avec les nSv/h affichés ailleurs sur le site.
 - **Repères de lecture** (légende, pas des seuils) : ~59 nGy/h (moyenne mondiale UNSCEAR) · 70–200 nGy/h (terrains granitiques).
 - **Échelle** : pas de barème concurrent. Rendu séquentiel type contexte ; réserver le vocabulaire de seuil aux couches qui en ont un.
 - **Reproductibilité** : `uv run --with rasterio python scripts/build_gamma_jrc_geojson.py` (cache brut sous `scripts/.cache/gamma_jrc/`, gitignored).
