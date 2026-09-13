@@ -1,7 +1,9 @@
 -- 014_contributions_grant_explicite.sql
--- APPLIQUÉE le 2026-09-13 (GO Soleil) PUIS PARTIELLEMENT ANNULÉE LE MÊME JOUR — voir constat
--- daté en fin de fichier. État actuel en production : GRANT SELECT table entière restauré
--- (rollback exécuté), le SELECT colonne par colonne ci-dessous N'EST PLUS en vigueur.
+-- APPLIQUÉE le 2026-09-13 (GO Soleil), ROLLBACKÉE LE SOIR MÊME (loadDB() sans select= explicite),
+-- PUIS RÉAPPLIQUÉE LE 2026-09-13 APRÈS CORRECTIF CLIENT (PR #1438, merge 00bde4f) ET
+-- RE-VÉRIFIÉE — voir les deux constats datés en fin de fichier. État actuel en production :
+-- SELECT colonne par colonne EN VIGUEUR (16 colonnes, cf. liste ci-dessous), vérifié par le
+-- chemin client réel (lecture ET écriture) après application, pas seulement en base.
 -- Préparée 2026-09-13, session Code (brief Soleil, en suite directe de la dette
 -- `CONTRIBUTIONS-GRANT-TABLE-REVOKE-COLONNE-INOPERANT-001`). Aucun REVOKE ni GRANT exécuté par
 -- cette session AU MOMENT DE LA PRÉPARATION : ce fichier a été écrit avant d'être joué. Même
@@ -272,3 +274,39 @@ grant select (
 -- colonne ci-dessus refonctionnerait sans le symptôme constaté aujourd'hui — vérifié dans
 -- l'ordre inverse (point 2 ci-dessus) avant de l'affirmer. Proposé, pas appliqué : nécessite un
 -- GO explicite pour toucher `app.html`, distinct du GO déjà donné pour ce fichier SQL.
+--
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- CONSTAT DU 2026-09-13, RÉAPPLICATION APRÈS CORRECTIF CLIENT — GO Soleil, TEMPS 2, une fois
+-- le TEMPS 1 (PR #1438, merge `00bde4f`) vérifié en prod. Prémisse re-vérifiée avant d'écrire
+-- quoi que ce soit (pas de mémoire) : build prod sert toujours `CONTRIB_SELECT_COLS` ; ses 16
+-- colonnes comparées terme à terme (diff programmatique, pas à l'œil) à la liste GRANT
+-- ci-dessus — identiques, 0 divergence ; `contributions` toujours `tableowner=postgres` —
+-- aucune barrière de propriété comme la 013.
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+--
+-- REVOKE + GRANT rejoués tels quels. Vérifié IMMÉDIATEMENT, onglet neuf, dans l'ordre demandé :
+-- 1) Lecture publique : `contribsDB`=5, marqueurs=5 (aucun perdu), liste rendue (identique
+--    caractère pour caractère à l'état pré-durcissement), badge 📊 présent. Pas de rollback
+--    nécessaire.
+-- 2) Contrôle négatif, chemin client réel : `GET .../contributions?select=session_id` (clé anon
+--    publique) → `401` `{"code":"42501","message":"permission denied for table contributions"}`.
+--    `session_id` confirmé non lisible, pas supposé.
+-- 3) Écriture, chemin client réel, forme exacte de `saveContrib()` (`select=` + 16 colonnes +
+--    `Prefer: return=representation`) : `POST` avec une ligne de test (`note` marquée
+--    explicitement, `type:'observation'`) → `201`, représentation reçue = exactement les 16
+--    colonnes. Ligne de test supprimée immédiatement après (connexion privilégiée — `anon` n'a
+--    pas de policy DELETE), suppression elle-même vérifiée (`count=0`).
+--
+-- ÉTAT FINAL, EN VIGUEUR EN PRODUCTION :
+--   Colonnes publiques (16) : bz, created_at, csv_stats, excluded_from_public, id, igrf_nt, kp,
+--   lat, lon, native_capture, note, score_anomalie, type, unite, unite_saisie, valeur.
+--   Colonnes retirées de la lecture publique (20) : airplane_mode_on, appareils_actifs,
+--   attenuation_prevue_db, bt_terme_inclus, contexte, delta_nt, densite_protons, etage,
+--   facteur_eau_nt, flux_protons, geo_nets, geo_netval, materiaux_murs, measurement_duration_s,
+--   no_metal_proximity, perturbation_humaine_nt, reseaux_actifs, session_id, usb_charging_off,
+--   version_app.
+--   `session_id` — confirmé non lisible publiquement (contrôle négatif ci-dessus).
+--
+-- Constat adjacent (DELETE/UPDATE/TRUNCATE/REFERENCES/TRIGGER sur `contributions`, RLS
+-- neutralise UPDATE/DELETE, TRUNCATE sans chemin PostgREST connu) reste non traité, inchangé
+-- depuis la préparation — toujours hors périmètre de ce fichier.
