@@ -1,0 +1,120 @@
+-- 013_spatial_ref_sys_revoke_write.sql
+-- NON APPLIQUÉE — décision Soleil requise avant exécution en production
+-- Préparée 2026-09-13, session Code (brief Soleil). Aucun REVOKE exécuté par cette session :
+-- ce fichier est écrit, pas joué. Même régime que 012_contributions_native_capture.sql.
+--
+-- POURQUOI
+-- Constat de l'audit Supabase du 2026-09-13 (`get_advisors`, sécurité) : `public.spatial_ref_sys`
+-- (table système PostGIS, définitions de systèmes de référence de coordonnées SRID) a RLS
+-- désactivée ET `anon`/`authenticated` y détiennent DELETE, INSERT, REFERENCES, SELECT, TRIGGER,
+-- TRUNCATE, UPDATE (vérifié par `information_schema.role_table_grants`, pas supposé — même
+-- classe de constat que INS-020/`CONTRIBUTIONS-GRANT-TABLE-REVOKE-COLONNE-INOPERANT-001` : droits
+-- par défaut jamais révoqués, pas une régression d'une session). Les données elles-mêmes ne sont
+-- pas sensibles (définitions de CRS, publiques par nature) — le risque est l'INTÉGRITÉ, pas la
+-- confidentialité : n'importe quel visiteur muni de la seule clé anon publique peut aujourd'hui
+-- TRUNCATE cette table, cassant toute opération PostGIS qui en dépendrait.
+--
+-- CE QUI RESTE : SELECT SEUL, ET POURQUOI
+-- PostGIS lit `spatial_ref_sys` en interne (ST_Transform, ST_SetSRID et consorts) pour résoudre
+-- les définitions proj4/WKT des SRID manipulés. Retirer SELECT casserait silencieusement toute
+-- opération PostGIS qui aurait besoin d'y lire une définition — y compris via un chemin que cette
+-- migration ne peut pas énumérer exhaustivement (fonction future, extension du schéma). SELECT
+-- reste donc accordé à `anon`/`authenticated`, sans changement.
+--
+-- CONSTAT PRÉALABLE, DEMANDÉ AVANT D'ÉCRIRE CE FICHIER, PAS SUPPOSÉ :
+-- aucune colonne de type `geometry`/`geography` n'existe dans le schéma `public`
+-- (`information_schema.columns`, filtré sur `udt_name in ('geometry','geography')` → 0 ligne,
+-- vérifié le 2026-09-13). Conséquence : aucune table applicative de ce projet ne stocke de type
+-- spatial natif aujourd'hui — les colonnes de coordonnées sont des `double precision` lat/lon
+-- ordinaires (`contributions`, `anfr_supports`, etc.), jamais un `geometry`. Ce que cette
+-- migration protège n'est donc PAS un chemin de lecture spatiale déjà emprunté par l'application
+-- en production aujourd'hui (aucun n'a été identifié) — c'est la CAPACITÉ PostGIS elle-même,
+-- installée et disponible (fonctions ST_* exposées, cf. plus bas), pour un usage direct ou futur.
+-- Ne pas confondre les deux dans la lecture de cette migration.
+--
+-- REFERENCES ET TRIGGER — TROUVÉS EN PLUS, INSTRUITS SÉPARÉMENT, PAS SUPPOSÉS ANODINS
+-- `anon`/`authenticated` détiennent aussi REFERENCES (créer une contrainte de clé étrangère
+-- pointant vers cette table) et TRIGGER (créer un déclencheur dessus) — deux privilèges de DDL,
+-- pas de DML. Vérifié avant de trancher :
+--   * PostgREST (la seule voie d'accès réelle pour `anon`/`authenticated` sur ce projet) ne
+--     traduit AUCUN verbe HTTP vers `CREATE TABLE ... REFERENCES ...` ni `CREATE TRIGGER ...` —
+--     ce sont des opérations de définition de schéma, hors du périmètre de l'API REST/RPC
+--     qu'expose PostgREST (SELECT/INSERT/UPDATE/DELETE sur des lignes, exécution de fonctions
+--     déjà définies). Aucun chemin HTTP normal ne peut donc les exercer aujourd'hui.
+--   * CE N'EST PAS UNE RAISON DE LES GARDER. Le raisonnement retenu est le même que pour
+--     INSERT/UPDATE/DELETE/TRUNCATE ci-dessus, pas un raisonnement différent : le privilège lui-
+--     même est la frontière de sécurité réelle dans Postgres, pas la présence ou l'absence d'un
+--     verbe HTTP qui l'exercerait aujourd'hui. S'appuyer sur « PostgREST ne l'expose pas » est un
+--     argument propre à CETTE couche API, fragile si elle change ou si un autre chemin d'accès SQL
+--     apparaît (injection dans une fonction, mauvaise configuration future, migration d'API) — pas
+--     un argument structurel. `anon`/`authenticated` n'ont par ailleurs aucun besoin légitime de
+--     créer une clé étrangère ou un déclencheur sur une table système PostGIS.
+--   * DÉCISION : REFERENCES et TRIGGER partent avec les quatre autres. Même liste que le
+--     brief l'a nommée (INSERT, UPDATE, DELETE, TRUNCATE) PLUS ces deux-là, pour la même raison
+--     de fond — pas une extension non demandée : la question posée appelait une réponse motivée,
+--     la voici.
+--
+-- EXPOSITION DE FONCTIONS POSTGIS À `anon` — CONSTAT ADJACENT, NON TRAITÉ ICI
+-- La quasi-totalité des ~300 fonctions PostGIS installées (dont `find_srid`,
+-- `postgis_transform_geometry`, `updategeometrysrid`, qui lisent `spatial_ref_sys`) apparaissent
+-- exécutables par `anon` dans `information_schema.role_routine_grants` — cohérent avec le
+-- comportement par défaut de PostgreSQL (EXECUTE accordé à PUBLIC à la création d'une fonction,
+-- sauf REVOKE explicite), pas une configuration propre à ce projet. Ce constat est plus large que
+-- le périmètre de cette migration (droits sur UNE table) et n'est pas instruit ici — signalé pour
+-- ne pas être perdu, pas traité.
+
+revoke insert, update, delete, truncate, references, trigger
+  on public.spatial_ref_sys
+  from anon, authenticated;
+
+-- ROLLBACK — non exécuté, écrit avec la migration comme demandé.
+-- Chaque privilège listé explicitement, dans le même ordre : un ROLLBACK qui dirait juste
+-- « regrant tout » masquerait lequel a été retiré si cette ligne est relue plus tard sans le
+-- REVOKE sous les yeux.
+--
+-- grant insert, update, delete, truncate, references, trigger
+--   on public.spatial_ref_sys
+--   to anon, authenticated;
+--
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- VÉRIFICATION APRÈS APPLICATION — à lancer une fois la migration jouée, PAS avant.
+-- Écrite ici pour rester avec la migration qu'elle vérifie ; rien ci-dessous n'a été exécuté
+-- par la session qui a préparé ce fichier.
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+--
+-- 1) Droits : `select grantee, privilege_type from information_schema.role_table_grants
+--    where table_schema='public' and table_name='spatial_ref_sys' and grantee in
+--    ('anon','authenticated');`
+--    ATTENDU : seul SELECT (et REFERENCES/USAGE hérités du propriétaire ne s'appliquent pas ici,
+--    ce ne sont que des grants de rôle) reste listé pour les deux rôles — plus de DELETE/INSERT/
+--    REFERENCES/TRIGGER/TRUNCATE/UPDATE.
+--
+-- 2) Lecture spatiale directe, chemin privilégié (prouve que SELECT + les données restent
+--    intactes, ne prouve PAS le chemin client) :
+--      select srtext from public.spatial_ref_sys where srid = 4326;
+--    ATTENDU : une ligne retournée (WGS 84), inchangée par rapport à avant la migration.
+--
+-- 3) Opération PostGIS bout en bout qui CONSULTE spatial_ref_sys en interne (transformation
+--    d'un point WGS84 vers Web Mercator — 4326 → 3857, deux SRID distincts, donc une vraie
+--    résolution de définition, pas un no-op) :
+--      select ST_AsText(ST_Transform(ST_SetSRID(ST_MakePoint(9.1, 42.1), 4326), 3857));
+--    ATTENDU SI ÇA MARCHE : une géométrie POINT en coordonnées Web Mercator, ex.
+--    `POINT(1013071... 5169499...)` — confirme que la lecture SELECT restante suffit à PostGIS.
+--    ATTENDU SI ÇA RATE : une erreur `could not find corresponding SRID` ou équivalent —
+--    signerait un SELECT cassé par erreur, à corriger avant toute chose.
+--
+-- 4) Chemin client réel, si un jour une fonction l'expose : `POST /rest/v1/rpc/<fonction>`
+--    avec la clé anon publique, sur une fonction appelant ST_Transform/find_srid. Aucune fonction
+--    de ce type n'est identifiée comme réellement appelée par l'application aujourd'hui (aucune
+--    colonne geometry/geography en base, cf. plus haut) — ce volet reste donc une procédure prête
+--    à jouer si un tel usage apparaît, pas un test qui a un objet concret à la date de cette
+--    migration. Ne pas le sauter pour autant s'il devient pertinent : c'est le seul des quatre
+--    volets qui teste le chemin PostgREST réel plutôt qu'une connexion privilégiée.
+--
+-- 5) Contrôle négatif, confirme que le retrait a un effet réel (pas un no-op comme le REVOKE
+--    colonne de la migration 012) : depuis une connexion authentifiée en `anon` (pas privilégiée),
+--    `INSERT INTO public.spatial_ref_sys (srid, auth_name, auth_srid) VALUES (900001, 'test',
+--    900001);` — ATTENDU : rejet `permission denied for table spatial_ref_sys` (42501). Si
+--    l'INSERT réussit, la migration n'a pas eu l'effet voulu — à ne PAS nettoyer par une
+--    connexion privilégiée sans d'abord comprendre pourquoi le REVOKE n'a pas tenu (même classe
+--    de vérification que celle qui a révélé l'échec du REVOKE colonne en migration 012).
