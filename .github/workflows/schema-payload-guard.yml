@@ -1,0 +1,90 @@
+name: schema-payload-guard
+
+# Garde clés-du-payload / colonnes-du-schéma — RAPPORT SEULEMENT.
+#
+# POURQUOI CE CHECK EXISTE
+# ------------------------
+# INS-018 (registre privé) : `protocole_aveugle` a été envoyé par le client
+# vers Supabase pendant 4,5 mois sans jamais avoir de colonne — invisible
+# depuis app.html, invisible depuis `_migrations/` (qui ne la mentionne pas),
+# visible seulement en confrontant le payload au schéma Supabase VIVANT.
+# `native_capture` porte aujourd'hui le même défaut, encore ouvert. Ce
+# workflow automatise la confrontation ; `tests/blindage-harness/schema-payload-guard.mjs`
+# porte la logique et son propre commentaire de tête, plus long — le lire
+# avant de modifier l'un ou l'autre.
+#
+# PAS REQUIS — ET C'EST DÉLIBÉRÉ, PAS UN OUBLI
+# -----------------------------------------------
+# `native_capture` est un défaut connu et encore ouvert : si ce check était
+# requis aujourd'hui, il serait rouge dès son premier run et bloquerait
+# `main` sur un défaut préexistant, pas sur une régression neuve — l'inverse
+# de ce qu'un check requis doit faire (cf. INS-007, ADR-067 : un check
+# conditionné par un état qui n'est pas encore vrai gèle plutôt que de
+# protéger). Il devient candidat au statut requis APRÈS la migration qui
+# ajoute la colonne manquante (Cran C, arbitrage Soleil) — pas avant, et pas
+# automatiquement à ce moment-là non plus : un nouvel arbitrage explicite.
+#
+# ACCÈS AU SCHÉMA — NON PROVISIONNÉ ICI
+# -----------------------------------------
+# Le script a besoin de lire `information_schema.columns` sur le projet
+# Supabase, ce que ni la clé anon publique ni PostgREST par défaut ne
+# permettent. Il lit une variable `SUPABASE_MGMT_PAT` qui N'EXISTE PAS
+# aujourd'hui dans les secrets du dépôt — ce workflow, en son absence, saute
+# proprement (exit 0, message explicite dans le résumé du job) plutôt que
+# d'échouer ou de simuler un succès. Description de l'accès nécessaire dans
+# le corps de la PR qui introduit ce fichier — jamais dans ce commentaire, et
+# rien n'est demandé ni posé ici : arbitrage Soleil.
+#
+# PAS DE FILTRE `paths:` REQUIS ICI (à la différence de contrast-panels.yml)
+# ---------------------------------------------------------------------------
+# La leçon d'INS-007/ADR-067 (« pas de filtre paths sur un check REQUIS,
+# sinon PR gelée en pending indéfini ») ne s'applique qu'aux checks requis.
+# Celui-ci ne l'est pas : un filtre `paths:` ici ne peut geler aucune PR,
+# seulement éviter un run sans objet sur des PR qui ne touchent aucun site
+# de payload ni aucune migration.
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'app.html'
+      - 'radon.html'
+      - '_migrations/**'
+      - 'tests/blindage-harness/schema-payload-guard.mjs'
+      - '.github/workflows/schema-payload-guard.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  schema-payload-guard:
+    name: Clés payload vs colonnes schéma (rapport seulement)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Exécuter la garde (auto-tests puis, si le secret existe, lecture du schéma vivant)
+        working-directory: tests/blindage-harness
+        env:
+          SUPABASE_MGMT_PAT: ${{ secrets.SUPABASE_MGMT_PAT }}
+        run: node schema-payload-guard.mjs
+        # Pas de `continue-on-error`: un vrai défaut détecté doit colorer ce
+        # check en rouge (visible dans l'onglet Checks de la PR) — il n'est
+        # simplement pas dans la liste des required status checks de `main`,
+        # donc ce rouge ne bloque rien. « Report seulement » porte sur
+        # l'effet (pas de blocage), pas sur la couleur (qui doit rester
+        # honnête, cf. brief : « un rapport que personne ne lit n'est pas une
+        # garde »).
