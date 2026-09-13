@@ -104,7 +104,36 @@ alter table public.contributions
 
 comment on column public.contributions.native_capture is 'Le bouton de capture magnetometre natif a-t-il ete utilise pour cette contribution ? null = non confirme (bouton non utilise, ou ligne anterieure a la migration 012 -- indistinguable aujourd hui) : a traiter comme non confirme, jamais comme false. true = capture native confirmee. false : interdit par contrainte native_capture_not_false -- jamais ecrit par le code client au 2026-09-13, voir commentaire de migration si un futur usage le justifie.';
 
-revoke select (native_capture) on public.contributions from anon, authenticated;
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- CONSTAT DU 2026-09-13, APRÈS APPLICATION — le paragraphe « EXPOSITION PUBLIQUE » plus haut
+-- affirme une protection qui n'existe pas. Ajouté ici, pas réécrit : ce que ce fichier
+-- croyait vrai au moment de son écriture reste lisible tel quel plus haut, l'écart est nommé
+-- à l'endroit qui l'a produit.
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- La ligne `revoke select (native_capture) ...` ci-dessous s'est exécutée SANS ERREUR à
+-- l'application (2026-09-13, GO Soleil) mais SANS EFFET : vérifié par lecture directe de
+-- `information_schema.column_privileges` après application — `anon`/`authenticated` ont
+-- toujours SELECT sur `native_capture`, exactement le même jeu de privilèges que sur
+-- `airplane_mode_on` (comparé colonne par colonne). Raison, PostgreSQL, pas un bug propre à
+-- cette migration : `anon`/`authenticated` ont un GRANT SELECT au niveau TABLE ENTIÈRE sur
+-- `contributions` (vérifié via `information_schema.role_table_grants`). Un REVOKE colonne par
+-- colonne ne retranche rien d'un GRANT déjà posé au niveau table — il faudrait REVOKE SELECT
+-- sur la table entière puis GRANT SELECT explicite sur la liste des colonnes à exposer, un
+-- changement plus large que cette migration et touchant les 36 colonnes de la table, non fait
+-- ici (arbitrage Soleil séparé, hors périmètre de ce fichier — cf. registre privé).
+--
+-- CONSÉQUENCE : `native_capture` est donc, en pratique, publiquement lisible au même titre
+-- que `airplane_mode_on`/`usb_charging_off`/`no_metal_proximity` — l'« écart délibéré aux
+-- colonnes voisines » du paragraphe ci-dessus n'existe pas depuis l'application. Ligne
+-- commentée ci-dessous plutôt que supprimée : elle documente l'intention d'origine et son
+-- échec, pas seulement l'intention.
+--
+-- PORTÉE, AU-DELÀ DE CETTE COLONNE : le même défaut (GRANT table présent, REVOKE colonne
+-- inopérant) s'applique à TOUTE colonne future ajoutée à `contributions` — ce n'est pas un
+-- problème propre à `native_capture`, c'est une propriété de la table. C'est le fait durable ;
+-- consigné comme tel au registre des faits (dépôt privé), pas seulement comme un défaut de
+-- cette migration.
+-- revoke select (native_capture) on public.contributions from anon, authenticated;
 
 -- ROLLBACK — non exécuté, écrit avec la migration comme demandé.
 -- DROP COLUMN retire avec elle la contrainte, le commentaire et le REVOKE ci-dessus : rien à
