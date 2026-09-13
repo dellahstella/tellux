@@ -9068,6 +9068,39 @@ function calcGammaAmbient(lat, lon, altitude_m) {
   const lithology_gamma = getGeoType(lat, lon);
   const terrestrialInfo = calcTerrestrialGamma(lithology_gamma);
   const terrestrial_nGy_h = terrestrialInfo.dose_nGy_h; // null si lithotype non couvert
+  // CONVERSION_NGY_TO_NSV — pourquoi et d'où vient ce facteur (documentation seulement,
+  // 2026-09-13 : la valeur ci-dessous ne change pas ce jour).
+  //
+  // QUOI : `terrestrial_nGy_h` (ligne précédente) est en dose ABSORBÉE DANS L'AIR (Gy),
+  // grandeur physique sortie telle quelle par la formule NCRP 94 (verrou NCRP-001 intact,
+  // coefficients Verdoya/Beck). `cosmic_nSv_h` (ci-dessus) est nativement en ÉQUIVALENT DE
+  // DOSE AMBIANT H*(10) (Sv) — la grandeur opérationnelle affichée par les balises Téléray de
+  // l'ASNR. Gy et Sv ne sont PAS la même grandeur physique et ne s'additionnent jamais l'un à
+  // l'autre sans conversion — aucune conversion implicite, aucune affirmation d'équivalence
+  // non déclarée (doctrine projet ; même principe que le retrait de la 012 et du correctif
+  // #1439 sur la chaîne i18n morte gamma_reperes_tooltip).
+  //
+  // POURQUOI ICI : cette fonction rend UN total agrégé (`total_nSv_h`, quelques lignes plus
+  // bas) qui additionne cosmique + terrestre + boost ponctuel. Additionner un nombre en Gy à
+  // un nombre en Sv sans conversion donnerait un résultat sans signification physique,
+  // silencieusement. La conversion est appliquée UNE fois, ici, avant l'addition — jamais
+  // après, jamais ailleurs (vérifié : balayage exhaustif de toutes les occurrences de "nGy"
+  // dans ce fichier, 2026-09-13 — aucun autre point ne convertit ni ne mélange ces deux
+  // grandeurs).
+  //
+  // SOURCE DU FACTEUR : `docs/physicien/v13/module_gamma/module_gamma_v1.6_FR.md` (corpus
+  // privé, document soumis pour relecture au physicien tiers, section « Unité — dose absorbée
+  // dans l'air (Gy) vs équivalent de dose ambiant (Sv) ») : « la conversion entre les deux est
+  // proche de ×1,2 (nSv par nGy) selon le spectre d'énergie des photons ». Ce document ne cite
+  // lui-même aucune référence externe précise pour cette valeur — à la différence des
+  // coefficients K/U/Th de la formule (sourcés et recalculés indépendamment dans le même
+  // fichier, section C.1). La chaîne de provenance s'arrête à ce document interne : ne pas la
+  // présenter comme davantage sourcée qu'elle ne l'est.
+  //
+  // RÉSERVE : ×1,2 vaut pour un spectre gamma terrestre naturel typique (K-40, chaînes U/Th).
+  // Ce n'est PAS une constante universelle — un spectre différent (source ponctuelle, isotope
+  // unique, blindage) change le facteur H*(10)/Gy réel. Ne pas réutiliser cette valeur hors de
+  // ce contexte (gamma terrestre naturel) sans le revérifier.
   const CONVERSION_NGY_TO_NSV = 1.2; // H*(10) nSv/h ≈ dose absorbée air nGy/h × 1,2 (dépend du spectre)
   const terrestrial_nSv_h = terrestrial_nGy_h != null ? Math.round(terrestrial_nGy_h * CONVERSION_NGY_TO_NSV * 10) / 10 : null;
 
