@@ -10837,6 +10837,11 @@ async function saveContrib(){
     valeurPivot=Math.round(valeur*cInstr.units[unite].pivot*100)/100;
   }
   const csvStats=window._csvStats||null;
+  // Toute clé ajoutée ici est vérifiée contre le schéma Supabase vivant par
+  // tests/blindage-harness/schema-payload-guard.mjs (rapport seulement, pas
+  // requis — cf. INS-018, registre privé) : une clé sans colonne casse
+  // l'INSERT ENTIER, pas seulement le champ. Une nouvelle colonne demande une
+  // migration AVANT ce commit, pas après.
   const row={
     lat:ll.lat,lon:ll.lng,
     type:instrType,
@@ -14329,6 +14334,8 @@ async function capSubmitMeasurement(){
   if(btn){btn.disabled=true;btn.textContent=jt('cap_sending', 'Envoi…');}
   const note=(document.getElementById('cap-note')||{}).value||'';
   const m=window.capLastMeasurement;
+  // Même garde que saveContrib() ci-dessus (schema-payload-guard.mjs) : toute
+  // clé ajoutée ici doit avoir une colonne Supabase avant ce commit.
   const row={
     lat:window.capPosition.lat,
     lon:window.capPosition.lon,
