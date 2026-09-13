@@ -1,0 +1,221 @@
+-- 014_contributions_grant_explicite.sql
+-- NON APPLIQUÉE — décision Soleil requise avant exécution en production
+-- Préparée 2026-09-13, session Code (brief Soleil, en suite directe de la dette
+-- `CONTRIBUTIONS-GRANT-TABLE-REVOKE-COLONNE-INOPERANT-001`). Aucun REVOKE ni GRANT exécuté par
+-- cette session : ce fichier est écrit, pas joué. Même régime que 012/013.
+--
+-- POURQUOI
+-- `anon`/`authenticated` détiennent un GRANT SELECT au niveau TABLE ENTIÈRE sur
+-- `public.contributions` : les 36 colonnes sont aujourd'hui publiquement lisibles, y compris
+-- 20 qui ne sont écrites par aucun code servi et jamais relues par personne — dont `session_id`
+-- (voir callout dédié plus bas). Un REVOKE colonne isolé ne change rien tant que ce GRANT large
+-- reste en place (c'est très exactement ce qui a rendu inopérant le `REVOKE SELECT
+-- (native_capture)` de la migration 012 — cf. INS-020/dette citée ci-dessus). La seule correction
+-- qui fonctionne inverse le modèle : retirer le GRANT large, puis ré-accorder explicitement les
+-- seules colonnes dont un consommateur réel a besoin.
+--
+-- CORRECTION IMPORTANTE PAR RAPPORT À LA MIGRATION 012 : `native_capture` avait été exclu de la
+-- liste publique par hypothèse (aucune lecture identifiée à l'époque). Faux — Soleil l'a vérifié
+-- en direct (badge sur la carte, sur des lignes d'autrui) et le code le confirme (voir plus bas,
+-- `app.html:11047`). `native_capture` RESTE dans la liste publique de ce fichier.
+--
+-- PRÉALABLE VÉRIFIÉ AVANT D'ÉCRIRE CE FICHIER — BARRIÈRE DE PROPRIÉTÉ (le défaut qui a rendu
+-- 013_spatial_ref_sys_revoke_write.sql inopérant à l'application, cf. ce fichier) :
+--   * `pg_tables.tableowner` de `public.contributions` = `postgres`.
+--   * `information_schema.role_table_grants.grantor` : `postgres`, sur CHACUN des 7 privilèges
+--     actuels de `anon` ET `authenticated` sur cette table (SELECT compris) — vérifié ligne par
+--     ligne, pas supposé par analogie avec `spatial_ref_sys`.
+--   * `postgres` n'est pas superutilisateur (`rolsuper=false`, identique à `spatial_ref_sys`),
+--     MAIS ici `postgres` est à la fois PROPRIÉTAIRE de la table et AUTEUR de chacun des GRANT à
+--     retirer — les deux conditions qui, selon PostgreSQL, autorisent un REVOKE, indépendamment du
+--     statut superutilisateur. Rien ici ne ressemble à la situation `spatial_ref_sys`
+--     (propriétaire `supabase_admin`, grantor `supabase_admin`, `postgres` sans lien avec l'un ni
+--     l'autre — REVOKE silencieusement sans effet).
+--   * Conséquence : le REVOKE de ce fichier n'a PAS de raison structurelle d'échouer comme celui
+--     de la 013. Reste néanmoins à vérifier après application (section dédiée plus bas) — une
+--     vérification théorique n'est pas une application réussie.
+--
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- CONSTAT RÉ-ÉTABLI CONTRE LE CODE VIVANT (pas repris du chiffre précédent sans le confirmer)
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- Méthode : chaque site où `contribsDB` (le tableau des lignes chargées depuis
+-- `/rest/v1/contributions`, seul point d'entrée — `app.html:10451`) est consommé, tracé un par un
+-- (`grep contribsDB`, 12 occurrences, toutes lues) — pas seulement les fonctions de rendu
+-- évidentes. C'est ce balayage exhaustif qui a fait apparaître `id` (site le moins évident, voir
+-- ci-dessous) : une lecture partielle se serait arrêtée à 15 colonnes, pas 16.
+--
+-- AUTRE CONSOMMATEUR QUE `app.html` ? Vérifié, pas supposé :
+--   * Les 5 autres pages publiques du dépôt (methode-limites-transparence, guide-et-glossaire,
+--     cadre-scientifique, mairies, mentions-legales) mentionnent le mot « contributions » en
+--     prose éditoriale uniquement — 0 appel réseau vers la table dans les 5 (grep ciblé sur les
+--     motifs de fetch/requête, pas sur le mot).
+--   * Aucune vue Postgres publique ne référence `contributions`
+--     (`information_schema.views.view_definition ilike '%contributions%'` → 0 ligne).
+--   * `scripts/generer_etat.mjs` et `scripts/build_eaje_osm_corse.py` contiennent le mot
+--     « contributions » — l'un dans un commentaire à propos de `sbPost` (pas un accès), l'autre
+--     au sens de « contributions OpenStreetMap » (domaine crèches, sans rapport). Ni l'un ni
+--     l'autre n'interroge la table.
+--   * Aucun export CSV ni fonction de téléchargement des contributions n'existe dans `app.html`.
+--   → « app.html seul » est confirmé, pas juste repris.
+--
+-- LES 16 COLONNES RÉELLEMENT LUES (source : le code, pas un jugement sur les noms) :
+--   id                     — app.html:10908, dédoublonnage post-sauvegarde (`c.id===ligne.id`)
+--   lat, lon               — app.html:9348 (delta prédit/réel), 9794 (marqueur carte), 11065 (liste)
+--   type                   — app.html:9793 (tooltip carte), 10979 (computeContribTier), 11063 (liste)
+--   valeur, unite          — app.html:9348, 9793, 11049-11060 (formatage liste)
+--   unite_saisie           — app.html:11055, 11059 (mention « saisi en … » si différent de l'unité stockée)
+--   note                   — app.html:9793 (tooltip carte)
+--   igrf_nt, score_anomalie— app.html:9793 (tooltip carte) ; score_anomalie aussi 11066 (liste)
+--   kp, bz                 — app.html:9793 (tooltip carte)
+--   csv_stats              — app.html:10979 (tier), 11046 (badge 📊 liste)
+--   native_capture         — app.html:10979 (tier), 11047 (badge 📱 liste — CONFIRME Soleil)
+--   excluded_from_public   — app.html:11038 (garde défense-en-profondeur, filtre côté client)
+--   created_at             — app.html:11041-11042 (tri), 11064 (affichage date liste)
+--
+-- LES 20 COLONNES ÉCRITES, JAMAIS RELUES PAR AUCUN CODE SERVI (confirmé par le même balayage,
+-- absence — pas juste non trouvées faute de chercher) :
+--   airplane_mode_on, appareils_actifs, attenuation_prevue_db, bt_terme_inclus, contexte,
+--   delta_nt, densite_protons, etage, facteur_eau_nt, flux_protons, geo_nets, geo_netval,
+--   materiaux_murs, measurement_duration_s, no_metal_proximity, perturbation_humaine_nt,
+--   reseaux_actifs, session_id, usb_charging_off, version_app.
+--   Conséquence pour 3 d'entre elles (`airplane_mode_on`, `usb_charging_off`,
+--   `no_metal_proximity`) : la migration 012 les avait citées comme « déjà publiques, écart
+--   assumé avec native_capture ». Ce fichier ne les traite plus par exception nommée — elles
+--   sortent de la liste publique pour la même raison que les 17 autres : rien ne les lit.
+--
+-- CALLOUT SÉPARÉ — `session_id` (demandé explicitement, pas noyé dans la liste des 20) :
+-- Identifiant qui relie entre elles toutes les contributions d'un même appareil/session
+-- (`app.html:10871`, écrit à chaque soumission, jamais relu par aucun consommateur identifié
+-- ci-dessus). Aujourd'hui, publiquement lisible comme les 35 autres colonnes — n'importe qui
+-- peut, via l'API publique, reconstituer l'historique complet des contributions d'une même
+-- personne en filtrant sur cette valeur, sans qu'aucune page ne l'affiche ni ne le suggère.
+-- Ce fichier le retire de la lecture publique comme conséquence de la méthode (pas lu → pas dans
+-- la liste), pas comme une décision de confidentialité distincte prise ici — mais l'effet est
+-- le même, et mérite d'être su comme tel plutôt que noyé dans 20 colonnes de capteurs.
+--
+-- CONSTAT ADJACENT, NON TRAITÉ ICI (trouvé en vérifiant les droits, pas cherché pour lui-même —
+-- même statut que « REFERENCES et TRIGGER » dans 013) : `anon` ET `authenticated` détiennent
+-- aussi DELETE, UPDATE, TRUNCATE, REFERENCES, TRIGGER sur `public.contributions` (même famille
+-- que le constat `spatial_ref_sys`, mais ici sur la table de données primaire de l'application,
+-- pas une table système). Avant de le nommer comme risque actif, vérifié :
+--   * RLS est ACTIVÉE sur `contributions` (`relrowsecurity=true`) et seules deux policies
+--     existent : `INSERT` (« insertion publique validée », avec bornes lat/lon + rate-limit) et
+--     `SELECT` (« lecture publique », `NOT excluded_from_public`). AUCUNE policy UPDATE ni DELETE.
+--     En PostgreSQL, RLS activée sans policy pour une commande = refus par défaut pour cette
+--     commande, quel que soit le GRANT — UPDATE et DELETE sont donc déjà bloqués pour
+--     `anon`/`authenticated` en pratique, malgré le GRANT.
+--   * TRUNCATE n'est PAS gouverné par RLS (RLS ne s'applique qu'à SELECT/INSERT/UPDATE/DELETE) —
+--     seul le GRANT au niveau table protège contre un TRUNCATE. Aucun verbe HTTP PostgREST ne
+--     traduit vers TRUNCATE (même raisonnement que 013 pour REFERENCES/TRIGGER) : pas de chemin
+--     d'accès public identifié aujourd'hui, mais le GRANT lui-même reste la vraie frontière, pas
+--     l'absence de route HTTP qui l'emprunterait.
+--   * REFERENCES et TRIGGER : DDL, non exposés par PostgREST, même statut que 013.
+--   Résultat : rien d'urgent à corriger dans l'immédiat (RLS neutralise UPDATE/DELETE, TRUNCATE
+--   n'a pas de chemin HTTP connu), mais un nettoyage symétrique à celui de 013
+--   (`REVOKE INSERT sauf, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ... FROM anon,
+--   authenticated`, en gardant INSERT pour `saveContrib()`/`capSubmitMeasurement()`) serait
+--   cohérent si vous voulez l'arbitrer — pas préparé ici, hors périmètre de ce brief.
+--
+-- ─────────────────────────────────────────────────────────────────────────────────────────
+-- SQL — ne touche à aucun autre privilège (INSERT reste intact, saveContrib()/
+-- capSubmitMeasurement() continuent de fonctionner sans changement).
+-- ─────────────────────────────────────────────────────────────────────────────────────────
+
+revoke select on public.contributions from anon, authenticated;
+
+grant select (
+  bz,
+  created_at,
+  csv_stats,
+  excluded_from_public,
+  id,
+  igrf_nt,
+  kp,
+  lat,
+  lon,
+  native_capture,
+  note,
+  score_anomalie,
+  type,
+  unite,
+  unite_saisie,
+  valeur
+) on public.contributions to anon, authenticated;
+
+-- ROLLBACK — non exécuté, écrit avec la migration comme demandé. Restaure l'état d'origine
+-- (GRANT SELECT table entière), pas une liste de colonnes à deviner en sens inverse.
+--
+-- grant select on public.contributions to anon, authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- VÉRIFICATION APRÈS APPLICATION — écrite pour être lancée une fois la migration jouée, PAS
+-- lancée par cette session. Distinction couche SQL directe / couche PostgREST réelle maintenue
+-- explicitement (même piège que 42703 vs PGRST204, INS-018/019) : ne pas conclure d'un test SQL
+-- privilégié ce que seul le chemin client réel prouve.
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+--
+-- 1) Droits, connexion privilégiée :
+--      select column_name from information_schema.column_privileges
+--      where table_schema='public' and table_name='contributions'
+--        and grantee='anon' and privilege_type='SELECT' order by column_name;
+--    ATTENDU : exactement les 16 colonnes listées ci-dessus, ni plus ni moins (répéter pour
+--    `authenticated`).
+--
+-- 2) Contrôle positif — chemin client réel, clé anon publique :
+--      GET /rest/v1/contributions?select=*&excluded_from_public=eq.false&order=created_at.desc&limit=5
+--    ATTENDU : 200, chaque ligne ne porte que les 16 clés ci-dessus (pas les 20 autres, pas
+--    d'erreur).
+--
+-- 3) Contrôle positif fonctionnel — PAS un test API seul, un rechargement réel de la page
+--    publique : la carte affiche toujours les marqueurs de contributions existants (tooltip
+--    avec type/valeur/note/IGRF/score/Kp/Bz), et la liste latérale affiche toujours les badges
+--    📊 (csv_stats) et 📱 (native_capture) là où ils existaient avant la migration. Sans ce
+--    volet, un test API vert peut coexister avec un rendu cassé si le nom d'une colonne a été
+--    mal recopié dans la liste GRANT.
+--
+-- 4) Contrôle négatif — confirme que le retrait a un effet réel (pas un no-op comme la 012) :
+--    a) couche SQL directe, rôle changé (PAS une connexion privilégiée) :
+--         set role anon; select session_id from public.contributions limit 1; reset role;
+--       ATTENDU : erreur `42501 insufficient_privilege`.
+--    b) couche PostgREST réelle, clé anon publique :
+--         GET /rest/v1/contributions?select=session_id&limit=1
+--       ATTENDU : une erreur explicite, PAS un succès silencieux avec valeur `null`. Code exact
+--       à confirmer empiriquement au moment du test (vraisemblablement `PGRST204` — colonne
+--       absente du cache de schéma pour ce rôle — plutôt que le `42501` brut de (a), sur le même
+--       principe que la distinction déjà établie entre couche SQL et couche PostgREST ailleurs
+--       dans ce dépôt) : ne pas affirmer le code avant de l'avoir vu une fois.
+--
+-- 5) Écriture non affectée — confirme qu'aucun autre privilège n'a bougé :
+--      POST /rest/v1/contributions (clé anon publique, payload minimal valide) doit toujours
+--      réussir en 201, comme avant cette migration. Nettoyer la ligne de test par connexion
+--      privilégiée immédiatement après (anon n'a pas de policy DELETE, cf. constat adjacent
+--      ci-dessus — le nettoyage ne peut PAS se faire par le chemin anon).
+--
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- RISQUE À NOMMER — qu'est-ce qui casse si une colonne lue a été oubliée de la liste GRANT ?
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- PostgREST ne renvoie PAS `null` pour une colonne demandée mais non autorisée : elle est
+-- absente du cache de schéma pour ce rôle, donc absente de la clé elle-même dans l'objet JSON
+-- renvoyé (`select=*` ne peut pas réclamer ce qu'il ne voit pas). Côté client, `c.colonne_oubliee`
+-- vaut alors `undefined`, jamais une exception. Selon le style du test dans le code lecteur :
+--   * `c.champ===true` (badges 📊/📱) → le badge n'apparaît simplement jamais, aucune erreur
+--     console, rien à cliquer, rien qui alerte.
+--   * `c.champ||'—'` ou `c.champ!=null?...:'—'` (tooltip carte : IGRF, score, Kp, Bz) → affiche
+--     silencieusement le tiret d'absence, indiscernable d'une vraie valeur manquante en base.
+--   * `c.champ` utilisé sans garde dans un calcul (ex. `c.lat`/`c.lon` si l'un des deux avait été
+--     omis) → `L.marker([undefined, c.lon])` : le marqueur ne s'affiche pas du tout, silencieux
+--     aussi (Leaflet n'émet pas d'erreur bloquante pour une coordonnée invalide dans ce contexte).
+-- Dans les trois cas : AUCUNE erreur, AUCUN rouge CI, AUCUNE entrée console — le symptôme est une
+-- carte ou une liste visuellement appauvrie, pas un plantage. Comment s'en apercevrait-on : pas
+-- par un check automatique existant (aucun garde actuel ne compare colonnes lues vs colonnes
+-- GRANT-ées) — seulement par relecture manuelle de ce fichier contre le rendu réel après
+-- application (section 3 ci-dessus), ou par un futur outil symétrique à
+-- `tests/blindage-harness/schema-payload-guard.mjs` (qui compare déjà clés-payload vs
+-- colonnes-schéma à l'écriture) appliqué à la lecture : colonnes lues par `app.html` vs colonnes
+-- GRANT-ées. Proposé, non construit ici — hors périmètre de ce brief.
+--
+-- RÉSERVE NUMÉROTATION : `014` vérifié libre sur `origin/main` (fetch frais au moment d'écrire
+-- ce fichier ; `013_spatial_ref_sys_revoke_write.sql` déjà présent, préparé par une session
+-- parallèle le même jour, non appliqué non plus). `list_migrations` (ledger Supabase) ne
+-- correspond pas nom à nom aux fichiers locaux (précédent documenté, migration 008) — `014` reste
+-- le nom de fichier local correct, l'application réelle portera son propre horodatage Supabase.
