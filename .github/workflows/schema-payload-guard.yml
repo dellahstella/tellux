@@ -13,46 +13,43 @@ name: schema-payload-guard
 # porte la logique et son propre commentaire de tête, plus long — le lire
 # avant de modifier l'un ou l'autre.
 #
-# PAS REQUIS — ET C'EST DÉLIBÉRÉ, PAS UN OUBLI
+# STATUT AU 2026-09-13 — CANDIDAT AU REQUIS, PAS ENCORE REQUIS
 # -----------------------------------------------
-# `native_capture` est un défaut connu et encore ouvert : si ce check était
-# requis aujourd'hui, il serait rouge dès son premier run et bloquerait
-# `main` sur un défaut préexistant, pas sur une régression neuve — l'inverse
-# de ce qu'un check requis doit faire (cf. INS-007, ADR-067 : un check
-# conditionné par un état qui n'est pas encore vrai gèle plutôt que de
-# protéger). Il devient candidat au statut requis APRÈS la migration qui
-# ajoute la colonne manquante (Cran C, arbitrage Soleil) — pas avant, et pas
-# automatiquement à ce moment-là non plus : un nouvel arbitrage explicite.
+# Le défaut qui rendait ce check dangereux à requérir (`native_capture` sans
+# colonne, rouge dès le premier run sur un état préexistant, pas une
+# régression neuve) est résolu : migration 012 appliquée, colonne créée.
+# 8 runs consécutifs verts depuis (2026-09-13, 13:06 → 20:46 ; 3 runs rouges
+# juste avant, tous légitimes — le défaut réel avant sa correction, pas un
+# faux positif). La commande pour le rendre requis est préparée
+# (cf. brief « rendre le check requis », 2026-09-13) mais PAS exécutée ici :
+# modifier la protection de branche reste un arbitrage Soleil, jamais
+# auto-adopté par une session.
 #
 # ACCÈS AU SCHÉMA — NON PROVISIONNÉ ICI
 # -----------------------------------------
 # Le script a besoin de lire `information_schema.columns` sur le projet
 # Supabase, ce que ni la clé anon publique ni PostgREST par défaut ne
-# permettent. Il lit une variable `SUPABASE_MGMT_PAT` qui N'EXISTE PAS
-# aujourd'hui dans les secrets du dépôt — ce workflow, en son absence, saute
-# proprement (exit 0, message explicite dans le résumé du job) plutôt que
-# d'échouer ou de simuler un succès. Description de l'accès nécessaire dans
-# le corps de la PR qui introduit ce fichier — jamais dans ce commentaire, et
-# rien n'est demandé ni posé ici : arbitrage Soleil.
+# permettent. Il lit une variable `SUPABASE_MGMT_PAT` — provisionnée depuis
+# le 2026-09-13 (vérifié : runs `workflow_dispatch` avec lecture réelle du
+# schéma vivant, pas un skip). En son absence, le job sortirait proprement
+# (exit 0, message explicite) plutôt que d'échouer ou de simuler un succès —
+# comportement conservé si le secret venait à disparaître.
 #
-# PAS DE FILTRE `paths:` REQUIS ICI (à la différence de contrast-panels.yml)
+# FILTRE `paths:` RETIRÉ LE 2026-09-13 (présent à la création du fichier,
+# légitime tant que ce check n'était pas requis — cf. historique git)
 # ---------------------------------------------------------------------------
-# La leçon d'INS-007/ADR-067 (« pas de filtre paths sur un check REQUIS,
-# sinon PR gelée en pending indéfini ») ne s'applique qu'aux checks requis.
-# Celui-ci ne l'est pas : un filtre `paths:` ici ne peut geler aucune PR,
-# seulement éviter un run sans objet sur des PR qui ne touchent aucun site
-# de payload ni aucune migration.
+# INS-007/ADR-067 : un filtre `paths:` sur un check REQUIS laisse ~43 % des
+# PR sans déclenchement — GitHub attend indéfiniment un statut qui ne sera
+# jamais rapporté, PR gelée sans le moindre rouge. Ce check devenant
+# candidat au statut requis, le filtre part avec la même justification qui
+# l'avait posé : il ne s'appliquait qu'à un check non requis. Coût accepté :
+# des runs sans objet sur des PR qui ne touchent aucun site de payload ni
+# aucune migration — un run vert de plus, jamais un blocage.
 
 on:
   pull_request:
     branches:
       - main
-    paths:
-      - 'app.html'
-      - 'radon.html'
-      - '_migrations/**'
-      - 'tests/blindage-harness/schema-payload-guard.mjs'
-      - '.github/workflows/schema-payload-guard.yml'
   workflow_dispatch:
 
 concurrency:
