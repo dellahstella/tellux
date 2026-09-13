@@ -96,17 +96,26 @@ jobs:
           git push origin "$BRANCH"
           PR_URL=$(gh pr create --base main --head "$BRANCH" \
             --title "data: refresh mensuel antennes Corse ($COUNT_ANT antennes, $COUNT_COMM communes)" \
-            --body "Régénération automatique (workflow \`refresh-antennes\`) — pas de contenu applicatif nouveau, uniquement l'agrégat mensuel des antennes ANFR depuis Supabase \`antennas_corse\`. Auto-merge après CI verte (2 checks requis).")
+            --body "Régénération automatique (workflow \`refresh-antennes\`) — pas de contenu applicatif nouveau, uniquement l'agrégat mensuel des antennes ANFR depuis Supabase \`antennas_corse\`. Auto-merge après CI verte (3 checks requis).")
           echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
           echo "pr_number=$(basename "$PR_URL")" >> "$GITHUB_OUTPUT"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Approuver les workflows en attente, attendre les checks requis, merger
-        # Copie de l'etape validee par le brief C1 (intermagnet-cron.yml). Les runs
-        # `pull_request` de la PR bot (dont le check requis « Scan anti-fuite (lecture
-        # seule) ») restent en `action_required` : on les approuve pour qu'ils
-        # s'executent en contexte pull_request et entrent dans le statusCheckRollup.
-        # GitHub materialise ces suites gatees avec une latence variable (~2-4 min).
+        # Aligne sur intermagnet-cron.yml (brief "check requis + workflows bot alignes",
+        # 2026-09-13) -- cette etape etait restee a l'ancienne version (2 checks requis,
+        # pre-ADR-067) : `contrast-panels.yml` n'etait ni approuve ni attendu, alors que le
+        # plancher est passe a 3 checks requis le 2026-09-09. Sans ce correctif, le PROCHAIN
+        # run programme (cron mensuel, 1er du mois -- le dernier run date du 2026-09-01,
+        # avant ADR-067, donc jamais encore rejoue avec 3 checks requis) aurait timeout sur
+        # `gh pr checks --required --watch` en attendant un `contrast-panels` jamais
+        # materialise -- meme mecanisme que l'incident C1 (2026-08-28), sur ce workflow-ci,
+        # trouve avant qu'il ne se produise, pas apres.
+        #
+        # Les runs `pull_request` de la PR bot restent en `action_required` : on les
+        # approuve pour qu'ils s'executent en contexte pull_request et entrent dans le
+        # statusCheckRollup. GitHub materialise ces suites gatees avec une latence variable
+        # (jusqu'a ~4 min observees) -> boucle d'approbation longue avant l'attente finale.
         if: steps.diff.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -131,27 +140,46 @@ jobs:
               done
           }
 
-          leak_ok=false
+          materialise () {
+            # $1 = fichier workflow ; vrai des que son run le plus recent sur la branche
+            # est sorti du gate. "" / "null/null" = pas encore de run ;
+            # "completed/action_required" = gate non approuve ; tout le reste
+            # (in_progress/null, completed/success…) = run approuve et lance.
+            row=$(gh run list --branch "$BRANCH" --workflow="$1" --limit 1 \
+                  --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion)"' 2>/dev/null || true)
+            case "$row" in
+              ""|"null/null"|"completed/action_required") return 1 ;;
+              *) return 0 ;;
+            esac
+          }
+
+          # TROIS workflows a approuver (etait DEUX, perime depuis ADR-067 le 2026-09-09 --
+          # jamais corrige avant faute d'un run declenchant le cas, cf. commentaire
+          # ci-dessus). `schema-payload-guard.yml` ajoute a `approve_wf` SEUL (pas a la
+          # condition de sortie `materialise` : il n'est pas requis aujourd'hui, rien
+          # n'attend sa materialisation) -- meme raisonnement que intermagnet-cron.yml,
+          # prepare a l'avance plutot que de rejouer C1 une 3e fois le jour ou il le
+          # devient. La boucle ne sort que quand les checks actuellement requis
+          # (leak-guard, contrast-panels) sont tous materialises.
+          gha_ok=false
           for i in $(seq 1 48); do   # 48 * 5s = 4 min max d'attente de materialisation
             approve_wf leak-guard.yml
             approve_wf validate-code.yml
-            row=$(gh run list --branch "$BRANCH" --workflow=leak-guard.yml --limit 1 \
-                  --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion)"' 2>/dev/null || true)
-            # "" / "null/null" = pas encore de run ; "completed/action_required" = gate non approuve ;
-            # tout le reste (in_progress/null, completed/success…) = run approuve et lance
-            case "$row" in
-              ""|"null/null"|"completed/action_required") : ;;
-              *) leak_ok=true; break ;;
-            esac
+            approve_wf contrast-panels.yml
+            approve_wf schema-payload-guard.yml
+            if materialise leak-guard.yml && materialise contrast-panels.yml; then
+              gha_ok=true; break
+            fi
             sleep 5
           done
-          if [ "$leak_ok" != "true" ]; then
-            echo "::warning::Scan anti-fuite pas declenche sur PR #$PR apres 4 min — laissee ouverte (prochain cron reessaie)."
+          if [ "$gha_ok" != "true" ]; then
+            echo "::warning::Workflows des checks requis pas tous declenches sur PR #$PR apres 4 min (leak-guard et/ou contrast-panels) — laissee ouverte. Pas un retry sur CETTE PR : le prochain run fermera celle-ci (perimee) et en ouvrira une neuve si les donnees ont encore change."
             exit 0
           fi
 
-          # Attente des 2 checks requis (Cloudflare Pages + Scan anti-fuite), pas les
-          # informatifs. Timeout 5 min avant abandon (PR laissee ouverte, pas de merge force).
+          # Attente des 3 checks requis (Cloudflare Pages + Scan anti-fuite + Contraste
+          # panneaux), pas les informatifs. Timeout 5 min avant abandon (PR laissee
+          # ouverte, pas de merge force).
           if timeout 300 gh pr checks "$PR" --required --watch --interval 15; then
             gh pr merge "$PR" --squash --delete-branch
           else
