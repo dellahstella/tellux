@@ -164,6 +164,7 @@ tests/blindage-harness/
 ├── non-regression.mjs     # boucle de comparaison sur la fixture
 ├── playground.mjs         # exemples WS2 (RF résiduels + sensibilité)
 ├── perimetre-reprise.mjs  # mesure : lecteurs réseau captifs du boot (analyse statique)
+├── perimetre-reprise-couples.mjs  # extension : détaille par couple (ressource, consommateur)
 └── README.md              # ce fichier
 ```
 
@@ -190,6 +191,30 @@ fichier, chacun avec le sens dans lequel il fausse le compte.
 - **Aucune modification de `app.html`** ni des constantes `GELE-001` / `NCRP-001`.
 - **`node_modules/` gitignoré** (cf. `.gitignore` ligne 43, pattern relatif).
 - **Le harness lance un serveur HTTP statique local** (Node `http`, racine du repo) pour servir `app.html` au navigateur Chromium. Désactivable en passant `url: 'https://tellux.pages.dev/app.html'`.
+
+### `perimetre-reprise-couples.mjs` — extension par couple, pas par fonction
+
+```bash
+node tests/blindage-harness/perimetre-reprise-couples.mjs
+```
+
+`perimetre-reprise.mjs` répond « combien de fonctions restent captives ». Cette question
+n'est pas celle qui gouverne l'adoption : une fonction peut toucher plusieurs ressources
+distinctes (chacune un couple de travail restant), et une même ressource peut avoir un
+consommateur couvert et un autre qui l'appelle en direct hors de l'assistant. Ce script
+réutilise le graphe d'appels du parent sans le modifier et détaille, pour chaque captif, ses
+ressources directes et transitives (1 niveau) — puis imprime un compte corrigé de deux biais
+**nommément déclarés dans son en-tête**, jamais appliqués en silence :
+
+- un aiguilleur argument-dépendant (`tog(id,…)`) fait paraître réseau des chemins qui ne le
+  sont pas pour l'argument réellement passé — 5 noms connus, vérifiés à la main le
+  2026-09-14 ;
+- la transitivité bornée à 1 niveau sous-compte un intermédiaire qui touche lui-même 2
+  ressources — 2 noms connus (`myPlaceAnalyze`), même date.
+
+Sort toujours 0, comme son parent. Origine : brief S2 « couples captifs », 2026-09-14 — cf.
+`INS-022` (registre d'instruments, dépôt privé) pour la dérivation complète et les chiffres
+17/37/28/25/10 qui ont circulé avant celui-ci.
 
 ---
 
