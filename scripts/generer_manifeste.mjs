@@ -267,18 +267,21 @@ async function main() {
     if (r.statut !== 'OK') s(`INDISPONIBLE (${r.raison}).`);
     else {
       const entrees = [...r.contenu.matchAll(/^###\s+([A-Z0-9-]+)\s+—.*$/gm)];
-      // Trouvé en relisant la sortie du premier essai : le registre a grossi par étapes
-      // (220 entrées) et seule une minorité récente porte le label structuré `**Statut** :` —
-      // les autres n'en ont aucun, pas un « ? » à deviner. 220 entrées dépasse de toute façon
-      // « deux pages » (contrainte du brief) : renvoi à la source plutôt qu'énumération.
+      // Palier 1 de INS-028 (2026-09-14, corrigé le jour même de la première génération) : le
+      // premier essai ne reconnaissait que `**Statut**` + `:` HORS gras (21/213), et affirmait
+      // 192 entrées « sans statut structuré ». Mesure exécutée (git blame + classement par
+      // étiquette exacte, cf. INS-028) : 104 des 192 portent en réalité `**Statut :**` — les
+      // DEUX-POINTS DANS le gras, MÊME CHAMP, seule la ponctuation du gras diffère. Le défaut
+      // était dans CE LECTEUR, pas dans le registre. Vrai compte structuré : 125/213 ; seules
+      // 88 entrées n'ont structurellement aucun champ Statut, sous quelque forme que ce soit.
       let structurees = 0, hautes = [];
       for (const m of entrees) {
         const suite = r.contenu.slice(m.index + m[0].length, m.index + m[0].length + 400);
-        const st = suite.match(/\*\*Statut\*\*\s*:\s*([^\n·]+)/);
+        const st = /\*\*Statut\*\*\s*:|\*\*Statut\s*:\*\*/.test(suite);
         if (st) structurees++;
         if (/priorit[ée]\s+HAUTE/i.test(suite)) hautes.push(`\`${m[1]}\``);
       }
-      s(`**${entrees.length} entrées** dans le registre (\`docs/internal/DETTES_TECHNIQUES.md\`, dépôt privé) — trop pour tenir ici, volontairement non énumérées (cf. contrainte de longueur). **${structurees}/${entrees.length}** portent un statut structuré (\`**Statut** :\`) ; les autres (format plus ancien) n'ont pas de statut extrait automatiquement — ce n'est pas une absence constatée, c'est un format non lu par ce script.`);
+      s(`**${entrees.length} entrées** dans le registre (\`docs/internal/DETTES_TECHNIQUES.md\`, dépôt privé) — trop pour tenir ici, volontairement non énumérées (cf. contrainte de longueur). **${structurees}/${entrees.length}** portent un statut structuré (\`**Statut** :\` ou \`**Statut :**\` — les deux formes reconnues, même champ, cf. INS-028) ; les ${entrees.length - structurees} autres n'ont structurellement aucun champ Statut — pas une forme non lue, une absence réelle.`);
       if (hautes.length) s('', `**Priorité HAUTE explicite (${hautes.length})** : ${hautes.join(', ')}.`);
       s('', '<sub>`grep -c \'^### \' docs/internal/DETTES_TECHNIQUES.md` pour le compte ; lire le fichier pour le détail — jamais recopié ici</sub>');
     }
