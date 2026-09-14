@@ -6321,7 +6321,20 @@ function showCrustalGauge(show){
     d.style.display='block';
     _crustalGaugeUpdater=()=>updateCrustalGauge();
     map.on('moveend',_crustalGaugeUpdater);
-    updateCrustalGauge();
+    // Adoption reprise, lot 2 (2026-09-15) — EXCLUE au lot 1, reconsidérée ici : l'exclusion
+    // reposait sur un risque réel avec le patron alors envisagé (router TOUS les appels par
+    // l'assistant), pas avec CELUI-CI. Seul CET appel d'ouverture passe par l'assistant — les
+    // appels déclenchés par map.on('moveend',...) restent des appels directs inchangés, jamais
+    // bloqués par un enVol/minuteur d'une position différente. 'idle' passe aussi par declenche()
+    // (sans quoi, sans déclenchement au boot, un premier échec ne serait jamais tracé comme
+    // 'error' — trouvé en testant, cf. même correctif sur openrad/foretouverte/landemaquis/
+    // gammajrc). Seul l'état 'ok' (panneau déjà ouvert avec succès) tombe dans l'appel direct
+    // ci-dessous, inchangé : une ré-ouverture reste immédiate, jamais retardée par un plancher.
+    const _etatEmag2 = (typeof reprisesEtat === 'function') ? reprisesEtat('emag2') : 'idle';
+    if (_etatEmag2 === 'idle') declenche('emag2', 'clic');
+    else if (_etatEmag2 === 'abandoned') repriseManuelle('emag2');
+    else if (_etatEmag2 === 'error') reveille('emag2', 'clic');
+    else updateCrustalGauge();
   }else{
     if(!_crustalGaugeUpdater){d.style.display='none';d.innerHTML='';return;}
     map.off('moveend',_crustalGaugeUpdater);
@@ -8991,8 +9004,19 @@ let _radonGeojsonCache = null;
 // ═══ OpenRadiation — mesures citoyennes gamma/X (couche d'affichage indépendante, ODbL) ═══
 // Points bruts, rayon + opacité réduits (couverture / traces), rendu canvas (2000+ points).
 // AUCUNE injection dans un calcul ; ne recale ni le modèle ni les bornes gamma. Gamma/X, pas radon.
+// Adoption reprise, lot 2 (2026-09-15) — SANS déclenchement au boot (couche de contexte,
+// jamais préchargée), le premier appel ('idle') doit lui-même passer par declenche() pour que
+// l'état existe — sans quoi un premier échec ne serait jamais tracé comme 'error' et le
+// backoff ne s'armerait jamais (trouvé en TESTANT, pas en lisant : le premier essai laissait
+// l'état à 'idle' pour toujours). declenche() rappelle cette même fonction — sûr : au rappel,
+// l'état vaut déjà 'pending' (posé par declenche AVANT l'appel), donc ce bloc est traversé sans
+// le reprendre, et le corps réel s'exécute une seule fois.
 async function loadOpenRad(){
   if(lOpenRad.getLayers().length > 0) return;
+  const _etatOpenrad = (typeof reprisesEtat === 'function') ? reprisesEtat('openrad') : 'idle';
+  if (_etatOpenrad === 'idle') { return declenche('openrad', 'clic'); }
+  if (_etatOpenrad === 'abandoned') { return repriseManuelle('openrad'); }
+  if (_etatOpenrad === 'error') { return reveille('openrad', 'clic'); }
   try {
     var r = await fetch('public/data/openradiation_gamma_corse.geojson', {signal: AbortSignal.timeout(8000)});
     if(!r.ok) throw new Error('HTTP ' + r.status);
@@ -11966,7 +11990,14 @@ function _syncForetDenseZoom(fromToggle){
 // Le simple test getLayers().length===0 au site d'appel (tog()) reste inchangé et suffisant une
 // fois ce cache posé : un appel concurrent renvoie la MÊME promesse en vol au lieu d'en relancer une.
 let _foretOuverteLoadPromise = null;
+// Adoption reprise, lot 2 (2026-09-15) — même patron que loadBT/loadProd (lot 1) : n'intervient
+// que sur 'error'/'abandoned', hérite du backoff sans casser le partage de _foretOuverteLoadPromise
+// (le cas 'idle'/'pending' tombe dans le comportement inchangé ci-dessous).
 function loadForetOuverte(){
+  const _etatFo = (typeof reprisesEtat === 'function') ? reprisesEtat('foretouverte') : 'idle';
+  if (_etatFo === 'idle') return declenche('foretouverte', 'clic');
+  if (_etatFo === 'abandoned') return repriseManuelle('foretouverte');
+  if (_etatFo === 'error') return reveille('foretouverte', 'clic');
   if (_foretOuverteLoadPromise) return _foretOuverteLoadPromise;
   _foretOuverteLoadPromise = fetch('public/data/foret_ouverte_corse.geojson', {signal: AbortSignal.timeout(8000)})
     .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
@@ -12000,7 +12031,12 @@ function _syncForetOuverteZoom(fromToggle){
 }
 // _landeMaquisLoadPromise : même fix, même rationale que _foretOuverteLoadPromise ci-dessus.
 let _landeMaquisLoadPromise = null;
+// Adoption reprise, lot 2 (2026-09-15) — même patron que loadForetOuverte ci-dessus.
 function loadLandeMaquis(){
+  const _etatLm = (typeof reprisesEtat === 'function') ? reprisesEtat('landemaquis') : 'idle';
+  if (_etatLm === 'idle') return declenche('landemaquis', 'clic');
+  if (_etatLm === 'abandoned') return repriseManuelle('landemaquis');
+  if (_etatLm === 'error') return reveille('landemaquis', 'clic');
   if (_landeMaquisLoadPromise) return _landeMaquisLoadPromise;
   _landeMaquisLoadPromise = fetch('public/data/lande_maquis_corse.geojson', {signal: AbortSignal.timeout(8000)})
     .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
@@ -12076,7 +12112,12 @@ function gammaJrcColor(v){
   return GAMMA_JRC_COLOR_STOPS[GAMMA_JRC_COLOR_STOPS.length-1].color;
 }
 let _gammaJRCLoadPromise=null;
+// Adoption reprise, lot 2 (2026-09-15) — même patron que loadForetOuverte/loadLandeMaquis.
 function loadGammaJRC(){
+  const _etatGjrc = (typeof reprisesEtat === 'function') ? reprisesEtat('gammajrc') : 'idle';
+  if (_etatGjrc === 'idle') return declenche('gammajrc', 'clic');
+  if (_etatGjrc === 'abandoned') return repriseManuelle('gammajrc');
+  if (_etatGjrc === 'error') return reveille('gammajrc', 'clic');
   if(_gammaJRCLoadPromise) return _gammaJRCLoadPromise;
   _gammaJRCLoadPromise=fetch('public/data/gamma_jrc_corse.geojson',{signal:AbortSignal.timeout(8000)})
     .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
@@ -12148,7 +12189,23 @@ function activateExpertMode() {
   // ci-dessus vient de dégrader proprement sur « — » (WMM_INDEX encore null, même court-circuit
   // que d'habitude) ; loadWMMGrid() rafraîchira elle-même l'affichage à sa résolution (cf. son
   // propre commentaire). Gardée par `!WMM_GRID` pour ne fetcher qu'une fois par session.
-  if (!WMM_GRID) loadWMMGrid();
+  // Adoption reprise, lot 2 (2026-09-15) — TRAITÉ PAR RESSOURCE ('wmmgrid'), pas par
+  // consommateur : openExpertMode() et confirmExpertMode() appellent toutes deux
+  // activateExpertMode(), qui est le SEUL point qui décide de fetcher — une adoption ici
+  // couvre les 4 consommateurs nommés (loadWMMGrid, activateExpertMode, openExpertMode,
+  // confirmExpertMode) sans rien répéter. 'idle' passe par declenche() (sans déclenchement au
+  // boot, un premier échec ne serait jamais tracé comme 'error' — trouvé en testant, cf. même
+  // correctif sur openrad/foretouverte/landemaquis/gammajrc/emag2). Seul l'état 'ok' (déjà
+  // chargée) tombe dans l'appel direct ci-dessous, inchangé — 'pending' aussi : loadWMMGrid()
+  // n'a pas de mémoïsation propre, un second appel pendant un premier en vol la duplique déjà
+  // AVANT ce lot (pré-existant, non aggravé ici, hors périmètre de ce correctif).
+  if (!WMM_GRID) {
+    const _etatWmm = (typeof reprisesEtat === 'function') ? reprisesEtat('wmmgrid') : 'idle';
+    if (_etatWmm === 'idle') declenche('wmmgrid', 'clic');
+    else if (_etatWmm === 'abandoned') repriseManuelle('wmmgrid');
+    else if (_etatWmm === 'error') reveille('wmmgrid', 'clic');
+    else loadWMMGrid();
+  }
 }
 
 function closeExpertMode() {
@@ -12904,6 +12961,52 @@ if(typeof loadAnt==='function'){
   enregistrerReprise('ant', loadAnt, {
     classe: 'contexte',
     verifie: () => ANFR_ONSHORE_COUNT !== null && ANFR_ONSHORE_COUNT > 0
+  });
+}
+// REPRISE — lot 2 (2026-09-15). Six couples supplémentaires, tous classe 'contexte' (couches
+// visuelles/diagnostiques, aucun n'alimente le composite — vérifié à la source pour chacun avant
+// d'écrire : wmmgrid n'est lu que par updateIgrfWmmDiff(), elle-même gardée par _expertActive
+// (Mode Expert seul) ; emag2 porte son propre texte « non intégré au score Tellux » ;
+// openrad/foretouverte/landemaquis/gammajrc sont des couches de contexte déjà étiquetées comme
+// telles ailleurs dans ce fichier). Trigger inchangé pour les six : premier clic sur la couche
+// (ou première ouverture du panneau pour emag2/wmmgrid), jamais de préchargement au boot — ce
+// lot adopte la politique de reprise, il ne change pas QUAND le chargement a lieu.
+if (typeof loadOpenRad === 'function') {
+  enregistrerReprise('openrad', loadOpenRad, {
+    classe: 'contexte',
+    verifie: () => lOpenRad.getLayers().length > 0
+  });
+}
+if (typeof loadForetOuverte === 'function') {
+  enregistrerReprise('foretouverte', loadForetOuverte, {
+    classe: 'contexte',
+    verifie: () => lForetOuverte.getLayers().length > 0
+  });
+}
+if (typeof loadLandeMaquis === 'function') {
+  enregistrerReprise('landemaquis', loadLandeMaquis, {
+    classe: 'contexte',
+    verifie: () => lLandeMaquis.getLayers().length > 0
+  });
+}
+if (typeof loadGammaJRC === 'function') {
+  enregistrerReprise('gammajrc', loadGammaJRC, {
+    classe: 'contexte',
+    verifie: () => lGammaJRC.getLayers().length > 0
+  });
+}
+if (typeof loadWMMGrid === 'function') {
+  enregistrerReprise('wmmgrid', loadWMMGrid, {
+    classe: 'contexte',
+    verifie: () => !!WMM_GRID
+  });
+}
+// emag2 — EXCLUE au lot 1, reconsidérée ici : cf. commentaire à showCrustalGauge() (seul
+// l'appel d'ouverture du panneau passe par l'assistant, jamais les appels moveend).
+if (typeof updateCrustalGauge === 'function') {
+  enregistrerReprise('emag2', updateCrustalGauge, {
+    classe: 'contexte',
+    verifie: () => !_emag2ServiceDown
   });
 }
 // buildHotRF() au boot (au lieu de buildHot()) — RF activé par défaut (ACTIVE.hotrf=true).
