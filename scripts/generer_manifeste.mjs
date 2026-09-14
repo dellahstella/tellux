@@ -104,8 +104,13 @@ const echec = (r) => r.status ? `HTTP ${r.status}` : r.erreur;
 const DEPOT = ARGS.depot;
 const PROD = (ARGS.prod || 'https://tellux.pages.dev').replace(/\/+$/, '');
 
-// ─── lecture d'un fichier tracké sur origin/main d'un dépôt local, sans jamais imprimer son chemin ───
-// Même principe que R1 de generer_etat.mjs. `quel` sert uniquement aux messages d'erreur (jamais le chemin réel).
+// ─── lecture d'un fichier tracké sur origin/main d'un dépôt local, sans jamais imprimer racineLocale ───
+// Même principe que R1 de generer_etat.mjs : c'est racineLocale (le clone local fourni par --prive,
+// donc potentiellement le nom du dépôt privé) qui n'est jamais imprimé — PAS cheminRelatif, le chemin
+// RELATIF À L'INTÉRIEUR de ce dépôt (ex. docs/internal/DECISIONS.md), qui n'a rien de confidentiel en
+// lui-même : §6 l'imprime déjà pour DETTES_TECHNIQUES.md sans que ça expose quoi que ce soit. Les deux
+// ne se protègent pas de la même chose ; ne pas les confondre a produit l'incohérence §1/§6 constatée
+// le 2026-09-14 — corrigée en alignant §1 sur ce que fait déjà §6.
 function lireTrackeSurMain(racineLocale, cheminRelatif, quel) {
   if (!racineLocale) return { statut: 'INDISPONIBLE', raison: `${quel} : aucun chemin fourni (--prive)` };
   const ref = 'origin/main';
@@ -160,7 +165,7 @@ async function main() {
       const nums = [...r.contenu.matchAll(motif)].map((m) => +m[1]);
       const dernier = nums.length ? Math.max(...nums) : null;
       s(dernier !== null
-        ? `- **Dernier ${label} mergé** : **${label}-${String(dernier).padStart(3, '0')}** (registre à \`${r.modif || '?'}\` sur \`origin/main\` du dépôt privé). <sub>lecture git tracée, chemin non imprimé</sub>`
+        ? `- **Dernier ${label} mergé** : **${label}-${String(dernier).padStart(3, '0')}** (\`${fichier}\`, dépôt privé — modifié \`${r.modif || '?'}\` sur \`origin/main\`). <sub>\`git show origin/main:${fichier}\` sur le dépôt privé</sub>`
         : `- **Dernier ${label} mergé** : aucune entrée \`${label}-NNN\` trouvée.`);
     }
   } else s('- **Dernier ADR / INS mergés** : INDISPONIBLE — `--prive` non fourni.');
