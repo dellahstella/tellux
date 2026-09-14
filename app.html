@@ -4144,6 +4144,49 @@ async function fetchAltitudeIGN(lat, lon) {
 const TLX_RM_QUERY = (typeof window !== 'undefined' && window.matchMedia) ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
 function tlxReduceMotion(){ return !!(TLX_RM_QUERY && TLX_RM_QUERY.matches); }
 const map=L.map('map',{maxZoom:20, zoomAnimation:!tlxReduceMotion(), fadeAnimation:!tlxReduceMotion(), markerZoomAnimation:!tlxReduceMotion()}).setView([42.0,9.0],8);
+// Neutralise mouseover/mouseout sur les tooltips Leaflet en tactile (brief S2, hypothèse
+// confirmée par Soleil sur appareil réel — Internet Android —, 2026-09-14) : un tap y synthétise
+// un mouseover sans mouseout fiable. Confirmé sur la source Leaflet 1.9.4 elle-même
+// (src/layer/Tooltip.js, _initTooltipInteractions) : un tooltip non permanent lie mouseover ET
+// click au même _openTooltip, et mouseout à closeTooltip — le clic est donc déjà une ouverture
+// fiable, seul le couple mouseover/mouseout ne l'est pas sur tactile. On retire ce couple pour
+// ces couches et on ferme explicitement au tap suivant ailleurs sur la carte.
+// stopPropagation défensif dans le handler de clic ci-dessous : un clic marker ne doit pas aussi
+// déclencher map.on('click',...) (popup de mesure, plus bas dans ce fichier) — la session du
+// 2026-09-13 avait déjà testé et réfuté cette remontée pour ce Leaflet 1.9.4 (PR #1430,
+// hypothèse (b)), non re-vérifié ici (Browser pane hors écran pendant cette session, map à
+// taille 0 dans cet environnement) ; la garde ne coûte rien si la remontée n'a jamais lieu.
+// Sans effet sur le survol desktop : IS_TOUCH_DEVICE est calculé une fois, false sur un poste
+// sans tactile, et le mouseover natif reste intact dans ce cas (retour anticipé ci-dessous).
+// Détection par média-feature (hover/pointer), PAS par capacité tactile brute
+// (ontouchstart/maxTouchPoints) : testé en direct pendant cette session, le navigateur
+// d'automatisation utilisé pour vérifier ce correctif rapporte lui-même maxTouchPoints=10
+// (matériel hôte tactile-capable) tout en étant piloté à la souris — un faux positif réel,
+// pas théorique, qui aurait fait passer ce poste de test en mode tactile à tort. Un vrai
+// hybride tactile+souris (portable Windows à écran tactile) tomberait dans le même piège
+// avec l'ancienne détection. `(hover:none) and (pointer:coarse)` interroge le moyen de
+// pointage PRINCIPAL plutôt que le matériel disponible : false ici (vérifié), comme sur un
+// poste desktop réel ; true sur un téléphone. Repli sur l'ancienne détection uniquement si
+// matchMedia est absent (navigateur trop ancien pour connaître hover/pointer).
+const IS_TOUCH_DEVICE = window.matchMedia
+  ? window.matchMedia('(hover: none) and (pointer: coarse)').matches
+  : (('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
+let _tooltipTactileOuvert = null;
+function armerTooltipTactile(layer){
+  if (!IS_TOUCH_DEVICE) return layer;
+  layer.off('mouseover'); layer.off('mouseout');
+  layer.on('click', function(e){
+    if (_tooltipTactileOuvert && _tooltipTactileOuvert !== layer) _tooltipTactileOuvert.closeTooltip();
+    _tooltipTactileOuvert = layer;
+    if (e && e.originalEvent) L.DomEvent.stopPropagation(e);
+  });
+  return layer;
+}
+if (IS_TOUCH_DEVICE) {
+  map.on('click', function(){
+    if (_tooltipTactileOuvert) { _tooltipTactileOuvert.closeTooltip(); _tooltipTactileOuvert = null; }
+  });
+}
 // rnd-005 — réactivité mid-session : si la préférence OS change en cours de session, re-synchroniser
 // les options d'animation de la carte. Les pans explicites (panBy/panTo/setView) lisent déjà
 // tlxReduceMotion() à l'appel, donc déjà réactifs ; seules les options init de la carte doivent l'être.
@@ -10030,7 +10073,7 @@ function addMarker(c){
   // suite de PR #1233 (revue adversariale) : la correction en base (Kp=0/Bz=0 désormais stockés)
   // était sans effet visible tant que ce lecteur les masquait encore derrière '—' comme absents.
   var html='<span class="tag" style="background:#f0e8ff;color:#5c3a9b;border:0.5px solid #9b72d4">DB</span><b>'+c.type+'</b>'+(c.valeur?' — '+c.valeur+' '+(c.unite||'nT'):'')+(c.note?'<br><i style="font-size:11px;color:var(--tx3)">'+c.note+'</i>':'')+'<br><span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">IGRF:'+(c.igrf_nt||'—')+'nT · score:'+(c.score_anomalie||'—')+' · Kp:'+(c.kp!=null?c.kp:'—')+' · Bz:'+(c.bz!=null?c.bz:'—')+'nT</span>';
-  L.marker([c.lat,c.lon],{icon:mkIcon('#5c3a9b',false,11),zIndexOffset:200}).bindTooltip(html,{sticky:true}).addTo(lCon);
+  armerTooltipTactile(L.marker([c.lat,c.lon],{icon:mkIcon('#5c3a9b',false,11),zIndexOffset:200}).bindTooltip(html,{sticky:true})).addTo(lCon);
 }
 
 // ── ANFR ANTENNES CORSE — loader Supabase + émetteurs radio/TV majeurs ──
@@ -10400,7 +10443,7 @@ async function loadAnt(){try{
       // n'avait pas. GC.default est la teinte de la bulle de grappe de cette même couche : en
       // zoomant, la bulle se scinde en marqueurs qui gardent son ton — la couche cesse de changer
       // de langage entre les deux échelles. La variable `gen` disparaît avec son dernier usage.
-      L.marker([f.lat,f.lon],{icon:mkIcon(GC.default,false,9),zIndexOffset:100}).bindTooltip(_antTooltipHtml(parPosition.get(posKey),f),{sticky:true,className:'tlx-ant-tt'}).addTo(lAntCluster);
+      armerTooltipTactile(L.marker([f.lat,f.lon],{icon:mkIcon(GC.default,false,9),zIndexOffset:100}).bindTooltip(_antTooltipHtml(parPosition.get(posKey),f),{sticky:true,className:'tlx-ant-tt'})).addTo(lAntCluster);
       ANTENNES_LOCATIONS.push({lat:f.lat,lon:f.lon}); // fiche « Mon lieu » — agrégat pur, une entrée par position distincte (miroir des marqueurs)
       seenPos.add(posKey);
     }
@@ -11616,8 +11659,8 @@ async function loadProd(){
     const size=s.puissance>50?12:s.puissance>10?9:7;
     const popup='<b>'+s.nom+'</b> \u00b7 '+s.commune+'<br><span style="color:'+color+';font-weight:500">'+jt(PROD_TYPE_KEYS[s.type],s.type)+'</span><br>'+jt('prod_puissance_label','Puissance: ')+'<b>'+s.puissance+' MW</b>'+(s.exploitant?'<br>'+s.exploitant:'');
     // Sticky tooltip au survol — même harmonisation que loadAnt() (bug confirmé, session 2026-08-19).
-    L.marker([s.lat,s.lon],{icon:mkIcon(color,true,size),zIndexOffset:120})
-      .bindTooltip(popup,{sticky:true}).addTo(lProd);
+    armerTooltipTactile(L.marker([s.lat,s.lon],{icon:mkIcon(color,true,size),zIndexOffset:120})
+      .bindTooltip(popup,{sticky:true})).addTo(lProd);
   });
 }
 
@@ -11726,8 +11769,8 @@ async function loadReseau(){
       if(!pts||pts.length<2) return;
       // Sticky tooltip — aligné sur le fallback OSM plus bas dans cette même fonction
       // (qui utilisait déjà bindTooltip) et sur le pattern harmonisé loadAnt/loadProd/loadBT.
-      L.polyline(pts,{color:'#b85c00',weight:1.2,opacity:0.65,dashArray:'3 2'})
-        .bindTooltip(jt('line_hta_aerien', 'Ligne HTA aérienne · EDF SEI open data'),{sticky:true}).addTo(lRes);
+      armerTooltipTactile(L.polyline(pts,{color:'#b85c00',weight:1.2,opacity:0.65,dashArray:'3 2'})
+        .bindTooltip(jt('line_hta_aerien', 'Ligne HTA aérienne · EDF SEI open data'),{sticky:true})).addTo(lRes);
     });
     setStatus(jt('hta_lignes_prefix','HTA: ')+all.length+jt('hta_lignes_suffix',' lignes'));
     console.log('✅ HTA:',all.length,'lignes');
@@ -11774,8 +11817,8 @@ async function loadReseau(){
         const v=parseInt(way.tags?.voltage)||0;if(v<10000)return;
         const pts=way.geometry.map(p=>[p.lat,p.lon]);
         const color=v>=50000?'#5c2000':'#b85c00';
-        L.polyline(pts,{color,weight:v>=50000?2:1.5,opacity:.7,dashArray:v>=50000?null:'4 3'})
-          .bindTooltip((v>=50000?'HTB ':'HTA ')+v/1000+'kV',{sticky:true}).addTo(lRes);n++;
+        armerTooltipTactile(L.polyline(pts,{color,weight:v>=50000?2:1.5,opacity:.7,dashArray:v>=50000?null:'4 3'})
+          .bindTooltip((v>=50000?'HTB ':'HTA ')+v/1000+'kV',{sticky:true})).addTo(lRes);n++;
       });
       if(n>0){setStatus(jt('reseau_osm_prefix', '⚠ Secours OSM (Supabase indisponible) : ')+n+jt('reseau_osm_suffix', ' lignes — couverture communautaire partielle'),true);return;}
     }catch(e2){}
@@ -13681,8 +13724,8 @@ function _renderPostesSources() {
       iconSize: [size+4, size+4]
     });
     const tensionTxt = (ps.tension_kV || []).join('/') + ' kV';
-    L.marker([ps.lat, ps.lon], {icon})
-      .bindTooltip('<b>Poste source : '+ps.nom+'</b><br>'+tensionTxt+(ps.operateur?' · '+ps.operateur:''),{sticky:true})
+    armerTooltipTactile(L.marker([ps.lat, ps.lon], {icon})
+      .bindTooltip('<b>Poste source : '+ps.nom+'</b><br>'+tensionTxt+(ps.operateur?' · '+ps.operateur:''),{sticky:true}))
       .addTo(lPostesSources);
   });
 }
