@@ -44,17 +44,17 @@ Des démarches sont en cours pour l'accès à d'autres données institutionnelle
 
 ## Architecture
 
-Tellux est aujourd'hui structuré autour d'une application principale publique :
+Tellux est aujourd'hui structuré autour de plusieurs applications publiques et d'une documentation partagée :
 
 - `index.html` — landing publique
 - `app.html` — application cartographie EM (publique, mise en avant), avec sélecteur de domaines physiques (chips de filtre Tous / Statique / ELF / RF / Ionisant) et badges temps réel dans le panneau Conditions (Kp, Réseau, Live Supabase, Orage)
+- `patrimoine.html` — seconde application : patrimoine corse cartographié et documenté (publique, bêta, distincte de la couche EM)
+- `radon.html` — troisième application : potentiel radon (publique, distincte de la couche EM)
 - `mairies.html` — outils communaux (fiche commune, modèles de courriers, cadre légal)
 - `cadre-scientifique.html` — démarche scientifique (architecture du modèle, formules, pondérations, et documentation méthodologique par domaine physique : magnétique statique, magnétique basse fréquence ELF 50 Hz, radiofréquences, rayonnement ionisant)
-- `methode-et-limites.html` — méthode et limites (position épistémique, vocabulaire, pièges rhétoriques)
+- `methode-limites-transparence.html` — méthode, limites et transparence éditoriale fusionnées (position épistémique, vocabulaire, pièges rhétoriques, sources, statuts épistémiques, limites connues, cadres éthiques ; héberge le journal public des retraits et reformulations substantielles — les anciennes pages `methode-et-limites.html`, `transparence.html` et `retractations.html` redirigent en 301)
 - `guide-et-glossaire.html` — guide d'utilisation et glossaire technique fusionnés (manuel d'usage de la carte et des contributions ; glossaire alphabétique couvrant physique des champs EM, méthodologie, terminologie institutionnelle et juridique, vocabulaire technique projet — les anciennes pages `guide-utilisation.html` et `glossaire.html` redirigent en 301)
 - `geomagnetisme.html` — page de culture scientifique : globe géomagnétique historique interactif (−8000 → 2025, reconstruction CALS10k.2 / IGRF-14, données embarquées), registre distinct de la couche cartographique EM
-- `transparence.html` — page de transparence éditoriale (sources, statuts épistémiques, limites connues, cadres éthiques) ; héberge le journal public des retraits et reformulations substantielles (section corrections — l'ancienne page `retractations.html` redirige en 301)
-- `patrimoine.html` — seconde application : patrimoine corse cartographié et documenté (publique, bêta, distincte de la couche EM)
 - `mentions-legales.html` — mentions légales et confidentialité
 
 Des modules d'extension thématiques pourront être envisagés sous condition d'obtention d'un financement public, sans calendrier public à ce stade.
