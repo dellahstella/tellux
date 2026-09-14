@@ -189,7 +189,19 @@ async function main() {
   // Une seule session navigateur pour §3 (rendu) et §4 (calibration live) — cf. commentaire
   // sur sessionNavigateur().
   let nav = null;
-  if (!ARGS.sansNavigateur) { try { nav = await sessionNavigateur(); } catch (e) { nav = { erreur: e.message }; } }
+  if (!ARGS.sansNavigateur) {
+    try { nav = await sessionNavigateur(); }
+    catch (e) {
+      // Trouvé en relançant depuis un worktree NEUF (pas celui, déjà `npm ci`, où le script a
+      // été développé) : playwright n'est déclaré que dans tests/blindage-harness/package.json,
+      // et son node_modules n'est jamais tracké par git — un clone ou worktree fraîchement créé
+      // ne l'a donc pas tant que `npm ci` n'y a pas tourné. Message actionnable plutôt que
+      // l'erreur brute de résolution de module, pour que ce défaut ne se répète pas en silence
+      // à la première génération dans un nouvel espace de travail.
+      const manquePlaywright = /Cannot find module ['"]playwright['"]/.test(e.message);
+      nav = { erreur: manquePlaywright ? `playwright non installé — lancer \`npm ci\` dans tests/blindage-harness/ puis relancer ce script (ou --sans-navigateur pour ignorer §3/§4)` : e.message };
+    }
+  }
 
   // ─── 3. COMPOSANTES SERVIES — trois lectures ──────────────────────────────────────────
   s('', '## 3. Composantes servies — trois lectures séparées', '', 'Le DOM seul donne une fausse réponse : une composante peut être calculée et pondérée sans jamais apparaître à l\'écran (cas réel, gamma terrestre, retiré du popup le 2026-09-01 sans que le calcul ni le poids ne changent).', '');
