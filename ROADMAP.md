@@ -10,7 +10,7 @@ Document de référence publique présentant la trajectoire générale du projet
 
 ## 1. Périmètre actuel et trajectoire
 
-Tellux est aujourd'hui structuré autour d'**une application principale publique** : la cartographie électromagnétique territoriale (`app.html`), accompagnée d'outils communaux (`mairies.html`) et d'une documentation publique en trois volets (démarche scientifique, méthode et limites, guide d'utilisation). Cette phase 1 est en cours de stabilisation.
+Tellux est aujourd'hui structuré autour de **plusieurs applications publiques** — la cartographie électromagnétique territoriale (`app.html`), le patrimoine corse cartographié (`patrimoine.html`, bêta) et le potentiel radon (`radon.html`) — accompagnées d'outils communaux (`mairies.html`) et d'une documentation publique en trois volets (démarche scientifique, méthode/limites/transparence, guide et glossaire). Cette phase 1 est en cours de stabilisation.
 
 Des modules d'extension thématiques pourront être envisagés sous condition de stabilisation préalable de la phase 1, sans calendrier public à ce stade.
 
@@ -129,7 +129,7 @@ Les chantiers suivants sont suspendus en attente de la validation méthodologiqu
 - **Type :** document pédagogique grand public
 - **Objet :** expliquer comment lire chaque couche de la carte Tellux, les unités, l'interprétation des gradients, ce qu'est (et n'est pas) l'indice composite.
 - **Destinataire :** visiteurs non spécialistes du site
-- **État actuel :** publié en `/guide-utilisation.html` et lié depuis la section `#ressources` de la landing. L'ambition initiale du chantier (interprétation des gradients, indice composite, ordres de grandeur) peut dépasser le contenu actuel ; une refonte éditoriale enrichie reste possible une fois la relecture méthodologique externe avancée.
+- **État actuel :** publié en `/guide-et-glossaire.html` (fusionné avec le glossaire depuis ; l'ancienne page `/guide-utilisation.html` redirige en 301) et lié depuis la section `#ressources` de la landing. L'ambition initiale du chantier (interprétation des gradients, indice composite, ordres de grandeur) peut dépasser le contenu actuel ; une refonte éditoriale enrichie reste possible une fois la relecture méthodologique externe avancée.
 - **Dépendance :** indépendant de toute conversion PDF (la documentation publique est servie en `.html`).
 
 ### Chantier 2 — Rédaction du document « Hygiène EM à domicile »
