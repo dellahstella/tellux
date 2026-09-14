@@ -1,0 +1,149 @@
+name: regenere-agregat-bt
+
+# Régénère public/data/bt_lines_agregat.json + bt_lines_agregat_marqueur.json depuis Supabase
+# (scripts/generer_agregat_bt.mjs) — agrégat statique bt_lines, variante (i), brief "agrégat
+# BT, mise en oeuvre" (2026-09-14). Dernier maillon du lot, délibérément : la génération, le
+# repli client (loadBTAgregatOuRepli, app.html) et le garde de fraîcheur indépendant
+# (verifie-fraicheur-agregat-bt.yml) existent et sont vérifiés AVANT que ce cron existe —
+# aucune automatisation ne tourne sur un mécanisme non prouvé.
+#
+# Même patron que intermagnet-cron.yml (lire son en-tête avant de toucher à celui-ci) : PR
+# depuis une branche dédiée, jamais d'écriture directe sur main (vraie protection de branche),
+# workflows requis approuvés (piège action_required du bot GITHUB_TOKEN, brief C1 2026-08-28),
+# 4 checks requis attendus, merge automatique uniquement s'ils passent, PR laissée ouverte sinon
+# (jamais --admin, jamais de contournement).
+#
+# Cadence : hebdomadaire — bt_lines est une référence EDF SEI relativement statique (pas un
+# flux temps réel comme INTERMAGNET/antennes). Le second garde (seuil 14 j, LITTÉRAL, deux fois
+# cette cadence) donne une marge avant d'alarmer sur un simple retard normal du planificateur.
+on:
+  schedule:
+    - cron: '41 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  regenere:
+    name: Régénérer l'agrégat BT et merger si les checks passent
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write   # POST /actions/runs/{id}/approve — débloque les checks requis de la PR bot
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Génère l'agrégat (échoue si incohérent — cf. script, refuse d'écrire un jeu tronqué)
+        run: node scripts/generer_agregat_bt.mjs
+
+      - name: Detect changes
+        id: diff
+        run: |
+          if git diff --quiet -- public/data/bt_lines_agregat.json public/data/bt_lines_agregat_marqueur.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Aucun changement detecte, skip."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --stat -- public/data/bt_lines_agregat.json public/data/bt_lines_agregat_marqueur.json
+          fi
+
+      - name: Fermer toute PR bot precedente encore ouverte
+        # Meme motif qu'intermagnet-cron.yml : une PR de regeneration n'a de sens que la plus
+        # recente, perimee des qu'une nouvelle existe.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr list --state open --base main --search "head:bot/agregat-bt-" \
+            --json number --jq '.[].number' 2>/dev/null \
+          | while read -r n; do
+              [ -n "$n" ] || continue
+              echo "Fermeture PR bot orpheline #$n (perimee par ce run)."
+              gh pr close "$n" --delete-branch \
+                --comment "Fermee automatiquement par le run suivant du cron regenere-agregat-bt : une PR de regeneration n'a de sens que la plus recente. Meme motif qu'intermagnet-cron.yml (constat 2026-09-08, PR #1184)." \
+                || echo "::warning::Fermeture PR #$n echouee (deja fermee ou fusionnee entre-temps ?)."
+            done
+
+      - name: Open PR if changed
+        if: steps.diff.outputs.changed == 'true'
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          BRANCH="bot/agregat-bt-$(date -u +%Y%m%d-%H%M%S)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add public/data/bt_lines_agregat.json public/data/bt_lines_agregat_marqueur.json
+          NB_LIGNES=$(node -e "console.log(JSON.parse(require('fs').readFileSync('public/data/bt_lines_agregat_marqueur.json')).nb_lignes)")
+          git commit -m "data: regenere l'agregat bt_lines (${NB_LIGNES} lignes)
+
+          Regeneration automatique via workflow regenere-agregat-bt.
+          Source : Supabase bt_lines, pagination par curseur (meme methode que loadBTLinesAsync)."
+          git push origin "$BRANCH"
+          PR_URL=$(gh pr create --base main --head "$BRANCH" \
+            --title "data: regenere l'agregat bt_lines (${NB_LIGNES} lignes)" \
+            --body "Régénération automatique (workflow \`regenere-agregat-bt\`) — pas de contenu applicatif nouveau, agrégat statique bt_lines (variante (i)). Auto-merge après CI verte (4 checks requis).")
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$(basename "$PR_URL")" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Approuver les workflows en attente, attendre les checks requis, merger
+        # Voir intermagnet-cron.yml pour le detail du piege action_required (brief C1).
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          PR="${{ steps.pr.outputs.pr_number }}"
+          BRANCH="${{ steps.pr.outputs.branch }}"
+          REPO="${{ github.repository }}"
+
+          approve_wf () {
+            gh run list --branch "$BRANCH" --workflow="$1" --limit 5 \
+              --json databaseId,status,conclusion \
+              --jq '.[] | select(.status=="completed" and .conclusion=="action_required") | .databaseId' 2>/dev/null \
+            | while read -r id; do
+                [ -n "$id" ] || continue
+                echo "Approbation $1 : run $id"
+                gh api --method POST "repos/$REPO/actions/runs/$id/approve" || true
+              done
+          }
+
+          materialise () {
+            row=$(gh run list --branch "$BRANCH" --workflow="$1" --limit 1 \
+                  --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion)"' 2>/dev/null || true)
+            case "$row" in
+              ""|"null/null"|"completed/action_required") return 1 ;;
+              *) return 0 ;;
+            esac
+          }
+
+          gha_ok=false
+          for i in $(seq 1 48); do   # 48 * 5s = 4 min max d'attente de materialisation
+            approve_wf leak-guard.yml
+            approve_wf validate-code.yml
+            approve_wf contrast-panels.yml
+            approve_wf schema-payload-guard.yml
+            if materialise leak-guard.yml && materialise contrast-panels.yml && materialise schema-payload-guard.yml; then
+              gha_ok=true; break
+            fi
+            sleep 5
+          done
+          if [ "$gha_ok" != "true" ]; then
+            echo "::warning::Workflows des checks requis pas tous declenches sur PR #$PR apres 4 min — laissee ouverte. Le prochain run fermera celle-ci (perimee) et en ouvrira une neuve si les donnees ont encore change."
+            exit 0
+          fi
+
+          if timeout 300 gh pr checks "$PR" --required --watch --interval 15; then
+            gh pr merge "$PR" --squash --delete-branch
+          else
+            echo "::warning::Checks requis pas verts (echec ou timeout) sur PR #$PR — laissee ouverte, pas mergee. Le prochain run la fermera (perimee) plutot que d'y revenir."
+          fi

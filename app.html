@@ -7260,6 +7260,70 @@ function loadBTLinesAsync() {
   return _btLinesPromise;
 }
 
+// ─── Agrégat statique bt_lines — variante (i), 2026-09-14 ──────────────────────────────────
+// Remplace CE QUI EST TENTÉ EN PREMIER sous la clé 'bt' (enregistrerReprise plus bas) —
+// loadBTLinesAsync() ci-dessus reste inchangée et devient le REPLI, jamais retirée. Plafond
+// mesuré (onglet neuf, fichier réel posé sur Cloudflare Pages, 2026-09-14) : ≈4,6 s au lieu de
+// ≈36-41 s — dominé par l'indexation par tuile côté client (3-4,2 s), pas par le transfert
+// (≤1 s, Brotli négocié par le navigateur, plus petit que le gzip mesuré). Identité SHA-256 +
+// rejeu calcMagneticELF_v2 sur les 236 mesures certifiées vérifiés avant ce commit (écart
+// 0,000 % exact) — cf. rapport de session et INS-024 (registre privé).
+//
+// LE POINT DUR, PAS UN DÉTAIL : un agrégat qui dérive de sa source sert une donnée fausse en
+// silence, pire que les 157 requêtes qu'il remplace. Contrôle de fraîcheur EN DIRECT avant de
+// faire confiance au fichier — coût mesuré 0,9 s / 15 octets (max(id)+count en un seul aller-
+// retour, jamais les 156 130 lignes). Divergence, timeout, erreur réseau, incohérence du
+// fichier avec son propre marqueur : TOUT tombe dans le même repli, loadBTLinesAsync() ci-
+// dessus, sans exception — jamais de branche qui suppose l'agrégat correct sans l'avoir vérifié.
+async function loadBTAgregatOuRepli() {
+  try {
+    const rMarqueur = await fetch('public/data/bt_lines_agregat_marqueur.json', { signal: AbortSignal.timeout(5000) });
+    if (!rMarqueur.ok) throw new Error('marqueur HTTP ' + rMarqueur.status);
+    const marqueur = await rMarqueur.json();
+    if (!marqueur || typeof marqueur.derniere_ligne_id !== 'number' || typeof marqueur.nb_lignes !== 'number') {
+      throw new Error('marqueur mal formé');
+    }
+
+    // Contrôle de fraîcheur — même requête mesurée le 2026-09-14 (~0,9 s, 15 o) : max(id) et
+    // count en un seul aller-retour, jamais les lignes elles-mêmes.
+    const rFraicheur = await fetch(SB_URL + '/rest/v1/bt_lines?select=id&order=id.desc&limit=1',
+      { headers: { apikey: SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Prefer': 'count=exact' },
+        signal: AbortSignal.timeout(5000) });
+    if (!rFraicheur.ok) throw new Error('fraîcheur HTTP ' + rFraicheur.status);
+    const cr = rFraicheur.headers.get('Content-Range') || '';
+    const totalVivant = parseInt((cr.split('/')[1]) || '0', 10);
+    const derniere = await rFraicheur.json();
+    const idVivant = derniere && derniere[0] && derniere[0].id;
+
+    if (idVivant !== marqueur.derniere_ligne_id || totalVivant !== marqueur.nb_lignes) {
+      console.warn('[Tellux] agrégat BT périmé (marqueur id=' + marqueur.derniere_ligne_id + '/n='
+        + marqueur.nb_lignes + ' vs vivant id=' + idVivant + '/n=' + totalVivant + ') — repli sur le chargement direct.');
+      return loadBTLinesAsync();
+    }
+
+    const t0 = performance.now();
+    const rAgregat = await fetch('public/data/bt_lines_agregat.json', { signal: AbortSignal.timeout(15000) });
+    if (!rAgregat.ok) throw new Error('agrégat HTTP ' + rAgregat.status);
+    const rows = await rAgregat.json();
+    if (!Array.isArray(rows) || rows.length !== marqueur.nb_lignes) {
+      throw new Error('agrégat incohérent avec son propre marqueur (' + (Array.isArray(rows) ? rows.length : typeof rows) + ' lignes reçues, ' + marqueur.nb_lignes + ' annoncées)');
+    }
+
+    BT_LINES_RAW = rows;
+    buildBTSegmentGrid(rows);
+    // Même contrat que loadBTLinesAsync() : verifie() de 'bt' (enregistrerReprise plus bas) lit
+    // _btPaginationComplete && BT_SEGMENT_GRID !== null, inchangée, quel que soit le chemin qui
+    // a réussi.
+    _btPaginationComplete = true;
+    const elapsed = performance.now() - t0;
+    console.log('[Tellux] bt_lines via agrégat statique : ' + BT_SEGMENTS_DATA.length
+      + ' segments en ' + elapsed.toFixed(0) + ' ms (hors contrôle de fraîcheur).');
+  } catch (e) {
+    console.warn('[Tellux] agrégat BT indisponible (' + e.message + ') — repli sur le chargement direct.');
+    return loadBTLinesAsync();
+  }
+}
+
 // ============================================================
 // Biot-Savart segment fini avec correction triphasée (v2)
 // Formule : B = (µ₀I)/(4πh) × (sinθ₁ + sinθ₂) — segment fini
@@ -12661,7 +12725,12 @@ if(typeof loadHTADataOnly==='function'){
 // reprise seulement si HTA a lui-même échoué puis réussi. Si HTA passe du premier coup et
 // que BT seul échoue, la reprise de BT tient à son propre enregistrement, pas à celui de HTA.
 if(typeof loadBTLinesAsync==='function'){
-  enregistrerReprise('bt', loadBTLinesAsync, {
+  // Agrégat statique tenté en premier (2026-09-14, variante (i)) — SEULE ligne qui change ici :
+  // même clé 'bt', même classe, même verifie(), même politique de reprise. loadBTAgregatOuRepli()
+  // retombe elle-même sur loadBTLinesAsync() à la moindre divergence/erreur — jamais retirée,
+  // c'est le repli. Si loadBTAgregatOuRepli n'existe pas (ex. cherry-pick partiel), retombe sur
+  // le chemin direct plutôt que de casser l'enregistrement.
+  enregistrerReprise('bt', typeof loadBTAgregatOuRepli==='function' ? loadBTAgregatOuRepli : loadBTLinesAsync, {
     classe: 'critique',
     verifie: () => _btPaginationComplete && BT_SEGMENT_GRID !== null
   });
