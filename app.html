@@ -7190,20 +7190,32 @@ function loadBTLinesAsync() {
     try {
       console.log('[Tellux] Chargement asynchrone bt_lines (calcul ELF)...');
       const t0 = performance.now();
-      // Bbox Corse complète — colonnes clat/clon indexées dans bt_lines
+      // Bbox Corse complète — colonnes clat/clon indexées dans bt_lines, appliquées en Filter
+      // (l'index existant, idx_bt_clat, n'est jamais choisi par le planificateur : la bbox couvre
+      // 100% des lignes de la table, vérifié le 2026-09-14, aucune ligne à exclure).
       // ,type conservé (2026-08-30) : sert au rendu statique aérien/souterrain (buildBTStaticLayer),
       // sans requête séparée — les deux besoins (calcul + rendu) partagent désormais ce seul fetch.
-      const base = SB_URL + '/rest/v1/bt_lines?select=pts,type'
-        + '&clat=gte.41.3&clat=lte.43.1&clon=gte.8.5&clon=lte.9.7';
-      let all = [], offset = 0, totalDeclare = null, finNormale = false;
+      //
+      // Pagination par CURSEUR sur id (2026-09-14), remplace OFFSET — id est la clé primaire
+      // (pg_constraint : bt_lines_pkey PRIMARY KEY (id)), donc unique et ORDER BY id strictement
+      // stable, sans ambiguïté possible. Motif mesuré (EXPLAIN ANALYZE réel, pas une intuition) :
+      // OFFSET force un balayage complet depuis le début à CHAQUE page (le filtre bbox ne peut rien
+      // éliminer, cf. ci-dessus, donc rien ne raccourcit ce balayage) — 260 ms/2717 pages mémoire
+      // pour la page à offset=78000, contre 22 ms/32 pages mémoire pour l'équivalent en id>78001.
+      // Même endpoint, même filtre, même select (+id, nécessaire au curseur), même ordre : identité
+      // bit à bit vérifiée avant ce commit (SHA-256 des 156 130 lignes, ancienne vs nouvelle
+      // pagination) et rejeu de calcMagneticELF_v2 sur les 236 mesures certifiées, écart 0,000%
+      // exact. INS-023 (registre privé) pour la dérivation complète.
+      const base = SB_URL + '/rest/v1/bt_lines?select=pts,type,id'
+        + '&clat=gte.41.3&clat=lte.43.1&clon=gte.8.5&clon=lte.9.7&order=id';
+      let all = [], lastId = 0, totalDeclare = null, finNormale = false;
       const PAGE = 1000;
       while (true) {
-        const entetes = { apikey: SB_KEY, 'Authorization': 'Bearer ' + SB_KEY,
-                          'Range': offset + '-' + (offset + PAGE - 1), 'Range-Unit': 'items' };
-        // count=exact sur la PREMIÈRE page seulement : le serveur compte les lignes à chaque
-        // requête qui le demande, inutile de le refaire à chaque page.
-        if (offset === 0) entetes['Prefer'] = 'count=exact';
-        const r = await fetch(base + '&order=id&limit=' + PAGE + '&offset=' + offset, { headers: entetes });
+        const entetes = { apikey: SB_KEY, 'Authorization': 'Bearer ' + SB_KEY };
+        // count=exact sur la PREMIÈRE page seulement (même économie qu'avant) : le serveur compte
+        // les lignes à chaque requête qui le demande, inutile de le refaire à chaque page.
+        if (lastId === 0) entetes['Prefer'] = 'count=exact';
+        const r = await fetch(base + '&id=gt.' + lastId + '&limit=' + PAGE, { headers: entetes });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         if (totalDeclare === null) {
           const cr = r.headers.get('Content-Range');           // ex. « 0-999/156130 »
@@ -7214,7 +7226,7 @@ function loadBTLinesAsync() {
         if (!Array.isArray(page) || page.length === 0) break;
         all = all.concat(page);
         if (page.length < PAGE) { finNormale = true; break; }
-        offset += PAGE;
+        lastId = page[page.length - 1].id;
       }
       // Complétude : identité si le serveur a déclaré un total, sinon repli sur la fin normale.
       _btPaginationComplete = (totalDeclare !== null) ? (all.length === totalDeclare) : finNormale;
