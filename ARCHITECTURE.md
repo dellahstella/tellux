@@ -13,10 +13,10 @@ tellux/
 ├── mairies.html                # Outils communaux (fiche commune, modèles de courriers)
 ├── index.html                  # Landing page (hero carte EM + blocs applications : mairies, patrimoine, culture scientifique geomagnetisme — patron lp-appsec décliné par modificateur : -mairies/-patrimoine/-geomag)
 ├── cadre-scientifique.html     # Démarche scientifique (registre éditorial public)
-├── methode-et-limites.html     # Méthode et limites (registre éditorial public)
+├── methode-limites-transparence.html  # Méthode, limites et transparence éditoriale fusionnées (registre éditorial public ; anciens methode-et-limites.html et transparence.html → 301 ; héberge le journal des retraits, ancien retractations.html → 301)
 ├── guide-et-glossaire.html     # Guide d'utilisation + glossaire fusionnés (registre éditorial public ; anciens guide-utilisation.html et glossaire.html → 301)
 ├── patrimoine.html             # Seconde application — patrimoine corse (PUBLIQUE bêta, distincte de la couche EM)
-├── transparence.html           # Transparence éditoriale + journal des retraits (ancien retractations.html → 301)
+├── radon.html                  # Troisième application — potentiel radon (PUBLIQUE, distincte de la couche EM)
 ├── mentions-legales.html       # Mentions légales & confidentialité (ancien donnees-vie-privee.html → 301)
 ├── _redirects                  # Redirects 301 Cloudflare Pages (pages support fusionnées)
 ├── geomagnetisme.html          # Culture scientifique — globe géomagnétique historique −8000→2025 (PUBLIQUE, autonome, données CALS10k.2/IGRF-14 embarquées ; registre distinct de la couche EM et du patrimoine ; accès landing = bloc dédié `lp-appsec-geomag` + lien footer « Géomagnétisme » — repositionné 2026-07-03, PR #918)
@@ -142,15 +142,18 @@ Variables et fonctions clés :
 
 ### 2.6 Couches Leaflet — sidebar accordéons
 
-Trois groupes accordéons dans la sidebar, premier ouvert par défaut :
+Deux groupes accordéons de tête, plus deux sous-groupes sous « Contexte naturel » (id vérifiés en direct sur `app.html`, 2026-09-14) :
 
-| Groupe | Couches (id toggle) |
-|--------|---------------------|
-| Modèle EM | b-hot (magnétique statique), b-con (ELF), b-intl (ionisant) |
-| Sources anthropiques | b-ant (antennes), b-res (réseau élec), b-bt (bluetooth), b-prod (production énergie) |
-| Contexte naturel | b-geo (géologie), b-hyd (hydrographie), b-cav (cavités), b-therm (thermique), b-emag (mag. embarqué), b-wdmam (WDMAM) |
+| Groupe / sous-groupe | Couches (id toggle) |
+|---|---|
+| Modèle EM | b-hot (champ magnétique composite), b-elf (champ ELF) |
+| Sources anthropiques | b-ant (antennes ANFR + TDF), b-res (réseau HTA), b-bt (réseau BT), b-prod (sites de production), b-postes (postes sources EDF) |
+| Contexte naturel › Substrat et paysage | b-emag (fond magnétique régional), b-gammajrc (fond gamma terrestre JRC), b-foretdense (forêt dense, module le calcul RF), b-foretouverte (forêt ouverte), b-landemaquis (lande/maquis) |
+| Contexte naturel › Repères et mesures externes | b-cert (mesures certifiées ANFR/EXEM), b-crustal (anomalies de référence), b-contrib (contributions smartphone), b-openrad (gamma citoyen OpenRadiation) |
 
-Chaque couche est dans `LAYERS[id]` / `ACTIVE[id]`. Toggle via `tog(id)`.
+`b-hyd` (hydrographie) existe encore dans le code (`LAYERS`, `tog('hyd',...)`, i18n) mais son bouton est commenté en dur depuis le 2026-08-27 (masqué du menu public, dette réservée, ni migré ni supprimé) — absent de cette table volontairement, pas un oubli. Aucun des id de l'ancienne table (`b-con`, `b-intl`, `b-geo`, `b-cav`, `b-therm`, `b-wdmam`) n'existe plus dans le fichier.
+
+Chaque couche est dans `LAYERS[id]` / `ACTIVE[id]`. Toggle via `tog(id)` (`togPostesSources(this)` pour `b-postes`, mécanisme dédié).
 
 ### 2.7 Panneau Conditions actuelles
 
