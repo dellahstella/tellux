@@ -96,7 +96,7 @@ jobs:
           git push origin "$BRANCH"
           PR_URL=$(gh pr create --base main --head "$BRANCH" \
             --title "data: refresh mensuel antennes Corse ($COUNT_ANT antennes, $COUNT_COMM communes)" \
-            --body "Régénération automatique (workflow \`refresh-antennes\`) — pas de contenu applicatif nouveau, uniquement l'agrégat mensuel des antennes ANFR depuis Supabase \`antennas_corse\`. Auto-merge après CI verte (3 checks requis).")
+            --body "Régénération automatique (workflow \`refresh-antennes\`) — pas de contenu applicatif nouveau, uniquement l'agrégat mensuel des antennes ANFR depuis Supabase \`antennas_corse\`. Auto-merge après CI verte (4 checks requis).")
           echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
           echo "pr_number=$(basename "$PR_URL")" >> "$GITHUB_OUTPUT"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
@@ -153,33 +153,41 @@ jobs:
             esac
           }
 
-          # TROIS workflows a approuver (etait DEUX, perime depuis ADR-067 le 2026-09-09 --
-          # jamais corrige avant faute d'un run declenchant le cas, cf. commentaire
-          # ci-dessus). `schema-payload-guard.yml` ajoute a `approve_wf` SEUL (pas a la
-          # condition de sortie `materialise` : il n'est pas requis aujourd'hui, rien
-          # n'attend sa materialisation) -- meme raisonnement que intermagnet-cron.yml,
-          # prepare a l'avance plutot que de rejouer C1 une 3e fois le jour ou il le
-          # devient. La boucle ne sort que quand les checks actuellement requis
-          # (leak-guard, contrast-panels) sont tous materialises.
+          # QUATRE workflows a approuver depuis le 2026-09-14 (etait TROIS depuis
+          # ADR-067 le 2026-09-09, DEUX avant -- cf. commentaire ci-dessus).
+          # `schema-payload-guard.yml` avait ete ajoute a `approve_wf` SEUL des le
+          # 2026-09-13, par prudence, AVANT de devenir requis -- mais son ajout jumeau a
+          # la condition de sortie `materialise`, explicitement promis pour "le jour ou
+          # il le devient", n'avait pas ete fait. Ecart trouve et corrige le 2026-09-14,
+          # au moment ou la protection de branche est passee a 4 checks (ADR-068,
+          # amendant ADR-067) -- meme correctif que sur intermagnet-cron.yml, meme jour :
+          # sans lui, la boucle pouvait sortir sans attendre schema-payload-guard, puis
+          # `gh pr checks --required --watch` expirer sur ce 4e check jamais rattrape
+          # (aucune approbation n'a lieu apres la sortie de boucle) -- le mecanisme du
+          # C1 (2026-08-28), rejoue muettement. Pas observe en echec reel sur CE
+          # workflow (cadence mensuelle, aucun run depuis le passage a 4 checks au
+          # moment du correctif). La boucle ne sort que quand les checks actuellement
+          # requis (leak-guard, contrast-panels, schema-payload-guard) sont tous
+          # materialises.
           gha_ok=false
           for i in $(seq 1 48); do   # 48 * 5s = 4 min max d'attente de materialisation
             approve_wf leak-guard.yml
             approve_wf validate-code.yml
             approve_wf contrast-panels.yml
             approve_wf schema-payload-guard.yml
-            if materialise leak-guard.yml && materialise contrast-panels.yml; then
+            if materialise leak-guard.yml && materialise contrast-panels.yml && materialise schema-payload-guard.yml; then
               gha_ok=true; break
             fi
             sleep 5
           done
           if [ "$gha_ok" != "true" ]; then
-            echo "::warning::Workflows des checks requis pas tous declenches sur PR #$PR apres 4 min (leak-guard et/ou contrast-panels) — laissee ouverte. Pas un retry sur CETTE PR : le prochain run fermera celle-ci (perimee) et en ouvrira une neuve si les donnees ont encore change."
+            echo "::warning::Workflows des checks requis pas tous declenches sur PR #$PR apres 4 min (leak-guard, contrast-panels et/ou schema-payload-guard) — laissee ouverte. Pas un retry sur CETTE PR : le prochain run fermera celle-ci (perimee) et en ouvrira une neuve si les donnees ont encore change."
             exit 0
           fi
 
-          # Attente des 3 checks requis (Cloudflare Pages + Scan anti-fuite + Contraste
-          # panneaux), pas les informatifs. Timeout 5 min avant abandon (PR laissee
-          # ouverte, pas de merge force).
+          # Attente des 4 checks requis (Cloudflare Pages + Scan anti-fuite + Contraste
+          # panneaux + Cles payload vs colonnes schema), pas les informatifs. Timeout
+          # 5 min avant abandon (PR laissee ouverte, pas de merge force).
           if timeout 300 gh pr checks "$PR" --required --watch --interval 15; then
             gh pr merge "$PR" --squash --delete-branch
           else

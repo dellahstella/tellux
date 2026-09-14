@@ -14,17 +14,26 @@ name: schema-payload-guard
 # porte la logique et son propre commentaire de tête, plus long — le lire
 # avant de modifier l'un ou l'autre.
 #
-# STATUT AU 2026-09-13 — CANDIDAT AU REQUIS, PAS ENCORE REQUIS
+# STATUT AU 2026-09-14 — REQUIS (ADR-068, amendant ADR-067 ; plancher CI 3 → 4)
 # -----------------------------------------------
 # Le défaut qui rendait ce check dangereux à requérir (`native_capture` sans
 # colonne, rouge dès le premier run sur un état préexistant, pas une
-# régression neuve) est résolu : migration 012 appliquée, colonne créée.
-# 8 runs consécutifs verts depuis (2026-09-13, 13:06 → 20:46 ; 3 runs rouges
-# juste avant, tous légitimes — le défaut réel avant sa correction, pas un
-# faux positif). La commande pour le rendre requis est préparée
-# (cf. brief « rendre le check requis », 2026-09-13) mais PAS exécutée ici :
-# modifier la protection de branche reste un arbitrage Soleil, jamais
-# auto-adopté par une session.
+# régression neuve) était résolu depuis le 2026-09-13 : migration 012
+# appliquée, colonne créée, 8 runs consécutifs verts (13:06 → 20:46 ; 3 runs
+# rouges juste avant, tous légitimes — le défaut réel avant sa correction,
+# pas un faux positif). La commande pour le rendre requis, préparée le
+# 2026-09-13 (brief « rendre le check requis »), a été exécutée par Soleil
+# le 2026-09-14 (`PATCH /branches/main/protection/required_status_checks`,
+# modifier la protection de branche restant un arbitrage Soleil, jamais
+# auto-adopté par une session) — vérifiée le même jour sur les deux
+# endpoints (`.../protection` et `.../protection/required_status_checks`),
+# et confirmée en conditions réelles sur une PR ne touchant ni `app.html`,
+# ni `radon.html`, ni `_migrations/` (le cas que l'ancien filtre `paths:`
+# aurait masqué) : le check s'est déclenché et a rapporté `success` au
+# statusCheckRollup. Les workflows bot (`intermagnet-cron.yml`,
+# `refresh-antennes.yml`) attendent désormais aussi sa matérialisation
+# avant de merger leurs propres PR — écart trouvé et corrigé le même jour
+# (cf. commentaires dans ces deux fichiers).
 #
 # ACCÈS AU SCHÉMA — NON PROVISIONNÉ ICI
 # -----------------------------------------
