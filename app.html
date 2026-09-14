@@ -3383,6 +3383,9 @@ var JS_STRINGS_EN = {
   contrib_envoi_detache: "Form closed. The measurement had already been sent: it may still be saved.",
   contrib_envoi_detache_ok: "The measurement sent before the form was closed has been saved.",
   contrib_envoi_detache_incertain: "The measurement sent before the form was closed could not be confirmed: it may have been saved.",
+  // Ajoutée 2026-09-14 (brief S2, incohérence signalée par Soleil) — même réserve que la clé
+  // ci-dessus, pour la branche NON détachée du même catch (formulaire resté ouvert).
+  contrib_save_error_uncertain_suffix: " — the measurement may have been saved despite this error.",
   elf_loading_label: "ELF field (nT) — loading…",
   // Étiquetage du terme BT manquant (2026-09-07, brief CJ). Direction de l'écart connue et dite.
   elf_bt_incomplet: "Incomplete value: the low-voltage term has not loaded yet, so the value shown is too low. It is included as soon as the network data is available.",
@@ -11186,8 +11189,12 @@ async function saveContrib(){
     // Un rejet ne prouve pas l'absence d'écriture (revue du 2026-09-11) : la connexion peut tomber après que le
     // serveur a validé l'INSERT, ou le corps d'une réponse 201 arriver tronqué. L'issue reste inconnue, et le
     // message le dit au lieu d'affirmer « n'a pas été enregistrée ».
+    // Correctif du 2026-09-14 (brief S2, incohérence signalée par Soleil) : cette même incertitude s'applique
+    // hors détachement — le formulaire reste ouvert et rempli, rien n'empêche une resoumission, qui écrirait
+    // une seconde ligne si la première avait en réalité abouti. La branche normale ne portait pas cette
+    // réserve jusqu'ici ; elle la porte désormais, au même titre que la branche détachée ci-dessous.
     if(envoi.detache) info(jt('contrib_envoi_detache_incertain','La mesure envoyée avant la fermeture du formulaire n’a pas pu être confirmée : elle a peut-être été enregistrée.'),'warn',8000);
-    else info('Erreur : '+err.message,'error',5000);
+    else info('Erreur : '+err.message+jt('contrib_save_error_uncertain_suffix',' — la mesure a peut-être malgré tout été enregistrée.'),'error',7000);
   }
   finally{
     if(_contribEnvoiEnVol===envoi) _contribEnvoiEnVol=null;
