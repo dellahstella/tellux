@@ -1,0 +1,39 @@
+name: verifie-fraicheur-agregat-bt
+
+# LE SECOND GARDE de l'agrégat statique bt_lines (variante (i), brief "agrégat BT, mise en
+# oeuvre", 2026-09-14) — INDÉPENDANT du repli client (loadBTAgregatOuRepli, app.html) et du
+# workflow de régénération (regenere-agregat-bt.yml). Ne régénère rien, ne corrige rien, ne
+# contacte pas Supabase : lit seulement public/data/bt_lines_agregat_marqueur.json et échoue
+# bruyamment si son âge dépasse le seuil littéral de scripts/verifie_fraicheur_agregat_bt.mjs
+# (14 jours, pas paramétrable ici).
+#
+# POURQUOI CE WORKFLOW EXISTE SÉPARÉMENT DE regenere-agregat-bt.yml : le repli client protège
+# la JUSTESSE de chaque visite (un marqueur périmé fait retomber sur le chargement direct,
+# jamais de donnée fausse) — mais ce repli est silencieux pour qui ne lit pas la console. Un
+# cron de régénération cassé pourrait laisser tous les visiteurs sur le chemin lent
+# indéfiniment sans qu'aucun humain ne le remarque. Ce workflow-ci est CE QUI REMARQUE : son
+# propre échec (visible dans l'onglet Actions, rouge) est le signal, pas une conséquence
+# annexe. Consigne explicite du brief : « le second garde n'est pas optionnel — sans lui, tu
+# ne merges pas ».
+#
+# Cadence : quotidienne, largement sous le seuil de 14 j — laisse une marge à `schedule`
+# (documenté best-effort par GitHub, cf. intermagnet-cron.yml) sans jamais s'en rapprocher.
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  verifie:
+    name: Vérifier l'âge du marqueur de l'agrégat BT
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Vérifier la fraîcheur (échoue si > 14 j — seuil littéral dans le script)
+        run: node scripts/verifie_fraicheur_agregat_bt.mjs
