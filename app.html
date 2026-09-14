@@ -11476,11 +11476,19 @@ async function buildElf(){
 // Fusion : PROD_ELECTRIQUE (hors Eolien) + EOLIENNES_DATA (RTE ODRE, coords fiables).
 // Les 3 entrees type Eolien de PROD_ELECTRIQUE sont filtrees a la lecture —
 // coords inline non fiables (divergence 2-6 km), on garde ODRE comme source unique.
+// Adoption reprise, lot 1 (2026-09-14) — même cas que loadBT() ci-dessous (cf. son commentaire) :
+// loadEoliennesData() relâche son mémo (_eolLoadPromise=null) sur échec pour ne pas bloquer la
+// reprise de l'assistant ('eoliennes', déjà enregistrée) ; un appel direct après cet échec lançait
+// donc sa propre requête brute, sans backoff. N'intervient que sur 'error'/'abandoned' — le partage
+// de promesse en vol ('pending') et le cas déjà résolu ('ok') restent l'appel direct inchangé.
 async function loadProd(){
   lProd.clearLayers();
   const TYPE_COLOR={'Hydraulique / barrage':'#1a5c8c','Hydraulique au fil de l eau':'#4a90d9',
     'Eolien':'#2d9b87','Diesel':'#991b1b','TAC':'#b85c00','Interconnexion':'#7c3aed','Biogaz':'#15803d'};
-  await loadEoliennesData();
+  const _etatEol = (typeof reprisesEtat === 'function') ? reprisesEtat('eoliennes') : 'idle';
+  if (_etatEol === 'abandoned') await repriseManuelle('eoliennes');
+  else if (_etatEol === 'error') await reveille('eoliennes', 'clic');
+  else await loadEoliennesData();
   const eolFromOdre = (EOLIENNES_DATA || []).map(e => ({
     lat: e.lat,
     lon: e.lon,
@@ -11575,21 +11583,36 @@ async function loadReseau(){
       all = _htaDataCache;
       console.log('✅ HTA: réutilisation cache préchargement (' + all.length + ' lignes)');
     } else {
-      all = [];
-      let offset = 0, PAGE = 1000;
-      while(true){
-        const r=await fetch(SB_URL+'/rest/v1/hta_lines?select=pts&order=id',
-          {headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,
-            'Range':offset+'-'+(offset+PAGE-1),'Range-Unit':'items','Prefer':'count=exact'}});
-        const page=await r.json();
-        if(!Array.isArray(page)||page.length===0) break;
-        all=all.concat(page);
-        const cr=r.headers.get('Content-Range')||'';
-        const total=parseInt((cr.split('/')[1])||'0');
-        if(page.length<PAGE||(total&&all.length>=total)) break;
-        offset+=PAGE;
+      // Adoption reprise, lot 1 (2026-09-14) — 'hta' est déjà enregistrée (loadHTADataOnly,
+      // 2026-09-09) : un échec DÉJÀ signalé par l'assistant (boot ou clic précédent) est réveillé/
+      // relancé par lui AVANT de retomber sur le fetch brut ci-dessous, pour hériter du backoff au
+      // lieu de dupliquer un chargeur non mémoïsé de la même ressource. N'intervient QUE sur
+      // 'error'/'abandoned' — 'idle' (rien tenté) et 'pending' (déjà en vol via le boot) tombent
+      // directement dans le fetch inchangé ci-dessous, comme avant ce lot : ce chantier ne cherche
+      // pas à faire attendre ce chemin une tentative en vol qu'il ne peut pas partager (pas de
+      // promesse mémoïsée ici, à la différence de loadBTLinesAsync/loadEoliennesData — cf. rapport).
+      const _etatHta = (typeof reprisesEtat === 'function') ? reprisesEtat('hta') : 'idle';
+      if (_etatHta === 'abandoned') await repriseManuelle('hta');
+      else if (_etatHta === 'error') await reveille('hta', 'clic');
+      if (_htaDataCache) {
+        all = _htaDataCache;
+      } else {
+        all = [];
+        let offset = 0, PAGE = 1000;
+        while(true){
+          const r=await fetch(SB_URL+'/rest/v1/hta_lines?select=pts&order=id',
+            {headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,
+              'Range':offset+'-'+(offset+PAGE-1),'Range-Unit':'items','Prefer':'count=exact'}});
+          const page=await r.json();
+          if(!Array.isArray(page)||page.length===0) break;
+          all=all.concat(page);
+          const cr=r.headers.get('Content-Range')||'';
+          const total=parseInt((cr.split('/')[1])||'0');
+          if(page.length<PAGE||(total&&all.length>=total)) break;
+          offset+=PAGE;
+        }
+        _htaDataCache = all;
       }
-      _htaDataCache = all;
     }
     all.forEach(row=>{
       const pts=row.pts;
@@ -11712,9 +11735,20 @@ function buildBTStaticLayer(){
 // loadBT() — point d'entrée appelé par tog('bt') au 1er toggle (cf. plus bas). Attend la donnée
 // partagée avec le calcul ELF (await loadBTLinesAsync() — promesse mise en cache, ne redéclenche
 // jamais de fetch si déjà chargée ou en cours via le boot) puis construit la couche une fois.
+// Adoption reprise, lot 1 (2026-09-14) — le cas nommé par le brief : loadBTLinesAsync() relâche
+// SON mémo (_btLinesPromise=null) sur échec, exprès pour ne pas bloquer la reprise de l'assistant
+// (cf. son propre commentaire) — mais un appel direct APRÈS cet échec, mémo relâché, lance donc sa
+// PROPRE requête brute, sans backoff, pendant que 'bt' reste enregistrée et couverte. Le clic
+// hérite désormais du backoff en passant par reveille()/repriseManuelle() dans ces deux états
+// PRÉCIS seulement — 'idle'/'pending'/'ok' tombent dans l'appel direct inchangé, qui partage déjà
+// correctement la promesse en vol ou déjà résolue (rien à réparer là) : le partage de promesse en
+// vol n'est jamais touché, seul le chemin qui le contournait après échec l'est.
 async function loadBT(){
   setStatus(jt('bt_loading', 'Chargement réseau BT…'));
-  await loadBTLinesAsync();
+  const _etatBt = (typeof reprisesEtat === 'function') ? reprisesEtat('bt') : 'idle';
+  if (_etatBt === 'abandoned') await repriseManuelle('bt');
+  else if (_etatBt === 'error') await reveille('bt', 'clic');
+  else await loadBTLinesAsync();
   if(!BT_LINES_RAW || BT_LINES_RAW.length===0){
     setStatus(jt('bt_indisponible','Réseau BT — données indisponibles.'));
     return;
