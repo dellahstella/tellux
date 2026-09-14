@@ -146,9 +146,25 @@ const MECANISMES = [
     // et non supposé : `reveille()` est appelé par les écouteurs `online` et
     // `visibilitychange`, qui balaient TOUTES les clés (`_reprises.forEach`, app.html:3930
     // et 3933). Une fonction inscrite est donc bien atteinte par une chaîne de reprise.
+    //
+    // Biais trouvé et corrigé le 2026-09-15 (brief S2 lot 2) : le 2e argument n'est pas
+    // toujours un identifiant nu. `enregistrerReprise('bt', typeof loadBTAgregatOuRepli===
+    // 'function' ? loadBTAgregatOuRepli : loadBTLinesAsync, {...})` (PR #1458, agrégat BT)
+    // ne matchait PAS le premier motif — 'bt' disparaissait silencieusement des mécanismes
+    // reconnus, et loadBTLinesAsync/loadBTAgregatOuRepli réapparaissaient comme captifs alors
+    // que 'bt' est bien enregistrée et fonctionne (vérifié en production, PR #1458). Second
+    // motif ajouté pour CE cas précis (ternaire `typeof X==='function' ? X : Y`), sans
+    // prétendre couvrir une expression arbitraire — la même limite « syntaxique, pas
+    // sémantique » que le reste de cet instrument, juste un motif de plus reconnu. Les deux
+    // branches sont retenues : l'une ou l'autre peut réellement s'exécuter.
     nom: 'enregistrerReprise(clé, fn, …)',
     depuis: '#1366 (2026-09-09)',
-    trouve: (src) => [...src.matchAll(/enregistrerReprise\s*\(\s*['"][^'"]*['"]\s*,\s*([A-Za-z_$][\w$]*)\s*[,)]/g)].map((x) => x[1]),
+    trouve: (src) => {
+      const identifiantNu = [...src.matchAll(/enregistrerReprise\s*\(\s*['"][^'"]*['"]\s*,\s*([A-Za-z_$][\w$]*)\s*[,)]/g)].map((x) => x[1]);
+      const ternaireTypeof = [...src.matchAll(/enregistrerReprise\s*\(\s*['"][^'"]*['"]\s*,\s*typeof\s+[A-Za-z_$][\w$]*\s*===\s*['"]function['"]\s*\?\s*([A-Za-z_$][\w$]*)\s*:\s*([A-Za-z_$][\w$]*)\s*[,)]/g)]
+        .flatMap((x) => [x[1], x[2]]);
+      return identifiantNu.concat(ternaireTypeof);
+    },
   },
 ];
 

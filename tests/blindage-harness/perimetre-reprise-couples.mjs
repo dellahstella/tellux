@@ -102,7 +102,16 @@ for (let chg = true; chg;) {
 const MECANISMES = [
   { trouve: (src) => [...src.matchAll(/setInterval\s*\(\s*([A-Za-z_$][\w$]*)\s*[,)]/g)].map((x) => x[1]) },
   { trouve: (src) => { const out = []; for (const mm of src.matchAll(/setInterval\s*\(\s*(?:async\s*)?\(\s*\)\s*=>\s*\{([\s\S]{0,400}?)\}/g)) for (const c of noms) if (new RegExp('\\b' + c + '\\s*\\(').test(mm[1])) out.push(c); return out; } },
-  { trouve: (src) => [...src.matchAll(/enregistrerReprise\s*\(\s*['"][^'"]*['"]\s*,\s*([A-Za-z_$][\w$]*)\s*[,)]/g)].map((x) => x[1]) },
+  // Biais trouvé et corrigé le 2026-09-15 (brief S2 lot 2), même correctif que
+  // perimetre-reprise.mjs (dupliqué ici, cf. en-tête « réutilise sans modifier ») : le 2e
+  // argument d'enregistrerReprise n'est pas toujours un identifiant nu — le ternaire de la
+  // clé 'bt' (PR #1458, agrégat BT) faisait disparaître 'bt' des mécanismes reconnus.
+  { trouve: (src) => {
+      const identifiantNu = [...src.matchAll(/enregistrerReprise\s*\(\s*['"][^'"]*['"]\s*,\s*([A-Za-z_$][\w$]*)\s*[,)]/g)].map((x) => x[1]);
+      const ternaireTypeof = [...src.matchAll(/enregistrerReprise\s*\(\s*['"][^'"]*['"]\s*,\s*typeof\s+[A-Za-z_$][\w$]*\s*===\s*['"]function['"]\s*\?\s*([A-Za-z_$][\w$]*)\s*:\s*([A-Za-z_$][\w$]*)\s*[,)]/g)]
+        .flatMap((x) => [x[1], x[2]]);
+      return identifiantNu.concat(ternaireTypeof);
+    } },
 ];
 const racines = new Set();
 for (const meca of MECANISMES) for (const n of new Set(meca.trouve(js))) racines.add(n);
