@@ -52,22 +52,45 @@ name: contrast-panels
 # de défaillance le plus discret (filtre `paths` retiré le même jour, voir `on:`).
 #
 # Le plancher CI passe de 2 à 3 checks requis : Cloudflare Pages, Scan anti-fuite
-# (lecture seule), Contraste panneaux (thème unique). Amende ADR-045, qui avait
-# posé le plancher à 2.
+# (lecture seule), Contraste panneaux (thème unique) — nom d'origine, renommé
+# « Contraste panneaux app.html (thème unique) » le 2026-09-15, voir plus bas.
+# Amende ADR-045, qui avait posé le plancher à 2.
 #
 # LE NOM ENREGISTRÉ DANS LA PROTECTION EST CELUI DU JOB, PAS CELUI DU WORKFLOW :
-# « Contraste panneaux (thème unique) », littéral statique du champ `name:` du job
-# ci-dessous — aucune expression `${{ }}`, donc identique sous `pull_request` et
-# sous `workflow_dispatch` (vérifié le 2026-09-09 sur les deux : tête de PR #1372
-# et main @118776c2). Renommer ce job casse silencieusement la protection : elle
-# attendrait un contexte que plus rien ne produit. Le nom du workflow
-# (`contrast-panels`, en tête de fichier) n'est PAS ce que la protection observe.
+# le littéral statique du champ `name:` du job ci-dessous — aucune expression
+# `${{ }}`, donc identique sous `pull_request` et sous `workflow_dispatch`
+# (vérifié le 2026-09-09 sur les deux : tête de PR #1372 et main @118776c2).
+# Renommer ce job casse silencieusement la protection SAUF à mettre à jour
+# `required_status_checks` vers le nouveau nom AVANT de merger le renommage —
+# fait une première fois le 2026-09-15, voir section dédiée plus bas. Le nom du
+# workflow (`contrast-panels`, en tête de fichier) n'est PAS ce que la
+# protection observe.
 #
 # Un `workflow_dispatch` NE PEUT PAS satisfaire la protection, même à nom égal :
 # son check-run apparaît bien sur le SHA de tête mais reste HORS du
 # statusCheckRollup de la PR (constaté le 2026-08-28, cf. en-tête d'
 # `intermagnet-cron.yml`). C'est une propriété souhaitable et non une limite : on
 # ne débloque pas une PR en déclenchant le check à la main.
+#
+# LE NOM A ÉTÉ CORRIGÉ LE 2026-09-15 : IL NE DISAIT PAS SON PÉRIMÈTRE
+# --------------------------------------------------------------------
+# Ancien nom : « Contraste panneaux (thème unique) ». Ce check ne mesure QUE
+# `app.html` (voir « CE QUE CE CHECK COUVRE » plus bas) — mais son nom, lu seul
+# dans la liste des checks requis d'une PR touchant une AUTRE page (`index.html`
+# en l'occurrence), ne le dit pas : il se lit comme un garde-fou général posé
+# sur « les panneaux », sans préciser lesquels. Point de casse silencieux
+# trouvé en conditions réelles (pas en revue de code) : un brief désignait ce
+# check comme le point sensible d'un changement de fond de carte sur
+# `index.html` — le check est passé, sans avoir rien mesuré de pertinent, et
+# seule une vérification indépendante du script lui-même (pas de la liste des
+# checks verts) a révélé qu'il ne charge jamais cette page.
+# Nouveau nom : « Contraste panneaux app.html (thème unique) ». Renommage fait
+# dans l'ordre qui ne casse rien : (1) ce commit renomme le job, (2) sa propre
+# PR tourne et produit un check-run sous le NOUVEAU nom, (3) `required_status_checks`
+# de `main` est mis à jour pour exiger le nouveau nom à la place de l'ancien
+# — SEULEMENT après (2), jamais avant, jamais en même temps —, (4) la PR de
+# renommage merge en dernier. Aucune fenêtre où la protection attend un
+# contexte que rien ne produit.
 
 # UN CHECK QUI DÉPEND DE LA MÉTÉO SPATIALE NE PROTÈGE RIEN (2026-09-03)
 # ---------------------------------------------------------------------
@@ -173,7 +196,7 @@ permissions:
 
 jobs:
   contrast:
-    name: Contraste panneaux (thème unique)
+    name: Contraste panneaux app.html (thème unique)
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
