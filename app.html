@@ -11423,9 +11423,19 @@ function renderList(){
 // scoreColor v2 — palette Ocre (gradient neutre, sans connotation danger/sécurité)
 // Palette conforme au cadre épistémique (cf. AUDIT_TELLUX_NIVEAU3_SPECIFICATION_UI_UX.md §2.2)
 // Bornes en nT pour le domaine ELF 50 Hz (0-1000 nT)
-// Aligné sur EXPERT_BOUNDS_DEFAULT.ELF_nT = [0, 1000] (zone GELÉ-001).
-// Repère IARC classe 2B (300 nT chronique résidentiel) maintenu dans la palette
-//   comme frontière Faible/Modéré, visible mais non dramatisé.
+// Borne haute (1000) alignée sur EXPERT_BOUNDS_DEFAULT.ELF_nT = [0, 1000] (zone GELÉ-001) —
+// seule des trois bornes (200/500/1000) à avoir un ancrage documenté. 200 et 500 : élargies
+// depuis un ancien couple 120/300 par le commit 1dd56e2 (2026-05-04, #326), justification citée
+// dans ce commit — atténuation de l'effet d'alerte visuel non pondéré (doctrine nocebo,
+// PROJECT_INSTRUCTIONS_v3 §A.4) — un choix éditorial de lisibilité, PAS une dérivation sanitaire
+// ou réglementaire.
+// Corrigé le 2026-09-16 (brief lecture seuils-provenance) : la ligne ci-dessous affirmait depuis
+// ce même commit 1dd56e2 que le repère IARC 300 nT était « maintenu dans la palette comme
+// frontière Faible/Modéré » — FAUX pour LE CODE ci-dessous, qui a toujours placé cette frontière
+// à 200, jamais 300 (cf. `if(sc<200)`). Le 300 nT existe bien, mais ailleurs : affiché séparément
+// dans LEGEND_HTML.hot comme repère documentaire IARC classe 2B, PAS comme une borne de cette
+// fonction. Description fausse du code par son propre commentaire, non détectée cinq mois durant
+// — cf. dette SEUILS-COULEUR-NON-SOURCES-001 (registre privé, groupe scoreColor).
 // NOTA : le rouge (#991b1b) et le vert (#2d9b87) ont été retirés car
 //   ils portent des connotations danger/sécurité non pertinentes ici.
 function scoreColor(sc){
@@ -14068,7 +14078,19 @@ function _certIsBasseFrequence(m) {
   return false;
 }
 
-// Couleur selon valeur V/m (bareme reglementaire)
+// Couleur selon valeur V/m — QUATRE BANDES QUALITATIVES INTERNES (0,5 / 2 / 5), SANS SOURCE
+// réglementaire citée. Corrigé le 2026-09-16 (brief lecture seuils-provenance) : ce commentaire
+// disait « bareme reglementaire » depuis l'introduction de cette fonction (commit b46580a,
+// 2026-04-23), dont le message groupait déjà ces trois bornes avec le seuil légal 28 V/m sous
+// une même étiquette « barème réglementaire », sans jamais nommer de texte. Aucun des deux n'a
+// changé depuis. La légende publique (LEGEND_HTML.cert), elle, a été désolidarisée du 28 V/m dès
+// le 2026-09-04 (brief AQ, cf. commentaire plus bas) — SEUL le 28 V/m y est dit « réglementaire »
+// (champ seuil_legal_vm du dataset, protocole ANFR/DR 15-4, cité) ; les quatre bandes de couleur
+// restent des paliers qualitatifs (Faible/Modéré/Élevé/Très élevé) sans dérivation. Ce
+// commentaire de fonction, resté sur la formulation de 2026-04-23, contredisait donc la légende
+// qu'il décrit depuis cinq mois et demi sans que rien ne le signale — cf. dette
+// SEUILS-COULEUR-NON-SOURCES-001 (registre privé) pour les neuf seuils concernés (ce groupe +
+// scoreColor() + elfColor()) et ce qu'il faudrait pour les ancrer.
 //
 // LA GARDE `v == null` RESTE, alors que son entree de legende a ete retiree le 2026-09-08
 // (0 fiche sur 236 la produit). Ce n'est pas une asymetrie oubliee, c'est le moindre mal, et
