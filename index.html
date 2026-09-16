@@ -100,6 +100,25 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);font-we
 .lp-section-sub{font-size:14px;color:var(--mica);max-width:680px;line-height:1.7;margin-bottom:48px;}
 .lp-section-sub a{color:inherit;text-decoration:underline;text-underline-offset:2px;}
 .lp-section-intro{padding:var(--section-py) var(--section-px) 0;}
+/* Modificateur réutilisable : un .lp-section-intro sans .lp-section-sub n'a pas la marge
+   basse de 48px du sous-titre pour fournir l'espacement vers ce qui suit (padding-bottom
+   de .lp-section-intro délibérément à 0, cf. règle ci-dessus) — mesuré à 34px de résidu de
+   collapse, hors échelle, sur le titre seul "Culture scientifique" (2026-09-15). La charte
+   porte sur l'espacement OBSERVÉ, pas sur les déclarations qui le produisent (même motif
+   que le refus des 34px) : 12px ici est dimensionné pour que la somme avec le margin-bottom
+   de .lp-section-h2 (12px, constant — vérifié : aucune autre règle ne le redéclare) atterrisse
+   sur 24px, palier de l'échelle — pas 32px comme une première version l'avait fait (12+32=44,
+   également hors échelle). Seules deux valeurs de padding-bottom, elles-mêmes sur l'échelle,
+   donnent une somme qui l'est aussi avec 12 : 4 (→16) et 12 (→24) ; 24 retenu comme le plus
+   généreux des deux pour un titre de section à 32px. Attention, précédent écarté : le gap
+   H2→grille de "Sous la carte" n'est PAS 24px comme un calcul sur les déclarations le
+   suggérerait — mesuré à 12px, les deux marges (h2 margin-bottom, .lp-method-docs margin-top)
+   étant adjacentes entre frères, elles s'effondrent au plus grand des deux (collapse), pas à
+   leur somme. Le padding-bottom ici ne collapse avec rien : la somme reste additive, d'où le
+   calcul ci-dessus qui, lui, tient à la mesure. Dette ouverte au registre technique privé
+   (SECTION-INTRO-ESPACEMENT-DEPEND-DU-SOUS-TITRE-001) : ce correctif ponctuel ne la résout
+   pas, il l'évite pour cette instance. */
+.lp-section-intro--title-only{padding-bottom:12px;}
 
 /* METHODE (dark) */
 .lp-section-dark{background:var(--ardoise);padding:var(--section-py) var(--section-px);}
@@ -115,7 +134,6 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);font-we
 .lp-doc-pill:hover{background:rgba(194,133,51,0.20);}
 .lp-doc-desc{font-size:12px;color:rgba(245,240,231,0.65);line-height:1.5;margin:0;}
 @media(max-width:768px){.lp-method-docs{grid-template-columns:1fr;}}
-.lp-method-bridge{font-family:var(--ff);font-style:italic;font-size:16px;color:rgba(245,240,231,0.85);line-height:1.7;max-width:680px;border-left:3px solid var(--ocre);padding-left:16px;margin-top:32px;}
 
 /* APPLICATIONS DÉDIÉES — mairies (collectivités) + patrimoine, sections symétriques */
 .lp-appsec{padding:var(--section-py) var(--section-px);}
@@ -261,7 +279,7 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);font-we
 <div class="lp-section-intro reveal">
   <div class="lp-section-label" data-i18n-key="explore_eyebrow">Explorer</div>
   <h2 class="lp-section-h2" data-i18n-key="explore_h2">Les cartographies</h2>
-  <p class="lp-section-sub" data-i18n-key="explore_sub">La <a href="app.html">cartographie électromagnétique &rarr;</a> reste l'application principale. Radon applique la même exigence de sources et de statut à un autre objet ; patrimoine l'aborde sous un angle culturel plus libre.</p>
+  <p class="lp-section-sub" data-i18n-key="explore_sub">La <a href="app.html">cartographie électromagnétique &rarr;</a> reste l'application principale, déjà présentée ci-dessus. Radon applique la même exigence de sources et de statut à un autre objet ; patrimoine l'aborde sous un angle culturel plus libre.</p>
 </div>
 <div class="lp-appsec lp-appsec-radon reveal">
   <div class="lp-appsec-inner">
@@ -291,7 +309,15 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);font-we
      registre plat sur amendement Soleil : la phrase ne raconte plus rien, elle désambiguïse —
      la carte géomagnétique qui suit n'est pas une couche de la cartographie EM, seule fonction
      qui reste à ce bridge. Le titre de section ("Mesurer, modéliser, ou hypothéser...")
-     n'a pas bougé dans cet amendement ; son retrait est prévu pour un lot ultérieur. -->
+     n'a pas bougé dans cet amendement ; son retrait est prévu pour un lot ultérieur.
+
+     Bridge retiré entièrement le 2026-09-15 (lot cartographies/culture scientifique) : sa
+     seule fonction restante — désambiguïser "ce qui suit n'est pas une couche de la carte" —
+     devient inutile une fois que ce qui suit s'annonce par son propre titre de section
+     ("Culture scientifique", cf. commentaire au-dessus de .lp-appsec-geomag). Définir par la
+     négative n'a plus de rôle quand l'affirmation positive suffit. Clé EN_STRINGS
+     method_bridge et règle CSS .lp-method-bridge retirées avec lui. -->
+
 <div class="lp-section-dark reveal" id="methode">
   <h2 class="lp-section-h2" data-i18n-key="method_h2">Sous la carte</h2>
   <!-- Triptyque Mesure/Modèle/Hypothèse (.lp-method-flow) retiré (demande Soleil
@@ -349,10 +375,20 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);font-we
          relit comme vivant — piège capitalisé le 2026-09-07 sur des boutons de couche commentés.
          Pour restaurer, réécrire l'entrée ; ne pas décommenter, il n'y a rien à décommenter. -->
   </div>
-  <div class="lp-method-bridge" data-i18n-key="method_bridge">Ce qui suit n'est pas une couche de la carte.</div>
 </div>
 
-<!-- SECTION : Géomagnétisme — culture scientifique, reste collée à La méthode juste au-dessus (demande Soleil 2026-08-22). -->
+<!-- SECTION : Géomagnétisme — a désormais son propre titre de section, "Culture scientifique"
+     (2026-09-15, lot cartographies/culture scientifique), assumé comme rubrique à une entrée :
+     d'autres modules y viendront, aucune grille ni affordance ne le suggère pour l'instant.
+     Niveau et traitement alignés sur les sections voisines (.lp-section-h2 nu, sans eyebrow —
+     comme "Sous la carte" juste au-dessus, pas comme "Agir" juste en dessous qui en porte un).
+     .lp-section-intro--title-only : modificateur réutilisable pour un .lp-section-intro sans
+     .lp-section-sub, cf. règle CSS et dette SECTION-INTRO-ESPACEMENT-DEPEND-DU-SOUS-TITRE-001.
+     Reste collée à La méthode juste au-dessus (demande Soleil 2026-08-22) : rien d'autre que ce
+     titre ne s'intercale. -->
+<div class="lp-section-intro lp-section-intro--title-only reveal">
+  <h2 class="lp-section-h2" data-i18n-key="geomag_section_h2">Culture scientifique</h2>
+</div>
 <div class="lp-appsec lp-appsec-geomag reveal">
   <div class="lp-appsec-inner">
     <h2 class="lp-appsec-h2" data-i18n-key="geomag_h2">Dix mille ans de champ géomagnétique</h2>
@@ -642,12 +678,13 @@ function telluxGetEffectiveLang(){
     patrimoine_h2: 'Megaliths, buildings, and sites across Corsica',
     patrimoine_p: 'Megaliths, buildings, and sites across Corsica, presented as illustrated postcards and documented as research progresses. A cultural exploration of Corsican heritage, set apart from the rest of the site by its freer tone &mdash; still taking shape.',
     patrimoine_cta: 'Explore heritage &rarr;',
+    geomag_section_h2: 'Science outreach',
     geomag_h2: 'Ten thousand years of geomagnetic field',
     geomag_p: "Earth's magnetic field has never stood still: its intensity and geometry have always evolved, over centuries and millennia alike. An interactive globe traces this history from &minus;8000 to today, based on published paleomagnetic reconstructions (CALS10k.2, GFZ Potsdam) and the IGRF-14 reference model. A model reconstruction, presented for scientific culture &mdash; distinct from Corsican EM mapping, and involving no Tellux measurement.",
     geomag_cta: 'Explore the geomagnetic field &rarr;',
     explore_eyebrow: 'Explore',
     explore_h2: 'The maps',
-    explore_sub: 'The <a href="app.html">electromagnetic map &rarr;</a> remains the main application. Radon applies the same requirement for sources and status to another subject; heritage takes a freer, more cultural approach.',
+    explore_sub: 'The <a href="app.html">electromagnetic map &rarr;</a> remains the main application, already presented above. Radon applies the same requirement for sources and status to another subject; heritage takes a freer, more cultural approach.',
     agir_eyebrow: 'Take action',
     agir_h2: 'Take action, as a municipality or a citizen',
     agir_radon_link: 'Radon procedures (deposits, letters) &rarr;',
@@ -666,7 +703,6 @@ function telluxGetEffectiveLang(){
     footer_geomag: 'Geomagnetism',
     footer_mentions_full: 'Legal notice &amp; privacy',
     footer_github: 'Public repository &amp; data',
-    method_bridge: 'What follows is not a map layer.',
     scope_head: '360 municipalities &middot; ANFR-certified RF'
     // "TELLUX" (logo) omis : identique FR/EN, aucune traduction nécessaire.
     // Toggle EN/FR (#lang-toggle-en*) omis : déjà géré par le script dédié ci-dessus.
