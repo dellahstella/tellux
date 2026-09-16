@@ -126,19 +126,44 @@ jobs:
             esac
           }
 
+          # ⚠ LISTE À MAINTENIR, PAS UNE ÉNUMÉRATION FIGÉE — tout nouveau workflow
+          # déclenché par `pull_request` sur ce dépôt doit être ajouté ICI (approve_wf)
+          # ET dans la condition `materialise` plus bas, ou son check-run reste gaté en
+          # `action_required` sur toute PR bot, indéfiniment, résolu en `failure` au
+          # merge (branche supprimée) sans qu'aucun rouge ne le signale avant coup —
+          # mécanisme documenté en tête de `intermagnet-cron.yml` (brief C1, 2026-08-28).
+          # PRÉCÉDENT QUI NE DOIT PAS SE REPRODUIRE UNE QUATRIÈME FOIS : schema-payload-
+          # guard.yml a suivi ce piège une première fois (corrigé le 2026-09-14 sur
+          # intermagnet-cron.yml/refresh-antennes.yml). CE FICHIER-CI, ÉCRIT DEUX JOURS
+          # APRÈS cette correction — donc avec le précédent déjà connu et documenté à
+          # cet endroit précis dans les deux autres fichiers — L'A REPRODUIT dès sa
+          # création : `echelle-visuelle-index.yml` (créé le 2026-09-16) manquait ici
+          # aussi. RETIRER CETTE NOTE, OU CRÉER UN WORKFLOW `pull_request` SANS METTRE
+          # À JOUR CETTE LISTE, EST UNE RÉGRESSION, PAS UN NETTOYAGE — cf. dette privée
+          # WORKFLOWS-BOT-LISTE-APPROVE-NON-GARDEE-001 (aucune garde mécanique ne
+          # vérifie cette liste ; cette note est le seul filet tant qu'elle n'existe pas).
+          #
+          # echelle-visuelle-index.yml ajoute le 2026-09-16 (diagnostic du meme jour :
+          # `failure` sans le moindre job execute sur des PR bot d'intermagnet-cron.yml,
+          # meme mecanisme applicable ici) -- PAS ENCORE REQUIS a ce jour (arbitrage
+          # separe), donc son resultat n'entre PAS dans la condition `gh pr checks
+          # --required` plus bas. Ajoute ICI en PREPARATION : materialiser son run
+          # maintenant, avant qu'il devienne requis, pour ne pas rejouer une quatrieme
+          # fois le meme piege le jour ou il le devient.
           gha_ok=false
           for i in $(seq 1 48); do   # 48 * 5s = 4 min max d'attente de materialisation
             approve_wf leak-guard.yml
             approve_wf validate-code.yml
             approve_wf contrast-panels.yml
             approve_wf schema-payload-guard.yml
-            if materialise leak-guard.yml && materialise contrast-panels.yml && materialise schema-payload-guard.yml; then
+            approve_wf echelle-visuelle-index.yml
+            if materialise leak-guard.yml && materialise contrast-panels.yml && materialise schema-payload-guard.yml && materialise echelle-visuelle-index.yml; then
               gha_ok=true; break
             fi
             sleep 5
           done
           if [ "$gha_ok" != "true" ]; then
-            echo "::warning::Workflows des checks requis pas tous declenches sur PR #$PR apres 4 min — laissee ouverte. Le prochain run fermera celle-ci (perimee) et en ouvrira une neuve si les donnees ont encore change."
+            echo "::warning::Workflows des checks requis pas tous declenches sur PR #$PR apres 4 min (leak-guard, contrast-panels, schema-payload-guard et/ou echelle-visuelle-index) — laissee ouverte. Le prochain run fermera celle-ci (perimee) et en ouvrira une neuve si les donnees ont encore change."
             exit 0
           fi
 
