@@ -10133,6 +10133,30 @@ function addMarker(c){
 // — croire qu'elle est vivante. Aucune ne doit être réutilisée pour autre chose sans arbitrage.
 const GC={'2G':'#1a4b8c','3G':'#1a6b5c','4G':'#b85c00','5G':'#991b1b','infra':'#6b7280','default':'#4a4f5e','infraText':'#616874'};
 
+// Teintes de BULLE DE CLUSTER ANFR/TDF (2026-09-16, brief clusters ANFR/TDF, arbitrage Soleil
+// tyrrhénien/maquis). Jusqu'ici lAntCluster et lTDFCluster partageaient GC.default (#4a4f5e) et
+// GC.infra (#6b7280) — deux gris proches, peu distincts au premier coup d'œil malgré le badge de
+// forme sur lTDFCluster. Périmètre volontairement restreint à la SEULE bulle de cluster, comme
+// titré par le brief : GC.default/GC.infra restent inchangés pour les marqueurs individuels
+// (mkIcon, hors cluster) — la légende (LEGEND_HTML.ant/LEGEND_HTML_EN.ant, gris #4a4f5e/#6b7280)
+// reste donc exacte pour un marqueur seul mais ne documente plus la couleur de la bulle groupée.
+// Signalé en PR, pas tranché ici : étendre à GC directement (marqueurs individuels compris) ou
+// ajouter un second swatch « en grappe » à la légende sont deux issues possibles, à arbitrer par
+// Soleil, pas par ce commentaire.
+// Contraste texte blanc revérifié pour CE lot (formule luminance relative WCAG, pas recopié d'un
+// chantier antérieur) : Tyrrhénien 11,5:1, Maquis 7,6:1 — largement > 4,5:1 AA dans les deux cas.
+// Point de vigilance non tranché ici, à confirmer visuellement (capture jointe à la PR, cert +
+// ant actifs ensemble) : distance RGB euclidienne Tyrrhénien↔Ardoise (lCert résidentiel,
+// #1F2329) ≈ 59 — du même ordre qu'un écart déjà jugé limite ailleurs dans ce fichier (cf.
+// _certClusterIcon, comparaison Ardoise-éclaircie/lAntCluster = 27). Historique utile : le choix
+// de GC.infra pour lTDFCluster (brief AH, 2026-09-04, commentaire juste plus bas) documentait
+// déjà une distance volontaire avec Tyrrhénien/Ocre — les teintes de lCert à l'époque, avant que
+// brief AL (même jour) ne fasse passer lCert résidentiel de Tyrrhénien à Ardoise. Réintroduire
+// Tyrrhénien ici n'est donc pas sans précédent d'évitement, d'où la vigilance plutôt qu'un GO
+// silencieux.
+const ANFR_CLUSTER_COLOR='#1F3A5F'; // Tyrrhénien (--tx-tyrrhenien / --tyrrh)
+const TDF_CLUSTER_COLOR='#3F5B3A'; // Maquis (--tx-maquis / --maquis)
+
 // Clustering ANFR à faible zoom (brief 2026-08-30, suite au brief clustering général jamais
 // exécuté — aucune trace en prod/PR/SUIVI de ce brief antérieur, vérifié avant d'écrire ceci ;
 // candidates citées — production/postes/mesures — pas davantage clusterisées ce tour, seule
@@ -10155,7 +10179,7 @@ const lAntCluster=L.markerClusterGroup({
   iconCreateFunction:function(cluster){
     var count=cluster.getChildCount();
     var size=count<10?26:count<50?32:38;
-    return L.divIcon({html:'<div style="background:'+GC.default+';color:white;border:2px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?11:count<100?10:9)+'px;box-shadow:0 1px 4px rgba(0,0,0,.35)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});
+    return L.divIcon({html:'<div style="background:'+ANFR_CLUSTER_COLOR+';color:white;border:2px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?11:count<100?10:9)+'px;box-shadow:0 1px 4px rgba(0,0,0,.35)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});
   },
   maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true
 });
@@ -10195,9 +10219,9 @@ const lTDFCluster=L.markerClusterGroup({
     var count=cluster.getChildCount();
     var size=count<10?26:count<50?32:38;
     return L.divIcon({html:'<div style="position:relative;width:'+size+'px;height:'+size+'px">'+
-      '<div style="width:100%;height:100%;background:'+GC.infra+';color:white;border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?11:count<100?10:9)+'px;box-shadow:0 1px 4px rgba(0,0,0,.35)">'+count+'</div>'+
+      '<div style="width:100%;height:100%;background:'+TDF_CLUSTER_COLOR+';color:white;border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?11:count<100?10:9)+'px;box-shadow:0 1px 4px rgba(0,0,0,.35)">'+count+'</div>'+
       '<div style="position:absolute;top:-3px;right:-3px;width:11px;height:11px;background:white;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center">'+
-        '<div style="width:5px;height:5px;background:'+GC.infra+'"></div>'+
+        '<div style="width:5px;height:5px;background:'+TDF_CLUSTER_COLOR+'"></div>'+
       '</div></div>',className:'tellux-cluster-icon-tdf',iconSize:[size,size]});
   },
   maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true
