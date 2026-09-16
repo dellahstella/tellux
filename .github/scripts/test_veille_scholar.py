@@ -21,7 +21,7 @@ import importlib.util
 import io
 import os
 import sys
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from email.message import EmailMessage
 from pathlib import Path
 
@@ -115,6 +115,18 @@ def capture(f, *args):
     with redirect_stdout(tampon):
         r = f(*args)
     return r, tampon.getvalue()
+
+
+def capture_fail(f, *args):
+    """Appelle f censée échouer via fail() (print stderr + sys.exit) ; rend (code, stderr).
+    (code, stderr) = (None, "") si f n'a pas échoué."""
+    tampon = io.StringIO()
+    try:
+        with redirect_stderr(tampon):
+            f(*args)
+        return None, ""
+    except SystemExit as e:
+        return e.code, tampon.getvalue()
 
 
 # --- 1. HTML → texte ------------------------------------------------------------------
@@ -344,5 +356,25 @@ verifie("## Alertes écartées faute de place" in envois.get("synthese", ""), "m
 verifie("corps tronqués à" in envois.get("issue", "") and "écartés faute de place" in envois.get("issue", ""),
         "main() : l'issue porte le bilan")
 verifie("sujet-main-" not in sortie, "main() : le journal ne nomme aucune alerte")
+
+# --- 14. UNTIL_DATE : requête bornée des deux côtés, et fenêtre glissante inchangée sans lui ---
+_, sortie_bornee = capture(v.fetch_scholar_emails, _service(_Messages()), 7, v.dt.date(2026, 9, 8))
+verifie(f"from:{v.SCHOLAR_FROM} after:2026/09/01 before:2026/09/08" in sortie_bornee,
+        "UNTIL_DATE fixé : la requête devient after:(UNTIL_DATE - lookback) before:UNTIL_DATE")
+
+# Régression : mêmes deux arguments qu'au test 8 (aucun until_date) — la requête ne doit
+# porter aucun before: et rester la fenêtre glissante jusqu'à aujourd'hui, comme avant
+# l'ajout d'UNTIL_DATE.
+_, sortie_glissante = capture(v.fetch_scholar_emails, _service(_Messages()), 7)
+verifie("before:" not in sortie_glissante and f"from:{v.SCHOLAR_FROM} after:" in sortie_glissante,
+        "sans UNTIL_DATE, la requête reste la fenêtre glissante d'origine (comportement inchangé)")
+
+# --- 15. UNTIL_DATE malformée : fail() explicite, jamais un before: silencieusement faux ---
+verifie(v.parse_until_date("") is None, "UNTIL_DATE absente : pas de borne de fin (défaut)")
+verifie(v.parse_until_date("2026-09-08") == v.dt.date(2026, 9, 8), "UNTIL_DATE ISO valide est parsée")
+code, err = capture_fail(v.parse_until_date, "08/09/2026")
+verifie(code == 1 and "UNTIL_DATE" in err, "UNTIL_DATE illisible échoue clairement via fail() (sys.exit(1))")
+code, err = capture_fail(v.parse_until_date, "2026-13-40")
+verifie(code == 1 and "UNTIL_DATE" in err, "UNTIL_DATE calendaire impossible échoue aussi via fail()")
 
 print("tous les contrôles passent")

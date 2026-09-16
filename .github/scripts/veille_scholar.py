@@ -32,6 +32,13 @@ Variables d'env optionnelles :
                             (défaut : docs/pilotage/prompt_integration_corpus.md)
     ANTHROPIC_MODEL       — défaut : claude-sonnet-4-5
     LOOKBACK_DAYS         — fenêtre de recherche en jours (défaut : 7)
+    UNTIL_DATE            — borne de fin de fenêtre Gmail, ISO YYYY-MM-DD (défaut : vide —
+                            fenêtre glissante jusqu'à aujourd'hui, comportement inchangé).
+                            Si fournie (2026-09-16, rattrapage historique) : la requête
+                            devient after:(UNTIL_DATE - LOOKBACK_DAYS) before:UNTIL_DATE au
+                            lieu de after:(aujourd'hui - LOOKBACK_DAYS) — LOOKBACK_DAYS
+                            devient la taille de la fenêtre qui se termine à UNTIL_DATE, pas
+                            à aujourd'hui. Rejetée avec fail() si non vide et illisible.
     OUTPUT_DIR            — dossier dans le dépôt cible pour les synthèses
                             (défaut : _inbox/scholar/syntheses ; garde-fou cron)
     INTEGRATION_OUTPUT_DIR — dossier pour la note d'intégration corpus
@@ -94,6 +101,9 @@ INTEGRATION_PROMPT_PATH = os.environ.get(
 PRIVATE_REPO = os.environ.get("PRIVATE_REPO", "")
 ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5")
 LOOKBACK_DAYS = int(os.environ.get("LOOKBACK_DAYS", "7"))
+# Brut, non parsée ici : fail() (Helpers, plus bas) n'est pas encore défini à ce point du
+# module. Parsée par parse_until_date() dans main(), avant tout appel réseau (2026-09-16).
+UNTIL_DATE_RAW = os.environ.get("UNTIL_DATE", "")
 # Bornes du corpus envoyé au modèle (2026-09-10). Jusque-là, le script concaténait le
 # corps entier de chaque alerte, sans borne. C'était juste tant qu'arrivaient 5 à 8
 # alertes par semaine (58 k à 117 k caractères). C'est devenu faux quand le volume a
@@ -154,6 +164,20 @@ def check_env() -> None:
     missing = [k for k in REQUIRED_SECRETS if not os.environ.get(k)]
     if missing:
         fail(f"Secrets manquants : {', '.join(missing)}")
+
+
+def parse_until_date(raw: str) -> dt.date | None:
+    """Borne de fin de fenêtre Gmail (UNTIL_DATE) ; None si vide (comportement par défaut,
+    fenêtre glissante jusqu'à aujourd'hui — inchangé). Échoue clairement (fail()) si non
+    vide mais illisible : une borne de fin mal formée ne doit pas glisser telle quelle
+    dans la requête Gmail (2026-09-16)."""
+    if not raw:
+        return None
+    try:
+        return dt.date.fromisoformat(raw)
+    except ValueError:
+        fail(f"UNTIL_DATE invalide ({raw!r}) : format attendu YYYY-MM-DD.")
+        return None  # inatteignable — fail() sort le process ; présent pour le typage
 
 
 def build_gmail_credentials() -> Credentials:
@@ -256,10 +280,23 @@ def texte_de_html(html_brut: str) -> str:
     return texte
 
 
-def fetch_scholar_emails(service: Any, lookback_days: int) -> list[dict[str, str]]:
-    """Récupère les emails Scholar Alerts des N derniers jours."""
-    after_date = (dt.date.today() - dt.timedelta(days=lookback_days)).strftime("%Y/%m/%d")
+def fetch_scholar_emails(
+    service: Any, lookback_days: int, until_date: dt.date | None = None
+) -> list[dict[str, str]]:
+    """Récupère les emails Scholar Alerts des N derniers jours.
+
+    Sans until_date (défaut, cron hebdo) : fenêtre glissante jusqu'à aujourd'hui,
+    comportement inchangé. Avec until_date (rattrapage manuel, 2026-09-16 — la fenêtre
+    2026-08-29→09-08 restait hors de portée d'un lookback élargi depuis aujourd'hui, qui
+    aurait rouvert le quota Gmail et la saturation de sortie déjà rencontrés cette
+    session) : lookback_days devient la taille de la fenêtre qui se termine à
+    until_date, pas à aujourd'hui.
+    """
+    fin_fenetre = until_date or dt.date.today()
+    after_date = (fin_fenetre - dt.timedelta(days=lookback_days)).strftime("%Y/%m/%d")
     query = f"from:{SCHOLAR_FROM} after:{after_date}"
+    if until_date is not None:
+        query += f" before:{until_date.strftime('%Y/%m/%d')}"
     print(f"[gmail] Requête : {query}")
 
     # Toutes les pages. Jusqu'au 2026-09-10, seule la première était lue (200 messages
@@ -915,12 +952,13 @@ def notify_run_complete(
 
 def main() -> int:
     check_env()
+    until_date = parse_until_date(UNTIL_DATE_RAW)
     today = dt.date.today()
     print(f"[start] Veille Scholar — {today.isoformat()}")
 
     creds = build_gmail_credentials()
     service = build("gmail", "v1", credentials=creds, cache_discovery=False)
-    emails = fetch_scholar_emails(service, LOOKBACK_DAYS)
+    emails = fetch_scholar_emails(service, LOOKBACK_DAYS, until_date)
 
     if not emails:
         print("[stop] Aucun email Scholar trouvé — pas de synthèse à produire.")
