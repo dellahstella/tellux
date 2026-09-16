@@ -1,0 +1,62 @@
+name: echelle-visuelle-index
+
+# Garde-fou échelle visuelle de `index.html` (espacement, taille de police,
+# graisse, rayon, ombre). Logique et commentaire de tête complet dans
+# `.github/scripts/echelle-visuelle-index.mjs` — le lire avant de modifier
+# l'un ou l'autre.
+#
+# POSÉ LE 2026-09-16, NON REQUIS DANS CE LOT
+# --------------------------------------------
+# Ce check tourne sur chaque PR et rapporte un vrai vert/rouge, mais n'entre
+# pas dans `required_status_checks` de `main` à sa création — le passer requis
+# est un arbitrage distinct, une fois quelques runs observés en conditions
+# réelles (même séquence que schema-payload-guard.yml, 2026-09-13/14).
+#
+# LE NOM ENREGISTRÉ DANS LA PROTECTION SERA CELUI DU JOB, PAS CELUI DE CE
+# WORKFLOW : le littéral du champ `name:` du job ci-dessous. Il nomme le
+# fichier couvert (index.html) et les cinq familles contrôlées — pas
+# « Charte visuelle », qui renverrait à un document absent de ce dépôt.
+# Précédent : contrast-panels.yml, renommé le 2026-09-15 parce que son nom
+# d'origine ne disait pas qu'il ne couvrait qu'app.html.
+#
+# PAS DE FILTRE `paths:`, DÈS LA CRÉATION
+# ------------------------------------------
+# Un filtre sur un check appelé à devenir requis laisse une partie des PR sans
+# déclenchement — GitHub attend alors indéfiniment un statut qu'aucun run ne
+# produira jamais, PR gelée sans le moindre rouge visible. Ce précédent est
+# documenté deux fois sur ce dépôt (schema-payload-guard.yml, INS-007/ADR-067 ;
+# contrast-panels.yml, ADR-045) : les deux ont dû RETIRER un filtre posé avant
+# de devenir requis. Ce check ne le pose jamais, pour ne jamais avoir à le
+# retirer. Coût : un run de plus sur les PR qui ne touchent pas index.html —
+# le script est un parseur statique sans dépendance, sans réseau ; son coût
+# est de l'ordre de la seconde.
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  echelle-visuelle:
+    name: Échelle visuelle index.html (espacement · taille · graisse · rayon · ombre)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Vérifier l'échelle visuelle de index.html
+        run: node .github/scripts/echelle-visuelle-index.mjs index.html
