@@ -19,16 +19,23 @@ lignes « ok : ».
 import base64
 import importlib.util
 import io
+import json
 import os
 import sys
 from contextlib import redirect_stderr, redirect_stdout
 from email.message import EmailMessage
 from pathlib import Path
 
+import httplib2
+from googleapiclient.errors import HttpError
+
 os.environ.setdefault("CORPS_MAX_CARACTERES", "8000")
 os.environ.setdefault("BUDGET_TOKENS_ENTREE", "150000")
 os.environ.setdefault("ANTHROPIC_API_KEY", "factice")
 os.environ.setdefault("GITHUB_PAT", "factice")
+# Pas d'attente réelle en test (tests 16-18) : seule la logique de reprise est
+# vérifiée, pas le minutage.
+os.environ.setdefault("GMAIL_PAUSE_ENTRE_APPELS", "0")
 _spec = importlib.util.spec_from_file_location("veille", Path(__file__).with_name("veille_scholar.py"))
 v = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(v)
@@ -92,6 +99,42 @@ def _service(messages) -> object:
     return type("S", (), {"users": lambda _s: type("U", (), {"messages": lambda _u: messages})()})()
 
 
+def _http_error_quota(status: int = 403, reason: str = "rateLimitExceeded") -> HttpError:
+    """Construit une HttpError dans sa forme réelle googleapiclient : resp avec un
+    .status, content JSON avec error.errors[].reason — la même forme que celle
+    rencontrée en production (403, reason=rateLimitExceeded, "Units per minute per
+    user")."""
+    contenu = json.dumps({
+        "error": {
+            "code": status,
+            "message": "Quota exceeded for quota metric 'Total Query Cost' and limit "
+                        "'Units per minute per user' of service 'gmail.googleapis.com'.",
+            "errors": [{"message": "Quota exceeded", "domain": "usageLimits", "reason": reason}],
+        }
+    }).encode("utf-8")
+    return HttpError(httplib2.Response({"status": status}), contenu)
+
+
+class _MessagesQuota:
+    """Double Gmail : .get() lève `erreur()` pour les `echecs` premiers appels sur l'id
+    `cible`, réussit ensuite (et réussit du premier coup pour tout autre id)."""
+
+    def __init__(self, echecs: int, cible: str, erreur=_http_error_quota) -> None:
+        self.echecs, self.cible, self.erreur = echecs, cible, erreur
+        self.appels: dict[str, int] = {}
+
+    def list(self, userId, q, maxResults, pageToken=None):
+        return _Req({"messages": [{"id": self.cible}]})
+
+    def get(self, userId, id, format):
+        self.appels[id] = self.appels.get(id, 0) + 1
+        if id == self.cible and self.appels[id] <= self.echecs:
+            raise self.erreur()
+        m = _courriel("sujet retenté")
+        m.set_content("corps ok")
+        return _Req({"raw": _brut(m)})
+
+
 def _brut(m: EmailMessage) -> str:
     return base64.urlsafe_b64encode(m.as_bytes()).decode()
 
@@ -119,10 +162,12 @@ def capture(f, *args):
 
 def capture_fail(f, *args):
     """Appelle f censée échouer via fail() (print stderr + sys.exit) ; rend (code, stderr).
-    (code, stderr) = (None, "") si f n'a pas échoué."""
-    tampon = io.StringIO()
+    (code, stderr) = (None, "") si f n'a pas échoué. stdout est capturé aussi (jamais
+    laissé passer, même si f imprime avant d'échouer) mais pas rendu : seul stderr porte
+    le message de fail()."""
+    tampon, tampon_out = io.StringIO(), io.StringIO()
     try:
-        with redirect_stderr(tampon):
+        with redirect_stderr(tampon), redirect_stdout(tampon_out):
             f(*args)
         return None, ""
     except SystemExit as e:
@@ -376,5 +421,32 @@ code, err = capture_fail(v.parse_until_date, "08/09/2026")
 verifie(code == 1 and "UNTIL_DATE" in err, "UNTIL_DATE illisible échoue clairement via fail() (sys.exit(1))")
 code, err = capture_fail(v.parse_until_date, "2026-13-40")
 verifie(code == 1 and "UNTIL_DATE" in err, "UNTIL_DATE calendaire impossible échoue aussi via fail()")
+
+# --- 16. quota Gmail : reprise avec backoff jusqu'au succès, la reprise se déclare -----
+service_quota = _MessagesQuota(echecs=2, cible="q1")
+recus, sortie = capture(v.fetch_scholar_emails, _service(service_quota), 7)
+verifie(len(recus) == 1 and recus[0]["subject"] == "sujet retenté",
+        "le message finit par être récupéré après reprise sur dépassement de quota")
+verifie(service_quota.appels["q1"] == 3, "2 échecs de quota puis un succès : 3 tentatives au total")
+verifie("quota" in sortie.lower() and "tentative 1/5" in sortie and "tentative 2/5" in sortie,
+        "chaque reprise se déclare au journal (une ligne par tentative retentée)")
+
+# --- 17. quota Gmail épuisé : le run échoue plutôt que de continuer sans le message -----
+service_epuise = _MessagesQuota(echecs=99, cible="q2")  # ne réussit jamais
+code, err = capture_fail(v.fetch_scholar_emails, _service(service_epuise), 7)
+verifie(code == 1 and "quota" in err.lower() and "q2" in err and "5 tentative" in err,
+        "l'épuisement des 5 tentatives fait échouer tout le run, en nommant le message et le compte")
+verifie(service_epuise.appels["q2"] == v.GMAIL_TENTATIVES_MAX,
+        "exactement GMAIL_TENTATIVES_MAX tentatives sont faites, jamais plus (borné)")
+
+# --- 18. une HttpError sans motif de quota n'est jamais retentée -----------------------
+service_404 = _MessagesQuota(echecs=99, cible="q3", erreur=lambda: _http_error_quota(status=404, reason="notFound"))
+leve = False
+try:
+    capture(v.fetch_scholar_emails, _service(service_404), 7)
+except HttpError:
+    leve = True
+verifie(leve and service_404.appels["q3"] == 1,
+        "une 404 (message supprimé, permission refusée) remonte au premier échec, sans être retentée")
 
 print("tous les contrôles passent")

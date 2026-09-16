@@ -39,6 +39,15 @@ Variables d'env optionnelles :
                             lieu de after:(aujourd'hui - LOOKBACK_DAYS) — LOOKBACK_DAYS
                             devient la taille de la fenêtre qui se termine à UNTIL_DATE, pas
                             à aujourd'hui. Rejetée avec fail() si non vide et illisible.
+    GMAIL_PAUSE_ENTRE_APPELS — délai en secondes entre deux fetch Gmail successifs
+                            (défaut : 0.3) ; pacing préventif contre le quota "Units per
+                            minute per user" (403 rateLimitExceeded confirmé à 143
+                            messages fetchés en boucle serrée le 2026-09-16, aucun souci
+                            à 50 — le seuil exact entre les deux n'est pas connu). Les
+                            reprises sur ce même dépassement sont bornées et non
+                            configurables (5 tentatives par message, délai doublé à
+                            chaque reprise) ; leur épuisement fait échouer tout le run
+                            via fail(), en nommant le nombre de messages déjà récupérés.
     OUTPUT_DIR            — dossier dans le dépôt cible pour les synthèses
                             (défaut : _inbox/scholar/syntheses ; garde-fou cron)
     INTEGRATION_OUTPUT_DIR — dossier pour la note d'intégration corpus
@@ -62,6 +71,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from email import message_from_bytes
 from email.policy import default as email_default_policy
 from email.utils import parsedate_to_datetime
@@ -75,6 +85,7 @@ import requests
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 # Force UTF-8 sur stdout/stderr pour éviter UnicodeEncodeError sur consoles
 # Windows (cp1252) lors des tests locaux. Sur GitHub Actions Linux, locale est
@@ -91,6 +102,17 @@ for _stream in (sys.stdout, sys.stderr):
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 SCHOLAR_FROM = "scholaralerts-noreply@google.com"
+# Pacing préventif entre deux fetch Gmail successifs : prévenir le mur de quota coûte
+# moins cher que s'en remettre. Confirmé le 2026-09-16 : 403 rateLimitExceeded sur
+# "Units per minute per user" à 143 messages fetchés en boucle serrée dans le même run,
+# aucun souci à 50 — le seuil exact entre les deux n'est pas connu.
+GMAIL_PAUSE_ENTRE_APPELS = float(os.environ.get("GMAIL_PAUSE_ENTRE_APPELS", "0.3"))
+# Tentatives par message avant abandon (1 essai + reprises), sur ce même dépassement de
+# quota seulement — jamais sur une autre HttpError (message supprimé, permission
+# refusée), qui remonte immédiatement. Délai doublé à chaque reprise à partir de
+# GMAIL_PAUSE_ENTRE_APPELS. Pas de variable d'env dédiée : le pacing ci-dessus suffit à
+# éviter le mur dans l'immense majorité des cas, ceci n'est qu'un filet borné.
+GMAIL_TENTATIVES_MAX = 5
 
 PROMPT_PATH = os.environ.get(
     "PROMPT_PATH", "docs/pilotage/prompt_veille_tellux_v2.md"
@@ -280,6 +302,57 @@ def texte_de_html(html_brut: str) -> str:
     return texte
 
 
+def _est_erreur_quota_gmail(exc: HttpError) -> bool:
+    """True si `exc` signale un dépassement de quota Gmail — le seul cas qu'on retente.
+
+    429 (Too Many Requests) l'est par construction, quel que soit son corps. Une 403
+    est ambiguë (peut aussi être un message supprimé ou une permission refusée) : on ne
+    la retente que si son corps porte une raison de quota (`rateLimitExceeded` et
+    apparentées — l'incident confirmé le 2026-09-16 : 403 sur "Units per minute per
+    user" à 143 messages fetchés en boucle serrée). Toute autre 403 remonte telle
+    quelle : la retenter masquerait une vraie panne."""
+    status = getattr(exc.resp, "status", None)
+    if status == 429:
+        return True
+    if status != 403:
+        return False
+    texte = f"{exc.reason} {exc.content.decode('utf-8', 'replace')}".lower()
+    return any(m in texte for m in ("ratelimitexceeded", "quotaexceeded", "userratelimitexceeded"))
+
+
+def _fetch_message_avec_reprises(service: Any, message_id: str, deja_recuperes: int, total: int) -> dict[str, Any]:
+    """Récupère un message Gmail (`format=raw`), avec reprises bornées sur un
+    dépassement de quota (`_est_erreur_quota_gmail`) seulement — toute autre HttpError
+    (message supprimé, permission refusée) remonte immédiatement, sans reprise.
+
+    Si les reprises s'épuisent sur un dépassement de quota persistant, arrête tout le
+    run via fail() plutôt que de continuer avec ce message manquant sans le dire : aucun
+    message ne doit disparaître en silence (même principe que decrire_bilan/pied_ecartes
+    pour le budget d'entrée, appliqué ici à la récupération elle-même)."""
+    derniere_erreur: HttpError | None = None
+    for tentative in range(1, GMAIL_TENTATIVES_MAX + 1):
+        try:
+            return (
+                service.users()
+                .messages()
+                .get(userId="me", id=message_id, format="raw")
+                .execute()
+            )
+        except HttpError as e:
+            if not _est_erreur_quota_gmail(e):
+                raise
+            derniere_erreur = e
+            if tentative == GMAIL_TENTATIVES_MAX:
+                break
+            delai = GMAIL_PAUSE_ENTRE_APPELS * (2 ** tentative)
+            print(f"[gmail] WARN — quota atteint sur le message {message_id} "
+                  f"(tentative {tentative}/{GMAIL_TENTATIVES_MAX}) : reprise dans {delai:.1f}s")
+            time.sleep(delai)
+    fail(f"Quota Gmail dépassé de façon persistante : {deja_recuperes} message(s) sur "
+         f"{total} récupéré(s) avant l'échec définitif du message {message_id} après "
+         f"{GMAIL_TENTATIVES_MAX} tentative(s) — {derniere_erreur}")
+
+
 def fetch_scholar_emails(
     service: Any, lookback_days: int, until_date: dt.date | None = None
 ) -> list[dict[str, str]]:
@@ -291,6 +364,12 @@ def fetch_scholar_emails(
     aurait rouvert le quota Gmail et la saturation de sortie déjà rencontrés cette
     session) : lookback_days devient la taille de la fenêtre qui se termine à
     until_date, pas à aujourd'hui.
+
+    Le fetch de chaque corps (`_fetch_message_avec_reprises`) est espacé de
+    GMAIL_PAUSE_ENTRE_APPELS et retente les seuls dépassements de quota Gmail
+    (2026-09-16 : 403 rateLimitExceeded confirmé à 143 messages fetchés en boucle
+    serrée) ; l'épuisement des reprises sur un message fait échouer tout le run via
+    fail() plutôt que de continuer avec ce message manquant sans le dire.
     """
     fin_fenetre = until_date or dt.date.today()
     after_date = (fin_fenetre - dt.timedelta(days=lookback_days)).strftime("%Y/%m/%d")
@@ -316,13 +395,10 @@ def fetch_scholar_emails(
     print(f"[gmail] {len(messages)} message(s) trouvé(s)")
 
     out: list[dict[str, str]] = []
-    for m in messages:
-        msg = (
-            service.users()
-            .messages()
-            .get(userId="me", id=m["id"], format="raw")
-            .execute()
-        )
+    for i, m in enumerate(messages):
+        if i:
+            time.sleep(GMAIL_PAUSE_ENTRE_APPELS)
+        msg = _fetch_message_avec_reprises(service, m["id"], len(out), len(messages))
         raw = base64.urlsafe_b64decode(msg["raw"])
         parsed = message_from_bytes(raw, policy=email_default_policy)
 
