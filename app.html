@@ -2343,7 +2343,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            dans la légende de b-hot (repère documentaire, PAS une recommandation de seuil
            cartographique) — arbitrage Soleil explicite, réserve reprise ici dans le title= et
            la légende, pas seulement en commentaire de code. -->
-      <button class="lbtn on-elf" id="b-elf" data-domains="elf" title="Champ magnétique ELF 50 Hz (réseau électrique), exprimé en nT — composante anthropique seule du modèle Tellux, sans la susceptibilité du substrat (distincte de « Champ magnétique composite », qui combine les deux). Estimation, pas une mesure. N'affiche rien sous 300 nT : seuil réutilisant le repère documentaire IARC classe 2B, une classification épidémiologique de long terme — un choix éditorial d'affichage, pas une évaluation du risque à ce niveau précis." onclick="tog('elf','on-elf',this)"><span class="dot" style="background:#5c3a9b"></span>Champ ELF (nT)<span class="layer-badge layer-badge--domain">ELF</span></button>
+      <button class="lbtn" id="b-elf" data-domains="elf" title="Champ magnétique ELF 50 Hz (réseau électrique), exprimé en nT — composante anthropique seule du modèle Tellux, sans la susceptibilité du substrat (distincte de « Champ magnétique composite », qui combine les deux). Estimation, pas une mesure. N'affiche rien sous 300 nT : seuil réutilisant le repère documentaire IARC classe 2B, une classification épidémiologique de long terme — un choix éditorial d'affichage, pas une évaluation du risque à ce niveau précis." onclick="tog('elf','on-elf',this)"><span class="dot" style="background:#5c3a9b"></span>Champ ELF (nT)<span class="layer-badge layer-badge--domain">ELF</span></button>
       <div class="mlegend-inline" id="mleg-elf"></div>
       <!-- L'ex-bouton unique b-con (« Mesures EM ») vit désormais dans GROUPE 3 « Contexte
            naturel » / sous-groupe « Repères et mesures externes », SCINDÉ le 2026-08-29 (brief
@@ -4539,6 +4539,19 @@ let _landeMaquisZoomHintShown=false;
 // fois, comme les fonds de carte — trois calques superposés produiraient des teintes composites
 // illisibles. Lu par tog() ci-dessous ; ne concerne QUE ces trois id, aucune autre couche.
 const VEG_GROUP=['foretdense','foretouverte','landemaquis'];
+// Exclusivité groupe couches de calcul (2026-09-16, lecture app.html du même jour) : hot/hotrf/elf
+// sont les trois heatmaps CALCULÉES par Tellux (grille au runtime, calcAll()/calcN_RF_calib()/
+// calcMagneticELFAuto()) — superposées, leurs aplats se cachent l'un l'autre sans rien dire de
+// quelle grandeur on lit. La comparaison entre domaines en un point reste assurée par le clic sur
+// la carte, pas par la superposition. gammajrc et emag en sont volontairement exclus : ce sont des
+// fonds de contexte, pas des couches de calcul Tellux au même sens — gammajrc le dit dans son
+// propre commentaire (« Option retenue : CÔTÉ À CÔTÉ. Couche de contexte visuelle indépendante »,
+// vérifié n'alimenter ni calcAll() ni computeExpertComposite()) et dans son title de bouton
+// (« hors calcul Tellux ») ; emag est une image raster externe (NOAA), aucun calcul Tellux. Même
+// mécanique que VEG_GROUP ci-dessus, lue par tog() plus bas. Affichage combiné et refonte
+// esthétique de ces trois couches : dette COUCHES-CALCUL-AFFICHAGE-COMBINE-ET-ESTHETIQUE-001
+// (registre privé), pas ce lot.
+const CALC_GROUP=['hot','hotrf','elf'];
 // SCISSION 2026-08-29 (brief « exécution groupée », item C) : con → cert (lCert, fiches
 // certifiées ANFR/EXEM) + contrib (lCon, contributions citoyennes). Deux boutons, deux toggles.
 const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,elf:lElf,cert:lCert,contrib:lCon,foretdense:lForetDense,foretouverte:lForetOuverte,landemaquis:lLandeMaquis,crustal:lCrustal,openrad:lOpenRad,gammajrc:lGammaJRC};
@@ -4575,7 +4588,12 @@ const WMS={hyd:wmsHyd,emag:wmsEmag};
 // conditionné par ACTIVE.ant, cf. le bloc Promise.all décalé plus bas, non touché ici. Antennes
 // toujours chargées et disponibles au clic (bouton b-ant), simplement plus affichées au premier
 // rendu — même mécanique que cert:false ci-dessus.
-const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,elf:true,res:false,prod:false,cert:false,contrib:false,crustal:false,openrad:false,gammajrc:false};
+// hot/hotrf/elf : exclusion mutuelle depuis le 2026-09-16 (cf. CALC_GROUP, brief mutuelle
+// exclusion couches de calcul) — au plus une des trois à true. hotrf seul par défaut (arbitrage
+// Soleil explicite, PAS déduit du fait qu'il était déjà true avant ce lot — la question était
+// distincte de la décision d'exclusion elle-même). elf était aussi à true avant ce lot : deux
+// couches de calcul actives au chargement, le défaut même que ce lot corrige.
+const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,elf:false,res:false,prod:false,cert:false,contrib:false,crustal:false,openrad:false,gammajrc:false};
 
 // 'con' (scindé depuis en 'cert'+'contrib', 2026-08-29 item C) et 'emag' promues en Zone 1
 // "core" le 2026-08-27 (brief "Panneau '?' sélectif",
@@ -5698,6 +5716,24 @@ function tog(id,cls,btn){
       if(other==='landemaquis')_landeMaquisZoomHintShown=false;
       var orow=document.getElementById(other+'-op-row');
       if(orow) orow.style.display='none';
+      showLegend(other,false);
+    });
+  }
+  // Exclusivité groupe couches de calcul (2026-09-16, CALC_GROUP déclaré près de VEG_GROUP
+  // plus haut) : même mécanique, appliquée à hot/hotrf/elf — au plus une heatmap calculée
+  // affichée à la fois, la comparaison entre domaines restant assurée par le clic sur la
+  // carte. Pas de ligne d'opacité ni de repère de zoom pour ces trois id (contrairement au
+  // groupe végétation ci-dessus) : rien à réinitialiser sur ce point. Correspondance id→bouton
+  // irrégulière pour un seul membre : la clé JS est 'hotrf' mais le bouton est #b-hot-rf (tiret),
+  // pas #b-hotrf — gérée explicitement plutôt que de supposer 'b-'+other partout.
+  if(CALC_GROUP.indexOf(id)!==-1 && !ACTIVE[id]){
+    CALC_GROUP.forEach(function(other){
+      if(other===id || !ACTIVE[other]) return;
+      map.removeLayer(LAYERS[other]);
+      ACTIVE[other]=false;
+      var obId='b-'+(other==='hotrf'?'hot-rf':other);
+      var ob=document.getElementById(obId);
+      if(ob) ob.className='lbtn';
       showLegend(other,false);
     });
   }
@@ -13064,21 +13100,26 @@ if (typeof updateCrustalGauge === 'function') {
 // pas du facteur de charge RTE (spécifique au domaine ELF/magnétique de buildHot()).
 buildHotRF();
 showLegend('hotrf',true);
-// ant:false / elf:true au boot (brief S1 mobile-ui, lot e, 2026-09-12 — remplace l'arbitrage du
-// 2026-09-02 en commentaire ci-dessus, cf. aussi ACTIVE plus haut) — grille ELF visible + légendée
-// au démarrage, à la place des antennes, en complément de la grille RF (hotrf). lAnt.addTo(map)
-// reste conditionné à ACTIVE.ant dans le Promise.all décalé plus bas (désormais false, donc
-// n'ajoute plus lAnt à la carte) — chargement des antennes (loadAnt, reprise 'ant') inchangé,
-// seul l'affichage change (cf. commentaire à ACTIVE). Mesures certifiées (cert) toujours chargées
-// au boot. calibrateRF() n'en
+// ant:false au boot (brief S1 mobile-ui, lot e, 2026-09-12) — lAnt.addTo(map) reste conditionné
+// à ACTIVE.ant dans le Promise.all décalé plus bas (false, donc n'ajoute plus lAnt à la carte) —
+// chargement des antennes (loadAnt, reprise 'ant') inchangé, seul l'affichage change (cf.
+// commentaire à ACTIVE). Mesures certifiées (cert) toujours chargées au boot. calibrateRF() n'en
 // dépend PAS : elle lit le même fichier par son propre fetch. L'ancienne mention « calibrateRF() en
 // dépend » était fausse, et corrigée le 2026-09-10 parce qu'elle aurait classé ce chargeur en critique.
 // Toujours non affichées ni légendées par défaut — cert:false, showLegend('cert',...) désormais piloté par
 // tog() au 1er clic comme contrib:false l'était déjà. Même règle appliquée à ant ci-dessus depuis
 // aujourd'hui : chargée, disponible au clic (b-ant), plus affichée ni légendée au premier rendu.
-lElf.addTo(map);
-buildElf();
-showLegend('elf',true);
+//
+// Amendement 2026-09-16 (exclusion mutuelle des couches de calcul, CALC_GROUP) : le bloc
+// « elf:true au boot » qui vivait ici (lElf.addTo(map); buildElf(); showLegend('elf',true);
+// brief S1, 2026-09-12) est retiré, pas commenté — il ajoutait lElf à la carte de façon
+// INCONDITIONNELLE, en dehors du mécanisme ACTIVE/tog(), ce qui faisait cohabiter deux
+// heatmaps calculées au premier chargement (RF ici + ELF via ce bloc) alors même que
+// ACTIVE.elf valait déjà false dans l'objet ACTIVE — le vrai défaut que ce lot corrige n'était
+// pas dans ACTIVE, il était ici. RF (hotrf) reste seule active par défaut, arbitrage explicite
+// de ce lot, pas déduit du fait qu'elle l'était déjà. Le clic sur #b-elf construit lElf à la
+// demande (garde lElf.getLayers().length===0 dans tog(), inchangée) — aucune perte de
+// fonctionnalité, juste plus de pré-construction silencieuse au chargement.
 // Démarrage : anomalies EM (couche RF + mesures terrain par défaut, cf. arbitrage 2026-08-23)
 let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.hotrf){lHotRF.clearLayers();buildHotRF();}if(ACTIVE.elf)buildElf();},300);}
