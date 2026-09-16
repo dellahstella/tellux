@@ -3197,37 +3197,44 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
          (--danger ≥10 V/m, --warn 5-10 V/m), aucune couleur neuve. Les deux mesures de Monticello
          San Quilico sont deux dates distinctes, pas un doublon : #192990 (20/03/2025, non
          conforme) et #193102 (01/04/2025, re-mesure après correctif opérateur, conforme) — la note
-         de la fiche #192990 le confirme. -->
+         de la fiche #192990 le confirme.
+
+     AMENDEMENT 2026-09-16 (même jour, brief suivant) — PASSAGE AU RUNTIME, le texte figé ci-dessus
+     décrit un état révolu, gardé pour l'historique de la découverte, pas pour l'état actuel :
+     le titre ET la grille de stats ET les barres sont désormais calculés à l'ouverture du panneau
+     depuis `MESURES_CERTIFIEES` (voir openStatsPanel(), _statsPanelCompute(), _statsPanelRender*()
+     plus bas dans ce fichier) — un seul périmètre partout, le corpus complet au moment de
+     l'ouverture, plus jamais les 30 fiches d'origine figées le jour de la construction de ce
+     panneau. `#stats-scope-note` (« Détail ci-dessous sur les 30 fiches d'origine… ») est RETIRÉ,
+     pas laissé vide : sa seule raison d'être — avertir d'un deuxième périmètre — n'existe plus
+     quand il n'y a qu'un seul périmètre. Les valeurs « 236/151/85/1 » citées dans le paragraphe
+     ci-dessus comme « le titre… porte sur le CORPUS COMPLET » restent une description fidèle de ce
+     qu'affiche le titre AUJOURD'HUI (2026-09-16) — mais ce ne sont plus des littéraux HTML : ce
+     sont les valeurs que retourne le calcul au moment où ce commentaire est écrit, recalculées à
+     chaque ouverture. Seul le footer (Laboratoire/Protocole/Monticello, dernier <div> du panneau)
+     reste du texte figé — hors périmètre de ce lot, signalé séparément (PR publique) : sa phrase
+     « Toutes mesures conformes sauf … Monticello » suppose implicitement qu'il n'existera jamais
+     qu'une seule non-conformité, comme l'ancien titre le supposait pour ses quatre chiffres avant
+     ce lot. -->
 <div id="stats-modal" role="dialog" aria-modal="true" aria-label="Statistiques du corpus CartoRadio EXEM" aria-hidden="true" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(31,35,41,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:2300;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeStatsPanel()">
 <div class="stats-panel" id="stats-panel">
   <button id="stats-close-btn" onclick="closeStatsPanel()" aria-label="Fermer" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--tx3);line-height:1;padding:2px 6px;z-index:1">&#x2715;</button>
-  <div class="mpanel-title">Corpus CartoRadio EXEM — 236 fiches ANFR/EXEM · Corse 2002–2026 · 1 non-conformité documentée (Monticello) · 151 en position exacte, 85 résidentielles agrégées au centroïde communal</div>
-  <div id="stats-scope-note" style="font-size:10px;color:var(--tx3);margin:-4px 0 8px">Détail ci-dessous sur les 30 fiches d'origine (28 mesures RF + 2 basse fréquence), sous-ensemble du corpus complet — pas les 236.</div>
+  <div class="mpanel-title" id="stats-mpanel-title">Corpus CartoRadio EXEM — chargement…</div>
   <div class="stats-grid">
-    <div class="stat-box"><div class="stat-val" style="color:var(--acc)">28</div><div class="stat-lbl">mesures RF (+ 2 BF)</div></div>
-    <div class="stat-box"><div class="stat-val" style="color:var(--maquis-clair)">0.16</div><div class="stat-lbl">min V/m · Barrettali</div></div>
-    <div class="stat-box"><div class="stat-val" style="color:var(--danger)">29.05</div><div class="stat-lbl">max V/m · Monticello</div></div>
-    <div class="stat-box"><div class="stat-val" style="color:var(--warn)">1.57</div><div class="stat-lbl">médiane V/m</div></div>
+    <div class="stat-box"><div class="stat-val" id="stats-val-rf" style="color:var(--acc)">…</div><div class="stat-lbl" id="stats-lbl-rf"></div></div>
+    <div class="stat-box"><div class="stat-val" id="stats-val-min" style="color:var(--maquis-clair)">…</div><div class="stat-lbl" id="stats-lbl-min"></div></div>
+    <div class="stat-box"><div class="stat-val" id="stats-val-max" style="color:var(--danger)">…</div><div class="stat-lbl" id="stats-lbl-max"></div></div>
+    <div class="stat-box"><div class="stat-val" id="stats-val-mediane" style="color:var(--warn)">…</div><div class="stat-lbl">médiane V/m</div></div>
   </div>
   <div class="stats-grid" style="margin-bottom:12px">
-    <div class="stat-box"><div class="stat-val" style="color:var(--danger)">1</div><div class="stat-lbl">dépassement légal</div></div>
-    <div class="stat-box"><div class="stat-val" style="color:#7c0000">3</div><div class="stat-lbl">mesures ≥ 10 V/m</div></div>
-    <div class="stat-box"><div class="stat-val" style="color:var(--warn)">9</div><div class="stat-lbl">mesures ≥ 5 V/m</div></div>
-    <div class="stat-box"><div class="stat-val" style="color:var(--acc)">13</div><div class="stat-lbl">mesures &lt; 1 V/m</div></div>
+    <div class="stat-box"><div class="stat-val" id="stats-val-depassement" style="color:var(--danger)">…</div><div class="stat-lbl">dépassement légal</div></div>
+    <div class="stat-box"><div class="stat-val" id="stats-val-ge10" style="color:#7c0000">…</div><div class="stat-lbl">mesures ≥ 10 V/m</div></div>
+    <div class="stat-box"><div class="stat-val" id="stats-val-ge5" style="color:var(--warn)">…</div><div class="stat-lbl">mesures ≥ 5 V/m</div></div>
+    <div class="stat-box"><div class="stat-val" id="stats-val-lt1" style="color:var(--acc)">…</div><div class="stat-lbl">mesures &lt; 1 V/m</div></div>
   </div>
   <div class="stats-bar-wrap">
     <div class="stats-bar-title">Top mesures par valeur (V/m) — limite légale 28–61 V/m · seuil atypique 9 V/m</div>
-    <div id="stats-bars">
-      <div class="stats-bar-row"><span class="lbl">Monticello (20/03)</span><div class="bar"><div class="fill" style="width:100%;background:var(--danger)"></div></div><span class="val">29.05</span></div>
-      <div class="stats-bar-row"><span class="lbl">Monticello (01/04)</span><div class="bar"><div class="fill" style="width:50%;background:var(--danger)"></div></div><span class="val">14.55</span></div>
-      <div class="stats-bar-row"><span class="lbl">Piana</span><div class="bar"><div class="fill" style="width:36%;background:var(--danger)"></div></div><span class="val">10.32</span></div>
-      <div class="stats-bar-row"><span class="lbl">Oletta</span><div class="bar"><div class="fill" style="width:29%;background:var(--warn)"></div></div><span class="val">8.53</span></div>
-      <div class="stats-bar-row"><span class="lbl">Calvi</span><div class="bar"><div class="fill" style="width:23%;background:var(--warn)"></div></div><span class="val">6.81</span></div>
-      <div class="stats-bar-row"><span class="lbl">Speloncato</span><div class="bar"><div class="fill" style="width:23%;background:var(--warn)"></div></div><span class="val">6.76</span></div>
-      <div class="stats-bar-row"><span class="lbl">Porto Vecchio</span><div class="bar"><div class="fill" style="width:21%;background:var(--warn)"></div></div><span class="val">6.24</span></div>
-      <div class="stats-bar-row"><span class="lbl">Olmo</span><div class="bar"><div class="fill" style="width:20%;background:var(--warn)"></div></div><span class="val">5.90</span></div>
-      <div class="stats-bar-row"><span class="lbl">Grosseto Prugna</span><div class="bar"><div class="fill" style="width:19%;background:var(--warn)"></div></div><span class="val">5.61</span></div>
-    </div>
+    <div id="stats-bars"></div>
   </div>
   <div style="font-size:11px;color:var(--tx3);border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
     Laboratoire : <b>EXEM</b> · Protocole ANFR/DR 15-4 · Toutes mesures conformes sauf <span class="nc-badge">NON CONFORME</span> Monticello San Quilico #192990 (29.05 V/m · 20/03/2025) — rapport d'infraction établi
@@ -3734,7 +3741,25 @@ var JS_STRINGS_EN = {
   ant_statut_indisponibles: "antennas unavailable",
   // Bascule « Contributions » tant que la liste n'est pas chargée : « 0 relevé(s) » y était un faux zéro.
   contrib_toast_chargement: "Smartphone contributions — loading… · outside the calculation.",
-  contrib_toast_non_chargees: "Smartphone contributions — not loaded · outside the calculation."
+  contrib_toast_non_chargees: "Smartphone contributions — not loaded · outside the calculation.",
+
+  // Panneau stats corpus CartoRadio, passage runtime (2026-09-16, cf. openStatsPanel()). CO non
+  // fourni pour ces clés (contenu dynamique, doctrine « pas de traduction improvisée » déjà en
+  // vigueur pour tout ce qui passe par jt() dans ce fichier) — cf. commentaires I18N_ENTRIES
+  // retirées (stat_rf, stats_mpanel_title) à leur ancien emplacement.
+  stats_title_loading: "CartoRadio EXEM corpus — loading…",
+  stats_title_error: "CartoRadio EXEM corpus — data unavailable right now",
+  stats_body_error: "The certified measurements file could not be loaded. Try again by reopening this panel.",
+  stats_title_a: "CartoRadio EXEM corpus — ",
+  stats_title_b: " ANFR/EXEM sheets · Corsica 2002–2026 · ",
+  stats_title_d: " at exact position, ",
+  stats_title_e: " residential aggregated at commune centroid",
+  stats_nc_zero: "no documented non-compliance",
+  stats_nc_one_prefix: "1 documented non-compliance (",
+  stats_nc_one_suffix: ")",
+  stats_nc_many_suffix: " documented non-compliances",
+  stats_lbl_rf_prefix: "RF measurements (+ ",
+  stats_lbl_rf_suffix: " LF)"
 };
 function jt(key, fr){
   return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
@@ -13601,14 +13626,150 @@ function chooseContribLevelN0(){
   startContribFromFAB();
 }
 
-// ═══ MODALE STATS CORPUS CARTORADIO (2026-09-08) ═══
+// ═══ MODALE STATS CORPUS CARTORADIO (2026-09-08, RUNTIME depuis le 2026-09-16) ═══
 // Déclenchée depuis le bouton « Corpus RF » du menu ☰ (#hdr-menu). Même mécanique que
-// openContribLevelModal()/closeContribLevelModal() ci-dessus : style.display + aria-hidden,
-// pas de piège à focus (aucun autre modal de ce fichier n'en a). Contenu statique, rien à
-// initialiser à l'ouverture.
-function openStatsPanel(){
+// openContribLevelModal()/closeContribLevelModal() ci-dessus pour l'affichage (style.display +
+// aria-hidden, pas de piège à focus), mais le CONTENU n'est plus statique depuis ce lot : titre,
+// grille et barres sont calculés à chaque ouverture depuis `MESURES_CERTIFIEES` (même variable,
+// même chargeur `loadMesuresCertifiees()`, que la couche carte `cert` — mémoïsé, aucun fetch
+// redondant si `cert` a déjà été activée avant l'ouverture de ce panneau). Un seul périmètre
+// partout : le corpus complet au moment de l'ouverture, plus jamais les 30 fiches d'origine
+// figées à la construction de ce panneau (cf. commentaire historique + amendement au-dessus du
+// HTML du panneau, et dette PANNEAU-STATS-DEUX-PERIMETRES-001, registre privé).
+//
+// Seul le footer (Laboratoire/Protocole/Monticello, dernier <div> du panneau) reste figé — hors
+// périmètre de ce lot, signalé dans la PR : sa phrase suppose implicitement une seule
+// non-conformité pour toujours, comme l'ancien titre le supposait pour ses quatre chiffres.
+//
+// État de chargement explicite (règle du brief) : `_statsPanelRenderLoading()` pose un texte de
+// chargement sur le titre ET sur chaque valeur de grille avant l'attente du fetch — jamais un
+// compte vide ni un zéro trompeur pendant que `MESURES_CERTIFIEES` n'est pas encore peuplée.
+// Échec de chargement : `_statsPanelRenderError()` remplace tout le contenu chiffré par un
+// message explicite, pas un panneau à moitié rempli.
+//
+// Lieu du min/max V/m : cité UNIQUEMENT si une seule fiche porte cette valeur extrême — plusieurs
+// fiches sont à exactement 0 V/m sur le corpus actuel (ex-aequo réel, pas hypothétique), et nommer
+// arbitrairement l'une d'elles referait la même erreur que l'ancien "Barrettali" (exact sur 30
+// fiches, faux sur 236 dont le vrai minimum est 0, ex-aequo, ailleurs) — non tranché autrement ici.
+//
+// i18n : ce contenu passe par jt()/JS_STRINGS_EN (FR/EN seulement, comme tout le reste du contenu
+// dynamique de ce fichier — cf. commentaire à jt(), ~ligne 3258) et non plus par le mécanisme
+// I18N_ENTRIES à sélecteur (FR/CO/EN, mais réservé au texte figé au chargement). Les entrées
+// stat_rf/stats_mpanel_title/stats_scope_note sont retirées d'I18N_ENTRIES en conséquence — la
+// traduction corse de ces trois-là n'existe donc plus (elle retombe sur le français), au même
+// titre que tout le reste du contenu dynamique de ce fichier (doctrine « pas de traduction
+// improvisée » pour le corse sur du contenu neuf/changé). stat_mediane/stat_depassement/stat_10/
+// stat_5/stat_1 restent inchangées : ce sont des libellés purs, jamais un chiffre embarqué dans
+// leur texte, seule la valeur voisine (désormais avec son propre id) devient dynamique.
+function _statsPanelFormatDDMM(dateStr){
+  if(!dateStr) return '';
+  var p = dateStr.split('-');
+  return p.length===3 ? (p[2]+'/'+p[1]) : '';
+}
+function _statsPanelFmtVal(v){
+  return v.toFixed(2);
+}
+function _statsPanelCompute(mesures){
+  var total=mesures.length, ext=0, resid=0, nonConformes=[];
+  mesures.forEach(function(m){
+    if(m.type_environnement==='exterieur_public') ext++;
+    else if(m.type_environnement==='residentiel') resid++;
+    if(!m.conforme) nonConformes.push(m);
+  });
+  var bf = mesures.filter(_certIsBasseFrequence).length;
+  var vm = mesures.filter(function(m){ return !_certIsBasseFrequence(m) && m.valeur_max_vm!=null; });
+  var sorted = vm.slice().sort(function(a,b){ return a.valeur_max_vm - b.valeur_max_vm; });
+  var n = sorted.length;
+  var median = n===0 ? null : (n%2 ? sorted[(n-1)/2].valeur_max_vm : (sorted[n/2-1].valeur_max_vm + sorted[n/2].valeur_max_vm)/2);
+  var minVal = n===0 ? null : sorted[0].valeur_max_vm;
+  var maxVal = n===0 ? null : sorted[n-1].valeur_max_vm;
+  var minCommunes = n===0 ? [] : sorted.filter(function(m){ return m.valeur_max_vm===minVal; });
+  var maxCommunes = n===0 ? [] : sorted.filter(function(m){ return m.valeur_max_vm===maxVal; });
+  var top9 = sorted.slice().sort(function(a,b){ return b.valeur_max_vm - a.valeur_max_vm; }).slice(0,9);
+  return {
+    total:total, ext:ext, resid:resid, nonConformes:nonConformes, bfCount:bf, rfCount:vm.length,
+    minVal:minVal, minCommune: minCommunes.length===1 ? minCommunes[0].commune : null,
+    maxVal:maxVal, maxCommune: maxCommunes.length===1 ? maxCommunes[0].commune : null,
+    median:median,
+    ge10: vm.filter(function(m){ return m.valeur_max_vm>=10; }).length,
+    ge5:  vm.filter(function(m){ return m.valeur_max_vm>=5;  }).length,
+    lt1:  vm.filter(function(m){ return m.valeur_max_vm<1;   }).length,
+    top9: top9
+  };
+}
+function _statsPanelSetVals(map, text){
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.textContent = map[id];
+  });
+}
+function _statsPanelRenderLoading(){
+  var t=document.getElementById('stats-mpanel-title');
+  if(t) t.textContent = jt('stats_title_loading','Corpus CartoRadio EXEM — chargement…');
+  _statsPanelSetVals({'stats-val-rf':'…','stats-val-min':'…','stats-val-max':'…','stats-val-mediane':'…','stats-val-depassement':'…','stats-val-ge10':'…','stats-val-ge5':'…','stats-val-lt1':'…'});
+  _statsPanelSetVals({'stats-lbl-rf':'','stats-lbl-min':'','stats-lbl-max':''});
+  var bars=document.getElementById('stats-bars');
+  if(bars) bars.innerHTML='';
+}
+function _statsPanelRenderError(){
+  var t=document.getElementById('stats-mpanel-title');
+  if(t) t.textContent = jt('stats_title_error','Corpus CartoRadio EXEM — données indisponibles pour le moment');
+  _statsPanelSetVals({'stats-val-rf':'—','stats-val-min':'—','stats-val-max':'—','stats-val-mediane':'—','stats-val-depassement':'—','stats-val-ge10':'—','stats-val-ge5':'—','stats-val-lt1':'—'});
+  _statsPanelSetVals({'stats-lbl-rf':'','stats-lbl-min':'min V/m','stats-lbl-max':'max V/m'});
+  var bars=document.getElementById('stats-bars');
+  if(bars) bars.innerHTML='<div style="font-size:11px;color:var(--tx3);padding:8px 0">'+jt('stats_body_error','Le fichier des mesures certifiées n\'a pas pu être chargé. Réessayez en rouvrant ce panneau.')+'</div>';
+}
+function _statsPanelRenderSuccess(s){
+  var t=document.getElementById('stats-mpanel-title');
+  if(t){
+    var ncClause;
+    if(s.nonConformes.length===0){
+      ncClause = jt('stats_nc_zero','aucune non-conformité documentée');
+    } else if(s.nonConformes.length===1){
+      ncClause = jt('stats_nc_one_prefix','1 non-conformité documentée (') + s.nonConformes[0].commune + jt('stats_nc_one_suffix',')');
+    } else {
+      ncClause = s.nonConformes.length + jt('stats_nc_many_suffix',' non-conformités documentées');
+    }
+    t.textContent = jt('stats_title_a','Corpus CartoRadio EXEM — ') + s.total + jt('stats_title_b',' fiches ANFR/EXEM · Corse 2002–2026 · ')
+      + ncClause + ' · ' + s.ext + jt('stats_title_d',' en position exacte, ') + s.resid + jt('stats_title_e',' résidentielles agrégées au centroïde communal');
+  }
+  _statsPanelSetVals({
+    'stats-val-rf': s.rfCount,
+    'stats-val-min': s.minVal==null ? '—' : _statsPanelFmtVal(s.minVal),
+    'stats-val-max': s.maxVal==null ? '—' : _statsPanelFmtVal(s.maxVal),
+    'stats-val-mediane': s.median==null ? '—' : _statsPanelFmtVal(s.median),
+    'stats-val-depassement': s.nonConformes.length,
+    'stats-val-ge10': s.ge10,
+    'stats-val-ge5': s.ge5,
+    'stats-val-lt1': s.lt1
+  });
+  _statsPanelSetVals({
+    'stats-lbl-rf': jt('stats_lbl_rf_prefix','mesures RF (+ ') + s.bfCount + jt('stats_lbl_rf_suffix',' BF)'),
+    'stats-lbl-min': 'min V/m' + (s.minCommune ? ' · ' + s.minCommune : ''),
+    'stats-lbl-max': 'max V/m' + (s.maxCommune ? ' · ' + s.maxCommune : '')
+  });
+  var barsEl=document.getElementById('stats-bars');
+  if(barsEl){
+    var maxRef = s.top9.length ? s.top9[0].valeur_max_vm : 0;
+    var communeCounts = {};
+    s.top9.forEach(function(m){ communeCounts[m.commune] = (communeCounts[m.commune]||0)+1; });
+    barsEl.innerHTML = s.top9.map(function(m){
+      var v = m.valeur_max_vm;
+      var color = v>=10 ? 'var(--danger)' : (v>=5 ? 'var(--warn)' : 'var(--acc)');
+      var pct = maxRef>0 ? Math.round((v/maxRef)*100) : 0;
+      var label = m.commune + (communeCounts[m.commune]>1 ? ' (' + _statsPanelFormatDDMM(m.date_mesure) + ')' : '');
+      return '<div class="stats-bar-row"><span class="lbl">'+label+'</span><div class="bar"><div class="fill" style="width:'+pct+'%;background:'+color+'"></div></div><span class="val">'+_statsPanelFmtVal(v)+'</span></div>';
+    }).join('');
+  }
+}
+async function openStatsPanel(){
   var m=document.getElementById('stats-modal');
-  if(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); }
+  if(!m) return;
+  m.style.display='flex'; m.setAttribute('aria-hidden','false');
+  _statsPanelRenderLoading();
+  var mesures = await loadMesuresCertifiees();
+  if(!mesures || mesures.length===0){ _statsPanelRenderError(); return; }
+  _statsPanelRenderSuccess(_statsPanelCompute(mesures));
 }
 function closeStatsPanel(){
   var m=document.getElementById('stats-modal');
@@ -15565,7 +15726,11 @@ function capCleanup(){
 ["cform_comment_mesurer","#link-comment-mesurer","","? Comment mesurer ?","? Cumu misurà ?","? How to measure?"],
 // 14 entrées geo_* (Panneau Prospecteur terrain) RETIRÉES le 2026-09-08 avec le panneau
 // #geo-panel — DOM mort, cf. commentaire à son ancien emplacement (app.html, ~ligne 3123).
-["stat_rf",".stat-lbl@0","","mesures RF (+ 2 BF)","misure RF (+ 2 BF)","RF measurements (+ 2 LF)"],
+// stat_rf RETIRÉE le 2026-09-16 (passage runtime du panneau stats, cf. openStatsPanel()) : son
+// libellé embarquait un compte ("+ 2 BF") devenu dynamique — ce sélecteur-based FR/CO/EN ne peut
+// plus s'appliquer à un texte que le JS reconstruit à chaque ouverture. Traduction EN reprise par
+// jt()/JS_STRINGS_EN (stats_lbl_rf_prefix/suffix) ; traduction CO perdue pour ce libellé (aucune
+// traduction improvisée sur du contenu dynamique, même règle que le reste de ce fichier).
 ["stat_mediane",".stat-lbl@3","","médiane V/m","mediana V/m","median V/m"],
 ["stat_depassement",".stat-lbl@4","","dépassement légal","supranamentu legale","legal exceedance"],
 ["stat_10",".stat-lbl@5","","mesures ≥ 10 V/m","misure ≥ 10 V/m","measurements ≥ 10 V/m"],
@@ -15625,10 +15790,18 @@ function capCleanup(){
 ["mat_sep_betons","#c-mats div@0","","— Bétons (µr=1 tous, effet RF uniquement) —","","— Concretes (µr=1 all, RF effect only) —"],
 ["mat_sep_legeres","#c-mats div@1","","— Parois légères —","","— Lightweight partitions —"],
 ["mat_sep_tuyauterie","#c-mats div@2","","— Tuyauterie (effet ELF local uniquement) —","","— Piping (local ELF effect only) —"],
-["stats_scope_note","#stats-scope-note","","Détail ci-dessous sur les 30 fiches d'origine (28 mesures RF + 2 basse fréquence), sous-ensemble du corpus complet — pas les 236.","","Detail below covers the 30 original records (28 RF measurements + 2 low-frequency), a subset of the full corpus — not the 236."],
+// stats_scope_note RETIRÉE le 2026-09-16 (passage runtime, cf. openStatsPanel()) : le div
+// #stats-scope-note lui-même est retiré du HTML — sa seule raison d'être (avertir d'un second
+// périmètre, 30 fiches vs 236) n'existe plus quand titre/grille/barres portent tous le même
+// périmètre (le corpus complet au moment de l'ouverture). Dette PANNEAU-STATS-DEUX-PERIMETRES-001
+// (registre privé) : close par ce lot, plus de deux périmètres à distinguer.
 ["stats_modal_aria","#stats-modal","aria-label","Statistiques du corpus CartoRadio EXEM","","CartoRadio EXEM corpus statistics"],
 ["stats_close_aria","#stats-close-btn","aria-label","Fermer","","Close"],
-["stats_mpanel_title","#stats-panel .mpanel-title","","Corpus CartoRadio EXEM — 236 fiches ANFR/EXEM · Corse 2002–2026 · 1 non-conformité documentée (Monticello) · 151 en position exacte, 85 résidentielles agrégées au centroïde communal","","CartoRadio EXEM corpus — 236 ANFR/EXEM sheets · Corsica 2002–2026 · 1 documented non-compliance (Monticello) · 151 at exact position, 85 residential aggregated at commune centroid"],
+// stats_mpanel_title RETIRÉE le 2026-09-16 (passage runtime) : le titre est désormais calculé à
+// chaque ouverture par _statsPanelRenderSuccess()/_statsPanelRenderLoading()/_statsPanelRenderError()
+// (cf. openStatsPanel()) — un sélecteur-based FR/CO/EN figé au chargement ne peut plus s'appliquer
+// à un texte reconstruit après coup. Traduction EN reprise par jt()/JS_STRINGS_EN (stats_title_*,
+// stats_nc_*) ; traduction CO perdue pour ce titre, même règle que stat_rf ci-dessus.
 ["stats_bar_title",".stats-bar-title","","Top mesures par valeur (V/m) — limite légale 28–61 V/m · seuil atypique 9 V/m","","Top measurements by value (V/m) — legal limit 28–61 V/m · atypical threshold 9 V/m"],
 ["stats_labo_prefix","#stats-panel > div:last-of-type","","Laboratoire :","","Laboratory:"],
 ["stats_protocole_infix","#stats-panel > div:last-of-type","","· Protocole ANFR/DR 15-4 · Toutes mesures conformes sauf","","· Protocol ANFR/DR 15-4 · All measurements compliant except"],
