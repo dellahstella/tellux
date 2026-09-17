@@ -252,6 +252,13 @@ a{color:inherit;}
 .rd-lbtn:hover{border-color:var(--mica);}
 .rd-lbtn.on{background:var(--pierre);border-color:var(--ocre);font-weight:500;}
 .rd-lbtn .sq{width:11px;height:11px;border-radius:2px;flex-shrink:0;display:inline-block;}
+/* État d'indisponibilité (brief LOT A, 2026-09-17, étape c) — chargement échoué : le bouton ne
+   passe jamais .on (rdToggleGammaJrc ne l'ajoute que si rdLGammaJRC.getLayers().length > 0
+   après résolution), et cette pastille devient visible à la place. #8E2F1F (--porphyre) sur
+   fond blanc (.rd-map-sidebar) : 8,16:1, bien au-dessus du seuil AA (4,5:1) — mesuré, pas
+   estimé, cf. PR pour le détail du calcul. */
+.rd-lbtn.unavailable{border-color:var(--porphyre);}
+.rd-lbtn-unavail-note{font-family:var(--fm);font-size:10.5px;font-weight:600;color:var(--porphyre);margin-left:auto;flex-shrink:0;}
 .rd-lbtn-hint{font-size:10.5px;color:var(--mica);line-height:1.5;margin:-2px 0 6px 2px;}
 .rd-lbtn-doc{font-size:10px;line-height:1.5;margin:0 0 12px 2px;}
 .rd-lbtn-doc a{color:var(--tyrrh);text-decoration:none;border-bottom:1px solid rgba(31,58,95,.3);}
@@ -393,15 +400,19 @@ a{color:inherit;}
              10.2905/JRC.SBESAC0, CC BY 4.0), même rendu (4 paliers discrets par quartile réel,
              interactive:false — cf. rdBuildGammaJRCLayer() plus bas, même nécessité fonctionnelle
              que sur app.html : un Path interactif avec popup coupait le clic carte, cf. INS-021).
-             Reste hors calcul Tellux (aucun lien avec le zonage radon ASNR ni avec le potentiel
-             affiché) — propriété inchangée par ce déplacement, portée explicitement par le hint
-             ci-dessous ("Gamma, pas radon"), exigence du brief. Pas de rd-lbtn-doc classique :
-             aucune section cadre-scientifique.html ne documente spécifiquement cette couche JRC
-             (vérifié par grep avant d'écrire ceci — #gamma-ambiant, utilisé par rd-b-geo
-             ci-dessus, documente le gamma CALCULÉ par Tellux, un objet différent) ; note plutôt
-             qu'un lien, même patron que rd-b-air juste en dessous. -->
-        <button class="rd-lbtn" id="rd-b-gammajrc" onclick="rdToggleGammaJrc(this)"><span class="sq" style="background:#C28533"></span><span data-i18n-key="lyr_gammajrc">Fond gamma terrestre (JRC)</span></button>
-        <div class="rd-lbtn-hint" data-i18n-key="lyr_gammajrc_hint">Gamma, pas radon : deux phénomènes physiques distincts, cette couche ne dit rien du potentiel radon affiché par ailleurs. Grille modélisée européenne (JRC/EANR, résolution 10 km), débit de dose absorbée dans l'air en nGy/h — pas l'équivalent de dose ambiant (nSv/h) affiché ailleurs sur ce site, deux grandeurs non comparables directement. Source tierce CC BY 4.0, hors modèle Tellux : aucune conversion, aucune corrélation avec le zonage n'est affirmée ici.</div>
+             Reste hors CALCUL Tellux (aucune valeur de cette couche n'entre dans calcRadonPotential()
+             ni dans le score affiché) — mais PAS hors du champ de connaissance du potentiel radon
+             en général : le JRC utilise le débit de dose gamma terrestre parmi les données d'entrée
+             de sa propre carte du potentiel radon géogénique (cf. hint ci-dessous, corrigé le
+             2026-09-17 — LOT A, revue web — après le constat qu'une première version de ce
+             hint affirmait à tort l'absence de tout lien, contredite par la source de la couche
+             elle-même). Pas de rd-lbtn-doc classique : aucune section cadre-scientifique.html ne
+             documente spécifiquement cette couche JRC (vérifié par grep avant d'écrire ceci —
+             #gamma-ambiant, utilisé par rd-b-geo ci-dessus, documente le gamma CALCULÉ par
+             Tellux, un objet différent) ; note plutôt qu'un lien, même patron que rd-b-air juste
+             en dessous. -->
+        <button class="rd-lbtn" id="rd-b-gammajrc" onclick="rdToggleGammaJrc(this)"><span class="sq" style="background:#C28533"></span><span data-i18n-key="lyr_gammajrc">Fond gamma terrestre (JRC)</span><span class="rd-lbtn-unavail-note" id="rd-gammajrc-unavail" data-i18n-key="lyr_gammajrc_unavail" hidden>Indisponible</span></button>
+        <div class="rd-lbtn-hint" data-i18n-key="lyr_gammajrc_hint">Gamma, pas radon : deux grandeurs distinctes. Le gamma terrestre fait partie des indicateurs indirects utilisés dans certaines cartes européennes du potentiel radon, mais cette couche ne mesure ni n'estime le radon, et Tellux n'en tire aucune estimation.</div>
         <div class="rd-lbtn-doc rd-lbtn-doc--note" data-i18n-key="rd_doc_gammajrc">Source externe (Union européenne, JRC) — hors du modèle radon/EM de Tellux.</div>
         <!-- Failles tectoniques — ajoutées le 2026-08-27 (brief "migration failles" : app.html
              renvoyait vers cette page via "Voir le volet radon →" juste à côté du bouton
@@ -849,10 +860,9 @@ a{color:inherit;}
     legend_failles_active: "Active",
     legend_failles_quaternaire: "Quaternary",
     lyr_gammajrc_map: "Regional terrestrial gamma background (JRC) — gamma, not radon",
-    legend_gammajrc_1: "60–73 nGy/h",
-    legend_gammajrc_2: "73–84 nGy/h",
-    legend_gammajrc_3: "84–90 nGy/h",
-    legend_gammajrc_4: "90–109 nGy/h",
+    // legend_gammajrc_1..4 retirées le 2026-09-17 (LOT A, étape d) : paliers recopiés à la
+    // main, désormais dérivés de RD_GAMMA_JRC_COLOR_STOPS + min/max du GeoJSON par
+    // rdGammaJrcLegendRows() — plus aucune chaîne à tenir synchronisée avec les seuils réels.
     legend_gammajrc_src: "© European Union, JRC — European Atlas of Natural Radiation, CC BY 4.0. Outside the Tellux calculation.",
     therm_popup_note: "Documentary reference — not used in the radon potential calculation.",
     radon_source_prefix: "Source: ",
@@ -1142,10 +1152,7 @@ a{color:inherit;}
     if (rdMap.hasLayer(rdLGammaJRC)) {
       blocks.push(
         '<div class="rd-legend-title" style="margin-top:' + (blocks.length ? '10px' : '0') + '">' + jt('lyr_gammajrc_map', 'Fond gamma terrestre (JRC) — gamma, pas radon') + '</div>' +
-        '<div class="rd-legend-row"><span class="rd-legend-swatch" style="background:#F0DFC0"></span>' + jt('legend_gammajrc_1', '60–73 nGy/h') + '</div>' +
-        '<div class="rd-legend-row"><span class="rd-legend-swatch" style="background:#DDB877"></span>' + jt('legend_gammajrc_2', '73–84 nGy/h') + '</div>' +
-        '<div class="rd-legend-row"><span class="rd-legend-swatch" style="background:#C28533"></span>' + jt('legend_gammajrc_3', '84–90 nGy/h') + '</div>' +
-        '<div class="rd-legend-row"><span class="rd-legend-swatch" style="background:#6B4A1F"></span>' + jt('legend_gammajrc_4', '90–109 nGy/h') + '</div>' +
+        rdGammaJrcLegendRows() +
         '<div class="rd-legend-row" style="font-size:9px;color:var(--mica);margin-top:2px">' + jt('legend_gammajrc_src', '© Union européenne, JRC — European Atlas of Natural Radiation, CC BY 4.0. Hors calcul Tellux.') + '</div>'
       );
     }
@@ -1281,6 +1288,25 @@ a{color:inherit;}
     for (var i = 0; i < RD_GAMMA_JRC_COLOR_STOPS.length; i++) { if (v <= RD_GAMMA_JRC_COLOR_STOPS[i].max) return RD_GAMMA_JRC_COLOR_STOPS[i].color; }
     return RD_GAMMA_JRC_COLOR_STOPS[RD_GAMMA_JRC_COLOR_STOPS.length - 1].color;
   }
+  // Bornes réelles (min/max de tgdr_ngyh sur les cellules chargées), calculées par
+  // rdBuildGammaJRCLayer() — brief LOT A, étape d (2026-09-17) : la légende ne recopie plus de
+  // paliers en dur (60/73/84/90/109), elle les dérive de RD_GAMMA_JRC_COLOR_STOPS pour les 3
+  // seuils internes et de ces bornes pour le premier/dernier palier. null tant qu'aucun
+  // chargement n'a réussi.
+  var _rdGammaJrcMin = null, _rdGammaJrcMax = null;
+  function rdFmtNgyh(v){
+    var s = v.toFixed(1);
+    return document.documentElement.lang === 'en' ? s : s.replace('.', ',');
+  }
+  function rdGammaJrcLegendRows(){
+    if (_rdGammaJrcMin == null || _rdGammaJrcMax == null) return '';
+    var bounds = [_rdGammaJrcMin, RD_GAMMA_JRC_COLOR_STOPS[0].max, RD_GAMMA_JRC_COLOR_STOPS[1].max, RD_GAMMA_JRC_COLOR_STOPS[2].max, _rdGammaJrcMax];
+    var rows = '';
+    for (var i = 0; i < RD_GAMMA_JRC_COLOR_STOPS.length; i++) {
+      rows += '<div class="rd-legend-row"><span class="rd-legend-swatch" style="background:' + RD_GAMMA_JRC_COLOR_STOPS[i].color + '"></span>' + rdFmtNgyh(bounds[i]) + '–' + rdFmtNgyh(bounds[i + 1]) + ' nGy/h</div>';
+    }
+    return rows;
+  }
   var _rdGammaJrcLoadPromise = null;
   function rdLoadGammaJRC(){
     if (rdLGammaJRC.getLayers().length > 0) return Promise.resolve();
@@ -1294,6 +1320,7 @@ a{color:inherit;}
   }
   function rdBuildGammaJRCLayer(geojson){
     rdLGammaJRC.clearLayers();
+    _rdGammaJrcMin = null; _rdGammaJrcMax = null;
     if (!geojson || !geojson.features || !geojson.features.length) return;
     // interactive:false — même nécessité fonctionnelle que sur app.html (INS-021, 2026-09-14) :
     // un Path interactif avec bindPopup() arrêterait la propagation du clic vers la carte. Cette
@@ -1302,6 +1329,8 @@ a{color:inherit;}
     // masquer ; interactive:false conservé par cohérence de rendu avec la source déplacée et par
     // prudence (aucun popup par cellule n'a d'utilité ici, la légende porte déjà toute la
     // substance).
+    var vals = geojson.features.map(function(f){ return f.properties.tgdr_ngyh; }).filter(function(v){ return typeof v === 'number' && isFinite(v); });
+    if (vals.length) { _rdGammaJrcMin = Math.min.apply(null, vals); _rdGammaJrcMax = Math.max.apply(null, vals); }
     L.geoJSON(geojson, {
       style: function(feature){
         var v = feature.properties.tgdr_ngyh;
@@ -1309,10 +1338,28 @@ a{color:inherit;}
       }
     }).addTo(rdLGammaJRC);
   }
+  // rdToggleGammaJrc — corrigé le 2026-09-17 (brief LOT A, étape c) : l'ancienne version
+  // ajoutait .on et la couche à la carte inconditionnellement après rdLoadGammaJRC(), dont le
+  // .catch() avale l'erreur (la promesse résout quand même) — un échec de chargement s'affichait
+  // donc comme un succès (bouton actif, couche "chargée" mais vide, légende invoquée sur du
+  // vide). Le succès se lit maintenant sur un fait vérifiable après coup
+  // (rdLGammaJRC.getLayers().length > 0), jamais sur la simple résolution de la promesse.
   window.rdToggleGammaJrc = function(btn){
     if (!rdMap) return;
     if (rdMap.hasLayer(rdLGammaJRC)) { rdMap.removeLayer(rdLGammaJRC); btn.classList.remove('on'); updateRdLegend(); return; }
-    rdLoadGammaJRC().then(function(){ rdLGammaJRC.addTo(rdMap); btn.classList.add('on'); updateRdLegend(); });
+    var note = document.getElementById('rd-gammajrc-unavail');
+    btn.classList.remove('unavailable');
+    if (note) note.setAttribute('hidden', '');
+    rdLoadGammaJRC().then(function(){
+      if (rdLGammaJRC.getLayers().length > 0) {
+        rdLGammaJRC.addTo(rdMap);
+        btn.classList.add('on');
+        updateRdLegend();
+      } else {
+        btn.classList.add('unavailable');
+        if (note) note.removeAttribute('hidden');
+      }
+    });
   };
   // Exposé pour le slider d'opacité (attribut oninput inline dans le HTML)
   window.rdWmsGeo = rdWmsGeo;
@@ -2215,7 +2262,8 @@ function telluxGetEffectiveLang(){
     lyr_cav: "Underground cavities",
     lyr_cav_hint: "Caves, karst, mines (BRGM) — a possible mechanism for radon accumulation underground.",
     lyr_gammajrc: "Regional terrestrial gamma background (JRC)",
-    lyr_gammajrc_hint: "Gamma, not radon: two distinct physical phenomena — this layer says nothing about the radon potential shown elsewhere on this page. Modeled European grid (JRC/EANR, 10 km resolution), absorbed dose rate in air in nGy/h — not the ambient dose equivalent (nSv/h) shown elsewhere on this site, two quantities not directly comparable. Third-party source, CC BY 4.0, outside the Tellux model: no conversion, no correlation with the zoning is asserted here.",
+    lyr_gammajrc_hint: "Gamma, not radon: two distinct quantities. Terrestrial gamma is one of the indirect indicators used in some European geogenic radon potential maps, but this layer does not measure or estimate radon, and Tellux draws no radon estimate from it.",
+    lyr_gammajrc_unavail: "Unavailable",
     rd_doc_gammajrc: "External source (European Union, JRC) — outside the Tellux radon/EM model.",
     lyr_failles: "Tectonic faults",
     lyr_failles_hint: "8 BRGM Corte faults (active + Quaternary) — structural context indicator, not integrated into the radon potential calculation.",
