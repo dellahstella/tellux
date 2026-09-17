@@ -1009,8 +1009,9 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
      (piège rencontré : un premier essai à 8/8/6/6 ne donnait que 38×38). */
   content:'';position:absolute;top:-14px;right:-14px;left:-6px;bottom:-6px;
 }
-/* Badge NC */
-.nc-badge{display:inline-block;background:#7c0000;color:#ffd700;font-family:var(--mono);font-size:9px;font-weight:500;padding:2px 6px;border-radius:4px;border:1px solid #ffd70055;letter-spacing:.03em;vertical-align:middle;}
+/* Badge NC — retiré le 2026-09-16 avec son seul usage (footer #stats-panel, passé au runtime en
+   compte agrégé, plus de fiche nommée à signaler) : classe CSS orpheline, aucun élément ne la
+   porte plus dans ce fichier — retirée du même geste que l'entrée i18n stats_nc_badge. */
 /* Panneau stats corpus */
 /* .stats-panel devient la CARTE de la modale #stats-modal (2026-09-08) — plus une visibilité
    propre : display:none/flex est désormais porté par #stats-modal (le fond), pas par cette classe.
@@ -3173,9 +3174,14 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
      openStatsPanel()/closeStatsPanel() juste après openContribLevelModal()/closeContribLevelModal()
      plus bas dans ce fichier, même mécanique (style.display + aria-hidden, pas de piège focus).
      STRUCTURE PRÉSERVÉE À DESSEIN : le bouton de fermeture ajouté ci-dessous est un élément
-     BUTTON, pas un DIV — `#stats-panel > div:last-of-type` (3 entrées I18N_ENTRIES, stats_labo_prefix et
-     suivantes) continue de cibler le même div (le footer), :last-of-type comptant par TYPE de
-     balise et ignorant les frères d'un autre type. Aucun sélecteur i18n existant n'a bougé.
+     BUTTON, pas un DIV — le footer reste le dernier div enfant de #stats-panel, :last-of-type
+     comptant par TYPE de balise et ignorant les frères d'un autre type. Motif historique de cette
+     règle : jusqu'au 2026-09-16 (passage runtime du footer, cf. amendement plus bas et
+     openStatsPanel()), trois entrées I18N_ENTRIES (stats_labo_prefix et suivantes) ciblaient ce
+     div par le sélecteur `#stats-panel > div:last-of-type` ; retirées depuis (contenu devenu
+     dynamique), remplacées par des sélecteurs par ID dédiés sur le réservoir de fragments
+     traduits — ce sélecteur partagé n'est donc plus utilisé par aucune entrée aujourd'hui, mais la
+     règle (BUTTON pas DIV) reste une bonne pratique, non retirée pour ce seul motif.
      Contenu recompté sur public/data/cartoradio_certified_corse.json le même jour, avant
      placement — voir historique git pour le détail chiffré (commit du contenu, même jour) :
        - le titre (236/151/85/1 non-conformité) porte sur le CORPUS COMPLET, exact ;
@@ -3211,17 +3217,54 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
      ci-dessus comme « le titre… porte sur le CORPUS COMPLET » restent une description fidèle de ce
      qu'affiche le titre AUJOURD'HUI (2026-09-16) — mais ce ne sont plus des littéraux HTML : ce
      sont les valeurs que retourne le calcul au moment où ce commentaire est écrit, recalculées à
-     chaque ouverture. Seul le footer (Laboratoire/Protocole/Monticello, dernier <div> du panneau)
-     reste du texte figé — hors périmètre de ce lot, signalé séparément (PR publique) : sa phrase
-     « Toutes mesures conformes sauf … Monticello » suppose implicitement qu'il n'existera jamais
-     qu'une seule non-conformité, comme l'ancien titre le supposait pour ses quatre chiffres avant
-     ce lot. -->
+     chaque ouverture. Le footer (Laboratoire/Protocole/Monticello, dernier <div> du panneau) est
+     resté du texte figé à ce stade — traité séparément ci-dessous (amendement du même jour).
+
+     AMENDEMENT 2026-09-16 bis (même jour, brief suivant) — FOOTER PASSÉ AU RUNTIME. Vérifié sur
+     236 fiches avant d'écrire ce lot : « Laboratoire : EXEM » et « Protocole ANFR/DR 15-4 »
+     étaient exacts sur les 30 fiches d'origine (100 % EXEM, 28/30 + 2 variantes basse fréquence)
+     mais faux sur 236 — 6 laboratoires distincts (EXEM 110, AEXPERTISE 116, Bureau Veritas 2,
+     CSTB 4, Emitech 3, Satelit 1) et 5 protocoles (ANFR/DR 15-4 103, 15-2.1 60, 15-3 36, 15-3.1
+     35, variante BF 2) — même défaut de périmètre que le titre/la grille avant le lot précédent,
+     jamais recalculé depuis la construction de ce panneau.
+
+     Forme arbitrée (Soleil) : des COMPTES, jamais une liste — « N laboratoires · M protocoles
+     ANFR — détail par fiche individuelle · K mesure(s) non conforme(s) sur TOTAL » — sans nommer
+     aucun laboratoire, aucun protocole, aucune commune, aucun identifiant de fiche. « rapport
+     d'infraction établi » non reconduit : invérifiable par aucun champ du dataset (seul le champ
+     `note` de la fiche mentionne un rapport en texte libre, sans preuve exploitable ici).
+
+     Accord grammatical dynamique SANS jt() ni traduction neuve : `#stats-footer-labo-sg/-pl`,
+     `-proto-sg/-pl`, `-nc-sg/-pl` (paires singulier/pluriel), `-mid` et `-tail` (fragments
+     invariables) forment un RÉSERVOIR de texte figé, chacun sa propre entrée I18N_ENTRIES par
+     sélecteur d'ID dédié — traduit UNE FOIS au chargement comme n'importe quel texte figé de ce
+     fichier, colonne CO laissée vide (aucune traduction n'existait avant ce lot pour le footer,
+     donc rien n'est perdu ici — à la différence de stat_rf, brief précédent, dont la traduction
+     corse existante avait été perdue par une reconstruction jt() plutôt que par une vraie
+     contrainte). `_statsPanelRenderSuccess()` choisit la variante sg/pl selon le compte réel
+     (0 et 1 = singulier, 2+ = pluriel, règle standard) et copie son textContent déjà traduit dans
+     `#stats-footer-line`, seul élément visible — JS ne touche jamais le texte des fragments fixes,
+     seulement lequel des deux est affiché.
+
+     `.nc-badge` retiré (HTML + entrée i18n stats_nc_badge) : il signalait une fiche NOMMÉE, sans
+     objet pour un compte agrégé — ne pas reporter son style sur le nombre, en faire une alerte là
+     où il n'y a qu'un fait (consigne explicite Soleil).
+
+     AMENDEMENT 2026-09-16 ter (même jour, brief suivant) — CORSE DE stat_rf RESTAURÉE. La perte
+     de traduction corse actée ci-dessus pour stat_rf (« misure RF (+ 2 BF) », brief précédent)
+     n'était pas requise : la contrainte réelle était le compte devenu dynamique, pas une doctrine
+     interdisant le corse sur du contenu dynamique — la doctrine invoquée (pas de traduction
+     improvisée sans validation locuteur natif, cf. `lyr_elf_tt`) vise les traductions NEUVES, pas
+     le support. `#stats-lbl-rf-prefix`/`#stats-lbl-rf-suffix` (réservoir caché, même patron que le
+     footer ci-dessus) portent chacun leur propre entrée I18N_ENTRIES avec FR/CO/EN préservées mot
+     pour mot ; `_statsPanelRenderSuccess()` concatène prefix + compte + suffix. jt()/JS_STRINGS_EN
+     (stats_lbl_rf_prefix/suffix) abandonnés pour ce libellé. -->
 <div id="stats-modal" role="dialog" aria-modal="true" aria-label="Statistiques du corpus CartoRadio EXEM" aria-hidden="true" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(31,35,41,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:2300;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeStatsPanel()">
 <div class="stats-panel" id="stats-panel">
   <button id="stats-close-btn" onclick="closeStatsPanel()" aria-label="Fermer" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--tx3);line-height:1;padding:2px 6px;z-index:1">&#x2715;</button>
   <div class="mpanel-title" id="stats-mpanel-title">Corpus CartoRadio EXEM — chargement…</div>
   <div class="stats-grid">
-    <div class="stat-box"><div class="stat-val" id="stats-val-rf" style="color:var(--acc)">…</div><div class="stat-lbl" id="stats-lbl-rf"></div></div>
+    <div class="stat-box"><div class="stat-val" id="stats-val-rf" style="color:var(--acc)">…</div><div class="stat-lbl" id="stats-lbl-rf"></div><span id="stats-lbl-rf-prefix" style="display:none">mesures RF (+ </span><span id="stats-lbl-rf-suffix" style="display:none"> BF)</span></div>
     <div class="stat-box"><div class="stat-val" id="stats-val-min" style="color:var(--maquis-clair)">…</div><div class="stat-lbl" id="stats-lbl-min"></div></div>
     <div class="stat-box"><div class="stat-val" id="stats-val-max" style="color:var(--danger)">…</div><div class="stat-lbl" id="stats-lbl-max"></div></div>
     <div class="stat-box"><div class="stat-val" id="stats-val-mediane" style="color:var(--warn)">…</div><div class="stat-lbl">médiane V/m</div></div>
@@ -3237,7 +3280,21 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
     <div id="stats-bars"></div>
   </div>
   <div style="font-size:11px;color:var(--tx3);border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
-    Laboratoire : <b>EXEM</b> · Protocole ANFR/DR 15-4 · Toutes mesures conformes sauf <span class="nc-badge">NON CONFORME</span> Monticello San Quilico #192990 (29.05 V/m · 20/03/2025) — rapport d'infraction établi
+    <span id="stats-footer-line">…</span>
+    <!-- Réservoir de fragments traduits, jamais affiché (display:none en dur, jamais togglé) —
+         lu par _statsPanelRenderSuccess() qui compose #stats-footer-line avec les nombres du
+         moment. Chaque span reste une chaîne fixe, traduite UNE FOIS au chargement par
+         I18N_ENTRIES comme n'importe quel texte figé de ce fichier (cf. commentaire plus haut,
+         ~ligne 3176) — la seule différence avec un texte figé ordinaire est qu'il n'est jamais
+         monté directement dans le DOM visible, JS en recopie le textContent déjà traduit. -->
+    <span id="stats-footer-labo-sg" style="display:none">laboratoire</span>
+    <span id="stats-footer-labo-pl" style="display:none">laboratoires</span>
+    <span id="stats-footer-proto-sg" style="display:none">protocole ANFR</span>
+    <span id="stats-footer-proto-pl" style="display:none">protocoles ANFR</span>
+    <span id="stats-footer-mid" style="display:none">— détail par fiche individuelle ·</span>
+    <span id="stats-footer-nc-sg" style="display:none">mesure non conforme</span>
+    <span id="stats-footer-nc-pl" style="display:none">mesures non conformes</span>
+    <span id="stats-footer-tail" style="display:none">sur</span>
   </div>
 </div>
 </div><!-- /#stats-modal -->
@@ -3745,8 +3802,10 @@ var JS_STRINGS_EN = {
 
   // Panneau stats corpus CartoRadio, passage runtime (2026-09-16, cf. openStatsPanel()). CO non
   // fourni pour ces clés (contenu dynamique, doctrine « pas de traduction improvisée » déjà en
-  // vigueur pour tout ce qui passe par jt() dans ce fichier) — cf. commentaires I18N_ENTRIES
-  // retirées (stat_rf, stats_mpanel_title) à leur ancien emplacement.
+  // vigueur pour tout ce qui passe par jt() dans ce fichier) — cf. commentaire I18N_ENTRIES
+  // retirée (stats_mpanel_title) à son ancien emplacement. stat_rf n'utilise plus jt() depuis la
+  // correction du même jour (ter) : voir stats_lbl_rf_prefix/stats_lbl_rf_suffix dans
+  // I18N_ENTRIES (~ligne 15809) — patron réservoir, traduction corse restaurée.
   stats_title_loading: "CartoRadio EXEM corpus — loading…",
   stats_title_error: "CartoRadio EXEM corpus — data unavailable right now",
   stats_body_error: "The certified measurements file could not be loaded. Try again by reopening this panel.",
@@ -3757,9 +3816,7 @@ var JS_STRINGS_EN = {
   stats_nc_zero: "no documented non-compliance",
   stats_nc_one_prefix: "1 documented non-compliance (",
   stats_nc_one_suffix: ")",
-  stats_nc_many_suffix: " documented non-compliances",
-  stats_lbl_rf_prefix: "RF measurements (+ ",
-  stats_lbl_rf_suffix: " LF)"
+  stats_nc_many_suffix: " documented non-compliances"
 };
 function jt(key, fr){
   return (document.documentElement.lang === 'en' && Object.prototype.hasOwnProperty.call(JS_STRINGS_EN, key)) ? JS_STRINGS_EN[key] : fr;
@@ -13686,6 +13743,11 @@ function _statsPanelCompute(mesures){
   var minCommunes = n===0 ? [] : sorted.filter(function(m){ return m.valeur_max_vm===minVal; });
   var maxCommunes = n===0 ? [] : sorted.filter(function(m){ return m.valeur_max_vm===maxVal; });
   var top9 = sorted.slice().sort(function(a,b){ return b.valeur_max_vm - a.valeur_max_vm; }).slice(0,9);
+  var labos = {}, protocoles = {};
+  mesures.forEach(function(m){
+    if(m.laboratoire) labos[m.laboratoire] = true;
+    if(m.protocole) protocoles[m.protocole] = true;
+  });
   return {
     total:total, ext:ext, resid:resid, nonConformes:nonConformes, bfCount:bf, rfCount:vm.length,
     minVal:minVal, minCommune: minCommunes.length===1 ? minCommunes[0].commune : null,
@@ -13694,8 +13756,18 @@ function _statsPanelCompute(mesures){
     ge10: vm.filter(function(m){ return m.valeur_max_vm>=10; }).length,
     ge5:  vm.filter(function(m){ return m.valeur_max_vm>=5;  }).length,
     lt1:  vm.filter(function(m){ return m.valeur_max_vm<1;   }).length,
-    top9: top9
+    top9: top9,
+    labCount: Object.keys(labos).length,
+    protoCount: Object.keys(protocoles).length
   };
+}
+// Accord singulier/pluriel sans jt() ni traduction neuve : lit le textContent DÉJÀ TRADUIT (au
+// chargement, par I18N_ENTRIES) du réservoir de fragments fixes #stats-footer-*-sg/-pl — ne
+// choisit que LEQUEL afficher, ne touche jamais leur texte. Règle standard : singulier pour 0 et
+// 1, pluriel à partir de 2.
+function _statsPanelPluralText(idSg, idPl, count){
+  var el = document.getElementById(count>=2 ? idPl : idSg);
+  return el ? el.textContent : '';
 }
 function _statsPanelSetVals(map, text){
   Object.keys(map).forEach(function(id){
@@ -13710,6 +13782,8 @@ function _statsPanelRenderLoading(){
   _statsPanelSetVals({'stats-lbl-rf':'','stats-lbl-min':'','stats-lbl-max':''});
   var bars=document.getElementById('stats-bars');
   if(bars) bars.innerHTML='';
+  var footer=document.getElementById('stats-footer-line');
+  if(footer) footer.textContent='…';
 }
 function _statsPanelRenderError(){
   var t=document.getElementById('stats-mpanel-title');
@@ -13718,6 +13792,8 @@ function _statsPanelRenderError(){
   _statsPanelSetVals({'stats-lbl-rf':'','stats-lbl-min':'min V/m','stats-lbl-max':'max V/m'});
   var bars=document.getElementById('stats-bars');
   if(bars) bars.innerHTML='<div style="font-size:11px;color:var(--tx3);padding:8px 0">'+jt('stats_body_error','Le fichier des mesures certifiées n\'a pas pu être chargé. Réessayez en rouvrant ce panneau.')+'</div>';
+  var footer=document.getElementById('stats-footer-line');
+  if(footer) footer.textContent='—';
 }
 function _statsPanelRenderSuccess(s){
   var t=document.getElementById('stats-mpanel-title');
@@ -13744,7 +13820,7 @@ function _statsPanelRenderSuccess(s){
     'stats-val-lt1': s.lt1
   });
   _statsPanelSetVals({
-    'stats-lbl-rf': jt('stats_lbl_rf_prefix','mesures RF (+ ') + s.bfCount + jt('stats_lbl_rf_suffix',' BF)'),
+    'stats-lbl-rf': document.getElementById('stats-lbl-rf-prefix').textContent + s.bfCount + document.getElementById('stats-lbl-rf-suffix').textContent,
     'stats-lbl-min': 'min V/m' + (s.minCommune ? ' · ' + s.minCommune : ''),
     'stats-lbl-max': 'max V/m' + (s.maxCommune ? ' · ' + s.maxCommune : '')
   });
@@ -13760,6 +13836,15 @@ function _statsPanelRenderSuccess(s){
       var label = m.commune + (communeCounts[m.commune]>1 ? ' (' + _statsPanelFormatDDMM(m.date_mesure) + ')' : '');
       return '<div class="stats-bar-row"><span class="lbl">'+label+'</span><div class="bar"><div class="fill" style="width:'+pct+'%;background:'+color+'"></div></div><span class="val">'+_statsPanelFmtVal(v)+'</span></div>';
     }).join('');
+  }
+  var footer=document.getElementById('stats-footer-line');
+  if(footer){
+    footer.textContent = s.labCount + ' ' + _statsPanelPluralText('stats-footer-labo-sg','stats-footer-labo-pl', s.labCount)
+      + ' · ' + s.protoCount + ' ' + _statsPanelPluralText('stats-footer-proto-sg','stats-footer-proto-pl', s.protoCount)
+      + ' ' + document.getElementById('stats-footer-mid').textContent
+      + ' ' + s.nonConformes.length + ' ' + _statsPanelPluralText('stats-footer-nc-sg','stats-footer-nc-pl', s.nonConformes.length)
+      + ' ' + document.getElementById('stats-footer-tail').textContent
+      + ' ' + s.total;
   }
 }
 async function openStatsPanel(){
@@ -15728,9 +15813,20 @@ function capCleanup(){
 // #geo-panel — DOM mort, cf. commentaire à son ancien emplacement (app.html, ~ligne 3123).
 // stat_rf RETIRÉE le 2026-09-16 (passage runtime du panneau stats, cf. openStatsPanel()) : son
 // libellé embarquait un compte ("+ 2 BF") devenu dynamique — ce sélecteur-based FR/CO/EN ne peut
-// plus s'appliquer à un texte que le JS reconstruit à chaque ouverture. Traduction EN reprise par
-// jt()/JS_STRINGS_EN (stats_lbl_rf_prefix/suffix) ; traduction CO perdue pour ce libellé (aucune
-// traduction improvisée sur du contenu dynamique, même règle que le reste de ce fichier).
+// plus s'appliquer à un texte que le JS reconstruit à chaque ouverture.
+// CORRECTION 2026-09-16 ter (même jour, brief suivant) : la traduction corse existante
+// (« misure RF (+ 2 BF) ») avait été abandonnée à ce moment-là au profit de jt()/JS_STRINGS_EN
+// (EN seul) — à tort : le compte devenu dynamique n'imposait pas cette perte, et la doctrine
+// invoquée (pas de traduction improvisée sans validation locuteur natif, cf. `lyr_elf_tt`) vise
+// les traductions NEUVES, pas le support dynamique. Remplacée ci-dessous par
+// stats_lbl_rf_prefix/stats_lbl_rf_suffix : même patron réservoir que le footer (amendement bis,
+// ~ligne 3237) — FR/CO/EN préservées mot pour mot, seul le compte est injecté entre les deux
+// fragments par _statsPanelRenderSuccess().
+// Espace de bord (fin de prefix, début de suffix) volontairement absent des colonnes CO/EN :
+// setTextNode() (plus bas, ~ligne 15942) le réinjecte automatiquement depuis le nœud FR d'origine
+// (lead/trail sniffés sur node.nodeValue) — le dupliquer ici produirait un double espace.
+["stats_lbl_rf_prefix","#stats-lbl-rf-prefix","","mesures RF (+ ","misure RF (+","RF measurements (+"],
+["stats_lbl_rf_suffix","#stats-lbl-rf-suffix",""," BF)","BF)","LF)"],
 ["stat_mediane",".stat-lbl@3","","médiane V/m","mediana V/m","median V/m"],
 ["stat_depassement",".stat-lbl@4","","dépassement légal","supranamentu legale","legal exceedance"],
 ["stat_10",".stat-lbl@5","","mesures ≥ 10 V/m","misure ≥ 10 V/m","measurements ≥ 10 V/m"],
@@ -15803,10 +15899,22 @@ function capCleanup(){
 // à un texte reconstruit après coup. Traduction EN reprise par jt()/JS_STRINGS_EN (stats_title_*,
 // stats_nc_*) ; traduction CO perdue pour ce titre, même règle que stat_rf ci-dessus.
 ["stats_bar_title",".stats-bar-title","","Top mesures par valeur (V/m) — limite légale 28–61 V/m · seuil atypique 9 V/m","","Top measurements by value (V/m) — legal limit 28–61 V/m · atypical threshold 9 V/m"],
-["stats_labo_prefix","#stats-panel > div:last-of-type","","Laboratoire :","","Laboratory:"],
-["stats_protocole_infix","#stats-panel > div:last-of-type","","· Protocole ANFR/DR 15-4 · Toutes mesures conformes sauf","","· Protocol ANFR/DR 15-4 · All measurements compliant except"],
-["stats_infraction_suffix","#stats-panel > div:last-of-type","","Monticello San Quilico #192990 (29.05 V/m · 20/03/2025) — rapport d'infraction établi","","Monticello San Quilico #192990 (29.05 V/m · March 20, 2025) — infraction report filed"],
-["stats_nc_badge",".nc-badge","","NON CONFORME","","NON-COMPLIANT"],
+// stats_labo_prefix / stats_protocole_infix / stats_infraction_suffix / stats_nc_badge RETIRÉES
+// le 2026-09-16 (footer #stats-panel passé au runtime, cf. amendement « bis » au HTML du panneau
+// et openStatsPanel()) : la phrase nommait un laboratoire, un protocole et une commune uniques —
+// faux sur 236 fiches (6 laboratoires, 5 protocoles), remplacée par des comptes dérivés. Le badge
+// `.nc-badge` signalait une fiche nommée ; sans objet pour un compte agrégé, retiré avec son
+// entrée. Remplacées par 8 entrées à sélecteur d'ID dédié (stats_footer_*, ci-dessous) — même
+// mécanisme I18N_ENTRIES, colonne CO vide comme les quatre entrées retirées (aucune traduction
+// corse n'existait pour le footer avant ce lot, rien n'est perdu ici).
+["stats_footer_labo_sg","#stats-footer-labo-sg","","laboratoire","","laboratory"],
+["stats_footer_labo_pl","#stats-footer-labo-pl","","laboratoires","","laboratories"],
+["stats_footer_proto_sg","#stats-footer-proto-sg","","protocole ANFR","","ANFR protocol"],
+["stats_footer_proto_pl","#stats-footer-proto-pl","","protocoles ANFR","","ANFR protocols"],
+["stats_footer_mid","#stats-footer-mid","","— détail par fiche individuelle ·","","— detail per individual record ·"],
+["stats_footer_nc_sg","#stats-footer-nc-sg","","mesure non conforme","","non-compliant measurement"],
+["stats_footer_nc_pl","#stats-footer-nc-pl","","mesures non conformes","","non-compliant measurements"],
+["stats_footer_tail","#stats-footer-tail","","sur","","out of"],
 ["myplace_fab_label","#myplace-fab-label","","Mon lieu","","My place"],
 ["myplace_fab_btn_aria","#myplace-fab-btn","aria-label","Analyser mon adresse ou ma position","","Analyze my address or my position"],
 ["myplace_title","#myplace-title","","Mon lieu","","My place"],
