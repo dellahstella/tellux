@@ -2335,7 +2335,14 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            donc non concernées par ce second correctif. -->
       <button class="lbtn" id="b-hot" data-domains="statique elf" title="Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. N'inclut pas le champ géomagnétique terrestre total (~46 000-47 500 nT en Corse, l'ordre de grandeur qu'un magnétomètre de smartphone mesure) : ce sont deux grandeurs physiques distinctes, jamais additionnées ici — le champ géomagnétique n'entre dans ce nombre à aucun titre. Estimation du modèle Tellux, pas une mesure. La composante ELF entre dans le score Indice Tellux affiché ; la composante substrat reste une donnée de contexte, sans consommateur dans ce score." onclick="tog('hot','on-hot',this)"><span class="dot" style="background:#991b1b"></span>Champ magnétique composite (nT)<span class="layer-badge layer-badge--domain">Statique + ELF</span></button>
       <div class="mlegend-inline" id="mleg-hot"></div>
-      <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 21 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)<span class="layer-badge layer-badge--domain">RF</span></button>
+      <!-- title= : "~3000 antennes ANFR" retiré (2026-09-17, revue web PR #1510, correction B4) — un
+           attribut title= est fixé au parse, il ne peut pas porter un <span id> mis à jour en direct
+           comme la légende ; plutôt qu'y dupliquer un chiffre qui pourrait diverger de la légende
+           Antennes ANFR+TDF du même panneau, il y renvoie. Traduction corse de cette clé (colonne CO
+           de lyr_hotrf_tt, I18N_ENTRIES) invalidée par ce changement de texte FR source — VIDÉE, pas
+           réécrite (aucune autorité linguistique corse ici) : affichage FR de repli tant qu'elle
+           n'est pas retraduite par un locuteur natif. -->
+      <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 21 mesures certifiées ANFR/EXEM (propagation depuis les antennes ANFR réelles — décompte dans la légende Antennes ANFR et émetteurs TDF). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ électrique RF (V/m)<span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-hotrf"></div>
       <!-- Champ ELF (nT) — brief BH, 2026-09-05 : couche ELF PURE (data-domains="elf" seul),
            distincte de b-hot (composite human+geo, cf. brief BF — conservé, non touché ici).
@@ -4755,7 +4762,8 @@ const LEGEND_MAX_CONTEXT=3;
 const LEGEND_ACTIVE_CORE=new Set();
 const LEGEND_ACTIVE_CONTEXT=[];
 // ANFR_ONSHORE_COUNT / syncAntCount (2026-08-31, brief "clôture chantier légende" volet
-// tooltip) : #leg-ant-count (dans LEGEND_HTML.ant) n'était peuplé qu'une fois, au chargement
+// tooltip) : #leg-ant-count (dans LEGEND_HTML.ant — renommé #leg-ant-sites le 2026-09-17, revue
+// web PR #1510, cf. commentaire à ANFR_SITE_COUNT plus bas) n'était peuplé qu'une fois, au chargement
 // des antennes — avant ce diff, un `document.getElementById` unique, appelé pendant le
 // chargement (boot), qui ratait presque toujours sa cible : la légende 'ant' n'existe dans le
 // DOM qu'une fois la couche activée par l'utilisateur (ant OFF par défaut), donc après le
@@ -4776,9 +4784,31 @@ let ANFR_ONSHORE_COUNT = null;
 // seule la légende change de source.
 let ANFR_SITE_COUNT = null;
 let TDF_EXTRACTION_DATE = null;
+// ANFR_GENERATIONS / ANFR_OPERATORS (2026-09-17, revue web PR #1510, correction B3) : "(mobile,
+// 2G–5G)" et "Orange · SFR · Bouygues · Free" étaient des littéraux. Étape 1 de la revue vérifiée
+// avant correction (requête antennas_corse complète, 3000 lignes) : exactement {2G,3G,4G,5G} et
+// {Orange,SFR,Bouygues,Free}, aucune ligne 'infra' — les littéraux étaient vrais aujourd'hui, mais
+// pas garantis de le rester. Dérivés depuis parPosition (loadAnt()) plutôt que laissés en dur.
+let ANFR_GENERATIONS = null;
+let ANFR_OPERATORS = null;
+// TDF_STATUS (même revue, correction B1) : "10 émetteurs" restait muet sur le statut
+// "partiel_verifie" du dataset (public/data/tdf_emitters_corse.json, champ `status`). "(liste
+// partielle)" n'est affiché que si ce champ diffère de 'complet' — condition demandée par la revue.
+let TDF_STATUS = null;
 function syncAntCount(){
   if(ANFR_SITE_COUNT!=null) document.querySelectorAll('#leg-ant-sites').forEach(el=>{ el.textContent = ANFR_SITE_COUNT; });
-  if(Array.isArray(TDF_EMITTERS) && TDF_EMITTERS.length) document.querySelectorAll('#leg-tdf-count').forEach(el=>{ el.textContent = TDF_EMITTERS.length; });
+  if(ANFR_GENERATIONS) document.querySelectorAll('#leg-ant-gens').forEach(el=>{ el.textContent = ANFR_GENERATIONS; });
+  if(ANFR_OPERATORS) document.querySelectorAll('#leg-ant-ops').forEach(el=>{ el.textContent = ANFR_OPERATORS; });
+  if(Array.isArray(TDF_EMITTERS) && TDF_EMITTERS.length){
+    document.querySelectorAll('#leg-tdf-count').forEach(el=>{ el.textContent = TDF_EMITTERS.length; });
+    const partiel = TDF_STATUS!=null && TDF_STATUS!=='complet';
+    document.querySelectorAll('#leg-tdf-clause').forEach(el=>{
+      el.textContent = TDF_EMITTERS.length + (el.dataset.lang==='en' ? ' TDF transmitters recorded' : ' émetteurs TDF recensés') + (partiel ? (el.dataset.lang==='en' ? ' (partial list)' : ' (liste partielle)') : '');
+    });
+  }
+  // leg-hotrf-count : même métrique (positions ANFR) que la légende ANFR du même panneau, pas le
+  // compte TDF — dépend uniquement d'ANFR_SITE_COUNT (correction B4, cohérence entre les deux blocs).
+  if(ANFR_SITE_COUNT!=null) document.querySelectorAll('#leg-hotrf-count').forEach(el=>{ el.textContent = ANFR_SITE_COUNT; });
   if(TDF_EXTRACTION_DATE) document.querySelectorAll('#leg-tdf-date').forEach(el=>{ el.textContent = TDF_EXTRACTION_DATE; });
 }
 // Repères documentaires du panneau "?" (2026-08-28, brief "bouton ? contextuel") : au toggle
@@ -4964,7 +4994,11 @@ const LEGEND_HTML={
     '<div style="font-size:8px;color:#626774;width:140px;margin-bottom:4px;line-height:1.3">Échelle <b>relative</b> au modèle (bins 0,40 · 0,55 · 0,85 · 1,5 V/m).</div>'+
     '<div class="leg-row" style="font-size:8.5px;color:#4a4f5e;line-height:1.35"><span style="display:inline-block;width:10px;height:8px;background:#1F2329;border-radius:2px;vertical-align:middle;margin-right:4px"></span><b style="color:#1F2329">&gt; 1,5 V/m</b> — hors échelle ambiante typique : zone à vérifier par mesure, pas un seuil sanitaire.</div>'+
     '<div class="leg-row" style="margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4">Estimation du champ radiofréquence <b>extérieur</b>, calée sur les antennes ANFR et des mesures certifiées. Ne remplace pas une mesure.</div>'+
-    '<div class="leg-src">Friis · ~3000 antennes ANFR · calibration interne — <a href="/cadre-scientifique.html#radiofrequences" target="_blank" rel="noopener" style="color:var(--maquis-clair)">modèle, calibration &amp; repères de lecture ↗</a></div>'+
+    // "~3000 antennes" -> décompte en positions dérivé (2026-09-17, revue web PR #1510, correction
+    // B4) — même span/même variable (ANFR_SITE_COUNT) que la légende Antennes ANFR+TDF du même
+    // panneau "?" : les deux blocs affichent désormais la même grandeur, pas deux chiffres non
+    // rapprochés pour ce qui se présente comme la même source de données.
+    '<div class="leg-src">Friis · <span id="leg-hotrf-count">—</span> positions ANFR · calibration interne — <a href="/cadre-scientifique.html#radiofrequences" target="_blank" rel="noopener" style="color:var(--maquis-clair)">modèle, calibration &amp; repères de lecture ↗</a></div>'+
     '</div>',
   // hotrf_noncal (2026-09-10, lot B) : la même légende quand k n'est pas calibré (rfCalibre() faux),
   // choisie par legendHtmlFor(). Deux lignes diffèrent : l'avertissement (au lieu de « calée sur les
@@ -5002,14 +5036,25 @@ const LEGEND_HTML={
   // générations, regroupées sans distinction visuelle avant dégroupement (lAntCluster, teinte
   // générique GC.default #4a4f5e). Mécanisme anti-collision (brief AH phase 2) volontairement NON
   // décrit ici — rendu invisible pour l'utilisateur, seul le contenu de la bulle compte.
-  ant:'<div class="leg-block"><b class="leg-title">Antennes ANFR</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Une pastille = une <b>position</b> déclarée, pas une antenne : plusieurs générations y coexistent presque toujours, et souvent plusieurs opérateurs. Touchez ou survolez un point pour voir ce qui y est déclaré.</div>'+
-  '<div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a4f5e;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Position d’émission déclarée, isolée — la teinte ne code aucune technologie</div>'+
-  '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#1F3A5F;border:1.5px solid white;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.3);vertical-align:middle;margin-right:4px"></span>Grappe ANFR (comptage) — regroupe des positions de toutes générations, sans dominante affichée</div>'+
-  '<div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#3F5B3A;vertical-align:middle;margin-right:4px"></span><b style="color:#3F5B3A">Émetteur radio/TV majeur</b> (TDF), isolé — même teinte que sa grappe</div>'+
-  '<div class="leg-row"><span style="display:inline-block;position:relative;width:14px;height:14px;vertical-align:middle;margin-right:4px"><span style="position:absolute;inset:0;background:#3F5B3A;border:1.5px solid white;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span><span style="position:absolute;top:-2px;right:-2px;width:6px;height:6px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center"><span style="width:3px;height:3px;background:#3F5B3A;display:block"></span></span></span>Grappe TDF — garde sa teinte et un badge blanc en coin, même groupée</div>'+
-  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:3px"><span id="leg-ant-sites">—</span> positions ANFR (mobile, 2G–5G) — Orange · SFR · Bouygues · Free. <span id="leg-tdf-count">—</span> émetteurs TDF (radio/TV), extraction du <span id="leg-tdf-date">—</span>. Date d’extraction non fournie côté ANFR (aucun champ date dans les données servies).</div>'+
-  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px">Conformité réglementaire : 28 à 61 V/m selon la fréquence (décret n° 2002-775) — voir la couche <b>« Mesures certifiées (ANFR/EXEM) »</b> (menu Contexte naturel → Repères et mesures externes).</div>'+
-  '<div class="leg-src">ANFR · TDF/Arcom/TVNT.net</div></div>',
+  // ant : fonction, pas une chaîne (2026-09-17, revue web PR #1510, corrections B1-B4 + non
+  // bloquant). Étape 1 de la revue vérifiée avant correction (requête directe antennas_corse,
+  // 3000 lignes, cf. commentaire à ANFR_GENERATIONS) : aucune ligne 'infra', exactement
+  // {2G,3G,4G,5G} × {Orange,SFR,Bouygues,Free} — "(mobile, 2G–5G)" et la liste d'opérateurs
+  // étaient vrais mais en dur ; dérivés désormais (ANFR_GENERATIONS/ANFR_OPERATORS). Titre élargi
+  // ("… et émetteurs TDF") : le bloc documente les deux catégories à parts égales depuis les 4
+  // lignes de symboles. Pastilles lues depuis GC.default/ANFR_CLUSTER_COLOR/TDF_CLUSTER_COLOR
+  // (mêmes constantes que mkIcon()/lAntCluster/lTDFCluster/dessinerMarqueursTDF(), pas des hex
+  // recopiés) — une future recoloration de ces constantes ne peut plus désaccorder la légende.
+  // Swatch TDF isolé désormais structurellement identique au marqueur réel (carré + glyphe blanc
+  // centré, mêmes bordure/ombre) — non un simple carré plat comme avant cette revue.
+  ant:function(){ return '<div class="leg-block"><b class="leg-title">Antennes ANFR et émetteurs TDF</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Une pastille = une <b>position</b> déclarée, pas une antenne : plusieurs générations y coexistent presque toujours, et souvent plusieurs opérateurs. Touchez ou survolez un point pour voir ce qui y est déclaré.</div>'+
+  '<div class="leg-row"><span style="display:inline-block;width:9px;height:9px;background:'+GC.default+';border:1.5px solid rgba(255,255,255,.9);border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2);vertical-align:middle;margin-right:4px"></span>Position d’émission déclarée, isolée — la teinte ne code aucune technologie</div>'+
+  '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:'+ANFR_CLUSTER_COLOR+';border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.35);vertical-align:middle;margin-right:4px"></span>Grappe ANFR (comptage) — regroupe des positions de toutes générations, sans dominante affichée</div>'+
+  '<div class="leg-row"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;background:'+TDF_CLUSTER_COLOR+';border:1.5px solid rgba(255,255,255,.9);box-shadow:0 1px 3px rgba(0,0,0,.2);vertical-align:middle;margin-right:4px"><span style="width:6px;height:6px;background:white;display:block"></span></span><b style="color:'+TDF_CLUSTER_COLOR+'">Émetteur radio/TV majeur</b> (TDF), isolé — même teinte que sa grappe</div>'+
+  '<div class="leg-row"><span style="display:inline-block;position:relative;width:14px;height:14px;vertical-align:middle;margin-right:4px"><span style="position:absolute;inset:0;background:'+TDF_CLUSTER_COLOR+';border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.35)"></span><span style="position:absolute;top:-2px;right:-2px;width:6px;height:6px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center"><span style="width:3px;height:3px;background:'+TDF_CLUSTER_COLOR+';display:block"></span></span></span>Grappe TDF — garde sa teinte et un badge blanc en coin, même groupée</div>'+
+  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:3px"><span id="leg-ant-sites">—</span> positions ANFR (<span id="leg-ant-gens">—</span>) — <span id="leg-ant-ops">—</span>. Date de mise à jour absente des données servies par Tellux (ANFR). <span id="leg-tdf-clause">—</span>, extraction du <span id="leg-tdf-date">—</span>.</div>'+
+  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px">Valeurs limites d’exposition : 28 à 61 V/m selon la fréquence (décret n° 2002-775) — voir la couche <b>« Mesures certifiées (ANFR/EXEM) »</b> (menu Contexte naturel → Repères et mesures externes).</div>'+
+  '<div class="leg-src">ANFR · TDF/Arcom/TVNT.net</div></div>'; },
   // Sous-bloc "MESURES CEM OFFICIELLES" retiré d'ici le 2026-09-04 (brief AQ) — faisait doublon
   // avec LEGEND_HTML.cert (vérifié concordant avec _certColor() une fois le champ
   // seuil_legal_vm du dataset pris en compte, contrairement à cert qui, elle, était fausse).
@@ -5164,7 +5209,7 @@ const LEGEND_HTML_EN={
     '<div style="font-size:8px;color:#626774;width:140px;margin-bottom:4px;line-height:1.3">Scale <b>relative</b> to the model (bins 0.40 · 0.55 · 0.85 · 1.5 V/m).</div>'+
     '<div class="leg-row" style="font-size:8.5px;color:#4a4f5e;line-height:1.35"><span style="display:inline-block;width:10px;height:8px;background:#1F2329;border-radius:2px;vertical-align:middle;margin-right:4px"></span><b style="color:#1F2329">&gt; 1.5 V/m</b> — outside the typical ambient range: an area to verify by measurement, not a health threshold.</div>'+
     '<div class="leg-row" style="margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><b>Outdoor</b> RF field estimate, anchored on ANFR antennas and certified measurements. Does not replace a measurement.</div>'+
-    '<div class="leg-src">Friis · ~3,000 ANFR antennas · internal calibration — <a href="/cadre-scientifique.html#radiofrequences" target="_blank" rel="noopener" style="color:var(--maquis-clair)">model, calibration &amp; reading references ↗</a></div>'+
+    '<div class="leg-src">Friis · <span id="leg-hotrf-count">—</span> ANFR positions · internal calibration — <a href="/cadre-scientifique.html#radiofrequences" target="_blank" rel="noopener" style="color:var(--maquis-clair)">model, calibration &amp; reading references ↗</a></div>'+
     '</div>',
   hotrf_noncal:'<div class="leg-block"><b class="leg-title">RF electric field (V/m)</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Radiofrequency — outdoor estimate, Tellux model</div>'+
@@ -5176,14 +5221,17 @@ const LEGEND_HTML_EN={
     '<div class="leg-src">Friis · not calibrated at the moment — <a href="/cadre-scientifique.html#radiofrequences" target="_blank" rel="noopener" style="color:var(--maquis-clair)">model, calibration &amp; reading references ↗</a></div>'+
     '</div>',
   hyd:'<div class="leg-block"><b class="leg-title">Groundwater</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Groundwater near the surface — BRGM visual layer; the calculation uses a separate dataset</div><img src="https://geoservices.brgm.fr/risques?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.1.1&FORMAT=image/png&LAYER=REMNAPPE_FR" style="max-width:260px;width:100%;display:block;margin:4px 0;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:4px;padding:4px;box-sizing:border-box" alt="Groundwater rise legend (BRGM REMNAPPE_FR)"><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Legend served live by the BRGM server — replaces the previous static list (\"Outcropping / Sub-outcropping\"), which described a different classification than the one actually rendered.</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
-  ant:'<div class="leg-block"><b class="leg-title">ANFR Antennas</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">A dot marks a declared <b>site</b>, not a single antenna: several generations almost always coexist there, and often several operators. Tap or hover a point to see what is declared.</div>'+
-  '<div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a4f5e;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Declared transmission site, isolated — the colour encodes no technology</div>'+
-  '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#1F3A5F;border:1.5px solid white;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.3);vertical-align:middle;margin-right:4px"></span>ANFR cluster (count) — groups positions of every generation, no dominant colour shown</div>'+
-  '<div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#3F5B3A;vertical-align:middle;margin-right:4px"></span><b style="color:#3F5B3A">Major radio/TV transmitter</b> (TDF), isolated — same colour as its cluster</div>'+
-  '<div class="leg-row"><span style="display:inline-block;position:relative;width:14px;height:14px;vertical-align:middle;margin-right:4px"><span style="position:absolute;inset:0;background:#3F5B3A;border:1.5px solid white;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span><span style="position:absolute;top:-2px;right:-2px;width:6px;height:6px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center"><span style="width:3px;height:3px;background:#3F5B3A;display:block"></span></span></span>TDF cluster — keeps its colour and a white corner badge, even when clustered</div>'+
-  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:3px"><span id="leg-ant-sites">—</span> ANFR sites (mobile, 2G–5G) — Orange · SFR · Bouygues · Free. <span id="leg-tdf-count">—</span> TDF transmitters (radio/TV), extracted on <span id="leg-tdf-date">—</span>. No extraction date available for the ANFR dataset (no date field in the data served).</div>'+
-  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px">Regulatory compliance: 28 to 61 V/m depending on frequency (Decree No. 2002-775) — see the <b>"Certified measurements (ANFR/EXEM)"</b> layer (Natural context menu → External references and measurements).</div>'+
-  '<div class="leg-src">ANFR · TDF/Arcom/TVNT.net</div></div>',
+  // ant : fonction, mêmes corrections que la version FR (cf. commentaire jumeau ci-dessus) —
+  // pastilles depuis les mêmes constantes, comptages/générations/opérateurs dérivés, pas de
+  // valeurs EN indépendantes recalculées.
+  ant:function(){ return '<div class="leg-block"><b class="leg-title">ANFR Antennas and TDF Transmitters</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">A dot marks a declared <b>site</b>, not a single antenna: several generations almost always coexist there, and often several operators. Tap or hover a point to see what is declared.</div>'+
+  '<div class="leg-row"><span style="display:inline-block;width:9px;height:9px;background:'+GC.default+';border:1.5px solid rgba(255,255,255,.9);border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2);vertical-align:middle;margin-right:4px"></span>Declared transmission site, isolated — the colour encodes no technology</div>'+
+  '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:'+ANFR_CLUSTER_COLOR+';border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.35);vertical-align:middle;margin-right:4px"></span>ANFR cluster (count) — groups positions of every generation, no dominant colour shown</div>'+
+  '<div class="leg-row"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;background:'+TDF_CLUSTER_COLOR+';border:1.5px solid rgba(255,255,255,.9);box-shadow:0 1px 3px rgba(0,0,0,.2);vertical-align:middle;margin-right:4px"><span style="width:6px;height:6px;background:white;display:block"></span></span><b style="color:'+TDF_CLUSTER_COLOR+'">Major radio/TV transmitter</b> (TDF), isolated — same colour as its cluster</div>'+
+  '<div class="leg-row"><span style="display:inline-block;position:relative;width:14px;height:14px;vertical-align:middle;margin-right:4px"><span style="position:absolute;inset:0;background:'+TDF_CLUSTER_COLOR+';border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.35)"></span><span style="position:absolute;top:-2px;right:-2px;width:6px;height:6px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center"><span style="width:3px;height:3px;background:'+TDF_CLUSTER_COLOR+';display:block"></span></span></span>TDF cluster — keeps its colour and a white corner badge, even when clustered</div>'+
+  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:3px"><span id="leg-ant-sites">—</span> ANFR sites (<span id="leg-ant-gens">—</span>) — <span id="leg-ant-ops">—</span>. No update date in the data served by Tellux (ANFR). <span id="leg-tdf-clause" data-lang="en">—</span>, extracted on <span id="leg-tdf-date">—</span>.</div>'+
+  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px">Exposure limit values: 28 to 61 V/m depending on frequency (Decree No. 2002-775) — see the <b>"Certified measurements (ANFR/EXEM)"</b> layer (Natural context menu → External references and measurements).</div>'+
+  '<div class="leg-src">ANFR · TDF/Arcom/TVNT.net</div></div>'; },
   emag:'<div class="leg-block"><b class="leg-title" style="font-size:11px">Regional magnetic background</b><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px">Continuous scale from &#x2212;200 to +200 nT — the colours are those of the image served by NOAA; Tellux produces none of them. Deep basement, unrelated to human activity (NOAA EMAG2v3).</div></div>',
   gammajrc:'<div class="leg-block"><b class="leg-title" style="font-size:11px">Regional terrestrial gamma background (JRC)</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Modeled European grid, 10 km resolution — context, outside the Tellux calculation</div>'+
@@ -5476,7 +5524,14 @@ function validateContrib(){
 function legendHtmlFor(id){
   // hotrf : variante « non calibré » tant que k ne l'est pas (2026-09-10, lot B) — cf. rfCalibre().
   if(id==='hotrf'&&typeof rfCalibre==='function'&&!rfCalibre()) id='hotrf_noncal';
-  return (document.documentElement.lang === 'en' && typeof LEGEND_HTML_EN !== 'undefined' && LEGEND_HTML_EN[id]) ? LEGEND_HTML_EN[id] : LEGEND_HTML[id];
+  const v=(document.documentElement.lang === 'en' && typeof LEGEND_HTML_EN !== 'undefined' && LEGEND_HTML_EN[id]) ? LEGEND_HTML_EN[id] : LEGEND_HTML[id];
+  // Valeur-fonction (2026-09-17, revue web PR #1510, non-bloquant « pastilles lues depuis les
+  // constantes ») : LEGEND_HTML est évalué au chargement du script, avant GC/ANFR_CLUSTER_COLOR/
+  // TDF_CLUSTER_COLOR (déclarés bien plus bas dans ce fichier) — y référencer ces constantes
+  // directement dans le littéral aurait levé une ReferenceError immédiate. Un thunk diffère la
+  // construction de la chaîne jusqu'à CET appel, largement postérieur à leur déclaration. Chaque
+  // autre entrée de LEGEND_HTML/LEGEND_HTML_EN reste une chaîne simple, inchangée.
+  return typeof v==='function' ? v() : v;
 }
 function updateLegendPanel(){
   // Brief 46 — Zone 1 (core) : rendue dans #tellux-leg-panel à l'intérieur de #legende (cf. .map-col).
@@ -8059,6 +8114,7 @@ function loadTDFEmitters() {
       const d = await r.json();
       TDF_EMITTERS = d.emitters || [];
       TDF_EXTRACTION_DATE = d.date_extraction || null; // champ réel du dataset (2026-09-17, brief légende ANFR+TDF) — absent côté antennas_corse (Supabase), cf. commentaire à ANFR_SITE_COUNT
+      TDF_STATUS = d.status || null; // 'partiel_verifie' au 2026-09-17 (revue web, correction B1) — cf. commentaire à sa déclaration
       const withPAR = TDF_EMITTERS.filter(e => e.par_kw_estimee && e.par_kw_estimee > 0).length;
       console.log('[Tellux] TDF emetteurs charges : ' + TDF_EMITTERS.length + ' (dont ' + withPAR + ' avec PAR connue)');
     } catch (e) {
@@ -8779,7 +8835,8 @@ function rfCalibre(){ return typeof RF_CALIB_STATS !== 'undefined' && RF_CALIB_S
 // syncAntCount() ajouté 2026-09-17 : updateLegendPanel() ci-dessous reconstruit TOUT
 // #tellux-leg-panel, pas seulement l'entrée hotrf visée par cette fonction — si 'ant' est
 // également core-active (LEGEND_ACTIVE_CORE) au moment où la calibration RF se termine, son
-// #leg-ant-count repart au « — » du template et rien ne le resynchronisait plus ensuite,
+// #leg-ant-sites (#leg-ant-count avant son renommage, même jour, revue web PR #1510) repart au
+// « — » du template et rien ne le resynchronisait plus ensuite,
 // contrairement aux deux autres appelants de updateLegendPanel() (showLegend(), qui s'auto-apparie
 // déjà ; la passe i18n post-lang, qui s'apparie aussi). Écart resté dormant depuis le passage
 // ant:false du 2026-09-12 (LEGEND_ACTIVE_CORE ne contenait plus 'ant' au boot) — mais INDÉPENDANT
@@ -10336,7 +10393,10 @@ const TDF_CLUSTER_COLOR='#3F5B3A'; // Maquis (--tx-maquis / --maquis)
 // violet de lCon pour ne pas confondre densité d'antennes et densité de contributions.
 // maxClusterRadius/spiderfyOnMaxZoom/showCoverageOnHover/zoomToBoundsOnClick repris identiques
 // à lCon : même comportement d'éclatement adaptatif par rayon en pixels, pas de nouveau seuil
-// de zoom à inventer (les ~552 positions ANFR + ~25 émetteurs TDF sont un volume trivial pour
+// de zoom à inventer (quelques centaines de positions ANFR + une dizaine d'émetteurs TDF — cf.
+// ANFR_SITE_COUNT/TDF_EMITTERS.length pour le compte courant, plutôt qu'un chiffre figé ici,
+// périmé une fois de plus au 2026-09-17 : ~552/~25 écrit en 2026-08-30 contre 566/10 mesurés en
+// revue web PR #1510 — sont un volume trivial pour
 // markercluster, perf non significativement différente de lCon qui gère déjà des centaines
 // de contributions).
 const lAntCluster=L.markerClusterGroup({
@@ -10646,6 +10706,17 @@ async function loadAnt(){try{
     if(f.generation)e.gens.add(f.generation);
     if(f.operateur)e.ops.add(f.operateur);
   });
+  // ANFR_GENERATIONS / ANFR_OPERATORS (2026-09-17, revue web PR #1510, correction B3) — dérivés de
+  // parPosition (déjà construit ci-dessus, mêmes filtres bbox/commune) plutôt que laissés en dur.
+  // Ordre 2G/3G/4G/5G explicite car lisible ; toute valeur inattendue est ajoutée triée en fin
+  // plutôt que tue, pour ne jamais masquer un futur écart réel aux données.
+  {
+    const allGens=new Set(), allOps=new Set();
+    parPosition.forEach(e=>{ e.gens.forEach(g=>allGens.add(g)); e.ops.forEach(o=>allOps.add(o)); });
+    const GEN_ORDER=['2G','3G','4G','5G'];
+    ANFR_GENERATIONS=GEN_ORDER.filter(g=>allGens.has(g)).concat([...allGens].filter(g=>!GEN_ORDER.includes(g)).sort()).join(' · ');
+    ANFR_OPERATORS=[...allOps].sort().join(' · ');
+  }
   rows.forEach(f=>{
     if(f.lon<8.30||f.lon>9.65||f.lat<41.35||f.lat>43.03){nSeaFiltered++;return;}
     if(!f.commune){nOffshore++;return;}
@@ -15738,7 +15809,7 @@ function capCleanup(){
 ["lyr_hot_tt","#b-hot","title","Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. N'inclut pas le champ géomagnétique terrestre total (~46 000-47 500 nT en Corse, l'ordre de grandeur qu'un magnétomètre de smartphone mesure) : ce sont deux grandeurs physiques distinctes, jamais additionnées ici — le champ géomagnétique n'entre dans ce nombre à aucun titre. Estimation du modèle Tellux, pas une mesure. La composante ELF entre dans le score Indice Tellux affiché ; la composante substrat reste une donnée de contexte, sans consommateur dans ce score.","","Composite magnetic field — ELF 50 Hz (electrical grid) + substrate susceptibility, expressed in nT. Does not include the total terrestrial geomagnetic field (~46,000-47,500 nT in Corsica, the order of magnitude a smartphone magnetometer measures): these are two distinct physical quantities, never added together here — the geomagnetic field plays no part whatsoever in this number. Tellux model estimate, not a measurement. The ELF component feeds the displayed Indice Tellux score; the substrate component remains contextual data, with no consumer in that score."],
 ["lyr_hotrf","#b-hot-rf","","Champ électrique RF (V/m)","Campu elettricu RF (V/m)","RF electric field (V/m)"],
 ["lyr_elf","#b-elf","","Champ ELF (nT)","","ELF field (nT)"],
-["lyr_hotrf_tt","#b-hot-rf","title","Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 21 mesures certifiées ANFR/EXEM (propagation depuis ~3000 antennes ANFR réelles). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte.","Campu elettricu radiufrequenza (V/m) — mudellu Tellux — calibrazione interna nantu à 21 misure certificate ANFR/EXEM (propagazione da ~3000 antenne ANFR reale). Stima centrale d'ordine di grandezza (campu esternu ; sott'ivaluta i siti più esposti, sopravaluta l'internu di i fabbricati). Rilettura fisicu in corsu ; ùn rimpiazza micca una misura certificata. Riferimenti ICNIRP indicativi, micca soglia d'alerta.","Radiofrequency electric field (V/m) — Tellux model — internal calibration on 21 certified ANFR/EXEM measurements (propagation from ~3,000 actual ANFR antennas). Central order-of-magnitude estimate (outdoor field; underestimates highly exposed sites, overestimates indoor levels). Physicist review underway; does not replace a certified measurement. ICNIRP reference points are indicative, not an alert threshold."],
+["lyr_hotrf_tt","#b-hot-rf","title","Champ électrique radiofréquence (V/m) — modèle Tellux — calibration interne sur 21 mesures certifiées ANFR/EXEM (propagation depuis les antennes ANFR réelles — décompte dans la légende Antennes ANFR et émetteurs TDF). Estimation centrale d'ordre de grandeur (champ extérieur ; sous-estime les sites très exposés, surestime l'intérieur des bâtiments). Relecture physicien en cours ; ne remplace pas une mesure certifiée. Repères ICNIRP indicatifs, pas de seuil d'alerte.","","Radiofrequency electric field (V/m) — Tellux model — internal calibration on 21 certified ANFR/EXEM measurements (propagation from actual ANFR antennas — see the ANFR Antennas and TDF Transmitters legend for the count). Central order-of-magnitude estimate (outdoor field; underestimates highly exposed sites, overestimates indoor levels). Physicist review underway; does not replace a certified measurement. ICNIRP reference points are indicative, not an alert threshold."],
 // lyr_elf_tt (brief BH, 2026-09-05) : CO laissée vide à dessein — pas de traduction improvisée
 // sans validation locuteur natif (même discipline que chip_label_tt/brief AV, dom_hot/brief BA).
 ["lyr_elf_tt","#b-elf","title","Champ magnétique ELF 50 Hz (réseau électrique), exprimé en nT — composante anthropique seule du modèle Tellux, sans la susceptibilité du substrat (distincte de « Champ magnétique composite », qui combine les deux). Estimation, pas une mesure. N'affiche rien sous 300 nT : seuil réutilisant le repère documentaire IARC classe 2B, une classification épidémiologique de long terme — un choix éditorial d'affichage, pas une évaluation du risque à ce niveau précis.","","ELF magnetic field 50 Hz (electrical grid), expressed in nT — anthropic component only of the Tellux model, without substrate susceptibility (distinct from \"Composite magnetic field\", which combines both). Estimate, not a measurement. Shows nothing below 300 nT: a threshold reusing the IARC class 2B documentary reference point, a long-term epidemiological classification — an editorial display choice, not a risk evaluation at this precise level."],
@@ -16319,7 +16390,8 @@ function capCleanup(){
         updateInlineLegendMobile(el.id.replace(/^mleg-/, ''), true);
       });
     }
-    // updateLegendPanel() réécrit #tellux-leg-panel, donc aussi le #leg-ant-count qu'il
+    // updateLegendPanel() réécrit #tellux-leg-panel, donc aussi le #leg-ant-sites (#leg-ant-count
+    // avant son renommage, 2026-09-17, revue web PR #1510) qu'il
     // contient : le recompléter tout de suite plutôt que d'attendre le prochain passage de
     // loadAnt() (+1500 ms, app.html:11097), qui laisserait un « — » visible entre-temps.
     if (typeof syncAntCount === 'function') syncAntCount();
