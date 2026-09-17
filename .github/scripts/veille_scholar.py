@@ -629,11 +629,18 @@ def call_anthropic(prompt: str, emails: list[dict[str, str]]) -> tuple[str, dict
     tokens_sortie_total = 0
     arret = "max_tokens"  # amorce la boucle : le premier appel est toujours tenté
     for tentative in range(1, SORTIE_TENTATIVES_MAX + 1):
-        msg = client.messages.create(
+        # Streaming, pas .create() : constaté le 2026-09-17, le run réel de rattrapage
+        # (66 messages, MAX_TOKENS_SORTIE=40000) a levé côté SDK
+        # « ValueError: Streaming is required for operations that may take longer than
+        # 10 minutes » — un plafond de sortie élevé fait estimer un appel synchrone trop
+        # long, quel que soit le volume réel en entrée. get_final_message() rend le même
+        # objet Message (content, stop_reason, usage) qu'un .create() classique.
+        with client.messages.stream(
             model=ANTHROPIC_MODEL,
             max_tokens=MAX_TOKENS_SORTIE,
             messages=messages,
-        )
+        ) as stream:
+            msg = stream.get_final_message()
         textes.append("".join(block.text for block in msg.content if block.type == "text"))
         tokens_sortie_total += msg.usage.output_tokens
         arret = msg.stop_reason
@@ -737,7 +744,9 @@ def call_anthropic_integration(integration_prompt: str, synthesis: str) -> str:
     )
 
     print(f"[integration] Modèle {ANTHROPIC_MODEL}, {len(user_message)} caractères en input")
-    msg = client.messages.create(
+    # Streaming : même motif que call_anthropic() (2026-09-17) — un MAX_TOKENS_SORTIE élevé
+    # fait exiger le streaming côté SDK, indépendamment du volume réel en entrée.
+    with client.messages.stream(
         model=ANTHROPIC_MODEL,
         # Même plafond que la synthèse (MAX_TOKENS_SORTIE) plutôt qu'un second 8192 codé
         # en dur (2026-09-17). Sans la reprise bornée de call_anthropic() : cette étape
@@ -746,7 +755,8 @@ def call_anthropic_integration(integration_prompt: str, synthesis: str) -> str:
         # d'interruption que la synthèse est un chantier séparé, pas fait ici.
         max_tokens=MAX_TOKENS_SORTIE,
         messages=[{"role": "user", "content": user_message}],
-    )
+    ) as stream:
+        msg = stream.get_final_message()
     return "".join(block.text for block in msg.content if block.type == "text")
 
 

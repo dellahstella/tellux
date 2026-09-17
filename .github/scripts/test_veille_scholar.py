@@ -81,24 +81,43 @@ class _Reponse:
         self.usage = type("U", (), {"output_tokens": tokens if tokens is not None else (8192 if arret == "max_tokens" else 1200)})()
 
 
+class _StreamCM:
+    """Double du context manager de client.messages.stream(...) (2026-09-17 : la
+    production est passée de .create() à .stream() — un MAX_TOKENS_SORTIE élevé exige
+    le streaming côté SDK réel). N'émet aucun évènement intermédiaire : seul
+    get_final_message() est exercé, comme dans le code de production."""
+
+    def __init__(self, reponse) -> None:
+        self._reponse = reponse
+
+    def __enter__(self) -> "_StreamCM":
+        return self
+
+    def __exit__(self, *exc: object) -> bool:
+        return False
+
+    def get_final_message(self):
+        return self._reponse
+
+
 def _client_complet(arret: str) -> _Client:
     c = _Client()
-    c.messages.create = lambda **kw: _Reponse(arret)
+    c.messages.stream = lambda **kw: _StreamCM(_Reponse(arret))
     return c
 
 
 class _MessagesSuite:
-    """Double dont chaque appel à create() rend la réponse suivante de `reponses`,
+    """Double dont chaque appel à stream() rend la réponse suivante de `reponses`,
     répétant la dernière une fois la liste épuisée (utile pour "toujours max_tokens")."""
 
     def __init__(self, reponses: list[_Reponse]) -> None:
         self._reponses = reponses
         self.appels = 0
 
-    def create(self, **kw):
+    def stream(self, **kw):
         r = self._reponses[min(self.appels, len(self._reponses) - 1)]
         self.appels += 1
-        return r
+        return _StreamCM(r)
 
 
 class _ClientSuite:
