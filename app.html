@@ -7619,21 +7619,37 @@ function calcMagneticELF_v1(lat, lon, chargeFactor) {
     }
   });
 
-  // === SITES DE PRODUCTION ÉLECTRIQUE === (scalaire — source ponctuelle)
-  // Modélise le site comme un fil rectiligne infini (MU0_OVER_2PI, même
-  // constante que les segments HTA réels ci-dessus) — décroissance en 1/d.
-  // Un site de production est une installation compacte (boucles fermées :
-  // alternateur/transformateur/jeu de barres), pas un conducteur étendu —
-  // modélisation en question, non arbitrée ici. Cf. dette privée
-  // PROD-ELECTRIQUE-LOI-DECROISSANCE-1D-NON-PHYSIQUE-001 (briefs AW/AX,
-  // 2026-09-04). Corrigé (commentaire seul) brief AY, même date.
+  // === SITES DE PRODUCTION ÉLECTRIQUE === (scalaire — source localisée, dipôle 1/d³)
+  // Corrigé le 2026-09-17 (dette PROD-ELECTRIQUE-LOI-DECROISSANCE-1D-NON-PHYSIQUE-001,
+  // briefs AW/AX 2026-09-04) : ce bloc appliquait MU0_OVER_2PI/d (fil rectiligne infini) à un
+  // site de production — une installation localisée (alternateur/transformateur/jeu de barres),
+  // pas un conducteur étendu. Le monopole magnétique est nul INCONDITIONNELLEMENT (∇·B=0, vrai
+  // aussi pour un fil infini) — ce qui dépend du caractère BORNÉ de la source, c'est la
+  // convergence du développement multipolaire vers le champ lointain réel : le dipôle (1/d³)
+  // domine dès lors que la distance d'observation est grande devant l'extension propre du site,
+  // quelle que soit sa complexité interne (Griffiths, Introduction to Electrodynamics, §5.4.3 ;
+  // Jackson, Classical Electrodynamics 2e éd., §5.6). Réserve non résolue : suppose un moment
+  // dipolaire net non nul (un montage parfaitement équilibré ferait dominer le quadripôle,
+  // 1/d⁴) — n'inverse pas le sens de la correction, cf. note de
+  // caractérisation _drafts/DIAGNOSTIC_LOI_DECROISSANCE_PROD_ELECTRIQUE_2026-09-17.md (dépôt
+  // public, gitignored) pour la caractérisation complète des 33 fiches et la validation.
+  // Reparamétrage, pas une nouvelle formule d'amplitude : I_equiv (dette distincte
+  // PROD-ELECTRIQUE-I-EQUIV-RACINE-P-NON-JUSTIFIEE-001, non traitée ici) et le plancher 100 m
+  // sont inchangés — B_ref_nT est la valeur que l'ANCIENNE loi 1/d donnait exactement à ce
+  // plancher ; seule la pente au-delà de 100 m change, de 1/d à 1/d³, continuité exacte à 100 m.
+  // Aucune loi mixte par puissance : aucune donnée d'emprise n'existe pour tracer un seuil
+  // compact/étendu défendable parmi les 33 fiches — en poser un serait une valeur non sourcée
+  // de plus. POSTES_SOURCES (1/d³ déjà, ancre 50 µT@10 m gelée) et EXPERT_BOUNDS_DEFAULT.ELF_nT
+  // (GELÉ-001b) non touchés par ce lot.
   PROD_ELECTRIQUE.forEach(s => {
     if (s.puissance < 0.5) return;
     if (s.type === 'Eolien') return; // dédup — parcs éoliens comptés via EOLIENNES_DATA (ODRE, coords fiables) ; les 3 entrées Eolien de PROD_ELECTRIQUE ont des coords inline divergentes 2-6 km
     const d = dist(lat, lon, s.lat, s.lon);
     const d_m = Math.max(100, d * 1000);
     const I_equiv = Math.sqrt(s.puissance) * 50; // I∝√P non établi par P=V×I (donnerait I∝P) ; cf. dette PROD-ELECTRIQUE-I-EQUIV-RACINE-P-NON-JUSTIFIEE-001
-    const B_nT = MU0_OVER_2PI * I_equiv / d_m * 1e9;
+    const d_ref_prod = 100; // plancher existant, inchangé
+    const B_ref_prod_nT = MU0_OVER_2PI * I_equiv / d_ref_prod * 1e9; // valeur au plancher, identique à l'ancienne loi 1/d en ce point précis
+    const B_nT = B_ref_prod_nT * Math.pow(d_ref_prod / d_m, 3); // dipôle, cf. commentaire ci-dessus
     if (B_nT > 0.5) {
       const contrib = Math.min(B_nT, 400);
       B_total_nT += contrib;
@@ -7780,14 +7796,23 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
   const B_lines = Math.sqrt(totalBx * totalBx + totalBy * totalBy);
   let B_total_nT = B_lines;
 
-  // === SITES DE PRODUCTION ÉLECTRIQUE === (scalaire — source ponctuelle)
-  // Modélise le site comme un fil rectiligne infini (MU0_OVER_2PI, même
-  // constante que les segments HTA réels ci-dessus) — décroissance en 1/d.
-  // Un site de production est une installation compacte (boucles fermées :
-  // alternateur/transformateur/jeu de barres), pas un conducteur étendu —
-  // modélisation en question, non arbitrée ici. Cf. dette privée
-  // PROD-ELECTRIQUE-LOI-DECROISSANCE-1D-NON-PHYSIQUE-001 (briefs AW/AX,
-  // 2026-09-04). Corrigé (commentaire seul) brief AY, même date.
+  // === SITES DE PRODUCTION ÉLECTRIQUE === (scalaire — source localisée, dipôle 1/d³)
+  // Corrigé le 2026-09-17 (dette PROD-ELECTRIQUE-LOI-DECROISSANCE-1D-NON-PHYSIQUE-001,
+  // briefs AW/AX 2026-09-04) : ce bloc appliquait MU0_OVER_2PI/d (fil rectiligne infini) à un
+  // site de production — une installation localisée (alternateur/transformateur/jeu de barres),
+  // pas un conducteur étendu. Le monopole magnétique est nul INCONDITIONNELLEMENT (∇·B=0, vrai
+  // aussi pour un fil infini) — ce qui dépend du caractère BORNÉ de la source, c'est la
+  // convergence du développement multipolaire vers le champ lointain réel : le dipôle (1/d³)
+  // domine dès lors que la distance d'observation est grande devant l'extension propre du site,
+  // quelle que soit sa complexité interne (Griffiths, Introduction to Electrodynamics, §5.4.3 ;
+  // Jackson, Classical Electrodynamics 2e éd., §5.6). Réserve non résolue : suppose un moment
+  // dipolaire net non nul (un montage parfaitement équilibré ferait dominer le quadripôle,
+  // 1/d⁴) — n'inverse pas le sens de la correction, cf. note de
+  // caractérisation _drafts/DIAGNOSTIC_LOI_DECROISSANCE_PROD_ELECTRIQUE_2026-09-17.md (dépôt
+  // public, gitignored) pour la caractérisation complète des 33 fiches et la validation — même
+  // correctif que dans calcMagneticELF_v1 ci-dessus, code identique v1/v2 (cf. commentaire à
+  // cette même section plus haut pour le détail complet : reparamétrage sans nouvelle amplitude,
+  // I_equiv/plancher 100 m inchangés, aucune loi mixte, POSTES_SOURCES/GELÉ-001b non touchés).
   const MU0_OVER_2PI = 2e-7;
   PROD_ELECTRIQUE.forEach(s => {
     if (s.puissance < 0.5) return;
@@ -7795,7 +7820,9 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
     const d = dist(lat, lon, s.lat, s.lon);
     const d_m = Math.max(100, d * 1000);
     const I_equiv = Math.sqrt(s.puissance) * 50; // I∝√P non établi par P=V×I (donnerait I∝P) ; cf. dette PROD-ELECTRIQUE-I-EQUIV-RACINE-P-NON-JUSTIFIEE-001
-    const B_nT = MU0_OVER_2PI * I_equiv / d_m * 1e9;
+    const d_ref_prod = 100; // plancher existant, inchangé
+    const B_ref_prod_nT = MU0_OVER_2PI * I_equiv / d_ref_prod * 1e9; // valeur au plancher, identique à l'ancienne loi 1/d en ce point précis
+    const B_nT = B_ref_prod_nT * Math.pow(d_ref_prod / d_m, 3); // dipôle, cf. commentaire ci-dessus
     if (B_nT > 0.5) {
       const contrib = Math.min(B_nT, 400);
       B_total_nT += contrib;
