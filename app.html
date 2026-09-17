@@ -4766,9 +4766,20 @@ const LEGEND_ACTIVE_CONTEXT=[];
 // à deux endroits du DOM (ex. panneau "?" desktop et onglet Couches mobile, tous deux toujours
 // présents, seuls masqués par media query), les deux instances doivent être mises à jour.
 let ANFR_ONSHORE_COUNT = null;
+// ANFR_SITE_COUNT / TDF_EMITTERS_DATE (2026-09-17, brief légende ANFR+TDF) : le chiffre publié
+// dans la légende était ANFR_ONSHORE_COUNT = nOnshore, un compte de LIGNES déclarées
+// (générations/opérateurs), pas de positions — écart trouvé en vérifiant la prémisse du brief
+// (le propre sous-titre de la légende dit pourtant « une pastille = une position »).
+// ANFR_SITE_COUNT = seenPos.size (posé dans loadAnt(), même passage que nOnshore) est le compte
+// réel de marqueurs distincts, celui qui correspond au sous-titre. ANFR_ONSHORE_COUNT n'est pas
+// retiré (consommé ailleurs, cf. window.__telluxLayers et le hook de vérification L~13229) :
+// seule la légende change de source.
+let ANFR_SITE_COUNT = null;
+let TDF_EXTRACTION_DATE = null;
 function syncAntCount(){
-  if(ANFR_ONSHORE_COUNT==null) return;
-  document.querySelectorAll('#leg-ant-count').forEach(el=>{ el.textContent = ANFR_ONSHORE_COUNT; });
+  if(ANFR_SITE_COUNT!=null) document.querySelectorAll('#leg-ant-sites').forEach(el=>{ el.textContent = ANFR_SITE_COUNT; });
+  if(Array.isArray(TDF_EMITTERS) && TDF_EMITTERS.length) document.querySelectorAll('#leg-tdf-count').forEach(el=>{ el.textContent = TDF_EMITTERS.length; });
+  if(TDF_EXTRACTION_DATE) document.querySelectorAll('#leg-tdf-date').forEach(el=>{ el.textContent = TDF_EXTRACTION_DATE; });
 }
 // Repères documentaires du panneau "?" (2026-08-28, brief "bouton ? contextuel") : au toggle
 // d'une couche, renvoi vers la section correspondante des pages doc publiques (table badge↔ancre
@@ -4991,7 +5002,14 @@ const LEGEND_HTML={
   // générations, regroupées sans distinction visuelle avant dégroupement (lAntCluster, teinte
   // générique GC.default #4a4f5e). Mécanisme anti-collision (brief AH phase 2) volontairement NON
   // décrit ici — rendu invisible pour l'utilisateur, seul le contenu de la bulle compte.
-  ant:'<div class="leg-block"><b class="leg-title">Antennes ANFR</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Une pastille = une <b>position</b> déclarée, pas une antenne : plusieurs générations y coexistent presque toujours, et souvent plusieurs opérateurs. Touchez ou survolez un point pour voir ce qui y est déclaré. Regroupées en grappe (comptage) à faible zoom ; les émetteurs TDF gardent leur teinte et un badge en coin même en grappe.</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a4f5e;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Position d’émission déclarée — la teinte ne code aucune technologie</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;vertical-align:middle;margin-right:4px"></span><b style="color:#616874">Émetteur radio/TV majeur</b> (TDF)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Opérateurs : Orange · SFR · Bouygues · Free<br><span id="leg-ant-count">—</span> antennes · Source ANFR open data</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px">Conformité réglementaire (seuil légal 28 V/m) : voir la couche <b>« Mesures certifiées (ANFR/EXEM) »</b> (menu Contexte naturel).</div><div class="leg-src">ANFR</div></div>',
+  ant:'<div class="leg-block"><b class="leg-title">Antennes ANFR</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Une pastille = une <b>position</b> déclarée, pas une antenne : plusieurs générations y coexistent presque toujours, et souvent plusieurs opérateurs. Touchez ou survolez un point pour voir ce qui y est déclaré.</div>'+
+  '<div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a4f5e;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Position d’émission déclarée, isolée — la teinte ne code aucune technologie</div>'+
+  '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#1F3A5F;border:1.5px solid white;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.3);vertical-align:middle;margin-right:4px"></span>Grappe ANFR (comptage) — regroupe des positions de toutes générations, sans dominante affichée</div>'+
+  '<div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#3F5B3A;vertical-align:middle;margin-right:4px"></span><b style="color:#3F5B3A">Émetteur radio/TV majeur</b> (TDF), isolé — même teinte que sa grappe</div>'+
+  '<div class="leg-row"><span style="display:inline-block;position:relative;width:14px;height:14px;vertical-align:middle;margin-right:4px"><span style="position:absolute;inset:0;background:#3F5B3A;border:1.5px solid white;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span><span style="position:absolute;top:-2px;right:-2px;width:6px;height:6px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center"><span style="width:3px;height:3px;background:#3F5B3A;display:block"></span></span></span>Grappe TDF — garde sa teinte et un badge blanc en coin, même groupée</div>'+
+  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:3px"><span id="leg-ant-sites">—</span> positions ANFR (mobile, 2G–5G) — Orange · SFR · Bouygues · Free. <span id="leg-tdf-count">—</span> émetteurs TDF (radio/TV), extraction du <span id="leg-tdf-date">—</span>. Date d’extraction non fournie côté ANFR (aucun champ date dans les données servies).</div>'+
+  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px">Conformité réglementaire : 28 à 61 V/m selon la fréquence (décret n° 2002-775) — voir la couche <b>« Mesures certifiées (ANFR/EXEM) »</b> (menu Contexte naturel → Repères et mesures externes).</div>'+
+  '<div class="leg-src">ANFR · TDF/Arcom/TVNT.net</div></div>',
   // Sous-bloc "MESURES CEM OFFICIELLES" retiré d'ici le 2026-09-04 (brief AQ) — faisait doublon
   // avec LEGEND_HTML.cert (vérifié concordant avec _certColor() une fois le champ
   // seuil_legal_vm du dataset pris en compte, contrairement à cert qui, elle, était fausse).
@@ -5158,7 +5176,14 @@ const LEGEND_HTML_EN={
     '<div class="leg-src">Friis · not calibrated at the moment — <a href="/cadre-scientifique.html#radiofrequences" target="_blank" rel="noopener" style="color:var(--maquis-clair)">model, calibration &amp; reading references ↗</a></div>'+
     '</div>',
   hyd:'<div class="leg-block"><b class="leg-title">Groundwater</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Groundwater near the surface — BRGM visual layer; the calculation uses a separate dataset</div><img src="https://geoservices.brgm.fr/risques?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.1.1&FORMAT=image/png&LAYER=REMNAPPE_FR" style="max-width:260px;width:100%;display:block;margin:4px 0;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:4px;padding:4px;box-sizing:border-box" alt="Groundwater rise legend (BRGM REMNAPPE_FR)"><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Legend served live by the BRGM server — replaces the previous static list (\"Outcropping / Sub-outcropping\"), which described a different classification than the one actually rendered.</div><div class="leg-src">BRGM REMNAPPE_FR</div></div>',
-  ant:'<div class="leg-block"><b class="leg-title">ANFR Antennas</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">A dot marks a declared <b>site</b>, not a single antenna: several generations almost always coexist there, and often several operators. Tap or hover a point to see what is declared. Grouped into clusters (count) at low zoom; TDF transmitters keep their own colour and a corner badge even when clustered.</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a4f5e;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Declared transmission site — the colour encodes no technology</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#6b7280;vertical-align:middle;margin-right:4px"></span><b style="color:#616874">Major radio/TV transmitter</b> (TDF)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px">Operators: Orange · SFR · Bouygues · Free<br><span id="leg-ant-count">—</span> antennas · Source: ANFR open data</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px">Regulatory compliance (legal threshold 28 V/m): see the <b>"Certified measurements (ANFR/EXEM)"</b> layer (Natural context menu).</div><div class="leg-src">ANFR</div></div>',
+  ant:'<div class="leg-block"><b class="leg-title">ANFR Antennas</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">A dot marks a declared <b>site</b>, not a single antenna: several generations almost always coexist there, and often several operators. Tap or hover a point to see what is declared.</div>'+
+  '<div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a4f5e;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Declared transmission site, isolated — the colour encodes no technology</div>'+
+  '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#1F3A5F;border:1.5px solid white;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.3);vertical-align:middle;margin-right:4px"></span>ANFR cluster (count) — groups positions of every generation, no dominant colour shown</div>'+
+  '<div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#3F5B3A;vertical-align:middle;margin-right:4px"></span><b style="color:#3F5B3A">Major radio/TV transmitter</b> (TDF), isolated — same colour as its cluster</div>'+
+  '<div class="leg-row"><span style="display:inline-block;position:relative;width:14px;height:14px;vertical-align:middle;margin-right:4px"><span style="position:absolute;inset:0;background:#3F5B3A;border:1.5px solid white;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span><span style="position:absolute;top:-2px;right:-2px;width:6px;height:6px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center"><span style="width:3px;height:3px;background:#3F5B3A;display:block"></span></span></span>TDF cluster — keeps its colour and a white corner badge, even when clustered</div>'+
+  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:3px"><span id="leg-ant-sites">—</span> ANFR sites (mobile, 2G–5G) — Orange · SFR · Bouygues · Free. <span id="leg-tdf-count">—</span> TDF transmitters (radio/TV), extracted on <span id="leg-tdf-date">—</span>. No extraction date available for the ANFR dataset (no date field in the data served).</div>'+
+  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px">Regulatory compliance: 28 to 61 V/m depending on frequency (Decree No. 2002-775) — see the <b>"Certified measurements (ANFR/EXEM)"</b> layer (Natural context menu → External references and measurements).</div>'+
+  '<div class="leg-src">ANFR · TDF/Arcom/TVNT.net</div></div>',
   emag:'<div class="leg-block"><b class="leg-title" style="font-size:11px">Regional magnetic background</b><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px">Continuous scale from &#x2212;200 to +200 nT — the colours are those of the image served by NOAA; Tellux produces none of them. Deep basement, unrelated to human activity (NOAA EMAG2v3).</div></div>',
   gammajrc:'<div class="leg-block"><b class="leg-title" style="font-size:11px">Regional terrestrial gamma background (JRC)</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Modeled European grid, 10 km resolution — context, outside the Tellux calculation</div>'+
@@ -8033,6 +8058,7 @@ function loadTDFEmitters() {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const d = await r.json();
       TDF_EMITTERS = d.emitters || [];
+      TDF_EXTRACTION_DATE = d.date_extraction || null; // champ réel du dataset (2026-09-17, brief légende ANFR+TDF) — absent côté antennas_corse (Supabase), cf. commentaire à ANFR_SITE_COUNT
       const withPAR = TDF_EMITTERS.filter(e => e.par_kw_estimee && e.par_kw_estimee > 0).length;
       console.log('[Tellux] TDF emetteurs charges : ' + TDF_EMITTERS.length + ' (dont ' + withPAR + ' avec PAR connue)');
     } catch (e) {
@@ -10660,7 +10686,7 @@ async function loadAnt(){try{
   if(hdr)statutAntennes(texteCompte);
   const anfrC=document.getElementById('anfr-count');
   if(anfrC)anfrC.textContent=texteCompte;
-  ANFR_ONSHORE_COUNT=nOnshore; syncAntCount(); // cf. déclaration ANFR_ONSHORE_COUNT plus haut
+  ANFR_ONSHORE_COUNT=nOnshore; ANFR_SITE_COUNT=seenPos.size; syncAntCount(); // cf. déclaration ANFR_ONSHORE_COUNT/ANFR_SITE_COUNT plus haut
   // Hook de debug léger pour les sondes d'évaluation (Playwright § Axe APP)
   // — publie le compteur de chaque couche en lecture seule. Suggéré §8
   // PROTOCOLE_AUTO_ITERATION (« exposer un hook de debug léger ... facilite
@@ -10685,6 +10711,7 @@ async function loadAnt(){try{
   // (2026-09-10, lot contexte de la reprise).
   await loadTDFEmitters();
   dessinerMarqueursTDF();
+  syncAntCount(); // TDF_EMITTERS.length/TDF_EXTRACTION_DATE ne sont connus qu'à partir d'ici (2026-09-17, brief légende ANFR+TDF)
 }catch(e){
   console.error('❌ loadAnt erreur:',e.message);
   // Sur échec, l'en-tête et le panneau disent l'indisponibilité (2026-09-11, lot ant/anfr). La phrase avait été
@@ -10732,11 +10759,20 @@ async function loadAnt(){try{
 // d'origine — supprime au passage une incohérence de teinte préexistante entre les deux
 // représentations du même émetteur (groupé/isolé), et réutilise le contraste blanc/#6b7280
 // déjà vérifié (4,8:1) plutôt que d'en établir un nouveau.
+// Forme et teinte revues (2026-09-17, brief légende ANFR+TDF) : le badge était rond (fond
+// arrondi + carré blanc dedans) alors que la légende (LEGEND_HTML.ant) documente depuis brief
+// BM un swatch CARRÉ pour ce même marqueur — écart forme légende/carte trouvé en vérifiant la
+// prémisse du brief. Corrigé en carré plein (aucun border-radius), et recoloré sur
+// TDF_CLUSTER_COLOR (Maquis, déjà la teinte de la bulle de grappe lTDFCluster) au lieu de
+// GC.infra (gris) : l'émetteur isolé porte désormais la même teinte que sa grappe, couleur =
+// catégorie (TDF), comme demandé. Teinte reprise du DA v2 déjà en usage sur cette même couche
+// (aucun accent nouveau, palette non touchée). Glyphe blanc intérieur conservé à l'identique
+// (silhouette carrée dans un carré, plutôt que ronde dans un rond — cohérent avec le contour).
 function dessinerMarqueursTDF(){
   if (!Array.isArray(TDF_EMITTERS) || TDF_EMITTERS.length === 0) return;
   if (lTDFCluster.getLayers().length > 0) return;
   TDF_EMITTERS.forEach(em => {
-    const shape='<div style="width:14px;height:14px;background:'+GC.infra+';border:1.5px solid rgba(255,255,255,.9);border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center"><div style="width:6px;height:6px;background:white"></div></div>';
+    const shape='<div style="width:14px;height:14px;background:'+TDF_CLUSTER_COLOR+';border:1.5px solid rgba(255,255,255,.9);box-shadow:0 1px 3px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center"><div style="width:6px;height:6px;background:white"></div></div>';
     const icon=L.divIcon({html:shape,className:'',iconSize:[17,17],iconAnchor:[8.5,8.5]});
     const services = (em.services || []).join(' + ') || 'broadcast';
     const par = (em.par_kw_estimee && em.par_kw_estimee > 0) ? em.par_kw_estimee + ' kW PAR' : 'PAR non connue';
