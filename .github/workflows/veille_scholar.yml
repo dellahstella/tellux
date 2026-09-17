@@ -37,6 +37,10 @@ on:
         description: "Si '1', n'écrit pas dans le repo privé"
         required: false
         default: "0"
+      until_date:
+        description: "Borne de fin de fenêtre Gmail, ISO YYYY-MM-DD (vide = fenêtre glissante jusqu'à aujourd'hui, inchangé)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -81,6 +85,9 @@ jobs:
           PRIVATE_REPO: ${{ secrets.PRIVATE_REPO }}
           LOOKBACK_DAYS: ${{ github.event.inputs.lookback_days || '7' }}
           DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
+          # Borne de fin de fenêtre Gmail, optionnelle (rattrapage historique, 2026-09-16).
+          # Vide par défaut : fenêtre glissante jusqu'à aujourd'hui, inchangée.
+          UNTIL_DATE: ${{ github.event.inputs.until_date || '' }}
           # Garde-fou d'archi (décision 2026-06-08) : le cron hebdo collecte uniquement
           # (digest dans une file inbox du dépôt cible). L'intégration au corpus est
           # mensuelle, séparée, gatée par scripts/verify_citation.py. RUN_INTEGRATION

@@ -32,6 +32,22 @@ Variables d'env optionnelles :
                             (défaut : docs/pilotage/prompt_integration_corpus.md)
     ANTHROPIC_MODEL       — défaut : claude-sonnet-4-5
     LOOKBACK_DAYS         — fenêtre de recherche en jours (défaut : 7)
+    UNTIL_DATE            — borne de fin de fenêtre Gmail, ISO YYYY-MM-DD (défaut : vide —
+                            fenêtre glissante jusqu'à aujourd'hui, comportement inchangé).
+                            Si fournie (2026-09-16, rattrapage historique) : la requête
+                            devient after:(UNTIL_DATE - LOOKBACK_DAYS) before:UNTIL_DATE au
+                            lieu de after:(aujourd'hui - LOOKBACK_DAYS) — LOOKBACK_DAYS
+                            devient la taille de la fenêtre qui se termine à UNTIL_DATE, pas
+                            à aujourd'hui. Rejetée avec fail() si non vide et illisible.
+    GMAIL_PAUSE_ENTRE_APPELS — délai en secondes entre deux fetch Gmail successifs
+                            (défaut : 0.3) ; pacing préventif contre le quota "Units per
+                            minute per user" (403 rateLimitExceeded confirmé à 143
+                            messages fetchés en boucle serrée le 2026-09-16, aucun souci
+                            à 50 — le seuil exact entre les deux n'est pas connu). Les
+                            reprises sur ce même dépassement sont bornées et non
+                            configurables (5 tentatives par message, délai doublé à
+                            chaque reprise) ; leur épuisement fait échouer tout le run
+                            via fail(), en nommant le nombre de messages déjà récupérés.
     OUTPUT_DIR            — dossier dans le dépôt cible pour les synthèses
                             (défaut : _inbox/scholar/syntheses ; garde-fou cron)
     INTEGRATION_OUTPUT_DIR — dossier pour la note d'intégration corpus
@@ -55,6 +71,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from email import message_from_bytes
 from email.policy import default as email_default_policy
 from email.utils import parsedate_to_datetime
@@ -68,6 +85,7 @@ import requests
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 # Force UTF-8 sur stdout/stderr pour éviter UnicodeEncodeError sur consoles
 # Windows (cp1252) lors des tests locaux. Sur GitHub Actions Linux, locale est
@@ -84,6 +102,17 @@ for _stream in (sys.stdout, sys.stderr):
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 SCHOLAR_FROM = "scholaralerts-noreply@google.com"
+# Pacing préventif entre deux fetch Gmail successifs : prévenir le mur de quota coûte
+# moins cher que s'en remettre. Confirmé le 2026-09-16 : 403 rateLimitExceeded sur
+# "Units per minute per user" à 143 messages fetchés en boucle serrée dans le même run,
+# aucun souci à 50 — le seuil exact entre les deux n'est pas connu.
+GMAIL_PAUSE_ENTRE_APPELS = float(os.environ.get("GMAIL_PAUSE_ENTRE_APPELS", "0.3"))
+# Tentatives par message avant abandon (1 essai + reprises), sur ce même dépassement de
+# quota seulement — jamais sur une autre HttpError (message supprimé, permission
+# refusée), qui remonte immédiatement. Délai doublé à chaque reprise à partir de
+# GMAIL_PAUSE_ENTRE_APPELS. Pas de variable d'env dédiée : le pacing ci-dessus suffit à
+# éviter le mur dans l'immense majorité des cas, ceci n'est qu'un filet borné.
+GMAIL_TENTATIVES_MAX = 5
 
 PROMPT_PATH = os.environ.get(
     "PROMPT_PATH", "docs/pilotage/prompt_veille_tellux_v2.md"
@@ -94,6 +123,9 @@ INTEGRATION_PROMPT_PATH = os.environ.get(
 PRIVATE_REPO = os.environ.get("PRIVATE_REPO", "")
 ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5")
 LOOKBACK_DAYS = int(os.environ.get("LOOKBACK_DAYS", "7"))
+# Brut, non parsée ici : fail() (Helpers, plus bas) n'est pas encore défini à ce point du
+# module. Parsée par parse_until_date() dans main(), avant tout appel réseau (2026-09-16).
+UNTIL_DATE_RAW = os.environ.get("UNTIL_DATE", "")
 # Bornes du corpus envoyé au modèle (2026-09-10). Jusque-là, le script concaténait le
 # corps entier de chaque alerte, sans borne. C'était juste tant qu'arrivaient 5 à 8
 # alertes par semaine (58 k à 117 k caractères). C'est devenu faux quand le volume a
@@ -115,9 +147,28 @@ OCTETS_PAR_TOKEN_PIRE_CAS = 2.3
 # En dessous de cette borne, on n'ampute plus les corps : on écarte les alertes les
 # plus anciennes, en les nommant.
 BORNE_PLANCHER = 500
-# Plafond de sortie de la synthèse. BUDGET_TOKENS_ENTREE + MAX_TOKENS_SORTIE doit rester
-# sous la fenêtre de contexte du modèle (200 000).
-MAX_TOKENS_SORTIE = 8192
+# Plafond de sortie d'un appel de synthèse. Plafond réel de l'API pour claude-sonnet-4-5
+# (alias résolu vers claude-sonnet-4-5-20250929) : fenêtre de contexte 200 000 tokens,
+# sortie maximale 64 000 tokens — confirmé sur platform.claude.com/docs/en/models/
+# sonnet-4-5/overview le 2026-09-17, pas un arrondi supposé (8192 avait saturé le
+# 2026-09-17 dès 50 messages / 56 345 tokens d'entrée, un volume que le correctif de
+# quota Gmail ci-dessus laisse pourtant passer sans broncher).
+# On ne prend pas les 64 000 tels quels : BUDGET_TOKENS_ENTREE (150 000 par défaut) +
+# 64 000 dépasserait la fenêtre de 14 000 tokens. Sur les modèles 4.5 et plus récents
+# ça ne fait pas échouer la requête (elle est acceptée ; si la génération atteint
+# vraiment la limite, elle s'arrête avec stop_reason="model_context_window_exceeded"
+# plutôt que par une erreur de validation, cf. doc « Context window overflow behavior »
+# de la même famille de pages) — mais compter dessus n'est pas le but ici. 40 000 laisse
+# 10 000 tokens (5 %) de marge sous les 200 000 (150 000 + 40 000 = 190 000), une marge
+# délibérément franche plutôt que calée pile sur la limite.
+MAX_TOKENS_SORTIE = 40000
+# Tentatives de continuation sur une sortie saturée (stop_reason == "max_tokens") avant
+# d'accepter l'interruption : 1 essai + 2 reprises. MAX_TOKENS_SORTIE recule la
+# saturation mais ne l'exclut pas sur un backlog extrême — la reprise la couvre, bornée
+# pour ne jamais boucler indéfiniment sur une synthèse qui ne finirait jamais (même
+# principe que GMAIL_TENTATIVES_MAX, appliqué à la sortie du modèle plutôt qu'au fetch
+# Gmail).
+SORTIE_TENTATIVES_MAX = 3
 # Garde-fou cron : OUTPUT_DIR pointe sur la file inbox par défaut. Le commit
 # direct dans le corpus est interdit en cron — l'intégration au corpus est un
 # processus séparé, mensuel, gaté par scripts/verify_citation.py.
@@ -154,6 +205,20 @@ def check_env() -> None:
     missing = [k for k in REQUIRED_SECRETS if not os.environ.get(k)]
     if missing:
         fail(f"Secrets manquants : {', '.join(missing)}")
+
+
+def parse_until_date(raw: str) -> dt.date | None:
+    """Borne de fin de fenêtre Gmail (UNTIL_DATE) ; None si vide (comportement par défaut,
+    fenêtre glissante jusqu'à aujourd'hui — inchangé). Échoue clairement (fail()) si non
+    vide mais illisible : une borne de fin mal formée ne doit pas glisser telle quelle
+    dans la requête Gmail (2026-09-16)."""
+    if not raw:
+        return None
+    try:
+        return dt.date.fromisoformat(raw)
+    except ValueError:
+        fail(f"UNTIL_DATE invalide ({raw!r}) : format attendu YYYY-MM-DD.")
+        return None  # inatteignable — fail() sort le process ; présent pour le typage
 
 
 def build_gmail_credentials() -> Credentials:
@@ -256,10 +321,80 @@ def texte_de_html(html_brut: str) -> str:
     return texte
 
 
-def fetch_scholar_emails(service: Any, lookback_days: int) -> list[dict[str, str]]:
-    """Récupère les emails Scholar Alerts des N derniers jours."""
-    after_date = (dt.date.today() - dt.timedelta(days=lookback_days)).strftime("%Y/%m/%d")
+def _est_erreur_quota_gmail(exc: HttpError) -> bool:
+    """True si `exc` signale un dépassement de quota Gmail — le seul cas qu'on retente.
+
+    429 (Too Many Requests) l'est par construction, quel que soit son corps. Une 403
+    est ambiguë (peut aussi être un message supprimé ou une permission refusée) : on ne
+    la retente que si son corps porte une raison de quota (`rateLimitExceeded` et
+    apparentées — l'incident confirmé le 2026-09-16 : 403 sur "Units per minute per
+    user" à 143 messages fetchés en boucle serrée). Toute autre 403 remonte telle
+    quelle : la retenter masquerait une vraie panne."""
+    status = getattr(exc.resp, "status", None)
+    if status == 429:
+        return True
+    if status != 403:
+        return False
+    texte = f"{exc.reason} {exc.content.decode('utf-8', 'replace')}".lower()
+    return any(m in texte for m in ("ratelimitexceeded", "quotaexceeded", "userratelimitexceeded"))
+
+
+def _fetch_message_avec_reprises(service: Any, message_id: str, deja_recuperes: int, total: int) -> dict[str, Any]:
+    """Récupère un message Gmail (`format=raw`), avec reprises bornées sur un
+    dépassement de quota (`_est_erreur_quota_gmail`) seulement — toute autre HttpError
+    (message supprimé, permission refusée) remonte immédiatement, sans reprise.
+
+    Si les reprises s'épuisent sur un dépassement de quota persistant, arrête tout le
+    run via fail() plutôt que de continuer avec ce message manquant sans le dire : aucun
+    message ne doit disparaître en silence (même principe que decrire_bilan/pied_ecartes
+    pour le budget d'entrée, appliqué ici à la récupération elle-même)."""
+    derniere_erreur: HttpError | None = None
+    for tentative in range(1, GMAIL_TENTATIVES_MAX + 1):
+        try:
+            return (
+                service.users()
+                .messages()
+                .get(userId="me", id=message_id, format="raw")
+                .execute()
+            )
+        except HttpError as e:
+            if not _est_erreur_quota_gmail(e):
+                raise
+            derniere_erreur = e
+            if tentative == GMAIL_TENTATIVES_MAX:
+                break
+            delai = GMAIL_PAUSE_ENTRE_APPELS * (2 ** tentative)
+            print(f"[gmail] WARN — quota atteint sur le message {message_id} "
+                  f"(tentative {tentative}/{GMAIL_TENTATIVES_MAX}) : reprise dans {delai:.1f}s")
+            time.sleep(delai)
+    fail(f"Quota Gmail dépassé de façon persistante : {deja_recuperes} message(s) sur "
+         f"{total} récupéré(s) avant l'échec définitif du message {message_id} après "
+         f"{GMAIL_TENTATIVES_MAX} tentative(s) — {derniere_erreur}")
+
+
+def fetch_scholar_emails(
+    service: Any, lookback_days: int, until_date: dt.date | None = None
+) -> list[dict[str, str]]:
+    """Récupère les emails Scholar Alerts des N derniers jours.
+
+    Sans until_date (défaut, cron hebdo) : fenêtre glissante jusqu'à aujourd'hui,
+    comportement inchangé. Avec until_date (rattrapage manuel, 2026-09-16 — la fenêtre
+    2026-08-29→09-08 restait hors de portée d'un lookback élargi depuis aujourd'hui, qui
+    aurait rouvert le quota Gmail et la saturation de sortie déjà rencontrés cette
+    session) : lookback_days devient la taille de la fenêtre qui se termine à
+    until_date, pas à aujourd'hui.
+
+    Le fetch de chaque corps (`_fetch_message_avec_reprises`) est espacé de
+    GMAIL_PAUSE_ENTRE_APPELS et retente les seuls dépassements de quota Gmail
+    (2026-09-16 : 403 rateLimitExceeded confirmé à 143 messages fetchés en boucle
+    serrée) ; l'épuisement des reprises sur un message fait échouer tout le run via
+    fail() plutôt que de continuer avec ce message manquant sans le dire.
+    """
+    fin_fenetre = until_date or dt.date.today()
+    after_date = (fin_fenetre - dt.timedelta(days=lookback_days)).strftime("%Y/%m/%d")
     query = f"from:{SCHOLAR_FROM} after:{after_date}"
+    if until_date is not None:
+        query += f" before:{until_date.strftime('%Y/%m/%d')}"
     print(f"[gmail] Requête : {query}")
 
     # Toutes les pages. Jusqu'au 2026-09-10, seule la première était lue (200 messages
@@ -279,13 +414,10 @@ def fetch_scholar_emails(service: Any, lookback_days: int) -> list[dict[str, str
     print(f"[gmail] {len(messages)} message(s) trouvé(s)")
 
     out: list[dict[str, str]] = []
-    for m in messages:
-        msg = (
-            service.users()
-            .messages()
-            .get(userId="me", id=m["id"], format="raw")
-            .execute()
-        )
+    for i, m in enumerate(messages):
+        if i:
+            time.sleep(GMAIL_PAUSE_ENTRE_APPELS)
+        msg = _fetch_message_avec_reprises(service, m["id"], len(out), len(messages))
         raw = base64.urlsafe_b64decode(msg["raw"])
         parsed = message_from_bytes(raw, policy=email_default_policy)
 
@@ -458,37 +590,84 @@ def pied_ecartes(bilan: dict[str, Any]) -> str:
 
 
 def pied_interruption(bilan: dict[str, Any]) -> str:
-    """Avertissement de fin de synthèse si le modèle s'est arrêté avant la fin ; vide sinon."""
+    """Avertissement de fin de synthèse si le modèle s'est arrêté avant la fin ; vide sinon.
+    Le plafond affiché porte sur TOUTES les tentatives de continuation cumulées
+    (bilan["tentatives_sortie"]), pas sur un seul appel — sinon un total de tokens de
+    sortie qui le dépasserait lirait comme une incohérence plutôt que comme la somme
+    réelle des appels tentés."""
     if bilan.get("arret") in (None, "end_turn"):
         return ""
+    plafond_cumule = bilan.get("tentatives_sortie", 1) * MAX_TOKENS_SORTIE
     return (f"\n\n---\n\n**⚠ Synthèse interrompue** (`stop_reason` = `{bilan['arret']}`, "
-            f"{bilan.get('tokens_sortie')} tokens de sortie sur {MAX_TOKENS_SORTIE}) : "
+            f"{bilan.get('tokens_sortie')} tokens de sortie sur {plafond_cumule}) : "
             f"le texte ci-dessus s'arrête en cours de route.\n")
 
 
 def call_anthropic(prompt: str, emails: list[dict[str, str]]) -> tuple[str, dict[str, Any]]:
     """Synthétise les alertes, l'entrée bornée par ajuster_au_budget.
-    Rend (texte, bilan) : le bilan dit ce qui a été tronqué ou écarté."""
+
+    Si la sortie sature (stop_reason == "max_tokens"), reprend la même synthèse par un
+    appel de continuation — le texte partiel renvoyé comme tour assistant, suivi d'une
+    consigne de poursuite — jusqu'à SORTIE_TENTATIVES_MAX tentatives au total (2026-09-17 :
+    8192 saturait déjà à 50 messages, et même un plafond par appel plus haut,
+    MAX_TOKENS_SORTIE, peut théoriquement rester insuffisant sur un backlog extrême). Les
+    textes de chaque tentative sont concaténés dans l'ordre. Une synthèse complétée par
+    reprise (arrêt final == "end_turn") N'EST PAS déclarée interrompue ; si
+    SORTIE_TENTATIVES_MAX est atteint sans conclure, elle l'est (bilan["arret"] porte le
+    dernier stop_reason), avec bilan["tokens_sortie"] cumulé sur TOUTES les tentatives,
+    pas seulement la dernière.
+
+    Rend (texte, bilan) : le bilan dit ce qui a été tronqué, écarté, ou interrompu.
+    """
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     user_message, bilan = ajuster_au_budget(client, prompt, emails)
     print(f"[anthropic] Modèle {ANTHROPIC_MODEL}, {len(user_message)} caractères en input · "
           f"{decrire_bilan(bilan, len(emails))}")
-    msg = client.messages.create(
-        model=ANTHROPIC_MODEL,
-        max_tokens=MAX_TOKENS_SORTIE,
-        messages=[{"role": "user", "content": user_message}],
-    )
-    # Une sortie coupée se déclare comme une entrée coupée (2026-09-10). Jusque-là,
-    # stop_reason n'était jamais lu : une synthèse arrêtée à max_tokens au milieu d'une
-    # phrase était commitée comme complète.
-    bilan["arret"] = msg.stop_reason
-    bilan["tokens_sortie"] = msg.usage.output_tokens
-    if msg.stop_reason != "end_turn":
-        print(f"[anthropic] WARN — synthèse interrompue : stop_reason={msg.stop_reason}, "
-              f"{msg.usage.output_tokens} tokens de sortie sur {MAX_TOKENS_SORTIE}")
+
+    messages: list[dict[str, Any]] = [{"role": "user", "content": user_message}]
+    textes: list[str] = []
+    tokens_sortie_total = 0
+    arret = "max_tokens"  # amorce la boucle : le premier appel est toujours tenté
+    for tentative in range(1, SORTIE_TENTATIVES_MAX + 1):
+        # Streaming, pas .create() : constaté le 2026-09-17, le run réel de rattrapage
+        # (66 messages, MAX_TOKENS_SORTIE=40000) a levé côté SDK
+        # « ValueError: Streaming is required for operations that may take longer than
+        # 10 minutes » — un plafond de sortie élevé fait estimer un appel synchrone trop
+        # long, quel que soit le volume réel en entrée. get_final_message() rend le même
+        # objet Message (content, stop_reason, usage) qu'un .create() classique.
+        with client.messages.stream(
+            model=ANTHROPIC_MODEL,
+            max_tokens=MAX_TOKENS_SORTIE,
+            messages=messages,
+        ) as stream:
+            msg = stream.get_final_message()
+        textes.append("".join(block.text for block in msg.content if block.type == "text"))
+        tokens_sortie_total += msg.usage.output_tokens
+        arret = msg.stop_reason
+        # Une sortie coupée se déclare comme une entrée coupée (2026-09-10). Jusque-là,
+        # stop_reason n'était jamais lu : une synthèse arrêtée à max_tokens au milieu
+        # d'une phrase était commitée comme complète.
+        if arret != "max_tokens":
+            break
+        if tentative < SORTIE_TENTATIVES_MAX:
+            print(f"[anthropic] WARN — sortie saturée (stop_reason=max_tokens, tentative "
+                  f"{tentative}/{SORTIE_TENTATIVES_MAX}) : reprise de la synthèse")
+            messages = messages + [
+                {"role": "assistant", "content": textes[-1]},
+                {"role": "user", "content": "Continue la synthèse précédente, exactement là "
+                                             "où elle s'est arrêtée, sans rien répéter."},
+            ]
+
+    bilan["arret"] = arret
+    bilan["tokens_sortie"] = tokens_sortie_total
+    bilan["tentatives_sortie"] = tentative
+    if arret != "end_turn":
+        print(f"[anthropic] WARN — synthèse interrompue après {tentative} tentative(s) : "
+              f"stop_reason={arret}, {tokens_sortie_total} tokens de sortie cumulés")
     else:
-        print(f"[anthropic] Synthèse complète : {msg.usage.output_tokens} tokens de sortie sur {MAX_TOKENS_SORTIE}")
-    return "".join(block.text for block in msg.content if block.type == "text"), bilan
+        print(f"[anthropic] Synthèse complète en {tentative} tentative(s) : "
+              f"{tokens_sortie_total} tokens de sortie cumulés")
+    return "".join(textes), bilan
 
 
 def commit_synthesis(content: str, today: dt.date) -> None:
@@ -565,11 +744,19 @@ def call_anthropic_integration(integration_prompt: str, synthesis: str) -> str:
     )
 
     print(f"[integration] Modèle {ANTHROPIC_MODEL}, {len(user_message)} caractères en input")
-    msg = client.messages.create(
+    # Streaming : même motif que call_anthropic() (2026-09-17) — un MAX_TOKENS_SORTIE élevé
+    # fait exiger le streaming côté SDK, indépendamment du volume réel en entrée.
+    with client.messages.stream(
         model=ANTHROPIC_MODEL,
-        max_tokens=8192,
+        # Même plafond que la synthèse (MAX_TOKENS_SORTIE) plutôt qu'un second 8192 codé
+        # en dur (2026-09-17). Sans la reprise bornée de call_anthropic() : cette étape
+        # reste best-effort, jamais fatale (cf. run_integration_step, try/except autour de
+        # cet appel) et ne lit pas son stop_reason — lui donner la même déclaration
+        # d'interruption que la synthèse est un chantier séparé, pas fait ici.
+        max_tokens=MAX_TOKENS_SORTIE,
         messages=[{"role": "user", "content": user_message}],
-    )
+    ) as stream:
+        msg = stream.get_final_message()
     return "".join(block.text for block in msg.content if block.type == "text")
 
 
@@ -915,12 +1102,13 @@ def notify_run_complete(
 
 def main() -> int:
     check_env()
+    until_date = parse_until_date(UNTIL_DATE_RAW)
     today = dt.date.today()
     print(f"[start] Veille Scholar — {today.isoformat()}")
 
     creds = build_gmail_credentials()
     service = build("gmail", "v1", credentials=creds, cache_discovery=False)
-    emails = fetch_scholar_emails(service, LOOKBACK_DAYS)
+    emails = fetch_scholar_emails(service, LOOKBACK_DAYS, until_date)
 
     if not emails:
         print("[stop] Aucun email Scholar trouvé — pas de synthèse à produire.")
