@@ -76,14 +76,21 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);font-we
 .lp-hero-h1{font-family:var(--ff);font-size:44px;line-height:1.1;color:var(--pierre);margin-bottom:16px;font-weight:600;overflow-wrap:break-word;}
 .lp-hero-h1 em{font-style:italic;color:var(--ocre);}
 .lp-hero-sub{font-size:16px;color:var(--mica);line-height:1.7;margin-bottom:16px;max-width:440px;}
-.lp-hero-btns{display:flex;gap:12px;flex-wrap:wrap;}
-.lp-btn-primary{background:var(--maquis);color:var(--pierre);border:none;padding:12px 24px;border-radius:4px;font-size:14px;font-family:var(--fu);font-weight:500;cursor:pointer;transition:background .15s;text-decoration:none;display:inline-block;}
-.lp-btn-primary:hover{background:var(--maquis-survol);}
 .lp-hero-links{display:flex;gap:16px;flex-wrap:wrap;margin-top:16px;}
 .lp-hero-link{font-family:var(--fu);font-size:12px;color:var(--mica);text-decoration:none;border-bottom:1px solid transparent;transition:color .15s,border-color .15s;}
 .lp-hero-link:hover{color:var(--pierre);border-color:rgba(245,240,231,.18);}
 .lp-hero-link:focus{color:var(--ocre);outline:2px solid var(--ocre);outline-offset:2px;}
-.lp-hero-map{border-radius:4px;overflow:hidden;border:1px solid rgba(245,240,231,.18);background:#2a2f37;padding:16px;}
+/* Vignette carte cliquable — remplace l'ancien CTA texte .lp-btn-primary (brief LOT 2,
+   2026-09-17) : toute la carte devient le lien vers /app, pas seulement un bouton à côté.
+   display:block + reset de lien (:link n'hérite ni display:block ni text-decoration:none
+   par défaut) — le <div> qu'elle remplace était déjà block, comportement inchangé. Élévation
+   translateY(-2px)/120ms (jamais box-shadow : interdit sans exception par
+   echelle-visuelle-index.mjs, famille OMBRE) — même mécanique que .lp-appsec-inner:hover
+   juste plus bas dans ce fichier (translateY(-2px), déjà validée sur cette page), timing propre
+   au brief (120ms ici, 200ms là-bas — deux composants distincts, pas une divergence à unifier). */
+.lp-hero-map{display:block;text-decoration:none;border-radius:4px;overflow:hidden;border:1px solid rgba(245,240,231,.18);background:#2a2f37;padding:16px;transition:transform .12s ease,border-color .15s ease;}
+.lp-hero-map:hover{transform:translateY(-2px);border-color:rgba(245,240,231,.32);}
+.lp-hero-map:focus{transform:translateY(-2px);outline:2px solid var(--ocre);outline-offset:2px;}
 .lp-scope-head{display:flex;justify-content:space-between;align-items:center;font-family:var(--fm);font-size:12px;letter-spacing:1.2px;color:var(--mica);margin-bottom:8px;text-transform:uppercase;}
 .lp-map-sim{background:#1a2228;border-radius:4px;height:320px;position:relative;overflow:hidden;background-image:linear-gradient(rgba(116,112,106,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(116,112,106,0.07) 1px,transparent 1px);background-size:26px 26px;}
 .lp-corse-svg{position:absolute;inset:10px;width:calc(100% - 20px);height:calc(100% - 20px);display:block;overflow:visible;opacity:0;transition:opacity .6s ease;}
@@ -91,6 +98,10 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);font-we
 .lp-corse-zone{fill:rgba(199,140,60,0.30);stroke:rgba(214,160,80,0.7);stroke-width:0.55;}
 .lp-corse-pt{fill:#f2bf72;stroke:#1a2228;stroke-width:0.5;filter:drop-shadow(0 0 1.4px rgba(242,191,114,0.9));}
 .lp-corse-scan{fill:var(--ocre);opacity:0.45;}
+/* Légende cliquable, en pied de vignette — réutilise cta_explore_map (même clé i18n que
+   l'ancien bouton, aucune nouvelle chaîne à traduire) : l'affordance "cliquable" reste lisible
+   sans reconstituer un second bouton à côté d'un lien qui l'englobe déjà tout entier. */
+.lp-hero-map-cta{margin-top:8px;font-family:var(--fm);font-size:12px;font-weight:500;color:var(--ocre);text-align:right;}
 
 /* SECTIONS — rythme vertical unifié */
 .lp-section{padding:var(--section-py) var(--section-px);}
@@ -188,7 +199,7 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);font-we
 @media(prefers-reduced-motion:reduce){
   .reveal{opacity:1!important;transform:none!important;filter:none!important;transition:none!important;}
   .lp-corse-svg{opacity:1;transition:none;}
-  .lp-appsec-inner,.lp-nav{transition:none;}
+  .lp-appsec-inner,.lp-nav,.lp-hero-map{transition:none;}
 }
 
 @media(max-width:768px){
@@ -200,7 +211,15 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);font-we
   .lp-mobile-menu{display:flex;}
   .lp-hero{grid-template-columns:1fr;padding:32px 16px;}
   .lp-hero-h1{font-size:32px;}
-  .lp-hero-map{display:none;}
+  /* Vignette visible sous 769px depuis le brief LOT 2 (2026-09-17) — était display:none
+     (carte desktop uniquement) : initHeroMap() ne la construisait plus du tout ici (cf. JS,
+     matchMedia retiré au même diff). Hauteur réduite (200px, pas 320px) : le conteneur reste
+     nettement moins large qu'en desktop (colonne pleine largeur, plus de grille 2 colonnes),
+     un cadre 320px carré aurait pillarboxé la Corse (viewBox portrait 268.8x600) sans rien
+     montrer de plus. Gap vertical avec la colonne texte au-dessus : hérité de .lp-hero{gap:64px}
+     (grid-template-columns passe à 1fr ci-dessus, mais gap reste, les deux colonnes empilées
+     en deux lignes automatiques) — aucune règle supplémentaire nécessaire ici. */
+  .lp-map-sim{height:200px;}
   .lp-section,.lp-section-dark,.lp-appsec{padding:32px 16px;}
   .lp-section-intro{padding:32px 16px 0;}
   .lp-hero-links{gap:12px 16px;}
@@ -256,9 +275,6 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);font-we
   <div>
     <h1 class="lp-hero-h1" data-i18n-key="hero_h1">Antennes, lignes électriques :<br> ce qu'on sait, et d'où ça vient</h1>
     <p class="lp-hero-sub" data-i18n-key="hero_lead">Ce qui traverse le territoire sans se voir, commune par commune, à partir des données publiques.</p>
-    <div class="lp-hero-btns">
-      <a class="lp-btn-primary" data-i18n-key="cta_explore_map" href="app.html">Voir la carte &rarr;</a>
-    </div>
     <div class="lp-hero-links">
       <a class="lp-hero-link" data-i18n-key="hero_method_cta" href="#methode">La méthode &rarr;</a>
       <a class="lp-hero-link" data-i18n-key="hero_radon_cta" href="radon.html">Radon &rarr;</a>
@@ -266,10 +282,17 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);font-we
     </div>
   </div>
   <div>
-    <div class="lp-hero-map">
+    <!-- Vignette carte cliquable (brief LOT 2, 2026-09-17) — remplace l'ancien CTA texte
+         .lp-btn-primary, retiré ci-dessus : toute la carte est le lien vers /app, pas un
+         bouton séparé. aria-label PROPOSÉ, pas définitif (brief §5 : "part en revue") —
+         priorité sur tout nom calculé depuis le contenu (dont le aria-label FR posé en dur par
+         initHeroMap() sur le <svg> lui-même, JS, cf. plus bas — celui-ci devient inerte pour le
+         lien une fois qu'un aria-label explicite est posé ici, jamais traduit sinon). -->
+    <a class="lp-hero-map" id="lp-hero-map-link" href="app.html" data-i18n-aria-key="hero_map_aria" aria-label="Aperçu de la carte : maillage des 360 communes de Corse et points de mesure RF certifiés ANFR — ouvrir la carte">
       <div class="lp-scope-head"><span data-i18n-key="scope_head">360 communes</span></div>
       <div class="lp-map-sim" id="lp-hero-map"></div>
-    </div>
+      <div class="lp-hero-map-cta" data-i18n-key="cta_explore_map" aria-hidden="true">Voir la carte &rarr;</div>
+    </a>
   </div>
 </div>
 
@@ -523,12 +546,17 @@ if(document.readyState === 'loading'){
    uniforme (pas de différenciation visuelle par zone radon — décoratif, cf. arbitrage
    Soleil), + les 30 fiches d'origine des mesures RF certifiées ANFR. Projetée hors-ligne en SVG léger. Construite
    en différé (idle) pour ne pas peser sur le premier rendu. Animations (scan, pulse)
-   gérées en CSS sous prefers-reduced-motion. */
+   gérées en CSS sous prefers-reduced-motion.
+   Visible < 769px depuis le brief LOT 2 (2026-09-17) — le court-circuit matchMedia qui
+   sautait la construction sous ce seuil est retiré : la vignette est désormais le lien
+   cliquable vers /app sur mobile aussi (cf. .lp-hero-map dans <style>, hauteur réduite sous
+   769px), donc construite partout. Champ radon.json retiré du JSON servi le même jour
+   (jamais lu par ce code — fallback mort, cf. `communes` toujours présent en pratique) :
+   ~51 Ko en moins sur CE fetch, payé désormais aussi par le mobile qui ne le payait pas
+   du tout avant ce lot. */
 (function initHeroMap(){
   const el = document.getElementById('lp-hero-map');
   if(!el || !('fetch' in window)) return;
-  /* La carte hero est masquée < 769px (cf. media query) : inutile de la construire sur mobile. */
-  if(window.matchMedia && !window.matchMedia('(min-width:769px)').matches) return;
   const NS = 'http://www.w3.org/2000/svg';
   function build(){
     /* cache:'no-cache' (pas 'force-cache') — force la revalidation à chaque chargement.
@@ -707,7 +735,9 @@ function telluxGetEffectiveLang(){
     footer_geomag: 'Geomagnetism',
     footer_mentions_full: 'Legal notice &amp; privacy',
     footer_github: 'Public repository &amp; data',
-    scope_head: '360 municipalities'
+    scope_head: '360 municipalities',
+    // hero_map_aria : PROPOSÉ, pas définitif (brief LOT 2, §5 "part en revue").
+    hero_map_aria: 'Map preview: mesh of Corsica\'s 360 municipalities and certified ANFR RF measurement points — open the map'
     // "TELLUX" (logo) omis : identique FR/EN, aucune traduction nécessaire.
     // Toggle EN/FR (#lang-toggle-en*) omis : déjà géré par le script dédié ci-dessus.
   };
@@ -723,6 +753,15 @@ function telluxGetEffectiveLang(){
     var key = el.getAttribute('data-i18n-title-key');
     if (!Object.prototype.hasOwnProperty.call(EN_STRINGS, key)) return;
     el.setAttribute('title', EN_STRINGS[key]);
+  });
+  // data-i18n-aria-key : traduit l'attribut aria-label — même patron que title-key
+  // ci-dessus, ajouté pour la vignette carte cliquable (brief LOT 2, 2026-09-17), premier
+  // consommateur. setAttribute (pas innerHTML) : une entité HTML dans EN_STRINGS n'y serait
+  // jamais décodée, d'où le tiret cadratin littéral (pas &mdash;) sur hero_map_aria ci-dessus.
+  document.querySelectorAll('[data-i18n-aria-key]').forEach(function(el){
+    var key = el.getAttribute('data-i18n-aria-key');
+    if (!Object.prototype.hasOwnProperty.call(EN_STRINGS, key)) return;
+    el.setAttribute('aria-label', EN_STRINGS[key]);
   });
   document.documentElement.setAttribute('lang', 'en');
 })();
