@@ -19,16 +19,23 @@ lignes « ok : ».
 import base64
 import importlib.util
 import io
+import json
 import os
 import sys
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from email.message import EmailMessage
 from pathlib import Path
+
+import httplib2
+from googleapiclient.errors import HttpError
 
 os.environ.setdefault("CORPS_MAX_CARACTERES", "8000")
 os.environ.setdefault("BUDGET_TOKENS_ENTREE", "150000")
 os.environ.setdefault("ANTHROPIC_API_KEY", "factice")
 os.environ.setdefault("GITHUB_PAT", "factice")
+# Pas d'attente réelle en test (tests 16-18) : seule la logique de reprise est
+# vérifiée, pas le minutage.
+os.environ.setdefault("GMAIL_PAUSE_ENTRE_APPELS", "0")
 _spec = importlib.util.spec_from_file_location("veille", Path(__file__).with_name("veille_scholar.py"))
 v = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(v)
@@ -65,18 +72,57 @@ class _Client:
 
 
 class _Reponse:
-    """Réponse de messages.create, arrêtée pour la raison `arret`."""
+    """Réponse de messages.create, arrêtée pour la raison `arret`. `texte` et `tokens` par
+    défaut reproduisent le comportement d'origine (un seul appel, sans reprise)."""
 
-    def __init__(self, arret: str) -> None:
-        self.content = [type("B", (), {"type": "text", "text": "## Axe 1\n- article A, conclusi"})()]
+    def __init__(self, arret: str, texte: str | None = None, tokens: int | None = None) -> None:
+        self.content = [type("B", (), {"type": "text", "text": texte or "## Axe 1\n- article A, conclusi"})()]
         self.stop_reason = arret
-        self.usage = type("U", (), {"output_tokens": 8192 if arret == "max_tokens" else 1200})()
+        self.usage = type("U", (), {"output_tokens": tokens if tokens is not None else (8192 if arret == "max_tokens" else 1200)})()
+
+
+class _StreamCM:
+    """Double du context manager de client.messages.stream(...) (2026-09-17 : la
+    production est passée de .create() à .stream() — un MAX_TOKENS_SORTIE élevé exige
+    le streaming côté SDK réel). N'émet aucun évènement intermédiaire : seul
+    get_final_message() est exercé, comme dans le code de production."""
+
+    def __init__(self, reponse) -> None:
+        self._reponse = reponse
+
+    def __enter__(self) -> "_StreamCM":
+        return self
+
+    def __exit__(self, *exc: object) -> bool:
+        return False
+
+    def get_final_message(self):
+        return self._reponse
 
 
 def _client_complet(arret: str) -> _Client:
     c = _Client()
-    c.messages.create = lambda **kw: _Reponse(arret)
+    c.messages.stream = lambda **kw: _StreamCM(_Reponse(arret))
     return c
+
+
+class _MessagesSuite:
+    """Double dont chaque appel à stream() rend la réponse suivante de `reponses`,
+    répétant la dernière une fois la liste épuisée (utile pour "toujours max_tokens")."""
+
+    def __init__(self, reponses: list[_Reponse]) -> None:
+        self._reponses = reponses
+        self.appels = 0
+
+    def stream(self, **kw):
+        r = self._reponses[min(self.appels, len(self._reponses) - 1)]
+        self.appels += 1
+        return _StreamCM(r)
+
+
+class _ClientSuite:
+    def __init__(self, reponses: list[_Reponse]) -> None:
+        self.messages = _MessagesSuite(reponses)
 
 
 class _Req:
@@ -90,6 +136,42 @@ class _Req:
 def _service(messages) -> object:
     """Double du service Gmail autour d'un objet qui a list() et get()."""
     return type("S", (), {"users": lambda _s: type("U", (), {"messages": lambda _u: messages})()})()
+
+
+def _http_error_quota(status: int = 403, reason: str = "rateLimitExceeded") -> HttpError:
+    """Construit une HttpError dans sa forme réelle googleapiclient : resp avec un
+    .status, content JSON avec error.errors[].reason — la même forme que celle
+    rencontrée en production (403, reason=rateLimitExceeded, "Units per minute per
+    user")."""
+    contenu = json.dumps({
+        "error": {
+            "code": status,
+            "message": "Quota exceeded for quota metric 'Total Query Cost' and limit "
+                        "'Units per minute per user' of service 'gmail.googleapis.com'.",
+            "errors": [{"message": "Quota exceeded", "domain": "usageLimits", "reason": reason}],
+        }
+    }).encode("utf-8")
+    return HttpError(httplib2.Response({"status": status}), contenu)
+
+
+class _MessagesQuota:
+    """Double Gmail : .get() lève `erreur()` pour les `echecs` premiers appels sur l'id
+    `cible`, réussit ensuite (et réussit du premier coup pour tout autre id)."""
+
+    def __init__(self, echecs: int, cible: str, erreur=_http_error_quota) -> None:
+        self.echecs, self.cible, self.erreur = echecs, cible, erreur
+        self.appels: dict[str, int] = {}
+
+    def list(self, userId, q, maxResults, pageToken=None):
+        return _Req({"messages": [{"id": self.cible}]})
+
+    def get(self, userId, id, format):
+        self.appels[id] = self.appels.get(id, 0) + 1
+        if id == self.cible and self.appels[id] <= self.echecs:
+            raise self.erreur()
+        m = _courriel("sujet retenté")
+        m.set_content("corps ok")
+        return _Req({"raw": _brut(m)})
 
 
 def _brut(m: EmailMessage) -> str:
@@ -115,6 +197,20 @@ def capture(f, *args):
     with redirect_stdout(tampon):
         r = f(*args)
     return r, tampon.getvalue()
+
+
+def capture_fail(f, *args):
+    """Appelle f censée échouer via fail() (print stderr + sys.exit) ; rend (code, stderr).
+    (code, stderr) = (None, "") si f n'a pas échoué. stdout est capturé aussi (jamais
+    laissé passer, même si f imprime avant d'échouer) mais pas rendu : seul stderr porte
+    le message de fail()."""
+    tampon, tampon_out = io.StringIO(), io.StringIO()
+    try:
+        with redirect_stderr(tampon), redirect_stdout(tampon_out):
+            f(*args)
+        return None, ""
+    except SystemExit as e:
+        return e.code, tampon.getvalue()
 
 
 # --- 1. HTML → texte ------------------------------------------------------------------
@@ -274,6 +370,32 @@ for arret in ("max_tokens", "end_turn"):
                 "une synthèse complète n'est pas déclarée interrompue")
 v.anthropic.Anthropic = _origine
 
+# --- 11b. reprise sur sortie saturée : les textes se concatènent, le total conclut -----
+v.anthropic.Anthropic = lambda api_key: _ClientSuite([
+    _Reponse("max_tokens", texte="Première moitié. ", tokens=40000),
+    _Reponse("end_turn", texte="seconde moitié.", tokens=1500),
+])
+(texte, bilan), sortie = capture(v.call_anthropic, "PROMPT", [{"subject": "a", "date": "", "body": "court"}])
+v.anthropic.Anthropic = _origine
+verifie(texte == "Première moitié. seconde moitié.",
+        "une sortie saturée puis complète reprend au bon endroit : les deux textes se concatènent dans l'ordre")
+verifie(bilan["arret"] == "end_turn" and "INTERROMPUE" not in v.decrire_bilan(bilan, 1) and v.pied_interruption(bilan) == "",
+        "une synthèse complétée par une reprise n'est pas déclarée interrompue")
+verifie(bilan["tokens_sortie"] == 40000 + 1500,
+        "le compte de tokens de sortie cumule les deux appels de la reprise, pas seulement le dernier")
+
+# --- 11c. sortie saturée à chaque appel : la reprise s'arrête à son plafond, sans avaler --
+v.anthropic.Anthropic = lambda api_key: _ClientSuite([_Reponse("max_tokens", texte="bloqué. ", tokens=40000)])
+(texte, bilan), sortie = capture(v.call_anthropic, "PROMPT", [{"subject": "a", "date": "", "body": "court"}])
+v.anthropic.Anthropic = _origine
+verifie(bilan["arret"] == "max_tokens", "toujours saturé : l'arrêt déclaré reste max_tokens, jamais avalé au plafond de reprises")
+verifie(bilan["tokens_sortie"] == v.SORTIE_TENTATIVES_MAX * 40000,
+        f"le compte de tokens de sortie couvre les {v.SORTIE_TENTATIVES_MAX} tentatives tentées, pas seulement la dernière")
+verifie(sortie.count("sortie saturée") == v.SORTIE_TENTATIVES_MAX - 1,
+        f"exactement {v.SORTIE_TENTATIVES_MAX} tentatives sont faites (la dernière ne déclare plus de reprise) : le plafond est respecté")
+verifie("SYNTHÈSE INTERROMPUE" in v.decrire_bilan(bilan, 1) and "synthèse interrompue" in sortie,
+        "le plafond de reprises atteint sans conclure reste déclaré interrompu, jamais avalé en silence")
+
 # --- 12. l'aperçu DRY_RUN n'imprime que l'en-tête ---------------------------------------
 v.DRY_RUN = True
 contenu = ("# Synthèse veille Scholar — 2026-09-10\n\n**Emails analysés** : 3 reçus · 3 retenus\n\n---\n\n"
@@ -344,5 +466,52 @@ verifie("## Alertes écartées faute de place" in envois.get("synthese", ""), "m
 verifie("corps tronqués à" in envois.get("issue", "") and "écartés faute de place" in envois.get("issue", ""),
         "main() : l'issue porte le bilan")
 verifie("sujet-main-" not in sortie, "main() : le journal ne nomme aucune alerte")
+
+# --- 14. UNTIL_DATE : requête bornée des deux côtés, et fenêtre glissante inchangée sans lui ---
+_, sortie_bornee = capture(v.fetch_scholar_emails, _service(_Messages()), 7, v.dt.date(2026, 9, 8))
+verifie(f"from:{v.SCHOLAR_FROM} after:2026/09/01 before:2026/09/08" in sortie_bornee,
+        "UNTIL_DATE fixé : la requête devient after:(UNTIL_DATE - lookback) before:UNTIL_DATE")
+
+# Régression : mêmes deux arguments qu'au test 8 (aucun until_date) — la requête ne doit
+# porter aucun before: et rester la fenêtre glissante jusqu'à aujourd'hui, comme avant
+# l'ajout d'UNTIL_DATE.
+_, sortie_glissante = capture(v.fetch_scholar_emails, _service(_Messages()), 7)
+verifie("before:" not in sortie_glissante and f"from:{v.SCHOLAR_FROM} after:" in sortie_glissante,
+        "sans UNTIL_DATE, la requête reste la fenêtre glissante d'origine (comportement inchangé)")
+
+# --- 15. UNTIL_DATE malformée : fail() explicite, jamais un before: silencieusement faux ---
+verifie(v.parse_until_date("") is None, "UNTIL_DATE absente : pas de borne de fin (défaut)")
+verifie(v.parse_until_date("2026-09-08") == v.dt.date(2026, 9, 8), "UNTIL_DATE ISO valide est parsée")
+code, err = capture_fail(v.parse_until_date, "08/09/2026")
+verifie(code == 1 and "UNTIL_DATE" in err, "UNTIL_DATE illisible échoue clairement via fail() (sys.exit(1))")
+code, err = capture_fail(v.parse_until_date, "2026-13-40")
+verifie(code == 1 and "UNTIL_DATE" in err, "UNTIL_DATE calendaire impossible échoue aussi via fail()")
+
+# --- 16. quota Gmail : reprise avec backoff jusqu'au succès, la reprise se déclare -----
+service_quota = _MessagesQuota(echecs=2, cible="q1")
+recus, sortie = capture(v.fetch_scholar_emails, _service(service_quota), 7)
+verifie(len(recus) == 1 and recus[0]["subject"] == "sujet retenté",
+        "le message finit par être récupéré après reprise sur dépassement de quota")
+verifie(service_quota.appels["q1"] == 3, "2 échecs de quota puis un succès : 3 tentatives au total")
+verifie("quota" in sortie.lower() and "tentative 1/5" in sortie and "tentative 2/5" in sortie,
+        "chaque reprise se déclare au journal (une ligne par tentative retentée)")
+
+# --- 17. quota Gmail épuisé : le run échoue plutôt que de continuer sans le message -----
+service_epuise = _MessagesQuota(echecs=99, cible="q2")  # ne réussit jamais
+code, err = capture_fail(v.fetch_scholar_emails, _service(service_epuise), 7)
+verifie(code == 1 and "quota" in err.lower() and "q2" in err and "5 tentative" in err,
+        "l'épuisement des 5 tentatives fait échouer tout le run, en nommant le message et le compte")
+verifie(service_epuise.appels["q2"] == v.GMAIL_TENTATIVES_MAX,
+        "exactement GMAIL_TENTATIVES_MAX tentatives sont faites, jamais plus (borné)")
+
+# --- 18. une HttpError sans motif de quota n'est jamais retentée -----------------------
+service_404 = _MessagesQuota(echecs=99, cible="q3", erreur=lambda: _http_error_quota(status=404, reason="notFound"))
+leve = False
+try:
+    capture(v.fetch_scholar_emails, _service(service_404), 7)
+except HttpError:
+    leve = True
+verifie(leve and service_404.appels["q3"] == 1,
+        "une 404 (message supprimé, permission refusée) remonte au premier échec, sans être retentée")
 
 print("tous les contrôles passent")
