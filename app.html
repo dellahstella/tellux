@@ -9185,8 +9185,42 @@ const GAMMA_TERRESTRE_PAR_LITHOTYPE = {
   granodiorite:   { status:'ancre', dose_nGy_h:106.6, range_nGy_h:null,
                      label:'Granodiorite (Verdoya 1998, site 4, n=1 échantillon)' },
   schistes:       { status:'extrapole', dose_nGy_h:105.0, range_nGy_h:[102,108],
-                     label:'Phyllites/micaschistes — analogue Verdoya 2009 (Ligurie alpine), NON mesuré en Corse' }
-  // ophiolite, serpentinite, calcaire, alluvions, gneiss, inconnu : pas d'entrée
+                     label:'Phyllites/micaschistes — analogue Verdoya 2009 (Ligurie alpine), NON mesuré en Corse' },
+  // calcaire (2026-09-17, arbitrage Soleil, dette privée GAMMA-LITHOTYPE-COVERAGE-001) —
+  // Verdoya et al. 2009 (Applied Radiation and Isotopes 67(5):964-968, doi.org/10.1016/j.
+  // apradiso.2009.01.066 — même source déjà utilisée pour schistes ci-dessus), Table 2 (p.966),
+  // Ligurie alpine, NON mesuré en Corse. Trois faciès carbonatés distincts y sont donnés :
+  // dolomitiques (n=104) 19,4 nGy/h ; schistes calcaires et calcaires (n=21) 12,3 nGy/h ;
+  // bioclastiques (n=62) 10,3 nGy/h — facteur ~2× entre le plus élevé et le plus bas. Tellux ne
+  // distingue pas ces trois faciès (une seule catégorie `calcaire` dans GEO_SUSC_GRID) ; comme
+  // pour granit/granit_biotite/granit_rose ci-dessus (une seule estimation pour 3 labels non
+  // distingués pétrologiquement), la valeur retenue est la MOYENNE non pondérée des 3 faciès
+  // (14,0 nGy/h), la plage réelle observée (10,3–19,4) affichée comme incertitude — plus honnête
+  // qu'une fausse précision par faciès non différencié.
+  calcaire:       { status:'extrapole', dose_nGy_h:14.0, range_nGy_h:[10.3,19.4],
+                     label:'Calcaires, faciès non différencié — analogue Verdoya 2009 (Ligurie alpine), NON mesuré en Corse' },
+  // gneiss (2026-09-17, arbitrage Soleil, dette privée GAMMA-LITHOTYPE-COVERAGE-001) — Kaçeli
+  // Xhixha, M. (2013), thèse de doctorat, Università di Sassari, Table II.2.3 (p.91), ligne
+  // Orthogneiss (n=13) : K=3,31 % · U=4,40 ppm · Th=12,78 ppm. Batholite varisque de SARDAIGNE
+  // (conjugué au batholite corse, même orogène — pas une mesure corse), candidat retenu sur deux
+  // autres indépendants (Dżaluk et al. 2018, varisque polonais ; Verdoya et al. 2009, orthogneiss
+  // ligure D=108,4) pour cohérence géologique (même bloc varisque corso-sarde). Dose NCRP 94
+  // (coefficients ci-dessus) : 4,8×4,40 + 2,2×12,78 + 12,0×3,31 = 88,956 ≈ 89,0 nGy/h.
+  // GARDE-FOU : le gneiss varie fortement selon le protolithe (facteur >5 rapporté dans la
+  // littérature) — cette valeur porte une incertitude large assumée.
+  // range_nGy_h VOLONTAIREMENT null, PAS un oubli (relecture adverse du 2026-09-17 a soulevé le
+  // point, tranché ici) : l'écart sarde/ligure (89,0 vs 108,4, ~22 %) EXISTE et est même cité
+  // ci-dessus, mais coder [89.0,108.4] en range_nGy_h le confondrait avec la nature de la plage de
+  // calcaire ci-dessous — celle de calcaire vient de 3 FACIÈS RÉELS mesurés dans LA MÊME étude
+  // (variance géologique interne au lithotype), quand un intervalle sarde/ligure viendrait de DEUX
+  // ÉTUDES DE RÉGIONS DIFFÉRENTES retenues comme candidats concurrents pour représenter la Corse
+  // (incertitude de choix de source, pas une variance mesurée). range_nGy_h n'a qu'un seul sens
+  // dans ce fichier (cf. calcaire, granit) : variance interne réelle. Lui faire porter une seconde
+  // signification silencieusement serait moins honnête que null — pas d'invention d'une plage à 2
+  // points pour un lithotype où un seul faciès (orthogneiss) est effectivement retenu.
+  gneiss:         { status:'extrapole', dose_nGy_h:89.0, range_nGy_h:null,
+                     label:'Orthogneiss — analogue Kaçeli Xhixha 2013 (thèse, batholite varisque de Sardaigne), NON mesuré en Corse' }
+  // ophiolite, serpentinite, alluvions, inconnu : pas d'entrée
   // → GAMMA_TERRESTRE_PAR_LITHOTYPE[x] === undefined → reste non modélisé.
 };
 
