@@ -72,18 +72,38 @@ class _Client:
 
 
 class _Reponse:
-    """Réponse de messages.create, arrêtée pour la raison `arret`."""
+    """Réponse de messages.create, arrêtée pour la raison `arret`. `texte` et `tokens` par
+    défaut reproduisent le comportement d'origine (un seul appel, sans reprise)."""
 
-    def __init__(self, arret: str) -> None:
-        self.content = [type("B", (), {"type": "text", "text": "## Axe 1\n- article A, conclusi"})()]
+    def __init__(self, arret: str, texte: str | None = None, tokens: int | None = None) -> None:
+        self.content = [type("B", (), {"type": "text", "text": texte or "## Axe 1\n- article A, conclusi"})()]
         self.stop_reason = arret
-        self.usage = type("U", (), {"output_tokens": 8192 if arret == "max_tokens" else 1200})()
+        self.usage = type("U", (), {"output_tokens": tokens if tokens is not None else (8192 if arret == "max_tokens" else 1200)})()
 
 
 def _client_complet(arret: str) -> _Client:
     c = _Client()
     c.messages.create = lambda **kw: _Reponse(arret)
     return c
+
+
+class _MessagesSuite:
+    """Double dont chaque appel à create() rend la réponse suivante de `reponses`,
+    répétant la dernière une fois la liste épuisée (utile pour "toujours max_tokens")."""
+
+    def __init__(self, reponses: list[_Reponse]) -> None:
+        self._reponses = reponses
+        self.appels = 0
+
+    def create(self, **kw):
+        r = self._reponses[min(self.appels, len(self._reponses) - 1)]
+        self.appels += 1
+        return r
+
+
+class _ClientSuite:
+    def __init__(self, reponses: list[_Reponse]) -> None:
+        self.messages = _MessagesSuite(reponses)
 
 
 class _Req:
@@ -330,6 +350,32 @@ for arret in ("max_tokens", "end_turn"):
         verifie("INTERROMPUE" not in ligne and pied == "" and "Synthèse complète" in sortie,
                 "une synthèse complète n'est pas déclarée interrompue")
 v.anthropic.Anthropic = _origine
+
+# --- 11b. reprise sur sortie saturée : les textes se concatènent, le total conclut -----
+v.anthropic.Anthropic = lambda api_key: _ClientSuite([
+    _Reponse("max_tokens", texte="Première moitié. ", tokens=40000),
+    _Reponse("end_turn", texte="seconde moitié.", tokens=1500),
+])
+(texte, bilan), sortie = capture(v.call_anthropic, "PROMPT", [{"subject": "a", "date": "", "body": "court"}])
+v.anthropic.Anthropic = _origine
+verifie(texte == "Première moitié. seconde moitié.",
+        "une sortie saturée puis complète reprend au bon endroit : les deux textes se concatènent dans l'ordre")
+verifie(bilan["arret"] == "end_turn" and "INTERROMPUE" not in v.decrire_bilan(bilan, 1) and v.pied_interruption(bilan) == "",
+        "une synthèse complétée par une reprise n'est pas déclarée interrompue")
+verifie(bilan["tokens_sortie"] == 40000 + 1500,
+        "le compte de tokens de sortie cumule les deux appels de la reprise, pas seulement le dernier")
+
+# --- 11c. sortie saturée à chaque appel : la reprise s'arrête à son plafond, sans avaler --
+v.anthropic.Anthropic = lambda api_key: _ClientSuite([_Reponse("max_tokens", texte="bloqué. ", tokens=40000)])
+(texte, bilan), sortie = capture(v.call_anthropic, "PROMPT", [{"subject": "a", "date": "", "body": "court"}])
+v.anthropic.Anthropic = _origine
+verifie(bilan["arret"] == "max_tokens", "toujours saturé : l'arrêt déclaré reste max_tokens, jamais avalé au plafond de reprises")
+verifie(bilan["tokens_sortie"] == v.SORTIE_TENTATIVES_MAX * 40000,
+        f"le compte de tokens de sortie couvre les {v.SORTIE_TENTATIVES_MAX} tentatives tentées, pas seulement la dernière")
+verifie(sortie.count("sortie saturée") == v.SORTIE_TENTATIVES_MAX - 1,
+        f"exactement {v.SORTIE_TENTATIVES_MAX} tentatives sont faites (la dernière ne déclare plus de reprise) : le plafond est respecté")
+verifie("SYNTHÈSE INTERROMPUE" in v.decrire_bilan(bilan, 1) and "synthèse interrompue" in sortie,
+        "le plafond de reprises atteint sans conclure reste déclaré interrompu, jamais avalé en silence")
 
 # --- 12. l'aperçu DRY_RUN n'imprime que l'en-tête ---------------------------------------
 v.DRY_RUN = True

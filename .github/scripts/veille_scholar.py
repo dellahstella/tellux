@@ -147,9 +147,28 @@ OCTETS_PAR_TOKEN_PIRE_CAS = 2.3
 # En dessous de cette borne, on n'ampute plus les corps : on écarte les alertes les
 # plus anciennes, en les nommant.
 BORNE_PLANCHER = 500
-# Plafond de sortie de la synthèse. BUDGET_TOKENS_ENTREE + MAX_TOKENS_SORTIE doit rester
-# sous la fenêtre de contexte du modèle (200 000).
-MAX_TOKENS_SORTIE = 8192
+# Plafond de sortie d'un appel de synthèse. Plafond réel de l'API pour claude-sonnet-4-5
+# (alias résolu vers claude-sonnet-4-5-20250929) : fenêtre de contexte 200 000 tokens,
+# sortie maximale 64 000 tokens — confirmé sur platform.claude.com/docs/en/models/
+# sonnet-4-5/overview le 2026-09-17, pas un arrondi supposé (8192 avait saturé le
+# 2026-09-17 dès 50 messages / 56 345 tokens d'entrée, un volume que le correctif de
+# quota Gmail ci-dessus laisse pourtant passer sans broncher).
+# On ne prend pas les 64 000 tels quels : BUDGET_TOKENS_ENTREE (150 000 par défaut) +
+# 64 000 dépasserait la fenêtre de 14 000 tokens. Sur les modèles 4.5 et plus récents
+# ça ne fait pas échouer la requête (elle est acceptée ; si la génération atteint
+# vraiment la limite, elle s'arrête avec stop_reason="model_context_window_exceeded"
+# plutôt que par une erreur de validation, cf. doc « Context window overflow behavior »
+# de la même famille de pages) — mais compter dessus n'est pas le but ici. 40 000 laisse
+# 10 000 tokens (5 %) de marge sous les 200 000 (150 000 + 40 000 = 190 000), une marge
+# délibérément franche plutôt que calée pile sur la limite.
+MAX_TOKENS_SORTIE = 40000
+# Tentatives de continuation sur une sortie saturée (stop_reason == "max_tokens") avant
+# d'accepter l'interruption : 1 essai + 2 reprises. MAX_TOKENS_SORTIE recule la
+# saturation mais ne l'exclut pas sur un backlog extrême — la reprise la couvre, bornée
+# pour ne jamais boucler indéfiniment sur une synthèse qui ne finirait jamais (même
+# principe que GMAIL_TENTATIVES_MAX, appliqué à la sortie du modèle plutôt qu'au fetch
+# Gmail).
+SORTIE_TENTATIVES_MAX = 3
 # Garde-fou cron : OUTPUT_DIR pointe sur la file inbox par défaut. Le commit
 # direct dans le corpus est interdit en cron — l'intégration au corpus est un
 # processus séparé, mensuel, gaté par scripts/verify_citation.py.
@@ -571,37 +590,77 @@ def pied_ecartes(bilan: dict[str, Any]) -> str:
 
 
 def pied_interruption(bilan: dict[str, Any]) -> str:
-    """Avertissement de fin de synthèse si le modèle s'est arrêté avant la fin ; vide sinon."""
+    """Avertissement de fin de synthèse si le modèle s'est arrêté avant la fin ; vide sinon.
+    Le plafond affiché porte sur TOUTES les tentatives de continuation cumulées
+    (bilan["tentatives_sortie"]), pas sur un seul appel — sinon un total de tokens de
+    sortie qui le dépasserait lirait comme une incohérence plutôt que comme la somme
+    réelle des appels tentés."""
     if bilan.get("arret") in (None, "end_turn"):
         return ""
+    plafond_cumule = bilan.get("tentatives_sortie", 1) * MAX_TOKENS_SORTIE
     return (f"\n\n---\n\n**⚠ Synthèse interrompue** (`stop_reason` = `{bilan['arret']}`, "
-            f"{bilan.get('tokens_sortie')} tokens de sortie sur {MAX_TOKENS_SORTIE}) : "
+            f"{bilan.get('tokens_sortie')} tokens de sortie sur {plafond_cumule}) : "
             f"le texte ci-dessus s'arrête en cours de route.\n")
 
 
 def call_anthropic(prompt: str, emails: list[dict[str, str]]) -> tuple[str, dict[str, Any]]:
     """Synthétise les alertes, l'entrée bornée par ajuster_au_budget.
-    Rend (texte, bilan) : le bilan dit ce qui a été tronqué ou écarté."""
+
+    Si la sortie sature (stop_reason == "max_tokens"), reprend la même synthèse par un
+    appel de continuation — le texte partiel renvoyé comme tour assistant, suivi d'une
+    consigne de poursuite — jusqu'à SORTIE_TENTATIVES_MAX tentatives au total (2026-09-17 :
+    8192 saturait déjà à 50 messages, et même un plafond par appel plus haut,
+    MAX_TOKENS_SORTIE, peut théoriquement rester insuffisant sur un backlog extrême). Les
+    textes de chaque tentative sont concaténés dans l'ordre. Une synthèse complétée par
+    reprise (arrêt final == "end_turn") N'EST PAS déclarée interrompue ; si
+    SORTIE_TENTATIVES_MAX est atteint sans conclure, elle l'est (bilan["arret"] porte le
+    dernier stop_reason), avec bilan["tokens_sortie"] cumulé sur TOUTES les tentatives,
+    pas seulement la dernière.
+
+    Rend (texte, bilan) : le bilan dit ce qui a été tronqué, écarté, ou interrompu.
+    """
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     user_message, bilan = ajuster_au_budget(client, prompt, emails)
     print(f"[anthropic] Modèle {ANTHROPIC_MODEL}, {len(user_message)} caractères en input · "
           f"{decrire_bilan(bilan, len(emails))}")
-    msg = client.messages.create(
-        model=ANTHROPIC_MODEL,
-        max_tokens=MAX_TOKENS_SORTIE,
-        messages=[{"role": "user", "content": user_message}],
-    )
-    # Une sortie coupée se déclare comme une entrée coupée (2026-09-10). Jusque-là,
-    # stop_reason n'était jamais lu : une synthèse arrêtée à max_tokens au milieu d'une
-    # phrase était commitée comme complète.
-    bilan["arret"] = msg.stop_reason
-    bilan["tokens_sortie"] = msg.usage.output_tokens
-    if msg.stop_reason != "end_turn":
-        print(f"[anthropic] WARN — synthèse interrompue : stop_reason={msg.stop_reason}, "
-              f"{msg.usage.output_tokens} tokens de sortie sur {MAX_TOKENS_SORTIE}")
+
+    messages: list[dict[str, Any]] = [{"role": "user", "content": user_message}]
+    textes: list[str] = []
+    tokens_sortie_total = 0
+    arret = "max_tokens"  # amorce la boucle : le premier appel est toujours tenté
+    for tentative in range(1, SORTIE_TENTATIVES_MAX + 1):
+        msg = client.messages.create(
+            model=ANTHROPIC_MODEL,
+            max_tokens=MAX_TOKENS_SORTIE,
+            messages=messages,
+        )
+        textes.append("".join(block.text for block in msg.content if block.type == "text"))
+        tokens_sortie_total += msg.usage.output_tokens
+        arret = msg.stop_reason
+        # Une sortie coupée se déclare comme une entrée coupée (2026-09-10). Jusque-là,
+        # stop_reason n'était jamais lu : une synthèse arrêtée à max_tokens au milieu
+        # d'une phrase était commitée comme complète.
+        if arret != "max_tokens":
+            break
+        if tentative < SORTIE_TENTATIVES_MAX:
+            print(f"[anthropic] WARN — sortie saturée (stop_reason=max_tokens, tentative "
+                  f"{tentative}/{SORTIE_TENTATIVES_MAX}) : reprise de la synthèse")
+            messages = messages + [
+                {"role": "assistant", "content": textes[-1]},
+                {"role": "user", "content": "Continue la synthèse précédente, exactement là "
+                                             "où elle s'est arrêtée, sans rien répéter."},
+            ]
+
+    bilan["arret"] = arret
+    bilan["tokens_sortie"] = tokens_sortie_total
+    bilan["tentatives_sortie"] = tentative
+    if arret != "end_turn":
+        print(f"[anthropic] WARN — synthèse interrompue après {tentative} tentative(s) : "
+              f"stop_reason={arret}, {tokens_sortie_total} tokens de sortie cumulés")
     else:
-        print(f"[anthropic] Synthèse complète : {msg.usage.output_tokens} tokens de sortie sur {MAX_TOKENS_SORTIE}")
-    return "".join(block.text for block in msg.content if block.type == "text"), bilan
+        print(f"[anthropic] Synthèse complète en {tentative} tentative(s) : "
+              f"{tokens_sortie_total} tokens de sortie cumulés")
+    return "".join(textes), bilan
 
 
 def commit_synthesis(content: str, today: dt.date) -> None:
@@ -680,7 +739,12 @@ def call_anthropic_integration(integration_prompt: str, synthesis: str) -> str:
     print(f"[integration] Modèle {ANTHROPIC_MODEL}, {len(user_message)} caractères en input")
     msg = client.messages.create(
         model=ANTHROPIC_MODEL,
-        max_tokens=8192,
+        # Même plafond que la synthèse (MAX_TOKENS_SORTIE) plutôt qu'un second 8192 codé
+        # en dur (2026-09-17). Sans la reprise bornée de call_anthropic() : cette étape
+        # reste best-effort, jamais fatale (cf. run_integration_step, try/except autour de
+        # cet appel) et ne lit pas son stop_reason — lui donner la même déclaration
+        # d'interruption que la synthèse est un chantier séparé, pas fait ici.
+        max_tokens=MAX_TOKENS_SORTIE,
         messages=[{"role": "user", "content": user_message}],
     )
     return "".join(block.text for block in msg.content if block.type == "text")
