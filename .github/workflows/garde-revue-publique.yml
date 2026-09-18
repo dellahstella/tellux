@@ -75,6 +75,16 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Tests de non-régression (node:test) — avant d'exécuter la garde sur ce diff
+        # Cas construits, pas le pipeline git complet (rejoué manuellement à chaque
+        # revue et consigné en description de PR, dépend de SHA réels non reproductibles
+        # en isolation). Couvre notamment les 4 paires de vocabulaire réglementaire/
+        # scientifique de la revue Soleil du 2026-09-18 (point 1, PR #1522) — ce sont
+        # elles qui justifient le garde-fou, pas les libellés d'état d'UI. Volontairement
+        # AVANT le step suivant : si la garde elle-même a régressé, on le sait avant de
+        # lui faire lire le vrai diff, plutôt que de lui faire confiance à l'aveugle.
+        run: node --test .github/scripts/garde-revue-publique.test.mjs
+
       - name: Exécuter la garde
         env:
           GRP_BASE: ${{ github.event.pull_request.base.sha }}

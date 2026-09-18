@@ -46,6 +46,16 @@
 // sur une ligne entière) sont exclues — sinon ce garde serait rouge en permanence dans
 // un dépôt qui commente abondamment.
 //
+// COUCHE COMPLÉMENTAIRE — lexique de termes verrouillés (revue Soleil 2026-09-18,
+// point 1/2) : au-dessus de ce qui précède, tout terme listé dans
+// garde-revue-publique-lexique.json déclenche un flag dès qu'il apparaît/disparaît sur
+// une ligne changée ou une valeur JSON — INDÉPENDAMMENT du mécanisme (script, style,
+// balisage statique, JSON) et INDÉPENDAMMENT du compte de mots. Comble spécifiquement
+// le faux négatif résiduel d'un littéral JS nu hors sink structurel (ex. `var X =
+// 'seuil';` sans `.textContent=` ni balise) — le cas qui compte le plus, car c'est lui
+// qui bascule un sens réglementaire/scientifique, pas un état d'UI. Cf. le fichier
+// lexique pour la liste et sa portée volontairement restreinte.
+//
 // EXIGENCE (Étage 3) — ligne Revue-publique
 // --------------------------------------------
 // Si (et seulement si) Étage 2 a flaggé au moins un extrait : le corps de la PR doit
@@ -66,6 +76,59 @@ const ROOT_HTML_RE = /^[^/]+\.html$/;
 // public/data/ (pas les sous-dossiers type public/data/corse/*.geojson, hors périmètre
 // de la demande — cf. note de portée en fin de fichier).
 const JSON_DATA_RE = /^public\/data\/[^/]+\.json$/;
+
+// Lexique de termes verrouillés (revue Soleil 2026-09-18, point 2) : détection
+// INDÉPENDANTE du mécanisme de rendu et du compte de mots (donc du faux négatif Q1
+// résiduel sur un littéral JS nu hors sink structurel) — cf. garde-revue-publique-
+// lexique.json pour la provenance, la portée volontairement restreinte, et comment
+// l'amender. Chargé une fois, jamais depuis le contenu diffé lui-même (c'est une
+// config de la garde, pas du contenu du dépôt examiné).
+const LEXICON_PATH = new URL('./garde-revue-publique-lexique.json', import.meta.url);
+function loadLexiconTerms() {
+  try {
+    const raw = readFileSync(LEXICON_PATH, 'utf8');
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed.termes) ? parsed.termes.filter(t => typeof t === 'string' && t.trim()) : [];
+  } catch {
+    // Fichier absent/invalide : dégrade vers un lexique vide plutôt que fail-closed —
+    // ce n'est qu'une couche COMPLÉMENTAIRE à la détection heuristique principale
+    // (Étage 2), pas la seule protection ; ne pas geler toute PR pour un lexique cassé.
+    return [];
+  }
+}
+const LEXICON_TERMS = loadLexiconTerms();
+
+// Construit un motif par terme : limites de mot conscientes de l'unicode (les
+// termes accentués comme "référence" ne passent pas par \b, qui ne connaît que
+// [A-Za-z0-9_]) ; espaces flexibles pour les termes à plusieurs mots ("niveau de
+// référence"). Insensible à la casse.
+function buildLexiconRegexes(terms) {
+  return terms.map(term => {
+    const escaped = term.trim().split(/\s+/).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+');
+    // `_` compte comme caractère de mot (comme \w) en plus des lettres/chiffres unicode
+    // — sinon un identifiant JS/CSS type `.seuil_legal_vm` (réel, app.html:14524)
+    // matcherait "seuil" comme terme isolé alors que c'est un identifiant, pas du texte.
+    return { term, re: new RegExp(`(?<![\\p{L}\\d_])${escaped}(?![\\p{L}\\d_])`, 'giu') };
+  });
+}
+const LEXICON_REGEXES = buildLexiconRegexes(LEXICON_TERMS);
+
+// Renvoie une entrée par OCCURRENCE trouvée (pas par terme unique) — pour que le
+// comptage multiset de washOutUnchangedContent (déjà testé, Q3) s'applique ici
+// exactement comme aux autres kinds : un terme verrouillé simplement déplacé dans
+// le même fichier ne doit pas se compter comme un changement.
+export function lexiconTermFlags(text) {
+  const found = [];
+  for (const { term, re } of LEXICON_REGEXES) {
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      found.push(term);
+      if (m.index === re.lastIndex) re.lastIndex++; // garde-fou boucle infinie sur motif vide
+    }
+  }
+  return found;
+}
 
 function git(args) {
   return execFileSync('git', args, { encoding: 'utf8', maxBuffer: 1024 * 1024 * 64 });
@@ -166,12 +229,12 @@ function stripTags(line) {
 // Au moins une lettre Unicode (couvre les accents français) dans le texte hors balises.
 const HAS_LETTER_RUN = /\p{L}{2,}/u;
 
-function htmlTextNodeFlag(line) {
+export function htmlTextNodeFlag(line) {
   const stripped = stripTags(line);
   return HAS_LETTER_RUN.test(stripped) ? stripped.trim().slice(0, 160) : null;
 }
 
-function visibleAttrFlag(line) {
+export function visibleAttrFlag(line) {
   const re = new RegExp(`\\b(${VISIBLE_ATTRS.join('|')})\\s*=\\s*(["'])([\\s\\S]*?)\\2`, 'i');
   const m = line.match(re);
   return m ? `${m[1]}="${m[3]}"` : null;
@@ -199,7 +262,7 @@ const CODE_LIKE_RE = /^(#[0-9a-fA-F]{3,8}|https?:\/\/\S*|\.?\/\S*|#[\w-]+|[\w-]+
 // exactement invisible pour le garde tel qu'il existait.
 const DOM_TEXT_SINK_RE = /\.(?:textContent|innerText|innerHTML)\s*=\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1|\.setAttribute\(\s*(["'])(title|alt|aria-label|placeholder)\3\s*,\s*(["'])((?:\\.|(?!\5)[^\\])*)\5\s*\)/g;
 
-function domTextSinkFlags(line) {
+export function domTextSinkFlags(line) {
   const flags = [];
   let m;
   DOM_TEXT_SINK_RE.lastIndex = 0;
@@ -214,7 +277,7 @@ function domTextSinkFlags(line) {
 // à la fois pour les littéraux JS (jsStringTextFlags) et pour les valeurs-feuilles
 // JSON de public/data/*.json (Q2, revue Soleil 2026-09-18) — même filtre partout,
 // pour ne pas faire dériver deux heuristiques qui devraient dire la même chose.
-function isTextLikeString(s) {
+export function isTextLikeString(s) {
   if (!s) return false;
   const containsTag = /<[a-zA-Z/][^>]*>/.test(s);
   const words = s.split(/\s+/).filter(w => /\p{L}{2,}/u.test(w));
@@ -226,7 +289,7 @@ function isTextLikeString(s) {
   return !CODE_LIKE_RE.test(s.trim());
 }
 
-function jsStringTextFlags(line) {
+export function jsStringTextFlags(line) {
   const flags = new Set();
   for (const f of domTextSinkFlags(line)) flags.add(f);
 
@@ -391,6 +454,15 @@ export function analyze({ base, head, prBody }) {
 function analyzeHtmlChanges(changes, { base, head, headContentCache, baseContentCache, headCtxCache, baseCtxCache, flags }) {
   for (const ch of changes) {
     if (isCommentOnly(ch.content)) continue;
+
+    // Lexique de termes verrouillés (point 2, revue Soleil 2026-09-18) : INDÉPENDANT
+    // du mécanisme de rendu — appliqué au texte brut de la ligne, avant toute
+    // classification script/style/HTML, avant tout filtre de compte de mots. Cf.
+    // garde-revue-publique-lexique.json.
+    for (const term of lexiconTermFlags(ch.content)) {
+      flags.push({ file: ch.file, line: ch.lineNo, side: ch.side, kind: 'terme verrouillé', extract: term });
+    }
+
     const ref = ch.side === 'new' ? head : base;
     const contentCache = ch.side === 'new' ? headContentCache : baseContentCache;
     const ctxCache = ch.side === 'new' ? headCtxCache : baseCtxCache;
@@ -448,6 +520,11 @@ function analyzeJsonDataChanges(touchedJsonData, { base, head, jsonDataBase, jso
       collectJsonStrings(parsed, strings);
       for (const s of strings) {
         if (isTextLikeString(s)) flags.push({ file: f, line: null, side, kind: 'valeur JSON texte', extract: s.trim().slice(0, 160) });
+        // Lexique (point 2) : indépendant d'isTextLikeString — un code court comme
+        // 'nSv' ne passerait jamais le filtre ≥2 mots ci-dessus, mais reste verrouillé.
+        for (const term of lexiconTermFlags(s)) {
+          flags.push({ file: f, line: null, side, kind: 'terme verrouillé', extract: term });
+        }
       }
     }
   }
