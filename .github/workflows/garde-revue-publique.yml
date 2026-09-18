@@ -43,6 +43,14 @@ on:
   pull_request:
     branches:
       - main
+    # `edited` ajouté explicitement (types par défaut GitHub : opened/synchronize/
+    # reopened seulement) — sans lui, ajouter la ligne `Revue-publique:` À POSTERIORI
+    # dans le corps d'une PR déjà rouge ne redéclenche jamais ce check : il reste
+    # rouge indéfiniment, sans autre repli qu'un commit vide. Revue Soleil, PR #1522
+    # (Q4) : « le genre de détail qui fait abandonner une garde au bout de trois
+    # jours ». `edited` se déclenche aussi sur un changement de titre seul (pas
+    # seulement le corps) — un run de plus, jamais un blocage, coût accepté.
+    types: [opened, synchronize, reopened, edited]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

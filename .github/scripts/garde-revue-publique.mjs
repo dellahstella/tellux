@@ -13,13 +13,16 @@
 //
 // PORTÉE (Étage 1) — surfaces publiques
 // --------------------------------------
-// Une "surface publique" = tout fichier `*.html` À LA RACINE du dépôt, tel qu'il existe
-// dans l'arbre Git au commit HEAD examiné. JAMAIS une liste en dur : recalculée à chaque
-// exécution par `git ls-tree`, pour ne jamais dériver quand une page est ajoutée/retirée
-// (même convention que scripts/generer_manifeste.mjs §5 / generer_etat.mjs P1 — "chaque
-// *.html à la racine"). Si cette énumération échoue ou revient vide, le check ÉCHOUE
+// Une "surface publique" = (a) tout fichier `*.html` À LA RACINE du dépôt, tel qu'il
+// existe dans l'arbre Git au commit examiné (JAMAIS une liste en dur : recalculée à
+// chaque exécution par `git ls-tree`, même convention que scripts/generer_manifeste.mjs
+// §5 / generer_etat.mjs P1 — "chaque *.html à la racine") ; (b) tout fichier
+// `public/data/*.json` (enfants directs, ajouté suite à revue Soleil du 2026-09-18,
+// Q2 — du texte affiché vit aussi dans ces fichiers de données, pas seulement dans le
+// HTML/JS). Si une énumération échoue ou revient vide (côté HTML), le check ÉCHOUE
 // explicitement (fail-closed) plutôt que de conclure silencieusement "aucune surface
-// publique touchée".
+// publique touchée" — de même pour toute lecture de fichier ou tout git diff qu'on SAIT
+// nécessaire une fois une surface publique repérée comme touchée (Q5, cf. analyze()).
 //
 // DÉTECTION (Étage 2) — texte visible dans le diff
 // ---------------------------------------------------
@@ -32,7 +35,12 @@
 //     contient soit une balise HTML (gabarits type LEGEND_HTML), soit une suite de mots
 //     qui ressemble à de la prose (tables i18n : I18N_ENTRIES, EN_STRINGS, RICH_HTML_EN,
 //     LEGEND_HTML_EN, etc. — jamais nommées en dur : la détection est structurelle,
-//     n'importe quel nom de variable est couvert)
+//     n'importe quel nom de variable est couvert) ; un littéral D'UN SEUL MOT est
+//     couvert séparément (peu importe le compte de mots) quand il alimente une
+//     assignation dont on sait structurellement qu'elle rend du texte à l'écran —
+//     .textContent=/.innerText=/.innerHTML=, setAttribute(visible, …) — sinon un
+//     littéral d'un seul mot ne franchit jamais le seuil de 2 mots de la détection
+//     générale (cf. domTextSinkFlags())
 // Règle de prudence : en cas d'ambiguïté, le classifieur flag (faux positif accepté,
 // faux négatif refusé). Les lignes de commentaire (JS `//`, `/* */` ; HTML `<!-- -->`
 // sur une ligne entière) sont exclues — sinon ce garde serait rouge en permanence dans
@@ -52,6 +60,12 @@ import { pathToFileURL } from 'node:url';
 
 const VISIBLE_ATTRS = ['title', 'alt', 'aria-label', 'placeholder'];
 const ROOT_HTML_RE = /^[^/]+\.html$/;
+// public/data/*.json : ajouté suite à la revue Soleil du 2026-09-18 (Q2) — du texte
+// affiché par les pages publiques vit dans ces fichiers de données (labels, libellés),
+// pas seulement dans le HTML/JS. Volontairement restreint aux enfants DIRECTS de
+// public/data/ (pas les sous-dossiers type public/data/corse/*.geojson, hors périmètre
+// de la demande — cf. note de portée en fin de fichier).
+const JSON_DATA_RE = /^public\/data\/[^/]+\.json$/;
 
 function git(args) {
   return execFileSync('git', args, { encoding: 'utf8', maxBuffer: 1024 * 1024 * 64 });
@@ -65,6 +79,21 @@ function listRootHtmlAt(ref) {
   const out = tryGit(['ls-tree', '-r', '--name-only', ref]);
   if (out == null) return null;
   return out.split('\n').map(s => s.trim()).filter(Boolean).filter(p => ROOT_HTML_RE.test(p));
+}
+
+function listJsonDataAt(ref) {
+  const out = tryGit(['ls-tree', '-r', '--name-only', ref]);
+  if (out == null) return null;
+  return out.split('\n').map(s => s.trim()).filter(Boolean).filter(p => JSON_DATA_RE.test(p));
+}
+
+// Parcourt une valeur JSON déjà parsée et collecte toutes les chaînes-feuilles
+// (valeurs string, à n'importe quelle profondeur — objets et tableaux). Les CLÉS ne
+// sont jamais collectées (ce sont des identifiants, pas du texte affiché).
+function collectJsonStrings(value, out) {
+  if (typeof value === 'string') { out.push(value); return; }
+  if (Array.isArray(value)) { for (const v of value) collectJsonStrings(v, out); return; }
+  if (value && typeof value === 'object') { for (const v of Object.values(value)) collectJsonStrings(v, out); }
 }
 
 function fileAt(ref, path) {
@@ -157,27 +186,58 @@ const STRING_LITERAL_RE = /(["'`])((?:\\.|(?!\1)[^\\])*)\1/g;
 // ou une suite de mots façon prose (ces deux inclusions passent AVANT ces exclusions).
 const CODE_LIKE_RE = /^(#[0-9a-fA-F]{3,8}|https?:\/\/\S*|\.?\/\S*|#[\w-]+|[\w-]+\.(png|jpg|jpeg|svg|json|geojson|js|css|html)|[a-zA-Z_][\w-]*|[\d.]+%?|[a-zA-Z]{1,3})$/;
 
-function jsStringTextFlags(line) {
+// Assignations/appels DOM dont on SAIT structurellement qu'ils rendent du texte à
+// l'écran : .textContent=/.innerText=/.innerHTML= et setAttribute() sur l'un des
+// 4 attributs visibles. Flagués quel que soit le nombre de mots (même un seul) —
+// contrairement à la détection générale ci-dessous qui exige ≥2 mots pour limiter
+// le bruit sur les innombrables littéraux d'UN mot qui sont des valeurs d'état
+// interne (ex. 'loading'/'error'/'active'), pas du texte affiché. Ici la structure
+// de l'appel lève l'ambiguïté : un seul mot suffit. Cas réel qui a motivé cet ajout
+// (revue Soleil, PR #1522) : `lvEl.textContent='indisponible'` (app.html) — un mot,
+// aucune balise, sous le seuil de 2 mots de la détection générale — manqué avant ce
+// correctif, alors qu'une retouche comme celle de #1517 sur ce littéral serait
+// exactement invisible pour le garde tel qu'il existait.
+const DOM_TEXT_SINK_RE = /\.(?:textContent|innerText|innerHTML)\s*=\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1|\.setAttribute\(\s*(["'])(title|alt|aria-label|placeholder)\3\s*,\s*(["'])((?:\\.|(?!\5)[^\\])*)\5\s*\)/g;
+
+function domTextSinkFlags(line) {
   const flags = [];
+  let m;
+  DOM_TEXT_SINK_RE.lastIndex = 0;
+  while ((m = DOM_TEXT_SINK_RE.exec(line)) !== null) {
+    const s = m[2] !== undefined ? m[2] : m[6];
+    if (s != null && HAS_LETTER_RUN.test(s)) flags.push(s.trim().slice(0, 160));
+  }
+  return flags;
+}
+
+// Décision partagée « cette chaîne ressemble-t-elle à du texte affiché ? », utilisée
+// à la fois pour les littéraux JS (jsStringTextFlags) et pour les valeurs-feuilles
+// JSON de public/data/*.json (Q2, revue Soleil 2026-09-18) — même filtre partout,
+// pour ne pas faire dériver deux heuristiques qui devraient dire la même chose.
+function isTextLikeString(s) {
+  if (!s) return false;
+  const containsTag = /<[a-zA-Z/][^>]*>/.test(s);
+  const words = s.split(/\s+/).filter(w => /\p{L}{2,}/u.test(w));
+  const looksLikeProse = words.length >= 2;
+  if (!containsTag && !looksLikeProse) return false;
+  // Une balise HTML explicite l'emporte toujours sur l'exclusion code-like (un
+  // gabarit LEGEND_HTML peut être une chaîne courte contenant '<b>').
+  if (containsTag) return true;
+  return !CODE_LIKE_RE.test(s.trim());
+}
+
+function jsStringTextFlags(line) {
+  const flags = new Set();
+  for (const f of domTextSinkFlags(line)) flags.add(f);
+
   let m;
   STRING_LITERAL_RE.lastIndex = 0;
   while ((m = STRING_LITERAL_RE.exec(line)) !== null) {
     const s = m[2];
     if (!s) continue;
-    const containsTag = /<[a-zA-Z/][^>]*>/.test(s);
-    const words = s.split(/\s+/).filter(w => /\p{L}{2,}/u.test(w));
-    const looksLikeProse = words.length >= 2;
-    if (containsTag || looksLikeProse) {
-      if (!CODE_LIKE_RE.test(s.trim())) {
-        flags.push(s.trim().slice(0, 160));
-      } else if (containsTag) {
-        // Une balise HTML explicite l'emporte toujours sur l'exclusion code-like
-        // (un gabarit LEGEND_HTML peut être une chaîne courte contenant '<b>').
-        flags.push(s.trim().slice(0, 160));
-      }
-    }
+    if (isTextLikeString(s)) flags.add(s.trim().slice(0, 160));
   }
-  return flags;
+  return [...flags];
 }
 
 // Parse un diff unifié (-U0) en lignes changées, avec leur numéro dans le fichier
@@ -247,23 +307,57 @@ export function analyze({ base, head, prBody }) {
     return { fatal: `Énumération des surfaces publiques (git ls-tree ${head}) est vide — fail-closed (surface indéterminable).` };
   }
 
-  const changedFiles = (tryGit(['diff', '--name-only', `${base}...${head}`]) || '')
-    .split('\n').map(s => s.trim()).filter(Boolean);
+  // Échec de `git diff --name-only` (base/head invalides, dépôt corrompu, etc.) :
+  // AUPARAVANT défauté silencieusement en '' → aucun fichier touché → vert. Fail-closed
+  // depuis la revue Soleil du 2026-09-18 (Q5) — un garde qui ne peut pas savoir ce qui a
+  // changé ne peut pas honnêtement dire « rien n'a changé ».
+  const nameOnlyOut = tryGit(['diff', '--name-only', `${base}...${head}`]);
+  if (nameOnlyOut == null) {
+    return { fatal: `Liste des fichiers changés (git diff --name-only ${base}...${head}) a échoué — fail-closed.` };
+  }
+  const changedFiles = nameOnlyOut.split('\n').map(s => s.trim()).filter(Boolean);
 
-  const rootHtmlBase = listRootHtmlAt(base) || [];
-  const allKnownRoot = new Set([...rootHtmlHead, ...rootHtmlBase]);
-  const touchedPublic = changedFiles.filter(f => allKnownRoot.has(f) || ROOT_HTML_RE.test(f));
-
-  // Une page publique touchée que l'énumération HEAD ne connaît PAS (renommage non
-  // suivi, extension inattendue) : signalée, pas silencieusement ignorée.
-  const unknownPublicTouch = touchedPublic.filter(f => ROOT_HTML_RE.test(f) && !rootHtmlHead.includes(f) && !rootHtmlBase.includes(f));
-
-  if (touchedPublic.length === 0) {
-    return { flags: [], touchedPublic: [], unknownPublicTouch: [], verdict: 'vert', reason: 'Aucune surface publique (*.html racine) touchée par ce diff.' };
+  // Échec de l'énumération BASE : même traitement fail-closed que HEAD (ci-dessus),
+  // pour la même raison — un défaut silencieux vers [] masquerait une page publique
+  // supprimée dans ce diff (elle n'apparaîtrait dans aucune des deux énumérations).
+  const rootHtmlBase = listRootHtmlAt(base);
+  if (rootHtmlBase == null) {
+    return { fatal: `Énumération des surfaces publiques (git ls-tree ${base}) a échoué — fail-closed.` };
   }
 
-  const diffText = tryGit(['diff', '-U0', `${base}...${head}`, '--', ...touchedPublic]) || '';
-  const changes = parseUnifiedDiff(diffText);
+  const allKnownRoot = new Set([...rootHtmlHead, ...rootHtmlBase]);
+  const touchedPublicHtml = changedFiles.filter(f => allKnownRoot.has(f) || ROOT_HTML_RE.test(f));
+
+  // Une page publique touchée que NI l'énumération HEAD NI l'énumération BASE ne
+  // connaissent : signalée, pas silencieusement ignorée. Honnêteté sur sa portée
+  // réelle (revue Soleil 2026-09-18, Q6) : depuis que les deux échecs d'énumération
+  // ci-dessus (HEAD et BASE) sont eux-mêmes fail-closed, ce filtre est structurellement
+  // INATTEIGNABLE en fonctionnement normal — tout fichier listé par `git diff
+  // --name-only` existe par construction à BASE ou à HEAD (invariant git), et les deux
+  // énumérations correspondantes, si elles ont réussi (sinon on ne serait pas ici),
+  // sont exhaustives sur leur référence. Conservé comme redondance défensive (coût
+  // nul) plutôt que retiré, au cas où une évolution future réintroduirait un chemin
+  // d'échec asymétrique — mais la protection réelle contre « page inconnue de la
+  // classification » tient aux deux `fatal` d'énumération ci-dessus, pas à ce filtre.
+  const unknownPublicTouch = touchedPublicHtml.filter(f => ROOT_HTML_RE.test(f) && !rootHtmlHead.includes(f) && !rootHtmlBase.includes(f));
+
+  // public/data/*.json (Q2, revue Soleil 2026-09-18) : même traitement fail-closed
+  // que les surfaces HTML sur l'énumération, symétrique BASE/HEAD.
+  const jsonDataHead = listJsonDataAt(head);
+  if (jsonDataHead == null) {
+    return { fatal: `Énumération de public/data/*.json (git ls-tree ${head}) a échoué — fail-closed.` };
+  }
+  const jsonDataBase = listJsonDataAt(base);
+  if (jsonDataBase == null) {
+    return { fatal: `Énumération de public/data/*.json (git ls-tree ${base}) a échoué — fail-closed.` };
+  }
+  const touchedJsonData = changedFiles.filter(f => JSON_DATA_RE.test(f));
+
+  const touchedPublic = [...touchedPublicHtml, ...touchedJsonData];
+
+  if (touchedPublic.length === 0) {
+    return { flags: [], touchedPublic: [], unknownPublicTouch: [], verdict: 'vert', reason: 'Aucune surface publique (*.html racine, public/data/*.json) touchée par ce diff.' };
+  }
 
   const headContentCache = new Map();
   const baseContentCache = new Map();
@@ -272,6 +366,29 @@ export function analyze({ base, head, prBody }) {
 
   const flags = [];
 
+  if (touchedPublicHtml.length > 0) {
+    // Échec de `git diff -U0` UNE FOIS qu'on sait que des pages HTML publiques SONT
+    // touchées : auparavant défauté vers '' → aucune ligne changée trouvée → vert,
+    // alors qu'on SAIT qu'il y a un diff à lire. Fail-closed (Q5).
+    const diffOut = tryGit(['diff', '-U0', `${base}...${head}`, '--', ...touchedPublicHtml]);
+    if (diffOut == null) {
+      return { fatal: `Lecture du diff (git diff -U0 ${base}...${head}) a échoué sur ${touchedPublicHtml.length} page(s) publique(s) pourtant touchée(s) — fail-closed.` };
+    }
+    const changes = parseUnifiedDiff(diffOut);
+    analyzeHtmlChanges(changes, { base, head, headContentCache, baseContentCache, headCtxCache, baseCtxCache, flags });
+  }
+
+  if (touchedJsonData.length > 0) {
+    const jsonFatal = analyzeJsonDataChanges(touchedJsonData, { base, head, jsonDataBase, jsonDataHead, flags });
+    if (jsonFatal) return { fatal: jsonFatal };
+  }
+
+  const washedFlags = washOutUnchangedContent(flags);
+  const verdict = washedFlags.length > 0 ? (hasRevuePubliqueLine(prBody) ? 'vert' : 'rouge') : 'vert';
+  return { flags: washedFlags, touchedPublic, touchedPublicHtml, touchedJsonData, unknownPublicTouch, verdict, revueLine: extractRevuePubliqueLine(prBody) };
+}
+
+function analyzeHtmlChanges(changes, { base, head, headContentCache, baseContentCache, headCtxCache, baseCtxCache, flags }) {
   for (const ch of changes) {
     if (isCommentOnly(ch.content)) continue;
     const ref = ch.side === 'new' ? head : base;
@@ -302,11 +419,39 @@ export function analyze({ base, head, prBody }) {
       if (textNode) flags.push({ file: ch.file, line: ch.lineNo, side: ch.side, kind: 'texte HTML', extract: textNode });
     }
   }
+}
 
-  const washedFlags = washOutUnchangedContent(flags);
+// public/data/*.json (Q2, revue Soleil 2026-09-18) : diff SÉMANTIQUE (parse + walk),
+// pas ligne-à-ligne — un JSON peut être minifié sur une seule ligne, et même
+// pretty-imprimé, une valeur déplacée par un reformatage ne doit pas se lire comme
+// un changement. Chaque valeur-feuille candidate (isTextLikeString, même filtre que
+// jsStringTextFlags) est poussée en side='old'/'new' avec line=null — netée ensuite
+// par le MÊME washOutUnchangedContent() que les flags HTML/JS (comptage par
+// occurrence, testé Q3 : une valeur déplacée sans changer nette à zéro, une valeur
+// réellement ajoutée en plus d'un déplacement reste comptée).
+// Renvoie une chaîne d'erreur fatale, ou null si tout s'est bien passé.
+function analyzeJsonDataChanges(touchedJsonData, { base, head, jsonDataBase, jsonDataHead, flags }) {
+  for (const f of touchedJsonData) {
+    const existedAtBase = jsonDataBase.includes(f);
+    const existedAtHead = jsonDataHead.includes(f);
 
-  const verdict = washedFlags.length > 0 ? (hasRevuePubliqueLine(prBody) ? 'vert' : 'rouge') : 'vert';
-  return { flags: washedFlags, touchedPublic, unknownPublicTouch, verdict, revueLine: extractRevuePubliqueLine(prBody) };
+    for (const [existed, ref, side] of [[existedAtBase, base, 'old'], [existedAtHead, head, 'new']]) {
+      if (!existed) continue; // fichier ajouté/supprimé de ce côté : aucune chaîne de ce côté, normal.
+      const content = fileAt(ref, f);
+      if (content == null) {
+        return `Lecture de ${f} (${ref}) a échoué alors que le fichier est connu à cette référence — fail-closed.`;
+      }
+      let parsed;
+      try { parsed = JSON.parse(content); }
+      catch { return `${f} n'est plus un JSON valide (${ref}) — fail-closed (diff de valeurs de texte impossible).`; }
+      const strings = [];
+      collectJsonStrings(parsed, strings);
+      for (const s of strings) {
+        if (isTextLikeString(s)) flags.push({ file: f, line: null, side, kind: 'valeur JSON texte', extract: s.trim().slice(0, 160) });
+      }
+    }
+  }
+  return null;
 }
 
 function extractRevuePubliqueLine(body) {
@@ -339,21 +484,27 @@ function main() {
     return;
   }
 
-  console.log(`Surfaces publiques (racine) au HEAD : ${result.touchedPublic?.length ?? 0} touchée(s) sur ce diff.`);
+  const nHtml = result.touchedPublicHtml?.length ?? 0;
+  const nJson = result.touchedJsonData?.length ?? 0;
+  console.log(`Surfaces publiques examinées : ${nHtml} page(s) HTML racine, ${nJson} fichier(s) public/data/*.json — ${result.touchedPublic?.length ?? 0} au total sur ce diff.`);
   if (result.unknownPublicTouch?.length) {
     console.log(`::error::Page(s) publique(s) touchée(s) hors classification (ni au BASE ni au HEAD connus) : ${result.unknownPublicTouch.join(', ')}`);
     process.exitCode = 1;
     return;
   }
   if (!result.flags || result.flags.length === 0) {
-    console.log(result.reason || 'Aucun texte visible détecté dans ce diff.');
+    // Résumé explicite même en vert (Q7, revue Soleil 2026-09-18) : un vert muet ne
+    // permet à personne de repérer un vert invraisemblable (ex. 0 extrait sur une PR
+    // qui touche visiblement `lyr_gammajrc_hint`).
+    console.log(result.reason || `0 extrait de texte visible retenu sur ${result.touchedPublic?.length ?? 0} surface(s) publique(s) examinée(s).`);
     console.log('Garde revue publique : OK (rien à revoir).');
     return;
   }
 
   console.log(`Extraits considérés comme du texte visible (${result.flags.length}) :`);
   for (const f of result.flags) {
-    console.log(`  ${f.file}:${f.line} [${f.side === 'new' ? '+' : '-'}] (${f.kind}) ${JSON.stringify(f.extract)}`);
+    const loc = f.line == null ? f.file : `${f.file}:${f.line}`;
+    console.log(`  ${loc} [${f.side === 'new' ? '+' : '-'}] (${f.kind}) ${JSON.stringify(f.extract)}`);
   }
 
   if (result.revueLine) {
