@@ -8539,7 +8539,7 @@ function RF_field(lat, lon, applyVegetation){
   }
   // (2) BROADCAST TDF — repris tel quel de l'ancien calcRF
   if(TDF_EMITTERS && TDF_EMITTERS.length){
-    TDF_EMITTERS.forEach(em=>{ if(!em.par_kw_estimee||em.par_kw_estimee<=0) return; const d_m=Math.max(50,dist(lat,lon,em.lat,em.lon)*1000); const S=Math.min((em.par_kw_estimee*1000/(4*Math.PI*d_m*d_m))*1e6,50000); if(S>0.1){ S_total+=S; } });
+    TDF_EMITTERS.forEach(em=>{ if(!em.par_kw_estimee||em.par_kw_estimee<=0) return; const d_m=Math.max(50,dist(lat,lon,em.lat,em.lon)*1000); const pire_kw_estimee=em.par_kw_estimee*1.64; /* PAR (dBd, réf. dipôle demi-onde, valeur stockée) -> PIRE (dBi), requise par le modèle isotrope S=P/(4πd²) — RAPPORT_VERIF_MOTEUR_2026-09-19 LOT 1 */ const S=Math.min((pire_kw_estimee*1000/(4*Math.PI*d_m*d_m))*1e6,50000); if(S>0.1){ S_total+=S; } });
   }
   // (3) FAISCEAUX HERTZIENS — repris tel quel de l'ancien calcRF
   FH_POINTS.forEach(([a,b,name,intensity])=>{ const d=dist(lat,lon,a,b); let c=0; if(d<1.5)c=intensity*(1-d/1.5); else if(d<4)c=intensity*0.2*(1-(d-1.5)/2.5); if(c>0){ S_total+=c; } });
