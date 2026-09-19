@@ -332,6 +332,128 @@ export async function createHarness(opts = {}) {
     },
 
     /**
+     * Attend que les données de champ chargées EN ASYNCHRONE soient réellement
+     * en place, et ÉCHOUE BRUYAMMENT sinon. À appeler avant toute collecte qui
+     * lit une valeur ELF (`human`, `B_total_nT` du domaine elf, `humanScore`,
+     * `perturbHumain`) OU RF (`calcN_RF_calib`, `RF_field`) — c'est-à-dire avant
+     * toute boucle `calcAll_v2()` dont un chiffre part dans un rapport.
+     *
+     * TROIS grilles, pas une. Le défaut a d'abord été trouvé sur `BT_SEGMENT_GRID`,
+     * mais `ANFR_GRID` court exactement de la même façon : une collecte lancée
+     * trop tôt lit un RF quasi nul (`calcN_RF_calib` sans antennes) — constaté le
+     * 2026-09-20, médiane 0,844 V/m contre 1,368 une fois la grille en place.
+     * `SEGMENT_GRID` (HTA) alimente le même `human` que BT.
+     *
+     * POURQUOI (2026-09-20). `createHarness()` rend la main dès que la page est
+     * interactive ; `BT_SEGMENT_GRID` et `SEGMENT_GRID` (HTA) continuent de se
+     * remplir après. Une boucle lancée immédiatement lit un ELF PARTIEL — jamais
+     * une erreur, juste des nombres trop bas, silencieusement. Fenêtre mesurée :
+     * ~4,6 s par l'agrégat BT, ~136 s en repli. Écart constaté sur une
+     * statistique de rapport : 72,9 % contre 75,0 % de saturation, soit une
+     * conclusion déplacée de deux points sans le moindre signe.
+     * Dette : BT-ZONE-CHARGEMENT-ASYNC-SILENCIEUX-001.
+     *
+     * CE QUI FAIT FOI : l'état des grilles, jamais le temps écoulé. Un retour en
+     * 0 ms est le cas NORMAL quand le chargement s'est déjà terminé — il ne
+     * prouve rien à lui seul, et cette fonction ne s'en contente pas.
+     *
+     * @returns {{ms:number, dejaPret:boolean, declenche:boolean, bt_cellules:number,
+     *            hta_cellules:number, anfr_cellules:number, rf_calib_k:number|null}}
+     *          À imprimer dans le rapport : c'est la preuve que l'attente a eu lieu.
+     *          `rf_calib_k` est rendu POUR ÊTRE LU, pas gardé : cette fonction attend
+     *          des DONNÉES, elle ne déclenche pas `calibrateRF()` — un `rf_calib_k`
+     *          resté à 1 signifie « RF non calibré », et tout chiffre RF collecté
+     *          dans cet état est faux d'un facteur ~2,8. C'est au script appelant de
+     *          calibrer s'il en a besoin, et au rapport de publier cette valeur.
+     * @throws  si une grille requise est encore vide au bout de `timeoutMs`.
+     *          Volontairement fatal : une collecte sur données partielles est
+     *          pire qu'une collecte qui n'a pas lieu.
+     */
+    async waitForFieldData({ timeoutMs = 180000, requireBT = true, requireHTA = true,
+                             requireANFR = true, requireCalibratedRF = true } = {}) {
+      const t0 = Date.now();
+      const etat = () => page.evaluate(() => ({
+        // eslint-disable-next-line no-undef
+        bt: typeof BT_SEGMENT_GRID !== 'undefined' && BT_SEGMENT_GRID ? Object.keys(BT_SEGMENT_GRID).length : 0,
+        // eslint-disable-next-line no-undef
+        hta: typeof SEGMENT_GRID !== 'undefined' && SEGMENT_GRID ? Object.keys(SEGMENT_GRID).length : 0,
+        // eslint-disable-next-line no-undef
+        anfr: typeof ANFR_GRID !== 'undefined' && ANFR_GRID ? Object.keys(ANFR_GRID).length : 0,
+        // eslint-disable-next-line no-undef
+        k: typeof RF_CALIB_K !== 'undefined' ? RF_CALIB_K : null,
+        // eslint-disable-next-line no-undef
+        aLoaderANFR: typeof loadANFRForField === 'function',
+      }));
+
+      let e = await etat();
+      if (requireANFR && !e.aLoaderANFR) {
+        throw new Error(
+          'waitForFieldData : requireANFR demande mais loadANFRForField() est absente de la page. '
+          + 'Passer requireANFR:false EXPLICITEMENT si cette collecte ne lit aucune valeur RF — '
+          + 'ne pas laisser l\'exigence tomber en silence.');
+      }
+      const manque = () => (requireBT && !e.bt) || (requireHTA && !e.hta) || (requireANFR && !e.anfr);
+      // Grilles déjà prêtes : on NE SORT PAS ici. La calibration RF (plus bas) est
+      // une course distincte des grilles — sortir en avance la sauterait, et le
+      // garde ne tiendrait sa promesse que dans le cas lent. C'est exactement la
+      // forme de trou qu'il existe pour fermer.
+      const dejaPret = !manque();
+
+      // Déclenche les chargements manquants seulement. loadBTAgregatOuRepli()
+      // est le chemin principal depuis le 2026-09-14 ; il retombe de lui-même
+      // sur loadBTLinesAsync() si le marqueur ne correspond plus au vivant.
+      if (!dejaPret) await page.evaluate(async ({ bt, hta, anfr }) => {
+        const jobs = [];
+        // eslint-disable-next-line no-undef
+        if (bt && typeof loadBTAgregatOuRepli === 'function') jobs.push(loadBTAgregatOuRepli());
+        // eslint-disable-next-line no-undef
+        else if (bt && typeof loadBTLinesAsync === 'function') jobs.push(loadBTLinesAsync());
+        // eslint-disable-next-line no-undef
+        if (hta && typeof loadHTADataOnly === 'function') jobs.push(loadHTADataOnly());
+        // eslint-disable-next-line no-undef
+        if (anfr && typeof loadANFRForField === 'function') jobs.push(loadANFRForField());
+        await Promise.allSettled(jobs);
+      }, { bt: requireBT && !e.bt, hta: requireHTA && !e.hta, anfr: requireANFR && !e.anfr });
+
+      // Le déclenchement peut avoir échoué sans lever (Promise.allSettled) :
+      // on revérifie l'état, on ne suppose pas le succès.
+      const echeance = t0 + timeoutMs;
+      while (!dejaPret) {
+        e = await etat();
+        if (!manque()) break;
+        if (Date.now() >= echeance) {
+          throw new Error(
+            'waitForFieldData : grille(s) encore vide(s) apres ' + Math.round((Date.now() - t0) / 1000)
+            + ' s — BT=' + e.bt + ' cellules, HTA=' + e.hta + ' cellules, ANFR=' + e.anfr + ' cellules. '
+            + 'Collecte REFUSEE : toute valeur ELF ou RF lue maintenant serait partielle et trop basse, '
+            + 'sans aucun signe visible. Cf. BT-ZONE-CHARGEMENT-ASYNC-SILENCIEUX-001.');
+        }
+        await new Promise(r => setTimeout(r, 250));
+      }
+
+      // TROISIÈME course, distincte des deux grilles et trouvée en les fermant
+      // (2026-09-20) : `RF_CALIB_K` passe de 1 à sa valeur calibrée ~1 s APRÈS le
+      // premier calcAll_v2. Une boucle lancée avant calcule ses premiers points
+      // non calibrés (~×2,8 trop haut) et les suivants calibrés — un jeu de
+      // valeurs qui n'est même pas homogène avec lui-même. On termine donc ici,
+      // de façon déterministe, ce que le boot ferait de toute façon en asynchrone.
+      // calibrateRF() est idempotente (elle force k=1 en interne avant de dériver).
+      if (requireCalibratedRF && requireANFR) {
+        // eslint-disable-next-line no-undef
+        const kFinal = await page.evaluate(async () => { await calibrateRF(); return RF_CALIB_K; });
+        if (kFinal === 1 || kFinal == null) {
+          throw new Error(
+            'waitForFieldData : RF_CALIB_K vaut ' + kFinal + ' apres calibrateRF() — la calibration '
+            + 'a echoue (grille ANFR vide ou 0 point exploitable). Collecte REFUSEE : tout chiffre RF '
+            + 'lu maintenant serait non calibre. Passer requireCalibratedRF:false si c\'est voulu.');
+        }
+        e.k = kFinal;
+      }
+      return { ms: Date.now() - t0, dejaPret, declenche: !dejaPret,
+        bt_cellules: e.bt, hta_cellules: e.hta, anfr_cellules: e.anfr, rf_calib_k: e.k };
+    },
+
+    /**
      * Evaluate an arbitrary expression inside the page. The function body runs
      * in the page context with access to all globals. Use for one-off
      * inspections.
