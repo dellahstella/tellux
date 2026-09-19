@@ -119,6 +119,48 @@ function duree(ms) {
 const mediane = (xs) => { if (!xs.length) return NaN; const s = [...xs].sort((a, b) => a - b); const k = s.length >> 1; return s.length % 2 ? s[k] : (s[k - 1] + s[k]) / 2; };
 const shaBlob = (buf) => createHash('sha1').update(Buffer.concat([Buffer.from(`blob ${buf.length}\0`), buf])).digest('hex');
 const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Renvoie une copie de `src`, MÊME LONGUEUR, où commentaires (`//`, `/* */`) et intérieurs
+// de littéraux de chaîne ('…', "…", `…`) sont effacés (espaces) — les guillemets eux-mêmes
+// sont conservés. Sert de base à toute analyse de blocs JS ci-dessous (P6/P7) : ce fichier
+// commente abondamment, et un motif de code cherché à l'aveugle peut matcher à l'intérieur
+// d'un commentaire (le même défaut déjà connu pour les citations Supabase de P4, ici
+// générique). Positions alignées sur le source original — slicer l'original aux indices
+// trouvés sur la copie dépouillée donne le texte réel, jamais un commentaire.
+function depouillerCommentaires(src) {
+  let out = '', dans = null;
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i], c2 = src[i + 1];
+    if (dans === '//') { out += c === '\n' ? (dans = null, '\n') : ' '; continue; }
+    if (dans === '/*') { if (c === '*' && c2 === '/') { dans = null; out += '  '; i++; } else out += c === '\n' ? '\n' : ' '; continue; }
+    if (dans === "'" || dans === '"' || dans === '`') {
+      if (c === '\\') { out += '  '; i++; continue; }
+      if (c === dans) { dans = null; out += c; } else out += c === '\n' ? '\n' : ' ';
+      continue;
+    }
+    if (c === '/' && c2 === '/') { dans = '//'; out += '  '; i++; continue; }
+    if (c === '/' && c2 === '*') { dans = '/*'; out += '  '; i++; continue; }
+    if (c === "'" || c === '"' || c === '`') { dans = c; out += c; continue; }
+    out += c;
+  }
+  return out;
+}
+// Trouve, dans une source DÉJÀ DÉPOUILLÉE (ci-dessus), le bloc `ouvre…ferme` équilibré qui
+// commence au premier `ouvre` à `depuis` ou après — comptage de profondeur simple, valable
+// puisque commentaires/chaînes ne portent plus de `{}()[]` une fois dépouillés. Renvoie les
+// indices [début, fin) dans la source dépouillée (donc aussi dans l'originale, même
+// longueur) — jamais le texte lui-même : à l'appelant de slicer l'original s'il veut le
+// contenu réel plutôt que la version dépouillée.
+function borneBlocEquilibre(srcDepouille, depuis, ouvre, ferme) {
+  const debut = srcDepouille.indexOf(ouvre, depuis);
+  if (debut < 0) return null;
+  let profondeur = 0;
+  for (let i = debut; i < srcDepouille.length; i++) {
+    if (srcDepouille[i] === ouvre) profondeur++;
+    else if (srcDepouille[i] === ferme) { profondeur--; if (profondeur === 0) return [debut, i + 1]; }
+  }
+  return null; // non équilibré trouvé avant la fin de la source — motif non reconnu, pas planté
+}
 async function parLots(items, n, fn) {
   const out = new Array(items.length); let i = 0;
   await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
@@ -159,6 +201,8 @@ const CATALOGUE = [
   ['P3', 'Couches déclarées par les pages servies', 'prod', 'clés de `const LAYERS = {…}` ; bouton `id="b-<clé>"` hors commentaires HTML, au besoin par rapprochement de nom (tirets et soulignés ignorés)', 'l’écran : un bouton créé en JS ou masqué en CSS échappe — « présent » n’est pas « visible »'],
   ['P4', 'Tables Supabase citées par les pages servies', 'Supabase — hôte et clé lus dans les pages servies', 'tables nommées littéralement dans `sbGet(…)`, `.from(…)` ou une URL `/rest/v1/<table>`, hors commentaires HTML ; usage — lecture ou écriture — lu sur l’appel, ou dans la définition de l’utilitaire appelé ; lignes visibles avec la clé anon servie (HEAD, aucun corps)', 'ce qu’un visiteur ne voit pas : 0 visible ne prouve pas une table vide ; si une écriture est atteignable (un formulaire commenté écrit encore sur le papier) ; une requête qui ne passe par aucune de ces trois formes'],
   ['P5', 'Identifiant de version servi', 'prod, en-têtes HTTP', 'ETag, Last-Modified et en-têtes `x-*` de la page d’accueil', '—'],
+  ['P6', 'Loi de décroissance par catégorie de source ELF', 'prod', 'dans chaque fonction `calcMagneticELF*` des pages servies, chaque bloc `<NOM>.forEach(…)` ; `Math.pow(réf/d, exposant)` → source ponctuelle, modèle `*_OVER_2PI` sans `Math.pow` → source ligne (fil rectiligne infini, exposant 1 non comparable) ; aucun nom de catégorie présupposé au-delà du préfixe de fonction', 'les catégories qui ne bouclent pas sur ce motif (ex. paliers manuels type `BT_ZONES`) ; toute source ELF calculée hors d’une fonction `calcMagneticELF*` ; une loi correcte appliquée à la mauvaise géométrie de source'],
+  ['P7', 'Couverture de `GAMMA_TERRESTRE_PAR_LITHOTYPE`', 'prod', 'clés de l’objet (lithotypes ancrés), `status` et présence/absence de `range_nGy_h` par clé ; lithotypes non couverts = domaine de `GEO_SUSC_GRID` (4ᵉ élément de chaque tuple) moins les clés ancrées', 'la défendabilité d’une valeur ou d’un statut — seul l’état est rapporté ; les lithotypes qui n’apparaissent dans aucun des deux objets'],
   ['R1', 'Dernier ADR pris', 'registre fourni par --registre', 'plus grand `### ADR-NNN` sur la réf distante suivie ; fraîcheur par `git ls-remote`', 'sans --registre, rien : sort INDISPONIBLE'],
 ];
 
@@ -168,7 +212,7 @@ const CHAMPS = {};    // id → { statut, corps, requete, raison }
 const champ = (id, statut, corps, extra = {}) => { CHAMPS[id] = { statut, corps, ...extra }; };
 const indispo = (id, raison, requete) => champ(id, 'INDISPONIBLE', null, { raison, requete });
 const IDS_DEPOT = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8'];
-const IDS_PROD = ['P1', 'P2', 'P3', 'P4', 'P5'];
+const IDS_PROD = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7'];
 
 const DEPOT = ARGS.depot || (() => {
   const url = cmd('git', ['remote', 'get-url', 'origin'], ICI);
@@ -461,6 +505,12 @@ async function collecterProd() {
 
   // P4 — Supabase
   await collecterSupabase(pagesServies);
+
+  // P6 — loi de décroissance par catégorie de source ELF
+  collecterLoiDecroissance(pagesServies);
+
+  // P7 — couverture de GAMMA_TERRESTRE_PAR_LITHOTYPE
+  collecterGammaLithotype(pagesServies);
 }
 
 function roleJeton(j) {
@@ -550,6 +600,139 @@ async function collecterSupabase(pagesServies) {
     const raisons = [alertes.length && 'jeton non anon présent dans une page servie', incertain && !alertes.length && 'un hôte sans clé anon', douteux.length && `compte non obtenu pour ${douteux.join(', ')}, même après un second essai`].filter(Boolean);
     champ('P4', raisons.length ? 'INCERTAIN' : 'OK', blocs.join('\n\n'), { requete: 'HEAD <hôte>/rest/v1/<table>?select=* avec Prefer: count=exact — aucun corps transféré ; second essai sur échec réseau ou 5xx', raison: raisons.join(' ; ') || null });
   }
+}
+
+// ─── P6 — loi de décroissance par catégorie de source ELF ─────────────────────────────────
+// Motivé par deux faits que ce générateur a longtemps ignorés en silence (revue Soleil,
+// 2026-09-18) : PROD_ELECTRIQUE a décrit une décroissance en 1/d alors que le code, depuis
+// #1508 (2026-09-17), applique 1/d³ (dipôle) — et le générateur n'avait tout simplement
+// aucune logique pour ce fait, dans un sens comme dans l'autre. Ici : dérivé du code à
+// chaque exécution, jamais recopié.
+//
+// Détecte, dans le CORPS de chaque bloc `<NOM_MAJUSCULE>.forEach(…)` trouvé À L'INTÉRIEUR
+// d'une fonction `calcMagneticELF*` (ancre nécessaire : un balayage non scopé matche aussi
+// des dizaines de `.forEach(` sans rapport ailleurs dans le fichier — `I18N_ENTRIES`,
+// `WMM_GRID`, `RICH_HTML_EN`… — noyant les 3-4 catégories ELF réelles sous du bruit ; même
+// principe d'ancrage que P3 sur `const LAYERS = {…}`, appliqué ici à la fonction plutôt
+// qu'à un objet), un facteur `Math.pow(<réf>/<d>, <exposant>)` : la forme utilisée par
+// toutes les sources ponctuelles ELF connues à la rédaction (PROD_ELECTRIQUE,
+// POSTES_SOURCES, EOLIENNES_DATA). Un bloc qui divise directement par la distance SANS
+// `Math.pow`, en présence d'une constante nommée `*_OVER_2PI` (Biot-Savart, fil rectiligne
+// infini — segments HTA) est signalé à part : géométrie de source différente (ligne, pas
+// point), dont l'exposant 1 n'est pas comparable à celui d'une source ponctuelle. Rejoué
+// sur toutes les fonctions `calcMagneticELF*` trouvées (`v1`/`v2`/`Auto` à la rédaction,
+// jamais un nom présupposé au-delà du préfixe) : si deux copies divergeaient un jour, ce
+// champ passerait INCERTAIN plutôt que de n'en montrer qu'une en silence.
+function loiDecroissancePourBloc(corpsDepouille) {
+  const pow = corpsDepouille.match(/Math\.pow\(\s*[^,()]+?,\s*(\d+)\s*\)/);
+  if (pow) return `1/d^${pow[1]} (\`Math.pow\`)`;
+  if (/_OVER_2PI\b/.test(corpsDepouille) && /\/\s*d_?m?\b/.test(corpsDepouille)) return '1/d (modèle fil rectiligne infini, Biot-Savart — géométrie ligne, pas point)';
+  return null;
+}
+function collecterLoiDecroissance(pagesServies) {
+  const parCategorie = new Map();   // nom → Map(forme → Set(pages))
+  const nonReconnu = new Set();
+  let fonctionsTrouvees = 0;
+  for (const p of pagesServies) {
+    const original = SERVI[p], depouille = depouillerCommentaires(original);
+    for (const fn of depouille.matchAll(/\bfunction\s+(calcMagneticELF\w*)\s*\(/g)) {
+      const bornesFn = borneBlocEquilibre(depouille, fn.index + fn[0].length - 1, '{', '}');
+      if (!bornesFn) continue;
+      fonctionsTrouvees++;
+      const corpsFn = depouille.slice(...bornesFn);
+      for (const m of corpsFn.matchAll(/\b([A-Z][A-Z0-9_]*)\.forEach\(/g)) {
+        const nom = m[1];
+        const bornes = borneBlocEquilibre(corpsFn, m.index + m[0].length - 1, '(', ')');
+        if (!bornes) continue;
+        const forme = loiDecroissancePourBloc(corpsFn.slice(...bornes));
+        if (!parCategorie.has(nom)) parCategorie.set(nom, new Map());
+        if (forme == null) { nonReconnu.add(`\`${nom}\` (${fn[1]}, ${p})`); continue; }
+        const parForme = parCategorie.get(nom);
+        if (!parForme.has(forme)) parForme.set(forme, new Set());
+        parForme.get(forme).add(`${fn[1]} (${p})`);
+      }
+    }
+  }
+  if (!fonctionsTrouvees) {
+    champ('P6', 'INCERTAIN', 'aucune fonction `calcMagneticELF*` trouvée dans les pages servies.', { raison: 'motif `function calcMagneticELF*(` non reconnu — nom peut-être changé' });
+    return;
+  }
+  if (!parCategorie.size) {
+    champ('P6', 'INCERTAIN', `${fonctionsTrouvees} fonction(s) \`calcMagneticELF*\` trouvée(s), mais aucun bloc \`<NOM>.forEach(\` dedans.`, { raison: 'motif non reconnu — aucune catégorie de source ELF détectée par ce motif' });
+    return;
+  }
+  const divergentes = [];
+  const lignes = [...parCategorie.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([nom, parForme]) => {
+    if (!parForme.size) return `| \`${nom}\` | motif non reconnu dans le corps de la boucle |`;
+    const formes = [...parForme.entries()];
+    if (formes.length > 1) divergentes.push(nom);
+    const val = formes.length === 1
+      ? formes[0][0]
+      : `**${formes.length} formes différentes selon l’occurrence** — ${formes.map(([f, pages]) => `${f} (${[...pages].join(', ')})`).join(' vs ')}`;
+    return `| \`${nom}\` | ${val} |`;
+  });
+  const incertain = divergentes.length > 0 || nonReconnu.size > 0;
+  champ('P6', incertain ? 'INCERTAIN' : 'OK',
+    '| catégorie (`.forEach`) | loi de décroissance |\n|---|---|\n' + lignes.join('\n')
+    + (nonReconnu.size ? `\n\nMotif non reconnu (ni \`Math.pow\`, ni modèle fil rectiligne infini) : ${[...nonReconnu].join(', ')} — souvent un modèle par paliers manuels, pas une loi de puissance.` : ''),
+    { requete: 'analyse statique des pages servies : dans chaque fonction `calcMagneticELF*`, blocs `<NOM>.forEach(` contenant `Math.pow(réf/d, exposant)` ou un modèle `*_OVER_2PI` sans `Math.pow`, commentaires et chaînes dépouillés avant recherche',
+      raison: divergentes.length ? `${divergentes.join(', ')} porte(nt) des lois différentes selon l’occurrence trouvée (ex. deux copies de la fonction de calcul en désaccord) — vérifier laquelle est effectivement appelée` : nonReconnu.size ? 'motif non reconnu pour au moins une catégorie' : null });
+}
+
+// ─── P7 — couverture de GAMMA_TERRESTRE_PAR_LITHOTYPE ──────────────────────────────────────
+// Motivé par le même défaut que P6 : le générateur classait calcaire et gneiss parmi les
+// lithotypes non couverts alors que #1511 (2026-09-17) les a ancrés — parce qu'il n'avait,
+// là non plus, aucune logique pour ce fait. Rapporte l'état (clé présente ou non, `status`
+// littéral du code, intervalle présent ou non) SANS juger la défendabilité d'une valeur —
+// ce jugement reste humain (§A.8, critère « défendable + étiqueté »).
+//
+// « Ancrés » = clés de l'objet `GAMMA_TERRESTRE_PAR_LITHOTYPE`. « Non couverts » = domaine
+// des lithotypes cités par `GEO_SUSC_GRID` (4ᵉ élément de chaque tuple `[lat, lon,
+// susceptibilité, type_roche]`) qui n'apparaît PAS parmi ces clés — jamais une liste en dur
+// des noms non couverts (elle datait déjà d'avant #1511) : le domaine se recalcule à chaque
+// génération depuis le second objet, structurellement.
+function collecterGammaLithotype(pagesServies) {
+  for (const p of pagesServies) {
+    const original = SERVI[p], depouille = depouillerCommentaires(original);
+    const mLitho = depouille.match(/\bGAMMA_TERRESTRE_PAR_LITHOTYPE\s*=/);
+    if (!mLitho) continue;
+    const bornesLitho = borneBlocEquilibre(depouille, mLitho.index, '{', '}');
+    if (!bornesLitho) { champ('P7', 'INCERTAIN', `\`GAMMA_TERRESTRE_PAR_LITHOTYPE\` trouvée dans \`${p}\` mais son bloc \`{…}\` n’est pas équilibré — motif non reconnu.`, { raison: 'accolade non refermée trouvée avant la fin du fichier, ou motif de déclaration inattendu' }); return; }
+    const texteLitho = original.slice(...bornesLitho);
+    const entrees = [];
+    for (const m of texteLitho.matchAll(/(\w+)\s*:\s*\{([^{}]*)\}/g)) {
+      const range = /range_nGy_h\s*:\s*null\b/.test(m[2]) ? 'absent' : /range_nGy_h\s*:\s*\[/.test(m[2]) ? 'présent' : 'motif non reconnu';
+      const status = m[2].match(/status\s*:\s*'([^']*)'/)?.[1] ?? 'motif non reconnu';
+      entrees.push({ cle: m[1], status, range });
+    }
+    if (!entrees.length) { champ('P7', 'INCERTAIN', `\`GAMMA_TERRESTRE_PAR_LITHOTYPE\` trouvée dans \`${p}\` mais aucune entrée \`clé: {…}\` reconnue dedans.`, { raison: 'motif d’entrée non reconnu' }); return; }
+    const couvertes = new Set(entrees.map((e) => e.cle));
+
+    const mGrid = depouille.match(/\bGEO_SUSC_GRID\s*=/);
+    let nonCouverts = null, raisonGrid = null;
+    if (!mGrid) raisonGrid = '`GEO_SUSC_GRID` non trouvée dans cette page : domaine des lithotypes non dérivable, seuls les lithotypes ancrés sont rapportés';
+    else {
+      const bornesGrid = borneBlocEquilibre(depouille, mGrid.index, '[', ']');
+      if (!bornesGrid) raisonGrid = '`GEO_SUSC_GRID` trouvée mais son bloc `[…]` n’est pas équilibré — domaine non dérivable';
+      else {
+        const texteGrid = original.slice(...bornesGrid);
+        const domaine = new Set([...texteGrid.matchAll(/,\s*'([a-z_]+)'\s*\]/g)].map((m) => m[1]));
+        nonCouverts = [...domaine].filter((x) => !couvertes.has(x)).sort();
+      }
+    }
+
+    const lignes = entrees.sort((a, b) => a.cle.localeCompare(b.cle)).map((e) => `| \`${e.cle}\` | ${cell(e.status)} | ${e.range} |`);
+    let corps = `**${entrees.length} lithotype(s) ancré(s)** dans \`GAMMA_TERRESTRE_PAR_LITHOTYPE\` (\`${p}\`) :\n\n`
+      + '| lithotype | `status` (littéral du code) | intervalle `range_nGy_h` |\n|---|---|---|\n' + lignes.join('\n');
+    corps += nonCouverts
+      ? (nonCouverts.length
+        ? `\n\n**${nonCouverts.length} lithotype(s) du domaine \`GEO_SUSC_GRID\` non couvert(s)** (aucune entrée) : ${nonCouverts.map((x) => `\`${x}\``).join(', ')}.`
+        : '\n\nAucun lithotype du domaine `GEO_SUSC_GRID` non couvert : tous ont une entrée.')
+      : '';
+    champ('P7', raisonGrid && !nonCouverts ? 'INCERTAIN' : 'OK', corps, { requete: `analyse statique de \`${p}\` : objet \`GAMMA_TERRESTRE_PAR_LITHOTYPE\` (clés, \`status\`, \`range_nGy_h\`) et domaine de \`GEO_SUSC_GRID\` (4ᵉ élément de chaque tuple)`, raison: raisonGrid });
+    return; // une seule page attendue à porter cette constante ; la première trouvée suffit
+  }
+  if (!CHAMPS.P7) champ('P7', 'INCERTAIN', 'aucune page servie ne déclare `GAMMA_TERRESTRE_PAR_LITHOTYPE`.', { raison: 'motif non reconnu — soit la constante a été renommée, soit aucune page servie ne la porte' });
 }
 
 // ─── registre ADR ─────────────────────────────────────────────────────────────────────────
