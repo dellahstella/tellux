@@ -129,6 +129,12 @@ async function main() {
     chargeFacteur: fixture.runtime_state_at_capture.chargeFacteur,
   });
 
+  // GARDE (2026-09-20) : ce script lit elf_nT par point — meme fenetre asynchrone
+  // que le patron rf-residuals-collect.mjs.
+  const pret = await harness.waitForFieldData();
+  console.error('[garde] donnees de champ pretes : BT=' + pret.bt_cellules + ' cellules, HTA='
+    + pret.hta_cellules + ' cellules (' + pret.ms + ' ms)');
+
   const collected = [];
   for (const p of points) {
     const v2 = await harness.calcAll_v2(p.lat, p.lon, p.options || {});

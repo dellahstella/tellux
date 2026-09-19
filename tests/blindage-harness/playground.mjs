@@ -36,6 +36,7 @@ async function modeRfResiduals() {
   console.log('');
 
   const harness = await createHarness();
+  await harness.waitForFieldData(); // garde 2026-09-20 — cf. harness.waitForFieldData()
   console.log('Harness ready.');
   console.log('');
 
@@ -88,6 +89,7 @@ async function modeSensitivity() {
   const picks = fixture.points.filter((p) => samples.includes(p.id));
 
   const harness = await createHarness();
+  await harness.waitForFieldData(); // garde 2026-09-20 — cf. harness.waitForFieldData()
   console.log('Harness ready.');
   console.log('');
 
