@@ -41,6 +41,11 @@ const POINTS = [
 
 async function main() {
   const harness = await createHarness();
+  // GARDE (2026-09-20) : ce test compare deux expressions de `human` — une egalite
+  // reste vraie meme si les deux cotes lisent un ELF partiel (voire nul), donc le
+  // test PASSAIT en ne verifiant presque rien. La garde ne corrige pas un chiffre
+  // faux ici, elle rend l'assertion reellement portante.
+  await harness.waitForFieldData();
   let nFail = 0;
 
   try {
