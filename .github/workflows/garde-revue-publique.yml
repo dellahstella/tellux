@@ -1,0 +1,97 @@
+name: garde-revue-publique
+
+# Garde revue publique — Phase 1, GÉNÉRATEUR, EN OBSERVATION (brief Soleil, 2026-09-18).
+#
+# POURQUOI CE CHECK EXISTE
+# ------------------------
+# Trois franchissements les 17 et 18 septembre 2026 (#1512, #1517, phrase Bouygues sur
+# #1519) : du contenu public neuf mergé sans que la revue web préalable ait tranché,
+# à chaque fois par un jugement humain de bonne foi ("ce n'est pas du contenu neuf" /
+# "c'est un déplacement mécanique"). Ce garde-fou ne juge plus si un changement de texte
+# public est acceptable — il détecte mécaniquement qu'un texte visible a changé sur une
+# surface publique et exige seulement une TRACE de revue (`Revue-publique: <référence>`
+# dans le corps de la PR), sans évaluer la revue elle-même.
+#
+# Logique complète et commentée : .github/scripts/garde-revue-publique.mjs (lire son
+# en-tête avant de modifier l'un ou l'autre).
+#
+# STATUT — NON REQUIS (2026-09-18)
+# ---------------------------------
+# Ce check tourne sur toute PR et colore rouge/vert honnêtement (pas de
+# `continue-on-error`), mais N'EST PAS dans la liste des required status checks de
+# `main` : un rouge ici ne bloque aucun merge tant que Soleil n'a pas explicitement
+# ajouté son nom à la protection de branche (`PATCH .../required_status_checks`, même
+# geste que pour schema-payload-guard.yml — jamais auto-adopté par une session, cf.
+# CLAUDE.md local § Autonomie). Passer en requis est un geste humain, pas une étape
+# de ce brief.
+#
+# NOM DU JOB — celui qui sera enregistré dans la protection le jour où Soleil le rend
+# requis. Choisi et documenté ici explicitement (brief, étape e) :
+#   "Revue publique — texte visible sans ligne Revue-publique (lecture seule)"
+#
+# PAS DE FILTRE `paths:` — un required status check filtré par chemins laisse les PR
+# hors périmètre indéfiniment "pending" (INS-007/ADR-067, déjà vécu sur
+# schema-payload-guard.yml). Ce check n'est pas encore requis, mais il est conçu pour
+# pouvoir le devenir sans qu'il faille revenir corriger ce point plus tard.
+#
+# LECTURE SEULE — permissions minimales (contents: read seulement) : ce workflow ne
+# commente rien, n'écrit rien sur le dépôt, n'ouvre aucune issue. Le corps de la PR est
+# lu depuis l'événement `pull_request` lui-même (github.event.pull_request.body),
+# aucun appel API supplémentaire n'est nécessaire.
+
+on:
+  pull_request:
+    branches:
+      - main
+    # `edited` ajouté explicitement (types par défaut GitHub : opened/synchronize/
+    # reopened seulement) — sans lui, ajouter la ligne `Revue-publique:` À POSTERIORI
+    # dans le corps d'une PR déjà rouge ne redéclenche jamais ce check : il reste
+    # rouge indéfiniment, sans autre repli qu'un commit vide. Revue Soleil, PR #1522
+    # (Q4) : « le genre de détail qui fait abandonner une garde au bout de trois
+    # jours ». `edited` se déclenche aussi sur un changement de titre seul (pas
+    # seulement le corps) — un run de plus, jamais un blocage, coût accepté.
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  garde-revue-publique:
+    name: "Revue publique — texte visible sans ligne Revue-publique (lecture seule)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # historique complet requis pour le diff base...head
+
+      - name: Setup Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Tests de non-régression (node:test) — avant d'exécuter la garde sur ce diff
+        # Cas construits, pas le pipeline git complet (rejoué manuellement à chaque
+        # revue et consigné en description de PR, dépend de SHA réels non reproductibles
+        # en isolation). Couvre notamment les 4 paires de vocabulaire réglementaire/
+        # scientifique de la revue Soleil du 2026-09-18 (point 1, PR #1522) — ce sont
+        # elles qui justifient le garde-fou, pas les libellés d'état d'UI. Volontairement
+        # AVANT le step suivant : si la garde elle-même a régressé, on le sait avant de
+        # lui faire lire le vrai diff, plutôt que de lui faire confiance à l'aveugle.
+        run: node --test .github/scripts/garde-revue-publique.test.mjs
+
+      - name: Exécuter la garde
+        env:
+          GRP_BASE: ${{ github.event.pull_request.base.sha }}
+          GRP_HEAD: ${{ github.sha }}
+          GRP_PR_BODY: ${{ github.event.pull_request.body }}
+        run: node .github/scripts/garde-revue-publique.mjs
+        # Pas de `continue-on-error` : un vrai défaut détecté doit colorer ce check en
+        # rouge (visible dans l'onglet Checks de la PR) — il n'est simplement pas dans
+        # la liste des required status checks de `main`, donc ce rouge ne bloque rien
+        # tant que Soleil ne l'y ajoute pas explicitement (cf. statut ci-dessus).
