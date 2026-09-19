@@ -8405,8 +8405,9 @@ let ANFR_GRID = null;        // { "gi_gj": [ {lat,lon,generation}, ... ] } — i
 let _anfrLoadPromise = null; // partage le fetch entre appels concurrents (boot + toggle couche)
 let RF_CALIB_K = 1;          // calibration interne Tellux : facteur scalaire E_cal = k·E_raw (défaut 1 = non calibré)
 let RF_CALIB_STATS = null;   // {k_med,k_geo,disp_geo,iqr,n_used,n_excl_nonconf,n_excl_oor,n_excl_indoor,
-                              //  n_excl_ineligible,k_res,pen_dB,n_total,n_fichier_total,bands} — commentaire
-                              // complété 2026-09-04 (brief AG), manquait 5 champs réellement présents.
+                              //  n_excl_ineligible,n_excl_bande,k_res,pen_dB,n_total,n_fichier_total,
+                              //  bands} — commentaire complété 2026-09-04 (brief AG), manquait 5 champs
+                              // réellement présents ; n_excl_bande ajouté 2026-09-20 (contrôle de bande).
                               // Assignée par une calibration RÉUSSIE (calibrateRF(), au boot ou par la
                               // reprise 'anfr' — lot B, 2026-09-10). Relue comme drapeau « calibration
                               // réussie » par repriseTDF() (lot RF) et par rfCalibre(), source des
@@ -8841,6 +8842,27 @@ function calcRF(lat, lon, applyVegetation){
 // par génération, pas par bande fine → comparaison fine = enrichissement ANFR fréquence ultérieur).
 // Label honnête : calibration INTERNE (extérieurs seuls), relecture physicien en cours ;
 // couche = estimation centrale d'ordre de grandeur (S2/S5/S6, PAS un majorant).
+// Contrôle de bande (2026-09-20, BRIEF_CODE_CONTROLE_BANDE_CALIBRATION_2026-09-20) — avant ce
+// correctif, calibrateRF() ne vérifiait AUCUNE bande de fréquence : deux fiches « objet
+// communicant fixe » 9 kHz-100 kHz (id 190593, 194161, protocole ANFR/DR 15-4 annoté) n'étaient
+// hors pool que parce qu'elles sont 'residentiel' (filtre S2 plus bas, qui ne les vise pas) — en
+// exterieur_public, une mesure hors bande serait entrée dans le pool de calibration sans rien
+// déclencher. Bande basse du modèle établie DEPUIS LE CODE, pas supposée : (1) antennes mobiles
+// ANFR documentées « systématiquement >100 MHz » (cf. commentaire de calcSoilConductivityEffective
+// ci-dessus) ; (2) TDF_EMITTERS diffuse aussi RADIO_FM (public/data/tdf_emitters_corse.json,
+// champ services) — FM = 87,5-108 MHz, bande standard internationale, pas une mesure du dépôt.
+// Borne retenue = la plus basse des deux composantes réellement modélisées : 87,5 MHz. Bande
+// HAUTE non contrôlée : FH_POINTS (faisceaux hertziens) ne porte aucune fréquence dans le code
+// (points synthétiques, poids seul) — impossible de l'établir sans la supposer, donc pas de
+// contrôle haut ici ; limite documentée, pas contournée en silence.
+const MODEL_RF_FREQ_MHZ_MIN = 87.5;
+function parseProtocoleBandeMhz(protocole){
+  if(!protocole) return null;
+  const m = /(\d+(?:[.,]\d+)?)\s*(kHz|MHz|GHz)\s*-\s*(\d+(?:[.,]\d+)?)\s*(kHz|MHz|GHz)/i.exec(protocole);
+  if(!m) return null;
+  const toMhz=(v,u)=>{const n=parseFloat(v.replace(',','.'));const k={khz:1e-3,mhz:1,ghz:1e3}[u.toLowerCase()];return n*k;};
+  return { min_mhz: toMhz(m[1],m[2]), max_mhz: toMhz(m[3],m[4]) };
+}
 async function calibrateRF(){
   // Lot B de la reprise (2026-09-10) — deux gardes, et calibrateRF() devient la fonction de reprise de
   // la clé 'anfr' (inscription plus bas) :
@@ -8859,7 +8881,7 @@ async function calibrateRF(){
     const d=await r.json(); const mes=d.mesures||[];
     RF_CALIB_K=1; // IDEMPOTENCE : calibrer sur le champ BRUT (E_pred non calibré, indépendant
                   // d'un k antérieur). Bloc synchrone jusqu'au RF_CALIB_K=k_med (aucun await → pas de fenêtre).
-    const ratios=[]; const resRatios=[]; let nNC=0,nOOR=0,nIndoor=0,nIneligible=0; const bandE2={};
+    const ratios=[]; const resRatios=[]; let nNC=0,nOOR=0,nIndoor=0,nIneligible=0,nHorsBande=0; const bandE2={};
     mes.forEach(m=>{
       // GARDE-FOU (2026-09-02, ingestion élargie Cartoradio) : calib_eligible===false exclut EN
       // PREMIER, avant tout autre filtre. Absence du champ (les 30 fiches d'origine, jamais
@@ -8869,6 +8891,11 @@ async function calibrateRF(){
       // distinct, non tranché ici. Cf. dette privée CARTORADIO-REFRESH-001.
       if(m.calib_eligible===false){ nIneligible++; return; }
       if(m.conforme===false){ nNC++; return; }                 // exclut l'aberrant non conforme
+      // Contrôle de bande (2026-09-20) : exclut AVANT le filtre environnement une fiche dont le
+      // protocole annonce une bande entièrement sous MODEL_RF_FREQ_MHZ_MIN — sans ce contrôle,
+      // une telle fiche en exterieur_public entrerait dans `ratios` sans rien déclencher.
+      const bande=parseProtocoleBandeMhz(m.protocole);
+      if(bande && bande.max_mhz < MODEL_RF_FREQ_MHZ_MIN){ nHorsBande++; return; }
       const meas=m.valeur_max_vm; if(meas==null||m.lat==null||m.lon==null) return;
       const Epred=RF_field(m.lat,m.lon).E_total_V_m;            // k=1 forcé ci-dessus → champ brut
       if(!(Epred>0.02)){ nOOR++; return; }                     // aucune antenne modèle proche → ratio non fiable
@@ -8901,8 +8928,8 @@ async function calibrateRF(){
     // toutes exclues en amont (nIneligible). n_fichier_total expose la taille brute du fichier
     // (236) séparément, pour audit, sans changer la signification d'aucun champ préexistant.
     const nCalibCorpus=mes.length-nIneligible;
-    RF_CALIB_STATS={k_med:+k_med.toFixed(3),k_geo:+k_geo.toFixed(3),disp_geo:+disp_geo.toFixed(2),iqr:[+q(0.25).toFixed(3),+q(0.75).toFixed(3)],n_used:ratios.length,n_excl_nonconf:nNC,n_excl_oor:nOOR,n_excl_indoor:nIndoor,n_excl_ineligible:nIneligible,k_res:k_res!=null?+k_res.toFixed(3):null,pen_dB,n_total:nCalibCorpus,n_fichier_total:mes.length,bands};
-    console.log('[Tellux] calibration RF : k='+k_med.toFixed(3)+' (méd) / '+k_geo.toFixed(3)+' (géo) · dispersion ×÷'+disp_geo.toFixed(2)+' · IQR ['+q(0.25).toFixed(2)+'–'+q(0.75).toFixed(2)+'] · n='+ratios.length+'/'+nCalibCorpus+(nIneligible?' (+'+nIneligible+' hors pool, fichier='+mes.length+')':'')+' (exclus : '+nNC+' non-conf, '+nOOR+' hors-portée, '+nIndoor+' résidentiel) · pénétration intérieur ≈'+(pen_dB!=null?pen_dB:'?')+' dB');
+    RF_CALIB_STATS={k_med:+k_med.toFixed(3),k_geo:+k_geo.toFixed(3),disp_geo:+disp_geo.toFixed(2),iqr:[+q(0.25).toFixed(3),+q(0.75).toFixed(3)],n_used:ratios.length,n_excl_nonconf:nNC,n_excl_oor:nOOR,n_excl_indoor:nIndoor,n_excl_ineligible:nIneligible,n_excl_bande:nHorsBande,k_res:k_res!=null?+k_res.toFixed(3):null,pen_dB,n_total:nCalibCorpus,n_fichier_total:mes.length,bands};
+    console.log('[Tellux] calibration RF : k='+k_med.toFixed(3)+' (méd) / '+k_geo.toFixed(3)+' (géo) · dispersion ×÷'+disp_geo.toFixed(2)+' · IQR ['+q(0.25).toFixed(2)+'–'+q(0.75).toFixed(2)+'] · n='+ratios.length+'/'+nCalibCorpus+(nIneligible?' (+'+nIneligible+' hors pool, fichier='+mes.length+')':'')+' (exclus : '+nNC+' non-conf, '+nOOR+' hors-portée, '+nIndoor+' résidentiel, '+nHorsBande+' hors-bande) · pénétration intérieur ≈'+(pen_dB!=null?pen_dB:'?')+' dB');
     if(disp_geo>5) console.warn('[Tellux] calibration RF : dispersion large (×÷'+disp_geo.toFixed(1)+') — k médian = compromis central, incertitude locale élevée (constat qualité modèle, non masqué).');
     // Carte RF : reconstruite si elle est allumée ; ÉTEINTE, vidée — tog() ne reconstruit qu'une couche
     // vide, et la carte d'avant (construite non calibrée) réapparaîtrait au rallumage (lot B, S7).
