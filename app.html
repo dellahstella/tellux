@@ -11973,7 +11973,14 @@ function scoreColor(sc){
 // [Étape 2/3 refonte RF] Calibration RF supprimée (code mort : buildRFCalibration jamais
 // appelée, cemData jamais définie, RF_CALIB_EXT toujours vide → facteur ×25 plat). calcN_RF_loo,
 // calcRFcorrFactor et calcDeltaRF (jamais appelé) supprimés. calcN_RF_calib délègue à RF_field.
-function calcN_RF_calib(lat,lon){ return RF_field(lat,lon).E_total_V_m; } // V/m — plus de ×25
+// L'annotation « V/m » de fin de ligne a été RETIRÉE le 2026-09-20 : cette fonction rend la valeur
+// que #1551 a requalifiée en densité d'émetteurs pondérée, sans unité, partout où elle est affichée.
+// Elle n'émettait rien à l'écran — mais c'est exactement la forme de résidu qui a fait survivre le
+// paramètre `vm` dans rfColor() jusqu'au LOT E : un commentaire ne trompe pas un lecteur du site,
+// il trompe le prochain lecteur du code, et c'est lui qui réintroduit l'unité ailleurs.
+// `E_total_V_m` reste le nom du champ rendu par RF_field() (renommage hors périmètre de ce lot,
+// aucun calcul touché ici) — la valeur, elle, ne se présente plus nulle part comme un champ.
+function calcN_RF_calib(lat,lon){ return RF_field(lat,lon).E_total_V_m; } // sans unité — plus de ×25
 
 function buildHot(){
   lHot.clearLayers();
