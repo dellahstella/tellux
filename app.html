@@ -2483,7 +2483,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
           <h5 class="subgroup-header subgroup-header-first">Substrat et paysage</h5>
         </div>
         <div class="accordion-cat-content subgroup-content open">
-          <p class="subgroup-text" title="Le fond magnétique régional affiché (NOAA EMAG2v3) n'est pas ce qui pèse sur le calcul : une grille interne distincte reste calculée en permanence — comme l'indique le badge — mais son résultat n'entre dans aucun score public affiché. Le bouton n'affiche/masque que la couche visuelle, il ne pilote pas cette entrée. Pour la forêt dense, activer le bouton module la valeur du bloc Radiofréquence au clic carte ; il ne modifie ni la heatmap ni le score affiché en haut du popup.">Fond magnétique régional : grille interne calculée en permanence (comme l'indique le badge), non intégrée au score public. Forêt dense : le bouton module la valeur µW/m² au clic ; ni la heatmap ni le score n'en dépendent.</p>
+          <p class="subgroup-text" title="Le fond magnétique régional affiché (NOAA EMAG2v3) n'est pas ce qui pèse sur le calcul : une grille interne distincte reste calculée en permanence — comme l'indique le badge — mais son résultat n'entre dans aucun score public affiché. Le bouton n'affiche/masque que la couche visuelle, il ne pilote pas cette entrée. Pour la forêt dense, activer le bouton module la valeur du bloc Radiofréquence au clic carte ; il ne modifie ni la heatmap ni le score affiché en haut du popup.">Fond magnétique régional : grille interne calculée en permanence (comme l'indique le badge), non intégrée au score public. Forêt dense : le bouton module la valeur du bloc Radiofréquence au clic ; ni la heatmap ni le score n'en dépendent.</p>
           <!-- Couche « Géologie BRGM » retirée de la carte publique le 2026-08-20 (décision Soleil :
                chaque couche vit dans l'app qui correspond à son domaine causal). Déjà présente sur
                radon.html avant ce retrait ; app.html n'en a donc plus de copie. Cette couche était une
@@ -10474,7 +10474,7 @@ map.on('click',async e=>{
           : '<div>H ('+jt('detail_human_label','champ ELF anthropique total, valeur identique à celle affichée plus haut — alimente le score Perturbation')+') : +'+human+' nT'+(elfState==='failed'?' <span style="color:#8A5E22">('+elfV1Badge()+')</span>':'')+'</div>')+
         // Libellé conditionnel à l'état de calibration (2026-09-10, lot B) : « calibré » n'est dit que si k
         // l'est (rfCalibre()) — sinon le même chiffre porte « NON calibré pour l'instant ».
-        (nRFcalib>0.01?'<div>RF ('+(rfCalibre()?jt('detail_rf_label','densité d’émetteurs pondérée — valeur relative, sans unité ; calcul distinct de la valeur ci-dessus (jamais atténué par la forêt) — alimente le score affiché'):jt('detail_rf_label_noncal','champ RF NON calibré pour l’instant (la calibration interne attend ses données) — calcul distinct de la valeur µW/m² ci-dessus (jamais atténué par la forêt) — alimente le score affiché'))+') : '+nRFcalib.toFixed(1)+'</div>':'')+
+        (nRFcalib>0.01?'<div>RF ('+(rfCalibre()?jt('detail_rf_label','densité d’émetteurs pondérée — valeur relative, sans unité ; calcul distinct de la valeur ci-dessus (jamais atténué par la forêt) — alimente le score affiché'):jt('detail_rf_label_noncal','densité d’émetteurs pondérée — facteur d’échelle NON ajusté pour l’instant (la calibration interne attend ses données) ; valeur relative, sans unité ; calcul distinct de la valeur ci-dessus (jamais atténué par la forêt) — alimente le score affiché'))+') : '+nRFcalib.toFixed(1)+'</div>':'')+
         (typeof altitude_m==='number' && isFinite(altitude_m)?'<div>'+jt('detail_alt_label','Altitude (IGN RGE Alti, résolution ~1 m)')+' : '+altitude_m+' m</div>':'')+
       '</div>'+
       elfContribsFullHTML+
@@ -11973,7 +11973,14 @@ function scoreColor(sc){
 // [Étape 2/3 refonte RF] Calibration RF supprimée (code mort : buildRFCalibration jamais
 // appelée, cemData jamais définie, RF_CALIB_EXT toujours vide → facteur ×25 plat). calcN_RF_loo,
 // calcRFcorrFactor et calcDeltaRF (jamais appelé) supprimés. calcN_RF_calib délègue à RF_field.
-function calcN_RF_calib(lat,lon){ return RF_field(lat,lon).E_total_V_m; } // V/m — plus de ×25
+// L'annotation « V/m » de fin de ligne a été RETIRÉE le 2026-09-20 : cette fonction rend la valeur
+// que #1551 a requalifiée en densité d'émetteurs pondérée, sans unité, partout où elle est affichée.
+// Elle n'émettait rien à l'écran — mais c'est exactement la forme de résidu qui a fait survivre le
+// paramètre `vm` dans rfColor() jusqu'au LOT E : un commentaire ne trompe pas un lecteur du site,
+// il trompe le prochain lecteur du code, et c'est lui qui réintroduit l'unité ailleurs.
+// `E_total_V_m` reste le nom du champ rendu par RF_field() (renommage hors périmètre de ce lot,
+// aucun calcul touché ici) — la valeur, elle, ne se présente plus nulle part comme un champ.
+function calcN_RF_calib(lat,lon){ return RF_field(lat,lon).E_total_V_m; } // sans unité — plus de ×25
 
 function buildHot(){
   lHot.clearLayers();
@@ -13005,8 +13012,8 @@ function exportExpertCSV() {
     ['expert_n_I_normalise', comp.normalized.I.toFixed(4), '0-1', '', '1', '', ts],
     ['expert_borne_ELF_min', comp.bounds.ELF_nT[0], 'nT', '', '1', '', ts],
     ['expert_borne_ELF_max', comp.bounds.ELF_nT[1], 'nT', '', '1', '', ts],
-    ['expert_borne_RF_min', comp.bounds.RF_uW_m2[0], 'uW/m2', '', '1', '', ts],
-    ['expert_borne_RF_max', comp.bounds.RF_uW_m2[1], 'uW/m2', '', '1', '', ts],
+    ['expert_borne_RF_min', comp.bounds.RF_uW_m2[0], '', '', '1', '', ts],
+    ['expert_borne_RF_max', comp.bounds.RF_uW_m2[1], '', '', '1', '', ts],
     ['expert_note_epistemique', '"' + (comp.epistemic_note || EXPERT_EPISTEMIC_NOTE).replace(/"/g, '""') + '"', '', '', '1', '', ts],
   ];
   var bom = '\uFEFF';
