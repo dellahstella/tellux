@@ -16,7 +16,7 @@
 <meta property="og:image:alt" content="Tellux — Cartographie électromagnétique de la Corse">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Tellux — Champ électromagnétique Corse">
-<meta name="twitter:description" content="236 fiches ANFR/EXEM certifiées · IGRF-14 · BRGM · Corse">
+<meta name="twitter:description" content="239 fiches ANFR/EXEM certifiées (117 sites) · IGRF-14 · BRGM · Corse">
 <meta name="twitter:image" content="https://tellux.pages.dev/assets/logo/tellux_logo_1200.png">
 <link rel="canonical" href="https://tellux.pages.dev/">
 <link rel="icon" type="image/svg+xml" href="assets/logo/tellux_logo.svg">
@@ -2609,8 +2609,14 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
                • b-contrib → lCon seul, badge « Hors calcul » seul. D'abord placé dans un
                  sous-sous-groupe « Mesures citoyennes » (avec Gamma citoyen), remonté au niveau
                  supérieur le 2026-08-30 quand Gamma citoyen a été muté (cf. plus bas). -->
-          <button class="lbtn" id="b-cert" data-domains="rf" title="236 fiches de mesure certifiées ANFR/EXEM (2002–2026), extraites des PDF CartoRadio ou de l'API CartoRadio. 21 ont servi à calibrer la constante k du modèle RF (calcul one-shot à l'initialisation, pas une modulation en direct par point). Losanges = extérieur public (position exacte) ; cercles = résidentiel (centroïde communal), colorés selon la conformité (limite légale 28 V/m)." onclick="tog('cert','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Mesures certifiées (ANFR/EXEM)<span class="layer-badge layer-badge--calc">Calibration RF</span><span class="layer-badge layer-badge--domain">RF</span></button>
+          <button class="lbtn" id="b-cert" data-domains="rf" title="239 fiches de mesure certifiées ANFR/EXEM (2002–2026, collecte CartoRadio du 19/09/2026) — 117 sites distincts en extérieur public (152 fiches, position exacte), 87 fiches résidentielles (centroïde communal, position non publiée). 21 fiches d'un jeu distinct et inchangé ont servi à calibrer la constante k du modèle RF (calcul one-shot à l'initialisation, pas une modulation en direct par point). Losanges = extérieur public (position exacte) ; cercles = résidentiel (centroïde communal, position non publiée), colorés selon la conformité (limite légale 28 V/m)." onclick="tog('cert','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Mesures certifiées (ANFR/EXEM)<span class="layer-badge layer-badge--calc">Calibration RF</span><span class="layer-badge layer-badge--domain">RF</span></button>
           <div class="mlegend-inline" id="mleg-cert"></div>
+          <!-- Couche « Interpolation des mesures » (b-interp), LOT D, BRIEF_CODE_TEMPS2_CD_MESURES_INTERPOLATION_2026-09-20 :
+               surface dérivée des SITES MESURÉS (buildHotMesures, jamais du modèle RF), restreinte
+               aux 3 zones qui remplissent le critère écrit (rayon 5 km, ppv médian sous 2,5 km) —
+               cf. commentaire à INTERP_ZONES. Hors calcul : rfScore/Indice Tellux intouchés. -->
+          <button class="lbtn" id="b-interp" data-domains="rf" title="Interpolation d'une surface à partir des sites mesurés (jamais du modèle), restreinte aux 3 zones qui remplissent le critère écrit — rayon 5 km, plus proche voisin sous 2,5 km : Ajaccio (42 sites), Bastia (20), Corte (3). Plafond interne de 2,5 km : arrêt net au bord, sans dégradé — une cellule sans site assez proche reste vide, y compris à l'intérieur d'une zone. Sites sources toujours visibles (points sombres)." onclick="tog('interp','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Interpolation des mesures (3 zones)<span class="layer-badge layer-badge--hors">Hors calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
+          <div class="mlegend-inline" id="mleg-interp"></div>
           <!-- Couche « Sites U/Th à mesurer » retirée de la carte publique le 2026-08-19 (décision
                Soleil, risque nocebo A.4 sur un catalogue 100% documentaire/non mesuré) — contenu
                transposé en fiche documentaire sur cadre-scientifique.html. Le chargement des données
@@ -2886,7 +2892,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
                    plus haut) — l'assombrir globalement pour ce seul nœud serait un blast radius
                    sans rapport avec ce lot. Couleur locale = même teinte assombrie -7% (méthode
                    identique à --tx-mica ci-dessus), 4,855:1 sur --tx-brume, marge de sécurité. -->
-              <span style="flex:1;text-align:left">Télécharger les 236 fiches ANFR/EXEM <span style="color:#63605A;font-size:10px">(JSON)</span></span>
+              <span style="flex:1;text-align:left">Télécharger les 239 fiches ANFR/EXEM <span style="color:#63605A;font-size:10px">(JSON)</span></span>
             </button>
             <div style="font-size:10px;color:var(--tx3);margin-top:6px;line-height:1.4">Mesures certifiées de laboratoire (ANFR · EXEM) extraites des PDFs CartoRadio. Déjà visibles sur la carte en losanges colorés.</div>
           </div>
@@ -3776,7 +3782,8 @@ var JS_STRINGS_EN = {
   mleg_sub_emag: "Deep Corsican basement anomalies (NOAA EMAG2v3, display) — the internal grid actually used (distinct, computed permanently as the badge indicates) is not part of any publicly displayed score.",
   mleg_sub_foretdense: "Tall-canopy species (IGN BD Forêt V2), excluding scrub-forest mosaic — modulates the RF value at map click; neither the heatmap nor the displayed score depends on it.",
   mleg_sub_crustal: "Reference magnetic anomalies, global and Corsican — documentary comparison, outside the calculation.",
-  mleg_sub_cert: "236 certified measurement records (2002–2026) — 21 used to calibrate the RF model.",
+  mleg_sub_cert: "239 certified measurement records (2002–2026, 117 distinct sites) — 21 sheets from a separate dataset used to calibrate the RF model.",
+  mleg_sub_interp: "Interpolated surface from measured sites (never the model), 3 zones: Ajaccio, Bastia, Corte — outside the calculation.",
   mleg_sub_contrib: "Citizen smartphone measurements, uncertified — display only, outside the calculation.",
   mleg_sub_ant: "2G-to-5G mobile antennas and broadcast transmitters — ANFR open data.",
   mleg_sub_res: "50 Hz medium-voltage (HTA) lines — EDF SEI, OSM.",
@@ -4432,16 +4439,17 @@ const lPostesSources=L.layerGroup();
 // restent chargées au boot pour le calcul, seul l'affichage carte a été retiré.
 // lSit/lSit2/lAlign/lEgl/lTour/lIndu/lCast/lPont : couches patrimoniales migrées vers patrimoine.html
 // anciennes couches supprimées — déplacées hors de ce fichier
-const lBT=L.layerGroup(),lAnt=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup(),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}),lHotRF=L.layerGroup().addTo(map),lGeom=L.layerGroup().addTo(map),lElf=L.layerGroup();
+const lBT=L.layerGroup(),lAnt=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup(),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}),lHotRF=L.layerGroup().addTo(map),lGeom=L.layerGroup().addTo(map),lElf=L.layerGroup(),lHotMesures=L.layerGroup();
 // lCon (contributions citoyennes) n'est plus .addTo(map) à la déclaration depuis 2026-08-29 —
 // ajoutée/retirée uniquement par tog('contrib') (bouton « Contributions smartphone », ex-b-con).
 const lCrustal=L.layerGroup();
 // lAir (Particules fines PM2,5, Qualitair Corse) retirée le 2026-08-20, migrée sur radon.html
 // (co-exposition radon/particulaire — vit désormais aux côtés du zonage radon lui-même).
-// lCert : couche des fiches ANFR/EXEM certifiées (236 depuis le 2026-09-02, brief D —
-// auparavant 30, non clusterisée). Activé/retiré par tog('cert') (bouton « Mesures certifiées
-// (ANFR/EXEM) », ex-b-con — scission 2026-08-29, item C). NB : le fichier certifié est lu
-// séparément par calibrateRF() au boot, indépendamment de ce toggle.
+// lCert : couche des fiches ANFR/EXEM certifiées (239 depuis le 2026-09-20, LOT C —
+// auparavant 236 depuis le 2026-09-02, avant cela 30, non clusterisée). Activé/retiré par
+// tog('cert') (bouton « Mesures certifiées (ANFR/EXEM) », ex-b-con — scission 2026-08-29, item C).
+// NB : le fichier de CALIBRATION (cartoradio_certified_corse.json, 236 fiches) est lu séparément
+// par calibrateRF() au boot, sur un fichier distinct et inchangé, indépendamment de ce toggle.
 //
 // Clusterisée depuis le brief D (2026-09-02) via L.markerClusterGroup — PAS une nouvelle
 // dépendance : la bibliothèque (leaflet.markercluster 1.5.3) est déjà chargée en tête de
@@ -4644,7 +4652,7 @@ const VEG_GROUP=['foretdense','foretouverte','landemaquis'];
 const CALC_GROUP=['hot','hotrf','elf'];
 // SCISSION 2026-08-29 (brief « exécution groupée », item C) : con → cert (lCert, fiches
 // certifiées ANFR/EXEM) + contrib (lCon, contributions citoyennes). Deux boutons, deux toggles.
-const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,elf:lElf,cert:lCert,contrib:lCon,foretdense:lForetDense,foretouverte:lForetOuverte,landemaquis:lLandeMaquis,crustal:lCrustal,openrad:lOpenRad};
+const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,elf:lElf,cert:lCert,interp:lHotMesures,contrib:lCon,foretdense:lForetDense,foretouverte:lForetOuverte,landemaquis:lLandeMaquis,crustal:lCrustal,openrad:lOpenRad};
 const WMS={hyd:wmsHyd,emag:wmsEmag};
 // hot:false/hotrf:true — modèle RF activé par défaut à la place du champ magnétique
 // composite (arbitrage Soleil 2026-08-23). Swap symétrique avec la déclaration lHot/lHotRF
@@ -4698,7 +4706,7 @@ const WMS={hyd:wmsHyd,emag:wmsEmag};
 //    ant:false du 2026-09-12 (LEGEND_ACTIVE_CORE ne contenait plus 'ant' à ce moment-là),
 //    resterait dormant pour la même raison si rien n'était fait — corrigé et CONSERVÉ malgré le
 //    retrait de l'essai (cf. commentaire à rafraichirLibellesRF()).
-const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,elf:false,res:false,prod:false,cert:false,contrib:false,crustal:false,openrad:false};
+const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,elf:false,res:false,prod:false,cert:false,interp:false,contrib:false,crustal:false,openrad:false};
 
 // 'con' (scindé depuis en 'cert'+'contrib', 2026-08-29 item C) et 'emag' promues en Zone 1
 // "core" le 2026-08-27 (brief "Panneau '?' sélectif",
@@ -4758,7 +4766,7 @@ const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,elf:f
 // conséquence à nommer : elf était la SEULE couche joignable de la Zone 2 ; une fois promue,
 // la pastille contextuelle n'a plus aucune occupante activable par un visiteur. Mécanisme
 // conservé tel quel (hyd/openrad sont explicitement "réactivables en dé-commentant").
-const LEGEND_CORE_IDS=new Set(['hot','hotrf','cert','contrib','emag','ant','res','bt','prod','postesSources','elf']);
+const LEGEND_CORE_IDS=new Set(['hot','hotrf','cert','interp','contrib','emag','ant','res','bt','prod','postesSources','elf']);
 const LEGEND_MAX_CONTEXT=3;
 const LEGEND_ACTIVE_CORE=new Set();
 const LEGEND_ACTIVE_CONTEXT=[];
@@ -4932,7 +4940,8 @@ const LAYER_SUBTITLE_FR={
   foretouverte:'BD Forêt V2 IGN, couvert 10-40 % — millésimes 2016-2017. Contexte seul, hors calcul.',
   landemaquis:'BD Forêt V2 IGN, landes et maquis non boisés — millésimes 2016-2017. Contexte seul, hors calcul.',
   crustal:'Anomalies magnétiques de référence, mondiales et corses — comparaison documentaire, hors calcul.',
-  cert: '236 fiches de mesure certifiées (2002–2026) — 21 ont servi à calibrer le modèle RF.',
+  cert: '239 fiches de mesure certifiées (2002–2026, 117 sites distincts) — 21 fiches d\'un jeu distinct ont servi à calibrer le modèle RF.',
+  interp: 'Surface interpolée depuis les sites mesurés (jamais le modèle), 3 zones : Ajaccio, Bastia, Corte — hors calcul.',
   contrib:'Mesures citoyennes au smartphone, non certifiées — affichage seul, hors calcul.',
   ant:  'Antennes mobiles 2G à 5G et émetteurs broadcast — source ANFR open data.',
   res:  'Lignes HTA (moyenne tension) 50 Hz — EDF SEI, OSM.',
@@ -5145,8 +5154,8 @@ const LEGEND_HTML={
   // sous-bloc ant retiré). lAntCluster/lTDFCluster (couche "ant", pas "cert") traités séparément,
   // cf. commentaire au-dessus de LEGEND_HTML.ant.
   cert:'<div class="leg-block"><b class="leg-title">Mesures certifiées (ANFR/EXEM)</b>'+
-    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">236 fiches 2002–2026 · seuil légal 28 V/m = repère réglementaire externe, pas une bande de couleur</div>'+
-    '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-bottom:2px"><span style="display:inline-block;width:9px;height:9px;background:#6b7280;transform:rotate(45deg);vertical-align:middle;margin-right:5px"></span>Losange = extérieur public (151, position exacte)&nbsp;&nbsp;<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#6b7280;vertical-align:middle;margin-right:5px"></span>Cercle = résidentiel (85, centroïde communal) — la forme, pas la teinte</div>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">239 fiches 2002–2026 · 117 sites distincts · seuil légal 28 V/m = repère réglementaire externe, pas une bande de couleur</div>'+
+    '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-bottom:2px"><span style="display:inline-block;width:9px;height:9px;background:#6b7280;transform:rotate(45deg);vertical-align:middle;margin-right:5px"></span>Losange = extérieur public (152 fiches, 117 sites distincts, position exacte)&nbsp;&nbsp;<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#6b7280;vertical-align:middle;margin-right:5px"></span>Cercle = résidentiel (87 fiches, centroïde communal, position non publiée) — la forme, pas la teinte</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Faible &lt; 0,5 V/m</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Modéré 0,5–2 V/m</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#991b1b;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Élevé 2–8 V/m</div>'+
@@ -5160,7 +5169,17 @@ const LEGEND_HTML={
     // la donnée ne produit pas ajoute du bruit à une légende déjà dense.
     // LA BRANCHE DU CODE, ELLE, RESTE — et ce n'est pas un oubli, cf. _certColor().
     '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Basse fréquence (9 kHz–100 kHz) : même code couleur ci-dessus, marqueur légèrement plus petit — pas une teinte à part · regroupement par proximité au zoom large (forme et teinte = type dominant du groupe : carré arrondi gris ardoise si résidentiel majoritaire, losange ocre si extérieur public majoritaire ou à égalité — brief AL, 2026-09-04)</div>'+
-    '<div class="leg-src">ANFR/EXEM · CartoRadio — 21 fiches ont calibré la constante k du modèle RF (one-shot) · seuil légal 28 V/m = champ seuil_legal_vm du jeu de données (protocole ANFR/DR 15-4)</div>'+
+    '<div class="leg-src">ANFR/EXEM · CartoRadio — 21 fiches d\'un jeu distinct et inchangé ont calibré la constante k du modèle RF (one-shot) · seuil légal 28 V/m = champ seuil_legal_vm du jeu de données (protocole ANFR/DR 15-4)</div>'+
+    '</div>',
+  interp:'<div class="leg-block"><b class="leg-title">Interpolation des mesures (3 zones)</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">Ajaccio (42 sites, ~69 km² couverts) · Bastia (20, ~55 km²) · Corte (3, ~29 km²) — critère : rayon 5 km, plus proche voisin médian sous 2,5 km</div>'+
+    '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-bottom:2px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#1F2329;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:5px"></span>Point sombre = site source (survol : id, V/m, date) — même palette de couleur que Mesures certifiées, jamais celle du modèle</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;vertical-align:middle;margin-right:4px"></span> Faible &lt; 0,5 V/m</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;vertical-align:middle;margin-right:4px"></span> Modéré 0,5–2 V/m</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#991b1b;vertical-align:middle;margin-right:4px"></span> Élevé 2–8 V/m</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c0000;vertical-align:middle;margin-right:4px"></span> Très élevé ≥ 8 V/m</div>'+
+    '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Plafond interne 2,5 km : arrêt net au bord, sans dégradé — une cellule sans site assez proche reste vide, y compris à l\'intérieur d\'une zone. Valeur d\'un site revisité = sa mesure la plus récente (jamais une moyenne).</div>'+
+    '<div class="leg-src">Sites : jeu ANFR/CartoRadio du 19/09/2026 (117 sites distincts), hors calcul — rfScore/Indice Tellux intouchés</div>'+
     '</div>',
   contrib:'<div class="leg-block"><b class="leg-title">Contributions smartphone</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">Relevés terrain des contributeurs Tellux</div>'+
@@ -5231,7 +5250,17 @@ const LEGEND_HTML_EN={
   res:'<div class="leg-block"><b class="leg-title">Electrical grid</b><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#b85c00;vertical-align:middle;margin-right:4px"></span>Power line (single colour)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">The Supabase dataset (8,386 EDF SEI lines) carries no voltage field: HTA and HTB share the same colour in normal rendering (documented technical debt). An HTB &#x2265; 50 kV distinction only exists in an exceptional fallback mode (OSM lookup, when Supabase is unavailable), not shown here.</div><div class="leg-src">EDF SEI · Supabase · OSM (fallback)</div></div>',
   bt:'<div class="leg-block"><b class="leg-title">LV grid</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Street-level electrical distribution</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#d97706;vertical-align:middle;margin-right:4px"></span>Overhead BT</div><div class="leg-row"><span style="display:inline-block;width:14px;height:2px;background:#92400e;border-top:2px dashed #92400e;vertical-align:middle;margin-right:4px"></span>Underground BT</div><div class="leg-row"><span style="font-size:9px;color:var(--tx3)">Zoom ≥ 9</span></div><div class="leg-src">EDF SEI open data</div></div>',
   prod:'<div class="leg-block"><b class="leg-title">Generation sites</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Corsican power grid generation plants</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#1a5c8c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Hydro dam</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a90d9;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Run-of-river hydro</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#2d9b87;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Wind</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#15803d;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Biogas</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#991b1b;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Diesel</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#b85c00;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Gas turbine (combustion turbine)</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#7c3aed;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>Interconnection</div><div class="leg-row" style="margin-top:6px;padding-top:4px;border-top:1px dashed rgba(0,0,0,.08);font-size:9px;color:var(--tx3)">Size according to power output:</div><div class="leg-row"><span style="display:inline-block;width:6px;height:6px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>≤ 10 MW</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>10 — 50 MW</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c5c5c;transform:rotate(45deg);border-radius:1px;vertical-align:middle;margin-right:6px"></span>&gt; 50 MW</div><div class="leg-src">EDF SEI · RTE ODRE · Supabase</div></div>',
-  cert:'<div class="leg-block"><b class="leg-title">Certified measurements (ANFR/EXEM)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">236 sheets 2002–2026 · legal threshold 28 V/m = external regulatory reference, not a colour band</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-bottom:2px"><span style="display:inline-block;width:9px;height:9px;background:#6b7280;transform:rotate(45deg);vertical-align:middle;margin-right:5px"></span>Diamond = outdoor public (151, exact position)&nbsp;&nbsp;<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#6b7280;vertical-align:middle;margin-right:5px"></span>Circle = residential (85, commune centroid) — shape, not colour</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Low &lt; 0.5 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Moderate 0.5–2 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#991b1b;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> High 2–8 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c0000;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Very high ≥ 8 V/m (compliant, below legal threshold)</div><div class="leg-row" style="border-top:1px dashed rgba(0,0,0,.08);padding-top:4px;margin-top:2px;font-size:8px;color:var(--tx3)">External regulatory threshold (not a colour band):</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#7c0000;transform:rotate(45deg);border:2.5px solid #C28533;vertical-align:middle;margin-right:4px"></span> Non-compliant &gt; 28 V/m (e.g. Monticello)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Low frequency (9 kHz–100 kHz): same colour code above, slightly smaller marker — not a separate colour · Detail per sheet by clicking the marker · grouped by proximity at wide zoom (shape and colour = group\'s dominant type: rounded slate-grey square if majority residential, ochre diamond if majority outdoor public or tied — brief AL, 2026-09-04)</div><div class="leg-src">ANFR/EXEM · CartoRadio — 21 sheets calibrated the RF model\'s k constant (one-shot) · legal threshold 28 V/m = dataset field seuil_legal_vm (ANFR/DR 15-4 protocol)</div></div>',
+  cert:'<div class="leg-block"><b class="leg-title">Certified measurements (ANFR/EXEM)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">239 sheets 2002–2026 · 117 distinct sites · legal threshold 28 V/m = external regulatory reference, not a colour band</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-bottom:2px"><span style="display:inline-block;width:9px;height:9px;background:#6b7280;transform:rotate(45deg);vertical-align:middle;margin-right:5px"></span>Diamond = outdoor public (152 sheets, 117 distinct sites, exact position)&nbsp;&nbsp;<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#6b7280;vertical-align:middle;margin-right:5px"></span>Circle = residential (87 sheets, commune centroid, position not published) — shape, not colour</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Low &lt; 0.5 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Moderate 0.5–2 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#991b1b;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> High 2–8 V/m</div><div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c0000;transform:rotate(45deg);border:2px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Very high ≥ 8 V/m (compliant, below legal threshold)</div><div class="leg-row" style="border-top:1px dashed rgba(0,0,0,.08);padding-top:4px;margin-top:2px;font-size:8px;color:var(--tx3)">External regulatory threshold (not a colour band):</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#7c0000;transform:rotate(45deg);border:2.5px solid #C28533;vertical-align:middle;margin-right:4px"></span> Non-compliant &gt; 28 V/m (e.g. Monticello)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Low frequency (9 kHz–100 kHz): same colour code above, slightly smaller marker — not a separate colour · Detail per sheet by clicking the marker · grouped by proximity at wide zoom (shape and colour = group\'s dominant type: rounded slate-grey square if majority residential, ochre diamond if majority outdoor public or tied — brief AL, 2026-09-04)</div><div class="leg-src">ANFR/EXEM · CartoRadio — 21 sheets from a separate, unchanged dataset calibrated the RF model\'s k constant (one-shot) · legal threshold 28 V/m = dataset field seuil_legal_vm (ANFR/DR 15-4 protocol)</div></div>',
+  interp:'<div class="leg-block"><b class="leg-title">Measured interpolation (3 zones)</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">Ajaccio (42 sites, ~69 km² covered) · Bastia (20, ~55 km²) · Corte (3, ~29 km²) — criterion: 5 km radius, median nearest neighbour under 2.5 km</div>'+
+    '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-bottom:2px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#1F2329;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:5px"></span>Dark dot = source site (hover: id, V/m, date) — same colour palette as Certified measurements, never the model\'s</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#0f766e;vertical-align:middle;margin-right:4px"></span> Low &lt; 0.5 V/m</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#b85c00;vertical-align:middle;margin-right:4px"></span> Moderate 0.5–2 V/m</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#991b1b;vertical-align:middle;margin-right:4px"></span> High 2–8 V/m</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c0000;vertical-align:middle;margin-right:4px"></span> Very high ≥ 8 V/m</div>'+
+    '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Internal cutoff 2.5 km: hard stop at the edge, no gradient — a cell without a close enough site stays empty, even inside a zone. A revisited site\'s value = its most recent measurement (never an average).</div>'+
+    '<div class="leg-src">Sites: ANFR/CartoRadio dataset of 2026-09-19 (117 distinct sites), outside the calculation — rfScore/Indice Tellux untouched</div>'+
+    '</div>',
   contrib:'<div class="leg-block"><b class="leg-title">Smartphone contributions</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">Field readings from Tellux contributors</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#5c3a9b;border-radius:50%;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Citizen contribution (cluster)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Magnetometer (nT), network/WiFi signal (dBm), external sensor. <b>Display only, outside the calculation.</b></div><div class="leg-src">Tellux crowdsourced · Supabase</div></div>',
   openrad:'<div class="leg-block"><b class="leg-title">Citizen gamma (OpenRadiation)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Ambient gamma/X dose rate · citizen measurements · Geiger tubes</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;opacity:0.55;vertical-align:middle;margin-right:4px"></span>Citizen measurement point (µSv/h)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4"><b>Gamma/X, not radon.</b> Independent display layer — not fed into the index or the gamma calculation.</div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#eef3f0;border:1px solid #cfe0da;border-radius:4px;font-size:8.5px;color:#2f5f54;line-height:1.4"><b>Indicative measurements, not certified.</b> Heterogeneous sensors. The dataset includes <b>continuous tracks</b> (a single walking session accounts for several hundred points) → displayed density <b>≠ number of measurement sites</b>.</div><div class="leg-src">OpenRadiation contributors — ODbL</div></div>',
   postesSources:'<div class="leg-block"><b class="leg-title">EDF SEI substations</b><div class="leg-row"><span style="display:inline-block;width:10px;height:10px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Substation &lt; 150 kV</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#C28533;border:2px solid #3F5B3A;vertical-align:middle;margin-right:4px"></span>Substation &#x2265; 150 kV</div><div class="leg-why">HTB/HTA grid nodes — significant ELF 50 Hz field nearby.</div><div class="leg-src">EDF SEI · OSM · 21 substations (real voltages: 20/90/150/200 kV)</div></div>'
@@ -5925,6 +5954,7 @@ function tog(id,cls,btn){
     if(id==='emag')document.getElementById('emag-op-row').style.display='flex';
     if(id==='hot'&&lHot.getLayers().length===0)buildHot();
     if(id==='hotrf'&&lHotRF.getLayers().length===0)buildHotRF();
+    if(id==='interp')loadMesuresCertifiees().then(buildHotMesures);
     if(id==='elf'&&lElf.getLayers().length===0)buildElf();
     if(id==='foretdense'){
       document.getElementById('foretdense-op-row').style.display='flex';
@@ -12034,6 +12064,105 @@ function buildHotRF(){
   }
 }
 
+// ═══ Zones d'interpolation mesurée (LOT D, BRIEF_CODE_TEMPS2_CD_MESURES_INTERPOLATION_2026-09-20) ═══
+// Surface interpolée à partir des SITES MESURÉS (jamais du modèle) sur 3 zones qui remplissent le
+// critère écrit : rayon 5 km, plus proche voisin médian sous 2,5 km. Calcul de densité fait sur le
+// jeu de 239 fiches (recherche/recuperation-mesures-anfr-2026-09-20, dépôt privé) — 6 zones
+// candidates (Ajaccio/Bastia/Porto-Vecchio/Corte/Calvi/Bonifacio), 3 retenues (Ajaccio 42 sites,
+// Bastia 20, Corte 3 — Porto-Vecchio/Calvi/Bonifacio écartées, ppv > 2,5 km). C'EST LE CRITÈRE QUI
+// DÉCIDE, jamais le cas par cas : Corte est incluse parce qu'elle le remplit (ppv médian 0,09 km),
+// pas malgré son faible effectif (3 sites). Si le critère se révèle trop permissif à l'usage, il
+// sera RÉÉCRIT ici — aucune zone ne sera retirée à la main. Même règle destinée à la page de
+// méthode (session parallèle, methode-limites-transparence.html — non touchée ici).
+//
+// Centres de zone repris TELS QUELS du script d'analyse (recherche/recuperation-mesures-anfr-
+// 2026-09-20/scripts/3_analyses_densite.py, dépôt privé) — PAS ceux de CERT_COMMUNE_CENTRES
+// ci-dessus : deux tables différentes pour deux usages différents (celle-ci fixe des zones
+// d'interpolation ; l'autre réduit des coordonnées résidentielles à un centroïde communal
+// officiel). Vérifié avant d'écrire (règle du brief) : avec CERT_COMMUNE_CENTRES, Corte retombe à
+// 0 site dans un rayon de 5 km (mauvais centre pour cet usage) contre 3 avec ce centre-ci —
+// reproduit exactement le 42/20/3 du script source.
+const INTERP_ZONES = {
+  Ajaccio: { lat: 41.9267, lon: 8.7369 },
+  Bastia:  { lat: 42.7028, lon: 9.4503 },
+  Corte:   { lat: 42.3061, lon: 9.1500 },
+};
+const INTERP_RADIUS_KM = 5;
+const INTERP_CUTOFF_KM = 2.5; // plafond interne : au-delà, cellule vide, arrêt net (item i)
+const INTERP_STEP_DEG = 0.0022; // ≈ 220 m de côté, fixe — 3 zones bornées (pas la Corse entière comme hotrf/hot), pas besoin d'un pas dépendant du zoom
+
+// Palette = CELLE DE LA MESURE (_certColor), jamais celle du modèle (rfColor, bleu) — item (f) :
+// distinguer visuellement mesure et modèle sans que l'un se lise comme l'autre. Pas de cas
+// non-conforme ici (n'a pas de sens pour une cellule interpolée, seulement pour une fiche).
+function _interpColor(v) {
+  if (v == null) return '#7B7770';
+  if (v < 0.5) return '#0f766e';
+  if (v < 2)   return '#b85c00';
+  if (v < 8)   return '#991b1b';
+  return '#5c0000';
+}
+
+// Dérive les SITES (dédoublonnage EXACT des coordonnées sur l'extérieur public — même méthode que
+// analyses.densite_sites_distincts du jeu source, vérifiée reproduire 117 sites sur 152 fiches) et
+// retient, par site, la mesure la PLUS RÉCENTE comme valeur d'interpolation. Choix assumé, non
+// dicté par le brief : un site revisité pèserait plusieurs fois dans une interpolation par
+// plus-proche-voisin s'il gardait toutes ses fiches — la plus récente est la moins arbitraire
+// (représente l'état actuel), jamais une moyenne (qui lisserait des mesures prises à des années
+// d'écart). N'affecte QUE cette couche : LOT C (item c) continue d'afficher chacune des mesures
+// d'un site revisité sur la carte, jamais une moyenne.
+function _interpSites(mesures) {
+  const groups = {};
+  (mesures || []).forEach(function(m) {
+    if (m.type_environnement !== 'exterieur_public') return;
+    const k = m.lat.toFixed(5) + ',' + m.lon.toFixed(5);
+    (groups[k] = groups[k] || []).push(m);
+  });
+  return Object.values(groups).map(function(g) {
+    const sorted = g.slice().sort(function(a, b) { return a.date_mesure < b.date_mesure ? 1 : -1; });
+    return { lat: g[0].lat, lon: g[0].lon, valeur: sorted[0].valeur_max_vm, date: sorted[0].date_mesure, id: sorted[0].id, n_mesures: g.length };
+  });
+}
+
+let _interpRendered = false;
+function buildHotMesures() {
+  if (_interpRendered) return;
+  if (!Array.isArray(MESURES_CERTIFIEES) || MESURES_CERTIFIEES.length === 0) return;
+  _interpRendered = true;
+  const sites = _interpSites(MESURES_CERTIFIEES);
+  Object.keys(INTERP_ZONES).forEach(function(nom) {
+    const c = INTERP_ZONES[nom];
+    const latSpan = INTERP_RADIUS_KM / 110.57;
+    const lonSpan = INTERP_RADIUS_KM / (111.32 * Math.cos(c.lat * Math.PI / 180));
+    for (let a = c.lat - latSpan; a <= c.lat + latSpan; a += INTERP_STEP_DEG) {
+      for (let o = c.lon - lonSpan; o <= c.lon + lonSpan; o += INTERP_STEP_DEG) {
+        const cLat = a + INTERP_STEP_DEG / 2, cLon = o + INTERP_STEP_DEG / 2;
+        if (dist(c.lat, c.lon, cLat, cLon) > INTERP_RADIUS_KM) continue; // hors zone : rien
+        let best = null, bestD = Infinity;
+        for (let i = 0; i < sites.length; i++) {
+          const d = dist(cLat, cLon, sites[i].lat, sites[i].lon);
+          if (d < bestD) { bestD = d; best = sites[i]; }
+        }
+        if (!best || bestD > INTERP_CUTOFF_KM) continue; // item (i) : arrêt net, sans dégradé
+        const rect = L.rectangle([[a, o], [a + INTERP_STEP_DEG, o + INTERP_STEP_DEG]], {
+          color: _interpColor(best.valeur), weight: 0, opacity: 0,
+          fillColor: _interpColor(best.valeur), fillOpacity: 0.42,
+          interactive: false
+        });
+        rect.addTo(lHotMesures);
+      }
+    }
+    // Sites sources visibles (item j) : toujours affichés avec la surface, pas conditionnés au
+    // toggle 'cert' — « le lecteur doit voir d'où elle vient ».
+    sites.filter(function(s) { return dist(c.lat, c.lon, s.lat, s.lon) <= INTERP_RADIUS_KM; })
+      .forEach(function(s) {
+        L.circleMarker([s.lat, s.lon], {
+          radius: 4, color: '#F5F0E7', weight: 1.5, fillColor: '#1F2329', fillOpacity: 1, interactive: true
+        }).bindTooltip('#' + s.id + ' · ' + s.valeur + ' V/m · ' + s.date, { direction: 'top' })
+          .addTo(lHotMesures);
+      });
+  });
+}
+
 // Champ ELF (nT) — couche dédiée (brief BH, 2026-09-05). Palette violette (dérivée de la
 // teinte déjà établie pour les contributions smartphone, #5c3a9b) — délibérément distincte de
 // l'ocre du composite (scoreColor) et du bleu de la RF (rfColor), jamais réutilisée ailleurs
@@ -14367,121 +14496,38 @@ let SITES_REMARQUABLES = [];
 // migré sur radon.html à titre de fiche documentaire (voir cadre-scientifique.html §10.9).
 
 // ═══ Mesures certifiées ANFR/EXEM ═══
-// Source : public/data/cartoradio_certified_corse.json — 30 fiches d'origine (régénération
-// 27 avril 2026) + 206 fiches ingérées le 2026-09-02 (brief A, endpoint par fiche, marquées
-// calib_eligible:false — hors pool de calibration, cf. calibrateRF()), soit 236 au total.
-// Coordonnées : positions exactes ANFR (precision_coord=exacte pour les 30 d'origine ; source
-// CartoRadio directe pour les 206 nouvelles), SAUF les fiches résidentielles, cf. ci-dessous.
-// Données métier (date, valeur_max_vm, conformité, services) : extraction Cowork OCR du 23
-// avril 2026 sur les 30 PDFs ANFR/EXEM d'origine ; réponse structurée de l'API pour les 206.
+// Source depuis le 2026-09-20 (BRIEF_CODE_TEMPS2_CD_MESURES_INTERPOLATION, LOT C) :
+// public/data/mesures_anfr_corse_2026-09-20.json — collecte fraîche du 2026-09-19 (239 fiches,
+// 152 extérieur public / 87 résidentiel, 117 sites distincts sur l'extérieur public), même API
+// publique CartoRadio, même licence Ouverte/Etalab que l'ancien jeu. Remplace le jeu du
+// 2026-09-02 (236 fiches) pour CETTE couche et pour la modale stats (openStatsPanel) — les deux
+// en dérivent via MESURES_CERTIFIEES, même variable, même chargeur.
 //
-// ── Agrégation résidentielle (briefs « D0 » puis « D », 2026-09-02) ─────────────────
-// Constat d'origine (D0) : le popup (cert_precision_note) et .mpanel-title affirment depuis
-// toujours « centroïde communal », alors que la régénération du 27 avril 2026 (voir
-// cartoradio-coords-regeneration-phase2.md, privé) avait remplacé TOUTES les coordonnées des
-// 30 fiches d'origine par des positions exactes ANFR — texte jamais réamendé après ce
-// changement. Sur les fiches en type_environnement==='residentiel' (mesure au domicile d'un
-// particulier), l'écart texte/donnée posait un vrai problème de vie privée : la carte
-// affichait — et le bouton de téléchargement livrait — une adresse précise en la présentant
-// comme anonymisée. D0 a corrigé les 8 fiches résidentielles d'origine ; D applique la même
-// règle, sans en changer la méthode, aux 77 fiches résidentielles issues de l'ingestion — un
-// seul régime pour les 85, pas deux. Les 151 fiches extérieur public gardent leurs coordonnées
-// exactes ; le même texte de précaution reste affiché pour elles aussi (écart résiduel connu
-// et déjà signalé, hors périmètre de ces deux briefs, non traité ici).
+// public/data/cartoradio_certified_corse.json (236 fiches, 2026-09-02) N'EST PAS TOUCHÉ et reste
+// la SEULE source de calibrateRF() (constante k) — fetch propre et indépendant (cf. calibrateRF,
+// ligne ~8881), jamais relu par ce chargeur. Aucun recalage de k : cf. rapport
+// RAPPORT_UNIFICATION_JEUX_MESURES_2026-09-20.md (privé) pour la relation exacte entre les deux
+// jeux (le second est un sur-ensemble strict du premier, mêmes id, mêmes coordonnées).
 //
-// Source du centroïde : PAS un centroïde des points de mesure (aurait dérivé avec le nombre
-// de fiches par commune, et changé à chaque nouvelle ingestion). Champ "centre" officiel de
-// chaque commune, API geo.api.gouv.fr (IGN AdminExpress, Etalab 2.0) — même source déjà
-// utilisée ailleurs dans ce repo (scripts/build_patrimoine_polygons_v3.py). Récupéré les
-// 2026-09-02 (D0 : 5 communes) puis 2026-09-02 (D : 20 communes supplémentaires) pour
-// couvrir les 25 communes concernées par les 85 fiches résidentielles actuelles :
-//   GET https://geo.api.gouv.fr/communes/{code_insee}?fields=centre,nom,code
-// Toute future fiche résidentielle dans une commune absente de cette table est laissée à sa
-// coordonnée exacte avec un avertissement console (_certAggregateResidentialCoords) plutôt
-// que silencieusement non agrégée — à étendre avant tout nouvel élargissement du corpus.
-// (geo.api.gouv.fr, champ "centre" officiel) — couvre les 85 fiches résidentielles du jeu
-// élargi (8 d'origine + 77 issues de l'ingestion CartoRadio). Noms CartoRadio sans tirets
-// (« Porto Vecchio ») rapprochés des noms INSEE officiels (« Porto-Vecchio ») par correspondance
-// normalisée (accents/espaces/tirets ignorés) — vérifié 25/25 sans ambiguïté avant récupération.
-const CERT_COMMUNE_CENTRES = {
-  'Ajaccio': { lat: 41.9228, lon: 8.7058 },  // INSEE 2A004
-  'Arbori':  { lat: 42.1230, lon: 8.7958 },  // INSEE 2A019
-  'Bastia':  { lat: 42.6861, lon: 9.4240 },  // INSEE 2B033
-  'Calvi':   { lat: 42.5498, lon: 8.7611 },  // INSEE 2B050
-  'Zonza':   { lat: 41.7145, lon: 9.2719 },  // INSEE 2A362
-  'Asco': { lat: 42.4386, lon: 8.9924 },  // INSEE 2B023
-  'Bastelicaccia': { lat: 41.9327, lon: 8.8371 },  // INSEE 2A032
-  'Biguglia': { lat: 42.6133, lon: 9.4401 },  // INSEE 2B037
-  'Bonifacio': { lat: 41.4217, lon: 9.1973 },  // INSEE 2A041
-  'Brando': { lat: 42.7771, lon: 9.4527 },  // INSEE 2B043
-  'Calenzana': { lat: 42.4736, lon: 8.7864 },  // INSEE 2B049
-  'Canale Di Verde': { lat: 42.2634, lon: 9.4997 },  // INSEE 2B057
-  'Castello Di Rostino': { lat: 42.4732, lon: 9.2967 },  // INSEE 2B079
-  'Corte': { lat: 42.2737, lon: 9.0691 },  // INSEE 2B096
-  'Furiani': { lat: 42.6548, lon: 9.4213 },  // INSEE 2B120
-  'Ghisonaccia': { lat: 42.0454, lon: 9.4192 },  // INSEE 2B123
-  'Pietricaggio': { lat: 42.3283, lon: 9.3780 },  // INSEE 2B227
-  'Popolasca': { lat: 42.4379, lon: 9.1328 },  // INSEE 2B244
-  'Porto Vecchio': { lat: 41.5849, lon: 9.2732 },  // INSEE 2A247
-  'Propriano': { lat: 41.6510, lon: 8.8900 },  // INSEE 2A249
-  'San Giuliano': { lat: 42.2844, lon: 9.5211 },  // INSEE 2B303
-  'San Martino Di Lota': { lat: 42.7306, lon: 9.4289 },  // INSEE 2B305
-  'Sarrola Carcopino': { lat: 41.9981, lon: 8.8276 },  // INSEE 2A271
-  'Viggianello': { lat: 41.6715, lon: 8.9461 },  // INSEE 2A349
-  'Ville Di Pietrabugno': { lat: 42.7165, lon: 9.4263 },  // INSEE 2B353
-};
-// Applique l'agrégation aux fiches résidentielles d'un tableau MESURES_CERTIFIEES déjà
-// chargé, EN PLACE et EN MÉMOIRE UNIQUEMENT — public/data/cartoradio_certified_corse.json
-// sur disque n'est jamais modifié (les coordonnées exactes y restent, seule la copie
-// affichée/téléchargée est aggrégée). calibrateRF() lit ce fichier séparément et exclut
-// déjà le résidentiel de son pool (type_environnement!=='exterieur_public') — cette
-// fonction n'a donc aucun effet sur la calibration RF, vérifié en direct (k/n_used
-// inchangés).
-//
-// Dispersion anti-empilement (_certOffsetPositions, existant) : les 3 fiches Ajaccio
-// tombent maintenant sur EXACTEMENT le même point (le centre communal) et seront
-// dispersées en cercle de 18 m par le mécanisme déjà en place, sans changement de code.
-// Examiné avant de la laisser active : le point de référence est le centre officiel de
-// la commune (un repère public, pas une adresse), donc un petit cercle de marqueurs
-// autour de lui ne peut pas se lire comme la position de logements distincts — la
-// dispersion aide seulement à voir qu'il y a plusieurs fiches, elle ne pointe vers rien
-// de précis. Laissée active ; le clustering du brief D la rendra de toute façon
-// redondante pour le résidentiel (un cluster par commune).
-// Correctif 2026-09-02 (constat revue indépendante, avant merge #1179/#1180) : la version
-// initiale de cette fonction n'agrégeait QUE lat/lon — insuffisant. site_nom (nom de voie exact
-// pour les 8 fiches résidentielles d'origine), adresse_complete (adresse postale complète, avec
-// nom de résidence pour plusieurs des 77 fiches issues de l'ingestion — ex. « Résidence les
-// Palmiers ») et note (réitère parfois l'adresse en texte libre) exposaient tous une adresse de
-// domicile précise malgré la coordonnée déplacée — exactement le risque que l'agrégation devait
-// éliminer. Les trois sont maintenant vidés ici, au même endroit que la coordonnée, pour que
-// TOUT consommateur (rendu carte, popup, téléchargement, hook debug) hérite automatiquement de
-// la protection sans avoir à y penser séparément à chaque nouveau point d'accès à ces données.
-//
-// Fail-closed sur l'invariant vie privée : une fiche résidentielle dont la commune est absente
-// de CERT_COMMUNE_CENTRES est désormais EXCLUE du tableau retourné (rendu et téléchargement),
-// pas seulement signalée par un avertissement console — celui-ci n'est surveillé par personne en
-// production, et laisser passer une coordonnée exacte de domicile n'est jamais acceptable même
-// dans un cas limite non couvert par la table.
-function _certAggregateResidentialCoords(mesures) {
-  let nAggregated = 0, nExcluded = 0;
+// ── Réduction résidentielle : faite À LA SOURCE, plus côté client ─────────────────
+// Les fiches D0/D (2026-09-02) exigeaient une agrégation cliente (CERT_COMMUNE_CENTRES +
+// _certAggregateResidentialCoords, retirées ici) parce que le fichier livrait encore des
+// coordonnées et adresses exactes de domicile. Le nouveau jeu réduit déjà les 87 fiches
+// résidentielles au centroïde communal AU MOMENT DE LA COLLECTE (meta.reduction_residentielle,
+// même doctrine que PR #1183 — vérifié : precision_coord==='centroide_communal' pour les 87,
+// aucun champ adresse/site_nom/note résiduel dans le fichier). _certCheckResidentialSafety()
+// ci-dessous est un filet de sécurité fail-closed (pas une agrégation) : une fiche résidentielle
+// qui arriverait un jour SANS ce marqueur est exclue, jamais affichée sur un doute.
+function _certCheckResidentialSafety(mesures) {
+  let nExcluded = 0;
   const kept = mesures.filter(function(m) {
     if (m.type_environnement !== 'residentiel') return true;
-    const c = CERT_COMMUNE_CENTRES[m.commune];
-    if (!c) {
-      nExcluded++;
-      console.warn('[Tellux] Fiche résidentielle #' + m.id + ' (' + m.commune + ') exclue — aucun centroïde communal connu, coordonnée exacte non exposée. À corriger (étendre CERT_COMMUNE_CENTRES) avant tout élargissement du corpus.');
-      return false;
-    }
-    m.lat = c.lat;
-    m.lon = c.lon;
-    m._coord_aggregated_commune = true;
-    m.site_nom = null;
-    m.adresse_complete = null;
-    m.note = null;
-    nAggregated++;
-    return true;
+    if (m.precision_coord === 'centroide_communal') return true;
+    nExcluded++;
+    console.warn('[Tellux] Fiche résidentielle #' + m.id + ' exclue — precision_coord absente ou différente de centroide_communal, coordonnée non garantie anonymisée.');
+    return false;
   });
-  console.log('[Tellux] Mesures certifiées — ' + nAggregated + ' fiche(s) résidentielle(s) agrégée(s) au centroïde communal (coordonnée + identifiants textuels)' + (nExcluded > 0 ? ' · ' + nExcluded + ' exclue(s) faute de centroïde connu' : '') + '.');
+  if (nExcluded > 0) console.warn('[Tellux] Mesures certifiées — ' + nExcluded + ' fiche(s) résidentielle(s) exclue(s) (garde vie privée).');
   return kept;
 }
 // Depuis le 2026-08-29 (item C) : bouton propre b-cert ("Mesures certifiées"), séparé des
@@ -14495,12 +14541,12 @@ function loadMesuresCertifiees() {
   if (_certLoadPromise) return _certLoadPromise;
   _certLoadPromise = (async () => {
     try {
-      const r = await fetch('public/data/cartoradio_certified_corse.json', { signal: AbortSignal.timeout(5000) });
+      const r = await fetch('public/data/mesures_anfr_corse_2026-09-20.json', { signal: AbortSignal.timeout(5000) });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const d = await r.json();
       MESURES_CERTIFIEES = d.mesures || [];
       console.log('[Tellux] Mesures certifiees chargees : ' + MESURES_CERTIFIEES.length);
-      MESURES_CERTIFIEES = _certAggregateResidentialCoords(MESURES_CERTIFIEES);
+      MESURES_CERTIFIEES = _certCheckResidentialSafety(MESURES_CERTIFIEES);
       // Jeu vide (2026-09-10, revue de la suite du lot contexte) : traité comme un échec, pour que le mémo
       // soit relâché. Sinon une réponse 200 sans fiche restait en mémoire : la bascule du bouton comme la
       // reprise la rendaient sans refaire la requête, alors que le message invite à réessayer.
@@ -14556,7 +14602,7 @@ function annoncerMesuresCertifiees() {
   info(jt('cert_toast_prefix','Mesures certifiées — ')+nCert+jt('cert_toast_suffix',' fiches ANFR/EXEM (2002–2026).'),null,4000);
 }
 
-// Telechargement des fiches certifiees ANFR/EXEM en JSON (236 depuis le 2026-09-02, wrapper avec metadata source/licence)
+// Telechargement des fiches certifiees ANFR/EXEM en JSON (239 depuis le 2026-09-20, wrapper avec metadata source/licence)
 function downloadCertifiedJSON() {
   if (!MESURES_CERTIFIEES || MESURES_CERTIFIEES.length === 0) {
     info(jt('cert_unavailable', 'Fiches certifiées non disponibles — réessayer dans quelques instants.'), 'warn', 5000);
@@ -14566,8 +14612,8 @@ function downloadCertifiedJSON() {
     source: 'Tellux Corse — https://tellux.pages.dev',
     generated_at: new Date().toISOString(),
     n_mesures: MESURES_CERTIFIEES.length,
-    note_precision: 'Coordonnées = positions exactes ANFR (precision_coord=exacte), récupérées via l’API publique cartoradio.fr le 27/04/2026 — SAUF les fiches en environnement résidentiel (mesure au domicile d’un particulier), agrégées au centroïde de leur commune (voir champ type_environnement et _coord_aggregated_commune par fiche).',
-    source_originale: 'ANFR/EXEM — 30 fiches d’origine (2024-2026) extraites des PDFs CartoRadio par l’équipe Tellux (PyMuPDF + OCR Tesseract) ; 206 fiches supplémentaires (2002-2023) via l’API CartoRadio par fiche (/api/v1/mesures/{id}, JSON structuré, sans OCR)',
+    note_precision: 'Coordonnées = positions exactes ANFR (precision_coord=exacte) pour les 152 fiches extérieur public (117 sites distincts) — SAUF les 87 fiches en environnement résidentiel (mesure au domicile d’un particulier), réduites à la source au centroïde de leur commune (voir champ precision_coord=centroide_communal par fiche, position non publiée).',
+    source_originale: 'ANFR/EXEM — collecte CartoRadio du 19/09/2026 (API publique /api/v1/mesures, sans authentification, Licence Ouverte/Etalab), 239 fiches (2002-2026)',
     licence: 'Données publiques ANFR (Licence Ouverte 2.0). Compilation Tellux sous CC-BY 4.0.',
     mesures: MESURES_CERTIFIEES
   };
@@ -14697,15 +14743,24 @@ function _certFormatPopup(m) {
   const noteHtml = m.note
     ? '<div class="cert-popup-note">' + m.note + '</div>'
     : '';
-  // site_nom absent (résidentiel, vidé par _certAggregateResidentialCoords — ou déjà null à la
-  // source pour la plupart des 129 fiches extérieur public issues de l'ingestion élargie) :
-  // repli sur la commune plutôt que d'afficher "null" en toutes lettres (constat revue
-  // indépendante 2026-09-02). Le libellé de repli distingue résidentiel/extérieur — jamais
-  // "résidentiel" pour une fiche qui ne l'est pas.
+  // site_nom absent depuis le jeu du 2026-09-20 (jamais fourni par la collecte, champ
+  // retire a la source, pas vide cote client). Repli sur la commune plutot que d'afficher
+  // "null" en toutes lettres. Le libelle de repli distingue residentiel/exterieur -- jamais
+  // "residentiel" pour une fiche qui ne l'est pas.
   const headerFallback = m.type_environnement === 'residentiel'
     ? jt('cert_header_fallback_resid_prefix','Mesure résidentielle — ') + m.commune
     : m.commune;
   const headerText = m.site_nom || headerFallback;
+  // Precision de position -- CONDITIONNELLE depuis le 2026-09-20 (LOT C, item d) : le texte
+  // unique d'avant ("centroide communal" affiche meme sur l'exterieur public a coordonnee
+  // exacte) etait trompeur pour 152 fiches sur 239, signale et laisse en l'etat par le lot
+  // RF texts (df9ef34, hors perimetre a l'epoque). Residentiel = etiquete "position non
+  // publiee" en clair (jamais de marqueur localise, cf. _certCheckResidentialSafety) ;
+  // exterieur public = position exacte, dite comme telle.
+  const precisionHtml = m.type_environnement === 'residentiel'
+    ? '<div class="cert-popup-precision">'+jt('cert_precision_resid','\u26A0 Position non publiée — centroïde communal (mesure au domicile d’un particulier)')+'</div>'
+    : '<div class="cert-popup-precision">'+jt('cert_precision_exact','Position exacte — source ANFR/CartoRadio.fr')+'</div>';
+  const provenanceHtml = '<div style="font-size:10px;color:var(--tx-mica,#7B7770);margin-top:2px">'+jt('cert_provenance_label','Source : ')+jt('cert_provenance_value','API CartoRadio publique, sans authentification')+'</div>';
   return '<div class="cert-popup-header">' + headerText + '</div>'
     + '<div style="font-size:11px;color:var(--tx-mica,#7B7770);margin-bottom:4px">' + m.commune + ' (' + m.departement + ')</div>'
     + badgeHtml
@@ -14715,7 +14770,8 @@ function _certFormatPopup(m) {
     + '<div style="font-size:11px"><b>'+jt('cert_protocole_label','Protocole :')+'</b> ' + m.protocole + jt('cert_infix_dot',' \u00B7 ')+'<b>'+jt('cert_ref_label','Réf. :')+'</b> #' + m.id + '</div>'
     + bandesHtml
     + linkCrossHtml
-    + '<div class="cert-popup-precision">'+jt('cert_precision_note','\u26A0 Précision : centroïde communal \u2014 localisation exacte à vérifier sur CartoRadio.fr')+'</div>'
+    + precisionHtml
+    + provenanceHtml
     + noteHtml;
 }
 
@@ -15912,7 +15968,9 @@ function capCleanup(){
 // sans validation locuteur natif (même discipline que chip_label_tt/brief AV, dom_hot/brief BA).
 ["lyr_elf_tt","#b-elf","title","Champ magnétique ELF 50 Hz (réseau électrique), exprimé en nT — composante anthropique seule du modèle Tellux, sans la susceptibilité du substrat (distincte de « Champ magnétique composite », qui combine les deux). Estimation, pas une mesure. N'affiche rien sous 300 nT : seuil réutilisant le repère documentaire IARC classe 2B, une classification épidémiologique de long terme — un choix éditorial d'affichage, pas une évaluation du risque à ce niveau précis.","","ELF magnetic field 50 Hz (electrical grid), expressed in nT — anthropic component only of the Tellux model, without substrate susceptibility (distinct from \"Composite magnetic field\", which combines both). Estimate, not a measurement. Shows nothing below 300 nT: a threshold reusing the IARC class 2B documentary reference point, a long-term epidemiological classification — an editorial display choice, not a risk evaluation at this precise level."],
 ["lyr_cert","#b-cert","","Mesures certifiées (ANFR/EXEM)","Misure certificate (ANFR/EXEM)","Certified measurements (ANFR/EXEM)"],
-["lyr_cert_tt","#b-cert","title","236 fiches de mesure certifiées ANFR/EXEM (2002–2026), extraites des PDF ou de l'API CartoRadio. 21 ont servi à calibrer la constante k du modèle RF (calcul one-shot à l'initialisation, pas une modulation en direct par point). Losanges = extérieur public (position exacte) ; cercles = résidentiel (centroïde communal), colorés selon la conformité (limite légale 28 V/m).","236 schede di misura certificate ANFR/EXEM (2002–2026), estratte da i PDF o da l'API CartoRadio. 21 anu servutu à calibrà a custante k di u mudellu RF (calculu una volta sola à l'iniziu, micca una mudulazione in direttu per puntu). Rombi = esternu pubblicu (pusizione esatta) ; cerchj = residenziale (centroide cumunale), culuriti secondu a cunfurmità (limita legale 28 V/m).","236 certified ANFR/EXEM measurement sheets (2002–2026), extracted from CartoRadio PDFs or API. 21 used to calibrate the RF model's k constant (one-shot calculation at initialization, not a live per-point modulation). Diamonds = outdoor public (exact position); circles = residential (commune centroid), coloured by compliance (legal limit 28 V/m)."],
+["lyr_cert_tt","#b-cert","title","239 fiches de mesure certifiées ANFR/EXEM (2002–2026, collecte CartoRadio du 19/09/2026) — 117 sites distincts en extérieur public (152 fiches, position exacte), 87 fiches résidentielles (centroïde communal, position non publiée). 21 fiches d'un jeu distinct et inchangé ont servi à calibrer la constante k du modèle RF (calcul one-shot à l'initialisation, pas une modulation en direct par point). Losanges = extérieur public (position exacte) ; cercles = résidentiel (centroïde communal, position non publiée), colorés selon la conformité (limite légale 28 V/m).","239 schede di misura certificate ANFR/EXEM (2002–2026, cuglita CartoRadio di u 19/09/2026) — 117 siti distinti in esternu pubblicu (152 schede, pusizione esatta), 87 schede residenziale (centroide cumunale, pusizione micca publicata). 21 schede d’un ghjocu distintu è micca cambiatu anu servutu à calibrà a custante k di u mudellu RF (calculu una volta sola à l’iniziu, micca una mudulazione in direttu per puntu). Rombi = esternu pubblicu (pusizione esatta) ; cerchj = residenziale (centroide cumunale, pusizione micca publicata), culuriti secondu a cunfurmità (limita legale 28 V/m).","239 certified ANFR/EXEM measurement sheets (2002–2026, CartoRadio collection of 2026-09-19) — 117 distinct sites in outdoor public settings (152 sheets, exact position), 87 residential sheets (commune centroid, position not published). 21 sheets from a separate, unchanged dataset were used to calibrate the RF model’s k constant (one-shot calculation at initialization, not a live per-point modulation). Diamonds = outdoor public (exact position); circles = residential (commune centroid, position not published), coloured by compliance (legal limit 28 V/m)."],
+["lyr_interp","#b-interp","","Interpolation des mesures (3 zones)","","Measured interpolation (3 zones)"],
+["lyr_interp_tt","#b-interp","title","Interpolation d'une surface à partir des sites mesurés (jamais du modèle), restreinte aux 3 zones qui remplissent le critère écrit — rayon 5 km, plus proche voisin sous 2,5 km : Ajaccio (42 sites), Bastia (20), Corte (3). Plafond interne de 2,5 km : arrêt net au bord, sans dégradé — une cellule sans site assez proche reste vide, y compris à l'intérieur d'une zone. Sites sources toujours visibles (points sombres).","","Interpolating a surface from measured sites (never the model), restricted to the 3 zones that meet the written criterion — 5 km radius, nearest neighbour under 2.5 km: Ajaccio (42 sites), Bastia (20), Corte (3). Internal cutoff of 2.5 km: hard stop at the edge, no gradient — a cell without a close enough site stays empty, even inside a zone. Source sites always visible (dark dots)."],
 ["lyr_contrib","#b-contrib","","Contributions smartphone","Cuntribuzione smartphone","Smartphone contributions"],
 ["lyr_contrib_tt","#b-contrib","title","Contributions terrain des utilisateurs Tellux : magnétomètre smartphone (nT), signal réseau/WiFi (dBm), relevés au capteur externe. Cercles violets, en cluster. N'influence jamais le score composite affiché ; une comparaison indicative apparaît dans le détail technique du popup.","Cuntribuzione di terrenu di l'utilizatori Tellux : magnetometru smartphone (nT), signale reta/WiFi (dBm), rilievi à u sensore esternu. Cerchji viola, in cluster. Affissu solu.","Field contributions from Tellux users: smartphone magnetometer (nT), network/WiFi signal (dBm), external-sensor readings. Purple circles, clustered. Never influences the displayed composite score; an indicative comparison appears in the popup's technical detail."],
 ["lyr_ant","#b-ant","","Antennes ANFR + TDF","Antenne ANFR + TDF","ANFR + TDF antennas"],
@@ -15988,7 +16046,7 @@ function capCleanup(){
 // aucun décalage sur @1-@8 : aucun autre .cond-key n'a d'entrée i18n positionnelle après lui.
 ["acq_label","#acq-label","","vérification…","verificazione…","checking…"],
 ["cert_header","#cert-download-block > div:first-child","","Sources certifiées","Fonti certificate","Certified sources"],
-["cert_btn","#btn-cert-download span@1","tf","Télécharger les 236 fiches ANFR/EXEM","Scaricà e 236 schede ANFR/EXEM","Download the 236 ANFR/EXEM sheets"],
+["cert_btn","#btn-cert-download span@1","tf","Télécharger les 239 fiches ANFR/EXEM","Scaricà e 239 schede ANFR/EXEM","Download the 239 ANFR/EXEM sheets"],
 ["cert_desc","#cert-download-block > div:nth-child(3)","","Mesures certifiées de laboratoire (ANFR · EXEM) extraites des PDFs CartoRadio. Déjà visibles sur la carte en losanges colorés.","Misure certificate di laburatoriu (ANFR · EXEM) estratte da i PDF CartoRadio. Dighjà visibule nant'à a carta in rombi culuriti.","Certified laboratory measurements (ANFR · EXEM) extracted from CartoRadio PDFs. Already visible on the map as colored diamonds."],
 ["contrib_recent","#contrib-panel > div:nth-child(2)","","Contributions récentes — base Supabase","Cuntribuzione recente — basa Supabase","Recent contributions — Supabase database"],
 ["legende_aria","#legende","aria-label","Légende EM","Legenda EM","EM legend"],
