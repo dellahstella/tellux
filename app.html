@@ -10127,20 +10127,29 @@ map.on('click',async e=>{
   const phEmoji=perturbHumain<=1?'🟢':perturbHumain<=2?'🟡':perturbHumain<=3?'🟠':'🔴';
   const phLabel=perturbHumain<=1?jt('ph_label_tres_calme','Très calme'):perturbHumain<=2?jt('ph_label_calme','Calme'):perturbHumain<=3?jt('ph_label_modere','Modéré'):jt('ph_label_perturbe','Perturbé');
   // Palette conforme §0.6 : sans rouge saturé ni vert saturé (pas de connotation danger/sécurité)
-  // phColor — lot 3 phase B (2026-09-02, dette A11Y-CONTRAST-APP-PANELS-002). Deux des 4 niveaux
-  // échouaient sur le fond popup (rgb(245,240,231)) : #5A7D4E (vert moyen, perturb<=2) à 4,13 —
-  // sous AA — et #C28533 (ocre, perturb<=3) à 2,76 — classe critique. Hypothèse de redondance
-  // vérifiée EXHAUSTIVEMENT avant d'agir (seul site de rendu de phColor dans tout le fichier,
-  // grep à l'appui) : phEmoji (🟢🟡🟠🔴, 4 glyphes distincts) ET le chiffre exact perturbHumain/5
-  // accompagnent TOUJOURS la couleur — celle-ci n'est jamais le seul canal. Fusion retenue :
-  // vert_fonce et vert_moyen deviennent UN seul vert (#3F5B3A, 6,68) — la tentative de sauver
-  // vert_moyen en l'assombrissant le rapprochait mécaniquement de vert_fonce (mutuel 1,25-1,37
-  // selon la variante testée, contre 1,62 avant correction) sans gain d'information puisque
-  // l'emoji distingue déjà les deux niveaux. Ocre -> #8A5E22 (4,99 sur ce fond), réemploi de la
-  // même substitution que #1165/#1167/#1173 — une seule "ocre-texte" dans tout le fichier.
-  // Porphyre inchangé (7,18). Résultat : 4 niveaux sémantiques (glyphe+chiffre), 3 couleurs.
-  // Vérifié par rendu visuel avant d'écrire ce commentaire (mockup temporaire, jamais commité).
-  const phColor=perturbHumain<=1?'#3F5B3A':perturbHumain<=2?'#3F5B3A':perturbHumain<=3?'#8A5E22':'#8E2F1F';
+  // phColor — historique jusqu'au 2026-09-02 (lot 3 phase B, dette A11Y-CONTRAST-APP-PANELS-002) :
+  // deux des 4 niveaux échouaient sur le fond popup (rgb(245,240,231)) : #5A7D4E (vert moyen,
+  // perturb<=2) à 4,13 — sous AA — et #C28533 (ocre, perturb<=3) à 2,76 — classe critique. Ce
+  // lot avait fusionné vert_fonce et vert_moyen en UN seul vert (#3F5B3A) plutôt que de corriger
+  // vert_moyen — reportant l'écart de contraste sur un écart de PALETTE : 3 niveaux (0,1,2)
+  // partageaient une seule couleur pour 4 libellés (phEmoji/phLabel restaient distincts). Masqué
+  // par la dominance du niveau maximal (90,7 % des points au libellé « Perturbé » sous la
+  // calibration ELF actuelle, cf. RAPPORT_RECALAGE_PALIERS_ELF_2026-09-20.md §f, privé) —
+  // deviendrait structurant dès que les paliers ELF seraient recalés (arbitrage encore ouvert,
+  // non touché ici).
+  //
+  // CORRIGÉ le 2026-09-20 (LOT E, exception nommée à ADR-070 — cf. ADR-072, dépôt privé) :
+  // niveau « Calme » (perturb===2) reçoit sa propre couleur, #5C5A1E (kaki/olive foncé,
+  // H 58°, à mi-chemin du vert-maquis existant H 111° et de l'ocre H 35° — ni rouge ni vert
+  // saturé, conforme §0.6). Contraste vérifié sur le même fond (rgb(245,240,231)) :
+  // 6,30:1 — AA largement passé (seuil 4,5:1, texte 14px gras, sous le seuil "grand texte"
+  // WCAG de 18,66px gras). Recalculé avec la même formule que tests/blindage-harness/
+  // contrast-panels.mjs (luminance relative WCAG, pas une approximation), et reverifié en
+  // exécutant ce script en local (0 violation, cf. PR). Résultat : 4 niveaux sémantiques
+  // (glyphe+chiffre+couleur), 4 couleurs — plus de fusion. Vert foncé #3F5B3A (perturb<=1,
+  // 6,68), ocre #8A5E22 (perturb===3, 4,99, inchangé), porphyre #8E2F1F (perturb>3, 7,18,
+  // inchangé) : aucun des trois autres n'est touché par ce lot.
+  const phColor=perturbHumain<=1?'#3F5B3A':perturbHumain<=2?'#5C5A1E':perturbHumain<=3?'#8A5E22':'#8E2F1F';
   // phHeaderHTML : état d'attente ELF (2026-09-04, brief AF lot B, arbitrage Soleil) — perturbHumain
   // dépend de human (ELF), lui-même v1 tant que elfState!=='ready'. 'loading' : aucun chiffre
   // affiché (le score changerait de palier dans 33% des cas, brief AP — pas une nuance à montrer
@@ -12006,20 +12015,34 @@ function buildHot(){
 
 // ═══ Couche RF — densité d'émetteurs pondérée par la distance (sans unité) ═══
 // Séparée de la heatmap magnétique (ADR-024) : une couche = une grandeur = une unité.
-// Valeur = calcN_RF_calib (V/m réel, calibré sur mesures ANFR/EXEM). Aucune bucketisation
-// ni fusion avec des nT. OFF par défaut (opt-in) pour ne pas charger le boot.
-function rfColor(vm){
-  // Bins RE-DÉRIVÉS 2026-07-02 sur la distribution réelle du modèle (post-S5, k≈0,361 ;
-  // grille de rendu : p50≈0,39 · p90≈0,86 · p99≈1,69 V/m). Les anciens 2/6/20 (magnitudes
-  // pré-S5) mettaient ~99 % des cellules dans un seul bin → heatmap monochrome (bug live).
-  // ÉCHELLE RELATIVE au modèle (option a) : labels comparatifs, PAS d'exposition absolue —
-  // valeurs très en deçà du repère ICNIRP public (28–61 V/m), aucun seuil d'alerte.
-  if(vm<0.40) return{fill:'#9ecae1',opacity:0.30,label:'Plus faible'};      // bleu clair
-  if(vm<0.55) return{fill:'#4292c6',opacity:0.40,label:'Faible'};        // bleu
-  if(vm<0.85) return{fill:'#2171b5',opacity:0.50,label:'Intermédiaire'}; // bleu foncé
-  if(vm<1.5)  return{fill:'#08306b',opacity:0.58,label:'Plus marqué'};    // bleu nuit
+// Valeur = calcN_RF_calib (densité pondérée, calibrée en interne sur 21 mesures certifiées
+// ANFR/EXEM — cf. requalification RF, #1551 — jamais présentée comme un champ mesuré).
+// Aucune bucketisation ni fusion avec des nT.  OFF par défaut (opt-in) pour ne pas charger le boot.
+//
+// Paramètre RENOMMÉ vm→score le 2026-09-20 (LOT E, exception nommée à ADR-070, cf. ADR-072) :
+// « vm » (V/m) survivait comme nom de variable après que #1551 (LOT B+A) a retiré toute
+// affirmation d'unité de cette couche ailleurs (légende, tooltip, popup) — un nombre orphelin
+// hérité d'une grandeur qu'on ne revendique plus, ici précisément (fonction de classification
+// visuelle uniquement, aucun calcul touché). Renommage seul, comportement byte-identique.
+function rfColor(score){
+  // Bornes INCHANGÉES depuis leur dérivation du 2026-07-02 (post-S5, k≈0,361) : ce sont déjà
+  // des quantiles de la distribution MODÉLISÉE elle-même (grille de rendu de l'époque :
+  // p50≈0,39 · p90≈0,86 · p99≈1,69), jamais des valeurs mesurées — la seconde option ouverte
+  // par le brief LOT E (§Volet II.c), déjà appliquée sans le savoir. Aucun recalage ici (règle
+  // du brief) : mêmes 4 bornes, même comportement, seule la lecture qu'on en fait change.
+  // La comparaison au repère ICNIRP public (28–61 V/m) qui figurait ici avant ce lot est
+  // RETIRÉE : elle comparait un nombre sans unité à un seuil sanitaire en V/m, exactement la
+  // confusion que #1551 a corrigée ailleurs sur cette même couche.
+  // Les anciens 2/6/20 (magnitudes pré-S5) mettaient ~99 % des cellules dans un seul bin →
+  // heatmap monochrome (bug live, motif historique de la re-dérivation du 2026-07-02).
+  // ÉCHELLE RELATIVE au modèle (option a) : cinq classes ordinales, un rang entre elles, pas
+  // un niveau d'exposition — cf. légende (LEGEND_HTML.hotrf), déjà sans nombre ni unité.
+  if(score<0.40) return{fill:'#9ecae1',opacity:0.30,label:'Plus faible'};      // bleu clair
+  if(score<0.55) return{fill:'#4292c6',opacity:0.40,label:'Faible'};        // bleu
+  if(score<0.85) return{fill:'#2171b5',opacity:0.50,label:'Intermédiaire'}; // bleu foncé
+  if(score<1.5)  return{fill:'#08306b',opacity:0.58,label:'Plus marqué'};    // bleu nuit
   // Débordement EXPLICITE (programme EM 4 axes, vague 2) : au-delà du haut de l'ambiant
-  // typique (~1,5 V/m ≈ p99 du modèle 1,69), plus de clamp silencieux dans le bin bleu nuit —
+  // typique (~1,5 ≈ p99 du modèle 1,69, sans unité depuis #1551), plus de clamp silencieux dans le bin bleu nuit —
   // catégorie distincte « hors échelle ambiante typique ». Couleur volontairement hors gradient
   // et non alarmiste (pas de rouge : pas un seuil sanitaire).
   //
@@ -12047,12 +12070,12 @@ function buildHotRF(){
   const lonMax=z>=10?Math.min(9.65,bnds.getEast()+0.1):9.65;
   for(let a=latMin;a<latMax;a+=step){
     for(let o=lonMin;o<lonMax;o+=step){
-      const vm=calcN_RF_calib(a,o); // V/m réel calibré (pas de bucket)
-      if(vm>=0.3){                  // seuil d'affichage (présentation) : 0,3 V/m — suit les magnitudes
+      const score=calcN_RF_calib(a,o); // densité pondérée, calibrée en interne (pas de bucket) — sans unité, cf. rfColor()
+      if(score>=0.3){                // seuil d'affichage (présentation) : 0,3 — suit les magnitudes
                                     // ×1,94 de S2 (k extérieurs-seuls) : 0,3 ≈ même couverture visuelle
                                     // (~7-9 %) que 0,2 sous l'ancien k. Réglable. Rural profond reste vide
                                     // (absence de source, pas effet de seuil).
-        const {fill,opacity}=rfColor(vm);
+        const {fill,opacity}=rfColor(score);
         const rect=L.rectangle([[a,o],[a+step,o+step]],{
           color:fill, weight:0.5, opacity:0.4,
           fillColor:fill, fillOpacity:opacity,
@@ -15963,7 +15986,7 @@ function capCleanup(){
 ["lyr_hot_tt","#b-hot","title","Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. N'inclut pas le champ géomagnétique terrestre total (~46 000-47 500 nT en Corse, l'ordre de grandeur qu'un magnétomètre de smartphone mesure) : ce sont deux grandeurs physiques distinctes, jamais additionnées ici — le champ géomagnétique n'entre dans ce nombre à aucun titre. Estimation du modèle Tellux, pas une mesure. La composante ELF entre dans le score Indice Tellux affiché ; la composante substrat reste une donnée de contexte, sans consommateur dans ce score.","","Composite magnetic field — ELF 50 Hz (electrical grid) + substrate susceptibility, expressed in nT. Does not include the total terrestrial geomagnetic field (~46,000-47,500 nT in Corsica, the order of magnitude a smartphone magnetometer measures): these are two distinct physical quantities, never added together here — the geomagnetic field plays no part whatsoever in this number. Tellux model estimate, not a measurement. The ELF component feeds the displayed Indice Tellux score; the substrate component remains contextual data, with no consumer in that score."],
 ["lyr_hotrf","#b-hot-rf","","Densité d'émetteurs pondérée","Densità d'emettitori ponderata","Weighted transmitter density"],
 ["lyr_elf","#b-elf","","Champ ELF (nT)","","ELF field (nT)"],
-["lyr_hotrf_tt","#b-hot-rf","title","Densité d'émetteurs pondérée par la distance — modèle Tellux. Compte les antennes ANFR et les émetteurs TDF déclarés autour du point, en pondérant par la distance (décompte dans la légende Antennes ANFR et émetteurs TDF). Classe les lieux entre eux ; n'indique pas un niveau d'exposition et ne remplace pas une mesure. Le facteur d'échelle est ajusté sur 21 mesures certifiées ANFR/EXEM — ajusté ne veut pas dire validé par la mesure. Relecture physicien sollicitée depuis le 2026-07-01 (ADR-027). Pour un niveau mesuré, voir la couche Mesures certifiées ANFR.","","Distance-weighted transmitter density — Tellux model. Counts the declared ANFR antennas and TDF transmitters around the point, weighted by distance. Ranks locations relative to one another; does not indicate an exposure level and does not replace a measurement. The scale factor is adjusted on 21 certified ANFR/EXEM measurements — adjusted does not mean validated by measurement. Physicist review requested since 2026-07-01 (ADR-027). For a measured level, see the Certified ANFR measurements layer."],,
+["lyr_hotrf_tt","#b-hot-rf","title","Densité d'émetteurs pondérée par la distance — modèle Tellux. Compte les antennes ANFR et les émetteurs TDF déclarés autour du point, en pondérant par la distance (décompte dans la légende Antennes ANFR et émetteurs TDF). Classe les lieux entre eux ; n'indique pas un niveau d'exposition et ne remplace pas une mesure. Le facteur d'échelle est ajusté sur 21 mesures certifiées ANFR/EXEM — ajusté ne veut pas dire validé par la mesure. Relecture physicien sollicitée depuis le 2026-07-01 (ADR-027). Pour un niveau mesuré, voir la couche Mesures certifiées ANFR.","","Distance-weighted transmitter density — Tellux model. Counts the declared ANFR antennas and TDF transmitters around the point, weighted by distance. Ranks locations relative to one another; does not indicate an exposure level and does not replace a measurement. The scale factor is adjusted on 21 certified ANFR/EXEM measurements — adjusted does not mean validated by measurement. Physicist review requested since 2026-07-01 (ADR-027). For a measured level, see the Certified ANFR measurements layer."],
 // lyr_elf_tt (brief BH, 2026-09-05) : CO laissée vide à dessein — pas de traduction improvisée
 // sans validation locuteur natif (même discipline que chip_label_tt/brief AV, dom_hot/brief BA).
 ["lyr_elf_tt","#b-elf","title","Champ magnétique ELF 50 Hz (réseau électrique), exprimé en nT — composante anthropique seule du modèle Tellux, sans la susceptibilité du substrat (distincte de « Champ magnétique composite », qui combine les deux). Estimation, pas une mesure. N'affiche rien sous 300 nT : seuil réutilisant le repère documentaire IARC classe 2B, une classification épidémiologique de long terme — un choix éditorial d'affichage, pas une évaluation du risque à ce niveau précis.","","ELF magnetic field 50 Hz (electrical grid), expressed in nT — anthropic component only of the Tellux model, without substrate susceptibility (distinct from \"Composite magnetic field\", which combines both). Estimate, not a measurement. Shows nothing below 300 nT: a threshold reusing the IARC class 2B documentary reference point, a long-term epidemiological classification — an editorial display choice, not a risk evaluation at this precise level."],
