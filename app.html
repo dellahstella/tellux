@@ -717,7 +717,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    visuel depuis le debut (pas une regression recente, verifie git blame). Rejoint le groupe
    partage ci-dessus plutot qu'une couleur dediee, coherent avec le fait qu'aucune des 4 autres
    couches de ce groupe n'a de teinte individuelle liee a son icone. */
-.lbtn.on-emag,.lbtn.on-prod,.lbtn.on-crustal,.lbtn.on-foretdense,.lbtn.on-postes,.lbtn.on-foretouverte,.lbtn.on-landemaquis{background:var(--tx-brume);color:var(--tx-maquis);border-color:var(--tx-maquis);}
+.lbtn.on-emag,.lbtn.on-prod,.lbtn.on-crustal,.lbtn.on-foretdense,.lbtn.on-postes,.lbtn.on-foretouverte,.lbtn.on-landemaquis,.lbtn.on-fmtv{background:var(--tx-brume);color:var(--tx-maquis);border-color:var(--tx-maquis);}
 .layers{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;}
 .lbtn{font-size:10px;padding:3px 7px;border-radius:14px;border:1px solid var(--border);background:var(--bg);color:var(--ardoise-clair);cursor:pointer;display:inline-flex;align-items:center;gap:3px;transition:all .15s;white-space:nowrap;}
 /* margin-right explicite (2026-08-26, repro Soleil mobile x3 : icône chevauchant la 1re
@@ -2370,6 +2370,19 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
     <div class="accordion-cat-content">
       <button class="lbtn" id="b-ant" data-domains="rf" title="Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF" onclick="tog('ant','on-ant',this)"><span class="dot" style="background:#1a4b8c"></span>Antennes ANFR + TDF<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-ant"></div>
+      <!-- Couche « Sites de diffusion FM/TV » (b-fmtv) — portée (b) du cadrage FM/TV,
+           BRIEF_CODE_FMTV_PORTEE_B_INTEGRATION_2026-09-20. PRÉSENCE DÉCLARÉE SEULE : 95 supports
+           ANFR portant FM et/ou TNT. Aucune puissance — l’ANFR n’en publie pas pour ces
+           émetteurs, et aucune n’a été fabriquée ni estimée (`par_kw_sourcee` vide partout dans
+           public/data/fmtv_anfr_corse_2026-09-17.json, cf. l’avertissement PAR/PIRE du jeu).
+           HORS CALCUL, vérifié et pas seulement affirmé : FMTV_SITES n’est lu que par
+           _renderFMTV() — ni RF_field(), ni calcN_RF_calib(), ni rfScore, ni l’Indice Tellux
+           n’y touchent. Distincte des 10 émetteurs TDF de b-ant ci-dessus, qui portent une PAR
+           estimée et contribuent, eux, au terme broadcast de RF_field(). Motif de la portée (b) :
+           sur les 21 points certifiés de la calibration, la contribution des sites de diffusion
+           vaut 0 à 0,71 % de Epred — y compris à Calvi, colocalisé à un site TDF. -->
+      <button class="lbtn" id="b-fmtv" data-domains="rf" title="95 supports ANFR déclarés portant de la radio FM et/ou de la télévision TNT en Corse — présence seule. L’ANFR ne publie pas la puissance de ces émetteurs : aucune n’est affichée, aucune n’est estimée. Ces sites n’entrent dans aucun calcul Tellux — ni la couche « Densité d’émetteurs pondérée », ni l’Indice Tellux. Un carré creux = un support déclaré, sans niveau connu. À ne pas confondre avec les 10 émetteurs TDF de la couche « Antennes ANFR + TDF », qui portent une puissance estimée et contribuent, eux, au modèle." onclick="tog('fmtv','on-fmtv',this)"><span class="sq" style="width:9px;height:9px;background:transparent;border:2px solid #3F5B3A;border-radius:1px;box-sizing:border-box"></span>Sites de diffusion FM/TV<span class="layer-badge layer-badge--hors">Hors calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
+      <div class="mlegend-inline" id="mleg-fmtv"></div>
       <button class="lbtn" id="b-res" data-domains="elf" title="Lignes électriques HTA — moyenne tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HTA<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">ELF</span></button>
       <div class="mlegend-inline" id="mleg-res"></div>
       <!-- Couche « Réseau BT » masquée en prod le 2026-08-29 (#1122, verdict RF : n'entre dans
@@ -4462,6 +4475,29 @@ const lCrustal=L.layerGroup();
 // marqueurs partagent presque toujours des coordonnées identiques au sein d'une même commune
 // — le clustering par proximité en fait naturellement « une commune, un cluster », sans
 // logique dédiée à écrire pour ce cas.
+// Couche « Sites de diffusion FM/TV » — présence déclarée seule (2026-09-20, portée b).
+// Couleur : Maquis #3F5B3A, déjà la teinte de la diffusion sur cette carte (TDF_CLUSTER_COLOR).
+// Réemployée à dessein plutôt que d’introduire une teinte neuve : ces 95 supports sont la même
+// famille que les 10 sites TDF — de la diffusion. Le choix n’engage donc PAS la DA au-delà de
+// cette couche (aucune couleur nouvelle, palette v1 inchangée).
+// Ce qui les distingue, c’est le REMPLISSAGE, pas la teinte : carré CREUX ici (présence sans
+// niveau connu) contre carré PLEIN pour les émetteurs TDF qui portent une PAR estimée. Un
+// marqueur vide pour une grandeur inconnue : la forme dit ce que la donnée ne dit pas.
+// Distincte aussi des deux autres registres RF de la carte — le modèle (rectangles translucides,
+// rampe bleue) et les mesures certifiées (losanges/cercles pleins, teal→ocre→rouge).
+const FMTV_COLOR='#3F5B3A'; // Maquis (--tx-maquis), identique à TDF_CLUSTER_COLOR
+const lFMTV=L.markerClusterGroup({
+  iconCreateFunction:function(cluster){
+    const n=cluster.getChildCount();
+    // Cluster creux lui aussi — même grammaire que le marqueur unitaire : rien n’est agrégé
+    // d’autre qu’un COMPTE de supports déclarés, jamais un niveau.
+    return L.divIcon({
+      html:'<div style="width:26px;height:26px;background:rgba(245,240,231,.92);border:2.5px solid '+FMTV_COLOR+';border-radius:2px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font:700 11px system-ui;color:'+FMTV_COLOR+';box-shadow:0 1px 4px rgba(0,0,0,.25)">'+n+'</div>',
+      className:'', iconSize:[26,26], iconAnchor:[13,13]
+    });
+  },
+  maxClusterRadius:45, spiderfyOnMaxZoom:true, showCoverageOnHover:false, zoomToBoundsOnClick:true
+});
 const lCert=L.markerClusterGroup({
   iconCreateFunction: _certClusterIcon,
   maxClusterRadius: 50,
@@ -4652,7 +4688,7 @@ const VEG_GROUP=['foretdense','foretouverte','landemaquis'];
 const CALC_GROUP=['hot','hotrf','elf'];
 // SCISSION 2026-08-29 (brief « exécution groupée », item C) : con → cert (lCert, fiches
 // certifiées ANFR/EXEM) + contrib (lCon, contributions citoyennes). Deux boutons, deux toggles.
-const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,elf:lElf,cert:lCert,interp:lHotMesures,contrib:lCon,foretdense:lForetDense,foretouverte:lForetOuverte,landemaquis:lLandeMaquis,crustal:lCrustal,openrad:lOpenRad};
+const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,elf:lElf,cert:lCert,interp:lHotMesures,fmtv:lFMTV,contrib:lCon,foretdense:lForetDense,foretouverte:lForetOuverte,landemaquis:lLandeMaquis,crustal:lCrustal,openrad:lOpenRad};
 const WMS={hyd:wmsHyd,emag:wmsEmag};
 // hot:false/hotrf:true — modèle RF activé par défaut à la place du champ magnétique
 // composite (arbitrage Soleil 2026-08-23). Swap symétrique avec la déclaration lHot/lHotRF
@@ -4706,7 +4742,7 @@ const WMS={hyd:wmsHyd,emag:wmsEmag};
 //    ant:false du 2026-09-12 (LEGEND_ACTIVE_CORE ne contenait plus 'ant' à ce moment-là),
 //    resterait dormant pour la même raison si rien n'était fait — corrigé et CONSERVÉ malgré le
 //    retrait de l'essai (cf. commentaire à rafraichirLibellesRF()).
-const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,elf:false,res:false,prod:false,cert:false,interp:false,contrib:false,crustal:false,openrad:false};
+const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,elf:false,res:false,prod:false,cert:false,interp:false,fmtv:false,contrib:false,crustal:false,openrad:false};
 
 // 'con' (scindé depuis en 'cert'+'contrib', 2026-08-29 item C) et 'emag' promues en Zone 1
 // "core" le 2026-08-27 (brief "Panneau '?' sélectif",
@@ -4766,7 +4802,7 @@ const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,elf:f
 // conséquence à nommer : elf était la SEULE couche joignable de la Zone 2 ; une fois promue,
 // la pastille contextuelle n'a plus aucune occupante activable par un visiteur. Mécanisme
 // conservé tel quel (hyd/openrad sont explicitement "réactivables en dé-commentant").
-const LEGEND_CORE_IDS=new Set(['hot','hotrf','cert','interp','contrib','emag','ant','res','bt','prod','postesSources','elf']);
+const LEGEND_CORE_IDS=new Set(['hot','hotrf','cert','interp','contrib','emag','ant','fmtv','res','bt','prod','postesSources','elf']);
 const LEGEND_MAX_CONTEXT=3;
 const LEGEND_ACTIVE_CORE=new Set();
 const LEGEND_ACTIVE_CONTEXT=[];
@@ -5061,6 +5097,19 @@ const LEGEND_HTML={
   // recopiés) — une future recoloration de ces constantes ne peut plus désaccorder la légende.
   // Swatch TDF isolé désormais structurellement identique au marqueur réel (carré + glyphe blanc
   // centré, mêmes bordure/ombre) — non un simple carré plat comme avant cette revue.
+  // Legende « Sites de diffusion FM/TV » (2026-09-20, portee b). Deux nombres NOMMES et
+  // distingues (95 supports / 60 emplacements) plutot qu’un seul : l’arbitrage du 2026-09-20 sur
+  // #1552 a retenu que deux comptes nommes n’exposent pas au risque d’arithmetique fausse — ils
+  // l’ecartent. Le support est la maille DECLAREE par l’ANFR ; le regroupement a 500 m est une
+  // agregation Tellux, dite comme telle.
+  fmtv:'<div class="leg-block"><b class="leg-title">Sites de diffusion FM/TV</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Pr\u00e9sence d\u00e9clar\u00e9e \u2014 aucune puissance publi\u00e9e</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:transparent;border:2.5px solid #3F5B3A;border-radius:2px;box-sizing:border-box;vertical-align:middle;margin-right:5px"></span>Support ANFR portant de la radio FM et/ou de la TNT</div>'+
+    '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px"><b>95</b> supports d\u00e9clar\u00e9s \u00b7 64 portent de la FM, 54 de la TNT, 23 les deux \u00b7 r\u00e9partis sur <b>60</b> emplacements distincts \u00e0 moins de 500 m (plusieurs pyl\u00f4nes peuvent partager un sommet).</div>'+
+    '<div class="leg-row" style="margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4">Ce que cette couche montre : <b>o\u00f9</b> des \u00e9metteurs de radio et de t\u00e9l\u00e9vision sont d\u00e9clar\u00e9s. Ce qu\u2019elle ne montre pas : <b>ce qu\u2019on y re\u00e7oit</b>. L\u2019ANFR ne publie pas la puissance de ces \u00e9metteurs \u2014 aucune n\u2019est affich\u00e9e ici, aucune n\u2019est estim\u00e9e. Le carr\u00e9 est creux pour cette raison.</div>'+
+    '<div class="leg-row" style="margin-top:4px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><b>Hors calcul</b> : ces sites n\u2019entrent ni dans la couche \u00ab\u00a0Densit\u00e9 d\u2019\u00e9metteurs pond\u00e9r\u00e9e\u00a0\u00bb, ni dans l\u2019Indice Tellux. Les 10 \u00e9metteurs TDF de la couche \u00ab\u00a0Antennes ANFR + TDF\u00a0\u00bb portent, eux, une puissance estim\u00e9e et contribuent au mod\u00e8le \u2014 carr\u00e9 <b>plein</b>.</div>'+
+    '<div class="leg-src">Supports ANFR, export du 31/05/2026 \u00b7 pr\u00e9sence seule, hors calcul</div>'+
+    '</div>',
   ant:function(){ return '<div class="leg-block"><b class="leg-title">Antennes ANFR et émetteurs TDF</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Une pastille = une <b>position</b> déclarée, pas une antenne : plusieurs générations y coexistent presque toujours, et souvent plusieurs opérateurs. Touchez ou survolez un point pour voir ce qui y est déclaré.</div>'+
   '<div class="leg-row"><span style="display:inline-block;width:9px;height:9px;background:'+GC.default+';border:1.5px solid rgba(255,255,255,.9);border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2);vertical-align:middle;margin-right:4px"></span>Position d’émission déclarée, isolée — la teinte ne code aucune technologie</div>'+
   '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:'+ANFR_CLUSTER_COLOR+';border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.35);vertical-align:middle;margin-right:4px"></span>Grappe ANFR (comptage) — regroupe des positions de toutes générations, sans dominante affichée</div>'+
@@ -5236,6 +5285,14 @@ const LEGEND_HTML_EN={
   // ant : fonction, mêmes corrections que la version FR (cf. commentaire jumeau ci-dessus) —
   // pastilles depuis les mêmes constantes, comptages/générations/opérateurs dérivés, pas de
   // valeurs EN indépendantes recalculées.
+  fmtv:'<div class="leg-block"><b class="leg-title">FM/TV broadcast sites</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Declared presence \u2014 no published power</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:transparent;border:2.5px solid #3F5B3A;border-radius:2px;box-sizing:border-box;vertical-align:middle;margin-right:5px"></span>ANFR support carrying FM radio and/or digital terrestrial TV</div>'+
+    '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px"><b>95</b> declared supports \u00b7 64 carry FM, 54 carry DTT, 23 carry both \u00b7 spread over <b>60</b> distinct locations less than 500 m apart (several masts can share one summit).</div>'+
+    '<div class="leg-row" style="margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4">What this layer shows: <b>where</b> radio and television transmitters are declared. What it does not show: <b>what you receive there</b>. ANFR does not publish the power of these transmitters \u2014 none is displayed here, none is estimated. That is why the square is hollow.</div>'+
+    '<div class="leg-row" style="margin-top:4px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><b>Outside the calculation</b>: these sites feed neither the \u201cWeighted transmitter density\u201d layer nor the Indice Tellux. The 10 TDF transmitters in the \u201cANFR + TDF antennas\u201d layer do carry an estimated power and do feed the model \u2014 <b>solid</b> square.</div>'+
+    '<div class="leg-src">ANFR supports, 2026-05-31 export \u00b7 presence only, outside the calculation</div>'+
+    '</div>',
   ant:function(){ return '<div class="leg-block"><b class="leg-title">ANFR Antennas and TDF Transmitters</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">A dot marks a declared <b>site</b>, not a single antenna: several generations almost always coexist there, and often several operators. Tap or hover a point to see what is declared.</div>'+
   '<div class="leg-row"><span style="display:inline-block;width:9px;height:9px;background:'+GC.default+';border:1.5px solid rgba(255,255,255,.9);border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2);vertical-align:middle;margin-right:4px"></span>Declared transmission site, isolated — the colour encodes no technology</div>'+
   '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:'+ANFR_CLUSTER_COLOR+';border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.35);vertical-align:middle;margin-right:4px"></span>ANFR cluster (count) — groups positions of every generation, no dominant colour shown</div>'+
@@ -5983,6 +6040,11 @@ function tog(id,cls,btn){
       else _syncBTZoom(true);
     }
     if(id==='ant'&&lAnt.getLayers().length===0)loadAnt();
+    if(id==='fmtv'){
+      // Presence seule : le chargeur ne fait que peupler lFMTV (deja ajoute a la carte
+      // par map.addLayer(LAYERS.fmtv) plus haut). Aucun calcul n'est declenche ici.
+      loadFMTV().then(function(){ _renderFMTV(); });
+    }
     if(id==='cert'){
       // Fiches certifiees ANFR/EXEM : chargement + rendu dans lCert (deja ajoute a la carte par
       // map.addLayer(LAYERS.cert) ci-dessus ; _renderMesuresCertifiees le peuple).
@@ -14560,6 +14622,101 @@ let _certLoadPromise = null;
 let _certRendered = false;
 const _certMarkerById = {};
 
+// ═══ Sites de diffusion FM/TV — PRÉSENCE DÉCLARÉE SEULE (2026-09-20, portée b) ═══
+// Jeu : public/data/fmtv_anfr_corse_2026-09-17.json — 95 supports ANFR portant FM et/ou TNT.
+// HORS CALCUL, par construction et pas seulement par intention : FMTV_SITES n'est lu que par
+// _renderFMTV() et _fmtvPopup() ci-dessous. Aucune fonction du moteur ne le référence —
+// ni RF_field(), ni calcN_RF_calib(), ni buildHotRF(), ni le bloc rfScore/perturbHumain.
+// Le jeu ne porte d'ailleurs AUCUNE puissance (par_kw_sourcee vide partout) : même branché
+// par erreur, il n'aurait rien à fournir au terme broadcast, qui exige une PAR strictement
+// positive. Cf. l'avertissement PAR/PIRE du jeu avant de remplir ce champ un jour.
+let FMTV_SITES = [];
+let _fmtvLoadPromise = null, _fmtvRendered = false;
+function loadFMTV() {
+  if (_fmtvLoadPromise) return _fmtvLoadPromise;
+  _fmtvLoadPromise = (async () => {
+    try {
+      const r = await fetch('public/data/fmtv_anfr_corse_2026-09-17.json', { signal: AbortSignal.timeout(5000) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      FMTV_SITES = d.sites || [];
+      if (FMTV_SITES.length === 0) throw new Error('aucun site dans la réponse');
+      // Garde de présence seule, côté client : une puissance qui apparaîtrait un jour dans ce
+      // jeu ne doit pas se mettre à exister silencieusement dans une couche qui promet le
+      // contraire. On la signale, on ne l'affiche pas — « mesurer n'est pas garder » ne vaut
+      // que si le dépassement fait quelque chose.
+      const avecPuissance = FMTV_SITES.filter(x => x.par_kw_sourcee != null).length;
+      if (avecPuissance > 0) {
+        console.warn('[Tellux] FM/TV : ' + avecPuissance + ' site(s) portent une puissance alors que cette couche est déclarée « présence seule ». Valeur IGNORÉE à l\'affichage. Si elle est légitime, c\'est la portée de la couche qu\'il faut rouvrir, pas ce garde-fou qu\'il faut retirer.');
+      }
+      console.log('[Tellux] Sites de diffusion FM/TV chargés : ' + FMTV_SITES.length + ' (présence seule, hors calcul)');
+    } catch (e) {
+      console.warn('[Tellux] Sites de diffusion FM/TV indisponibles : ' + e.message);
+      FMTV_SITES = [];
+      _fmtvLoadPromise = null; // mémo relâché sur échec — même patron que loadMesuresCertifiees()
+    }
+    return FMTV_SITES;
+  })();
+  return _fmtvLoadPromise;
+}
+// Popup — ce que l'ANFR déclare, et rien de plus. Aucune valeur dérivée, aucune unité de champ.
+function _fmtvPopup(x) {
+  const en = document.documentElement.lang === 'en';
+  const fm = x.n_emetteurs_fm > 0, tv = x.n_emetteurs_tv > 0;
+  const sys = en ? (fm && tv ? 'FM radio + digital terrestrial TV' : fm ? 'FM radio' : 'Digital terrestrial TV')
+                 : (fm && tv ? 'Radio FM + t\u00e9l\u00e9vision TNT' : fm ? 'Radio FM' : 'T\u00e9l\u00e9vision TNT');
+  const ligne = (lib, val) => val == null || val === '' ? '' :
+    '<div style="display:flex;justify-content:space-between;gap:10px;font-size:11px;margin-bottom:2px"><span style="color:#626774">' + lib + '</span><span style="font-weight:600;color:#1F2329;text-align:right">' + val + '</span></div>';
+  const bandes = [];
+  if (fm) bandes.push((en ? 'FM ' : 'FM ') + x.fm_freq_min_mhz + '\u2013' + x.fm_freq_max_mhz + ' MHz');
+  if (tv) bandes.push((en ? 'DTT ' : 'TNT ') + x.tv_freq_min_mhz + '\u2013' + x.tv_freq_max_mhz + ' MHz');
+  const nEm = [];
+  if (fm) nEm.push(x.n_emetteurs_fm + (en ? ' FM' : ' FM'));
+  if (tv) nEm.push(x.n_emetteurs_tv + (en ? ' DTT' : ' TNT'));
+  return '<div style="min-width:214px">' +
+    '<div style="font-weight:700;font-size:13px;color:#1F2329;margin-bottom:1px">' + x.commune + '</div>' +
+    '<div style="font-size:10px;color:#626774;margin-bottom:7px">' + (en ? 'Declared broadcast site' : 'Site de diffusion d\u00e9clar\u00e9') + ' \u00b7 ' + x.dept + '</div>' +
+    ligne(en ? 'Systems' : 'Syst\u00e8mes', sys) +
+    ligne(en ? 'Transmitters' : '\u00c9metteurs', nEm.join(' \u00b7 ')) +
+    ligne(en ? 'Frequency bands' : 'Bandes', bandes.join('<br>')) +
+    ligne(en ? 'Support height' : 'Hauteur du support', x.hauteur_support_m != null ? x.hauteur_support_m + ' m' : null) +
+    ligne(en ? 'In service since' : 'Mise en service', x.date_mise_en_service) +
+    ligne(en ? 'ANFR support' : 'Support ANFR', x.sup_id) +
+    '<div style="margin-top:7px;padding-top:6px;border-top:1px solid rgba(0,0,0,.08);font-size:9.5px;color:#4a4f5e;line-height:1.45">' +
+    (en ? '<b>No power.</b> ANFR does not publish the power of these transmitters, and none is estimated here. This site feeds no Tellux calculation \u2014 neither the model layer nor the Indice Tellux.'
+        : '<b>Aucune puissance.</b> L\u2019ANFR ne publie pas la puissance de ces \u00e9metteurs, et aucune n\u2019est estim\u00e9e ici. Ce site n\u2019entre dans aucun calcul Tellux \u2014 ni la couche du mod\u00e8le, ni l\u2019Indice Tellux.') +
+    '</div></div>';
+}
+function _renderFMTV() {
+  if (_fmtvRendered) return;
+  if (!FMTV_SITES || FMTV_SITES.length === 0) return; // pas de verrou sur un jeu vide (patron cert)
+  _fmtvRendered = true;
+  FMTV_SITES.forEach(x => {
+    const icon = L.divIcon({
+      className: '',
+      // Carré CREUX : la forme dit l'absence de niveau connu. Halo blanc pour tenir sur
+      // n'importe quel fond de carte, comme les autres marqueurs de la carte.
+      html: '<div style="width:13px;height:13px;background:transparent;border:2.5px solid ' + FMTV_COLOR + ';border-radius:2px;box-sizing:border-box;box-shadow:0 0 0 1.5px rgba(255,255,255,.9),0 1px 3px rgba(0,0,0,.25)"></div>',
+      iconSize: [16, 16], iconAnchor: [8, 8]
+    });
+    L.marker([x.lat, x.lon], { icon })
+      .bindPopup(_fmtvPopup(x), { maxWidth: 300, autoPan: true })
+      .addTo(lFMTV);
+  });
+}
+async function repriseFMTV() {
+  await loadFMTV();
+  if (!Array.isArray(FMTV_SITES) || FMTV_SITES.length === 0) return;
+  _renderFMTV();
+  if (ACTIVE.fmtv) lFMTV.addTo(map);
+}
+if (typeof enregistrerReprise === 'function') {
+  enregistrerReprise('fmtv', repriseFMTV, {
+    classe: 'contexte',
+    verifie: () => Array.isArray(FMTV_SITES) && FMTV_SITES.length > 0
+  });
+}
+
 function loadMesuresCertifiees() {
   if (_certLoadPromise) return _certLoadPromise;
   _certLoadPromise = (async () => {
@@ -15997,6 +16154,13 @@ function capCleanup(){
 ["lyr_contrib","#b-contrib","","Contributions smartphone","Cuntribuzione smartphone","Smartphone contributions"],
 ["lyr_contrib_tt","#b-contrib","title","Contributions terrain des utilisateurs Tellux : magnétomètre smartphone (nT), signal réseau/WiFi (dBm), relevés au capteur externe. Cercles violets, en cluster. N'influence jamais le score composite affiché ; une comparaison indicative apparaît dans le détail technique du popup.","Cuntribuzione di terrenu di l'utilizatori Tellux : magnetometru smartphone (nT), signale reta/WiFi (dBm), rilievi à u sensore esternu. Cerchji viola, in cluster. Affissu solu.","Field contributions from Tellux users: smartphone magnetometer (nT), network/WiFi signal (dBm), external-sensor readings. Purple circles, clustered. Never influences the displayed composite score; an indicative comparison appears in the popup's technical detail."],
 ["lyr_ant","#b-ant","","Antennes ANFR + TDF","Antenne ANFR + TDF","ANFR + TDF antennas"],
+// lyr_fmtv / lyr_fmtv_tt (2026-09-20, portee b FM/TV) : colonnes FR RECOPIEES DU DOM, pas
+// retapees — le mecanisme invalide une entree dont le FR ne correspond plus au DOM, et
+// l'infobulle reste alors en francais sous ?lang=en sans que rien ne le signale (precedent
+// vecu sur lyr_hotrf_tt le 2026-09-20, #1551). CO laissee VIDE a dessein : aucune traduction
+// improvisee sans locuteur natif — meme discipline que lyr_interp / chip_label_tt / dom_hot.
+["lyr_fmtv","#b-fmtv","","Sites de diffusion FM/TV","","FM/TV broadcast sites"],
+["lyr_fmtv_tt","#b-fmtv","title","95 supports ANFR déclarés portant de la radio FM et/ou de la télévision TNT en Corse — présence seule. L’ANFR ne publie pas la puissance de ces émetteurs : aucune n’est affichée, aucune n’est estimée. Ces sites n’entrent dans aucun calcul Tellux — ni la couche « Densité d’émetteurs pondérée », ni l’Indice Tellux. Un carré creux = un support déclaré, sans niveau connu. À ne pas confondre avec les 10 émetteurs TDF de la couche « Antennes ANFR + TDF », qui portent une puissance estimée et contribuent, eux, au modèle.","","95 declared ANFR supports carrying FM radio and/or digital terrestrial television in Corsica — presence only. ANFR does not publish the power of these transmitters: none is displayed, none is estimated. These sites feed no Tellux calculation — neither the “Weighted transmitter density” layer nor the Indice Tellux. A hollow square = one declared support, with no known level. Not to be confused with the 10 TDF transmitters in the “ANFR + TDF antennas” layer, which do carry an estimated power and do feed the model."],
 ["lyr_ant_tt","#b-ant","title","Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF","Antenne 2G/3G/4G/5G ANFR + emettitori broadcast TDF","2G/3G/4G/5G ANFR antennas + TDF broadcast transmitters"],
 ["lyr_res","#b-res","","Réseau HTA","Reta HTA","MV grid"],
 ["lyr_res_tt","#b-res","title","Lignes électriques HTA — moyenne tension (50 Hz)","Linee elettrichi alta tensione (50 Hz)","Medium-voltage (HTA) power lines (50 Hz)"],
