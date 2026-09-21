@@ -68,6 +68,13 @@ async function main() {
   const mesures = data.mesures || [];
 
   const harness = await createHarness({ freezeTime: FREEZE_TIME });
+  // GARDE (2026-09-20) : ne JAMAIS boucler avant que les grilles asynchrones soient
+  // peuplees. Ce fichier est le patron que les scripts de collecte recopient ; sans
+  // cette ligne ici, le defaut se reproduit a chaque copie. Echoue bruyamment plutot
+  // que de collecter du partiel. Cf. BT-ZONE-CHARGEMENT-ASYNC-SILENCIEUX-001.
+  const pret = await harness.waitForFieldData();
+  console.error('[garde] donnees de champ pretes : BT=' + pret.bt_cellules + ' cellules, HTA='
+    + pret.hta_cellules + ' cellules (' + pret.ms + ' ms, deja pret=' + pret.dejaPret + ')');
 
   const perPoint = [];
   for (const m of mesures) {

@@ -1,0 +1,64 @@
+-- 015_contributions_crustal_source.sql
+-- 2026-09-19 — enregistre quelle grille d'anomalie crustale a produit igrf_nt (et donc
+-- perturbation_humaine_nt/delta_nt, dérivés du même appel) au moment de l'écriture.
+--
+-- POURQUOI
+-- `saveContrib()` écrit `igrf_nt:Math.round(igrf)` (app.html), où `igrf` inclut
+-- `calcLCS1(lat,lon)` — l'anomalie crustale. `igrf_nt` est RELU et affiché dans l'infobulle
+-- des marqueurs de contribution (`'IGRF:'+(c.igrf_nt||'—')+'nT'`) : contrairement à
+-- `delta_nt`/`version_app` (écrits, jamais relus par aucun code servi — confirmé par le
+-- balayage exhaustif de la migration 014), c'est une valeur réellement vue par un visiteur.
+--
+-- Une bascule de source (Temps 2, brief BASCULE_LCS1_TEMPS2 — PR de bascule à venir,
+-- distincte de cette migration) fera lire `calcLCS1()`/les affichages publics depuis une
+-- grille EMAG2v3 extraite (produit, résolution native et provenance établis au Temps 1,
+-- PR #1536 mergée, dellahstella/tellux) au lieu de l'ancienne LCS1_GRID — dont la
+-- provenance a été établie comme indéterminée et non corrélée au service NOAA source
+-- qu'elle cite (r=-0,10 sur 24 points, r=0,05 sur 236 points certifiés, 89,4% de
+-- changements de signe — cf. PR #1536 pour le détail chiffré).
+--
+-- Sans cette colonne, l'infobulle afficherait des `igrf_nt` de deux sources différentes,
+-- sans aucun moyen de savoir laquelle a produit une ligne donnée — deux valeurs de signe
+-- potentiellement opposé, indiscernables l'une de l'autre. C'est la raison concrète de
+-- cette migration, pas une précaution de principe.
+--
+-- CHOIX DE SCHÉMA, ET LEURS RAISONS (même patron que la migration 011, bt_terme_inclus —
+-- même table, même situation : une valeur dont la composition devient conditionnelle)
+--   * text, nullable, SANS DEFAULT et SANS NOT NULL : l'existant doit rester distinguable
+--     du neuf.
+--   * AUCUN backfill, y compris par déduction de date : toute ligne écrite avant que cette
+--     colonne existe prend `null`. On ne sait pas ce qu'elle vaut — la colonne le dit,
+--     plutôt que d'inférer silencieusement 'lcs1_grid' pour tout ce qui précède une date.
+--     Une valeur déduite qui s'avère fausse une seule fois serait pire qu'une absence
+--     déclarée pour toutes.
+--   * Différence assumée avec le patron de la migration 011 : celle-ci ajoutait SA colonne
+--     dans la même séance que le correctif applicatif qui l'écrit, pour fermer toute
+--     fenêtre. Ici, la migration et la bascule sont deux PR séparées (décision explicite,
+--     schéma isolé de l'UI pour revue indépendante) — une fenêtre existe donc entre le
+--     merge de cette migration et celui de la bascule : les lignes écrites dans cette
+--     fenêtre (toujours produites par l'ancienne grille, code applicatif inchangé) restent
+--     `null`, au même titre que les lignes antérieures. Assumé, pas un défaut : `null`
+--     reste vrai dans les deux cas — « aucune valeur de source n'a été enregistrée pour
+--     cette ligne » — et rien ne serait gagné à distinguer les deux par une inférence non
+--     vérifiée ligne par ligne.
+--
+-- RÈGLE DE LECTURE — elle est dans le commentaire de colonne pour survivre à ce fichier :
+--   null                    = source non enregistrée (ligne antérieure à la bascule
+--                             applicative, ou écrite dans la fenêtre entre cette migration
+--                             et cette bascule). Ne PAS déduire 'lcs1_grid' par la date.
+--   'lcs1_grid'             = si un jour écrit explicitement (non fait à ce jour).
+--   'emag2v3_<AAAA-MM-JJ>'  = grille EMAG2v3 extraite à la date indiquée (produit, méthode
+--                             et métadonnées complètes : PR #1536, dellahstella/tellux).
+--
+-- ORDRE D'APPLICATION
+-- Cette migration doit être mergée et appliquée AVANT le merge de la PR de bascule
+-- applicative (Temps 2). Dans l'autre sens, l'écriture de `crustal_source` échouerait sur
+-- une colonne inconnue et casserait l'INSERT ENTIER de `saveContrib()` — plus aucune
+-- contribution ne pourrait être enregistrée (même mécanisme d'échec que documenté au
+-- commentaire de `saveContrib()`, app.html : « une clé sans colonne casse l'INSERT
+-- ENTIER »). Jamais en parallèle.
+
+alter table public.contributions
+  add column if not exists crustal_source text;
+
+comment on column public.contributions.crustal_source is 'Quelle grille d''anomalie crustale a produit igrf_nt (et perturbation_humaine_nt/delta_nt qui en dérivent) au moment de l''ecriture. null = source non enregistree (ligne anterieure a la bascule applicative Temps 2, ou ecrite dans la fenetre entre cette migration et cette bascule) : ne jamais deduire ''lcs1_grid'' par la date, aucun backfill retroactif. ''lcs1_grid'' = ancienne grille (24 points, provenance indeterminee, non correlee a EMAG2v3 NOAA). ''emag2v3_<date>'' = grille EMAG2v3 extraite a la date indiquee, produit/methode/provenance complets dans la PR #1536 (dellahstella/tellux, mergee 2026-09-19) et son rapport associe.';

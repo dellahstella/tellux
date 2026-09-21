@@ -346,7 +346,7 @@ async function main() {
   }
 
   let anyOrphan = false;
-  const lines = ['## Garde clés/colonnes — rapport seulement, non requis\n'];
+  const lines = ['## Garde clés/colonnes — requis (bloquant depuis le 2026-09-14, ADR-068)\n'];
   for (const f of findings) {
     const label = `${f.site.table} — ${f.site.fn}`;
     if (f.skipped) { lines.push(`- ⚪ ${label} : non vérifiable (pas d'appelant client connu)`); continue; }
@@ -365,10 +365,15 @@ async function main() {
     const { appendFile } = await import('node:fs/promises');
     await appendFile(process.env.GITHUB_STEP_SUMMARY, summary + '\n');
   }
-  // Rapport seulement : sort non-zéro pour que le check s'affiche rouge et
-  // visible (cf. test de sortie, brief §2 — un rapport que personne ne lit
-  // n'est pas une garde), mais ce workflow n'est PAS dans la liste des
-  // required status checks : rouge ici n'empêche aucun merge.
+  // Requis depuis le 2026-09-14 (ADR-068, plancher CI 3 → 4) : ce workflow
+  // EST dans la liste des required status checks — un rouge ici bloque le
+  // merge. Sort non-zéro pour que le check s'affiche rouge et visible (cf.
+  // test de sortie, brief §2 — un rapport que personne ne lit n'est pas une
+  // garde). Statut à revérifier en direct (gh api .../protection/
+  // required_status_checks) avant de modifier ce commentaire — cf. LOT A,
+  // BRIEF_CODE_CLOTURE_BASCULE_EMAG2_2026-09-19, corrigé le 2026-09-19 après
+  // que cette ligne et le titre du rapport ci-dessus aient affirmé le
+  // contraire pendant 5 jours.
   process.exit(anyOrphan ? 1 : 0);
 }
 
