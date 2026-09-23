@@ -84,7 +84,12 @@ function usage() {
 }
 
 // ─── utilitaires (dupliqués de generer_etat.mjs à dessein, cf. bandeau) ───────────────────
-function cmd(bin, argv, cwd) { try { return execFileSync(bin, argv, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 30000, windowsHide: true }).trim(); } catch { return null; } }
+// maxBuffer explicite (même valeur dans generer_etat.mjs). Le défaut de Node, 1 Mio, a été dépassé
+// par DETTES_TECHNIQUES.md (1 053 784 o, 2026-09-23) : execFileSync levait ENOBUFS, l'erreur était
+// avalée ici, et le §6 imprimait « absent de origin/main » pour un fichier bien présent.
+function cmd(bin, argv, cwd) { try { return execFileSync(bin, argv, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 30000, windowsHide: true, maxBuffer: 64 * 1024 * 1024 }).trim(); } catch { return null; } }
+// Un échec de lecture n'est pas une absence : `git cat-file -e` départage avant d'écrire « absent ».
+const present = (ref, chemin, cwd) => cmd('git', ['cat-file', '-e', `${ref}:${chemin}`], cwd) !== null;
 const cell = (s) => String(s ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ').trim();
 const UA = { 'User-Agent': 'tellux-generer-manifeste' };
 async function http(url, { headers = {}, corps = 'texte', timeout = 20000 } = {}) {
@@ -117,7 +122,9 @@ function lireTrackeSurMain(racineLocale, cheminRelatif, quel) {
   cmd('git', ['fetch', 'origin', 'main', '--quiet'], racineLocale); // lecture seule : fetch, jamais pull/merge
   const distant = (cmd('git', ['ls-remote', 'origin', 'refs/heads/main'], racineLocale) || '').split(/\s/)[0] || null;
   const contenu = cmd('git', ['show', `${ref}:${cheminRelatif}`], racineLocale);
-  if (contenu === null) return { statut: 'INDISPONIBLE', raison: `${quel} : absent de ${ref} sur le dépôt fourni (chemin non imprimé)` };
+  if (contenu === null) return { statut: 'INDISPONIBLE', raison: present(ref, cheminRelatif, racineLocale)
+    ? `${quel} : présent sur ${ref} mais illisible (lecture git échouée) sur le dépôt fourni (chemin non imprimé)`
+    : `${quel} : absent de ${ref} sur le dépôt fourni (chemin non imprimé)` };
   const modif = cmd('git', ['log', '-1', '--format=%cI', ref, '--', cheminRelatif], racineLocale);
   return { statut: 'OK', contenu, distant, modif: modif ? iso(modif) : null };
 }
@@ -127,7 +134,9 @@ function lireTrackePublic(cheminRelatif, quel) {
   // git, pas à la racine — l'erreur qui rendait ARCHITECTURE.md `null` au premier essai.
   const distant = (cmd('git', ['ls-remote', 'origin', 'refs/heads/main'], RACINE_PUBLIQUE) || '').split(/\s/)[0] || null;
   const contenu = cmd('git', ['show', `origin/main:${cheminRelatif}`], RACINE_PUBLIQUE);
-  if (contenu === null) return { statut: 'INDISPONIBLE', raison: `${quel} : absent de origin/main` };
+  if (contenu === null) return { statut: 'INDISPONIBLE', raison: present('origin/main', cheminRelatif, RACINE_PUBLIQUE)
+    ? `${quel} : présent sur origin/main mais illisible (lecture git échouée)`
+    : `${quel} : absent de origin/main` };
   const modif = cmd('git', ['log', '-1', '--format=%cI', 'origin/main', '--', cheminRelatif], RACINE_PUBLIQUE);
   return { statut: 'OK', contenu, distant, modif: modif ? iso(modif) : null };
 }

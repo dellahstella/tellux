@@ -102,9 +102,12 @@ function usage() {
 }
 
 // ─── utilitaires ──────────────────────────────────────────────────────────────────────────
+// maxBuffer explicite, même valeur que generer_manifeste.mjs (utilitaire dupliqué à dessein) : le
+// défaut de Node, 1 Mio, fait lever ENOBUFS au-delà. L'erreur est avalée ci-dessous, et une sortie
+// trop longue deviendrait donc un null muet (cas réel du manifeste, 2026-09-23).
 function cmd(bin, argv, cwd) {
   try {
-    return execFileSync(bin, argv, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 30000, windowsHide: true }).trim();
+    return execFileSync(bin, argv, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 30000, windowsHide: true, maxBuffer: 64 * 1024 * 1024 }).trim();
   } catch { return null; }
 }
 const cell = (s) => String(s ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ').trim();
