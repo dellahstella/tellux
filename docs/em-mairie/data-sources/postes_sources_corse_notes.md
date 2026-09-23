@@ -33,7 +33,11 @@ Résultat : **21 postes** de distribution HTB/HTA identifiés. Exclus : les boî
 
 ## Cas particulier Bonifacio
 
-Le poste de Bonifacio (`OSM_136737513`) concentre également la liaison HVDC SARCO (Italie-Corse via Sardaigne). Sa tension primaire est donc 200 kV, plus élevée que le standard corse (90 kV). Annotée dans les données.
+Le poste de Bonifacio (`OSM_136737513`) est le point d'arrivée en Corse de la liaison SARCO (Sardaigne-Corse) : un câble en courant alternatif de 150 kV et 100 MW, venu de Santa Teresa di Gallura. Ces 150 kV sont plus élevés que le standard corse (90 kV).
+
+Le tag OSM du poste porte aussi 200 kV. Ce n'est pas la tension de SARCO, mais celle de la liaison SACOI (Sardaigne-Corse-Italie), en courant continu, dont la seule station de conversion en Corse est à Lucciana : ce n'est donc pas un niveau de transformation du poste. Cette précision figure dans le champ `note` du poste, dans `public/data/postes_sources_corse.json`.
+
+Sources : Terna, *Codice di Rete*, allegato A.24, rév. 06 (janvier 2025), pour la nature et la tension des deux liaisons ; Terna, présentation « Le infrastrutture elettriche per la transizione energetica » (Cagliari, 9 décembre 2024), pour la capacité de 100 MW ; CRE, délibération n° 2023-363, pour la station de conversion de Lucciana ; OpenStreetMap, ligne `way/137729287` (« HVDC Sacoi - Bonifacio - Lucciana », 200 kV, `frequency=0`), dont un pylône est dans l'emprise du poste, pour l'attribution des 200 kV à SACOI.
 
 ## Limitations
 
