@@ -4486,13 +4486,66 @@ wmsEmag.on('error',function(){
 // lTherm/lFailles retirées le 2026-08-27 (brief "nettoyage Contexte naturel") — couches
 // migrées vers radon.html (#1056), qui en devient l'unique affichage. lForetDense (nouvelle,
 // cf. plus bas) prend la place laissée dans LAYERS ci-dessous par lTherm.
-const lPostesSources=L.layerGroup();
+// Production et postes sources REGROUPÉS (brief CLUSTERS_ET_ANTICOLLISION, 2026-09-23 ; proposition
+// du lot « postes sources et clusters », dépôt privé 96487c6). C'étaient les deux dernières couches
+// ponctuelles non regroupées. Même patron que FM/TV : rayon 45 px, éclatement au zoom maximal, pas
+// de disableClusteringAtZoom (il ré-empilerait les fiches superposées).
+// UN GROUPE PAR COUCHE, JAMAIS DE CLUSTER MIXTE : 312 des 566 emplacements d'antennes partagent un
+// pylône avec un support FH, et 7 des 21 postes ont un FH à moins de 50 m — un cluster mixte
+// fondrait une source calculée dans un simple compte.
+// Une bulle montre un NOMBRE et le glyphe de sa couche, jamais une valeur agrégée (ni somme ni
+// maximum de MW, de kV ou de nT).
+// Affichage seul : le calcul lit PROD_ELECTRIQUE, EOLIENNES_DATA et POSTES_SOURCES, jamais ces
+// couches (preuve par perturbation dans la PR).
+// Production : 12 fiches sont empilées sur 4 points (Lucciana 5, Asco 3, Soccia 2, Ocana/Pont de
+// Vanna 2). Sans regroupement, seule la fiche du dessus de chaque pile était survolable. Regroupées,
+// une pile s'éclate au clic (spiderfy) et les 12 deviennent accessibles.
+// Racine unique SANS transform dans les deux icônes : contrat de l'anti-collision TCA_*, qui écrit
+// son décalage dans le style.transform du premier enfant (cf. son en-tête plus bas).
+// Rang d'empilement de la production, partagé par ses marqueurs (loadProd) et ses bulles : une bulle ne
+// doit pas passer sous des couches que ses marqueurs dominaient (mesuré : sans ce rang, 31 bulles de
+// production masquées par des bulles d'antennes ou de mesures sur 60 vues, contre 0 avant regroupement).
+const PROD_Z=120;
+function _prodClusterIcon(cluster){
+  const n=cluster.getChildCount();
+  cluster.options.zIndexOffset=PROD_Z;
+  // Losange PLEIN, le glyphe des marqueurs de production (mkIcon carré tourné). Teinte NEUTRE
+  // GC.default (#4a4f5e, résolu à l'appel : GC est déclaré plus bas) et non la couleur d'une
+  // filière, car les filières sont mêlées dans une bulle — même raison que l'icône neutre de
+  // lAntCluster. DÉCISION DA SIGNALÉE en PR : aucune couleur nouvelle, mais premier usage de
+  // GC.default comme fond de bulle. Compte blanc sur #4a4f5e : 8,2:1.
+  return L.divIcon({
+    html:'<div style="position:relative;width:28px;height:28px">'+
+      '<div style="position:absolute;left:4px;top:4px;width:20px;height:20px;background:'+GC.default+';border:2px solid white;border-radius:2px;box-sizing:border-box;transform:rotate(45deg);box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>'+
+      '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 11px system-ui;color:white">'+n+'</div>'+
+      '</div>',
+    className:'tellux-cluster-icon-prod', iconSize:[28,28], iconAnchor:[14,14]
+  });
+}
+function _postesClusterIcon(cluster){
+  const n=cluster.getChildCount();
+  // Carré PLEIN Ocre bordé Maquis : le glyphe exact des marqueurs et de la légende de la couche,
+  // agrandi, sans couleur nouvelle. Compte en Ardoise #1F2329 : 5,03:1 sur Ocre (mesure reprise de
+  // _certClusterIcon, mêmes deux teintes).
+  return L.divIcon({
+    html:'<div style="width:24px;height:24px;background:#C28533;border:2.5px solid #3F5B3A;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font:700 11px system-ui;color:#1F2329;box-shadow:0 1px 4px rgba(0,0,0,.3)">'+n+'</div>',
+    className:'tellux-cluster-icon-postes', iconSize:[24,24], iconAnchor:[12,12]
+  });
+}
+const lPostesSources=L.markerClusterGroup({
+  iconCreateFunction:_postesClusterIcon,
+  maxClusterRadius:45, spiderfyOnMaxZoom:true, showCoverageOnHover:false, zoomToBoundsOnClick:true
+});
+const lProd=L.markerClusterGroup({
+  iconCreateFunction:_prodClusterIcon,
+  maxClusterRadius:45, spiderfyOnMaxZoom:true, showCoverageOnHover:false, zoomToBoundsOnClick:true
+});
 // lPointsChaudsRadio (couche carte Points chauds U/Th) retirée le 2026-08-19 avec son bouton —
 // voir commentaire au-dessus de loadPointsChaudsRadio() : les données POINTS_CHAUDS_RADIO
 // restent chargées au boot pour le calcul, seul l'affichage carte a été retiré.
 // lSit/lSit2/lAlign/lEgl/lTour/lIndu/lCast/lPont : couches patrimoniales migrées vers patrimoine.html
 // anciennes couches supprimées — déplacées hors de ce fichier
-const lBT=L.layerGroup(),lAnt=L.layerGroup(),lRes=L.layerGroup(),lProd=L.layerGroup(),lHot=L.layerGroup(),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}),lHotRF=L.layerGroup().addTo(map),lGeom=L.layerGroup().addTo(map),lElf=L.layerGroup(),lHotMesures=L.layerGroup();
+const lBT=L.layerGroup(),lAnt=L.layerGroup(),lRes=L.layerGroup(),lHot=L.layerGroup(),lCon=L.markerClusterGroup({iconCreateFunction:function(cluster){var count=cluster.getChildCount();var size=count<10?30:count<50?36:42;return L.divIcon({html:'<div style="background:#5c3a9b;color:white;border:3px solid white;border-radius:50%;width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:'+(count<10?13:count<100?12:11)+'px;box-shadow:0 2px 8px rgba(92,58,155,0.4)">'+count+'</div>',className:'tellux-cluster-icon',iconSize:[size,size]});},maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true}),lHotRF=L.layerGroup().addTo(map),lGeom=L.layerGroup().addTo(map),lElf=L.layerGroup(),lHotMesures=L.layerGroup();
 // lCon (contributions citoyennes) n'est plus .addTo(map) à la déclaration depuis 2026-08-29 —
 // ajoutée/retirée uniquement par tog('contrib') (bouton « Contributions smartphone », ex-b-con).
 const lCrustal=L.layerGroup();
@@ -4526,14 +4579,27 @@ const lCrustal=L.layerGroup();
 // Distincte aussi des deux autres registres RF de la carte — le modèle (rectangles translucides,
 // rampe bleue) et les mesures certifiées (losanges/cercles pleins, teal→ocre→rouge).
 const FMTV_COLOR='#3F5B3A'; // Maquis (--tx-maquis), identique à TDF_CLUSTER_COLOR
+// Ordre d'empilement des couches de PRÉSENCE (FM/TV, PMR, FH : hors calcul, sans niveau connu) —
+// brief CLUSTERS_ET_ANTICOLLISION (2026-09-23), point g : une source qui entre dans le calcul ne doit
+// jamais être masquée par une couche de présence. Leurs marqueurs ET leurs bulles portent donc un
+// zIndexOffset de −100, sous tout le reste (les autres couches sont à 0 ou au-dessus : antennes 100,
+// production 120, TDF 150, contributions 200…). Leaflet calcule z = y écran + décalage ; deux icônes
+// qui se recouvrent ont moins de 100 px d'écart vertical (rayon max 21 px, décalage d'anti-collision
+// borné à 24 px par bulle), l'écart de 100 suffit donc à les ordonner.
+// Pour une bulle, le décalage est posé dans iconCreateFunction : markercluster crée ses bulles avec
+// les seules options icon et pane ; iconCreateFunction est appelée avant le premier positionnement
+// (_initIcon puis update), le décalage est donc lu dès l'ajout à la carte.
+const TLX_PRESENCE_Z=-100;
 const lFMTV=L.markerClusterGroup({
   iconCreateFunction:function(cluster){
     const n=cluster.getChildCount();
+    cluster.options.zIndexOffset=TLX_PRESENCE_Z;
     // Cluster creux lui aussi — même grammaire que le marqueur unitaire : rien n’est agrégé
     // d’autre qu’un COMPTE de supports déclarés, jamais un niveau.
+    // className : sélecteur de l'anti-collision (TCA_registerGroup plus bas), sans effet de style.
     return L.divIcon({
       html:'<div style="width:26px;height:26px;background:rgba(245,240,231,.92);border:2.5px solid '+FMTV_COLOR+';border-radius:2px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font:700 11px system-ui;color:'+FMTV_COLOR+';box-shadow:0 1px 4px rgba(0,0,0,.25)">'+n+'</div>',
-      className:'', iconSize:[26,26], iconAnchor:[13,13]
+      className:'tellux-cluster-icon-fmtv', iconSize:[26,26], iconAnchor:[13,13]
     });
   },
   maxClusterRadius:45, spiderfyOnMaxZoom:true, showCoverageOnHover:false, zoomToBoundsOnClick:true
@@ -4559,9 +4625,13 @@ const PMR_FH_COLOR='#6C6863'; // --tx-mica, premier usage comme couleur de marqu
 const lPMR=L.markerClusterGroup({
   iconCreateFunction:function(cluster){
     const n=cluster.getChildCount();
+    cluster.options.zIndexOffset=TLX_PRESENCE_Z;
+    // Enveloppe SANS transform autour du triangle tourné : l'anti-collision écrit son décalage dans
+    // le style.transform du premier enfant, qui écraserait sinon le rotate(45deg). Rendu inchangé
+    // (même taille, même ancre).
     return L.divIcon({
-      html:'<div style="width:26px;height:26px;background:rgba(245,240,231,.92);border:2.5px solid '+PMR_FH_COLOR+';border-radius:50% 50% 50% 0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;transform:rotate(45deg);font:700 11px system-ui;color:'+PMR_FH_COLOR+';box-shadow:0 1px 4px rgba(0,0,0,.25)"><span style="transform:rotate(-45deg);display:block">'+n+'</span></div>',
-      className:'', iconSize:[26,26], iconAnchor:[13,20]
+      html:'<div style="width:26px;height:26px"><div style="width:26px;height:26px;background:rgba(245,240,231,.92);border:2.5px solid '+PMR_FH_COLOR+';border-radius:50% 50% 50% 0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;transform:rotate(45deg);font:700 11px system-ui;color:'+PMR_FH_COLOR+';box-shadow:0 1px 4px rgba(0,0,0,.25)"><span style="transform:rotate(-45deg);display:block">'+n+'</span></div></div>',
+      className:'tellux-cluster-icon-pmr', iconSize:[26,26], iconAnchor:[13,20]
     });
   },
   maxClusterRadius:45, spiderfyOnMaxZoom:true, showCoverageOnHover:false, zoomToBoundsOnClick:true
@@ -4569,9 +4639,11 @@ const lPMR=L.markerClusterGroup({
 const lFH=L.markerClusterGroup({
   iconCreateFunction:function(cluster){
     const n=cluster.getChildCount();
+    cluster.options.zIndexOffset=TLX_PRESENCE_Z;
+    // Même enveloppe sans transform que lPMR ci-dessus, pour la même raison.
     return L.divIcon({
-      html:'<div style="width:24px;height:24px;background:rgba(245,240,231,.92);border:2.5px solid '+PMR_FH_COLOR+';box-sizing:border-box;transform:rotate(45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.25)"><span style="transform:rotate(-45deg);display:block;font:700 11px system-ui;color:'+PMR_FH_COLOR+'">'+n+'</span></div>',
-      className:'', iconSize:[24,24], iconAnchor:[12,12]
+      html:'<div style="width:24px;height:24px"><div style="width:24px;height:24px;background:rgba(245,240,231,.92);border:2.5px solid '+PMR_FH_COLOR+';box-sizing:border-box;transform:rotate(45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.25)"><span style="transform:rotate(-45deg);display:block;font:700 11px system-ui;color:'+PMR_FH_COLOR+'">'+n+'</span></div></div>',
+      className:'tellux-cluster-icon-fh', iconSize:[24,24], iconAnchor:[12,12]
     });
   },
   maxClusterRadius:50, spiderfyOnMaxZoom:true, showCoverageOnHover:false, zoomToBoundsOnClick:true
@@ -10844,6 +10916,9 @@ const lTDFCluster=L.markerClusterGroup({
 // second noeud DOM indépendant : icon.firstElementChild, le contenu HTML retourné par chaque
 // iconCreateFunction (racine unique sans transform inline dans les 4 groupes actuels, vérifié
 // ligne par ligne — aucune des 4 fonctions ci-dessus/ci-dessous n'est modifiée pour ça).
+// 2026-09-23 : 9 groupes enregistrés (cf. la liste TCA_registerGroup en fin de module). PMR et FH
+// tournaient leur racine (rotate(45deg)) : elle est désormais enveloppée dans un noeud sans
+// transform, rendu inchangé.
 //
 // Détection : composantes connexes (union-find) sur les bulles racine actuellement rendues,
 // sélectionnées par la réunion des className enregistrés (générique — un 5e groupe s'ajoute
@@ -10867,9 +10942,12 @@ const lTDFCluster=L.markerClusterGroup({
 // même instant pendant une même transition.
 //
 // Limite assumée, signalée plutôt que masquée : si la borne (24px max) ne suffit pas à séparer
-// visuellement une collision (composante à 8+ bulles au même pixel — non atteint aujourd'hui,
-// 4 groupes), TCA_checkOcclusion le détecte et le publie dans window.__telluxClusterCollisionDeficit
-// (même patron que window.__telluxLayers, cf. loadAnt ci-dessous) plutôt que de dépasser la borne.
+// visuellement une collision, TCA_checkOcclusion le détecte et le publie dans
+// window.__telluxClusterCollisionDeficit (même patron que window.__telluxLayers, cf. loadAnt
+// ci-dessous) plutôt que de dépasser la borne. Cette limite EST atteinte : mesuré le 2026-09-23,
+// toutes couches allumées, 5 zones × zooms 7 à 18 → 8 paires (couples de couches × zoom) signalées
+// avec 4 groupes, 57 avec 9. L'ordre d'empilement (zIndexOffset, cf. TLX_PRESENCE_Z) départage
+// alors les bulles qui restent superposées.
 const TCA_REGISTRY=[];        // [{group, className}]
 const TCA_MARGIN_PX=4;        // espace résiduel visé entre deux bulles séparées
 const TCA_ABS_CEILING_PX=24;  // filet de sécurité — n'est actif avec aucune icône actuelle (rayon max 21px)
@@ -10949,6 +11027,13 @@ function TCA_clampToViewport(members){
   members.forEach(m=>{
     if(!m.ox && !m.oy) return;
     if(maxX-m.r<=minX+m.r || maxY-m.r<=minY+m.r) return;  // conteneur trop petit — cas défensif
+    // Seulement les bulles dont le point RÉEL est dans la carte (2026-09-23, brief
+    // CLUSTERS_ET_ANTICOLLISION). markercluster garde des bulles juste hors de l'écran ; quand elles
+    // entraient dans une composante, ce clamp les tirait jusqu'au bord, jusqu'à plus de 350 px de leur
+    // point (mesuré au zoom 10 sur Ajaccio) : une bulle affichée loin de ce qu'elle représente, et une
+    // borne de décalage (rayon propre) qui ne tenait plus. Une bulle proche du bord mais dont le centre
+    // est dans la carte reste recadrée comme avant : son déplacement reste de l'ordre de son rayon.
+    if(m.cx<c.left || m.cx>c.right || m.cy<c.top || m.cy>c.bottom) return;
     const nx=Math.min(Math.max(m.cx+m.ox, minX+m.r), maxX-m.r);
     const ny=Math.min(Math.max(m.cy+m.oy, minY+m.r), maxY-m.r);
     m.ox=nx-m.cx; m.oy=ny-m.cy;
@@ -11001,11 +11086,20 @@ function TCA_recompute(){
 }
 
 map.on('zoomend moveend layeradd layerremove', TCA_schedule);
-// Un futur 5e groupe clusterisé s'ajoute par une seule ligne ici — aucune autre modification.
+// Un futur groupe clusterisé s'ajoute par une seule ligne ici — aucune autre modification.
 TCA_registerGroup(lCon, 'tellux-cluster-icon');
 TCA_registerGroup(lAntCluster, 'tellux-cluster-icon');
 TCA_registerGroup(lCert, 'tellux-cluster-icon-cert');
 TCA_registerGroup(lTDFCluster, 'tellux-cluster-icon-tdf');
+// Brief CLUSTERS_ET_ANTICOLLISION (2026-09-23) : FM/TV, PMR et FH étaient absents de ce registre
+// (leurs bulles pouvaient masquer celles des autres couches ou être masquées), production et postes
+// n'avaient pas de bulles. L'ordre d'empilement reste tenu par zIndexOffset (TLX_PRESENCE_Z) : les
+// bulles de présence passent sous les autres quand le décalage borné ne suffit pas à les séparer.
+TCA_registerGroup(lFMTV, 'tellux-cluster-icon-fmtv');
+TCA_registerGroup(lPMR, 'tellux-cluster-icon-pmr');
+TCA_registerGroup(lFH, 'tellux-cluster-icon-fh');
+TCA_registerGroup(lProd, 'tellux-cluster-icon-prod');
+TCA_registerGroup(lPostesSources, 'tellux-cluster-icon-postes');
 
 // ═══ Infobulle d'une position ANFR (2026-09-07, brief « couche ANFR conforme à la donnée ») ═══
 // Le marqueur représente une POSITION, pas une antenne : le rendu dédoublonne par coordonnées
@@ -12493,7 +12587,7 @@ async function loadProd(){
     const size=s.puissance>50?12:s.puissance>10?9:7;
     const popup='<b>'+s.nom+'</b> \u00b7 '+s.commune+'<br><span style="color:'+color+';font-weight:500">'+jt(PROD_TYPE_KEYS[s.type],s.type)+'</span><br>'+jt('prod_puissance_label','Puissance: ')+'<b>'+s.puissance+' MW</b>'+(s.exploitant?'<br>'+s.exploitant:'');
     // Sticky tooltip au survol — même harmonisation que loadAnt() (bug confirmé, session 2026-08-19).
-    armerTooltipTactile(L.marker([s.lat,s.lon],{icon:mkIcon(color,true,size),zIndexOffset:120})
+    armerTooltipTactile(L.marker([s.lat,s.lon],{icon:mkIcon(color,true,size),zIndexOffset:PROD_Z})
       .bindTooltip(popup,{sticky:true})).addTo(lProd);
   });
 }
@@ -14869,7 +14963,8 @@ function _renderFMTV() {
       html: '<div style="width:13px;height:13px;background:transparent;border:2.5px solid ' + FMTV_COLOR + ';border-radius:2px;box-sizing:border-box;box-shadow:0 0 0 1.5px rgba(255,255,255,.9),0 1px 3px rgba(0,0,0,.25)"></div>',
       iconSize: [16, 16], iconAnchor: [8, 8]
     });
-    L.marker([x.lat, x.lon], { icon })
+    // Sous toutes les autres couches : cf. TLX_PRESENCE_Z près de la déclaration de lFMTV.
+    L.marker([x.lat, x.lon], { icon, zIndexOffset: TLX_PRESENCE_Z })
       .bindPopup(_fmtvPopup(x), { maxWidth: 300, autoPan: true })
       .addTo(lFMTV);
   });
@@ -14959,7 +15054,7 @@ function _renderPMR() {
         '</div>',
       iconSize: [16, 14], iconAnchor: [8, 12]
     });
-    L.marker([x.lat, x.lon], { icon })
+    L.marker([x.lat, x.lon], { icon, zIndexOffset: TLX_PRESENCE_Z })
       .bindPopup(_pmrPopup(x), { maxWidth: 300, autoPan: true })
       .addTo(lPMR);
   });
@@ -15011,7 +15106,7 @@ function _renderFH() {
       html: '<div style="width:11px;height:11px;background:transparent;border:2.2px solid ' + PMR_FH_COLOR + ';box-sizing:border-box;transform:rotate(45deg);box-shadow:0 0 0 1.5px rgba(255,255,255,.9),0 1px 3px rgba(0,0,0,.25)"></div>',
       iconSize: [16, 16], iconAnchor: [8, 8]
     });
-    L.marker([x.lat, x.lon], { icon })
+    L.marker([x.lat, x.lon], { icon, zIndexOffset: TLX_PRESENCE_Z })
       .bindPopup(_fhPopup(x), { maxWidth: 300, autoPan: true })
       .addTo(lFH);
   });
