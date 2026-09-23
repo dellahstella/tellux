@@ -11,7 +11,7 @@ Cartographie électromagnétique territoriale de la Corse.
 Tellux est un outil de cartographie et de visualisation des champs électromagnétiques en Corse. Il couvre quatre domaines physiques distincts :
 
 - **Magnétique statique** — géomagnétisme IGRF-14, anomalies crustales EMAG2v3, cross-check WMM 2025
-- **Magnétique basse fréquence (ELF)** — lignes HTA/HTB modélisées par Biot-Savart, postes sources, éoliennes
+- **Magnétique basse fréquence (ELF)** — modélisés : lignes HTA aériennes (loi de Biot-Savart), réseau basse tension (forfait par paliers selon la densité de segments BT à proximité), sources ponctuelles (sites de production et d'interconnexion, postes sources, parcs éoliens) ; non modélisés : lignes HTB, réseau HTA souterrain, postes de distribution HTA/BT, installations solaires
 - **Radiofréquences** — antennes ANFR, émetteurs TDF
 - **Ionisant** — composante cosmique altitudinale, classification radon officielle
 
