@@ -718,6 +718,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    partage ci-dessus plutot qu'une couleur dediee, coherent avec le fait qu'aucune des 4 autres
    couches de ce groupe n'a de teinte individuelle liee a son icone. */
 .lbtn.on-emag,.lbtn.on-prod,.lbtn.on-crustal,.lbtn.on-foretdense,.lbtn.on-postes,.lbtn.on-foretouverte,.lbtn.on-landemaquis,.lbtn.on-fmtv{background:var(--tx-brume);color:var(--tx-maquis);border-color:var(--tx-maquis);}
+.lbtn.on-pmr,.lbtn.on-fh{background:var(--tx-brume);color:var(--tx-mica);border-color:var(--tx-mica);}
 .layers{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;}
 .lbtn{font-size:10px;padding:3px 7px;border-radius:14px;border:1px solid var(--border);background:var(--bg);color:var(--ardoise-clair);cursor:pointer;display:inline-flex;align-items:center;gap:3px;transition:all .15s;white-space:nowrap;}
 /* margin-right explicite (2026-08-26, repro Soleil mobile x3 : icône chevauchant la 1re
@@ -2383,6 +2384,29 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            vaut 0 à 0,71 % de Epred — y compris à Calvi, colocalisé à un site TDF. -->
       <button class="lbtn" id="b-fmtv" data-domains="rf" title="95 supports ANFR déclarés portant de la radio FM et/ou de la télévision TNT en Corse — présence seule. L’ANFR ne publie pas la puissance de ces émetteurs : aucune n’est affichée, aucune n’est estimée. Ces sites n’entrent dans aucun calcul Tellux — ni la couche « Densité d’émetteurs pondérée », ni l’Indice Tellux. Un carré creux = un support déclaré, sans niveau connu. À ne pas confondre avec les 10 émetteurs TDF de la couche « Antennes ANFR + TDF », qui portent une puissance estimée et contribuent, eux, au modèle." onclick="tog('fmtv','on-fmtv',this)"><span class="sq" style="width:9px;height:9px;background:transparent;border:2px solid #3F5B3A;border-radius:1px;box-sizing:border-box"></span>Sites de diffusion FM/TV<span class="layer-badge layer-badge--hors">Hors calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-fmtv"></div>
+      <!-- Couches « Sites PMR » (b-pmr) et « Liaisons hertziennes (FH) » (b-fh) — présence
+           déclarée seule, BRIEF_CODE_RF_COMPLEMENTS_PMR_FH_MESURES_2026-09-21, même patron
+           que b-fmtv ci-dessus : mêmes tables sources anfr_secteurs/anfr_supports (le schéma
+           ne porte AUCUN champ de puissance — rien à masquer ni à marquer nul, contrairement au
+           jeu FM/TV qui portait un champ par_kw_sourcee vide). Chiffres vérifiés par requête SQL
+           directe le 2026-09-21 (pas repris de rumeur) : PMR 47 secteurs/41 supports (les
+           « 53 secteurs » qui circulaient n'ont été retrouvés nulle part) ; FH 1415 secteurs/553
+           supports (le « 692 » qui circulait ne correspond à aucun filtre testé — plus du double).
+           HORS CALCUL, vérifié et pas seulement affirmé : PMR_SITES et FH_SITES ne sont lus que
+           par leurs _render*()/_popup() respectifs ci-dessous. Ni RF_field(), ni
+           calcN_RF_calib(), ni buildHotRF(), ni le bloc rfScore/perturbHumain n'y touchent —
+           testé par perturbation (injection d'une puissance fictive sur un site de chaque jeu,
+           sortie du moteur comparée bit à bit avant/après).
+           IMPORTANT — à ne pas confondre avec FH_POINTS (app.html, ~L7311+, 16 points) : ce
+           tableau-là est DÉJÀ lu par RF_field() (terme faisceaux hertziens du champ RF) et porte
+           des positions déduites par topographie (cols/crêtes), pas des coordonnées ANFR réelles.
+           Défaut potentiel signalé séparément (dette
+           FH-POINTS-POSITIONS-FABRIQUEES-CONTRIBUENT-AU-CALCUL-001, dépôt privé) — PAS corrigé
+           ici, PAS le même jeu que b-fh. -->
+      <button class="lbtn" id="b-pmr" data-domains="rf" title="41 supports ANFR déclarés portant un secteur PMR (radio professionnelle mobile, bandes 30,8 à 470 MHz) en Corse, présence seule. Le schéma ANFR ne publie aucune puissance pour ce système. Ces sites n'entrent dans aucun calcul Tellux, ni la couche Densité d'émetteurs pondérée, ni l'Indice Tellux. Un triangle creux : un support déclaré, sans niveau connu." onclick="tog('pmr','on-pmr',this)"><span style="display:inline-block;position:relative;width:10px;height:8px;vertical-align:middle"><span style="position:absolute;left:0;top:-1px;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:8px solid #6C6863"></span><span style="position:absolute;left:2px;top:1.6px;width:0;height:0;border-left:3px solid transparent;border-right:3px solid transparent;border-bottom:5px solid #F5F0E7"></span></span>&nbsp;Sites PMR<span class="layer-badge layer-badge--hors">Hors calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
+      <div class="mlegend-inline" id="mleg-pmr"></div>
+      <button class="lbtn" id="b-fh" data-domains="rf" title="553 supports ANFR déclarés portant un secteur FH (faisceau hertzien, liaison point à point) en Corse, présence seule. Liaisons très directives : hors axe, la contribution au champ est négligeable. Le schéma ANFR ne publie aucune puissance pour ce système. Ces sites n'entrent dans aucun calcul Tellux, ni la couche Densité d'émetteurs pondérée, ni l'Indice Tellux. Un losange creux : un support déclaré, sans niveau connu. À ne pas confondre avec le terme faisceaux hertziens du modèle RF, qui repose sur 16 positions déduites par topographie, pas sur ces supports ANFR réels." onclick="tog('fh','on-fh',this)"><span style="display:inline-block;width:8px;height:8px;background:transparent;border:2px solid #6C6863;box-sizing:border-box;transform:rotate(45deg);vertical-align:middle"></span>&nbsp;Liaisons hertziennes (FH)<span class="layer-badge layer-badge--hors">Hors calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
+      <div class="mlegend-inline" id="mleg-fh"></div>
       <button class="lbtn" id="b-res" data-domains="elf" title="Lignes électriques HTA — moyenne tension (50 Hz)" onclick="tog('res','on-res',this)"><span class="ln" style="background:#b85c00"></span>Réseau HTA<span class="layer-badge layer-badge--calc">Toujours dans le calcul</span><span class="layer-badge layer-badge--domain">ELF</span></button>
       <div class="mlegend-inline" id="mleg-res"></div>
       <!-- Couche « Réseau BT » masquée en prod le 2026-08-29 (#1122, verdict RF : n'entre dans
@@ -4498,6 +4522,44 @@ const lFMTV=L.markerClusterGroup({
   },
   maxClusterRadius:45, spiderfyOnMaxZoom:true, showCoverageOnHover:false, zoomToBoundsOnClick:true
 });
+// Couches « Sites PMR » et « Liaisons hertziennes (FH) » — présence déclarée seule
+// (2026-09-21, BRIEF_CODE_RF_COMPLEMENTS_PMR_FH_MESURES_2026-09-21, même patron que FM/TV
+// ci-dessus : mêmes tables sources anfr_secteurs/anfr_supports, même grain sup_id, même absence
+// de puissance dans le schéma).
+// Couleur — DÉCISION DA À SIGNALER : les 4 teintes d'accent v1 sont déjà toutes prises par un
+// sens existant (Maquis = diffusion/FM-TV/TDF, Ocre = alerte/densité RF, Porphyre = danger/
+// anomalies crustales/pire perturbation, Tyrrhénien = résidentiel/info) — en reprendre une aurait
+// entretenu une confusion avec une couche déjà en place. --tx-mica (#6C6863) n'avait encore
+// jamais servi de couleur de MARQUEUR (seulement du texte/chrome d'UI) : réemployé ici plutôt
+// qu'une teinte neuve, dans le même esprit que FM/TV (« aucune couleur nouvelle ») mais c'est un
+// premier usage de mica comme couleur de donnée — à valider, pas une décision Cran B silencieuse.
+// PMR et FH partagent donc la même couleur (même famille : infrastructure administrative ANFR,
+// hors calcul) et se distinguent par la FORME, pas la teinte — triangle creux (PMR) contre
+// losange creux (FH), tous deux hors du vocabulaire déjà pris (carré=FM/TV, cercle=antennes,
+// losange/cercle plein=mesures, rectangle translucide=modèle, pentagone=anomalies crustales)
+// à l'exception du losange, déjà utilisé pour les mesures MAIS toujours PLEIN là-bas — creux ici,
+// même logique de remplissage que FM/TV (creux = présence sans niveau connu).
+const PMR_FH_COLOR='#6C6863'; // --tx-mica, premier usage comme couleur de marqueur (cf. commentaire ci-dessus)
+const lPMR=L.markerClusterGroup({
+  iconCreateFunction:function(cluster){
+    const n=cluster.getChildCount();
+    return L.divIcon({
+      html:'<div style="width:26px;height:26px;background:rgba(245,240,231,.92);border:2.5px solid '+PMR_FH_COLOR+';border-radius:50% 50% 50% 0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;transform:rotate(45deg);font:700 11px system-ui;color:'+PMR_FH_COLOR+';box-shadow:0 1px 4px rgba(0,0,0,.25)"><span style="transform:rotate(-45deg);display:block">'+n+'</span></div>',
+      className:'', iconSize:[26,26], iconAnchor:[13,20]
+    });
+  },
+  maxClusterRadius:45, spiderfyOnMaxZoom:true, showCoverageOnHover:false, zoomToBoundsOnClick:true
+});
+const lFH=L.markerClusterGroup({
+  iconCreateFunction:function(cluster){
+    const n=cluster.getChildCount();
+    return L.divIcon({
+      html:'<div style="width:24px;height:24px;background:rgba(245,240,231,.92);border:2.5px solid '+PMR_FH_COLOR+';box-sizing:border-box;transform:rotate(45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.25)"><span style="transform:rotate(-45deg);display:block;font:700 11px system-ui;color:'+PMR_FH_COLOR+'">'+n+'</span></div>',
+      className:'', iconSize:[24,24], iconAnchor:[12,12]
+    });
+  },
+  maxClusterRadius:50, spiderfyOnMaxZoom:true, showCoverageOnHover:false, zoomToBoundsOnClick:true
+});
 const lCert=L.markerClusterGroup({
   iconCreateFunction: _certClusterIcon,
   maxClusterRadius: 50,
@@ -4688,7 +4750,7 @@ const VEG_GROUP=['foretdense','foretouverte','landemaquis'];
 const CALC_GROUP=['hot','hotrf','elf'];
 // SCISSION 2026-08-29 (brief « exécution groupée », item C) : con → cert (lCert, fiches
 // certifiées ANFR/EXEM) + contrib (lCon, contributions citoyennes). Deux boutons, deux toggles.
-const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,elf:lElf,cert:lCert,interp:lHotMesures,fmtv:lFMTV,contrib:lCon,foretdense:lForetDense,foretouverte:lForetOuverte,landemaquis:lLandeMaquis,crustal:lCrustal,openrad:lOpenRad};
+const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,elf:lElf,cert:lCert,interp:lHotMesures,fmtv:lFMTV,pmr:lPMR,fh:lFH,contrib:lCon,foretdense:lForetDense,foretouverte:lForetOuverte,landemaquis:lLandeMaquis,crustal:lCrustal,openrad:lOpenRad};
 const WMS={hyd:wmsHyd,emag:wmsEmag};
 // hot:false/hotrf:true — modèle RF activé par défaut à la place du champ magnétique
 // composite (arbitrage Soleil 2026-08-23). Swap symétrique avec la déclaration lHot/lHotRF
@@ -4742,7 +4804,7 @@ const WMS={hyd:wmsHyd,emag:wmsEmag};
 //    ant:false du 2026-09-12 (LEGEND_ACTIVE_CORE ne contenait plus 'ant' à ce moment-là),
 //    resterait dormant pour la même raison si rien n'était fait — corrigé et CONSERVÉ malgré le
 //    retrait de l'essai (cf. commentaire à rafraichirLibellesRF()).
-const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,elf:false,res:false,prod:false,cert:false,interp:false,fmtv:false,contrib:false,crustal:false,openrad:false};
+const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,elf:false,res:false,prod:false,cert:false,interp:false,fmtv:false,pmr:false,fh:false,contrib:false,crustal:false,openrad:false};
 
 // 'con' (scindé depuis en 'cert'+'contrib', 2026-08-29 item C) et 'emag' promues en Zone 1
 // "core" le 2026-08-27 (brief "Panneau '?' sélectif",
@@ -4802,7 +4864,7 @@ const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,elf:f
 // conséquence à nommer : elf était la SEULE couche joignable de la Zone 2 ; une fois promue,
 // la pastille contextuelle n'a plus aucune occupante activable par un visiteur. Mécanisme
 // conservé tel quel (hyd/openrad sont explicitement "réactivables en dé-commentant").
-const LEGEND_CORE_IDS=new Set(['hot','hotrf','cert','interp','contrib','emag','ant','fmtv','res','bt','prod','postesSources','elf']);
+const LEGEND_CORE_IDS=new Set(['hot','hotrf','cert','interp','contrib','emag','ant','fmtv','pmr','fh','res','bt','prod','postesSources','elf']);
 const LEGEND_MAX_CONTEXT=3;
 const LEGEND_ACTIVE_CORE=new Set();
 const LEGEND_ACTIVE_CONTEXT=[];
@@ -5110,6 +5172,22 @@ const LEGEND_HTML={
     '<div class="leg-row" style="margin-top:4px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><b>Hors calcul</b> : ces sites n\u2019entrent ni dans la couche \u00ab\u00a0Densit\u00e9 d\u2019\u00e9metteurs pond\u00e9r\u00e9e\u00a0\u00bb, ni dans l\u2019Indice Tellux. Les 10 \u00e9metteurs TDF de la couche \u00ab\u00a0Antennes ANFR + TDF\u00a0\u00bb portent, eux, une puissance estim\u00e9e et contribuent au mod\u00e8le \u2014 carr\u00e9 <b>plein</b>.</div>'+
     '<div class="leg-src">Supports ANFR, export du 31/05/2026 \u00b7 pr\u00e9sence seule, hors calcul</div>'+
     '</div>',
+  pmr:'<div class="leg-block"><b class="leg-title">Sites PMR</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Pr\u00e9sence d\u00e9clar\u00e9e \u2014 radio professionnelle mobile</div>'+
+    '<div class="leg-row"><span style="display:inline-block;position:relative;width:12px;height:10px;vertical-align:middle;margin-right:5px"><span style="position:absolute;left:0;top:-1px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid #6C6863"></span><span style="position:absolute;left:2.4px;top:2px;width:0;height:0;border-left:3.6px solid transparent;border-right:3.6px solid transparent;border-bottom:6px solid #F5F0E7"></span></span>Support ANFR portant un secteur PMR</div>'+
+    '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px"><b>41</b> supports d\u00e9clar\u00e9s \u00b7 47 secteurs PMR \u00b7 bandes 30,8 \u00e0 470 MHz.</div>'+
+    '<div class="leg-row" style="margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4">Ce que cette couche montre : <b>o\u00f9</b> des secteurs PMR sont d\u00e9clar\u00e9s aupr\u00e8s de l\u2019ANFR. Le sch\u00e9ma source ne porte aucun champ de puissance pour ce syst\u00e8me \u2014 rien n\u2019est affich\u00e9 ici, rien n\u2019est estim\u00e9. Le triangle est creux pour cette raison.</div>'+
+    '<div class="leg-row" style="margin-top:4px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><b>Hors calcul</b> : ces sites n\u2019entrent ni dans la couche \u00ab\u00a0Densit\u00e9 d\u2019\u00e9metteurs pond\u00e9r\u00e9e\u00a0\u00bb, ni dans l\u2019Indice Tellux.</div>'+
+    '<div class="leg-src">Supports ANFR (anfr_secteurs/anfr_supports), extraction du 21/09/2026 \u00b7 pr\u00e9sence seule, hors calcul</div>'+
+    '</div>',
+  fh:'<div class="leg-block"><b class="leg-title">Liaisons hertziennes (FH)</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Pr\u00e9sence d\u00e9clar\u00e9e \u2014 liaisons point \u00e0 point</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:9px;height:9px;background:transparent;border:2px solid #6C6863;box-sizing:border-box;transform:rotate(45deg);vertical-align:middle;margin-right:6px"></span>Support ANFR portant un secteur FH</div>'+
+    '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px"><b>553</b> supports d\u00e9clar\u00e9s \u00b7 1\u00a0415 secteurs FH \u00b7 bandes 1,4 \u00e0 86 GHz.</div>'+
+    '<div class="leg-row" style="margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4">Liaisons point \u00e0 point tr\u00e8s directives : hors de l\u2019axe du faisceau, la contribution au champ est n\u00e9gligeable \u2014 la pr\u00e9sence seule est la repr\u00e9sentation juste, pas une simplification. Le sch\u00e9ma source ne porte aucun champ de puissance pour ce syst\u00e8me. Le losange est creux pour cette raison.</div>'+
+    '<div class="leg-row" style="margin-top:4px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><b>Hors calcul</b> : ces sites n\u2019entrent ni dans la couche \u00ab\u00a0Densit\u00e9 d\u2019\u00e9metteurs pond\u00e9r\u00e9e\u00a0\u00bb, ni dans l\u2019Indice Tellux. \u00c0 ne pas confondre avec le terme \u00ab\u00a0faisceaux hertziens\u00a0\u00bb du mod\u00e8le RF, qui repose sur 16 positions d\u00e9duites par topographie, pas sur ces 553 supports ANFR r\u00e9els.</div>'+
+    '<div class="leg-src">Supports ANFR (anfr_secteurs/anfr_supports), extraction du 21/09/2026 \u00b7 pr\u00e9sence seule, hors calcul</div>'+
+    '</div>',
   ant:function(){ return '<div class="leg-block"><b class="leg-title">Antennes ANFR et émetteurs TDF</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Une pastille = une <b>position</b> déclarée, pas une antenne : plusieurs générations y coexistent presque toujours, et souvent plusieurs opérateurs. Touchez ou survolez un point pour voir ce qui y est déclaré.</div>'+
   '<div class="leg-row"><span style="display:inline-block;width:9px;height:9px;background:'+GC.default+';border:1.5px solid rgba(255,255,255,.9);border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2);vertical-align:middle;margin-right:4px"></span>Position d’émission déclarée, isolée — la teinte ne code aucune technologie</div>'+
   '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:'+ANFR_CLUSTER_COLOR+';border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.35);vertical-align:middle;margin-right:4px"></span>Grappe ANFR (comptage) — regroupe des positions de toutes générations, sans dominante affichée</div>'+
@@ -5292,6 +5370,22 @@ const LEGEND_HTML_EN={
     '<div class="leg-row" style="margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4">What this layer shows: <b>where</b> radio and television transmitters are declared. What it does not show: <b>what you receive there</b>. ANFR does not publish the power of these transmitters \u2014 none is displayed here, none is estimated. That is why the square is hollow.</div>'+
     '<div class="leg-row" style="margin-top:4px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><b>Outside the calculation</b>: these sites feed neither the \u201cWeighted transmitter density\u201d layer nor the Indice Tellux. The 10 TDF transmitters in the \u201cANFR + TDF antennas\u201d layer do carry an estimated power and do feed the model \u2014 <b>solid</b> square.</div>'+
     '<div class="leg-src">ANFR supports, 2026-05-31 export \u00b7 presence only, outside the calculation</div>'+
+    '</div>',
+  pmr:'<div class="leg-block"><b class="leg-title">PMR sites</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Declared presence \u2014 professional mobile radio</div>'+
+    '<div class="leg-row"><span style="display:inline-block;position:relative;width:12px;height:10px;vertical-align:middle;margin-right:5px"><span style="position:absolute;left:0;top:-1px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid #6C6863"></span><span style="position:absolute;left:2.4px;top:2px;width:0;height:0;border-left:3.6px solid transparent;border-right:3.6px solid transparent;border-bottom:6px solid #F5F0E7"></span></span>ANFR support carrying a PMR sector</div>'+
+    '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px"><b>41</b> declared supports \u00b7 47 PMR sectors \u00b7 30.8 to 470 MHz bands.</div>'+
+    '<div class="leg-row" style="margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4">What this layer shows: <b>where</b> PMR sectors are declared to ANFR. The source schema carries no power field for this system \u2014 none is displayed here, none is estimated. That is why the triangle is hollow.</div>'+
+    '<div class="leg-row" style="margin-top:4px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><b>Outside the calculation</b>: these sites feed neither the \u201cWeighted transmitter density\u201d layer nor the Indice Tellux.</div>'+
+    '<div class="leg-src">ANFR supports (anfr_secteurs/anfr_supports), 2026-09-21 extraction \u00b7 presence only, outside the calculation</div>'+
+    '</div>',
+  fh:'<div class="leg-block"><b class="leg-title">Microwave links (FH)</b>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Declared presence \u2014 point-to-point links</div>'+
+    '<div class="leg-row"><span style="display:inline-block;width:9px;height:9px;background:transparent;border:2px solid #6C6863;box-sizing:border-box;transform:rotate(45deg);vertical-align:middle;margin-right:6px"></span>ANFR support carrying an FH sector</div>'+
+    '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px"><b>553</b> declared supports \u00b7 1,415 FH sectors \u00b7 1.4 to 86 GHz bands.</div>'+
+    '<div class="leg-row" style="margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4">Highly directive point-to-point links: off the beam axis, the contribution to the field is negligible \u2014 presence only is the accurate representation, not a simplification. The source schema carries no power field for this system. That is why the diamond is hollow.</div>'+
+    '<div class="leg-row" style="margin-top:4px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><b>Outside the calculation</b>: these sites feed neither the \u201cWeighted transmitter density\u201d layer nor the Indice Tellux. Not to be confused with the model\u2019s \u201cmicrowave links\u201d term, which relies on 16 topographically-deduced positions, not these 553 real ANFR supports.</div>'+
+    '<div class="leg-src">ANFR supports (anfr_secteurs/anfr_supports), 2026-09-21 extraction \u00b7 presence only, outside the calculation</div>'+
     '</div>',
   ant:function(){ return '<div class="leg-block"><b class="leg-title">ANFR Antennas and TDF Transmitters</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">A dot marks a declared <b>site</b>, not a single antenna: several generations almost always coexist there, and often several operators. Tap or hover a point to see what is declared.</div>'+
   '<div class="leg-row"><span style="display:inline-block;width:9px;height:9px;background:'+GC.default+';border:1.5px solid rgba(255,255,255,.9);border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2);vertical-align:middle;margin-right:4px"></span>Declared transmission site, isolated — the colour encodes no technology</div>'+
@@ -6044,6 +6138,15 @@ function tog(id,cls,btn){
       // Presence seule : le chargeur ne fait que peupler lFMTV (deja ajoute a la carte
       // par map.addLayer(LAYERS.fmtv) plus haut). Aucun calcul n'est declenche ici.
       loadFMTV().then(function(){ _renderFMTV(); });
+    }
+    if(id==='pmr'){
+      // Presence seule, meme patron que fmtv ci-dessus. Aucun calcul n'est declenche ici.
+      loadPMR().then(function(){ _renderPMR(); });
+    }
+    if(id==='fh'){
+      // Presence seule, meme patron que fmtv ci-dessus. Aucun calcul n'est declenche ici.
+      // Ne pas confondre avec FH_POINTS (deja lu par RF_field(), non touche par ce toggle).
+      loadFH().then(function(){ _renderFH(); });
     }
     if(id==='cert'){
       // Fiches certifiees ANFR/EXEM : chargement + rendu dans lCert (deja ajoute a la carte par
@@ -14724,6 +14827,148 @@ if (typeof enregistrerReprise === 'function') {
   });
 }
 
+// ═══ Sites PMR + Liaisons hertziennes (FH) — PRÉSENCE DÉCLARÉE SEULE (2026-09-21) ═══
+// Même patron que Sites de diffusion FM/TV ci-dessus : mêmes tables sources
+// anfr_secteurs/anfr_supports (Supabase, ingestion 2026-07-01), filtrées systeme=PMR / systeme=FH,
+// extraites le 2026-09-21 (requête SQL directe, chiffres vérifiés — pas repris de rumeur : PMR
+// 47 secteurs/41 supports, FH 1415 secteurs/553 supports). Le schéma anfr_secteurs ne porte AUCUN
+// champ de puissance (sup_id, aer_id, emr_id, azimut_deg, hauteur_antenne_m, tilt_mec_deg,
+// tilt_elec_deg, systeme, bande_min_mhz, bande_max_mhz) : rien à masquer, rien à marquer nul.
+// HORS CALCUL, par construction et pas seulement par intention : PMR_SITES et FH_SITES ne sont lus
+// que par leurs _render*()/_popup() ci-dessous. Ni RF_field(), ni calcN_RF_calib(), ni
+// buildHotRF(), ni le bloc rfScore/perturbHumain n'y touchent.
+// NE PAS CONFONDRE avec FH_POINTS (déclaré plus haut dans ce fichier, ~L7311, 16 positions) :
+// ce tableau-là EST lu par RF_field() (terme faisceaux hertziens du champ RF) et porte des
+// positions déduites par topographie, pas des coordonnées ANFR réelles — défaut potentiel signalé
+// séparément (dette FH-POINTS-POSITIONS-FABRIQUEES-CONTRIBUENT-AU-CALCUL-001, dépôt privé), non
+// corrigé ici. FH_SITES (ce bloc-ci) est un jeu strictement distinct, jamais lu par le moteur.
+let PMR_SITES = [];
+let _pmrLoadPromise = null, _pmrRendered = false;
+function loadPMR() {
+  if (_pmrLoadPromise) return _pmrLoadPromise;
+  _pmrLoadPromise = (async () => {
+    try {
+      const r = await fetch('public/data/pmr_anfr_corse_2026-09-21.json', { signal: AbortSignal.timeout(5000) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      PMR_SITES = d.sites || [];
+      if (PMR_SITES.length === 0) throw new Error('aucun site dans la réponse');
+      console.log('[Tellux] Sites PMR chargés : ' + PMR_SITES.length + ' (présence seule, hors calcul)');
+    } catch (e) {
+      console.warn('[Tellux] Sites PMR indisponibles : ' + e.message);
+      PMR_SITES = [];
+      _pmrLoadPromise = null; // mémo relâché sur échec — même patron que loadFMTV()
+    }
+    return PMR_SITES;
+  })();
+  return _pmrLoadPromise;
+}
+function _pmrFhPopup(x, titreFr, titreEn) {
+  const en = document.documentElement.lang === 'en';
+  const ligne = (lib, val) => val == null || val === '' ? '' :
+    '<div style="display:flex;justify-content:space-between;gap:10px;font-size:11px;margin-bottom:2px"><span style="color:#626774">' + lib + '</span><span style="font-weight:600;color:#1F2329;text-align:right">' + val + '</span></div>';
+  const bande = x.bande_min_mhz != null && x.bande_max_mhz != null
+    ? (x.bande_min_mhz === x.bande_max_mhz ? x.bande_min_mhz + ' MHz' : x.bande_min_mhz + '–' + x.bande_max_mhz + ' MHz')
+    : null;
+  return '<div style="min-width:200px">' +
+    '<div style="font-weight:700;font-size:13px;color:#1F2329;margin-bottom:1px">' + (en ? titreEn : titreFr) + '</div>' +
+    '<div style="font-size:10px;color:#626774;margin-bottom:7px">' + (en ? 'Declared ANFR support' : 'Support ANFR déclaré') + ' · ' + (x.code_insee || '') + ' · ' + (x.dept || '') + '</div>' +
+    ligne(en ? 'Sectors' : 'Secteurs', x.n_secteurs) +
+    ligne(en ? 'Frequency band' : 'Bande de fréquence', bande) +
+    ligne(en ? 'Support height' : 'Hauteur du support', x.hauteur_support_m != null ? x.hauteur_support_m + ' m' : null) +
+    ligne(en ? 'In service since' : 'Mise en service', x.date_mise_en_service) +
+    ligne(en ? 'ANFR support' : 'Support ANFR', x.sup_id) +
+    '<div style="margin-top:7px;padding-top:6px;border-top:1px solid rgba(0,0,0,.08);font-size:9.5px;color:#4a4f5e;line-height:1.45">' +
+    (en ? '<b>No power.</b> The ANFR source schema carries no power field for this system, and none is estimated here. This site feeds no Tellux calculation — neither the model layer nor the Indice Tellux.'
+        : '<b>Aucune puissance.</b> Le schéma source ANFR ne porte aucun champ de puissance pour ce système, et aucune n’est estimée ici. Ce site n’entre dans aucun calcul Tellux — ni la couche du modèle, ni l’Indice Tellux.') +
+    '</div></div>';
+}
+function _pmrPopup(x) { return _pmrFhPopup(x, 'Site PMR', 'PMR site'); }
+function _renderPMR() {
+  if (_pmrRendered) return;
+  if (!PMR_SITES || PMR_SITES.length === 0) return; // pas de verrou sur un jeu vide (patron cert/fmtv)
+  _pmrRendered = true;
+  PMR_SITES.forEach(x => {
+    const icon = L.divIcon({
+      className: '',
+      // Triangle CREUX (deux triangles superposés, mica puis fond, cf. commentaire DA plus haut) :
+      // la forme dit l'absence de niveau connu, même grammaire que le carré creux FM/TV.
+      html: '<div style="position:relative;width:15px;height:13px;filter:drop-shadow(0 0 1.5px rgba(255,255,255,.95)) drop-shadow(0 1px 2px rgba(0,0,0,.25))">' +
+        '<div style="position:absolute;left:0.5px;top:0;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:13px solid ' + PMR_FH_COLOR + '"></div>' +
+        '<div style="position:absolute;left:3.2px;top:3px;width:0;height:0;border-left:4.3px solid transparent;border-right:4.3px solid transparent;border-bottom:8px solid #F5F0E7"></div>' +
+        '</div>',
+      iconSize: [16, 14], iconAnchor: [8, 12]
+    });
+    L.marker([x.lat, x.lon], { icon })
+      .bindPopup(_pmrPopup(x), { maxWidth: 300, autoPan: true })
+      .addTo(lPMR);
+  });
+}
+async function reprisePMR() {
+  await loadPMR();
+  if (!Array.isArray(PMR_SITES) || PMR_SITES.length === 0) return;
+  _renderPMR();
+  if (ACTIVE.pmr) lPMR.addTo(map);
+}
+if (typeof enregistrerReprise === 'function') {
+  enregistrerReprise('pmr', reprisePMR, {
+    classe: 'contexte',
+    verifie: () => Array.isArray(PMR_SITES) && PMR_SITES.length > 0
+  });
+}
+
+let FH_SITES = [];
+let _fhLoadPromise = null, _fhRendered = false;
+function loadFH() {
+  if (_fhLoadPromise) return _fhLoadPromise;
+  _fhLoadPromise = (async () => {
+    try {
+      const r = await fetch('public/data/fh_anfr_corse_2026-09-21.json', { signal: AbortSignal.timeout(5000) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      FH_SITES = d.sites || [];
+      if (FH_SITES.length === 0) throw new Error('aucun site dans la réponse');
+      console.log('[Tellux] Liaisons hertziennes (FH) chargées : ' + FH_SITES.length + ' (présence seule, hors calcul — distinct de FH_POINTS)');
+    } catch (e) {
+      console.warn('[Tellux] Liaisons hertziennes (FH) indisponibles : ' + e.message);
+      FH_SITES = [];
+      _fhLoadPromise = null; // mémo relâché sur échec — même patron que loadFMTV()
+    }
+    return FH_SITES;
+  })();
+  return _fhLoadPromise;
+}
+function _fhPopup(x) { return _pmrFhPopup(x, 'Liaison FH', 'FH link'); }
+function _renderFH() {
+  if (_fhRendered) return;
+  if (!FH_SITES || FH_SITES.length === 0) return; // pas de verrou sur un jeu vide (patron cert/fmtv)
+  _fhRendered = true;
+  FH_SITES.forEach(x => {
+    const icon = L.divIcon({
+      className: '',
+      // Losange CREUX : rotation CSS d'un carré à bord seul, même grammaire que le carré creux
+      // FM/TV et le triangle creux PMR ci-dessus.
+      html: '<div style="width:11px;height:11px;background:transparent;border:2.2px solid ' + PMR_FH_COLOR + ';box-sizing:border-box;transform:rotate(45deg);box-shadow:0 0 0 1.5px rgba(255,255,255,.9),0 1px 3px rgba(0,0,0,.25)"></div>',
+      iconSize: [16, 16], iconAnchor: [8, 8]
+    });
+    L.marker([x.lat, x.lon], { icon })
+      .bindPopup(_fhPopup(x), { maxWidth: 300, autoPan: true })
+      .addTo(lFH);
+  });
+}
+async function repriseFH() {
+  await loadFH();
+  if (!Array.isArray(FH_SITES) || FH_SITES.length === 0) return;
+  _renderFH();
+  if (ACTIVE.fh) lFH.addTo(map);
+}
+if (typeof enregistrerReprise === 'function') {
+  enregistrerReprise('fh', repriseFH, {
+    classe: 'contexte',
+    verifie: () => Array.isArray(FH_SITES) && FH_SITES.length > 0
+  });
+}
+
 function loadMesuresCertifiees() {
   if (_certLoadPromise) return _certLoadPromise;
   _certLoadPromise = (async () => {
@@ -16156,6 +16401,8 @@ function capCleanup(){
 ["hors_crustal","#b-crustal .layer-badge--hors","","Hors calcul","","Outside the calculation"],
 ["hors_contrib","#b-contrib .layer-badge--hors","","Hors calcul","","Outside the calculation"],
 ["hors_fmtv","#b-fmtv .layer-badge--hors","","Hors calcul","","Outside the calculation"],
+["hors_pmr","#b-pmr .layer-badge--hors","","Hors calcul","","Outside the calculation"],
+["hors_fh","#b-fh .layer-badge--hors","","Hors calcul","","Outside the calculation"],
 ["cat_modele",".accordion-cat-header > span:nth-child(2)@0","","Modèle EM","Mudellu EM","EM model"],
 ["cat_anthropique",".accordion-cat-header > span:nth-child(2)@1","","Sources anthropiques","Fonti antropiche","Anthropogenic sources"],
 ["cat_naturel",".accordion-cat-header > span:nth-child(2)@2","","Contexte naturel","Cuntestu naturale","Natural context"],
@@ -16189,6 +16436,10 @@ function capCleanup(){
 // vecu sur lyr_hotrf_tt le 2026-09-20, #1551). CO laissee VIDE a dessein : aucune traduction
 // improvisee sans locuteur natif — meme discipline que lyr_interp / chip_label_tt / dom_hot.
 ["lyr_fmtv","#b-fmtv","","Sites de diffusion FM/TV","","FM/TV broadcast sites"],
+["lyr_pmr","#b-pmr","","Sites PMR","","PMR sites"],
+["lyr_pmr_tt","#b-pmr","title","41 supports ANFR déclarés portant un secteur PMR (radio professionnelle mobile, bandes 30,8 à 470 MHz) en Corse, présence seule. Le schéma ANFR ne publie aucune puissance pour ce système. Ces sites n'entrent dans aucun calcul Tellux, ni la couche Densité d'émetteurs pondérée, ni l'Indice Tellux. Un triangle creux : un support déclaré, sans niveau connu.","","41 declared ANFR supports carrying a PMR (professional mobile radio) sector, 30.8 to 470 MHz bands, in Corsica — presence only. The ANFR source schema publishes no power for this system. These sites feed no Tellux calculation, neither the Weighted transmitter density layer nor the Indice Tellux. A hollow triangle: one declared support, with no known level."],
+["lyr_fh","#b-fh","","Liaisons hertziennes (FH)","","Microwave links (FH)"],
+["lyr_fh_tt","#b-fh","title","553 supports ANFR déclarés portant un secteur FH (faisceau hertzien, liaison point à point) en Corse, présence seule. Liaisons très directives : hors axe, la contribution au champ est négligeable. Le schéma ANFR ne publie aucune puissance pour ce système. Ces sites n'entrent dans aucun calcul Tellux, ni la couche Densité d'émetteurs pondérée, ni l'Indice Tellux. Un losange creux : un support déclaré, sans niveau connu. À ne pas confondre avec le terme faisceaux hertziens du modèle RF, qui repose sur 16 positions déduites par topographie, pas sur ces supports ANFR réels.","","553 declared ANFR supports carrying an FH (microwave link, point-to-point) sector in Corsica — presence only. Highly directive links: off the beam axis, the contribution to the field is negligible. The ANFR source schema publishes no power for this system. These sites feed no Tellux calculation, neither the Weighted transmitter density layer nor the Indice Tellux. A hollow diamond: one declared support, with no known level. Not to be confused with the RF model's microwave-links term, which relies on 16 topographically-deduced positions, not these real ANFR supports."],
 ["lyr_fmtv_tt","#b-fmtv","title","95 supports ANFR déclarés portant de la radio FM et/ou de la télévision TNT en Corse — présence seule. L’ANFR ne publie pas la puissance de ces émetteurs : aucune n’est affichée, aucune n’est estimée. Ces sites n’entrent dans aucun calcul Tellux — ni la couche « Densité d’émetteurs pondérée », ni l’Indice Tellux. Un carré creux = un support déclaré, sans niveau connu. À ne pas confondre avec les 10 émetteurs TDF de la couche « Antennes ANFR + TDF », qui portent une puissance estimée et contribuent, eux, au modèle.","","95 declared ANFR supports carrying FM radio and/or digital terrestrial television in Corsica — presence only. ANFR does not publish the power of these transmitters: none is displayed, none is estimated. These sites feed no Tellux calculation — neither the “Weighted transmitter density” layer nor the Indice Tellux. A hollow square = one declared support, with no known level. Not to be confused with the 10 TDF transmitters in the “ANFR + TDF antennas” layer, which do carry an estimated power and do feed the model."],
 ["lyr_ant_tt","#b-ant","title","Antennes 2G/3G/4G/5G ANFR + émetteurs broadcast TDF","Antenne 2G/3G/4G/5G ANFR + emettitori broadcast TDF","2G/3G/4G/5G ANFR antennas + TDF broadcast transmitters"],
 ["lyr_res","#b-res","","Réseau HTA","Reta HTA","MV grid"],
