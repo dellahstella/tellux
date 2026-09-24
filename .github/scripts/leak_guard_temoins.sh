@@ -12,6 +12,14 @@
 #   - extension inconnue et fichier sans extension non déclaré → CONFIG extension_non_classee ;
 #   - répertoire exclu (docs/data) NON lu (aveugle documenté : un changement de périmètre se voit) ;
 #   - dette : ligne inscrite → DETTE ; autre ligne du même fichier → FUITE ; entrée orpheline → CONFIG.
+# Et les motifs tenus en secret (brief EXPOSITIONS_ET_GARDE, 2026-09-25), avec des valeurs FACTICES,
+# jamais les vraies (le workflow ne passe aucun secret à ce step) :
+#   - secret absent, vide ou blanc → CONFIG bloquant, pour chacun des trois ;
+#   - secret présent → motif retrouvé, malgré la casse, les espaces, un CRLF et une ligne vide ;
+#   - motif universel, régex invalide → CONFIG ; dette d'une classe non lue → « non évaluée », jamais
+#     « périmée » ;
+#   - canari du dépôt privé : motif présent dans l'historique du garde → rien ; absent → CONFIG ;
+#     historique tronqué → CONFIG.
 # Sortie : une ligne OK/ÉCHEC par témoin ; code retour 1 au premier écart (le job échoue).
 set -uo pipefail
 
@@ -38,6 +46,11 @@ cd "$WORK" || exit 1
 git init -q . && git config user.email temoins@exemple.invalid && git config user.name temoins \
   && git config core.autocrlf false
 mkdir -p .github/scripts noms docs/data
+# Historique factice pour le canari : une version ANCIENNE du garde portait le motif du dépôt
+# privé en clair (comme la vraie, jusqu'au 2026-09-24). Valeur factice, jamais la vraie.
+MOTIF_DEPOT="zzqdepot-temoin"
+printf '# version ancienne\nFUITE\tcorpus_repo\t%s\t-i\n' "$MOTIF_DEPOT" > .github/scripts/leak_guard.sh
+git add .github/scripts/leak_guard.sh && git commit -q -m "version ancienne" || { echo "ÉCHEC : commit de l'historique factice"; exit 1; }
 cp "$GUARD" .github/scripts/leak_guard.sh
 : > .github/scripts/leak_guard_allowlist.txt
 DECLENCHEUR="SARL"   # motif public du garde (classe FUITE, label forme_sarl)
@@ -56,19 +69,25 @@ printf 'temoin %s\n' "$DECLENCHEUR" > "temoin espace.md"                     # e
 printf 'ligne de dette %s\nautre ligne %s\nligne de dette %s\n' "$DECLENCHEUR" "$DECLENCHEUR" "$DECLENCHEUR" \
   > "temoin_dette.py"                                                        # ligne 3 = copie de la 1
 H=$(printf '%s' "ligne de dette $DECLENCHEUR" | sha256sum | cut -c1-16)
+# Motifs tenus en secret : un témoin par classe, en MAJUSCULES (le motif est lu sans égard à la casse).
+printf 'voir %s ici\ndette %s connue\nraison ZZQRAISON\nmodule ZZQMODULE\n' "${MOTIF_DEPOT^^}" "${MOTIF_DEPOT^^}" \
+  > "temoin_secret.md"
+HS=$(printf '%s' "dette ${MOTIF_DEPOT^^} connue" | sha256sum | cut -c1-16)
 # Registre de dette saisi « à la Windows » : BOM en tête, CRLF, espace final sur l'entrée.
-printf '\xEF\xBB\xBF# commentaire\r\ntemoin_dette.py\tforme_sarl\t%s \r\nfichier_disparu.py\tforme_sarl\t0000000000000000\r\n' "$H" \
+printf '\xEF\xBB\xBF# commentaire\r\ntemoin_dette.py\tforme_sarl\t%s \r\nfichier_disparu.py\tforme_sarl\t0000000000000000\r\ntemoin_secret.md\tcorpus_repo\t%s\r\n' "$H" "$HS" \
   > .github/scripts/leak_guard_dette.txt
 git add -A >/dev/null
 
-env -u LEAK_TERMS_REGEX -u LEAK_CONFIDENTIAL_REGEX bash .github/scripts/leak_guard.sh . > sortie.txt 2>/dev/null
+sans_secrets() { env -u LEAK_TERMS_REGEX -u LEAK_CONFIDENTIAL_REGEX -u LEAK_CORPUS_REPO_REGEX "$@"; }
+sans_secrets bash .github/scripts/leak_guard.sh . > sortie.txt 2>/dev/null
 
 ECHECS=0
+SORTIE=sortie.txt   # sortie du passage en cours
 attendu() { # motif (ERE, ligne entière) description
-  if grep -qE "^$1\$" sortie.txt; then echo "OK      $2"; else echo "ÉCHEC   $2 (attendu : $1)"; ECHECS=$((ECHECS+1)); fi
+  if grep -qE "^$1\$" "$SORTIE"; then echo "OK      $2"; else echo "ÉCHEC   $2 (attendu : $1)"; ECHECS=$((ECHECS+1)); fi
 }
 absent() { # motif description
-  if grep -qE "$1" sortie.txt; then echo "ÉCHEC   $2 (présent : $1)"; ECHECS=$((ECHECS+1)); else echo "OK      $2"; fi
+  if grep -qE "$1" "$SORTIE"; then echo "ÉCHEC   $2 (présent : $1)"; ECHECS=$((ECHECS+1)); else echo "OK      $2"; fi
 }
 n=0
 for ext in $TEXT_EXTS; do attendu "temoin\.$ext:1	FUITE	forme_sarl" "extension .$ext lue"; n=$((n+1)); done
@@ -88,6 +107,44 @@ attendu "fichier_disparu\.py	CONFIG	dette_perimee_forme_sarl" "entrée de dette 
 absent "dette_perimee_$" "commentaire du registre (après BOM) non pris pour une entrée"
 attendu "\(meta\)	META	sentinelle_fin_de_scan" "scan complet (sentinelle)"
 absent "scanner_interrompu" "scan non interrompu"
+
+# --- Motifs tenus en secret : absents (passage ci-dessus, sans aucun secret) ---
+for c in raison_sociale module_confidentiel corpus_repo; do
+  attendu "\(config\)	CONFIG	${c}_NON_SCANNEE_secret_absent" "secret de $c absent → CONFIG bloquant"
+done
+attendu "temoin_secret\.md	CONFIG	dette_non_evaluee_corpus_repo" "dette d'une classe non lue → « non évaluée »"
+absent "dette_perimee_corpus_repo" "dette d'une classe non lue jamais dite « périmée »"
+absent "^temoin_secret\.md:" "classes secrètes non lues sans secret (aucun finding de contenu)"
+
+# --- Motifs tenus en secret : présents (valeurs factices, saisie « à la Windows ») ---
+SORTIE=sortie_secrets.txt
+sans_secrets env LEAK_CORPUS_REPO_REGEX="  $MOTIF_DEPOT "$'\r\n\r\n' LEAK_TERMS_REGEX=$'zzqraison\r\n' \
+  LEAK_CONFIDENTIAL_REGEX=' zzqmodule' bash .github/scripts/leak_guard.sh . > "$SORTIE" 2>/dev/null
+attendu "temoin_secret\.md:1	FUITE	corpus_repo" "secret du dépôt privé présent → motif retrouvé (casse, espaces, CRLF, ligne vide)"
+attendu "temoin_secret\.md:2	DETTE	corpus_repo" "ligne du dépôt privé inscrite en dette → DETTE"
+attendu "temoin_secret\.md:3	FUITE	raison_sociale" "secret raison sociale présent → motif retrouvé"
+attendu "temoin_secret\.md:4	FUITE	module_confidentiel" "secret modules confidentiels présent → motif retrouvé"
+absent "NON_SCANNEE|motif_universel|canari|regex_invalide|dette_non_evaluee" "aucun CONFIG de secret quand les trois sont valides"
+attendu "\(meta\)	META	sentinelle_fin_de_scan" "scan complet avec secrets (sentinelle)"
+
+# --- Refus : chaque cas doit bloquer (CONFIG), jamais passer en silence ---
+passe_depot() { # valeur du secret du dépôt privé → sortie dans $SORTIE
+  sans_secrets env LEAK_CORPUS_REPO_REGEX="$1" bash .github/scripts/leak_guard.sh . > "$SORTIE" 2>/dev/null
+}
+SORTIE=sortie_canari.txt; passe_depot "zzqabsent-historique"
+attendu "\(config\)	CONFIG	corpus_repo_canari_absent_de_l_historique" "motif valide absent de l'historique du garde (faute de frappe) → CONFIG"
+SORTIE=sortie_universel.txt; passe_depot "zzq|"
+attendu "\(config\)	CONFIG	corpus_repo_motif_universel" "motif qui correspond à tout → CONFIG"
+attendu "temoin_secret\.md	CONFIG	dette_non_evaluee_corpus_repo" "motif refusé : dette « non évaluée »"
+SORTIE=sortie_invalide.txt; passe_depot "zzq("
+attendu "\(config\)	CONFIG	regex_invalide_corpus_repo" "régex invalide → CONFIG"
+SORTIE=sortie_blanc.txt; passe_depot $' \r\n\t'
+attendu "\(config\)	CONFIG	corpus_repo_NON_SCANNEE_secret_absent" "secret blanc (espaces, CRLF, tabulation) → CONFIG"
+# Historique tronqué (clone superficiel) : le canari ne peut pas être évalué.
+git rev-parse HEAD > .git/shallow
+SORTIE=sortie_superficiel.txt; passe_depot "$MOTIF_DEPOT"
+attendu "\(config\)	CONFIG	corpus_repo_canari_non_evaluable_historique_absent" "historique tronqué → canari non évalué → CONFIG"
+rm -f .git/shallow
 
 echo "---"
 echo "$n extensions ou noms déclarés texte testés ; écarts : $ECHECS"

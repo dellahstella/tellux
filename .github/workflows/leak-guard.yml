@@ -9,7 +9,8 @@ name: R5 — Garde-fou doctrine anti-fuite
 # le 2026-06-29 (fix manuel #893). 4 classes de fuite doctrine v4 (PERSO ajoutée 2026-09-02,
 # brief I ; GELÉ rendu bloquant 2026-09-02, brief O) :
 #   - FUITE       : raison sociale (secret LEAK_TERMS_REGEX), FEDER/ANR/OS1.2/candidature,
-#                   corpus privé, axes, SARL/SASU, SIRET espacé.
+#                   nom du dépôt privé (secret LEAK_CORPUS_REPO_REGEX), axes, SARL/SASU,
+#                   SIRET espacé.
 #   - PERSO       : données personnelles (adresse postale, coordonnées de domicile) — motifs
 #                   structurels de fiche d'adresse, scanne aussi scripts/*.json et
 #                   public/data/*.json (exclus des autres classes, une donnée peut fuiter).
@@ -36,7 +37,11 @@ name: R5 — Garde-fou doctrine anti-fuite
 # (exception cité/réfuté). Le scanner reste exit 0 (détecteur) ; le blocage est un step de gate
 # lisant sa sortie. Ni l'issue ni le gate ne recopient la chaîne sensible (emplacement + classe
 # seulement). Marqueurs sensibles NON en clair ici : raison sociale = secret LEAK_TERMS_REGEX,
-# modules confidentiels = secret LEAK_CONFIDENTIAL_REGEX ; absent → classe sautée + finding CONFIG.
+# modules confidentiels = secret LEAK_CONFIDENTIAL_REGEX, nom du dépôt privé = secret
+# LEAK_CORPUS_REPO_REGEX (depuis le brief EXPOSITIONS_ET_GARDE, 2026-09-25 ; il était en clair dans la
+# table RULES du garde, servie). Secret absent, vide, universel ou invalide → classe non lue + finding
+# CONFIG bloquant. Le dernier est aussi vérifié contre l'historique git du garde (« canari »), d'où
+# fetch-depth: 0 ci-dessous : un motif mal saisi ne passe pas en silence.
 # Allowlist par chemin : .github/scripts/leak_guard_allowlist.txt (« chemin<TAB>label ») — pour
 # les FAUX POSITIFS (le scanner s'est trompé), PAS pour débloquer une modification de zone gelée
 # réelle et légitime (cf. « CHEMIN DE DÉBLOCAGE GELÉ » ci-dessous, un cas structurellement différent).
@@ -108,7 +113,9 @@ jobs:
         # Un garde étendu mais inopérant serait pire qu'avant (brief FUITE_APERCUS_CLOUDFLARE,
         # 2026-09-24). Dépôt jetable, un témoin par extension/nom déclaré texte, plus les limites
         # (binaire non lu, extension inconnue → CONFIG, dette → DETTE, dette orpheline → CONFIG).
-        # Sans les secrets : seul le motif public forme_sarl sert de déclencheur. Échec → job rouge.
+        # AUCUN secret n'est passé à ce step : le motif public forme_sarl sert de déclencheur, et les
+        # classes tenues en secret sont testées avec des valeurs factices (absent → CONFIG, présent →
+        # retrouvé, canari). Échec → job rouge.
         run: bash .github/scripts/leak_guard_temoins.sh
 
       - name: Scan présence (FUITE / PROSCRIT)
@@ -116,6 +123,7 @@ jobs:
         env:
           LEAK_TERMS_REGEX: ${{ secrets.LEAK_TERMS_REGEX }}
           LEAK_CONFIDENTIAL_REGEX: ${{ secrets.LEAK_CONFIDENTIAL_REGEX }}
+          LEAK_CORPUS_REPO_REGEX: ${{ secrets.LEAK_CORPUS_REPO_REGEX }}
         run: |
           set +e
           bash .github/scripts/leak_guard.sh . > findings.txt 2> warn.txt
@@ -261,7 +269,12 @@ jobs:
             echo "  détecté est un changement réel, qui reste Cran C. Chemin de déblocage : cf. « CHEMIN DE DÉBLOCAGE GELÉ »"
             echo "  en tête de .github/workflows/leak-guard.yml — arbitrage Soleil consigné au registre privé, puis merge"
             echo "  admin par Soleil (jamais par Code, avec ou sans --admin)."
-            echo "→ CONFIG : lire le label. *_NON_SCANNEE_secret_absent : configurer le secret (LEAK_TERMS_REGEX / LEAK_CONFIDENTIAL_REGEX) ;"
+            echo "→ CONFIG : lire le label. *_NON_SCANNEE_secret_absent : créer le secret (raison_sociale → LEAK_TERMS_REGEX,"
+            echo "  module_confidentiel → LEAK_CONFIDENTIAL_REGEX, corpus_repo → LEAK_CORPUS_REPO_REGEX) ;"
+            echo "  *_motif_universel / regex_invalide_* : corriger la valeur du secret ;"
+            echo "  corpus_repo_canari_* : le secret ne correspond pas au nom qu'il doit retrouver (faute de frappe ?),"
+            echo "  ou l'historique git manque (clone superficiel) ; dette_non_evaluee_* : sa classe n'a pas été lue,"
+            echo "  régler d'abord le secret — ne PAS retirer l'entrée de dette ;"
             echo "  extension_non_classee_<ext> : classer l'extension dans TEXT_EXTS, TEXT_NAMES ou BINARY_EXTS (leak_guard.sh) ;"
             echo "  dette_perimee_<label> : la fuite a été corrigée ou la ligne a changé — retirer ou mettre à jour l'entrée"
             echo "  de .github/scripts/leak_guard_dette.txt dans cette PR ; saute_cap_taille_* : allowlister « chemin<TAB>cap_taille »."
