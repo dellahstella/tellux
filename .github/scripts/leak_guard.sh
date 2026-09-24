@@ -187,14 +187,18 @@ RAW_PERSO_LIST="$(list_perso_files)"
 PERSO_FILES="$(printf '%s\n' "$RAW_PERSO_LIST" | awk -F'\t' '$1=="F"{print $2}')"
 
 # CLASSE <TAB> LABEL <TAB> REGEX (ERE) <TAB> FLAGS (-i ou vide)
+# Frontière des sigles : « tout ce qui n'est ni lettre ni chiffre », PAS \b. Pour \b, le souligné est
+# un caractère de mot : un sigle collé à « _ » (nom de fichier, identifiant) échappait en silence.
+# Constaté le 2026-09-24 (relecture adverse du brief EXPOSITIONS_ET_GARDE) : deux lignes suivies et
+# servies, et une ligne du .gitignore, portaient ainsi un sigle de financement que le garde ne lisait pas.
 RULES=$(cat <<'RULESEOF'
-FUITE	forme_sarl	\bSARL\b
-FUITE	forme_sasu	\bSASU\b
-FUITE	financement_feder	\bFEDER\b	-i
-FUITE	financement_anr	\bANR\b
+FUITE	forme_sarl	(^|[^[:alnum:]])SARL([^[:alnum:]]|$)
+FUITE	forme_sasu	(^|[^[:alnum:]])SASU([^[:alnum:]]|$)
+FUITE	financement_feder	(^|[^[:alnum:]])FEDER([^[:alnum:]]|$)	-i
+FUITE	financement_anr	(^|[^[:alnum:]])ANR([^[:alnum:]]|$)
 FUITE	financement_os12	OS ?1[.\-]?2	-i
 FUITE	financement_candidature	candidature	-i
-FUITE	corpus_axes	AXE_[A-R]\b
+FUITE	corpus_axes	AXE_[A-R]([^[:alnum:]]|$)
 FUITE	siret_spaced	[0-9]{3}[ .][0-9]{3}[ .][0-9]{3}([ .][0-9]{5})?
 FUITE	module_agronomie	agronomie	-i
 FUITE	module_batiment	bâtiment	-i
@@ -386,19 +390,34 @@ scan_secret() { # label nom_du_secret valeur — renvoie 1 si la classe n'a pas 
 
 # Canari du nom du dépôt privé. Un motif valide mais FAUX (faute de frappe à la création du
 # secret) ne correspondrait à rien, et le garde passerait en silence. Or ce nom a figuré en clair
-# dans CE fichier (table RULES) jusqu'au 2026-09-24 : l'historique git du fichier le contient, et
-# le contiendra tant qu'il n'est pas réécrit. Le motif doit donc y correspondre, sinon CONFIG
-# bloquant. Historique absent ou tronqué (clone superficiel) → CONFIG aussi : canari non évalué.
+# dans CE fichier, 3e champ de la ligne « FUITE<TAB>corpus_repo<TAB>… » de la table RULES, jusqu'au
+# 2026-09-24 : l'historique git du fichier porte cette ligne, et la portera tant qu'il n'est pas
+# réécrit. Le motif doit correspondre à CE CHAMP, et à lui seul : comparé à tout l'historique, il
+# serait satisfait par n'importe quel mot du garde (le nom du secret, le label), ce que la relecture
+# adverse a montré. Sinon CONFIG bloquant, et la classe compte comme non évaluée (sa dette n'est pas
+# « périmée »). Historique absent ou tronqué (clone superficiel), ou ligne de référence introuvable
+# (fichier renommé, historique réécrit) → CONFIG aussi : la décision redevient humaine.
 # Ce que le canari ne prouve pas : que le motif est assez ÉTROIT (un motif trop large se voit
-# autrement, par des FUITE en nombre). Si ce fichier est renommé ou son historique réécrit, le
-# canari échouera : c'est voulu, la décision redevient humaine.
-# grep sans -q : avec pipefail, une sortie anticipée de grep tuerait git log (SIGPIPE) et ferait
-# échouer le canari à tort.
+# autrement, par des FUITE en nombre).
+# Dans un dépôt jetable (relecture d'un fichier non suivi, cf. LIMITES en tête), l'historique du
+# garde manque : le canari y émet toujours un CONFIG, attendu ; lire les autres lignes.
+# Aucune sortie anticipée dans le pipeline (awk et grep lisent tout) : avec pipefail, un SIGPIPE sur
+# git log ferait échouer le canari à tort.
 canari_historique() { # label regex
+  local ref
   if [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" != "false" ]; then
     printf '%s\t%s\t%s\n' "(config)" "CONFIG" "${1}_canari_non_evaluable_historique_absent"
-  elif ! git log -p --format= -- .github/scripts/leak_guard.sh 2>/dev/null | grep -aiE -- "$2" >/dev/null; then
+    NON_EVALUES="$NON_EVALUES$1 "
+    return
+  fi
+  ref="$(git log -p --format= -- .github/scripts/leak_guard.sh 2>/dev/null | tr -d '\r' \
+    | awk -F'\t' -v L="$1" '($1=="+FUITE" || $1=="-FUITE" || $1==" FUITE") && $2==L { print $3 }')"
+  if [ -z "$ref" ]; then
+    printf '%s\t%s\t%s\n' "(config)" "CONFIG" "${1}_canari_reference_introuvable"
+    NON_EVALUES="$NON_EVALUES$1 "
+  elif ! printf '%s\n' "$ref" | grep -aiE -- "$2" >/dev/null; then
     printf '%s\t%s\t%s\n' "(config)" "CONFIG" "${1}_canari_absent_de_l_historique"
+    NON_EVALUES="$NON_EVALUES$1 "
   fi
 }
 
