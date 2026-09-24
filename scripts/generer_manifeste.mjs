@@ -53,6 +53,9 @@ const jourFr = (d) => new Date(d).toLocaleDateString('fr-FR', { year: 'numeric',
 
 // ─── config maintenue à la main — section 7, cf. bandeau ci-dessus ────────────────────────
 // dépôt: 'public' | 'prive'. chemin : relatif à la racine de ce dépôt-là.
+// Sans chemin (dépôt privé seulement) : chemin résolu à l'exécution, par le nom du fichier, dans
+// l'arbre du dépôt privé (cf. trouverSurMain) — pour un fichier dont le chemin serait lui-même une
+// exposition, ce script étant public et servi.
 // « à lever » : ambiguïté connue et non résolue, à porter au manifeste tel quel, pas à trancher ici.
 const CONFIG_FICHIERS_PROJET = [
   { nom: 'ARCHITECTURE.md', depot: 'public', chemin: 'ARCHITECTURE.md' },
@@ -61,7 +64,7 @@ const CONFIG_FICHIERS_PROJET = [
   { nom: 'TELLUX_MODELE_CALCUL.md', depot: 'prive', chemin: 'docs/corpus_scientifique/00_canon/TELLUX_MODELE_CALCUL.md' },
   { nom: 'TELLUX_HYPOTHESES_PROTOCOLES.md', depot: 'prive', chemin: 'docs/corpus_scientifique/00_canon/TELLUX_HYPOTHESES_PROTOCOLES.md' },
   { nom: 'INDEX_DOCUMENTS_SCIENTIFIQUES.md', depot: 'prive', chemin: 'docs/corpus_scientifique/00_canon/INDEX_DOCUMENTS_SCIENTIFIQUES.md' },
-  { nom: 'DOSSIER_PRESENTATION_v1.md', depot: 'prive', chemin: 'docs/feder/FINANCEMENT_2026-07/DOSSIER_PRESENTATION_v1.md' },
+  { nom: 'DOSSIER_PRESENTATION_v1.md', depot: 'prive' }, // chemin résolu à l'exécution, cf. ci-dessus
   { nom: 'auto-affinage-conception-v1.md', depot: 'prive', chemin: 'docs/internal/from-public-cleanup-p1/docs/em-mairie/auto-affinage-conception-v1.md' },
   { nom: 'PROJECT_INSTRUCTIONS_v4.12.md', depot: 'prive', chemin: 'docs/instructions/PROJECT_INSTRUCTIONS_v4.12.md' },
 ];
@@ -78,7 +81,7 @@ for (let i = 2; i < process.argv.length; i++) {
 }
 function usage() {
   process.stderr.write(`usage : node scripts/generer_manifeste.mjs [--sortie MANIFESTE.md] [--prive <chemin local du dépôt privé>] [--prod <url>] [--depot <propriétaire/dépôt>] [--sans-navigateur]
-  --prive           chemin local du clone privé (docs/instructions, docs/internal, docs/feder…). Son chemin n'est jamais écrit dans la sortie. Sans lui : sections privées INDISPONIBLE.
+  --prive           chemin local du clone privé (docs/instructions, docs/internal…). Son chemin n'est jamais écrit dans la sortie. Sans lui : sections privées INDISPONIBLE.
   --sans-navigateur  saute la calibration RF live et le triptyque « rendu » (pas de Playwright) — sections marquées INDISPONIBLE au lieu d'échouer.
 `);
 }
@@ -127,6 +130,18 @@ function lireTrackeSurMain(racineLocale, cheminRelatif, quel) {
     : `${quel} : absent de ${ref} sur le dépôt fourni (chemin non imprimé)` };
   const modif = cmd('git', ['log', '-1', '--format=%cI', ref, '--', cheminRelatif], racineLocale);
   return { statut: 'OK', contenu, distant, modif: modif ? iso(modif) : null };
+}
+// Chemin d'un fichier du dépôt privé retrouvé par son NOM dans l'arbre de origin/main, pour les
+// entrées de CONFIG_FICHIERS_PROJET sans chemin. Exactement une correspondance exigée : zéro ou
+// plusieurs → INDISPONIBLE, jamais un choix au hasard. Le chemin trouvé n'est pas imprimé.
+function trouverSurMain(racineLocale, nomFichier) {
+  if (!racineLocale) return { chemin: null, raison: `${nomFichier} : aucun chemin fourni (--prive)` };
+  cmd('git', ['fetch', 'origin', 'main', '--quiet'], racineLocale); // lecture seule, comme lireTrackeSurMain
+  const arbre = cmd('git', ['ls-tree', '-r', '-z', '--name-only', 'origin/main'], racineLocale);
+  if (arbre === null) return { chemin: null, raison: `${nomFichier} : arbre de origin/main illisible sur le dépôt fourni (chemin non imprimé)` };
+  const trouves = arbre.split('\0').filter((c) => c === nomFichier || c.endsWith(`/${nomFichier}`));
+  if (trouves.length !== 1) return { chemin: null, raison: `${nomFichier} : ${trouves.length} emplacement(s) sur origin/main du dépôt fourni, 1 attendu (chemin non imprimé)` };
+  return { chemin: trouves[0] };
 }
 const RACINE_PUBLIQUE = cmd('git', ['rev-parse', '--show-toplevel'], ICI) || ICI;
 function lireTrackePublic(cheminRelatif, quel) {
@@ -301,7 +316,13 @@ async function main() {
   s(`**Liste maintenue à la main dans ce script, dernière mise à jour le ${CONFIG_FICHIERS_PROJET_MAJ}.** Rien ne peut la découvrir automatiquement (le Projet web est hors dépôt, hors API — A.0 ter) : elle dérivera comme tout ce que ce manifeste corrige ailleurs si elle n'est pas tenue à jour à la main. Ce qui suit constate l'état de la SOURCE de chaque fichier connu, pas le contenu du Projet lui-même.`, '');
   s('| fichier | dépôt | dernière modif. source | à lever |', '|---|---|---|---|');
   for (const f of CONFIG_FICHIERS_PROJET) {
-    const r = f.depot === 'public' ? lireTrackePublic(f.chemin, f.nom) : lireTrackeSurMain(ARGS.prive, f.chemin, f.nom);
+    let r;
+    if (f.depot === 'public') r = lireTrackePublic(f.chemin, f.nom);
+    else if (f.chemin) r = lireTrackeSurMain(ARGS.prive, f.chemin, f.nom);
+    else {
+      const t = trouverSurMain(ARGS.prive, f.nom);
+      r = t.chemin ? lireTrackeSurMain(ARGS.prive, t.chemin, f.nom) : { statut: 'INDISPONIBLE', raison: t.raison };
+    }
     const dateAff = r.statut === 'OK' ? r.modif : `INDISPONIBLE${!ARGS.prive && f.depot === 'prive' ? ' (--prive non fourni)' : ` (${r.raison})`}`;
     s(`| ${f.nom} | ${f.depot} | ${dateAff} | ${f.aLever ? cell(f.aLever) : '—'} |`);
   }
