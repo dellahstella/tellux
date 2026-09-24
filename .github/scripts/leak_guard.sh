@@ -18,6 +18,44 @@
 # DU garde-fou lui-même). Motivation : le 2026-06-29 un .md tracké (docs/i18n/NOTE_METHODE_CO.md) a
 # porté une mention de financement conditionnel et a échappé au scan limité aux .html (fix manuel #893).
 #
+# Élargi le 2026-09-24 (brief FUITE_APERCUS_CLOUDFLARE, volet II) au code et à la configuration
+# (.py .mjs .js .cjs .sql .sh .css .tsv .svg .geojson, fichiers « point » et fichiers sans extension) :
+# deux fichiers .sql et .py nommaient le dépôt privé sans que le garde les lise, alors que tout
+# fichier tracké est aussi SERVI sur le site (Cloudflare Pages publie la racine du dépôt).
+# PROPRIÉTÉ, et non inventaire : hors répertoires exclus, toute extension tracée qui n'est ni texte
+# (TEXT_EXTS/TEXT_NAMES) ni binaire déclaré (BINARY_EXTS, médias et polices seulement : un PDF ou un
+# DOCX n'y figure PAS et force donc une décision) émet un finding CONFIG bloquant — une extension
+# nouvelle force une décision au lieu de rester aveugle en silence. Témoins :
+# .github/scripts/leak_guard_temoins.sh, exécuté par le workflow avant chaque scan (un fichier par
+# extension couverte doit être détecté ; plancher : aucune extension texte ne peut en sortir en silence).
+#
+# LIMITES CONNUES (ce que le garde NE voit PAS) :
+#   - Il ne lit que `git ls-files` : un fichier NON SUIVI n'est jamais scanné, même s'il est publié
+#     ailleurs (déploiement fait depuis un disque local, artefact de CI, fichier généré puis déposé à
+#     la main). Il n'accepte pas de fichier en argument, seulement une racine de dépôt git (un fichier
+#     passé en argument ne rend que CONFIG scanner_interrompu). Pour relire un fichier non suivi — ex.
+#     MANIFESTE_ETAT.md, que la procédure de clôture demande de faire relire « au scan anti-fuite » :
+#     le copier dans un dépôt jetable (git init ; git add), y copier .github/scripts/leak_guard.sh, lancer
+#     le garde sur ce dépôt. Hors CI, sans LEAK_TERMS_REGEX ni LEAK_CONFIDENTIAL_REGEX, les classes
+#     raison_sociale et module_confidentiel ne sont PAS lues : un résultat vide n'est pas un feu vert.
+#   - Les répertoires exclus ci-dessous (docs/assets, docs/data, public/data, _data, tests/fixtures)
+#     restent aveugles aux classes FUITE/PROSCRIT (seule PERSO lit public/data/*.json), et une extension
+#     inconnue n'y émet aucun CONFIG.
+#   - Ses propres fichiers (leak_guard.sh, son allowlist, sa dette, ses témoins, leak-guard.yml), ainsi
+#     que package.json et node_modules, ne sont jamais scannés — mais ils sont servis. La table RULES
+#     ci-dessous porte ses motifs en clair, dont le nom du dépôt privé (règle corpus_repo) : exposition
+#     connue, à déplacer vers un secret comme LEAK_CONFIDENTIAL_REGEX (arbitrage, Cran C).
+#   - Il ne voit que l'état COURANT : ni l'historique, ni les tags, ni les déploiements d'aperçu déjà
+#     publiés (qui gardent l'arbre de leur commit, cf. inventaire privé du 2026-09-24).
+#
+# Dette connue : .github/scripts/leak_guard_dette.txt (« chemin<TAB>label<TAB>empreinte »). Une
+# EXPOSITION RÉELLE déjà présente, en attente d'une décision (Cran C), y est inscrite avec
+# l'empreinte de SA ligne : UNE occurrence de cette ligne ressort en classe DETTE (signalée, non
+# bloquante) ; toute autre occurrence — ligne différente, copie identique, autre fichier — reste
+# FUITE (bloquante) ; une entrée qui ne correspond plus à rien émet un CONFIG bloquant (dette
+# corrigée → retirer l'entrée dans la même PR). Ce n'est PAS l'allowlist : l'allowlist tait un faux
+# positif pour toujours, la dette nomme une fuite à corriger.
+#
 # Sortie (stdout) : une ligne par finding « FICHIER:LIGNE<TAB>CLASSE<TAB>LABEL ».
 # NE RECOPIE JAMAIS la chaîne sensible détectée (seul l'emplacement + la classe).
 #
@@ -47,16 +85,32 @@ finish() {
   # existant — ou tué avant son trap), le gate échoue. Fail-closed jusqu'au lancement.
   # Classe META = plomberie : exclue du compte de findings et de l'issue (filtre workflow).
   printf '%s\t%s\t%s\n' "(meta)" "META" "sentinelle_fin_de_scan"
+  rm -f "${DETTE_VUES:-}" "${DETTE_NORM:-}" 2>/dev/null
   exit 0
 }
 trap finish EXIT
 ROOT="${1:-.}"
 cd "$ROOT" 2>/dev/null || exit 0
 ALLOW=".github/scripts/leak_guard_allowlist.txt"
+DETTE_FILE=".github/scripts/leak_guard_dette.txt"
+DETTE_VUES="$(mktemp)"
+DETTE_NORM="$(mktemp)"
+# Copie normalisée (sans CR ni commentaires) : une entrée saisie sous Windows doit correspondre.
+if [ -f "$DETTE_FILE" ]; then
+  tr -d '\r' < "$DETTE_FILE" | sed -e '1s/^\xEF\xBB\xBF//' -e 's/[[:space:]]*$//' \
+    | grep -vE '^[[:space:]]*(#|$)' > "$DETTE_NORM"
+  if ! command -v sha256sum >/dev/null 2>&1; then
+    printf '%s\t%s\t%s\n' "(config)" "CONFIG" "sha256sum_absent_dette_non_evaluee"
+  fi
+fi
 
-# Extensions texte scannées. Les binaires (webp/png/woff2/…) et le code (py/js/sql/…) sont exclus de
-# facto (hors whitelist), ce qui réduit le risque de faux positifs et le bruit.
-TEXT_EXTS=" html htm md markdown txt yml yaml json jsonc "
+# Extensions texte scannées (élargies le 2026-09-24 au code et à la configuration, cf. en-tête).
+# Comparaison en minuscules : un .MD ou un .Py n'échappe plus au scan.
+TEXT_EXTS=" html htm md markdown txt yml yaml json jsonc geojson py mjs js cjs sql sh css tsv svg gitignore gitattributes htmlhintrc assetsignore "
+# Fichiers sans extension lus comme du texte (nom exact du fichier, sans le chemin).
+TEXT_NAMES=" LICENSE _headers _redirects pre-commit "
+# Binaires déclarés : jamais scannés. Toute autre extension → CONFIG extension_non_classee (bloquant).
+BINARY_EXTS=" webp png jpg jpeg gif ico bmp avif woff woff2 ttf otf eot mp3 mp4 webm "
 # 2 MiB : anti dump de données / binaire résiduel (faux positifs + perf). Relevé de 512 KiB le
 # 2026-07-10 (audit) : app.html (~538 Ko, surface publique n°1) dépassait l'ancien cap depuis sa
 # création et était SILENCIEUSEMENT exclu de tout le scan de présence. Tout skip-par-cap est
@@ -74,10 +128,19 @@ list_files() {
     case "$f" in
       docs/assets/*|docs/data/*|public/data/*|_data/*|tests/fixtures/*) continue ;;
       */node_modules/*|*/package-lock.json|*package.json)              continue ;;
-      .github/scripts/leak_guard*|.github/workflows/leak-guard.yml)    continue ;;
+      .github/scripts/leak_guard.sh|.github/scripts/leak_guard_allowlist.txt|.github/scripts/leak_guard_dette.txt|.github/scripts/leak_guard_temoins.sh|.github/workflows/leak-guard.yml) continue ;;
     esac
-    local ext="${f##*.}"
-    case "$TEXT_EXTS" in *" $ext "*) : ;; *) continue ;; esac
+    local base="${f##*/}" ext
+    if [ "${base#*.}" = "$base" ]; then
+      # Aucun point dans le nom : fichier sans extension, lu seulement s'il est déclaré texte.
+      case "$TEXT_NAMES" in *" $base "*) : ;; *) printf 'UNK\t%s\t%s\n' "$f" "sans_extension"; continue ;; esac
+    else
+      ext="${base##*.}"; ext="${ext,,}"
+      case "$TEXT_EXTS" in
+        *" $ext "*) : ;;
+        *) case "$BINARY_EXTS" in *" $ext "*) continue ;; *) printf 'UNK\t%s\t%s\n' "$f" "$ext"; continue ;; esac ;;
+      esac
+    fi
     local sz
     sz=$(wc -c < "$f" 2>/dev/null || echo 0)
     if [ "${sz:-0}" -gt "$SIZE_CAP" ]; then
@@ -144,7 +207,7 @@ is_cited_refuted() { # line — vrai si le passage est cité (guillemets) ou exp
 }
 
 scan_rule() { # class label regex flags [filelist=$FILES]
-  local cls="$1" label="$2" rx="$3" flags="$4" filelist="${5:-$FILES}" f m n line out rc
+  local cls="$1" label="$2" rx="$3" flags="$4" filelist="${5:-$FILES}" f m n line out rc h
   # Fail-loud régex (audit 2026-07-10) : une ERE invalide faisait échouer grep en silence
   # (2>/dev/null, code retour perdu) → classe entière non scannée SANS signal. Pré-validation
   # sur /dev/null : 1 = régex valide sans match, ≥ 2 = régex invalide → finding CONFIG
@@ -154,10 +217,13 @@ scan_rule() { # class label regex flags [filelist=$FILES]
     printf '%s\t%s\t%s\n' "(config)" "CONFIG" "regex_invalide_${label}"
     return 0
   fi
-  for f in $filelist; do
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
     [ -f "$f" ] || continue
     is_allowed "$f" "$label" && continue
-    out=$(grep -nE $flags -- "$rx" "$f" 2>/dev/null); rc=$?
+    # -a : lire comme du texte même avec un octet NUL ou non UTF-8 ; sans lui, GNU grep ≥ 3.5
+    # retire en silence les lignes d'un fichier jugé binaire (message sur stderr, rc=0).
+    out=$(grep -anE $flags -- "$rx" "$f" 2>/dev/null); rc=$?
     if [ "$rc" -ge 2 ]; then
       # grep a planté sur CE fichier (illisible, etc.) : fichier non scanné pour cette classe
       # → fail-loud, pas de trou silencieux.
@@ -169,9 +235,20 @@ scan_rule() { # class label regex flags [filelist=$FILES]
       [ -z "$m" ] && continue
       n="${m%%:*}"; line="${m#*:}"
       if [ "$cls" = "PROSCRIT" ] && is_cited_refuted "$line"; then continue; fi
+      # Dette connue : même fichier, même label, même ligne (empreinte) → DETTE, non bloquante.
+      if [ -s "$DETTE_NORM" ]; then
+        h=$(printf '%s' "${line%$'\r'}" | sha256sum 2>/dev/null | cut -c1-16)
+        # Une entrée ne couvre qu'UNE occurrence : une copie identique de la ligne reste FUITE.
+        if [ -n "$h" ] && grep -qxF "$f"$'\t'"$label"$'\t'"$h" "$DETTE_NORM" \
+           && ! grep -qxF "$f"$'\t'"$label"$'\t'"$h" "$DETTE_VUES"; then
+          printf '%s\t%s\t%s\n' "$f" "$label" "$h" >> "$DETTE_VUES"
+          printf '%s:%s\t%s\t%s\n' "$f" "$n" "DETTE" "$label"
+          continue
+        fi
+      fi
       printf '%s:%s\t%s\t%s\n' "$f" "$n" "$cls" "$label"
     done <<< "$out"
-  done
+  done <<< "$filelist"   # une ligne par chemin : un nom avec espace n'est plus découpé
 }
 
 # Anti-endormissement : si aucune surface n'a été énumérée (git absent / index vide), émettre un
@@ -179,6 +256,13 @@ scan_rule() { # class label regex flags [filelist=$FILES]
 if [ -z "${FILES//[[:space:]]/}" ]; then
   printf '%s\t%s\t%s\n' "(config)" "CONFIG" "aucune_surface_enumeree_git_ls-files_vide"
 fi
+
+# Extension non classée (2026-09-24) : ni texte ni binaire déclaré → CONFIG bloquant. Décider
+# explicitement (TEXT_EXTS, TEXT_NAMES ou BINARY_EXTS) plutôt que laisser un fichier servi hors scan.
+printf '%s\n' "$RAW_LIST" | awk -F'\t' '$1=="UNK"{print $2 "\t" $3}' | while IFS=$'\t' read -r f ext; do
+  [ -z "$f" ] && continue
+  printf '%s\t%s\t%s\n' "$f" "CONFIG" "extension_non_classee_${ext}"
+done
 
 # Fail-loud skip-par-cap (audit 2026-07-10) : tout fichier texte tracké au-dessus du cap émet
 # un finding CONFIG (bloquant au gate PR) — un skip DÉLIBÉRÉ se déclare dans l'allowlist
@@ -230,7 +314,8 @@ done
 # 8/8 puis 77/77 détectés sur les versions AVANT correctif ; 0/0 sur la version corrigée.
 scan_perso_coocurrence() { # label field_regex context_regex filelist
   local label="$1" field_rx="$2" ctx_rx="$3" filelist="$4" f
-  for f in $filelist; do
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
     [ -f "$f" ] || continue
     is_allowed "$f" "$label" && continue
     awk -v FRX="$field_rx" -v CRX="$ctx_rx" -v FIL="$f" -v LBL="$label" '
@@ -243,7 +328,7 @@ scan_perso_coocurrence() { # label field_regex context_regex filelist
       { buf = buf "\n" $0 }
       END { flush() }
     ' "$f"
-  done
+  done <<< "$filelist"
 }
 scan_perso_coocurrence "adresse_voie_residentiel" \
   '"(adresse_complete|voie)"[ \t]*:[ \t]*"[^"]' \
@@ -272,6 +357,16 @@ if [ -n "${LEAK_CONFIDENTIAL_REGEX:-}" ]; then
 else
   echo "WARN: LEAK_CONFIDENTIAL_REGEX absent — classe module_confidentiel non scannée (dégradation propre)." >&2
   printf '%s\t%s\t%s\n' "(config)" "CONFIG" "module_confidentiel_NON_SCANNEE_secret_absent"
+fi
+
+# Dette périmée : une entrée qui n'a correspondu à aucune ligne (fuite corrigée, ligne modifiée ou
+# fichier retiré) → CONFIG bloquant, pour que l'entrée soit retirée dans la PR qui corrige.
+if [ -s "$DETTE_NORM" ]; then
+  while IFS=$'\t' read -r df dl dh; do
+    [ -z "${df:-}" ] && continue
+    grep -qxF "$df"$'\t'"$dl"$'\t'"$dh" "$DETTE_VUES" 2>/dev/null && continue
+    printf '%s\t%s\t%s\n' "$df" "CONFIG" "dette_perimee_${dl}"
+  done < "$DETTE_NORM"
 fi
 
 SCAN_COMPLET=1
