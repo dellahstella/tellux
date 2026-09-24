@@ -40,6 +40,18 @@ name: R5 — Garde-fou doctrine anti-fuite
 # Allowlist par chemin : .github/scripts/leak_guard_allowlist.txt (« chemin<TAB>label ») — pour
 # les FAUX POSITIFS (le scanner s'est trompé), PAS pour débloquer une modification de zone gelée
 # réelle et légitime (cf. « CHEMIN DE DÉBLOCAGE GELÉ » ci-dessous, un cas structurellement différent).
+#
+# Élargi le 2026-09-24 (brief FUITE_APERCUS_CLOUDFLARE, volet II) au code et à la configuration
+# (.py .mjs .js .cjs .sql .sh .css .tsv .svg .geojson, fichiers « point », fichiers sans extension) ;
+# toute extension ni texte ni binaire déclaré → CONFIG bloquant. Témoins exécutés AVANT chaque scan
+# (step « Témoins ») : un fichier par extension couverte doit être détecté, sinon le job échoue.
+# Dette connue : .github/scripts/leak_guard_dette.txt — expositions RÉELLES en attente d'arbitrage,
+# inscrites avec l'empreinte de leur ligne : classe DETTE, signalée (résumé de run, annotation,
+# issue hebdomadaire), NON bloquante ; toute autre occurrence reste FUITE ; entrée périmée → CONFIG.
+# LIMITES (détail en tête de leak_guard.sh) : le scanner ne lit que `git ls-files` — un fichier
+# non suivi, généré ou déposé hors git n'est jamais scanné ; les répertoires de données exclus
+# restent aveugles à FUITE/PROSCRIT ; ni l'historique, ni les tags, ni les déploiements d'aperçu
+# déjà publiés ne sont vus.
 # Activation depuis main (défaut) pour le cron ; aussi sur push/PR touchant une surface texte.
 #
 # ─── CHEMIN DE DÉBLOCAGE GELÉ (brief O, 2026-09-02) ──────────────────────────────────────────
@@ -81,6 +93,24 @@ on:
       - '**/*.yaml'
       - '**/*.json'
       - '**/*.jsonc'
+      - '**/*.geojson'
+      - '**/*.py'
+      - '**/*.mjs'
+      - '**/*.js'
+      - '**/*.cjs'
+      - '**/*.sql'
+      - '**/*.sh'
+      - '**/*.css'
+      - '**/*.tsv'
+      - '**/*.svg'
+      - '**/.gitignore'
+      - '**/.gitattributes'
+      - '.htmlhintrc'
+      - '.assetsignore'
+      - 'LICENSE'
+      - '_headers'
+      - '_redirects'
+      - '.githooks/**'
       - '.github/scripts/leak_guard*'
 
 permissions:
@@ -97,6 +127,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0   # historique requis pour le diff zones gelées
+
+      - name: Témoins du garde (chaque extension couverte doit être détectée)
+        # Un garde étendu mais inopérant serait pire qu'avant (brief FUITE_APERCUS_CLOUDFLARE,
+        # 2026-09-24). Dépôt jetable, un témoin par extension/nom déclaré texte, plus les limites
+        # (binaire non lu, extension inconnue → CONFIG, dette → DETTE, dette orpheline → CONFIG).
+        # Sans les secrets : seul le motif public forme_sarl sert de déclencheur. Échec → job rouge.
+        run: bash .github/scripts/leak_guard_temoins.sh
 
       - name: Scan présence (FUITE / PROSCRIT)
         id: scan
@@ -145,15 +182,25 @@ jobs:
           set +e
           # La ligne META (sentinelle de fin de scan) est de la plomberie : exclue du compte
           # et de l'affichage (elle est exigée par le gate PR, pas signalée en issue).
-          COUNT=0
-          if [ -s findings.txt ]; then COUNT=$(awk -F'\t' '$2!="META"{c++} END{print c+0}' findings.txt); fi
-          [ -z "$COUNT" ] && COUNT=0
+          # DETTE (dette connue, cf. leak_guard_dette.txt) : comptée à part — signalée à chaque run
+          # (résumé + annotation), mais n'ouvre pas d'issue sur chaque PR ; l'issue hebdomadaire
+          # (cron) la reprend, pour qu'une fuite connue ne soit jamais oubliée.
+          COUNT=0; DCOUNT=0
+          if [ -s findings.txt ]; then
+            COUNT=$(awk -F'\t' '$2!="META" && $2!="DETTE"{c++} END{print c+0}' findings.txt)
+            DCOUNT=$(awk -F'\t' '$2=="DETTE"{c++} END{print c+0}' findings.txt)
+          fi
+          [ -z "$COUNT" ] && COUNT=0; [ -z "$DCOUNT" ] && DCOUNT=0
           printf 'count=%s\n' "$COUNT" >> "$GITHUB_OUTPUT"
+          printf 'dcount=%s\n' "$DCOUNT" >> "$GITHUB_OUTPUT"
+          if [ "$DCOUNT" -gt 0 ]; then
+            echo "::warning::Garde-fou anti-fuite : $DCOUNT exposition(s) réelle(s) connue(s) en attente d'arbitrage (classe DETTE, leak_guard_dette.txt)."
+          fi
           {
             echo "## R5 Garde-fou doctrine anti-fuite"
             echo ""
-            echo "Findings : **$COUNT**"
-            if [ "$COUNT" -gt 0 ]; then
+            echo "Findings : **$COUNT** · Dette connue (non bloquante, à corriger sur arbitrage) : **$DCOUNT**"
+            if [ "$COUNT" -gt 0 ] || [ "$DCOUNT" -gt 0 ]; then
               echo ""
               echo '```'
               awk -F'\t' '$2!="META"' findings.txt
@@ -163,7 +210,7 @@ jobs:
           exit 0
 
       - name: Ouvrir / mettre à jour une issue (alert-only, Cran B)
-        if: steps.summary.outputs.count != '0'
+        if: steps.summary.outputs.count != '0' || (github.event_name == 'schedule' && steps.summary.outputs.dcount != '0')
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -182,7 +229,7 @@ jobs:
             awk -F'\t' '$2!="META"' findings.txt
             echo '```'
             echo ""
-            echo "Classes : **FUITE** (financement/identité/corpus — bloquant sur PR) · **PERSO** (donnée personnelle — bloquant sur PR) · **PROSCRIT** (formulation interdite) · **GELE** (zone gelée modifiée — bloquant sur PR depuis le 2026-09-02, brief O ; relecture physicien/arbitrage Soleil requis, chemin de déblocage documenté dans .github/workflows/leak-guard.yml)."
+            echo "Classes : **FUITE** (financement/identité/corpus — bloquant sur PR) · **PERSO** (donnée personnelle — bloquant sur PR) · **PROSCRIT** (formulation interdite) · **GELE** (zone gelée modifiée — bloquant sur PR depuis le 2026-09-02, brief O ; relecture physicien/arbitrage Soleil requis, chemin de déblocage documenté dans .github/workflows/leak-guard.yml) · **DETTE** (exposition réelle connue, inscrite dans .github/scripts/leak_guard_dette.txt, non bloquante, à corriger sur arbitrage — retirer l'entrée dans la PR qui corrige)."
             echo "Faux positif ? → ajouter \`fichier<TAB>label\` à \`.github/scripts/leak_guard_allowlist.txt\` (FUITE/PERSO/PROSCRIT uniquement — PAS pour un GELE réel, cf. « chemin de déblocage » ci-dessus)."
             echo ""
             echo "> Sur cron/push : alert-only (le build n'est pas cassé). Sur PR : FUITE/PERSO/GELE/CONFIG bloquent le merge (cf. workflow)."
@@ -242,3 +289,8 @@ jobs:
             exit 1
           fi
           echo "Gate anti-fuite : aucun marqueur bloquant (FUITE/PERSO/GELE/CONFIG). OK."
+          DETTES=$(awk -F'\t' '$2=="DETTE"{c++} END{print c+0}' findings.txt)
+          if [ "${DETTES:-0}" -gt 0 ]; then
+            echo "Dette connue (non bloquante, leak_guard_dette.txt) : $DETTES exposition(s) réelle(s) en attente d'arbitrage :"
+            awk -F'\t' '$2=="DETTE"{print "  "$1"  [DETTE/"$3"]"}' findings.txt
+          fi
