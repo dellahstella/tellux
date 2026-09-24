@@ -28,7 +28,7 @@ BINARY_EXTS="$(lire_liste BINARY_EXTS)"
   echo "ÉCHEC : listes TEXT_EXTS / TEXT_NAMES / BINARY_EXTS illisibles dans le garde"; exit 1; }
 # Plancher : les extensions ajoutées le 2026-09-24 ne peuvent pas quitter TEXT_EXTS en silence
 # (les passer en BINARY_EXTS les rendrait aveugles sans qu'aucun autre contrôle ne bronche).
-for e in html md txt yml json py mjs js cjs sql sh css tsv svg; do
+for e in html htm md markdown txt yml yaml json jsonc geojson py mjs js cjs sql sh css tsv svg gitignore gitattributes htmlhintrc assetsignore; do
   case "$TEXT_EXTS" in *" $e "*) : ;; *) echo "ÉCHEC   plancher : .$e absent de TEXT_EXTS"; exit 1 ;; esac
 done
 
@@ -50,9 +50,14 @@ printf 'temoin %s\n' "$DECLENCHEUR" > "temoin_binaire.$BIN1"
 printf 'temoin %s\n' "$DECLENCHEUR" > "temoin_inconnu.zzqx"
 printf 'temoin %s\n' "$DECLENCHEUR" > "SANS_EXTENSION_NON_DECLARE"
 printf 'temoin %s\n' "$DECLENCHEUR" > "docs/data/temoin_exclu.json"
-printf 'ligne de dette %s\nautre ligne %s\n' "$DECLENCHEUR" "$DECLENCHEUR" > "temoin_dette.py"
+printf 'a\0b\ntemoin %s\n' "$DECLENCHEUR" > "temoin_nul.md"                 # octet NUL avant le déclencheur
+printf 'caf\xe9 temoin %s\n' "$DECLENCHEUR" > "temoin_latin1.md"            # octet non UTF-8 sur la ligne
+printf 'temoin %s\n' "$DECLENCHEUR" > "temoin espace.md"                     # espace dans le nom
+printf 'ligne de dette %s\nautre ligne %s\nligne de dette %s\n' "$DECLENCHEUR" "$DECLENCHEUR" "$DECLENCHEUR" \
+  > "temoin_dette.py"                                                        # ligne 3 = copie de la 1
 H=$(printf '%s' "ligne de dette $DECLENCHEUR" | sha256sum | cut -c1-16)
-printf 'temoin_dette.py\tforme_sarl\t%s\nfichier_disparu.py\tforme_sarl\t0000000000000000\n' "$H" \
+# Registre de dette saisi « à la Windows » : BOM en tête, CRLF, espace final sur l'entrée.
+printf '\xEF\xBB\xBF# commentaire\r\ntemoin_dette.py\tforme_sarl\t%s \r\nfichier_disparu.py\tforme_sarl\t0000000000000000\r\n' "$H" \
   > .github/scripts/leak_guard_dette.txt
 git add -A >/dev/null
 
@@ -73,9 +78,14 @@ absent "^temoin_binaire\." "binaire déclaré .$BIN1 non lu"
 attendu "temoin_inconnu\.zzqx	CONFIG	extension_non_classee_zzqx" "extension inconnue → CONFIG bloquant"
 attendu "SANS_EXTENSION_NON_DECLARE	CONFIG	extension_non_classee_sans_extension" "sans extension non déclaré → CONFIG bloquant"
 absent "^docs/data/temoin_exclu" "répertoire exclu docs/data non lu (limite documentée)"
-attendu "temoin_dette\.py:1	DETTE	forme_sarl" "ligne inscrite en dette → DETTE"
+attendu "temoin_nul\.md:2	FUITE	forme_sarl" "octet NUL dans le fichier : ligne lue"
+attendu "temoin_latin1\.md:1	FUITE	forme_sarl" "octet non UTF-8 sur la ligne : ligne lue"
+attendu "temoin espace\.md:1	FUITE	forme_sarl" "nom de fichier avec espace lu"
+attendu "temoin_dette\.py:1	DETTE	forme_sarl" "ligne inscrite en dette → DETTE (registre avec BOM, CRLF, espace final)"
 attendu "temoin_dette\.py:2	FUITE	forme_sarl" "autre ligne du même fichier → FUITE"
+attendu "temoin_dette\.py:3	FUITE	forme_sarl" "copie identique de la ligne en dette → FUITE"
 attendu "fichier_disparu\.py	CONFIG	dette_perimee_forme_sarl" "entrée de dette orpheline → CONFIG bloquant"
+absent "dette_perimee_$" "commentaire du registre (après BOM) non pris pour une entrée"
 attendu "\(meta\)	META	sentinelle_fin_de_scan" "scan complet (sentinelle)"
 absent "scanner_interrompu" "scan non interrompu"
 

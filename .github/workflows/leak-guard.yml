@@ -52,7 +52,7 @@ name: R5 — Garde-fou doctrine anti-fuite
 # non suivi, généré ou déposé hors git n'est jamais scanné ; les répertoires de données exclus
 # restent aveugles à FUITE/PROSCRIT ; ni l'historique, ni les tags, ni les déploiements d'aperçu
 # déjà publiés ne sont vus.
-# Activation depuis main (défaut) pour le cron ; aussi sur push/PR touchant une surface texte.
+# Activation depuis main (défaut) pour le cron ; aussi sur toute PR et tout push sur main/dev.
 #
 # ─── CHEMIN DE DÉBLOCAGE GELÉ (brief O, 2026-09-02) ──────────────────────────────────────────
 # Un finding GELÉ correctement détecté n'est PAS une erreur du scanner à corriger (contrairement
@@ -82,36 +82,12 @@ on:
     # Un required check filtré par chemins ne s'exécute pas sur les PR ne touchant que des fichiers
     # hors périmètre (.js/.css/.sql/.png…) → le check resterait « pending » et GÈLERAIT ces PR.
     # Il doit donc tourner sur TOUTE PR (le scanner dérive sa surface de git ls-files de toute façon,
-    # ~15-20 s). Le filtre `paths` reste sur `push` (post-merge, non bloquant).
+    # ~15-20 s). Le push n'a plus de filtre `paths` non plus (retiré le 2026-09-24, cf. ci-dessous).
   push:
+    # Filtre `paths` retiré le 2026-09-24 : c'était un inventaire d'extensions (il manquait .htm,
+    # .markdown, les majuscules, les extensions inconnues que le garde doit justement signaler). Le
+    # scan est court ; tout push sur main/dev le relance.
     branches: [main, dev]
-    paths:
-      - '**/*.html'
-      - '**/*.md'
-      - '**/*.txt'
-      - '**/*.yml'
-      - '**/*.yaml'
-      - '**/*.json'
-      - '**/*.jsonc'
-      - '**/*.geojson'
-      - '**/*.py'
-      - '**/*.mjs'
-      - '**/*.js'
-      - '**/*.cjs'
-      - '**/*.sql'
-      - '**/*.sh'
-      - '**/*.css'
-      - '**/*.tsv'
-      - '**/*.svg'
-      - '**/.gitignore'
-      - '**/.gitattributes'
-      - '.htmlhintrc'
-      - '.assetsignore'
-      - 'LICENSE'
-      - '_headers'
-      - '_redirects'
-      - '.githooks/**'
-      - '.github/scripts/leak_guard*'
 
 permissions:
   contents: read
@@ -219,7 +195,7 @@ jobs:
           gh label create routine --color 1d76db --description "Routine de surveillance (détecte/signale)" --force >/dev/null 2>&1 || true
           BODY=$(mktemp)
           {
-            echo "Le garde-fou doctrine R5 a détecté **${{ steps.summary.outputs.count }}** signalement(s) potentiel(s) de fuite sur une surface publique."
+            echo "Le garde-fou doctrine R5 a détecté **${{ steps.summary.outputs.count }}** signalement(s) potentiel(s) de fuite et **${{ steps.summary.outputs.dcount }}** exposition(s) réelle(s) connue(s) en dette (classe DETTE, leak_guard_dette.txt, non bloquante) sur une surface publique."
             echo ""
             echo "- Événement : \`${{ github.event_name }}\` · Ref : \`${{ github.ref }}\`"
             echo "- Run : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -229,7 +205,7 @@ jobs:
             awk -F'\t' '$2!="META"' findings.txt
             echo '```'
             echo ""
-            echo "Classes : **FUITE** (financement/identité/corpus — bloquant sur PR) · **PERSO** (donnée personnelle — bloquant sur PR) · **PROSCRIT** (formulation interdite) · **GELE** (zone gelée modifiée — bloquant sur PR depuis le 2026-09-02, brief O ; relecture physicien/arbitrage Soleil requis, chemin de déblocage documenté dans .github/workflows/leak-guard.yml) · **DETTE** (exposition réelle connue, inscrite dans .github/scripts/leak_guard_dette.txt, non bloquante, à corriger sur arbitrage — retirer l'entrée dans la PR qui corrige)."
+            echo "Classes : **FUITE** (financement/identité/corpus — bloquant sur PR) · **PERSO** (donnée personnelle — bloquant sur PR) · **PROSCRIT** (formulation interdite) · **GELE** (zone gelée modifiée — bloquant sur PR depuis le 2026-09-02, brief O ; relecture physicien/arbitrage Soleil requis, chemin de déblocage documenté dans .github/workflows/leak-guard.yml) · **DETTE** (exposition réelle connue, inscrite dans .github/scripts/leak_guard_dette.txt, non bloquante, à corriger sur arbitrage — retirer l'entrée dans la PR qui corrige) · **CONFIG** (garde dégradé ou mal configuré — bloquant sur PR, voir le label)."
             echo "Faux positif ? → ajouter \`fichier<TAB>label\` à \`.github/scripts/leak_guard_allowlist.txt\` (FUITE/PERSO/PROSCRIT uniquement — PAS pour un GELE réel, cf. « chemin de déblocage » ci-dessus)."
             echo ""
             echo "> Sur cron/push : alert-only (le build n'est pas cassé). Sur PR : FUITE/PERSO/GELE/CONFIG bloquent le merge (cf. workflow)."
@@ -285,7 +261,10 @@ jobs:
             echo "  détecté est un changement réel, qui reste Cran C. Chemin de déblocage : cf. « CHEMIN DE DÉBLOCAGE GELÉ »"
             echo "  en tête de .github/workflows/leak-guard.yml — arbitrage Soleil consigné au registre privé, puis merge"
             echo "  admin par Soleil (jamais par Code, avec ou sans --admin)."
-            echo "→ CONFIG : configurer le secret manquant (LEAK_TERMS_REGEX / LEAK_CONFIDENTIAL_REGEX)."
+            echo "→ CONFIG : lire le label. *_NON_SCANNEE_secret_absent : configurer le secret (LEAK_TERMS_REGEX / LEAK_CONFIDENTIAL_REGEX) ;"
+            echo "  extension_non_classee_<ext> : classer l'extension dans TEXT_EXTS, TEXT_NAMES ou BINARY_EXTS (leak_guard.sh) ;"
+            echo "  dette_perimee_<label> : la fuite a été corrigée ou la ligne a changé — retirer ou mettre à jour l'entrée"
+            echo "  de .github/scripts/leak_guard_dette.txt dans cette PR ; saute_cap_taille_* : allowlister « chemin<TAB>cap_taille »."
             exit 1
           fi
           echo "Gate anti-fuite : aucun marqueur bloquant (FUITE/PERSO/GELE/CONFIG). OK."
