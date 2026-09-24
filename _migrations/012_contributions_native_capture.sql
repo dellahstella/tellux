@@ -10,7 +10,7 @@
 -- `information_schema.columns`, aucune ne s'appelle `native_capture`). PostgREST construit
 -- l'INSERT depuis les clés du payload : une clé sans colonne ne « manque » pas, elle **fait
 -- échouer l'INSERT ENTIER** (`ERROR 42703` côté Postgres direct, `PGRST204` côté API réelle —
--- les deux vus, cf. INS-018/INS-019, `tellux-corpus-internal`). Toute contribution soumise
+-- les deux vus, cf. INS-018/INS-019 du registre privé). Toute contribution soumise
 -- avec ce bouton utilisé est perdue en entier, pas seulement le champ. Confirmé ce soir comme
 -- SEULE clé orpheline restante sur `contributions` par la garde CI
 -- (`schema-payload-guard.mjs`, run 34754227360 : `capSubmitMeasurement()` et

@@ -1,8 +1,10 @@
 name: Test couverture anti-fuite (manuel)
 
 # Déclenchement MANUEL uniquement (Actions -> Run workflow). Vérifie que les secrets du
-# garde-fou (LEAK_TERMS_REGEX / LEAK_CONFIDENTIAL_REGEX) ATTRAPENT bien les marqueurs
-# confidentiels du projet — SANS que ces marqueurs ni les secrets ne quittent GitHub.
+# garde-fou (LEAK_TERMS_REGEX / LEAK_CONFIDENTIAL_REGEX / LEAK_CORPUS_REPO_REGEX) ATTRAPENT bien
+# les marqueurs confidentiels du projet — SANS que ces marqueurs ni les secrets ne quittent GitHub.
+# Le dépôt de test n'a pas l'historique du garde : le canari de LEAK_CORPUS_REPO_REGEX y émet un
+# CONFIG, attendu et sans effet ici (seules les lignes FUITE comptent).
 #
 # Principe : les marqueurs à tester sont fournis dans un SECRET dédié `COVERAGE_MARKERS`
 # (un marqueur par ligne), posé par le mainteneur dans l'UI. Ils NE sont PAS un input
@@ -43,6 +45,7 @@ jobs:
         env:
           LEAK_TERMS_REGEX: ${{ secrets.LEAK_TERMS_REGEX }}
           LEAK_CONFIDENTIAL_REGEX: ${{ secrets.LEAK_CONFIDENTIAL_REGEX }}
+          LEAK_CORPUS_REPO_REGEX: ${{ secrets.LEAK_CORPUS_REPO_REGEX }}
           COVERAGE_MARKERS: ${{ secrets.COVERAGE_MARKERS }}
           WITH_VARIANTS: ${{ inputs.variants }}
         run: |
@@ -53,7 +56,7 @@ jobs:
             echo "::error::Secret COVERAGE_MARKERS absent ou vide. Pose-le (un marqueur par ligne) puis relance."
             exit 1
           fi
-          if [ -z "${LEAK_TERMS_REGEX:-}" ] && [ -z "${LEAK_CONFIDENTIAL_REGEX:-}" ]; then
+          if [ -z "${LEAK_TERMS_REGEX:-}" ] && [ -z "${LEAK_CONFIDENTIAL_REGEX:-}" ] && [ -z "${LEAK_CORPUS_REPO_REGEX:-}" ]; then
             echo "::error::Aucun secret LEAK_* injecté — rien à tester."
             exit 1
           fi
@@ -90,7 +93,7 @@ jobs:
           bash "$SCANNER" "$R" > "$OUT" 2>/dev/null
 
           # Un fichier est "attrapé" ssi une ligne FUITE de classe secret existe pour lui.
-          caught(){ grep -qE "^$1/$2\.md:[0-9]+"$'\t'"FUITE"$'\t'"(raison_sociale|module_confidentiel)$" "$OUT"; }
+          caught(){ grep -qE "^$1/$2\.md:[0-9]+"$'\t'"FUITE"$'\t'"(raison_sociale|module_confidentiel|corpus_repo)$" "$OUT"; }
 
           echo "=================================================================="
           echo " COUVERTURE — $TOTAL marqueur(s) — rapport PAR RÉFÉRENCE (index seul)"
