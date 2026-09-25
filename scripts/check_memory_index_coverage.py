@@ -15,7 +15,10 @@ audit reproductible et pose un plancher de couverture.
 
 Méthode — ATTEIGNABILITÉ MULTI-SAUTS, pas une simple sous-chaîne :
     "Atteignable" = le fichier est référencé (par [[nom]] ou (nom.md)) soit
-    directement dans MEMORY.md, soit dans un fichier lui-même atteignable
+    directement dans la PARTIE CHARGÉE de MEMORY.md (voir loaded_index : Claude Code
+    ne lit que 200 lignes ou 25 000 caractères comptés ; corrigé le 2026-09-24, le script
+    lisait jusque-là le fichier entier et ne voyait pas une troncature), soit dans un
+    fichier lui-même atteignable
     depuis MEMORY.md — parcours en largeur, profondeur non plafonnée (les
     chaînes réelles observées dans ce dossier ne dépassent pas 2-3 sauts,
     ex. MEMORY.md → fichier d'agrégation de période → fichier individuel).
@@ -48,6 +51,48 @@ import re
 import sys
 
 LINK_PATTERN = re.compile(r"\[\[([^\]|]+)\]\]|\(([A-Za-z0-9_.\-]+\.md)\)")
+
+# Limites de lecture de l'index par Claude Code (2.1.280, fonction de troncature de l'index) :
+# le texte est lu BRUT (retours chariot compris), débarrassé de ses blancs de bord par trim(), puis
+# réduit aux 200 premières lignes, puis coupé à la dernière fin de ligne située au plus à 25 000 en
+# longueur de chaîne JavaScript (unités UTF-16). Au-delà, les sessions ne voient pas la fin de l'index :
+# les liens qui s'y trouvent ne rendent rien atteignable (2026-09-24 : le 20/09, deux lignes coupées ont
+# rendu 4 fichiers inatteignables, alors que ce script, qui lisait le fichier entier, répondait « aucun
+# orphelin »).
+INDEX_MAX_LINES = 200
+INDEX_MAX_UNITS = 25000
+# Blancs retirés par String.prototype.trim() (WhiteSpace + LineTerminator, BOM compris ; pas U+0085).
+JS_TRIM_CHARS = (
+    "\t\n\x0b\x0c\r            "
+    "      　﻿"
+)
+
+
+def loaded_index(raw_text):
+    """Partie de l'index réellement chargée par Claude Code, et ses mesures.
+
+    `raw_text` doit être lu sans conversion des fins de ligne (open(..., newline="")) :
+    les retours chariot comptent dans la limite.
+    """
+    text = raw_text.strip(JS_TRIM_CHARS)
+    lines = text.split("\n")
+    n_lines = len(lines)
+    units = text.encode("utf-16-le", "surrogatepass")
+    n_units = len(units) // 2
+    truncated = n_lines > INDEX_MAX_LINES or n_units > INDEX_MAX_UNITS
+    if truncated:
+        if n_lines > INDEX_MAX_LINES:
+            text = "\n".join(lines[:INDEX_MAX_LINES])
+            units = text.encode("utf-16-le", "surrogatepass")
+        if len(units) // 2 > INDEX_MAX_UNITS:
+            cut = -1
+            for i in range(INDEX_MAX_UNITS, -1, -1):  # comme lastIndexOf("\n", 25000)
+                if units[2 * i:2 * i + 2] == b"\n\x00":
+                    cut = i
+                    break
+            end = cut if cut > 0 else INDEX_MAX_UNITS
+            text = units[:2 * end].decode("utf-16-le", "surrogatepass")
+    return text, {"lines": n_lines, "units": n_units, "truncated": truncated}
 
 
 def parse_frontmatter(path):
@@ -84,8 +129,8 @@ def extract_links(text):
 
 def scan(memory_dir, index_filename="MEMORY.md"):
     index_path = os.path.join(memory_dir, index_filename)
-    with open(index_path, encoding="utf-8") as f:
-        index_text = f.read()
+    with open(index_path, encoding="utf-8", newline="") as f:
+        index_text, index_stats = loaded_index(f.read())
 
     all_files = sorted(
         f for f in os.listdir(memory_dir)
@@ -118,11 +163,16 @@ def scan(memory_dir, index_filename="MEMORY.md"):
         "total_files": len(all_files),
         "reachable": reachable,
         "orphans": orphans,
+        "index": index_stats,
     }
 
 
 def report(memory_dir):
     result = scan(memory_dir)
+    idx = result["index"]
+    print(f"Index chargé : {idx['units']} caractères comptés (limite {INDEX_MAX_UNITS}), "
+          f"{idx['lines']} lignes (limite {INDEX_MAX_LINES}) — "
+          f"{'TRONQUÉ : seule la partie chargée compte ci-dessous' if idx['truncated'] else 'chargé en entier'}")
     print(f"Fichiers .md (hors index) : {result['total_files']}")
     print(f"Atteignables depuis l'index (tous chemins confondus) : {len(result['reachable'])}")
     print(f"Orphelins (aucun chemin)  : {len(result['orphans'])}")
