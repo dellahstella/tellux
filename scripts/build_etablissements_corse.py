@@ -57,7 +57,7 @@ officiel = finess-structures-1 + finess-activites-1 (data.gouv.fr), format
 JSON (pas CSV), geoloc restructuree, equivalent categetab/libcategetab non
 identifie cote structure (probablement activite, a verifier a la bascule).
 Detail complet + travail estime : ticket FINESS-BASCULE-001
-(tellux-corpus-internal/docs/internal/DETTES_TECHNIQUES.md, prive).
+(registre prive des dettes techniques, DETTES_TECHNIQUES.md).
 
 NOTE IMPORTANTE POUR L'UTILISATEUR
 ----------------------------------
