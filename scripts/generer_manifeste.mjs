@@ -290,7 +290,17 @@ async function main() {
     const r = lireTrackeSurMain(ARGS.prive, 'docs/internal/DETTES_TECHNIQUES.md', 'dettes');
     if (r.statut !== 'OK') s(`INDISPONIBLE (${r.raison}).`);
     else {
-      const entrees = [...r.contenu.matchAll(/^###\s+([A-Z0-9-]+)\s+—.*$/gm)];
+      // Définition d'une entrée (2026-09-28, dette privée MANIFESTE-COMPTE-DETTES-FAUX-001) : un
+      // identifiant en majuscules, accents compris, chiffres et tirets, avec au moins un tiret, quel
+      // que soit le séparateur du titre. L'ancien motif (`[A-Z0-9-]+` suivi d'un tiret cadratin)
+      // manquait 4 entrées réelles (GELÉ-001, TÉLÉ-001, deux titres sans tiret cadratin), et la
+      // commande affichée (`grep -c '^### '`) comptait en plus 4 sous-titres internes : trois
+      // chiffres pour la même chose, aucun juste. Une seule définition sert désormais au compte ET
+      // à la commande affichée, qui rendent le même chiffre (vérifié : 259 = 259 au 2026-09-28).
+      // On corrige le lecteur, pas le registre.
+      const MOTIF_ENTREE = /^###\s+([\p{Lu}0-9]+(?:-[\p{Lu}0-9]+)+)\b.*$/gmu;
+      const entrees = [...r.contenu.matchAll(MOTIF_ENTREE)];
+      const identifiants = new Set(entrees.map((m) => m[1]));
       // Palier 1 de INS-028 (2026-09-14, corrigé le jour même de la première génération) : le
       // premier essai ne reconnaissait que `**Statut**` + `:` HORS gras (21/213), et affirmait
       // 192 entrées « sans statut structuré ». Mesure exécutée (git blame + classement par
@@ -303,11 +313,13 @@ async function main() {
         const suite = r.contenu.slice(m.index + m[0].length, m.index + m[0].length + 400);
         const st = /\*\*Statut\*\*\s*:|\*\*Statut\s*:\*\*/.test(suite);
         if (st) structurees++;
-        if (/priorit[ée]\s+HAUTE/i.test(suite)) hautes.push(`\`${m[1]}\``);
+        // Forme « **Priorité :** HAUTE » reconnue aussi (2026-09-28) : l'ancien motif ne lisait que
+        // « priorité HAUTE » et manquait GITHUB-DONNEES-PERSONNELLES-SERVIES-PAR-EMPREINTE-001.
+        if (/priorit[ée]\s*(?:\*\*)?\s*:?\s*(?:\*\*)?\s*HAUTE/i.test(suite)) hautes.push(`\`${m[1]}\``);
       }
-      s(`**${entrees.length} entrées** dans le registre (\`docs/internal/DETTES_TECHNIQUES.md\`, dépôt privé) — trop pour tenir ici, volontairement non énumérées (cf. contrainte de longueur). **${structurees}/${entrees.length}** portent un statut structuré (\`**Statut** :\` ou \`**Statut :**\` — les deux formes reconnues, même champ, cf. INS-028) ; les ${entrees.length - structurees} autres n'ont structurellement aucun champ Statut — pas une forme non lue, une absence réelle.`);
+      s(`**${identifiants.size} entrées** dans le registre (\`docs/internal/DETTES_TECHNIQUES.md\`, dépôt privé) — trop pour tenir ici, volontairement non énumérées (cf. contrainte de longueur). **${structurees}/${entrees.length}** portent un statut structuré (\`**Statut** :\` ou \`**Statut :**\` — les deux formes reconnues, même champ, cf. INS-028) ; les ${entrees.length - structurees} autres n'ont structurellement aucun champ Statut — pas une forme non lue, une absence réelle.`);
       if (hautes.length) s('', `**Priorité HAUTE explicite (${hautes.length})** : ${hautes.join(', ')}.`);
-      s('', '<sub>`grep -c \'^### \' docs/internal/DETTES_TECHNIQUES.md` pour le compte ; lire le fichier pour le détail — jamais recopié ici</sub>');
+      s('', '<sub>`LC_ALL=C.UTF-8 grep -cP \'^###\\s+[\\p{Lu}0-9]+(?:-[\\p{Lu}0-9]+)+\\b\' docs/internal/DETTES_TECHNIQUES.md` pour le compte (même définition d\'une entrée que ce script) ; lire le fichier pour le détail — jamais recopié ici</sub>');
     }
   }
 
