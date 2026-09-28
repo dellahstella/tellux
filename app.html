@@ -2659,7 +2659,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
       <!-- Couche « Interpolation des mesures » (b-interp), LOT D, BRIEF_CODE_TEMPS2_CD_MESURES_INTERPOLATION_2026-09-20 :
            surface dérivée des SITES MESURÉS (buildHotMesures, jamais du modèle RF), restreinte
            aux zones qui remplissent le critère de couverture (2026-09-28) — cf. commentaire à
-           INTERP_ZONES. Hors calcul : Indice Tellux intouchés. -->
+           INTERP_ZONES. Hors calcul : Indice Tellux intouché. -->
       <button class="lbtn" id="b-interp" data-domains="rf" title="Interpolation d'une surface à partir des sites mesurés (jamais du modèle), restreinte aux 5 zones dont au moins la moitié du disque de 5 km est à 2,5 km ou moins d'un site mesuré : Ajaccio (42 sites), Bastia (20), L'Île-Rousse – Monticello (9), Porto-Vecchio (5), Bonifacio (5). Plafond interne de 2,5 km : arrêt net au bord, sans dégradé — une cellule sans site assez proche reste vide, y compris à l'intérieur d'une zone. Sites sources toujours visibles (points sombres)." onclick="tog('interp','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Interpolation des mesures (5 zones)<span class="layer-badge layer-badge--hors">Hors calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-interp"></div>
       <!-- Couche « Sites U/Th à mesurer » retirée de la carte publique le 2026-08-19 (décision
@@ -3448,7 +3448,7 @@ var JS_STRINGS_EN = {
   bt_line_aerien: "Overhead BT line · EDF SEI",
   bt_line_souterrain: "Underground BT line · EDF SEI",
   legende_generic: "Legend",
-  foretdense_zoom_hint: "Dense forest — layer shown from zoom {z} (too extensive at small scale); the calculation stays active.",
+  foretdense_zoom_hint: "Dense forest — layer shown from zoom {z} (too extensive at small scale).",
   foretouverte_zoom_hint: "Open forest — layer shown from zoom 10 (too extensive at small scale); context layer, outside the calculation.",
   landemaquis_zoom_hint: "Heathland / scrub — layer shown from zoom 10 (too extensive at small scale); context layer, outside the calculation.",
   cert_toast_prefix: "Certified measurements — ",
@@ -3515,7 +3515,7 @@ var JS_STRINGS_EN = {
   // 2026-09-03) : anLabel retirée (score Naturel plus affiché) ; itVerdict devient un renvoi unique
   // non branché (Option A, cf. commentaire au calcul, app.html) — les 6 anciennes branches
   // catégoriques n'ont plus d'équivalent. Aucune destination de portage identifiée pour ces 9 clés.
-  it_verdict_renvoi: "Detailed values below (ELF, RF) and in the technical detail “?”.",
+  it_verdict_renvoi: "Electrical-grid (ELF) score: details below and in the technical detail “?”. Radiofrequency does not feed it; it is shown further down.",
   sol_fort: "Substrate with high magnetic susceptibility (biotite granite)",
   sol_modere: "Substrate with moderate susceptibility",
   sol_neutre: "Neutral substrate (limestone/ophiolite)",
@@ -3535,8 +3535,6 @@ var JS_STRINGS_EN = {
   detail_crustal_label: "large-scale crustal anomaly, EMAG2v3 (NOAA/NCEI, extracted 2026-09-19) — exploratory reference point, not integrated into the score. Value at the product's reference altitude (4 km), not continued to ground.",
   detail_local_label: "local geological susceptibility, same value as susc_nT above — feeds axesTotal internally, unscored in this popup since ADR-064",
   detail_human_label: "total anthropic ELF field, same value shown above — feeds the Disturbance score",
-  detail_rf_label: "weighted transmitter density — relative value, no unit; computed separately from the value above (never forest-attenuated) — no longer feeds the displayed score since 2026-09-28",
-  detail_rf_label_noncal: "weighted transmitter density — scale factor NOT adjusted at the moment (waiting for its data); relative value, no unit; computed separately from the value above (never forest-attenuated) — no longer feeds the displayed score since 2026-09-28",
   detail_alt_label: "Altitude (IGN RGE Alti, ~1 m resolution)",
   mp_igrf_ref_msg: "Expected Tellux composite value here (IGRF-14 + crustal anomaly [EMAG2v3, extracted 2026-09-19] + external correction + ELF disturbance) : ",
   mp_igrf_delta_msg: " Difference from your measurement : ",
@@ -3565,11 +3563,10 @@ var JS_STRINGS_EN = {
   v2_title_rf: "Radiofrequency — mobile telephony",
   rf_supports_indispo: "Mobile-phone masts not loaded yet.",
   rf_support_proche: "Nearest mobile-phone mast",
+  rf_bandes_indispo: "Measurement references by distance unavailable at the moment.",
   rf_limite_note: "Regulatory limit values: 28 to 61 V/m depending on frequency (Decree No. 2002-775).",
-  v2_conf_rf: "Confidence: low — propagation model (ANFR mobile-phone antennas, TDF television transmitters, microwave links; FM radio is not modelled)",
   tdf_par_tv: "kW ERP, television only",
   tdf_fm_non_modelisee: "FM radio not modelled",
-  rf_icnirp_note: "No unit — this value is not comparable to the ICNIRP reference point (≈ 4,500,000 µW/m²), which applies to a measured power density.",
   v2_title_ionisant: "Ionizing domain",
   v2_conf_prefix: "Confidence: ",
   // gamma_reperes_tooltip RETIRÉE le 2026-09-17 (brief « gamma JRC vers radon ») : réservée au
@@ -5385,7 +5382,7 @@ const LEGEND_HTML={
     '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#991b1b;vertical-align:middle;margin-right:4px"></span> Élevé 2–8 V/m</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c0000;vertical-align:middle;margin-right:4px"></span> Très élevé ≥ 8 V/m</div>'+
     '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Plafond interne 2,5 km : arrêt net au bord, sans dégradé — une cellule sans site assez proche reste vide, y compris à l\'intérieur d\'une zone. Valeur d\'un site revisité = sa mesure la plus récente (jamais une moyenne).</div>'+
-    '<div class="leg-src">Sites : jeu ANFR/CartoRadio du 19/09/2026 (117 sites distincts), hors calcul — Indice Tellux intouchés</div>'+
+    '<div class="leg-src">Sites : jeu ANFR/CartoRadio du 19/09/2026 (117 sites distincts), hors calcul — Indice Tellux intouché</div>'+
     '</div>',
   contrib:'<div class="leg-block"><b class="leg-title">Contributions smartphone</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">Relevés terrain des contributeurs Tellux</div>'+
@@ -10488,7 +10485,7 @@ map.on('click',async e=>{
   // les mêmes seuils non sourcés (Math.round(elf/100), seuils 0,5/2/6 V/m) — l'Option A éteint le
   // problème à la racine plutôt que de l'adoucir. Réserve Soleil traitée : le texte pointe
   // explicitement vers où lire les valeurs (pas un simple retrait qui laisserait un vide).
-  const itVerdict=jt('it_verdict_renvoi','Valeurs détaillées ci-dessous (ELF, RF) et dans le « ? » Détail technique.');
+  const itVerdict=jt('it_verdict_renvoi','Score du réseau électrique (ELF) : détail ci-dessous et dans le « ? » Détail technique. La radiofréquence n’y entre pas ; elle est présentée plus bas.');
   const itLabel=phLabel; // itEmoji/itColor retirés le 2026-08-23 (n'étaient utilisés que par l'INFO BAR)
   // Sous-sol simplifié — basé sur susceptibilité magnétique (nT)
   const solLabel=susc_nT>30?jt('sol_fort','Substrat à forte susceptibilité magnétique (granit biotite)'):susc_nT>12?jt('sol_modere','Substrat à susceptibilité modérée'):geo<0?jt('sol_neutre','Substrat neutre (calcaire/ophiolite)'):jt('sol_standard','Substrat standard');
@@ -12398,7 +12395,7 @@ function rfClasseDistance(d_m){ for(const c of RF_DIST_CLASSES) if(d_m<c.max) re
 function rfPopupHTML(lat,lng){
   const en=document.documentElement.lang==='en';
   const esc=v=>String(v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const fmtD=m=>m<1000?Math.round(m)+' m':(en?(m/1000).toFixed(1):(m/1000).toFixed(1).replace('.',','))+' km';
+  const fmtD=m=>Math.round(m)<1000?Math.round(m)+' m':(en?(m/1000).toFixed(1):(m/1000).toFixed(1).replace('.',','))+' km';
   const lignes=[];
   const p=supportMobileLePlusProche(lat,lng);
   if(!p||!p.support){
@@ -12409,20 +12406,30 @@ function rfPopupHTML(lat,lng){
     if(Array.isArray(RF_BANDES_STATS)){
       const bi=rfBandeDistance(p.d_m), b=RF_BANDES_STATS[bi];
       const lib=(en?['under 50 m','50 to 150 m','150 m and beyond']:['moins de 50 m','50 à 150 m','150 m et plus'])[bi];
-      let t=(en?'Certified measurements taken in Corsica at this distance ('+lib+'): ':'Mesures certifiées faites en Corse à cette distance ('+lib+') : ');
+      let t=(en?'Certified measurements taken outdoors in Corsica at this distance ('+lib+'): ':'Mesures certifiées faites en Corse, en extérieur, à cette distance ('+lib+') : ');
       t+= (b&&b.n) ? (en?'median ':'médiane ')+rfFormatVm(b.med,en)+' V/m'+(en?', 9 in 10 below ':', 9 sur 10 sous ')+rfFormatVm(b.p90,en)+' V/m ('+b.n+(en?' measurements)':' mesures)') : (en?'none':'aucune');
       t+= en?'. Not a measurement at this point.':'. Ce n’est pas une mesure en ce point.';
       if(bi===2) t+= en?' Few measurements for this band, which covers most inhabited places.':' Peu de mesures pour cette bande, qui couvre la plupart des lieux habités.';
       lignes.push('<div style="font-size:9px;color:#4a4f5e;line-height:1.35;margin-top:2px">'+t+'</div>');
+    } else {
+      lignes.push('<div style="font-size:9px;color:#626774;margin-top:2px">'+jt('rf_bandes_indispo','Repères de mesure par distance indisponibles pour l’instant.')+'</div>');
     }
   }
   if(typeof MESURES_CERTIFIEES!=='undefined'&&Array.isArray(MESURES_CERTIFIEES)&&MESURES_CERTIFIEES.length){
-    const voisines=MESURES_CERTIFIEES
-      .filter(m=>m&&m.precision_coord==='exacte'&&m.type_environnement==='exterieur_public'&&m.valeur_max_vm>0&&m.lat!=null&&m.lon!=null)
-      .map(m=>({m,d:dist(lat,lng,m.lat,m.lon)*1000})).filter(x=>x.d<2000).sort((a,b)=>a.d-b.d).slice(0,3);
+    // Une entrée par position (un même lieu est souvent revisité, jusqu'à 8 fois) : la visite la plus récente,
+    // même règle que la couche d'interpolation (« site revisité = mesure la plus récente »).
+    const parPos=new Map();
+    MESURES_CERTIFIEES.forEach(m=>{
+      const v=+(m&&m.valeur_max_vm);
+      if(!m||m.precision_coord!=='exacte'||m.type_environnement!=='exterieur_public'||!(v>0)||m.lat==null||m.lon==null) return;
+      const k=(+m.lat).toFixed(5)+','+(+m.lon).toFixed(5), e=parPos.get(k);
+      if(!e||String(m.date_mesure||'')>String(e.date_mesure||'')) parPos.set(k,m);
+    });
+    const voisines=[...parPos.values()]
+      .map(m=>({m,d:dist(lat,lng,+m.lat,+m.lon)*1000})).filter(x=>x.d<2000).sort((a,b)=>a.d-b.d).slice(0,3);
     const t= voisines.length
-      ? (en?'Certified measurements within 2 km: ':'Mesures certifiées à moins de 2 km : ')+voisines.map(x=>rfFormatVm(x.m.valeur_max_vm,en)+' V/m '+(en?'at ':'à ')+fmtD(x.d)+' ('+esc(String(x.m.date_mesure||'').slice(0,4))+')').join(' · ')
-      : (en?'No certified measurement within 2 km. A free measurement can be requested from ANFR through the town hall (mesures.anfr.fr).':'Aucune mesure certifiée à moins de 2 km. Une mesure gratuite peut être demandée à l’ANFR par l’intermédiaire de la mairie (mesures.anfr.fr).');
+      ? (en?'Certified outdoor measurements within 2 km (latest visit per site): ':'Mesures certifiées d’extérieur à moins de 2 km (dernière visite de chaque lieu) : ')+voisines.map(x=>rfFormatVm(+x.m.valeur_max_vm,en)+' V/m '+(en?'at ':'à ')+fmtD(x.d)+' ('+esc(String(x.m.date_mesure||'').slice(0,4))+')').join(' · ')
+      : (en?'No certified outdoor measurement with an exact position within 2 km. A free measurement can be requested from ANFR through the town hall (mesures.anfr.fr).':'Aucune mesure certifiée d’extérieur, à position exacte, à moins de 2 km. Une mesure gratuite peut être demandée à l’ANFR par l’intermédiaire de la mairie (mesures.anfr.fr).');
     lignes.push('<div style="font-size:9px;color:#4a4f5e;line-height:1.35;margin-top:2px">'+t+'</div>');
   }
   lignes.push('<div style="font-size:8px;color:#626774;font-style:italic;margin-top:2px">'+jt('rf_limite_note','Valeurs limites réglementaires : 28 à 61 V/m selon la fréquence (décret n° 2002-775).')+'</div>');
@@ -13066,7 +13073,7 @@ function _syncForetDenseZoom(fromToggle){
   }else{
     if(map.hasLayer(lForetDense))map.removeLayer(lForetDense);
     if(fromToggle||!_foretDenseZoomHintShown){
-      info(jt('foretdense_zoom_hint','Forêt dense — couche visible à partir du zoom {z} (trop étendue à petite échelle) ; le calcul reste actif.').replace('{z}',FORET_DENSE_MIN_ZOOM),null,4500);
+      info(jt('foretdense_zoom_hint','Forêt dense — couche visible à partir du zoom {z} (trop étendue à petite échelle).').replace('{z}',FORET_DENSE_MIN_ZOOM),null,4500);
       _foretDenseZoomHintShown=true;
     }
   }

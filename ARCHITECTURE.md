@@ -148,7 +148,7 @@ Deux groupes accordéons de tête, plus deux sous-groupes sous « Contexte natur
 |---|---|
 | Modèle EM | b-hot (champ magnétique composite), b-elf (champ ELF) |
 | Sources anthropiques | b-ant (antennes ANFR + TDF), b-res (réseau HTA), b-bt (réseau BT), b-prod (sites de production), b-postes (postes sources EDF) |
-| Contexte naturel › Substrat et paysage | b-emag (fond magnétique régional), b-gammajrc (fond gamma terrestre JRC), b-foretdense (forêt dense, module le calcul RF), b-foretouverte (forêt ouverte), b-landemaquis (lande/maquis) |
+| Contexte naturel › Substrat et paysage | b-emag (fond magnétique régional), b-gammajrc (fond gamma terrestre JRC), b-foretdense (forêt dense, couche de contexte depuis le 2026-09-28), b-foretouverte (forêt ouverte), b-landemaquis (lande/maquis) |
 | Contexte naturel › Repères et mesures externes | b-cert (mesures certifiées ANFR/EXEM), b-crustal (anomalies de référence), b-contrib (contributions smartphone), b-openrad (gamma citoyen OpenRadiation) |
 
 `b-hyd` (hydrographie) existe encore dans le code (`LAYERS`, `tog('hyd',...)`, i18n) mais son bouton est commenté en dur depuis le 2026-08-27 (masqué du menu public, dette réservée, ni migré ni supprimé) — absent de cette table volontairement, pas un oubli. Aucun des id de l'ancienne table (`b-con`, `b-intl`, `b-geo`, `b-cav`, `b-therm`, `b-wdmam`) n'existe plus dans le fichier.
