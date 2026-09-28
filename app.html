@@ -2220,7 +2220,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
 
 <p style="margin:10px 0 8px 0;"><strong style="color:var(--acc)">✅ Données validées (institutionnelles) :</strong></p>
 <ul style="margin:6px 0 6px 16px;padding:0">
-  <li style="margin-bottom:3px"><strong>Antennes ANFR</strong> : 656 supports de téléphonie mobile (2G à 5G, 19 952 secteurs) sur les 976 supports ANFR de Corse (structures physiques, export national ANFR du 31 mai 2026 — extraction ponctuelle, non rafraîchie automatiquement), DMS/ETRS89. Depuis le 28/09/2026, ils remplacent un relevé antérieur (1 030 positions × opérateur) qui ne couvrait qu'environ la moitié de la Haute-Corse.</li>
+  <li style="margin-bottom:3px"><strong>Antennes ANFR</strong> : 656 supports de téléphonie mobile (2G à 5G, 19 952 secteurs) sur les 976 supports ANFR de Corse (structures physiques, export national ANFR du 31 mai 2026 — extraction ponctuelle, non rafraîchie automatiquement), DMS/ETRS89. Depuis le 28/09/2026, ils remplacent pour cette carte un relevé antérieur (1 030 positions × opérateur) qui ne couvrait qu'environ la moitié de la Haute-Corse ; la liste des antennes par commune de la page Mairies repose encore sur ce relevé.</li>
   <li style="margin-bottom:3px"><strong>Failles BRGM</strong> : cartes géologiques 1/50k (02B, 2A), D'Anna 2019</li>
   <li style="margin-bottom:3px"><strong>BRGM WMS</strong> : géologie, nappes, cavités = données publiques</li>
 </ul>
@@ -2349,7 +2349,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            un état de procédure n'a pas sa place dans le libellé d'une couche de la carte. Le
            statut reste écrit dans le panneau Méthodologie (#methodology-panel, liste des
            composantes, FR et EN). -->
-      <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Distance au support de téléphonie mobile le plus proche (2G à 5G), d'après le registre ANFR (export du 31/05/2026). Une donnée déclarée et vérifiable, pas un niveau d'exposition : elle ne remplace pas une mesure. La légende indique ce que les mesures certifiées faites en Corse montrent à chaque distance. Pour un niveau mesuré, voir la couche Mesures certifiées ANFR." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Distance aux antennes mobiles<span class="layer-badge layer-badge--domain">RF</span></button>
+      <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Distance au support de téléphonie mobile le plus proche — 2G à 5G, d'après le registre ANFR (export du 31/05/2026). Une donnée déclarée et vérifiable, pas un niveau d'exposition : elle ne remplace pas une mesure. La légende indique ce que les mesures certifiées faites en Corse montrent à chaque distance. Pour un niveau mesuré, voir la couche Mesures certifiées ANFR." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Distance aux antennes mobiles<span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-hotrf"></div>
       <!-- Champ ELF (nT) — brief BH, 2026-09-05 : couche ELF PURE (data-domains="elf" seul),
            distincte de b-hot (composite human+geo, cf. brief BF — conservé, non touché ici).
@@ -5012,7 +5012,7 @@ function syncAntCount(){
   // leg-hotrf-count : même métrique (positions ANFR) que la légende ANFR du même panneau, pas le
   // compte TDF — dépend uniquement d'ANFR_SITE_COUNT (correction B4, cohérence entre les deux blocs).
   // Depuis le 2026-09-28, la couche RF compte des supports (fichier statique), pas des positions.
-  if(Array.isArray(SUPPORTS_MOBILES)&&SUPPORTS_MOBILES.length) document.querySelectorAll('#leg-hotrf-count').forEach(el=>{ el.textContent = SUPPORTS_MOBILES.length; });
+  if(Array.isArray(SUPPORTS_MOBILES)&&SUPPORTS_MOBILES.length) document.querySelectorAll('#leg-hotrf-count,#leg-ant-supports').forEach(el=>{ el.textContent = SUPPORTS_MOBILES.length; });
   if(Array.isArray(RF_BANDES_STATS)) document.querySelectorAll('#leg-rf-bandes').forEach(el=>{ el.textContent = rfBandesTexte(el.dataset.lang==='en'); });
   if(TDF_EXTRACTION_DATE) document.querySelectorAll('#leg-tdf-date').forEach(el=>{ el.textContent = TDF_EXTRACTION_DATE; });
 }
@@ -5269,7 +5269,7 @@ const LEGEND_HTML={
   '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:'+ANFR_CLUSTER_COLOR+';border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.35);vertical-align:middle;margin-right:4px"></span>Grappe ANFR (comptage) — regroupe des positions de toutes générations, sans dominante affichée</div>'+
   '<div class="leg-row"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;background:'+TDF_CLUSTER_COLOR+';border:1.5px solid rgba(255,255,255,.9);box-shadow:0 1px 3px rgba(0,0,0,.2);vertical-align:middle;margin-right:4px"><span style="width:6px;height:6px;background:white;display:block"></span></span><b style="color:'+TDF_CLUSTER_COLOR+'">Émetteur radio/TV majeur</b> (TDF), isolé — même teinte que sa grappe</div>'+
   '<div class="leg-row"><span style="display:inline-block;position:relative;width:14px;height:14px;vertical-align:middle;margin-right:4px"><span style="position:absolute;inset:0;background:'+TDF_CLUSTER_COLOR+';border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.35)"></span><span style="position:absolute;top:-2px;right:-2px;width:6px;height:6px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center"><span style="width:3px;height:3px;background:'+TDF_CLUSTER_COLOR+';display:block"></span></span></span>Grappe TDF — garde sa teinte et un badge blanc en coin, même groupée</div>'+
-  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:3px"><span id="leg-ant-sites">—</span> positions ANFR (<span id="leg-ant-gens">—</span>) — <span id="leg-ant-ops">—</span>. Supports de téléphonie mobile, export ANFR du 31/05/2026 ; opérateurs déduits d’un relevé antérieur, absents pour certains supports. <span id="leg-tdf-clause">—</span>, extraction du <span id="leg-tdf-date">—</span>.</div>'+
+  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:3px"><span id="leg-ant-sites">—</span> positions ANFR (<span id="leg-ant-gens">—</span>) — <span id="leg-ant-ops">—</span>. Positions de <span id="leg-ant-supports">—</span> supports de téléphonie mobile, export ANFR du 31/05/2026 ; opérateurs déduits d’un relevé antérieur, absents pour certains supports. <span id="leg-tdf-clause">—</span>, extraction du <span id="leg-tdf-date">—</span>.</div>'+
   '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px">Valeurs limites d’exposition : 28 à 61 V/m selon la fréquence (décret n° 2002-775) — voir la couche <b>« Mesures certifiées (ANFR/EXEM) »</b> (menu Repères et mesures).</div>'+
   '<div class="leg-src">ANFR · TDF/Arcom/TVNT.net</div></div>'; },
   // Sous-bloc "MESURES CEM OFFICIELLES" retiré d'ici le 2026-09-04 (brief AQ) — faisait doublon
@@ -5456,7 +5456,7 @@ const LEGEND_HTML_EN={
   '<div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:'+ANFR_CLUSTER_COLOR+';border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.35);vertical-align:middle;margin-right:4px"></span>ANFR cluster (count) — groups positions of every generation, no dominant colour shown</div>'+
   '<div class="leg-row"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;background:'+TDF_CLUSTER_COLOR+';border:1.5px solid rgba(255,255,255,.9);box-shadow:0 1px 3px rgba(0,0,0,.2);vertical-align:middle;margin-right:4px"><span style="width:6px;height:6px;background:white;display:block"></span></span><b style="color:'+TDF_CLUSTER_COLOR+'">Major radio/TV transmitter</b> (TDF), isolated — same colour as its cluster</div>'+
   '<div class="leg-row"><span style="display:inline-block;position:relative;width:14px;height:14px;vertical-align:middle;margin-right:4px"><span style="position:absolute;inset:0;background:'+TDF_CLUSTER_COLOR+';border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.35)"></span><span style="position:absolute;top:-2px;right:-2px;width:6px;height:6px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center"><span style="width:3px;height:3px;background:'+TDF_CLUSTER_COLOR+';display:block"></span></span></span>TDF cluster — keeps its colour and a white corner badge, even when clustered</div>'+
-  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:3px"><span id="leg-ant-sites">—</span> ANFR sites (<span id="leg-ant-gens">—</span>) — <span id="leg-ant-ops">—</span>. Mobile-phone masts, ANFR export of 2026-05-31; operators inferred from an earlier survey, missing for some masts. <span id="leg-tdf-clause" data-lang="en">—</span>, extracted on <span id="leg-tdf-date">—</span>.</div>'+
+  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:3px"><span id="leg-ant-sites">—</span> ANFR sites (<span id="leg-ant-gens">—</span>) — <span id="leg-ant-ops">—</span>. Positions of <span id="leg-ant-supports">—</span> mobile-phone masts, ANFR export of 2026-05-31; operators inferred from an earlier survey, missing for some masts. <span id="leg-tdf-clause" data-lang="en">—</span>, extracted on <span id="leg-tdf-date">—</span>.</div>'+
   '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px">Exposure limit values: 28 to 61 V/m depending on frequency (Decree No. 2002-775) — see the <b>"Certified measurements (ANFR/EXEM)"</b> layer (References and measurements menu).</div>'+
   '<div class="leg-src">ANFR · TDF/Arcom/TVNT.net</div></div>'; },
   emag:'<div class="leg-block"><b class="leg-title" style="font-size:11px">Regional magnetic background</b><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px">Continuous scale from &#x2212;200 to +200 nT — the colours are those of the image served by NOAA; Tellux produces none of them. Deep basement, unrelated to human activity (NOAA EMAG2v3).</div></div>',
@@ -8779,7 +8779,9 @@ function rfBandesTexte(en){
     if(!b||!b.n) return lib[i]+(en?': no measurement':' : aucune mesure');
     return lib[i]+(en?': median ':' : médiane ')+rfFormatVm(b.med,en)+' V/m'+(en?', 9 in 10 below ':', 9 sur 10 sous ')+rfFormatVm(b.p90,en)+' V/m ('+b.n+(en?' measurements)':' mesures)');
   });
-  return parts.join(' · ')+(en?'. Few measurements beyond 150 m, where most inhabited places are.':'. Peu de mesures au-delà de 150 m, là où se trouvent la plupart des lieux habités.');
+  // La dernière bande n'a pas moins de mesures que les autres ; elle en a peu pour ce qu'elle couvre : presque
+  // tout le territoire habité (94 % des points du réseau basse tension, dossier privé classe-rf-2026-09-28).
+  return parts.join(' · ')+(en?'. The last band covers most inhabited places, with few measurements for so large an area.':'. La dernière bande couvre la plupart des lieux habités, avec peu de mesures pour un territoire aussi vaste.');
 }
 // anfrGrillePrete() (2026-09-10, lot B de la reprise) — la grille est-elle chargée ET non vide ? Seule
 // condition sous laquelle calibrateRF() dérive k. Un succès Supabase à zéro ligne donne {} : vrai pour
@@ -11311,7 +11313,8 @@ async function loadAnt(){try{
       hotspots_uth: Array.isArray(POINTS_CHAUDS_RADIO) ? POINTS_CHAUDS_RADIO.length : null,
       mesures_certifiees: Array.isArray(MESURES_CERTIFIEES) ? MESURES_CERTIFIEES.length : null,
       radon_communes_L3: (typeof RADON_L3_INSEE_SET !== 'undefined' && RADON_L3_INSEE_SET && RADON_L3_INSEE_SET.size) || null,
-      antennes_anfr: nOnshore,
+      antennes_anfr: nSupports,   // supports physiques depuis le 2026-09-28 (lignes support × génération : antennes_lignes)
+      antennes_lignes: nOnshore,
       antennes_offshore: nOffshore,
       antennes_sea_filtered: nSeaFiltered,
       published_at: Date.now(),
@@ -12404,7 +12407,8 @@ function buildHotRF(){
   // Couche RF (2026-09-28, décision de Soleil) : distance au support de téléphonie mobile ANFR le plus
   // proche. Une donnée déclarée et vérifiable, pas une exposition. Remplace la densité d'émetteurs
   // pondérée du modèle : sur les 142 mesures certifiées d'extérieur, la simple distance classe mieux les
-  // lieux (ρ 0,54) que le modèle (0,43) — dossier privé recherche/classe-rf-2026-09-28/.
+  // lieux (ρ 0,54) que le modèle (0,43 sur l'ancien relevé d'antennes, 0,47 sur les supports complets) — dossier
+  // privé recherche/classe-rf-2026-09-28/.
   // Rendu exact, sans grille : pour chaque classe, de la plus lointaine à la plus proche, un disque
   // OPAQUE par support, sur un canevas dans un volet transparent. Chaque classe recouvre la précédente,
   // donc un point prend la couleur de la classe de son support le plus proche — aucun cumul de
@@ -13907,9 +13911,9 @@ if(typeof loadForetDenseGrid==='function'){
 // grille vide calibrée 1,33 V/m ; grille revenue SANS recalibrer 132,8 V/m (terme ANFR × k² ≈ 493) ;
 // grille revenue PUIS recalibrée 2,16 V/m, k identique au bit. Recharger la grille sans recalibrer
 // serait pire que ne rien faire : la reprise passe donc par la calibration.
-// Limite déclarée : Supabase répondant 200 avec zéro ligne donne une grille vide que
-// fetchSupportsMobilesRaw (ex-fetchAntennasCorseRaw)() met en cache (partagé avec loadAnt) — la reprise ne la refait pas ; la
-// calibration reste refusée et les libellés disent « non calibré » (réfutation, S4).
+// Limite déclarée (jusqu'au 2026-09-28) : Supabase répondant 200 avec zéro ligne donnait une grille vide mise en
+// cache. Depuis la bascule sur le fichier statique, fetchSupportsMobilesRaw() lève une erreur sur un fichier sans
+// support : la promesse est relâchée et la reprise peut réessayer.
 // Réfutation : tests/blindage-harness/non-regression-reprise-anfr.mjs — exécutée AVANT ce lot sur le
 // code d'origine : 25 échecs prédits (carte construite sur un k dérivé de la grille vide, grille jamais
 // rechargée, k valide écrasé, carte éteinte périmée, libellés sans état).
@@ -16691,7 +16695,7 @@ function capCleanup(){
 ["lyr_hot_tt","#b-hot","title","Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. N'inclut pas le champ géomagnétique terrestre total (~46 000-47 500 nT en Corse, l'ordre de grandeur qu'un magnétomètre de smartphone mesure) : ce sont deux grandeurs physiques distinctes, jamais additionnées ici — le champ géomagnétique n'entre dans ce nombre à aucun titre. Estimation du modèle Tellux, pas une mesure. La composante ELF entre dans le score Indice Tellux affiché ; la composante substrat reste une donnée de contexte, sans consommateur dans ce score.","","Composite magnetic field — ELF 50 Hz (electrical grid) + substrate susceptibility, expressed in nT. Does not include the total terrestrial geomagnetic field (~46,000-47,500 nT in Corsica, the order of magnitude a smartphone magnetometer measures): these are two distinct physical quantities, never added together here — the geomagnetic field plays no part whatsoever in this number. Tellux model estimate, not a measurement. The ELF component feeds the displayed Indice Tellux score; the substrate component remains contextual data, with no consumer in that score."],
 ["lyr_hotrf","#b-hot-rf","","Distance aux antennes mobiles","","Distance to mobile masts"],
 ["lyr_elf","#b-elf","","Champ ELF (nT)","","ELF field (nT)"],
-["lyr_hotrf_tt","#b-hot-rf","title","Distance au support de téléphonie mobile le plus proche (2G à 5G), d'après le registre ANFR (export du 31/05/2026). Une donnée déclarée et vérifiable, pas un niveau d'exposition : elle ne remplace pas une mesure. La légende indique ce que les mesures certifiées faites en Corse montrent à chaque distance. Pour un niveau mesuré, voir la couche Mesures certifiées ANFR.","","Distance to the nearest mobile-phone mast (2G to 5G), from the ANFR register (export of 2026-05-31). Declared, verifiable data, not an exposure level: it does not replace a measurement. The legend shows what certified measurements taken in Corsica show at each distance. For a measured level, see the Certified ANFR measurements layer."],
+["lyr_hotrf_tt","#b-hot-rf","title","Distance au support de téléphonie mobile le plus proche — 2G à 5G, d'après le registre ANFR (export du 31/05/2026). Une donnée déclarée et vérifiable, pas un niveau d'exposition : elle ne remplace pas une mesure. La légende indique ce que les mesures certifiées faites en Corse montrent à chaque distance. Pour un niveau mesuré, voir la couche Mesures certifiées ANFR.","","Distance to the nearest mobile-phone mast — 2G to 5G, from the ANFR register (export of 2026-05-31). Declared, verifiable data, not an exposure level: it does not replace a measurement. The legend shows what certified measurements taken in Corsica show at each distance. For a measured level, see the Certified ANFR measurements layer."],
 // lyr_elf_tt (brief BH, 2026-09-05) : CO laissée vide à dessein — pas de traduction improvisée
 // sans validation locuteur natif (même discipline que chip_label_tt/brief AV, dom_hot/brief BA).
 ["lyr_elf_tt","#b-elf","title","Champ magnétique ELF 50 Hz (réseau électrique), exprimé en nT — composante anthropique seule du modèle Tellux, sans la susceptibilité du substrat (distincte de « Champ magnétique composite », qui combine les deux). Estimation, pas une mesure. N'affiche rien sous 300 nT : seuil réutilisant le repère documentaire IARC classe 2B, une classification épidémiologique de long terme — un choix éditorial d'affichage, pas une évaluation du risque à ce niveau précis.","","ELF magnetic field 50 Hz (electrical grid), expressed in nT — anthropic component only of the Tellux model, without substrate susceptibility (distinct from \"Composite magnetic field\", which combines both). Estimate, not a measurement. Shows nothing below 300 nT: a threshold reusing the IARC class 2B documentary reference point, a long-term epidemiological classification — an editorial display choice, not a risk evaluation at this precise level."],
@@ -17159,8 +17163,8 @@ function capCleanup(){
         "✅ Données validées (institutionnelles) :",
         "<strong style=\"color:var(--acc)\">✅ Validated data (institutional):</strong>"],
       ["#methodology-panel li@8",
-        "Antennes ANFR : 656 supports de téléphonie mobile (2G à 5G, 19 952 secteurs) sur les 976 supports ANFR de Corse (structures physiques, export national ANFR du 31 mai 2026 — extraction ponctuelle, non rafraîchie automatiquement), DMS/ETRS89. Depuis le 28/09/2026, ils remplacent un relevé antérieur (1 030 positions × opérateur) qui ne couvrait qu'environ la moitié de la Haute-Corse.",
-        "<strong>ANFR antennas</strong>: 656 mobile-phone masts (2G to 5G, 19,952 sectors) among the 976 ANFR supports in Corsica (physical structures, national ANFR export from 31 May 2026 — one-off extraction, not automatically refreshed), DMS/ETRS89. Since 2026-09-28 they replace an earlier survey (1,030 positions × operator) that covered only about half of Haute-Corse."],
+        "Antennes ANFR : 656 supports de téléphonie mobile (2G à 5G, 19 952 secteurs) sur les 976 supports ANFR de Corse (structures physiques, export national ANFR du 31 mai 2026 — extraction ponctuelle, non rafraîchie automatiquement), DMS/ETRS89. Depuis le 28/09/2026, ils remplacent pour cette carte un relevé antérieur (1 030 positions × opérateur) qui ne couvrait qu'environ la moitié de la Haute-Corse ; la liste des antennes par commune de la page Mairies repose encore sur ce relevé.",
+        "<strong>ANFR antennas</strong>: 656 mobile-phone masts (2G to 5G, 19,952 sectors) among the 976 ANFR supports in Corsica (physical structures, national ANFR export from 31 May 2026 — one-off extraction, not automatically refreshed), DMS/ETRS89. Since 2026-09-28 they replace, for this map, an earlier survey (1,030 positions × operator) that covered only about half of Haute-Corse; the per-municipality antenna list of the Mairies page still relies on that survey."],
       ["#methodology-panel li@9",
         "Failles BRGM : cartes géologiques 1/50k (02B, 2A), D'Anna 2019",
         "<strong>BRGM faults</strong>: 1:50k geological maps (02B, 2A), D'Anna 2019"],
