@@ -265,7 +265,7 @@ async function main() {
   if (appJs) {
     const mb = appJs.match(/const\s+EXPERT_BOUNDS_DEFAULT\s*=\s*(\{[^;]*?\})\s*;/);
     if (poids) s(`- **Poids composite** : M=${poids.M ?? '?'} · RF=${poids.RF ?? '?'} · I=${poids.I ?? '?'} (GELÉ-001a).`);
-    if (mb) s(`- **Bornes de normalisation** : \`${mb[1].replace(/\s+/g, ' ')}\` (GELÉ-001b, ELF/RF re-dérivables, gamma re-dérivable).`);
+    if (mb) s(`- **Bornes de normalisation** : \`${mb[1].replace(/\s+/g, ' ')}\` (GELÉ-001b, ELF et gamma re-dérivables ; borne RF retirée le 2026-09-29 avec la composante).`);
   }
   const calib = nav?.page ? await lireCalibrationLive(nav.page) : null;
   if (calib?.k != null) s(`- **k RF calibré (live)** : **${calib.k}** · dispersion ×÷${calib.disp ?? '?'} · n=${calib.n ?? '?'} points. <sub>lu sur l'identifiant \`RF_CALIB_STATS\` dans le contexte JS de ${PROD}/app (pas \`window.\` — variable \`let\`, cf. code)</sub>`);

@@ -2752,7 +2752,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
          que #expert-index-val et les spans .sv (#1165) du même panneau. -->
     <div style="font-family:var(--mono);font-size:10px;color:#8A5E22;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">&#9881; Indice composite</div>
     <div style="background:var(--tx-pierre);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:14px;font-family:var(--font);font-size:12px;color:var(--tx-ardoise);line-height:1.5">
-      Le mode Expertise permet d'ajuster la pondération du domaine magnétique et d'exporter les valeurs détaillées par point. La radiofréquence n'entre plus dans l'indice composite depuis le 29/09/2026. Il est destiné aux utilisateurs qui souhaitent reproduire ou auditer le calcul composite. Les pondérations par défaut sont gelées dans la documentation du projet.
+      Le mode Expertise permet d'ajuster la pondération du domaine magnétique et d'exporter les valeurs détaillées par point. La radiofréquence n'entre plus dans l'indice composite depuis le 29/09/2026. Ce mode est destiné aux utilisateurs qui souhaitent reproduire ou auditer le calcul composite. Les pondérations par défaut sont gelées dans la documentation du projet.
     </div>
     <div style="margin-bottom:10px">
       <div id="expert-index-val">&#x2014;</div>
@@ -2761,7 +2761,8 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
     <div class="expert-slider-row">
       <label>w_M</label>
       <!-- step="any" (2026-09-29) : le poids par défaut est 2/3 ; un pas de 0,05 l'aurait arrondi à 0,65 à
-           l'affichage ET dans le calcul, et le composite piloté par le curseur aurait divergé de la constante. -->
+           l'affichage ET dans le calcul. Le navigateur sérialise la valeur sur 15 chiffres (0.666666666666667) :
+           écart de 3e-16 avec la constante, sans effet sur l'indice arrondi à 3 décimales. -->
       <input type="range" id="sl-wM" min="0" max="1" step="any" value="0.6666666666666666" oninput="onExpertSlider()">
       <span class="sv" id="v-wM">0.67</span>
     </div>
@@ -2777,8 +2778,8 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
          correctif de #1164) : depuis le retrait de l'affichage gamma, la valeur de la composante
          ionisante n'est plus visible nulle part dans l'application. Laisser un curseur permettait
          de pondérer une grandeur illisible — défaut d'étiquetage introduit par la PR elle-même.
-         Le POIDS ne bouge pas : 0,20 est toujours passé à computeExpertComposite(), qui est
-         inchangé, et l'indice reste défini sur trois composantes (GELÉ-001a intact). Vérifié
+         Le POIDS ne bougeait pas : 0,20 restait passé à computeExpertComposite(), et l'indice restait
+         défini sur trois composantes (GELÉ-001a intact). Depuis le 2026-09-29 : 1/3, deux composantes (RF sortie). Vérifié
          avant retrait : aucune normalisation à somme constante dans ce fichier (l'indice est une
          somme pondérée brute, les curseurs sont indépendants), donc retirer celui-ci ne modifie
          en rien le comportement de w_M et w_RF. La valeur reste alimentée depuis
@@ -9609,7 +9610,7 @@ function calcAll(lat,lng,options){
 // ════════════════════════════════════════════════════════════════════════════
 const EXPERT_WEIGHTS_DEFAULT = { M: 2/3, RF: 0, I: 1/3 }; // GELÉ-001a — RF retirée le 2026-09-29
 const EXPERT_BOUNDS_DEFAULT  = { ELF_nT: [0, 1000], GAMMA_nSv_h: [50, 250] };
-const EXPERT_EPISTEMIC_NOTE  = 'Indice composite conventionnel, sans signification physique ni sanitaire directe. Deux composantes : le champ magnétique basse fréquence du réseau électrique (ELF) et le débit de dose gamma ambiant, pondérés 2/3 et 1/3. Depuis le 2026-09-29, la radiofréquence n\'y entre plus, comme pour l\'Indice Tellux depuis le 2026-09-28 : confronté aux 142 mesures certifiées d\'extérieur, le modèle RF classait mal les points les plus exposés, et aucune grandeur calculée ne prédit la valeur mesurée en un point. Le poids qu\'elle portait (0,40) a été réparti en gardant le rapport 2:1 des deux autres composantes (0,40 et 0,20). Pour la radiofréquence, cet export donne seulement la distance au support de téléphonie mobile le plus proche (registre ANFR), une donnée déclarée. Pondérations et bornes de normalisation provisoires, en attente de relecture par un physicien tiers. Usage exploratoire pour comparer la composition du paysage physique entre zones. Source : AUDIT_TELLUX_NIVEAU3 §5. La composante ionisante n\'est affichée dans aucune interface depuis le 2026-09-01 : cet export et la console sont les seuls endroits où elle est lisible.';
+const EXPERT_EPISTEMIC_NOTE  = 'Indice composite conventionnel, sans signification physique ni sanitaire directe. Deux composantes : le champ magnétique basse fréquence du réseau électrique (ELF) et le débit de dose gamma ambiant, pondérés par défaut 2/3 et 1/3 (les poids effectivement utilisés figurent dans les lignes expert_w_* de cet export). Depuis le 2026-09-29, la radiofréquence n\'y entre plus, comme pour l\'Indice Tellux depuis le 2026-09-28 : confronté aux 142 mesures certifiées d\'extérieur, le modèle RF classait mal les points les plus exposés, et aucune grandeur calculée ne prédit la valeur mesurée en un point. Le poids qu\'elle portait (0,40) a été réparti en gardant le rapport 2:1 des deux autres composantes (0,40 et 0,20). Pour la radiofréquence, cet export donne seulement la distance au support de téléphonie mobile le plus proche (registre ANFR), une donnée déclarée. Pondérations et bornes de normalisation provisoires, en attente de relecture par un physicien tiers. Usage exploratoire pour comparer la composition du paysage physique entre zones. Source : AUDIT_TELLUX_NIVEAU3 §5. La composante ionisante n\'est affichée dans aucune interface depuis le 2026-09-01 : cet export et la console sont les seuls endroits où elle est lisible.';
 
 // EXPERT_EPISTEMIC_NOTE_NONCAL (variante « k RF non calibré », 2026-09-10, lot B) retirée le 2026-09-29 : sans
 // composante RF, l'état de la calibration RF ne change plus rien au composite ni à sa note.
@@ -9621,7 +9622,9 @@ function computeExpertComposite(v2, weights, bounds) {
   const n_M  = Math.min(1, Math.max(0, (elf_nT - bounds.ELF_nT[0])      / (bounds.ELF_nT[1]      - bounds.ELF_nT[0])));
   const n_I  = Math.min(1, Math.max(0, (gamma  - bounds.GAMMA_nSv_h[0]) / (bounds.GAMMA_nSv_h[1] - bounds.GAMMA_nSv_h[0])));
   // Deux composantes depuis le 2026-09-29 : le modèle RF n'entre plus dans le composite (cf. en-tête du bloc). Un
-  // poids RF passé par un appelant est ignoré, pas multiplié par une valeur du modèle.
+  // poids RF passé par un appelant est ignoré, pas multiplié par une valeur du modèle — et signalé en console, pour
+  // qu'un outil encore réglé sur l'ancien composite (0,4/0,4/0,2) ne produise pas en silence un indice plafonné à 0,6.
+  if (weights.RF) console.warn('[Tellux] computeExpertComposite : poids RF ignoré (' + weights.RF + ') — la RF est hors composite depuis le 2026-09-29.');
   const idx  = Math.round((weights.M * n_M + weights.I * n_I) * 1000) / 1000;
   return {
     index: idx, normalized: { M: n_M, I: n_I },
@@ -13293,8 +13296,8 @@ function closeExpertMode() {
 
 // w_I n'a plus de curseur depuis le 2026-09-01 (cf. commentaire au bloc #expert-panel) : les
 // cinq points de lecture de #sl-wI de ce fichier lisent désormais EXPERT_WEIGHTS_DEFAULT.I,
-// source unique. Le poids reste 0,20 et computeExpertComposite() reçoit toujours ses trois
-// composantes — aucun changement de l'indice, GELÉ-001a intact.
+// source unique. Le poids était alors 0,20 sur trois composantes ; depuis le 2026-09-29, 1/3 sur deux (RF sortie
+// du composite, GELÉ-001a levé ponctuellement par décision de Soleil).
 function updateExpertBandeau() {
   var wM  = parseFloat(document.getElementById('sl-wM').value);
   var wRF = EXPERT_WEIGHTS_DEFAULT.RF;   // 0 : hors composite depuis le 2026-09-29, plus de curseur
@@ -13390,13 +13393,17 @@ function exportExpertCSV() {
     ['substrate_susceptibility_nT', sub.susceptibility_nT != null ? sub.susceptibility_nT : '', 'nT', sub.confidence || '', '0', 'BRGM + Ghilardi 2017', ts],
     ['substrate_lithology', sub.lithology || '', '', sub.confidence || '', '0', 'BRGM RP-50200-FR', ts],
     ['expert_composite_index', comp.index, '0-1', 'low', '1', 'Tellux v2 computeExpertComposite', ts],
-    ['expert_w_M', comp.weights.M, '', '', '1', '', ts],
+    ['expert_w_M', +comp.weights.M.toFixed(4), '', '', '1', '', ts],
     ['expert_w_RF', comp.weights.RF, '', '', '1', '', ts],
-    ['expert_w_I', comp.weights.I, '', '', '1', '', ts],
+    ['expert_w_I', +comp.weights.I.toFixed(4), '', '', '1', '', ts],
     ['expert_n_M_normalise', comp.normalized.M.toFixed(4), '0-1', '', '1', '', ts],
     ['expert_n_I_normalise', comp.normalized.I.toFixed(4), '0-1', '', '1', '', ts],
     ['expert_borne_ELF_min', comp.bounds.ELF_nT[0], 'nT', '', '1', '', ts],
     ['expert_borne_ELF_max', comp.bounds.ELF_nT[1], 'nT', '', '1', '', ts],
+    // Bornes gamma exportées depuis le 2026-09-29 : la composante pèse désormais 1/3, et n_I n'était pas
+    // reproductible depuis l'export sans elles.
+    ['expert_borne_GAMMA_min', comp.bounds.GAMMA_nSv_h[0], 'nSv/h', '', '1', '', ts],
+    ['expert_borne_GAMMA_max', comp.bounds.GAMMA_nSv_h[1], 'nSv/h', '', '1', '', ts],
     ['expert_note_epistemique', '"' + (comp.epistemic_note || EXPERT_EPISTEMIC_NOTE).replace(/"/g, '""') + '"', '', '', '1', '', ts],
   ];
   var bom = '\uFEFF';
@@ -16831,6 +16838,9 @@ function capCleanup(){
 // reprend la graphie corse déjà employée par les clés chip_ionisant/chip_ionisant_tt, retirées
 // le 2026-08-30 — pas une traduction neuve.
 ["xp_wi_note","#xp-wi-note","","composante ionisante — calculée, non affichée ici","cumpunente ionizante — calculata, micca affissata quì","ionizing component — computed, not displayed here"],
+// xp_wrf_note (2026-09-29) : ligne en lecture seule qui a remplacé le curseur w_RF. CO laissée vide à dessein (pas
+// de traduction corse neuve sans relecture), même discipline que calc_ant et consorts.
+["xp_wrf_note","#xp-wrf-note","","radiofréquence — hors composite depuis le 29/09/2026","","radio frequency — out of the composite since 2026-09-29"],
 ["xp_stats","#expert-panel div[style*='uppercase']@1","","Statistiques du modèle","Statistiche di u mudellu","Model statistics"],
 ["xp_anfr_loading","#anfr-count","","chargement…","caricamentu…","loading…"],
 ["xp_reset","#expert-panel button[onclick='resetExpertSliders()']","","Réinitialiser","Rimette à zeru","Reset"],
