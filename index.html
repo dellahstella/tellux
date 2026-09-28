@@ -313,8 +313,27 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);font-we
   </div>
 </div>
 
+<!-- SECTION : Agir — outils mairies + accès discret aux démarches radon (brief restructuration 2026-08-21).
+     Remontée le 2026-09-28 (notes de Soleil) : juste sous « Les cartographies », avant « Sous la
+     carte » — elle fermait la page, après « Culture scientifique ». -->
+<div class="lp-section-intro reveal">
+  <div class="lp-section-label" data-i18n-key="agir_eyebrow">Agir</div>
+  <h2 class="lp-section-h2" data-i18n-key="agir_h2">Passer à l'action, en tant que commune ou citoyen</h2>
+</div>
+<div class="lp-appsec lp-appsec-mairies reveal">
+  <div class="lp-appsec-inner">
+    <h2 class="lp-appsec-h2" data-i18n-key="mairies_h2">Outils mairies : cadre Loi Abeille</h2>
+    <p class="lp-appsec-p" data-i18n-key="mairies_p">Une interface dédiée aux communes corses : fiche commune, cadre légal, génération de courriers pour exercer leurs prérogatives sur les installations EM.</p>
+    <a class="lp-appsec-cta" data-i18n-key="mairies_cta" href="mairies.html">Ouvrir les outils mairies &rarr;</a>
+    <div class="lp-appsec-secondary">
+      <a class="lp-appsec-secondary-link" data-i18n-key="agir_radon_link" href="radon.html#démarches">Démarches radon (dépôts, courriers) &rarr;</a>
+    </div>
+  </div>
+</div>
+
 <!-- SECTION : La méthode — repositionnée sous les deux cartes Radon/Patrimoine, collée à
-     Culture scientifique juste après (demande Soleil 2026-08-22). Le bridge "radon, patrimoine
+     Culture scientifique juste après (demande Soleil 2026-08-22). Depuis le 2026-09-28, la
+     section « Agir » s'intercale entre Patrimoine et elle (notes de Soleil). Le bridge "radon, patrimoine
      — présentées ci-dessous" a été retiré : il n'a plus de sens ici, radon et patrimoine sont
      désormais AU-DESSUS, pas en dessous — le laisser tel quel l'aurait rendu factuellement faux.
      La phrase de clôture de section a changé deux fois depuis (texte "La méthode a ses
@@ -396,7 +415,7 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);font-we
      (2026-09-15, lot cartographies/culture scientifique), assumé comme rubrique à une entrée :
      d'autres modules y viendront, aucune grille ni affordance ne le suggère pour l'instant.
      Niveau et traitement alignés sur les sections voisines (.lp-section-h2 nu, sans eyebrow —
-     comme "Sous la carte" juste au-dessus, pas comme "Agir" juste en dessous qui en porte un).
+     comme "Sous la carte" juste au-dessus, pas comme "Agir", qui en porte un).
      .lp-section-intro--title-only : modificateur réutilisable pour un .lp-section-intro sans
      .lp-section-sub, cf. règle CSS et dette SECTION-INTRO-ESPACEMENT-DEPEND-DU-SOUS-TITRE-001.
      Reste collée à La méthode juste au-dessus (demande Soleil 2026-08-22) : rien d'autre que ce
@@ -412,21 +431,6 @@ body{font-family:var(--fu);background:var(--pierre);color:var(--ardoise);font-we
   </div>
 </div>
 
-<!-- SECTION : Agir — outils mairies + accès discret aux démarches radon (brief restructuration 2026-08-21) -->
-<div class="lp-section-intro reveal">
-  <div class="lp-section-label" data-i18n-key="agir_eyebrow">Agir</div>
-  <h2 class="lp-section-h2" data-i18n-key="agir_h2">Passer à l'action, en tant que commune ou citoyen</h2>
-</div>
-<div class="lp-appsec lp-appsec-mairies reveal">
-  <div class="lp-appsec-inner">
-    <h2 class="lp-appsec-h2" data-i18n-key="mairies_h2">Outils mairies : cadre Loi Abeille</h2>
-    <p class="lp-appsec-p" data-i18n-key="mairies_p">Une interface dédiée aux communes corses : fiche commune, cadre légal, génération de courriers pour exercer leurs prérogatives sur les installations EM.</p>
-    <a class="lp-appsec-cta" data-i18n-key="mairies_cta" href="mairies.html">Ouvrir les outils mairies &rarr;</a>
-    <div class="lp-appsec-secondary">
-      <a class="lp-appsec-secondary-link" data-i18n-key="agir_radon_link" href="radon.html#démarches">Démarches radon (dépôts, courriers) &rarr;</a>
-    </div>
-  </div>
-</div>
 </main>
 
 <footer class="lp-footer">
@@ -542,8 +546,13 @@ if(document.readyState === 'loading'){
 (function initHeroMap(){
   const el = document.getElementById('lp-hero-map');
   if(!el || !('fetch' in window)) return;
-  /* La carte hero est masquée < 769px (cf. media query) : inutile de la construire sur mobile. */
-  if(window.matchMedia && !window.matchMedia('(min-width:769px)').matches) return;
+  /* La carte hero est masquée < 769px (cf. media query) : inutile de la construire tant que la
+     fenêtre est étroite. Mais la largeur change sans rechargement : un téléphone chargé en
+     portrait (390 px) passe à ~844 px en paysage, et le panneau « 360 communes » réapparaît
+     alors par la CSS — vide, puisque l'ancien garde (return au chargement) n'avait jamais
+     construit la carte (notes de Soleil, 2026-09-28, capture mobile paysage). On construit
+     donc à la première fois où la fenêtre est assez large, au chargement ou plus tard. */
+  const WIDE_MQ = window.matchMedia ? window.matchMedia('(min-width:769px)') : null;
   const NS = 'http://www.w3.org/2000/svg';
   function build(){
     /* cache:'no-cache' (pas 'force-cache') — force la revalidation à chaque chargement.
@@ -592,7 +601,21 @@ if(document.readyState === 'loading'){
       })
       .catch(() => {});
   }
-  if('requestIdleCallback' in window){ requestIdleCallback(build, {timeout:1200}); } else { setTimeout(build, 200); }
+  let planned = false;
+  function schedule(){
+    if(planned) return;
+    planned = true;
+    if('requestIdleCallback' in window){ requestIdleCallback(build, {timeout:1200}); } else { setTimeout(build, 200); }
+  }
+  if(!WIDE_MQ || WIDE_MQ.matches){ schedule(); return; }
+  function onWide(e){
+    if(!e.matches) return;
+    schedule();
+    if(WIDE_MQ.removeEventListener) WIDE_MQ.removeEventListener('change', onWide);
+    else if(WIDE_MQ.removeListener) WIDE_MQ.removeListener(onWide);
+  }
+  if(WIDE_MQ.addEventListener) WIDE_MQ.addEventListener('change', onWide);
+  else if(WIDE_MQ.addListener) WIDE_MQ.addListener(onWide);
 })();
 
 /* Nav — ombre légère au scroll (état "produit") */
