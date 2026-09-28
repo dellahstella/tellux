@@ -258,12 +258,14 @@ a{color:inherit;}
 .mr-mutual-dot.vert{background:var(--maquis);}
 .mr-mutual-dot.orange{background:var(--ocre);}
 .mr-mutual-dot.rouge{background:var(--porphyre);}
+.mr-mutual-dot.inconnu{background:var(--mica);}
 .mr-mutual-ops{font-weight:500;color:var(--ardoise);}
 .mr-mutual-gps{font-family:var(--fm);font-size:10.5px;color:var(--mica);}
 .mr-mutual-etat{font-size:11px;}
 .mr-mutual-etat.rouge{color:var(--porphyre);font-weight:500;}
 .mr-mutual-etat.orange{color:var(--ocre);}
 .mr-mutual-etat.vert{color:var(--maquis);}
+.mr-mutual-etat.inconnu{color:var(--mica);}
 .mr-mutual-legend{font-size:11px;color:var(--mica);line-height:1.6;margin-top:14px;padding-top:14px;border-top:1px solid var(--brume);}
 .mr-mutual-legend span{white-space:nowrap;margin-right:14px;}
 
@@ -594,7 +596,7 @@ a{color:inherit;}
       <p class="mr-corse-overview-lead" data-i18n-key="corse_overview_lead">Tellux Mairies est l'outillage administratif et réglementaire de Tellux pour les communes de Corse : fiche de synthèse par commune sur l'exposition électromagnétique, modèles de courriers prêts à l'emploi et rappel du cadre légal applicable. <strong>Choisissez votre commune</strong> dans le champ ci-dessus pour afficher sa fiche — en attendant, un aperçu à l'échelle de la Corse :</p>
       <div class="mr-corse-kpis" id="mr-corse-kpis">
         <div class="mr-kpi"><div class="mr-kpi-value" id="mr-corse-kpi-communes">—</div><div class="mr-kpi-label" data-i18n-key="kpi_communes">Communes couvertes</div></div>
-        <div class="mr-kpi"><div class="mr-kpi-value" id="mr-corse-kpi-antennes">—</div><div class="mr-kpi-label" data-i18n-key="kpi_antennes" title="Regroupement Tellux par position et opérateur, dérivé des données ANFR CartoRadio · ce n'est pas le compte de supports ANFR : un pylône partagé compte une fois par opérateur">Positions ANFR × opérateur</div><div class="mr-kpi-small" id="mr-corse-kpi-antennes-sub"></div></div>
+        <div class="mr-kpi"><div class="mr-kpi-value" id="mr-corse-kpi-antennes">—</div><div class="mr-kpi-label" data-i18n-key="kpi_antennes" title="Regroupement Tellux par position et opérateur, dérivé des données ANFR CartoRadio · ce n'est pas le compte de supports ANFR : un pylône partagé compte une fois par opérateur. Depuis le 28/09/2026, les positions de supports mobiles ANFR absentes de ce relevé sont ajoutées, sans opérateur (non renseigné dans les données servies).">Positions ANFR × opérateur</div><div class="mr-kpi-small" id="mr-corse-kpi-antennes-sub"></div></div>
         <div class="mr-kpi"><div class="mr-kpi-value" id="mr-corse-kpi-radon">—</div><div class="mr-kpi-label" data-i18n-key="kpi_radon">Communes en zone à potentiel radon (ASNR)</div><div class="mr-kpi-small" id="mr-corse-kpi-radon-sub"></div></div>
       </div>
     </section>
@@ -1779,7 +1781,20 @@ a{color:inherit;}
     var ops = operateursDuJeu();
     return 'Ce relevé couvre les antennes de téléphonie mobile déclarées à l\'ANFR'
       + (ops.length ? ' par ' + ops.join(', ') : '')
-      + '. Il ne contient ni les émetteurs de radiodiffusion, ni les faisceaux hertziens, ni les réseaux radio professionnels : une installation de ces catégories n\'y figurerait pas.';
+      + '. Il ne contient ni les émetteurs de radiodiffusion, ni les faisceaux hertziens, ni les réseaux radio professionnels : une installation de ces catégories n\'y figurerait pas.'
+      + complementJeuAntennesTexte();
+  }
+
+  // Complétude du relevé (2026-09-28). Le relevé d'origine (CartoRadio, avril 2026) ne couvrait qu'environ la
+  // moitié de la Haute-Corse. Les positions de supports mobiles ANFR qu'il ignorait sont ajoutées par
+  // scripts/build_antennes_par_commune_corse.py (export ANFR du 31/05/2026), sans opérateur : le jeu ANFR des
+  // secteurs ne le porte pas. Aux positions déjà connues, un opérateur absent du relevé d'origine reste absent.
+  function complementJeuAntennesTexte(){
+    var c = antennesData && antennesData._meta && antennesData._meta.complement_supports_anfr;
+    if (!c || !c.n_positions_ajoutees) return '';
+    return ' ' + c.n_positions_ajoutees + ' positions de supports mobiles, absentes du relevé d\'origine, y ont été ajoutées d\'après l\'export ANFR du '
+      + String(c.export_anfr_mise_a_disposition || '').split('-').reverse().join('/')
+      + ', sans opérateur (non renseigné dans ces données). À une position déjà connue, un opérateur absent du relevé d\'origine peut encore manquer.';
   }
 
   function renderAntennesBody(){
@@ -1790,7 +1805,8 @@ a{color:inherit;}
     var commune = antennesData.communes[antennesState.code_insee];
     if (updated){
       var date = antennesData._meta && antennesData._meta.date_extraction ? antennesData._meta.date_extraction : '';
-      updated.textContent = date ? 'Mise à jour : ' + date : '';
+      var comp = antennesData._meta && antennesData._meta.complement_supports_anfr;
+      updated.textContent = date ? 'Mise à jour : ' + date + (comp && comp.date_complement ? ' · complété le ' + comp.date_complement : '') : '';
     }
 
     if (!commune){
@@ -1824,7 +1840,7 @@ a{color:inherit;}
       '<div class="mr-antennes-kpis">' +
         '<div class="mr-kpi"><div class="mr-kpi-value">' + commune.n_supports + '</div><div class="mr-kpi-label">Supports</div></div>' +
         '<div class="mr-kpi"><div class="mr-kpi-value">' + commune.n_antennes + '</div><div class="mr-kpi-label">Antennes declarees</div></div>' +
-        '<div class="mr-kpi"><div class="mr-kpi-value">' + (commune.operateurs || []).length + '</div><div class="mr-kpi-label">Opérateurs présents</div><div class="mr-kpi-small">' + (commune.operateurs || []).join(', ') + '</div></div>' +
+        '<div class="mr-kpi"><div class="mr-kpi-value">' + (commune.operateurs || []).length + '</div><div class="mr-kpi-label">Opérateurs présents</div><div class="mr-kpi-small">' + escapeHtml((commune.operateurs || []).join(', ')) + (commune.n_positions_operateur_non_renseigne ? ((commune.operateurs || []).length ? ' · ' : '') + 'non renseigné sur ' + commune.n_positions_operateur_non_renseigne + ' position' + (commune.n_positions_operateur_non_renseigne > 1 ? 's' : '') : '') + '</div></div>' +
         '<div class="mr-kpi"><div class="mr-kpi-label">Technologies deployees</div><div class="mr-kpi-badges">' + (commune.technologies || []).map(renderTechBadge).join('') + '</div></div>' +
       '</div>';
 
@@ -1850,7 +1866,7 @@ a{color:inherit;}
     } else {
       var rows = pageRows.map(function(s){
         return '<div class="mr-antenne-row">' +
-          '<div class="mr-antenne-op">' + escapeHtml(s.operateur || '—') + '</div>' +
+          '<div class="mr-antenne-op"' + (s.operateur ? '' : ' title="Position de support mobile ANFR (export du 31/05/2026) absente du relevé d\'origine ; le jeu ANFR des secteurs ne porte pas l\'opérateur."') + '>' + (s.operateur ? escapeHtml(s.operateur) : 'Non renseigné') + '</div>' +
           '<div class="mr-antenne-techs">' + (s.generations || []).map(renderTechBadge).join('') + '</div>' +
           '<div class="mr-antenne-gps">' + Number(s.lat).toFixed(5) + ', ' + Number(s.lon).toFixed(5) + '</div>' +
           '<div class="mr-antenne-count">' + s.n_antennes + ' antenne' + (s.n_antennes > 1 ? 's' : '') + '</div>' +
@@ -2423,7 +2439,10 @@ a{color:inherit;}
       var c = clusters[key];
       var mono = c.operateurs.length === 1;
       var etat, distSensible = null;
-      if (!mono){
+      if (c.operateurs.some(function(o){ return !o; })){
+        // Opérateur non renseigné (complément ANFR du 2026-09-28) : mutualisation impossible à établir.
+        etat = 'inconnu';
+      } else if (!mono){
         etat = 'vert';
       } else {
         var minDist = Infinity;
@@ -2437,9 +2456,9 @@ a{color:inherit;}
         distSensible = (minDist === Infinity) ? null : Math.round(minDist);
         etat = (minDist < ZONE_CRITIQUE_M) ? 'rouge' : 'orange';
       }
-      return { lat: c.lat, lon: c.lon, operateurs: c.operateurs.sort(), n_antennes: c.n_antennes, etat: etat, dist_sensible_m: distSensible };
+      return { lat: c.lat, lon: c.lon, operateurs: c.operateurs.filter(function(o){ return o; }).sort(), n_antennes: c.n_antennes, etat: etat, dist_sensible_m: distSensible };
     }).sort(function(a, b){
-      var ordre = { rouge: 0, orange: 1, vert: 2 };
+      var ordre = { rouge: 0, orange: 1, vert: 2, inconnu: 3 };
       return ordre[a.etat] - ordre[b.etat];
     });
   }
@@ -2490,12 +2509,13 @@ a{color:inherit;}
 
     var rowsHtml = '<div class="mr-mutual-row header"><div></div><div>Opérateur(s)</div><div>Coordonnées</div><div style="text-align:right">État</div></div>' +
       sites.map(function(s){
-        var etatLabel = s.etat === 'vert' ? (s.operateurs.length + ' opérateurs mutualisés')
+        var etatLabel = s.etat === 'inconnu' ? 'opérateur non renseigné'
+          : s.etat === 'vert' ? (s.operateurs.length + ' opérateurs mutualisés')
           : s.etat === 'rouge' ? ('mono-opérateur · ' + s.dist_sensible_m + ' m d\'un site sensible')
           : 'mono-opérateur · opportunité';
         return '<div class="mr-mutual-row">' +
           '<div class="mr-mutual-dot ' + s.etat + '"></div>' +
-          '<div class="mr-mutual-ops">' + escapeHtml(s.operateurs.join(', ')) + '</div>' +
+          '<div class="mr-mutual-ops">' + (s.operateurs.length ? escapeHtml(s.operateurs.join(', ')) : '—') + '</div>' +
           '<div class="mr-mutual-gps">' + s.lat.toFixed(5) + ', ' + s.lon.toFixed(5) + '</div>' +
           '<div class="mr-mutual-etat ' + s.etat + '" style="text-align:right">' + escapeHtml(etatLabel) + '</div>' +
         '</div>';
@@ -2505,6 +2525,7 @@ a{color:inherit;}
       '<span><span class="mr-mutual-dot vert" style="display:inline-block;vertical-align:middle;margin-right:4px"></span>Mutualisé — ≥ 2 opérateurs au même site</span>' +
       '<span><span class="mr-mutual-dot orange" style="display:inline-block;vertical-align:middle;margin-right:4px"></span>Opportunité — mono-opérateur, pas de site sensible à proximité</span>' +
       '<span><span class="mr-mutual-dot rouge" style="display:inline-block;vertical-align:middle;margin-right:4px"></span>À surveiller — mono-opérateur à moins de 100 m d\'un site sensible</span>' +
+      (sites.some(function(x){ return x.etat === 'inconnu'; }) ? '<span><span class="mr-mutual-dot inconnu" style="display:inline-block;vertical-align:middle;margin-right:4px"></span>Opérateur non renseigné — position ANFR ajoutée le 28/09/2026, mutualisation inconnue</span>' : '') +
     '</div>';
 
     var linksHtml = '<div class="mr-etab-links">' +
