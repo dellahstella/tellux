@@ -65,7 +65,7 @@ Des modules d'extension thématiques pourront être envisagés sous condition d'
 ## Stack technique
 
 - HTML / JavaScript / Leaflet (frontend)
-- Supabase (PostgreSQL + RLS) pour les contributions terrain et une partie des données lues par les pages, dont les lignes HTA de la carte EM et les antennes ANFR de la page Mairies (la carte EM lit un fichier statique des supports ANFR depuis le 28/09/2026), le réseau BT (contrôle de fraîcheur, et chargement complet en repli de l'agrégat statique) et les dépôts de mesurage radon publiés sur `radon.html`
+- Supabase (PostgreSQL + RLS) pour les contributions terrain et une partie des données lues par les pages, dont les lignes HTA de la carte EM et les antennes ANFR de la page Mairies (complétées par le fichier statique des supports ANFR, que la carte EM lit seul depuis le 28/09/2026), le réseau BT (contrôle de fraîcheur, et chargement complet en repli de l'agrégat statique) et les dépôts de mesurage radon publiés sur `radon.html`
 - Cloudflare Pages pour l'hébergement
 - Pages statiques, sans fonction serveur propre. Au chargement, la carte interroge Supabase, la NOAA (SWPC) et Open-Meteo, et charge Leaflet et son extension de regroupement de marqueurs (cdnjs) ainsi que son fond de carte (Esri) ; selon l'usage, elle appelle aussi la Base Adresse Nationale, l'altimétrie et le fond Plan IGN de la Géoplateforme, la NOAA (EMAG2v3) et OpenStreetMap (secours).
 - Des tâches planifiées GitHub Actions rafraîchissent des fichiers de données servis avec les pages (observatoires INTERMAGNET, antennes par commune, agrégat du réseau BT).

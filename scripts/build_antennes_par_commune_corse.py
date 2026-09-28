@@ -143,6 +143,86 @@ def fetch_commune_names(codes_insee):
 # AGGREGATION
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# COMPLEMENT (2026-09-28) : supports mobiles ANFR absents de antennas_corse
+# ---------------------------------------------------------------------------
+# antennas_corse ne couvre qu'environ la moitie de la Haute-Corse (dette privee
+# ANFR-DECOMPTES-NON-RAPPROCHES-LEGENDE-METHODE-MODELE-001). La carte EM lit
+# depuis le 2026-09-28 un fichier statique des 656 supports mobiles ANFR (export
+# du 31/05/2026, public/data/supports_mobiles_anfr_corse_*.json). Ce complement
+# ajoute a la page Mairies chaque position de support mobile ANFR qui n'a aucune
+# entree antennas_corse a moins d'environ 60 m. Le jeu ANFR des secteurs ne porte
+# pas l'operateur : ces entrees ont "operateur": null et le marqueur
+# "operateur_non_renseigne": true. Les entrees existantes ne sont pas modifiees.
+# n_antennes d'une entree ajoutee = nombre de generations presentes, meme grain
+# qu'une ligne antennas_corse (position x operateur x generation), l'operateur
+# etant inconnu.
+
+import glob
+
+SEUIL_LAT = 0.0006   # ~67 m
+SEUIL_LON = 0.0008   # ~66 m a 42 N
+
+
+def fichier_supports():
+    fichiers = sorted(glob.glob(str(OUTPUT_DIR / "supports_mobiles_anfr_corse_*.json")))
+    return Path(fichiers[-1]) if fichiers else None
+
+
+def completer_depuis_supports(final, commune_names=None):
+    """Ajoute a `final` (structure de finalize) les positions de supports
+    mobiles ANFR sans entree antennas_corse proche. Rend un dict de meta."""
+    chemin = fichier_supports()
+    if chemin is None:
+        print("  (complement) aucun fichier supports_mobiles_anfr_corse_*.json : rien ajoute")
+        return None
+    with open(chemin, encoding="utf-8") as f:
+        data = json.load(f)
+    supports = data.get("supports") or []
+    existants = [(s["lat"], s["lon"]) for c in final.values() for s in c["supports"]]
+    ajouts = {}
+    n_supports = 0
+    for sp in supports:
+        lat, lon = sp.get("lat"), sp.get("lon")
+        if lat is None or lon is None:
+            continue
+        if any(abs(a - lat) < SEUIL_LAT and abs(b - lon) < SEUIL_LON for a, b in existants):
+            continue
+        n_supports += 1
+        code = sp.get("code_insee")
+        cle = (code, round_coord(lat), round_coord(lon))
+        e = ajouts.setdefault(cle, {
+            "lat": round_coord(lat), "lon": round_coord(lon), "operateur": None,
+            "operateur_non_renseigne": True, "generations": [], "n_antennes": 0,
+            "source": "supports ANFR " + (data.get("_meta", {}).get("export_anfr_mise_a_disposition") or ""),
+        })
+        for g in (sp.get("secteurs") or {}):
+            if g not in e["generations"]:
+                e["generations"].append(g)
+        e["nom_commune"] = (commune_names or {}).get(code) or sp.get("commune") or code
+    for (code, _, _), e in ajouts.items():
+        e["generations"] = sort_generations(e["generations"])
+        e["n_antennes"] = len(e["generations"])
+        nom = e.pop("nom_commune")
+        c = final.setdefault(code, {"nom": nom, "departement": code[:2], "n_supports": 0, "n_antennes": 0,
+                                    "operateurs": [], "technologies": [], "supports": []})
+        c["supports"].append(e)
+        c["n_supports"] = len(c["supports"])
+        c["n_antennes"] = sum(s["n_antennes"] for s in c["supports"])
+        c["technologies"] = sort_generations(g for s in c["supports"] for g in s["generations"])
+        c["n_positions_operateur_non_renseigne"] = sum(1 for s in c["supports"] if s.get("operateur_non_renseigne"))
+    print(f"  (complement) {len(ajouts)} positions ajoutees ({n_supports} supports ANFR sans entree antennas_corse a ~60 m)")
+    return {
+        "fichier": chemin.name,
+        "export_anfr_mise_a_disposition": data.get("_meta", {}).get("export_anfr_mise_a_disposition"),
+        "date_complement": "2026-09-28",
+        "n_supports_ajoutes": n_supports,
+        "n_positions_ajoutees": len(ajouts),
+        "note": ("Positions de supports mobiles ANFR absentes de antennas_corse (a ~60 m pres). Operateur non "
+                 "renseigne : le jeu ANFR des secteurs ne le porte pas. n_antennes = nombre de generations."),
+    }
+
+
 def round_coord(v, digits=5):
     return round(float(v), digits)
 
@@ -244,6 +324,7 @@ def main():
     print(f"Agregation de {len(antennas)} antennes...")
     by_commune, unassigned = aggregate(antennas, commune_names)
     final = finalize(by_commune)
+    complement = completer_depuis_supports(final, commune_names)
 
     n_communes_with_antenna = len(final)
     n_supports_total = sum(c["n_supports"] for c in final.values())
@@ -278,6 +359,10 @@ def main():
         },
         "communes": final,
     }
+    if complement:
+        out["_meta"]["complement_supports_anfr"] = complement
+        out["_meta"]["n_supports_total"] = sum(c["n_supports"] for c in final.values())
+        out["_meta"]["n_communes_avec_antenne"] = len(final)
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
@@ -293,5 +378,32 @@ def main():
         print(f"  Non placees (code_insee_commune NULL) : {unassigned}")
 
 
+def completer_fichier_existant():
+    """Mode --completer-seulement : applique le complement au JSON deja
+    produit (sans reseau). Equivalent a un run complet tant que antennas_corse
+    n'a pas change (derniere extraction : 2026-04-24)."""
+    with open(OUTPUT_FILE, encoding="utf-8") as f:
+        out = json.load(f)
+    final = out["communes"]
+    for c in final.values():
+        c["supports"] = [s for s in c["supports"] if not s.get("operateur_non_renseigne")]
+        c["n_supports"] = len(c["supports"])
+        c["n_antennes"] = sum(s["n_antennes"] for s in c["supports"])
+        c["technologies"] = sort_generations(g for s in c["supports"] for g in s["generations"])
+        c.pop("n_positions_operateur_non_renseigne", None)
+    for code in [k for k, c in final.items() if not c["supports"]]:
+        del final[code]
+    complement = completer_depuis_supports(final, {k: c["nom"] for k, c in final.items()})
+    if complement:
+        out["_meta"]["complement_supports_anfr"] = complement
+        out["_meta"]["n_supports_total"] = sum(c["n_supports"] for c in final.values())
+        out["_meta"]["n_communes_avec_antenne"] = len(final)
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"OK (complement seul) : {OUTPUT_FILE.relative_to(REPO_ROOT)}")
+
+
 if __name__ == "__main__":
+    if "--completer-seulement" in sys.argv:
+        sys.exit(completer_fichier_existant() or 0)
     sys.exit(main() or 0)
