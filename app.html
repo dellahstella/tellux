@@ -7736,9 +7736,20 @@ function buildBTSegmentGrid(polylines) {
   const t0 = performance.now();
   BT_SEGMENTS_DATA = [];
   BT_SEGMENT_GRID  = {};
+  // Doublons exacts retirés (2026-09-28, décision de Soleil) : 59 969 des 156 130 lignes de
+  // l'agrégat servi reprennent le tracé d'une autre ligne du même type, dans le même sens ou à
+  // l'envers (constat du lot BT v2, 21/09). Le forfait BT compte des segments par zone : chaque
+  // doublon le gonflait. Clé = type + suite exacte des points (ou suite inversée) — un tracé
+  // voisin mais différent n'est PAS retiré. Vaut pour les deux chemins de chargement (agrégat et
+  // Supabase direct). BT_LINES_RAW (tracé affiché) n'est pas touché.
+  const _btVus = new Set();
+  let _btDoublons = 0;
   polylines.forEach(row => {
     const pts = row.pts;
     if (!Array.isArray(pts) || pts.length < 2) return;
+    const k1 = row.type + '|' + JSON.stringify(pts);
+    if (_btVus.has(k1) || _btVus.has(row.type + '|' + JSON.stringify(pts.slice().reverse()))) { _btDoublons++; return; }
+    _btVus.add(k1);
     for (let i = 0; i < pts.length - 1; i++) {
       const a = pts[i], b = pts[i+1];
       if (!a || !b || a.length < 2 || b.length < 2) continue;
@@ -7766,7 +7777,7 @@ function buildBTSegmentGrid(polylines) {
   const elapsed = performance.now() - t0;
   const nTiles = Object.keys(BT_SEGMENT_GRID).length;
   console.log('[Tellux] Grille BT construite en ' + elapsed.toFixed(0) + ' ms : '
-    + BT_SEGMENTS_DATA.length + ' segments, ' + nTiles + ' tuiles.');
+    + BT_SEGMENTS_DATA.length + ' segments, ' + nTiles + ' tuiles, ' + _btDoublons + ' lignes en double ignorées.');
 }
 
 function getBTSegmentsNear(lat, lon) {
