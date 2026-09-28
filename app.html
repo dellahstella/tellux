@@ -2508,206 +2508,205 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            (b-hot n'en a aucun depuis le brief AB) — forme intentionnelle, pas un oubli : ses
            deux domaines n'ont pas le même statut de participation (ELF dans le score, substrat
            statique hors score, cf. son title=), un badge de statut unique les aurait mal dits. -->
-      <div class="subgroup">
-        <div class="accordion-cat-header subgroup-toggle open" onclick="toggleAccordion(this)">
-          <span class="accordion-cat-icon open">▶</span>
-          <h5 class="subgroup-header subgroup-header-first">Substrat et paysage</h5>
-        </div>
-        <div class="accordion-cat-content subgroup-content open">
-          <p class="subgroup-text" title="Le fond magnétique régional affiché (NOAA EMAG2v3) n'est pas ce qui pèse sur le calcul : une grille interne distincte reste calculée en permanence — comme l'indique le badge — mais son résultat n'entre dans aucun score public affiché. Le bouton n'affiche/masque que la couche visuelle, il ne pilote pas cette entrée. Pour la forêt dense, activer le bouton module la valeur du bloc Radiofréquence au clic carte ; il ne modifie ni la heatmap ni le score affiché en haut du popup.">Fond magnétique régional : grille interne calculée en permanence (comme l'indique le badge), non intégrée au score public. Forêt dense : le bouton module la valeur du bloc Radiofréquence au clic ; ni la heatmap ni le score n'en dépendent.</p>
-          <!-- Couche « Géologie BRGM » retirée de la carte publique le 2026-08-20 (décision Soleil :
-               chaque couche vit dans l'app qui correspond à son domaine causal). Déjà présente sur
-               radon.html avant ce retrait ; app.html n'en a donc plus de copie. Cette couche était une
-               tuile WMS tierce (geoservices.brgm.fr) — SANS lien technique avec getGeoType()/
-               GEO_SUSC_GRID (grille interne à app.html, INCHANGÉE, précision corrigée 2026-09-04
-               brief AG : 6 appelants confirmés par grep — calcSubstrateContext, calcRadonPotential,
-               calcGammaAmbient, calcSkinDepth, calcTelluricSecondary, et le handler de clic
-               directement — pas seulement « le calcul radon »). -->
-          <!-- Couche « Failles tectoniques » (b-failles) retirée le 2026-08-27 (brief "nettoyage
-               Contexte naturel") — migrée vers radon.html (#1056), qui en devient l'unique
-               affichage. Voir commentaire au retrait de loadFailles()/renderFailles()/togFailles()
-               plus bas dans ce fichier : FAILLES_CORSE (source de calcul de calcFaultProximity()/
-               calcSubstrateContext()) est TOTALEMENT INDÉPENDANTE de ce qui a été retiré ici et
-               reste INCHANGÉE. -->
-          <!-- Couches « Radon » et « Dépôts radon ERP (certifié) » retirées de la carte publique le
-               2026-08-20 (pattern PR #990 : consolidation dans une app dédiée, pas un retrait de
-               contenu). Le zonage ASNR, les dépôts ERP et la géologie BRGM en couche de référence
-               radon sont désormais sur radon.html, avec en plus une lecture par commune et les 4
-               courriers radon (auparavant sur mairies.html). Le chargement des données
-               (indexRadonZonesOfficial() au boot, calcRadonPotential()) reste actif et INCHANGÉ —
-               voir bloc "DOMAINE I — Potentiel radon" plus bas dans ce fichier : le calcul composite
-               (calcGammaAmbient, boost ponctuel) continue de s'appliquer exactement comme avant. -->
-          <!-- Lien contextuel "Voir le volet radon →" retiré d'ici le 2026-08-27 (brief "nettoyage
-               Contexte naturel", décision Soleil) — le lien vers radon.html vit désormais
-               uniquement dans #hdr-menu (menu sandwich, cf. commentaire à son ajout plus haut dans
-               ce fichier), pour ne garder qu'un seul chemin de navigation au lieu de deux
-               redondants. -->
-          <!-- Badge de statut reclassé --calc -> --context le 2026-09-06 (brief BT lot D) —
-               raisonnement complet dans le commentaire taxonomique plus haut (Badges de statut
-               par couche). Titre INCHANGÉ. -->
-          <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#AD22BE"></span>Fond magnétique régional<span class="layer-badge layer-badge--context">Contexte</span><span class="layer-badge layer-badge--domain">Statique</span></button>
-          <div class="mlegend-inline" id="mleg-emag"></div>
-          <!-- Couche « Fond gamma terrestre JRC » (b-gammajrc) DÉPLACÉE vers radon.html le
-               2026-09-17 (brief « gamma JRC vers radon »), pas dupliquée — voir radon.html
-               (rd-b-gammajrc, rdLGammaJRC). Déplacement, pas suppression du chantier : elle
-               restait hors calcul Tellux sur app.html (arbitrage Soleil « côté à côté »,
-               2026-09-13/14), une propriété inchangée par ce déplacement. -->
-          <!-- Couche « Forêt dense » (b-foretdense) ajoutée le 2026-08-27 (brief "nettoyage Contexte
-               naturel" point 5, dette FORET-DENSE-LAYER-001 close par ce diff) : jusqu'ici
-               foret_dense_corse.geojson (BD Forêt V2, #1038) alimentait calcVegetationAttenuation()
-               (RF, clic carte) sans aucune couche visible correspondante. Cf.
-               buildForetDenseLayer()/lForetDense plus bas dans ce fichier. -->
-          <button class="lbtn" id="b-foretdense" data-domains="rf" title="BD Forêt V2 IGN — forêt fermée à essence haute (chênes, hêtre, châtaignier, pins laricio/maritime, sapin…), hors classes de feuillus indifférenciés qui recouvrent surtout le maquis-forêt corse (~28 % de la Corse). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6). Ce calque module la valeur du bloc Radiofréquence. Il ne modifie ni la heatmap, ni le score affiché en haut du popup." onclick="tog('foretdense','on-foretdense',this)"><span class="sq" style="background:#3a7d5c;border:1px solid #1b5e3f"></span>Forêt dense (atténuation RF)<span class="layer-badge layer-badge--calc">Module le calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
-          <div class="mlegend-inline" id="mleg-foretdense"></div>
-          <!-- Couches « Forêt ouverte » et « Lande/maquis » (b-foretouverte, b-landemaquis) ajoutées
-               le 2026-09-02 (brief F, couches contextuelles hors calcul). Même source que Forêt dense
-               (BD Forêt V2 IGN, cf. scripts/build_foret_ouverte_lande_corse_geojson.py) mais CODE_TFV
-               différent (FO1/FO2/FO3 et LA4 — codes cités depuis la nomenclature officielle IGN,
-               DC_BDFORET_v2.pdf §4.1.2/4.1.3, pas déduits par analogie). Contrairement à
-               b-foretdense : n'alimentent AUCUN calcul (badge --context, pas --calc), et sont
-               mutuellement exclusives entre elles ET avec Forêt dense au sein du groupe végétation
-               (VEG_GROUP, cf. tog()) — une seule couche de couvert visible à la fois, comme les
-               fonds de carte. Millésime 2016-2017 rendu visible directement dans le libellé du
-               bouton (pas seulement dans les métadonnées du GeoJSON), cf. brief F étape 8. -->
-          <!-- Couches « Forêt ouverte » et « Lande/maquis » (b-foretouverte, b-landemaquis) masquées
-               du menu public le 2026-09-05 (brief AI, décision Soleil maintenue après réexamen) —
-               conservées en dette RÉSERVÉE, NI migrées NI supprimées : boutons, GeoJSON
-               (foret_ouverte_corse.geojson, lande_maquis_corse.geojson), LAYERS.foretouverte/
-               landemaquis, tog('foretouverte'|'landemaquis',...), VEG_GROUP (INCHANGÉ — reste à 3
-               membres, aucun retiré du groupe, cf. const VEG_GROUP plus bas), LAYER_SUBTITLE_FR/
-               JS_STRINGS_EN (zoom hints foretouverte_zoom_hint/landemaquis_zoom_hint) et
-               foretouverte-op-row/landemaquis-op-row (déjà display:none par défaut comme
-               hyd-op-row, jamais affichées puisque leur seul déclencheur — tog() — devient
-               inatteignable) restent INCHANGÉS dans le code JS/CSS, seul l'affichage des boutons
-               est retiré ici par commentaire. Réactivable par un futur brief en dé-commentant le
-               bloc ci-dessous, sans reconstruction — condition de réactivation posée par ce brief :
-               des points de mesure certifiés en couvert méditerranéen, seule voie établie par DS-01
-               pour ces formations (aucune profondeur de végétation équivalente n'existe aujourd'hui
-               pour elles). Les entrées i18n JT_TABLE ["lyr_foretouverte","lyr_foretouverte_tt",
-               "lyr_landemaquis","lyr_landemaquis_tt"] visant ces boutons sont laissées telles
-               quelles : sans élément DOM à cibler tant que ce bloc reste commenté, elles ne
-               s'appliquent simplement à rien (aucune erreur) — même traitement que #b-hyd/#b-openrad
-               ci-dessous. Écart réconcilié par ce diff : le registre technique privé
-               (VEG-GROUP-EXCLUSIVITE-CALC-SIDE-EFFECT-001) décrivait ces deux couches comme déjà
-               masquées depuis le 2026-09-04, alors que ce brief n'avait jamais été exécuté avant
-               aujourd'hui — chronologie complète dans l'entrée amendée du registre. -->
-          <!--
-          <button class="lbtn" id="b-foretouverte" data-domains="visuel" title="BD Forêt V2 IGN — forêt ouverte (couvert arboré 10-40 %, feuillus FO1/conifères FO2/mélange FO3 — codes nomenclature IGN §4.1.2). Couche de contexte, millésimes 2016 (2B) / 2017 (2A) — incendies possibles depuis, ne pas lire comme un état actuel. N'entre dans AUCUN calcul directement (contrairement à Forêt dense) ; une seule couche de végétation affichée à la fois — activer ce bouton désactive Forêt dense s'il était actif, ce qui retire alors l'atténuation RF du prochain calcul au clic." onclick="tog('foretouverte','on-foretouverte',this)"><span class="sq" style="background:#4F7048;border:1px solid #3F5B3A"></span>Forêt ouverte (2016-2017)<span class="layer-badge layer-badge--context">Contexte</span></button>
-          <div class="mlegend-inline" id="mleg-foretouverte"></div>
-          <button class="lbtn" id="b-landemaquis" data-domains="visuel" title="BD Forêt V2 IGN — lande (bruyères, genêts, ajoncs ; garrigues et maquis non boisés — code LA4, nomenclature IGN §4.1.2). Couche de contexte, millésimes 2016 (2B) / 2017 (2A) — incendies possibles depuis, ne pas lire comme un état actuel. N'entre dans AUCUN calcul (contrairement à Forêt dense) ; une seule couche de végétation affichée à la fois." onclick="tog('landemaquis','on-landemaquis',this)"><span class="sq" style="background:#C28533;border:1px solid #8E6423"></span>Lande / maquis (2016-2017)<span class="layer-badge layer-badge--context">Contexte</span></button>
-          <div class="mlegend-inline" id="mleg-landemaquis"></div>
-          -->
-          <!-- Couche « Forêts publiques » (b-foret, ONF via WMS IGN) retirée complètement le
-               2026-08-27 (décision Soleil, brief court "la couche forêt publique n'est plus utile
-               dans app") — devenue redondante une fois « Forêt dense » (ci-dessus) affichée et
-               correctement badgée : la distinction propriété foncière (ex-b-foret) vs densité du
-               couvert/source du calcul (b-foretdense) n'apportait plus assez de valeur pour
-               justifier 2 boutons. Retrait complet (pas juste masqué, cf. traitement Hydrographie
-               ci-dessous) car aucune régénération de donnée propre à préserver — la couche était
-               100% servie par le WMS IGN dynamique (wmsForet), rien à "garder au chaud". Code
-               supprimé : bouton, wmsForet/WMS.foret, tog('foret',...) via le registre WMS générique,
-               LEGEND_HTML['foret']/LEGEND_HTML_EN['foret'], CSS .on-foret, i18n lyr_foret/lyr_foret_tt.
-               Doc historique (voie C retenue, sources testées, licence) conservée telle quelle dans
-               docs/em-mairie/data-sources/bd_foret_v2_corse_notes.md — pas réécrite, juste devenue
-               un historique de décision plutôt qu'une doc de couche active. -->
-          <!-- Couche « Hydrographie » (b-hyd) masquée du menu public le 2026-08-27 (brief "nettoyage
-               Contexte naturel" point 3, décision Soleil) — conservée en dette RÉSERVÉE, NI migrée
-               NI supprimée : bouton, wmsHyd, tog('hyd',...) et LEGEND_HTML['hyd']/LEGEND_HTML_EN
-               restent INCHANGÉS dans le code JS, seul l'affichage du bouton est retiré ici par
-               commentaire. Réactivable par un futur brief en dé-commentant le bloc ci-dessous, sans
-               reconstruction. Les entrées i18n JT_TABLE ["lyr_hyd","lyr_hyd_tt"] visant #b-hyd sont
-               laissées telles quelles : sans élément DOM à cibler tant que ce bloc reste commenté,
-               elles ne s'appliquent simplement à rien (aucune erreur). -->
-          <!--
-          <button class="lbtn" id="b-hyd" data-domains="visuel" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie<span class="layer-badge layer-badge--context">Contexte</span></button>
-          <div class="mlegend-inline" id="mleg-hyd"></div>
-          -->
-        </div>
-      </div>
+      <!-- 2026-09-28 (décision de Soleil) : le volet « Substrat et paysage » n'est plus un sous-groupe —
+           ses couches sont directement dans « Contexte naturel », qui en garde l'axe. Le volet
+           « Repères et mesures externes » devient le groupe de premier niveau « Repères et mesures »,
+           juste en dessous (mesures certifiées, interpolation, anomalies de référence, contributions :
+           ce ne sont pas du contexte naturel). -->
+      <p class="subgroup-text" title="Le fond magnétique régional affiché (NOAA EMAG2v3) n'est pas ce qui pèse sur le calcul : une grille interne distincte reste calculée en permanence — comme l'indique le badge — mais son résultat n'entre dans aucun score public affiché. Le bouton n'affiche/masque que la couche visuelle, il ne pilote pas cette entrée. Pour la forêt dense, activer le bouton module la valeur du bloc Radiofréquence au clic carte ; il ne modifie ni la heatmap ni le score affiché en haut du popup.">Fond magnétique régional : grille interne calculée en permanence (comme l'indique le badge), non intégrée au score public. Forêt dense : le bouton module la valeur du bloc Radiofréquence au clic ; ni la heatmap ni le score n'en dépendent.</p>
+      <!-- Couche « Géologie BRGM » retirée de la carte publique le 2026-08-20 (décision Soleil :
+           chaque couche vit dans l'app qui correspond à son domaine causal). Déjà présente sur
+           radon.html avant ce retrait ; app.html n'en a donc plus de copie. Cette couche était une
+           tuile WMS tierce (geoservices.brgm.fr) — SANS lien technique avec getGeoType()/
+           GEO_SUSC_GRID (grille interne à app.html, INCHANGÉE, précision corrigée 2026-09-04
+           brief AG : 6 appelants confirmés par grep — calcSubstrateContext, calcRadonPotential,
+           calcGammaAmbient, calcSkinDepth, calcTelluricSecondary, et le handler de clic
+           directement — pas seulement « le calcul radon »). -->
+      <!-- Couche « Failles tectoniques » (b-failles) retirée le 2026-08-27 (brief "nettoyage
+           Contexte naturel") — migrée vers radon.html (#1056), qui en devient l'unique
+           affichage. Voir commentaire au retrait de loadFailles()/renderFailles()/togFailles()
+           plus bas dans ce fichier : FAILLES_CORSE (source de calcul de calcFaultProximity()/
+           calcSubstrateContext()) est TOTALEMENT INDÉPENDANTE de ce qui a été retiré ici et
+           reste INCHANGÉE. -->
+      <!-- Couches « Radon » et « Dépôts radon ERP (certifié) » retirées de la carte publique le
+           2026-08-20 (pattern PR #990 : consolidation dans une app dédiée, pas un retrait de
+           contenu). Le zonage ASNR, les dépôts ERP et la géologie BRGM en couche de référence
+           radon sont désormais sur radon.html, avec en plus une lecture par commune et les 4
+           courriers radon (auparavant sur mairies.html). Le chargement des données
+           (indexRadonZonesOfficial() au boot, calcRadonPotential()) reste actif et INCHANGÉ —
+           voir bloc "DOMAINE I — Potentiel radon" plus bas dans ce fichier : le calcul composite
+           (calcGammaAmbient, boost ponctuel) continue de s'appliquer exactement comme avant. -->
+      <!-- Lien contextuel "Voir le volet radon →" retiré d'ici le 2026-08-27 (brief "nettoyage
+           Contexte naturel", décision Soleil) — le lien vers radon.html vit désormais
+           uniquement dans #hdr-menu (menu sandwich, cf. commentaire à son ajout plus haut dans
+           ce fichier), pour ne garder qu'un seul chemin de navigation au lieu de deux
+           redondants. -->
+      <!-- Badge de statut reclassé --calc -> --context le 2026-09-06 (brief BT lot D) —
+           raisonnement complet dans le commentaire taxonomique plus haut (Badges de statut
+           par couche). Titre INCHANGÉ. -->
+      <button class="lbtn" id="b-emag" data-domains="statique" title="Fond magnétique régional NOAA EMAG2v3 — anomalies du socle profond Corse" onclick="tog('emag','on-emag',this)"><span class="sq" style="background:#AD22BE"></span>Fond magnétique régional<span class="layer-badge layer-badge--context">Contexte</span><span class="layer-badge layer-badge--domain">Statique</span></button>
+      <div class="mlegend-inline" id="mleg-emag"></div>
+      <!-- Couche « Fond gamma terrestre JRC » (b-gammajrc) DÉPLACÉE vers radon.html le
+           2026-09-17 (brief « gamma JRC vers radon »), pas dupliquée — voir radon.html
+           (rd-b-gammajrc, rdLGammaJRC). Déplacement, pas suppression du chantier : elle
+           restait hors calcul Tellux sur app.html (arbitrage Soleil « côté à côté »,
+           2026-09-13/14), une propriété inchangée par ce déplacement. -->
+      <!-- Couche « Forêt dense » (b-foretdense) ajoutée le 2026-08-27 (brief "nettoyage Contexte
+           naturel" point 5, dette FORET-DENSE-LAYER-001 close par ce diff) : jusqu'ici
+           foret_dense_corse.geojson (BD Forêt V2, #1038) alimentait calcVegetationAttenuation()
+           (RF, clic carte) sans aucune couche visible correspondante. Cf.
+           buildForetDenseLayer()/lForetDense plus bas dans ce fichier. -->
+      <button class="lbtn" id="b-foretdense" data-domains="rf" title="BD Forêt V2 IGN — forêt fermée à essence haute (chênes, hêtre, châtaignier, pins laricio/maritime, sapin…), hors classes de feuillus indifférenciés qui recouvrent surtout le maquis-forêt corse (~28 % de la Corse). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6). Ce calque module la valeur du bloc Radiofréquence. Il ne modifie ni la heatmap, ni le score affiché en haut du popup." onclick="tog('foretdense','on-foretdense',this)"><span class="sq" style="background:#3a7d5c;border:1px solid #1b5e3f"></span>Forêt dense (atténuation RF)<span class="layer-badge layer-badge--calc">Module le calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
+      <div class="mlegend-inline" id="mleg-foretdense"></div>
+      <!-- Couches « Forêt ouverte » et « Lande/maquis » (b-foretouverte, b-landemaquis) ajoutées
+           le 2026-09-02 (brief F, couches contextuelles hors calcul). Même source que Forêt dense
+           (BD Forêt V2 IGN, cf. scripts/build_foret_ouverte_lande_corse_geojson.py) mais CODE_TFV
+           différent (FO1/FO2/FO3 et LA4 — codes cités depuis la nomenclature officielle IGN,
+           DC_BDFORET_v2.pdf §4.1.2/4.1.3, pas déduits par analogie). Contrairement à
+           b-foretdense : n'alimentent AUCUN calcul (badge --context, pas --calc), et sont
+           mutuellement exclusives entre elles ET avec Forêt dense au sein du groupe végétation
+           (VEG_GROUP, cf. tog()) — une seule couche de couvert visible à la fois, comme les
+           fonds de carte. Millésime 2016-2017 rendu visible directement dans le libellé du
+           bouton (pas seulement dans les métadonnées du GeoJSON), cf. brief F étape 8. -->
+      <!-- Couches « Forêt ouverte » et « Lande/maquis » (b-foretouverte, b-landemaquis) masquées
+           du menu public le 2026-09-05 (brief AI, décision Soleil maintenue après réexamen) —
+           conservées en dette RÉSERVÉE, NI migrées NI supprimées : boutons, GeoJSON
+           (foret_ouverte_corse.geojson, lande_maquis_corse.geojson), LAYERS.foretouverte/
+           landemaquis, tog('foretouverte'|'landemaquis',...), VEG_GROUP (INCHANGÉ — reste à 3
+           membres, aucun retiré du groupe, cf. const VEG_GROUP plus bas), LAYER_SUBTITLE_FR/
+           JS_STRINGS_EN (zoom hints foretouverte_zoom_hint/landemaquis_zoom_hint) et
+           foretouverte-op-row/landemaquis-op-row (déjà display:none par défaut comme
+           hyd-op-row, jamais affichées puisque leur seul déclencheur — tog() — devient
+           inatteignable) restent INCHANGÉS dans le code JS/CSS, seul l'affichage des boutons
+           est retiré ici par commentaire. Réactivable par un futur brief en dé-commentant le
+           bloc ci-dessous, sans reconstruction — condition de réactivation posée par ce brief :
+           des points de mesure certifiés en couvert méditerranéen, seule voie établie par DS-01
+           pour ces formations (aucune profondeur de végétation équivalente n'existe aujourd'hui
+           pour elles). Les entrées i18n JT_TABLE ["lyr_foretouverte","lyr_foretouverte_tt",
+           "lyr_landemaquis","lyr_landemaquis_tt"] visant ces boutons sont laissées telles
+           quelles : sans élément DOM à cibler tant que ce bloc reste commenté, elles ne
+           s'appliquent simplement à rien (aucune erreur) — même traitement que #b-hyd/#b-openrad
+           ci-dessous. Écart réconcilié par ce diff : le registre technique privé
+           (VEG-GROUP-EXCLUSIVITE-CALC-SIDE-EFFECT-001) décrivait ces deux couches comme déjà
+           masquées depuis le 2026-09-04, alors que ce brief n'avait jamais été exécuté avant
+           aujourd'hui — chronologie complète dans l'entrée amendée du registre. -->
+      <!--
+      <button class="lbtn" id="b-foretouverte" data-domains="visuel" title="BD Forêt V2 IGN — forêt ouverte (couvert arboré 10-40 %, feuillus FO1/conifères FO2/mélange FO3 — codes nomenclature IGN §4.1.2). Couche de contexte, millésimes 2016 (2B) / 2017 (2A) — incendies possibles depuis, ne pas lire comme un état actuel. N'entre dans AUCUN calcul directement (contrairement à Forêt dense) ; une seule couche de végétation affichée à la fois — activer ce bouton désactive Forêt dense s'il était actif, ce qui retire alors l'atténuation RF du prochain calcul au clic." onclick="tog('foretouverte','on-foretouverte',this)"><span class="sq" style="background:#4F7048;border:1px solid #3F5B3A"></span>Forêt ouverte (2016-2017)<span class="layer-badge layer-badge--context">Contexte</span></button>
+      <div class="mlegend-inline" id="mleg-foretouverte"></div>
+      <button class="lbtn" id="b-landemaquis" data-domains="visuel" title="BD Forêt V2 IGN — lande (bruyères, genêts, ajoncs ; garrigues et maquis non boisés — code LA4, nomenclature IGN §4.1.2). Couche de contexte, millésimes 2016 (2B) / 2017 (2A) — incendies possibles depuis, ne pas lire comme un état actuel. N'entre dans AUCUN calcul (contrairement à Forêt dense) ; une seule couche de végétation affichée à la fois." onclick="tog('landemaquis','on-landemaquis',this)"><span class="sq" style="background:#C28533;border:1px solid #8E6423"></span>Lande / maquis (2016-2017)<span class="layer-badge layer-badge--context">Contexte</span></button>
+      <div class="mlegend-inline" id="mleg-landemaquis"></div>
+      -->
+      <!-- Couche « Forêts publiques » (b-foret, ONF via WMS IGN) retirée complètement le
+           2026-08-27 (décision Soleil, brief court "la couche forêt publique n'est plus utile
+           dans app") — devenue redondante une fois « Forêt dense » (ci-dessus) affichée et
+           correctement badgée : la distinction propriété foncière (ex-b-foret) vs densité du
+           couvert/source du calcul (b-foretdense) n'apportait plus assez de valeur pour
+           justifier 2 boutons. Retrait complet (pas juste masqué, cf. traitement Hydrographie
+           ci-dessous) car aucune régénération de donnée propre à préserver — la couche était
+           100% servie par le WMS IGN dynamique (wmsForet), rien à "garder au chaud". Code
+           supprimé : bouton, wmsForet/WMS.foret, tog('foret',...) via le registre WMS générique,
+           LEGEND_HTML['foret']/LEGEND_HTML_EN['foret'], CSS .on-foret, i18n lyr_foret/lyr_foret_tt.
+           Doc historique (voie C retenue, sources testées, licence) conservée telle quelle dans
+           docs/em-mairie/data-sources/bd_foret_v2_corse_notes.md — pas réécrite, juste devenue
+           un historique de décision plutôt qu'une doc de couche active. -->
+      <!-- Couche « Hydrographie » (b-hyd) masquée du menu public le 2026-08-27 (brief "nettoyage
+           Contexte naturel" point 3, décision Soleil) — conservée en dette RÉSERVÉE, NI migrée
+           NI supprimée : bouton, wmsHyd, tog('hyd',...) et LEGEND_HTML['hyd']/LEGEND_HTML_EN
+           restent INCHANGÉS dans le code JS, seul l'affichage du bouton est retiré ici par
+           commentaire. Réactivable par un futur brief en dé-commentant le bloc ci-dessous, sans
+           reconstruction. Les entrées i18n JT_TABLE ["lyr_hyd","lyr_hyd_tt"] visant #b-hyd sont
+           laissées telles quelles : sans élément DOM à cibler tant que ce bloc reste commenté,
+           elles ne s'appliquent simplement à rien (aucune erreur). -->
+      <!--
+      <button class="lbtn" id="b-hyd" data-domains="visuel" title="Nappes et cours d'eau souterrains (BRGM REMNAPPE) — couche visuelle ; le calcul utilise un dataset distinct" onclick="tog('hyd','on-hyd',this)"><span class="dot" style="background:#1a5c8c"></span>Hydrographie<span class="layer-badge layer-badge--context">Contexte</span></button>
+      <div class="mlegend-inline" id="mleg-hyd"></div>
+      -->
+    </div>
+  </div>
 
-      <div class="subgroup">
-        <div class="accordion-cat-header subgroup-toggle" onclick="toggleAccordion(this)">
-          <span class="accordion-cat-icon">▶</span>
-          <h5 class="subgroup-header">Repères et mesures externes</h5>
-        </div>
-        <div class="accordion-cat-content subgroup-content">
-          <p class="subgroup-text" title="Mesures certifiées ANFR/EXEM, Anomalies de référence (catalogue documentaire issu de la littérature) et Contributions smartphone (non certifiées, capteurs hétérogènes). Aucune de ces couches ne module le calcul composite Tellux affiché ; les fiches certifiées ont servi une fois à calibrer la constante k du modèle RF.">Mesures et repères externes — fiches certifiées, catalogue de comparaison, contributions smartphone.</p>
-          <!-- Couche « Émergences thermales » (b-therm) retirée le 2026-08-27 (brief "nettoyage
-               Contexte naturel") — migrée vers radon.html (#1056), off par défaut là-bas, qui en
-               devient l'unique affichage. THERMAL_SOURCES_CORSE (peuplée par loadSitesApp(), même
-               loader partagé que SITES_REMARQUABLES/POINTS_CHAUDS_RADIO) reste chargée mais n'a
-               plus de consommateur d'affichage ici — cf. commentaire au retrait de
-               buildThermLayer() plus bas dans ce fichier. -->
-          <!-- Couche « Cavités » retirée de la carte publique le 2026-08-20 (décision Soleil : les
-               cavités souterraines (grottes, karst, mines) sont un mécanisme d'accumulation possible
-               du radon, elles vivent désormais sur radon.html plutôt qu'ici — aucun calcul Tellux
-               n'utilisait cette couche). -->
-          <!-- SCISSION 2026-08-29 (brief « exécution groupée », item C) : l'ancien bouton unique
-               b-con (« Mesures EM ») activait EN PARALLÈLE deux jeux de données de nature et de
-               statut différents (lCon = contributions citoyennes / lCert = 236 fiches certifiées
-               ANFR/EXEM). Scindé en deux boutons :
-               • b-cert (ci-dessous) → lCert seul, badge « Calibration RF » seul. Le fichier
-                 public/data/cartoradio_certified_corse.json reste lu DIRECTEMENT par calibrateRF()
-                 au boot (fetch propre, indépendant de ce toggle — vérifié) : la scission ne touche
-                 QUE l'affichage.
-               • b-contrib → lCon seul, badge « Hors calcul » seul. D'abord placé dans un
-                 sous-sous-groupe « Mesures citoyennes » (avec Gamma citoyen), remonté au niveau
-                 supérieur le 2026-08-30 quand Gamma citoyen a été muté (cf. plus bas). -->
-          <button class="lbtn" id="b-cert" data-domains="rf" title="239 fiches de mesure certifiées ANFR/EXEM (2002–2026, collecte CartoRadio du 19/09/2026) — 117 sites distincts en extérieur public (152 fiches, position exacte), 87 fiches résidentielles (centroïde communal, position non publiée). 142 fiches d'un jeu distinct ont servi à calibrer la constante k du modèle RF (21 jusqu'au 28/09/2026) (calcul one-shot à l'initialisation, pas une modulation en direct par point). Losanges = extérieur public (position exacte) ; cercles = résidentiel (centroïde communal, position non publiée), colorés selon la conformité (limite légale 28 V/m)." onclick="tog('cert','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Mesures certifiées (ANFR/EXEM)<span class="layer-badge layer-badge--calc">Calibration RF</span><span class="layer-badge layer-badge--domain">RF</span></button>
-          <div class="mlegend-inline" id="mleg-cert"></div>
-          <!-- Couche « Interpolation des mesures » (b-interp), LOT D, BRIEF_CODE_TEMPS2_CD_MESURES_INTERPOLATION_2026-09-20 :
-               surface dérivée des SITES MESURÉS (buildHotMesures, jamais du modèle RF), restreinte
-               aux zones qui remplissent le critère de couverture (2026-09-28) — cf. commentaire à
-               INTERP_ZONES. Hors calcul : rfScore/Indice Tellux intouchés. -->
-          <button class="lbtn" id="b-interp" data-domains="rf" title="Interpolation d'une surface à partir des sites mesurés (jamais du modèle), restreinte aux 5 zones dont au moins la moitié du disque de 5 km est à 2,5 km ou moins d'un site mesuré : Ajaccio (42 sites), Bastia (20), L'Île-Rousse – Monticello (9), Porto-Vecchio (5), Bonifacio (5). Plafond interne de 2,5 km : arrêt net au bord, sans dégradé — une cellule sans site assez proche reste vide, y compris à l'intérieur d'une zone. Sites sources toujours visibles (points sombres)." onclick="tog('interp','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Interpolation des mesures (5 zones)<span class="layer-badge layer-badge--hors">Hors calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
-          <div class="mlegend-inline" id="mleg-interp"></div>
-          <!-- Couche « Sites U/Th à mesurer » retirée de la carte publique le 2026-08-19 (décision
-               Soleil, risque nocebo A.4 sur un catalogue 100% documentaire/non mesuré) — contenu
-               transposé en fiche documentaire sur cadre-scientifique.html. Le chargement des données
-               (POINTS_CHAUDS_RADIO, via loadPointsChaudsRadio()/loadSitesApp()) reste actif au boot
-               pour le boost ponctuel du calcul gamma composite (calcGammaAmbient) — voir commentaire
-               au-dessus de loadPointsChaudsRadio(). -->
-          <!-- Couche « Anomalies de substrat (serpentinite, magnétite) & Th-234 » retirée de la carte
-               publique le 2026-08-20 (pattern PR #990, même logique que le retrait "Sites U/Th" du
-               2026-08-19) — contenu transposé en fiche documentaire cadre-scientifique.html §10.9.
-               3 des 4 sites (categorie 'ophiolite' : Albu, Nonza, Farinole) RÉINTÉGRÉS le
-               2026-08-27 dans le toggle b-crustal ci-dessous (décision Soleil, cf. commentaire
-               détaillé à buildCrustalLayer() plus bas dans ce fichier — 3 vérifications faites
-               avant fusion : comptage exact 4 pas 3 sites, exclusion volontaire de Bonifacio/
-               Th-234 (radioactivité marine, pas magnétisme), lien calcGammaAmbient vérifié
-               ABSENT malgré ce que ce commentaire affirmait jusqu'ici). Le chargement des
-               données (SITES_REMARQUABLES, via loadSitesApp(), même loader partagé que
-               POINTS_CHAUDS_RADIO) reste actif et INCONDITIONNEL au boot : NE PAS retirer la
-               déclaration `let SITES_REMARQUABLES = [];` ni son assignation dans loadSitesApp()
-               — mais ⚠️ CORRECTIF : SITES_REMARQUABLES n'alimente AUCUN calcul (grep exhaustif
-               fait le 2026-08-27, aucune fonction de ce fichier ne la lit) — seul
-               POINTS_CHAUDS_RADIO alimente le boost ponctuel de calcGammaAmbient. Les deux
-               variables partagent juste le même loader, ce n'était pas la même chose. -->
-          <button class="lbtn" id="b-crustal" data-domains="statique" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF), quantifiées (valeur nT, EMAG2v3 + littérature académique) — comparaison locale/mondiale. + 4 sites ophiolitiques corses (Albu, Nonza, Farinole, Monte Maggiore) à anomalie magnétique documentée mais NON quantifiée (aucune mesure nT publiée) — échelle locale distincte, hors calcul." onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales &amp; Corse)<span class="layer-badge layer-badge--hors">Hors calcul</span><span class="layer-badge layer-badge--domain">Statique</span></button>
-          <div class="mlegend-inline" id="mleg-crustal"></div>
+  <!-- GROUPE 4 — REPÈRES ET MESURES (plié par défaut) — créé le 2026-09-28 (décision de Soleil),
+       ex-sous-groupe « Repères et mesures externes » de « Contexte naturel ». -->
+  <div class="accordion-cat">
+    <div class="accordion-cat-header" onclick="toggleAccordion(this)">
+      <span class="accordion-cat-icon">▶</span>
+      <span>Repères et mesures</span>
+    </div>
+    <div class="accordion-cat-content">
+      <p class="subgroup-text" title="Mesures certifiées ANFR/EXEM, Anomalies de référence (catalogue documentaire issu de la littérature) et Contributions smartphone (non certifiées, capteurs hétérogènes). Aucune de ces couches ne module le calcul composite Tellux affiché ; les fiches certifiées ont servi une fois à calibrer la constante k du modèle RF.">Mesures et repères externes — fiches certifiées, catalogue de comparaison, contributions smartphone.</p>
+      <!-- Couche « Émergences thermales » (b-therm) retirée le 2026-08-27 (brief "nettoyage
+           Contexte naturel") — migrée vers radon.html (#1056), off par défaut là-bas, qui en
+           devient l'unique affichage. THERMAL_SOURCES_CORSE (peuplée par loadSitesApp(), même
+           loader partagé que SITES_REMARQUABLES/POINTS_CHAUDS_RADIO) reste chargée mais n'a
+           plus de consommateur d'affichage ici — cf. commentaire au retrait de
+           buildThermLayer() plus bas dans ce fichier. -->
+      <!-- Couche « Cavités » retirée de la carte publique le 2026-08-20 (décision Soleil : les
+           cavités souterraines (grottes, karst, mines) sont un mécanisme d'accumulation possible
+           du radon, elles vivent désormais sur radon.html plutôt qu'ici — aucun calcul Tellux
+           n'utilisait cette couche). -->
+      <!-- SCISSION 2026-08-29 (brief « exécution groupée », item C) : l'ancien bouton unique
+           b-con (« Mesures EM ») activait EN PARALLÈLE deux jeux de données de nature et de
+           statut différents (lCon = contributions citoyennes / lCert = 236 fiches certifiées
+           ANFR/EXEM). Scindé en deux boutons :
+           • b-cert (ci-dessous) → lCert seul, badge « Calibration RF » seul. Le fichier
+             public/data/cartoradio_certified_corse.json reste lu DIRECTEMENT par calibrateRF()
+             au boot (fetch propre, indépendant de ce toggle — vérifié) : la scission ne touche
+             QUE l'affichage.
+           • b-contrib → lCon seul, badge « Hors calcul » seul. D'abord placé dans un
+             sous-sous-groupe « Mesures citoyennes » (avec Gamma citoyen), remonté au niveau
+             supérieur le 2026-08-30 quand Gamma citoyen a été muté (cf. plus bas). -->
+      <button class="lbtn" id="b-cert" data-domains="rf" title="239 fiches de mesure certifiées ANFR/EXEM (2002–2026, collecte CartoRadio du 19/09/2026) — 117 sites distincts en extérieur public (152 fiches, position exacte), 87 fiches résidentielles (centroïde communal, position non publiée). 142 fiches d'un jeu distinct ont servi à calibrer la constante k du modèle RF (21 jusqu'au 28/09/2026) (calcul one-shot à l'initialisation, pas une modulation en direct par point). Losanges = extérieur public (position exacte) ; cercles = résidentiel (centroïde communal, position non publiée), colorés selon la conformité (limite légale 28 V/m)." onclick="tog('cert','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Mesures certifiées (ANFR/EXEM)<span class="layer-badge layer-badge--calc">Calibration RF</span><span class="layer-badge layer-badge--domain">RF</span></button>
+      <div class="mlegend-inline" id="mleg-cert"></div>
+      <!-- Couche « Interpolation des mesures » (b-interp), LOT D, BRIEF_CODE_TEMPS2_CD_MESURES_INTERPOLATION_2026-09-20 :
+           surface dérivée des SITES MESURÉS (buildHotMesures, jamais du modèle RF), restreinte
+           aux zones qui remplissent le critère de couverture (2026-09-28) — cf. commentaire à
+           INTERP_ZONES. Hors calcul : rfScore/Indice Tellux intouchés. -->
+      <button class="lbtn" id="b-interp" data-domains="rf" title="Interpolation d'une surface à partir des sites mesurés (jamais du modèle), restreinte aux 5 zones dont au moins la moitié du disque de 5 km est à 2,5 km ou moins d'un site mesuré : Ajaccio (42 sites), Bastia (20), L'Île-Rousse – Monticello (9), Porto-Vecchio (5), Bonifacio (5). Plafond interne de 2,5 km : arrêt net au bord, sans dégradé — une cellule sans site assez proche reste vide, y compris à l'intérieur d'une zone. Sites sources toujours visibles (points sombres)." onclick="tog('interp','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Interpolation des mesures (5 zones)<span class="layer-badge layer-badge--hors">Hors calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
+      <div class="mlegend-inline" id="mleg-interp"></div>
+      <!-- Couche « Sites U/Th à mesurer » retirée de la carte publique le 2026-08-19 (décision
+           Soleil, risque nocebo A.4 sur un catalogue 100% documentaire/non mesuré) — contenu
+           transposé en fiche documentaire sur cadre-scientifique.html. Le chargement des données
+           (POINTS_CHAUDS_RADIO, via loadPointsChaudsRadio()/loadSitesApp()) reste actif au boot
+           pour le boost ponctuel du calcul gamma composite (calcGammaAmbient) — voir commentaire
+           au-dessus de loadPointsChaudsRadio(). -->
+      <!-- Couche « Anomalies de substrat (serpentinite, magnétite) & Th-234 » retirée de la carte
+           publique le 2026-08-20 (pattern PR #990, même logique que le retrait "Sites U/Th" du
+           2026-08-19) — contenu transposé en fiche documentaire cadre-scientifique.html §10.9.
+           3 des 4 sites (categorie 'ophiolite' : Albu, Nonza, Farinole) RÉINTÉGRÉS le
+           2026-08-27 dans le toggle b-crustal ci-dessous (décision Soleil, cf. commentaire
+           détaillé à buildCrustalLayer() plus bas dans ce fichier — 3 vérifications faites
+           avant fusion : comptage exact 4 pas 3 sites, exclusion volontaire de Bonifacio/
+           Th-234 (radioactivité marine, pas magnétisme), lien calcGammaAmbient vérifié
+           ABSENT malgré ce que ce commentaire affirmait jusqu'ici). Le chargement des
+           données (SITES_REMARQUABLES, via loadSitesApp(), même loader partagé que
+           POINTS_CHAUDS_RADIO) reste actif et INCONDITIONNEL au boot : NE PAS retirer la
+           déclaration `let SITES_REMARQUABLES = [];` ni son assignation dans loadSitesApp()
+           — mais ⚠️ CORRECTIF : SITES_REMARQUABLES n'alimente AUCUN calcul (grep exhaustif
+           fait le 2026-08-27, aucune fonction de ce fichier ne la lit) — seul
+           POINTS_CHAUDS_RADIO alimente le boost ponctuel de calcGammaAmbient. Les deux
+           variables partagent juste le même loader, ce n'était pas la même chose. -->
+      <button class="lbtn" id="b-crustal" data-domains="statique" title="5 anomalies magnétiques crustales mondiales de référence (cratères d'impact + BIF), quantifiées (valeur nT, EMAG2v3 + littérature académique) — comparaison locale/mondiale. + 4 sites ophiolitiques corses (Albu, Nonza, Farinole, Monte Maggiore) à anomalie magnétique documentée mais NON quantifiée (aucune mesure nT publiée) — échelle locale distincte, hors calcul." onclick="tog('crustal','on-crustal',this)"><span class="sq" style="background:#8E2F1F"></span>Anomalies de référence (mondiales &amp; Corse)<span class="layer-badge layer-badge--hors">Hors calcul</span><span class="layer-badge layer-badge--domain">Statique</span></button>
+      <div class="mlegend-inline" id="mleg-crustal"></div>
 
-          <!-- Contributions smartphone — non certifiées, capteurs hétérogènes, affichage seul (hors calcul).
-               Remontée au niveau supérieur de « Repères et mesures externes » le 2026-08-30 (décision
-               Soleil) : le sous-sous-groupe « Mesures citoyennes » créé le 2026-08-29 (#1117) est dissous
-               car il ne restait qu'une couche. -->
-          <button class="lbtn" id="b-contrib" data-domains="statique rf" title="Contributions terrain des utilisateurs Tellux : magnétomètre smartphone (nT), signal réseau/WiFi (dBm), relevés au capteur externe. Cercles violets, en cluster. N'influence jamais le score composite affiché ; une comparaison indicative apparaît dans le détail technique du popup." onclick="tog('contrib','on-contrib',this)"><span class="dot" style="background:#5c3a9b"></span>Contributions smartphone<span class="layer-badge layer-badge--hors">Hors calcul</span><span class="layer-badge layer-badge--domain">Statique + RF</span></button>
-          <div class="mlegend-inline" id="mleg-contrib"></div>
+      <!-- Contributions smartphone — non certifiées, capteurs hétérogènes, affichage seul (hors calcul).
+           Remontée au niveau supérieur de « Repères et mesures externes » le 2026-08-30 (décision
+           Soleil) : le sous-sous-groupe « Mesures citoyennes » créé le 2026-08-29 (#1117) est dissous
+           car il ne restait qu'une couche. -->
+      <button class="lbtn" id="b-contrib" data-domains="statique rf" title="Contributions terrain des utilisateurs Tellux : magnétomètre smartphone (nT), signal réseau/WiFi (dBm), relevés au capteur externe. Cercles violets, en cluster. N'influence jamais le score composite affiché ; une comparaison indicative apparaît dans le détail technique du popup." onclick="tog('contrib','on-contrib',this)"><span class="dot" style="background:#5c3a9b"></span>Contributions smartphone<span class="layer-badge layer-badge--hors">Hors calcul</span><span class="layer-badge layer-badge--domain">Statique + RF</span></button>
+      <div class="mlegend-inline" id="mleg-contrib"></div>
 
-          <!-- Couche « Gamma citoyen (OpenRadiation) » (b-openrad) MUTÉE dans app.html le 2026-08-30
-               (décision Soleil) : destinée à radon.html plus tard (débit de dose γ/X ambiant, cohérent
-               avec le domaine radiologique de radon.html, pas avec la carte EM). Code MORT conservé pour
-               migration : lOpenRad / LAYERS.openrad / ACTIVE.openrad / LAYER_DOC_ANCHORS.openrad /
-               LEGEND_HTML.openrad / .on-openrad / loadOpenRad() / le handler tog('openrad') / i18n
-               openrad_* — tous intacts. Le fichier public/data/openradiation_gamma_corse.geojson reste
-               en place. Pour restaurer ici : décommenter le bouton ci-dessous. NB : b-openrad était la
-               seule couche du domaine « ionisant » → le chip de filtre « Ionisant » est aussi commenté
-               (cf. .domain-chips plus haut).
-          <button class="lbtn" id="b-openrad" data-domains="ionisant" title="Mesures citoyennes de débit de dose gamma/X ambiant (OpenRadiation, tubes Geiger, µSv/h). Gamma/X, PAS radon. Couche d'affichage indépendante — non injectée dans l'indice ni le calcul gamma. Indicatives, capteurs hétérogènes, non certifiées ; inclut des traces (densité ≠ nombre de sites)." onclick="tog('openrad','on-openrad',this)"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Gamma citoyen (OpenRadiation)<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
-          <div class="mlegend-inline" id="mleg-openrad"></div>
-          -->
-          <!-- TODO backlog couches : Communes radon niveau 3 overlay (GeoJSON geometries à fournir), MNT altitude overlay -->
-        </div>
-      </div>
+      <!-- Couche « Gamma citoyen (OpenRadiation) » (b-openrad) MUTÉE dans app.html le 2026-08-30
+           (décision Soleil) : destinée à radon.html plus tard (débit de dose γ/X ambiant, cohérent
+           avec le domaine radiologique de radon.html, pas avec la carte EM). Code MORT conservé pour
+           migration : lOpenRad / LAYERS.openrad / ACTIVE.openrad / LAYER_DOC_ANCHORS.openrad /
+           LEGEND_HTML.openrad / .on-openrad / loadOpenRad() / le handler tog('openrad') / i18n
+           openrad_* — tous intacts. Le fichier public/data/openradiation_gamma_corse.geojson reste
+           en place. Pour restaurer ici : décommenter le bouton ci-dessous. NB : b-openrad était la
+           seule couche du domaine « ionisant » → le chip de filtre « Ionisant » est aussi commenté
+           (cf. .domain-chips plus haut).
+      <button class="lbtn" id="b-openrad" data-domains="ionisant" title="Mesures citoyennes de débit de dose gamma/X ambiant (OpenRadiation, tubes Geiger, µSv/h). Gamma/X, PAS radon. Couche d'affichage indépendante — non injectée dans l'indice ni le calcul gamma. Indicatives, capteurs hétérogènes, non certifiées ; inclut des traces (densité ≠ nombre de sites)." onclick="tog('openrad','on-openrad',this)"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;vertical-align:middle;margin-right:2px"></span>Gamma citoyen (OpenRadiation)<span class="layer-badge layer-badge--hors">Hors calcul</span></button>
+      <div class="mlegend-inline" id="mleg-openrad"></div>
+      -->
+      <!-- TODO backlog couches : Communes radon niveau 3 overlay (GeoJSON geometries à fournir), MNT altitude overlay -->
     </div>
   </div>
 
@@ -5294,7 +5293,7 @@ const LEGEND_HTML={
   '<div class="leg-row"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;background:'+TDF_CLUSTER_COLOR+';border:1.5px solid rgba(255,255,255,.9);box-shadow:0 1px 3px rgba(0,0,0,.2);vertical-align:middle;margin-right:4px"><span style="width:6px;height:6px;background:white;display:block"></span></span><b style="color:'+TDF_CLUSTER_COLOR+'">Émetteur radio/TV majeur</b> (TDF), isolé — même teinte que sa grappe</div>'+
   '<div class="leg-row"><span style="display:inline-block;position:relative;width:14px;height:14px;vertical-align:middle;margin-right:4px"><span style="position:absolute;inset:0;background:'+TDF_CLUSTER_COLOR+';border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.35)"></span><span style="position:absolute;top:-2px;right:-2px;width:6px;height:6px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center"><span style="width:3px;height:3px;background:'+TDF_CLUSTER_COLOR+';display:block"></span></span></span>Grappe TDF — garde sa teinte et un badge blanc en coin, même groupée</div>'+
   '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:3px"><span id="leg-ant-sites">—</span> positions ANFR (<span id="leg-ant-gens">—</span>) — <span id="leg-ant-ops">—</span>. Date de mise à jour absente des données servies par Tellux (ANFR). <span id="leg-tdf-clause">—</span>, extraction du <span id="leg-tdf-date">—</span>.</div>'+
-  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px">Valeurs limites d’exposition : 28 à 61 V/m selon la fréquence (décret n° 2002-775) — voir la couche <b>« Mesures certifiées (ANFR/EXEM) »</b> (menu Contexte naturel → Repères et mesures externes).</div>'+
+  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px">Valeurs limites d’exposition : 28 à 61 V/m selon la fréquence (décret n° 2002-775) — voir la couche <b>« Mesures certifiées (ANFR/EXEM) »</b> (menu Repères et mesures).</div>'+
   '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px">Socle ANFR partiel : couverture quasi complète en Corse-du-Sud, d\'environ la moitié en Haute-Corse — comparaison à l\'export national ANFR de septembre 2026.</div>'+
   '<div class="leg-src">ANFR · TDF/Arcom/TVNT.net</div></div>'; },
   // Sous-bloc "MESURES CEM OFFICIELLES" retiré d'ici le 2026-09-04 (brief AQ) — faisait doublon
@@ -5496,7 +5495,7 @@ const LEGEND_HTML_EN={
   '<div class="leg-row"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;background:'+TDF_CLUSTER_COLOR+';border:1.5px solid rgba(255,255,255,.9);box-shadow:0 1px 3px rgba(0,0,0,.2);vertical-align:middle;margin-right:4px"><span style="width:6px;height:6px;background:white;display:block"></span></span><b style="color:'+TDF_CLUSTER_COLOR+'">Major radio/TV transmitter</b> (TDF), isolated — same colour as its cluster</div>'+
   '<div class="leg-row"><span style="display:inline-block;position:relative;width:14px;height:14px;vertical-align:middle;margin-right:4px"><span style="position:absolute;inset:0;background:'+TDF_CLUSTER_COLOR+';border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.35)"></span><span style="position:absolute;top:-2px;right:-2px;width:6px;height:6px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center"><span style="width:3px;height:3px;background:'+TDF_CLUSTER_COLOR+';display:block"></span></span></span>TDF cluster — keeps its colour and a white corner badge, even when clustered</div>'+
   '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:3px"><span id="leg-ant-sites">—</span> ANFR sites (<span id="leg-ant-gens">—</span>) — <span id="leg-ant-ops">—</span>. No update date in the data served by Tellux (ANFR). <span id="leg-tdf-clause" data-lang="en">—</span>, extracted on <span id="leg-tdf-date">—</span>.</div>'+
-  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px">Exposure limit values: 28 to 61 V/m depending on frequency (Decree No. 2002-775) — see the <b>"Certified measurements (ANFR/EXEM)"</b> layer (Natural context menu → External references and measurements).</div>'+
+  '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px">Exposure limit values: 28 to 61 V/m depending on frequency (Decree No. 2002-775) — see the <b>"Certified measurements (ANFR/EXEM)"</b> layer (References and measurements menu).</div>'+
   '<div class="leg-row" style="display:block;font-size:9px;color:var(--tx3);margin-top:2px">Partial ANFR base: coverage is near-complete in Corse-du-Sud and roughly half in Haute-Corse — compared against the September 2026 national ANFR export.</div>'+
   '<div class="leg-src">ANFR · TDF/Arcom/TVNT.net</div></div>'; },
   emag:'<div class="leg-block"><b class="leg-title" style="font-size:11px">Regional magnetic background</b><div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:2px">Continuous scale from &#x2212;200 to +200 nT — the colours are those of the image served by NOAA; Tellux produces none of them. Deep basement, unrelated to human activity (NOAA EMAG2v3).</div></div>',
@@ -16689,8 +16688,10 @@ function capCleanup(){
 ["cat_modele",".accordion-cat-header > span:nth-child(2)@0","","Modèle EM","Mudellu EM","EM model"],
 ["cat_anthropique",".accordion-cat-header > span:nth-child(2)@1","","Sources anthropiques","Fonti antropiche","Anthropogenic sources"],
 ["cat_naturel",".accordion-cat-header > span:nth-child(2)@2","","Contexte naturel","Cuntestu naturale","Natural context"],
-["subgroup_a",".subgroup-header@0","","Substrat et paysage","Sustratu è paisaghju","Substrate and landscape"],
-["subgroup_b",".subgroup-header@1","","Repères et mesures externes","Puntelli è misure esterne","External references and measurements"],
+// subgroup_a / subgroup_b retirés le 2026-09-28 : plus de sous-groupes dans « Contexte naturel ». Le
+// nouveau groupe de premier niveau « Repères et mesures » a sa ligne cat_reperes (colonne corse vide :
+// libellé source nouveau, repli français en attendant un locuteur natif).
+["cat_reperes",".accordion-cat-header > span:nth-child(2)@3","","Repères et mesures","","References and measurements"],
 // subgroup_c (« Mesures citoyennes », .subgroup-header@2) retiré le 2026-08-30 — sous-sous-groupe dissous.
 ["lyr_hot","#b-hot","","Champ magnétique composite (nT)","Campu magneticu cumpostu (nT)","Composite magnetic field (nT)"],
 // lyr_hot_tt (2026-09-05, brief BF) : FR étendue d'une clause d'exclusion (cf. commentaire au
