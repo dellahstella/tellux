@@ -13958,8 +13958,11 @@ if(typeof loadTDFEmitters==='function'){
   });
 }
 if(typeof loadForetDenseGrid==='function'){
+  // Classe « contexte » et plus de déclenchement au démarrage depuis le 2026-09-28 : depuis #1640, aucune valeur
+  // affichée ne dépend de l'atténuation par la forêt. Le fichier (~2 Mo) n'est plus chargé qu'au premier affichage
+  // de la couche Forêt dense (tog), qui ne le demande qu'une fois. Dette privée FORET-DENSE-CHARGEMENT-BOOT-SANS-USAGE-001.
   enregistrerReprise('foretdense', repriseForetDense, {
-    classe: 'critique',
+    classe: 'contexte',
     verifie: () => Array.isArray(FORET_DENSE_PARTS) && FORET_DENSE_PARTS.length > 0
   });
 }
@@ -14112,7 +14115,7 @@ map.on('zoomend',function(){ _syncBTZoom(false); });
 // forêt dense ci-dessus, cf. _syncForetOuverteZoom/_syncLandeMaquisZoom.
 map.on('zoomend',function(){ _syncForetOuverteZoom(false); });
 map.on('zoomend',function(){ _syncLandeMaquisZoom(false); });
-setTimeout(()=>Promise.all([declenche('ant','boot').then(function(){if(ACTIVE.ant)lAnt.addTo(map);}),declenche('anfr','boot'),loadDB(),declenche('radon','boot'),declenche('tdf','boot'),declenche('postes','boot'),declenche('eoliennes','boot'),declenche('sites','boot'),declenche('sols','boot'),declenche('foretdense','boot'),declenche('cert','boot')]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k). ant:true au boot (2026-09-02) : lAnt.addTo(map) conditionné à ACTIVE.ant, après la première tentative — une réussite plus tardive de la reprise 'ant' dessine dans lAnt, déjà sur la carte. showLegend('ant',true) essayé ici le 2026-09-17 (aux côtés de l'essai ant:true, cf. commentaire à ACTIVE) puis retiré le jour même avec lui — sans objet propre sous ant:false. Mesures certifiées : rendu et lCert.addTo(map) dans repriseMesuresCertifiees() (lot contexte, 2026-09-10). loadHTADataOnly() RETIRÉ de ce lot (2026-09-04, brief AF lot B) — démarre désormais immédiatement, cf. commentaire plus haut.
+setTimeout(()=>Promise.all([declenche('ant','boot').then(function(){if(ACTIVE.ant)lAnt.addTo(map);}),declenche('anfr','boot'),loadDB(),declenche('radon','boot'),declenche('tdf','boot'),declenche('postes','boot'),declenche('eoliennes','boot'),declenche('sites','boot'),declenche('sols','boot'),declenche('cert','boot')]),1500); // Décalé — après rendu complet de la carte (calibrateRF charge ANFR + dérive k). ant:true au boot (2026-09-02) : lAnt.addTo(map) conditionné à ACTIVE.ant, après la première tentative — une réussite plus tardive de la reprise 'ant' dessine dans lAnt, déjà sur la carte. showLegend('ant',true) essayé ici le 2026-09-17 (aux côtés de l'essai ant:true, cf. commentaire à ACTIVE) puis retiré le jour même avec lui — sans objet propre sous ant:false. Mesures certifiées : rendu et lCert.addTo(map) dans repriseMesuresCertifiees() (lot contexte, 2026-09-10). loadHTADataOnly() RETIRÉ de ce lot (2026-09-04, brief AF lot B) — démarre désormais immédiatement, cf. commentaire plus haut. // foretdense retiré du démarrage le 2026-09-28 : chargé au premier affichage de la couche (tog), cf. enregistrerReprise('foretdense')
 setTimeout(loadMeteo,4000);
 setTimeout(loadAQU,4500); // INTERMAGNET DUR/EBR/CLF (nom loadAQU conservé, cf. commentaire fonction) — correction externe réelle niveau 1
 setTimeout(loadDst,5500); // Dst Kyoto via NOAA — correction externe niveau 2 (Sprint astro 2026-05-25)
