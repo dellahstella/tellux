@@ -717,7 +717,7 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    visuel depuis le debut (pas une regression recente, verifie git blame). Rejoint le groupe
    partage ci-dessus plutot qu'une couleur dediee, coherent avec le fait qu'aucune des 4 autres
    couches de ce groupe n'a de teinte individuelle liee a son icone. */
-.lbtn.on-emag,.lbtn.on-prod,.lbtn.on-crustal,.lbtn.on-foretdense,.lbtn.on-postes,.lbtn.on-foretouverte,.lbtn.on-landemaquis,.lbtn.on-fmtv{background:var(--tx-brume);color:var(--tx-maquis);border-color:var(--tx-maquis);}
+.lbtn.on-emag,.lbtn.on-prod,.lbtn.on-crustal,.lbtn.on-foretdense,.lbtn.on-relief,.lbtn.on-postes,.lbtn.on-foretouverte,.lbtn.on-landemaquis,.lbtn.on-fmtv{background:var(--tx-brume);color:var(--tx-maquis);border-color:var(--tx-maquis);}
 .lbtn.on-pmr,.lbtn.on-fh{background:var(--tx-brume);color:var(--tx-mica);border-color:var(--tx-mica);}
 .layers{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;}
 .lbtn{font-size:10px;padding:3px 7px;border-radius:14px;border:1px solid var(--border);background:var(--bg);color:var(--ardoise-clair);cursor:pointer;display:inline-flex;align-items:center;gap:3px;transition:all .15s;white-space:nowrap;}
@@ -2558,6 +2558,11 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            buildForetDenseLayer()/lForetDense plus bas dans ce fichier. -->
       <button class="lbtn" id="b-foretdense" data-domains="rf" title="BD Forêt V2 IGN — forêt fermée à essence haute (chênes, hêtre, châtaignier, pins laricio/maritime, sapin…), hors classes de feuillus indifférenciés qui recouvrent surtout le maquis-forêt corse (~28 % de la Corse). Couche de contexte. Jusqu'au 28/09/2026, l'activer ajoutait l'atténuation RF de la canopée (modèle ITU-R P.833-6) à la valeur du bloc Radiofréquence ; ce bloc n'affiche plus de valeur calculée, et la couche ne modifie plus aucune valeur affichée." onclick="tog('foretdense','on-foretdense',this)"><span class="sq" style="background:#3a7d5c;border:1px solid #1b5e3f"></span>Forêt dense<span class="layer-badge layer-badge--context">Contexte</span><span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-foretdense"></div>
+      <!-- Couche « Relief » (b-relief) ajoutée le 2026-09-28 (idée de Soleil : des couches de substrat et de paysage dans
+           « Contexte naturel »). Tuiles d'ombrage de la Géoplateforme IGN, sans clé, même service que le fond Plan IGN.
+           Hors calcul, par construction : aucun code ne lit ces tuiles. -->
+      <button class="lbtn" id="b-relief" data-domains="rf" title="Relief ombré — IGN, calculé sur le modèle numérique de terrain RGE ALTI. Couche de lecture du paysage, hors calcul. Le relief peut masquer une antenne ; le calcul de Tellux n'en tient pas compte, et la couche « Distance aux antennes mobiles » donne une distance à vol d'oiseau." onclick="tog('relief','on-relief',this)"><span class="sq" style="background:#8c8a86;border:1px solid #5d5b57"></span>Relief<span class="layer-badge layer-badge--context">Contexte</span></button>
+      <div class="mlegend-inline" id="mleg-relief"></div>
       <!-- Couches « Forêt ouverte » et « Lande/maquis » (b-foretouverte, b-landemaquis) ajoutées
            le 2026-09-02 (brief F, couches contextuelles hors calcul). Même source que Forêt dense
            (BD Forêt V2 IGN, cf. scripts/build_foret_ouverte_lande_corse_geojson.py) mais CODE_TFV
@@ -3839,6 +3844,7 @@ var JS_STRINGS_EN = {
   mleg_sub_hotrf: "Distance to the nearest mobile-phone mast (ANFR register). Declared data, not an exposure, not a measurement.",
   mleg_sub_elf: "Tellux model, 50 Hz electrical grid only — no substrate, no total geomagnetic field. Shows nothing below 300 nT (IARC class 2B reference point — a display choice, not a risk threshold).",
   mleg_sub_emag: "Deep Corsican basement anomalies (NOAA EMAG2v3, display) — the internal grid actually used (distinct, computed permanently as the badge indicates) is not part of any publicly displayed score.",
+  mleg_sub_relief: "Shaded relief (IGN, RGE ALTI), outside the calculation. Terrain can hide an antenna; the distance to masts is given as the crow flies.",
   mleg_sub_foretdense: "Tall-canopy species (IGN BD Forêt V2), excluding scrub-forest mosaic — context layer; since 2026-09-28 it no longer changes any displayed value.",
   mleg_sub_crustal: "Reference magnetic anomalies, global and Corsican — documentary comparison, outside the calculation.",
   mleg_sub_cert: "239 certified measurement records (2002–2026, 117 distinct sites) — 142 sheets from a separate dataset calibrate the RF model (21 until 2026-09-28).",
@@ -4846,7 +4852,10 @@ const CALC_GROUP=['hot','hotrf','elf'];
 // SCISSION 2026-08-29 (brief « exécution groupée », item C) : con → cert (lCert, fiches
 // certifiées ANFR/EXEM) + contrib (lCon, contributions citoyennes). Deux boutons, deux toggles.
 const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,elf:lElf,cert:lCert,interp:lHotMesures,fmtv:lFMTV,pmr:lPMR,fh:lFH,contrib:lCon,foretdense:lForetDense,foretouverte:lForetOuverte,landemaquis:lLandeMaquis,crustal:lCrustal,openrad:lOpenRad};
-const WMS={hyd:wmsHyd,emag:wmsEmag};
+// Relief ombré IGN (2026-09-28) : WMTS Géoplateforme, sans clé ; ombrage gdal du RGE ALTI (hillshade alt 80, az 315, z 2,
+// d'après les métadonnées du service). Tuiles natives jusqu'au zoom 17, rien sous le zoom 6.
+const wmtsRelief=L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=IGNF_ELEVATION.ELEVATIONGRIDCOVERAGE.SHADOW&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',{opacity:0.45,minZoom:6,maxNativeZoom:17,zIndex:2,attribution:'Relief : IGN, RGE ALTI'});
+const WMS={hyd:wmsHyd,emag:wmsEmag,relief:wmtsRelief};
 // hot:false/hotrf:true — modèle RF activé par défaut à la place du champ magnétique
 // composite (arbitrage Soleil 2026-08-23). Swap symétrique avec la déclaration lHot/lHotRF
 // ci-dessous (.addTo(map) déplacé) + les classes on-hot/on-hot-rf des boutons b-hot/b-hot-rf
@@ -4899,7 +4908,7 @@ const WMS={hyd:wmsHyd,emag:wmsEmag};
 //    ant:false du 2026-09-12 (LEGEND_ACTIVE_CORE ne contenait plus 'ant' à ce moment-là),
 //    resterait dormant pour la même raison si rien n'était fait — corrigé et CONSERVÉ malgré le
 //    retrait de l'essai (cf. commentaire à rafraichirLibellesRF()).
-const ACTIVE={bt:false,ant:false,hyd:false,emag:false,hot:false,hotrf:true,elf:false,res:false,prod:false,cert:false,interp:false,fmtv:false,pmr:false,fh:false,contrib:false,crustal:false,openrad:false};
+const ACTIVE={bt:false,ant:false,hyd:false,emag:false,relief:false,hot:false,hotrf:true,elf:false,res:false,prod:false,cert:false,interp:false,fmtv:false,pmr:false,fh:false,contrib:false,crustal:false,openrad:false};
 
 // 'con' (scindé depuis en 'cert'+'contrib', 2026-08-29 item C) et 'emag' promues en Zone 1
 // "core" le 2026-08-27 (brief "Panneau '?' sélectif",
@@ -5057,6 +5066,7 @@ const LAYER_DOC_ANCHORS={
   hotrf:      [{href:'/cadre-scientifique.html#radiofrequences'}],
   emag:       [{href:'/cadre-scientifique.html#magnetique-statique'}],
   foretdense: [{href:'/cadre-scientifique.html#radiofrequences'}],
+  relief:     [{href:'/cadre-scientifique.html#radiofrequences'}],
   crustal:    [{href:'/geomagnetisme.html'}],
   cert:       [{href:'/methode-limites-transparence.html#sources-rf',labelKey:'docref_con_calib',labelFr:'Rôle dans la calibration RF'}],
   contrib:    [{href:'/methode-limites-transparence.html#statuts-epistemiques',labelKey:'docref_con_status',labelFr:'Statut des contributions citoyennes'}],
@@ -5126,6 +5136,7 @@ const LAYER_SUBTITLE_FR={
   // (app.html ~L7829-7853). Dire "au clic" sans cette nuance laissait croire que le score reflète
   // l'atténuation — faux dans les deux cas. Point non résolu ici, dette distincte : voir
   // RF-FOREST-TERRAIN-PLACEHOLDER-001 (RF_CALIB_K aussi dérivé sans végétation, même famille).
+  relief:'Relief ombré (IGN, RGE ALTI), hors calcul. Le relief peut masquer une antenne ; la distance aux antennes est donnée à vol d’oiseau.',
   foretdense:'Essences hautes (BD Forêt V2 IGN), hors maquis-forêt — couche de contexte ; depuis le 28/09/2026, elle ne modifie plus aucune valeur affichée.',
   // foretouverte/landemaquis (brief F, 2026-09-02) : « hors calcul » explicite ici, même formule
   // que crustal/contrib ci-dessous — pas seulement un badge, l'infobulle mobile le dit aussi.
@@ -16798,6 +16809,9 @@ function capCleanup(){
 // 2026-09-13) ; radon.html n'a pas de mécanisme CO du tout (data-i18n-key/EN_STRINGS, FR+EN
 // seulement) — rien de réel n'est donc perdu dans ce déplacement sur ce point précis.
 ["lyr_foretdense","#b-foretdense","","Forêt dense","Fureste densa","Dense forest"],
+["lyr_relief","#b-relief","","Relief","","Relief"],
+["lyr_relief_tt","#b-relief","title","Relief ombré — IGN, calculé sur le modèle numérique de terrain RGE ALTI. Couche de lecture du paysage, hors calcul. Le relief peut masquer une antenne ; le calcul de Tellux n'en tient pas compte, et la couche « Distance aux antennes mobiles » donne une distance à vol d'oiseau.","","Shaded relief — IGN, computed from the RGE ALTI digital terrain model. A landscape-reading layer, outside the calculation. Terrain can hide an antenna; Tellux's calculation does not account for it, and the “Distance to mobile masts” layer gives a straight-line distance."],
+["ctx_relief","#b-relief .layer-badge--context","","Contexte","","Context"],
 ["lyr_foretdense_tt","#b-foretdense","title","BD Forêt V2 IGN — forêt fermée à essence haute (chênes, hêtre, châtaignier, pins laricio/maritime, sapin…), hors classes de feuillus indifférenciés qui recouvrent surtout le maquis-forêt corse (~28 % de la Corse). Couche de contexte. Jusqu'au 28/09/2026, l'activer ajoutait l'atténuation RF de la canopée (modèle ITU-R P.833-6) à la valeur du bloc Radiofréquence ; ce bloc n'affiche plus de valeur calculée, et la couche ne modifie plus aucune valeur affichée.","","IGN BD Forêt V2 — closed forest of tall species (oaks, beech, chestnut, laricio/maritime pine, fir…), excluding undifferentiated broadleaf classes that mostly map to Corsican maquis-forest (~28% of Corsica). Context layer. Until 2026-09-28, enabling it added canopy RF attenuation (ITU-R P.833-6 model) to the value in the Radiofrequency block; that block no longer shows a computed value, and the layer no longer changes any displayed value."],
 ["lyr_foretouverte","#b-foretouverte","","Forêt ouverte (2016-2017)","Fureste aperta (2016-2017)","Open forest (2016-2017)"],
 ["lyr_foretouverte_tt","#b-foretouverte","title","BD Forêt V2 IGN — forêt ouverte (couvert arboré 10-40 %, feuillus FO1/conifères FO2/mélange FO3 — codes nomenclature IGN §4.1.2). Couche de contexte, millésimes 2016 (2B) / 2017 (2A) — incendies possibles depuis, ne pas lire comme un état actuel. N'entre dans AUCUN calcul directement (contrairement à Forêt dense) ; une seule couche de végétation affichée à la fois — activer ce bouton désactive Forêt dense s'il était actif, ce qui retire alors l'atténuation RF du prochain calcul au clic.","BD Fureste V2 IGN — fureste aperta (cupertura arburata 10-40 %, latifogli FO1/cunifere FO2/mischju FO3 — codici nomenclatura IGN §4.1.2). Stratu di cuntestu, millesimi 2016 (2B) / 2017 (2A) — pussibuli scindi dapoi, ùn hè da leghje micca cum'è un statu attuale. Ùn entre in NISUN calculu (à u cuntrariu di a Fureste densa) ; una sola stratu di vegetazione affissata à u listessu tempu.","IGN BD Forêt V2 — open forest (canopy cover 10-40%, broadleaf FO1/conifer FO2/mixed FO3 — IGN nomenclature codes §4.1.2). Context layer, vintages 2016 (2B) / 2017 (2A) — wildfires possible since; not to be read as a current state. Enters NO calculation directly (unlike Dense forest); only one vegetation layer shown at a time — enabling this button disables Dense forest if it was active, which then removes RF attenuation from the next on-click calculation."],
