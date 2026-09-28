@@ -35,7 +35,7 @@ Sources publiques intégrées :
 - **Radiofréquences** : ANFR (antennes mobiles ; supports FM/TV, PMR et faisceaux hertziens), TDF, l'Arcom et le forum TVNT.net (émetteurs de télévision, liste partielle, puissances estimées), mesures certifiées publiées par l'ANFR sur CartoRadio
 - **Géologie** : BRGM (carte géologique au 1/50 000, parmi les sources de la susceptibilité magnétique du substrat affichée au clic ; géologie, cavités et failles sur `radon.html`)
 - **Altitude** : IGN RGE Alti (Géoplateforme)
-- **Couvert forestier** : BD Forêt V2 (IGN), couche « Forêt dense » (une fois activée, elle atténue par la végétation la valeur radiofréquence du point cliqué, sans modifier la carte de chaleur ni l'Indice Tellux)
+- **Couvert forestier** : BD Forêt V2 (IGN), couche « Forêt dense » (couche de contexte ; jusqu'au 28/09/2026, elle atténuait par la végétation la valeur radiofréquence calculée du point cliqué, que le popup n'affiche plus)
 - **Radon et rayonnement gamma** : zonage réglementaire du potentiel radon de l'ASNR (arrêté du 27 juin 2018), fond gamma terrestre du JRC
 - **Qualité de l'air** : Qualitair Corse (particules fines PM2,5, moyenne annuelle modélisée 2024, sur `radon.html`)
 - **Établissements sensibles** : annuaire de l'Éducation nationale, FINESS (DREES) et OpenStreetMap pour la petite enfance (sur `mairies.html`)

@@ -92,7 +92,7 @@ async function main() {
     const s1 = extractSnippets(r1.html);
     console.log('État LOADING — elfState=' + r1.elfState + ' | score="' + s1.scoreHeader + '" | elf="' + s1.elfBlock.slice(0, 60) + '..."');
     assert(r1.elfState === 'loading', 'LOADING → elfState==loading');
-    assert(!/\d\/5/.test(s1.scoreHeader), 'LOADING → aucun chiffre de score affiché');
+    assert(!/\d\/4/.test(s1.scoreHeader), 'LOADING → aucun chiffre de score affiché');
     assert(!/\d+\s*nT/.test(s1.elfBlock), 'LOADING → aucune valeur nT affichée dans le bloc ELF');
     assert(s1.scoreHeader.toLowerCase().includes('préparation') && s1.elfBlock.includes('Préparation du calcul'), 'LOADING → texte d\'attente présent (score + bloc ELF)');
     assert(!/[+-]?\d+\s*nT/.test(s1.deltaLine) && s1.deltaLine.includes('pas encore disponible'), 'LOADING → ligne Δ montre l\'attente, aucun chiffre (trouvaille revue PR #1243, corrigée ici)');
@@ -103,7 +103,7 @@ async function main() {
     const s2 = extractSnippets(r2.html);
     console.log('État FAILED  — elfState=' + r2.elfState + ' | score="' + s2.scoreHeader + '" | elf="' + s2.elfBlock.slice(0, 60) + '..."');
     assert(r2.elfState === 'failed', 'FAILED → elfState==failed');
-    assert(/\d\/5/.test(s2.scoreHeader) && (s2.scoreHeader.includes('≈') || s2.scoreHeader.includes('estimation')), 'FAILED → score affiché ET marqué ≈/estimation');
+    assert(/\d\/4/.test(s2.scoreHeader) && (s2.scoreHeader.includes('≈') || s2.scoreHeader.includes('estimation')), 'FAILED → score affiché ET marqué ≈/estimation');
     assert(/\d+\s*nT/.test(s2.elfBlock) && (s2.elfBlock.includes('≈') || s2.elfBlock.includes('estimation')), 'FAILED → bloc ELF affiché ET marqué ≈/estimation');
     assert(/[+-]?\d+\s*nT/.test(s2.deltaLine) && (s2.deltaLine.includes('≈') || s2.deltaLine.includes('estimation')), 'FAILED → ligne Δ affichée ET marquée ≈/estimation');
 
@@ -116,7 +116,7 @@ async function main() {
     const s3 = extractSnippets(r3.html);
     console.log('État READY   — elfState=' + r3.elfState + ' | score="' + s3.scoreHeader + '" | elf="' + s3.elfBlock.slice(0, 60) + '..."');
     assert(r3.elfState === 'ready', 'READY → elfState==ready');
-    assert(/\d\/5/.test(s3.scoreHeader) && !s3.scoreHeader.includes('estimation'), 'READY → score affiché SANS marquage');
+    assert(/\d\/4/.test(s3.scoreHeader) && !s3.scoreHeader.includes('estimation'), 'READY → score affiché SANS marquage');
     assert(/\d+\s*nT/.test(s3.elfBlock) && !s3.elfBlock.includes('estimation'), 'READY → bloc ELF affiché SANS marquage');
     assert(/[+-]?\d+\s*nT/.test(s3.deltaLine) && !s3.deltaLine.includes('estimation'), 'READY → ligne Δ affichée SANS marquage');
 
@@ -125,7 +125,7 @@ async function main() {
     //     asynchrone indépendamment de SEGMENT_GRID, une variation de valeur est normale). ───
     for (const [label, r] of [['LOADING', r1], ['FAILED', r2], ['READY', r3]]) {
       const hasStatic = /Champ statique géomagnétique<\/div>[\s\S]{0,60}?\d/.test(r.html);
-      const hasRF = /Radiofréquence[\s\S]{0,200}?[\d.]+\s*.{0,2}W\/m/.test(r.html);
+      const hasRF = /Radiofréquence[\s\S]{0,400}?(Support de téléphonie mobile le plus proche|Supports de téléphonie mobile non chargés)/.test(r.html); // bloc RF depuis le 2026-09-28 : distance au support, plus de valeur du modèle
       const hasSubstrat = /Substrat (à forte|à susceptibilité|neutre|standard)/.test(r.html);
       assert(hasStatic && hasRF && hasSubstrat, label + ' → statique/RF/substrat tous présents (inchangés par elfState)');
     }

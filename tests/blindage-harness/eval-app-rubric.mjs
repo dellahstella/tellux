@@ -210,13 +210,13 @@ async function probeIndiceDual(page) {
 
   // Cible le bloc réel du score (phHeaderHTML, app.html) plutôt qu'un texte
   // générique — pas de repli sur `.leaflet-popup-content` seul : sans chiffre
-  // `/5` dedans, ce n'est pas un score, même si un popup est bien ouvert.
+  // `/4` dedans (`/5` avant le 2026-09-28), ce n'est pas un score, même si un popup est bien ouvert.
   try {
     const scoreEl = page.locator('.leaflet-popup-content div[style*="font-weight:700"]').first();
     const visible = await scoreEl.isVisible({ timeout: 800 }).catch(() => false);
     if (!visible) return { matched: null };
     const txt = await scoreEl.textContent().catch(() => '');
-    const scoreVisible = /\d\s*\/\s*5/.test(txt || '');
+    const scoreVisible = /\d\s*\/\s*4/.test(txt || ''); // Indice ELF seul, 0 à 4, depuis le 2026-09-28
     return { matched: scoreVisible ? 'perturbation_score' : null, score_text: txt || null };
   } catch (_e) {
     return { matched: null };
@@ -526,7 +526,7 @@ async function main() {
     if (!filtreCoter?.ok) fails.push({ check: 'filtre_cotier', detail: `filtre offshore : method=${filtreCoter?.method}, ok=${filtreCoter?.ok}` });
 
     indice = await probeIndiceDual(page);
-    if (!indice?.matched) fails.push({ check: 'indice_dual', detail: 'Indice Tellux (score Perturbation X/5) non visible dans le popup.' });
+    if (!indice?.matched) fails.push({ check: 'indice_dual', detail: 'Indice Tellux (score Perturbation X/4) non visible dans le popup.' });
 
     drillDown = await probeDrillDown(page);
     if (!drillDown?.present) fails.push({ check: 'drill_down', detail: 'Mécanisme drill-down (popup/modale/panel) non détecté.' });

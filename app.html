@@ -2513,7 +2513,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            « Repères et mesures externes » devient le groupe de premier niveau « Repères et mesures »,
            juste en dessous (mesures certifiées, interpolation, anomalies de référence, contributions :
            ce ne sont pas du contexte naturel). -->
-      <p class="subgroup-text" title="Le fond magnétique régional affiché (NOAA EMAG2v3) n'est pas ce qui pèse sur le calcul : une grille interne distincte reste calculée en permanence — comme l'indique le badge — mais son résultat n'entre dans aucun score public affiché. Le bouton n'affiche/masque que la couche visuelle, il ne pilote pas cette entrée. Pour la forêt dense, activer le bouton module la valeur du bloc Radiofréquence au clic carte ; il ne modifie ni la heatmap ni le score affiché en haut du popup.">Fond magnétique régional : grille interne calculée en permanence (comme l'indique le badge), non intégrée au score public. Forêt dense : le bouton module la valeur du bloc Radiofréquence au clic ; ni la heatmap ni le score n'en dépendent.</p>
+      <p class="subgroup-text" title="Le fond magnétique régional affiché (NOAA EMAG2v3) n'est pas ce qui pèse sur le calcul : une grille interne distincte reste calculée en permanence — comme l'indique le badge — mais son résultat n'entre dans aucun score public affiché. Le bouton n'affiche/masque que la couche visuelle, il ne pilote pas cette entrée. La forêt dense est une couche de contexte : depuis le 28/09/2026, elle ne modifie plus aucune valeur affichée.">Fond magnétique régional : grille interne calculée en permanence (comme l'indique le badge), non intégrée au score public. Forêt dense : couche de contexte, sans effet sur les valeurs affichées.</p>
       <!-- Couche « Géologie BRGM » retirée de la carte publique le 2026-08-20 (décision Soleil :
            chaque couche vit dans l'app qui correspond à son domaine causal). Déjà présente sur
            radon.html avant ce retrait ; app.html n'en a donc plus de copie. Cette couche était une
@@ -2556,7 +2556,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            foret_dense_corse.geojson (BD Forêt V2, #1038) alimentait calcVegetationAttenuation()
            (RF, clic carte) sans aucune couche visible correspondante. Cf.
            buildForetDenseLayer()/lForetDense plus bas dans ce fichier. -->
-      <button class="lbtn" id="b-foretdense" data-domains="rf" title="BD Forêt V2 IGN — forêt fermée à essence haute (chênes, hêtre, châtaignier, pins laricio/maritime, sapin…), hors classes de feuillus indifférenciés qui recouvrent surtout le maquis-forêt corse (~28 % de la Corse). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6). Ce calque module la valeur du bloc Radiofréquence. Il ne modifie ni la heatmap, ni le score affiché en haut du popup." onclick="tog('foretdense','on-foretdense',this)"><span class="sq" style="background:#3a7d5c;border:1px solid #1b5e3f"></span>Forêt dense (atténuation RF)<span class="layer-badge layer-badge--calc">Module le calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
+      <button class="lbtn" id="b-foretdense" data-domains="rf" title="BD Forêt V2 IGN — forêt fermée à essence haute (chênes, hêtre, châtaignier, pins laricio/maritime, sapin…), hors classes de feuillus indifférenciés qui recouvrent surtout le maquis-forêt corse (~28 % de la Corse). Couche de contexte. Jusqu'au 28/09/2026, l'activer ajoutait l'atténuation RF de la canopée (modèle ITU-R P.833-6) à la valeur du bloc Radiofréquence ; ce bloc n'affiche plus de valeur calculée, et la couche ne modifie plus aucune valeur affichée." onclick="tog('foretdense','on-foretdense',this)"><span class="sq" style="background:#3a7d5c;border:1px solid #1b5e3f"></span>Forêt dense<span class="layer-badge layer-badge--context">Contexte</span><span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-foretdense"></div>
       <!-- Couches « Forêt ouverte » et « Lande/maquis » (b-foretouverte, b-landemaquis) ajoutées
            le 2026-09-02 (brief F, couches contextuelles hors calcul). Même source que Forêt dense
@@ -2659,7 +2659,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
       <!-- Couche « Interpolation des mesures » (b-interp), LOT D, BRIEF_CODE_TEMPS2_CD_MESURES_INTERPOLATION_2026-09-20 :
            surface dérivée des SITES MESURÉS (buildHotMesures, jamais du modèle RF), restreinte
            aux zones qui remplissent le critère de couverture (2026-09-28) — cf. commentaire à
-           INTERP_ZONES. Hors calcul : Indice Tellux intouchés. -->
+           INTERP_ZONES. Hors calcul : Indice Tellux intouché. -->
       <button class="lbtn" id="b-interp" data-domains="rf" title="Interpolation d'une surface à partir des sites mesurés (jamais du modèle), restreinte aux 5 zones dont au moins la moitié du disque de 5 km est à 2,5 km ou moins d'un site mesuré : Ajaccio (42 sites), Bastia (20), L'Île-Rousse – Monticello (9), Porto-Vecchio (5), Bonifacio (5). Plafond interne de 2,5 km : arrêt net au bord, sans dégradé — une cellule sans site assez proche reste vide, y compris à l'intérieur d'une zone. Sites sources toujours visibles (points sombres)." onclick="tog('interp','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Interpolation des mesures (5 zones)<span class="layer-badge layer-badge--hors">Hors calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-interp"></div>
       <!-- Couche « Sites U/Th à mesurer » retirée de la carte publique le 2026-08-19 (décision
@@ -3448,7 +3448,7 @@ var JS_STRINGS_EN = {
   bt_line_aerien: "Overhead BT line · EDF SEI",
   bt_line_souterrain: "Underground BT line · EDF SEI",
   legende_generic: "Legend",
-  foretdense_zoom_hint: "Dense forest — layer shown from zoom {z} (too extensive at small scale); the calculation stays active.",
+  foretdense_zoom_hint: "Dense forest — layer shown from zoom {z} (too extensive at small scale).",
   foretouverte_zoom_hint: "Open forest — layer shown from zoom 10 (too extensive at small scale); context layer, outside the calculation.",
   landemaquis_zoom_hint: "Heathland / scrub — layer shown from zoom 10 (too extensive at small scale); context layer, outside the calculation.",
   cert_toast_prefix: "Certified measurements — ",
@@ -3515,7 +3515,7 @@ var JS_STRINGS_EN = {
   // 2026-09-03) : anLabel retirée (score Naturel plus affiché) ; itVerdict devient un renvoi unique
   // non branché (Option A, cf. commentaire au calcul, app.html) — les 6 anciennes branches
   // catégoriques n'ont plus d'équivalent. Aucune destination de portage identifiée pour ces 9 clés.
-  it_verdict_renvoi: "Detailed values below (ELF, RF) and in the technical detail “?”.",
+  it_verdict_renvoi: "Electrical-grid (ELF) score: details below and in the technical detail “?”. Radiofrequency does not feed it; it is shown further down.",
   sol_fort: "Substrate with high magnetic susceptibility (biotite granite)",
   sol_modere: "Substrate with moderate susceptibility",
   sol_neutre: "Neutral substrate (limestone/ophiolite)",
@@ -3535,8 +3535,6 @@ var JS_STRINGS_EN = {
   detail_crustal_label: "large-scale crustal anomaly, EMAG2v3 (NOAA/NCEI, extracted 2026-09-19) — exploratory reference point, not integrated into the score. Value at the product's reference altitude (4 km), not continued to ground.",
   detail_local_label: "local geological susceptibility, same value as susc_nT above — feeds axesTotal internally, unscored in this popup since ADR-064",
   detail_human_label: "total anthropic ELF field, same value shown above — feeds the Disturbance score",
-  detail_rf_label: "weighted transmitter density — relative value, no unit; computed separately from the value above (never forest-attenuated) — no longer feeds the displayed score since 2026-09-28",
-  detail_rf_label_noncal: "weighted transmitter density — scale factor NOT adjusted at the moment (waiting for its data); relative value, no unit; computed separately from the value above (never forest-attenuated) — no longer feeds the displayed score since 2026-09-28",
   detail_alt_label: "Altitude (IGN RGE Alti, ~1 m resolution)",
   mp_igrf_ref_msg: "Expected Tellux composite value here (IGRF-14 + crustal anomaly [EMAG2v3, extracted 2026-09-19] + external correction + ELF disturbance) : ",
   mp_igrf_delta_msg: " Difference from your measurement : ",
@@ -3562,11 +3560,13 @@ var JS_STRINGS_EN = {
   v2_conf_statique: "Confidence: medium — IGRF-14 + EMAG2v3 (extracted 2026-09-19, reference altitude 4 km, not continued to ground), ±100 nT (IGRF-14 precision)",
   v2_title_elf: "Anthropogenic ELF 50 Hz",
   v2_conf_elf: "Confidence: medium — HTA Biot-Savart ±50% + low-voltage flat-rate tiers",
-  v2_title_rf: "Radiofrequency (mobile phones, TDF TV, microwave links — FM not modelled)",
-  v2_conf_rf: "Confidence: low — propagation model (ANFR mobile-phone antennas, TDF television transmitters, microwave links; FM radio is not modelled)",
+  v2_title_rf: "Radiofrequency — mobile telephony",
+  rf_supports_indispo: "Mobile-phone masts not loaded yet.",
+  rf_support_proche: "Nearest mobile-phone mast",
+  rf_bandes_indispo: "Measurement references by distance unavailable at the moment.",
+  rf_limite_note: "Regulatory limit values: 28 to 61 V/m depending on frequency (Decree No. 2002-775).",
   tdf_par_tv: "kW ERP, television only",
   tdf_fm_non_modelisee: "FM radio not modelled",
-  rf_icnirp_note: "No unit — this value is not comparable to the ICNIRP reference point (≈ 4,500,000 µW/m²), which applies to a measured power density.",
   v2_title_ionisant: "Ionizing domain",
   v2_conf_prefix: "Confidence: ",
   // gamma_reperes_tooltip RETIRÉE le 2026-09-17 (brief « gamma JRC vers radon ») : réservée au
@@ -3840,7 +3840,7 @@ var JS_STRINGS_EN = {
   mleg_sub_hotrf: "Distance to the nearest mobile-phone mast (ANFR register). Declared data, not an exposure, not a measurement.",
   mleg_sub_elf: "Tellux model, 50 Hz electrical grid only — no substrate, no total geomagnetic field. Shows nothing below 300 nT (IARC class 2B reference point — a display choice, not a risk threshold).",
   mleg_sub_emag: "Deep Corsican basement anomalies (NOAA EMAG2v3, display) — the internal grid actually used (distinct, computed permanently as the badge indicates) is not part of any publicly displayed score.",
-  mleg_sub_foretdense: "Tall-canopy species (IGN BD Forêt V2), excluding scrub-forest mosaic — modulates the RF value at map click; neither the heatmap nor the displayed score depends on it.",
+  mleg_sub_foretdense: "Tall-canopy species (IGN BD Forêt V2), excluding scrub-forest mosaic — context layer; since 2026-09-28 it no longer changes any displayed value.",
   mleg_sub_crustal: "Reference magnetic anomalies, global and Corsican — documentary comparison, outside the calculation.",
   mleg_sub_cert: "239 certified measurement records (2002–2026, 117 distinct sites) — 142 sheets from a separate dataset calibrate the RF model (21 until 2026-09-28).",
   mleg_sub_interp: "Interpolated surface from measured sites (never the model), 5 zones: Ajaccio, Bastia, L'Île-Rousse – Monticello, Porto-Vecchio, Bonifacio — outside the calculation.",
@@ -5127,7 +5127,7 @@ const LAYER_SUBTITLE_FR={
   // (app.html ~L7829-7853). Dire "au clic" sans cette nuance laissait croire que le score reflète
   // l'atténuation — faux dans les deux cas. Point non résolu ici, dette distincte : voir
   // RF-FOREST-TERRAIN-PLACEHOLDER-001 (RF_CALIB_K aussi dérivé sans végétation, même famille).
-  foretdense:'Essences hautes (BD Forêt V2 IGN), hors maquis-forêt — module la valeur RF au clic carte ; ni la carte de chaleur ni le score affiché n’en dépendent.',
+  foretdense:'Essences hautes (BD Forêt V2 IGN), hors maquis-forêt — couche de contexte ; depuis le 28/09/2026, elle ne modifie plus aucune valeur affichée.',
   // foretouverte/landemaquis (brief F, 2026-09-02) : « hors calcul » explicite ici, même formule
   // que crustal/contrib ci-dessous — pas seulement un badge, l'infobulle mobile le dit aussi.
   foretouverte:'BD Forêt V2 IGN, couvert 10-40 % — millésimes 2016-2017. Contexte seul, hors calcul.',
@@ -5382,7 +5382,7 @@ const LEGEND_HTML={
     '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#991b1b;vertical-align:middle;margin-right:4px"></span> Élevé 2–8 V/m</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c0000;vertical-align:middle;margin-right:4px"></span> Très élevé ≥ 8 V/m</div>'+
     '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Plafond interne 2,5 km : arrêt net au bord, sans dégradé — une cellule sans site assez proche reste vide, y compris à l\'intérieur d\'une zone. Valeur d\'un site revisité = sa mesure la plus récente (jamais une moyenne).</div>'+
-    '<div class="leg-src">Sites : jeu ANFR/CartoRadio du 19/09/2026 (117 sites distincts), hors calcul — Indice Tellux intouchés</div>'+
+    '<div class="leg-src">Sites : jeu ANFR/CartoRadio du 19/09/2026 (117 sites distincts), hors calcul — Indice Tellux intouché</div>'+
     '</div>',
   contrib:'<div class="leg-block"><b class="leg-title">Contributions smartphone</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">Relevés terrain des contributeurs Tellux</div>'+
@@ -10338,7 +10338,7 @@ map.on('click',async e=>{
   // Valeurs v2 structurées — utilisées pour la popup niveau B
   const elf_nT    = v2.domains.magnetic.elf.B_total_nT;
   const static_nT = v2.domains.magnetic.static.B_total_nT;
-  const rf_uWm2   = v2.domains.rf.S_total_uW_m2;
+  // rf_uWm2 retiré le 2026-09-28 : le popup ne présente plus la valeur du modèle RF (cf. rfPopupHTML()).
   // gamma_nSvh reste calculé et lu ici : il alimente _geoLastPoint (plus bas) et l'export CSV
   // expert passe par v2 directement. Le RENDU gamma du popup a été retiré le 2026-09-01
   // (décision Soleil, brief « retrait de l'affichage du gamma ») — la chaîne de calcul est
@@ -10485,7 +10485,7 @@ map.on('click',async e=>{
   // les mêmes seuils non sourcés (Math.round(elf/100), seuils 0,5/2/6 V/m) — l'Option A éteint le
   // problème à la racine plutôt que de l'adoucir. Réserve Soleil traitée : le texte pointe
   // explicitement vers où lire les valeurs (pas un simple retrait qui laisserait un vide).
-  const itVerdict=jt('it_verdict_renvoi','Valeurs détaillées ci-dessous (ELF, RF) et dans le « ? » Détail technique.');
+  const itVerdict=jt('it_verdict_renvoi','Score du réseau électrique (ELF) : détail ci-dessous et dans le « ? » Détail technique. La radiofréquence n’y entre pas ; elle est présentée plus bas.');
   const itLabel=phLabel; // itEmoji/itColor retirés le 2026-08-23 (n'étaient utilisés que par l'INFO BAR)
   // Sous-sol simplifié — basé sur susceptibilité magnétique (nT)
   const solLabel=susc_nT>30?jt('sol_fort','Substrat à forte susceptibilité magnétique (granit biotite)'):susc_nT>12?jt('sol_modere','Substrat à susceptibilité modérée'):geo<0?jt('sol_neutre','Substrat neutre (calcaire/ophiolite)'):jt('sol_standard','Substrat standard');
@@ -10727,7 +10727,7 @@ map.on('click',async e=>{
           : '<div>H ('+jt('detail_human_label','champ ELF anthropique total, valeur identique à celle affichée plus haut — alimente le score Perturbation')+') : +'+human+' nT'+(elfState==='failed'?' <span style="color:#8A5E22">('+elfV1Badge()+')</span>':'')+'</div>')+
         // Libellé conditionnel à l'état de calibration (2026-09-10, lot B) : « calibré » n'est dit que si k
         // l'est (rfCalibre()) — sinon le même chiffre porte « NON calibré pour l'instant ».
-        (nRFcalib>0.01?'<div>RF ('+(rfCalibre()?jt('detail_rf_label','densité d’émetteurs pondérée — valeur relative, sans unité ; calcul distinct de la valeur ci-dessus (jamais atténué par la forêt) — n’entre plus dans le score affiché depuis le 28/09/2026'):jt('detail_rf_label_noncal','densité d’émetteurs pondérée — facteur d’échelle NON ajusté pour l’instant (la calibration interne attend ses données) ; valeur relative, sans unité ; calcul distinct de la valeur ci-dessus (jamais atténué par la forêt) — n’entre plus dans le score affiché depuis le 28/09/2026'))+') : '+nRFcalib.toFixed(1)+'</div>':'')+
+        // Ligne « RF (densité d'émetteurs pondérée) » retirée le 2026-09-28 : le popup ne présente plus le modèle RF.
         (typeof altitude_m==='number' && isFinite(altitude_m)?'<div>'+jt('detail_alt_label','Altitude (IGN RGE Alti, résolution ~1 m)')+' : '+altitude_m+' m</div>':'')+
       '</div>'+
       elfContribsFullHTML+
@@ -10745,13 +10745,9 @@ map.on('click',async e=>{
       // ── ELF 50 Hz ── elfBlockHTML porte l'état d'attente (brief AF lot B) — cf. son commentaire.
       '<div style="margin-top:3px;font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">'+jt('v2_title_elf','ELF anthropique 50 Hz')+'</div>'+
       elfBlockHTML+
-      // ── RF ──
-      '<div style="margin-top:3px;font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">'+jt('v2_title_rf','Radiofréquence (téléphonie mobile, TV TDF, faisceaux — FM non modélisée)')+'</div>'+
-      '<div style="display:flex;align-items:center;gap:4px">'+
-        '<span style="font-size:12px;font-weight:700;color:#8E2F1F">'+rf_uWm2+'</span>'+
-        '<span style="font-size:9px;color:#626774" title="'+jt('v2_conf_rf','Confiance : faible — modèle de propagation (antennes de téléphonie mobile ANFR, émetteurs de télévision TDF, faisceaux hertziens ; la radio FM n’est pas modélisée)')+'">●○○</span>'+
-      '</div>'+
-      '<div style="font-size:8px;color:#626774;font-style:italic">'+jt('rf_icnirp_note','Sans unité — cette valeur ne se compare pas au repère ICNIRP (≈ 4 500 000 µW/m²), qui porte sur une densité de puissance mesurée.')+'</div>'+
+      // ── RF ── (2026-09-28, décision de Soleil) : distance au support mobile le plus proche, mesures certifiées
+      // faites à cette distance, mesures certifiées voisines. Plus aucune valeur du modèle — cf. rfPopupHTML().
+      rfPopupHTML(lat,lng)+
       // ── Ionisant : bloc entier retiré le 2026-09-02 (décision Soleil, brief "retrait radon") ──
       // Le domaine ionisant du popup ne comptait plus qu'un membre affiché (radon) depuis le
       // retrait du gamma le 2026-09-01 (#1164) — la colonne Gamma était déjà partie, seul
@@ -12388,6 +12384,57 @@ const RF_DIST_CLASSES=[   // max = rayon du disque en mètres ; couleurs pleines
   {max:3000, fill:'#9ecae1'}
 ];
 function rfClasseDistance(d_m){ for(const c of RF_DIST_CLASSES) if(d_m<c.max) return c; return null; }
+// rfPopupHTML(lat, lng) — bloc Radiofréquence du popup (2026-09-28, décision de Soleil, dossier privé
+// recherche/classe-rf-2026-09-28/). Trois lignes, toutes observables ou mesurées, aucune valeur du modèle :
+//   1. distance au support de téléphonie mobile ANFR le plus proche (parcours complet des 656 supports) ;
+//   2. ce que les mesures certifiées du pool de calibration montrent dans la même bande de distance
+//      (RF_BANDES_STATS, cf. calibrateRF) — dit explicitement que ce n'est pas une mesure au point ;
+//   3. les fiches certifiées voisines à coordonnées exactes (extérieur public, valeur non nulle, moins de
+//      2 km, trois au plus, les plus proches), avec leur date — les fiches résidentielles, placées au
+//      centroïde communal, sont exclues : leur position ne dit rien du lieu mesuré.
+function rfPopupHTML(lat,lng){
+  const en=document.documentElement.lang==='en';
+  const esc=v=>String(v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const fmtD=m=>Math.round(m)<1000?Math.round(m)+' m':(en?(m/1000).toFixed(1):(m/1000).toFixed(1).replace('.',','))+' km';
+  const lignes=[];
+  const p=supportMobileLePlusProche(lat,lng);
+  if(!p||!p.support){
+    lignes.push('<div style="font-size:9.5px;color:#626774">'+jt('rf_supports_indispo','Supports de téléphonie mobile non chargés pour l’instant.')+'</div>');
+  } else {
+    const g=Object.keys(p.support.secteurs||{}).sort().join(', ');
+    lignes.push('<div style="font-size:9.5px;color:#1F2329">'+jt('rf_support_proche','Support de téléphonie mobile le plus proche')+(en?': ':' : ')+'<b style="font-size:12px;color:#1F3A5F">'+fmtD(p.d_m)+'</b> <span style="color:#626774">('+esc(p.support.commune||'')+(g?' · '+esc(g):'')+')</span></div>');
+    if(Array.isArray(RF_BANDES_STATS)){
+      const bi=rfBandeDistance(p.d_m), b=RF_BANDES_STATS[bi];
+      const lib=(en?['under 50 m','50 to 150 m','150 m and beyond']:['moins de 50 m','50 à 150 m','150 m et plus'])[bi];
+      let t=(en?'Certified measurements taken outdoors in Corsica at this distance ('+lib+'): ':'Mesures certifiées faites en Corse, en extérieur, à cette distance ('+lib+') : ');
+      t+= (b&&b.n) ? (en?'median ':'médiane ')+rfFormatVm(b.med,en)+' V/m'+(en?', 9 in 10 below ':', 9 sur 10 sous ')+rfFormatVm(b.p90,en)+' V/m ('+b.n+(en?' measurements)':' mesures)') : (en?'none':'aucune');
+      t+= en?'. Not a measurement at this point.':'. Ce n’est pas une mesure en ce point.';
+      if(bi===2) t+= en?' Few measurements for this band, which covers most inhabited places.':' Peu de mesures pour cette bande, qui couvre la plupart des lieux habités.';
+      lignes.push('<div style="font-size:9px;color:#4a4f5e;line-height:1.35;margin-top:2px">'+t+'</div>');
+    } else {
+      lignes.push('<div style="font-size:9px;color:#626774;margin-top:2px">'+jt('rf_bandes_indispo','Repères de mesure par distance indisponibles pour l’instant.')+'</div>');
+    }
+  }
+  if(typeof MESURES_CERTIFIEES!=='undefined'&&Array.isArray(MESURES_CERTIFIEES)&&MESURES_CERTIFIEES.length){
+    // Une entrée par position (un même lieu est souvent revisité, jusqu'à 8 fois) : la visite la plus récente,
+    // même règle que la couche d'interpolation (« site revisité = mesure la plus récente »).
+    const parPos=new Map();
+    MESURES_CERTIFIEES.forEach(m=>{
+      const v=+(m&&m.valeur_max_vm);
+      if(!m||m.precision_coord!=='exacte'||m.type_environnement!=='exterieur_public'||!(v>0)||m.lat==null||m.lon==null) return;
+      const k=(+m.lat).toFixed(5)+','+(+m.lon).toFixed(5), e=parPos.get(k);
+      if(!e||String(m.date_mesure||'')>String(e.date_mesure||'')) parPos.set(k,m);
+    });
+    const voisines=[...parPos.values()]
+      .map(m=>({m,d:dist(lat,lng,+m.lat,+m.lon)*1000})).filter(x=>x.d<2000).sort((a,b)=>a.d-b.d).slice(0,3);
+    const t= voisines.length
+      ? (en?'Certified outdoor measurements within 2 km (latest visit per site): ':'Mesures certifiées d’extérieur à moins de 2 km (dernière visite de chaque lieu) : ')+voisines.map(x=>rfFormatVm(+x.m.valeur_max_vm,en)+' V/m '+(en?'at ':'à ')+fmtD(x.d)+' ('+esc(String(x.m.date_mesure||'').slice(0,4))+')').join(' · ')
+      : (en?'No certified outdoor measurement with an exact position within 2 km. A free measurement can be requested from ANFR through the town hall (mesures.anfr.fr).':'Aucune mesure certifiée d’extérieur, à position exacte, à moins de 2 km. Une mesure gratuite peut être demandée à l’ANFR par l’intermédiaire de la mairie (mesures.anfr.fr).');
+    lignes.push('<div style="font-size:9px;color:#4a4f5e;line-height:1.35;margin-top:2px">'+t+'</div>');
+  }
+  lignes.push('<div style="font-size:8px;color:#626774;font-style:italic;margin-top:2px">'+jt('rf_limite_note','Valeurs limites réglementaires : 28 à 61 V/m selon la fréquence (décret n° 2002-775).')+'</div>');
+  return '<div style="margin-top:3px;font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">'+jt('v2_title_rf','Radiofréquence — téléphonie mobile')+'</div>'+lignes.join('');
+}
 function buildHotRF(){
   // Couche RF (2026-09-28, décision de Soleil) : distance au support de téléphonie mobile ANFR le plus
   // proche. Une donnée déclarée et vérifiable, pas une exposition. Remplace la densité d'émetteurs
@@ -13026,7 +13073,7 @@ function _syncForetDenseZoom(fromToggle){
   }else{
     if(map.hasLayer(lForetDense))map.removeLayer(lForetDense);
     if(fromToggle||!_foretDenseZoomHintShown){
-      info(jt('foretdense_zoom_hint','Forêt dense — couche visible à partir du zoom {z} (trop étendue à petite échelle) ; le calcul reste actif.').replace('{z}',FORET_DENSE_MIN_ZOOM),null,4500);
+      info(jt('foretdense_zoom_hint','Forêt dense — couche visible à partir du zoom {z} (trop étendue à petite échelle).').replace('{z}',FORET_DENSE_MIN_ZOOM),null,4500);
       _foretDenseZoomHintShown=true;
     }
   }
@@ -16654,7 +16701,7 @@ function capCleanup(){
 ["calc_bt","#b-bt .layer-badge--calc","","Toujours dans le calcul","","Always part of the calculation"],
 ["calc_prod","#b-prod .layer-badge--calc","","Toujours dans le calcul","","Always part of the calculation"],
 ["calc_postes","#b-postes .layer-badge--calc","","Toujours dans le calcul","","Always part of the calculation"],
-["calc_foretdense","#b-foretdense .layer-badge--calc","","Module le calcul","","Modulates the calculation"],
+["calc_foretdense","#b-foretdense .layer-badge--context","","Contexte","","Context"],
 ["calc_cert","#b-cert .layer-badge--calc","","Calibration RF","","RF calibration"],
 ["hors_interp","#b-interp .layer-badge--hors","","Hors calcul","","Outside the calculation"],
 ["hors_crustal","#b-crustal .layer-badge--hors","","Hors calcul","","Outside the calculation"],
@@ -16718,8 +16765,8 @@ function capCleanup(){
 // qu'une copie du FR, jamais une traduction corse vérifiée (signalé au moment de sa création,
 // 2026-09-13) ; radon.html n'a pas de mécanisme CO du tout (data-i18n-key/EN_STRINGS, FR+EN
 // seulement) — rien de réel n'est donc perdu dans ce déplacement sur ce point précis.
-["lyr_foretdense","#b-foretdense","","Forêt dense (atténuation RF)","Fureste densa (attenuazione RF)","Dense forest (RF attenuation)"],
-["lyr_foretdense_tt","#b-foretdense","title","BD Forêt V2 IGN — forêt fermée à essence haute (chênes, hêtre, châtaignier, pins laricio/maritime, sapin…), hors classes de feuillus indifférenciés qui recouvrent surtout le maquis-forêt corse (~28 % de la Corse). Activer ce bouton inclut l'atténuation RF de la canopée (modèle ITU-R P.833-6). Ce calque module la valeur du bloc Radiofréquence. Il ne modifie ni la heatmap, ni le score affiché en haut du popup.","BD Fureste V2 IGN — fureste chjinta à essenza alta (querce, fau, castagnu, pini laricio/marittimu, abetu…), fora di e classi di latifogli indifferenziati chì cuprenu sopratuttu u machja-fureste corsu (~28 % di a Corsica). Attivà stu buttone include l'attenuazione RF di a canopea (mudellu ITU-R P.833-6) in u calculu à u cliccu carta ; disattivallu a caccia.","IGN BD Forêt V2 — closed forest of tall species (oaks, beech, chestnut, laricio/maritime pine, fir…), excluding undifferentiated broadleaf classes that mostly map to Corsican maquis-forest (~28% of Corsica). Enabling this button includes canopy RF attenuation (ITU-R P.833-6 model). This layer modulates the value in the Radiofrequency block. It changes neither the heatmap nor the score shown at the top of the popup."],
+["lyr_foretdense","#b-foretdense","","Forêt dense","Fureste densa","Dense forest"],
+["lyr_foretdense_tt","#b-foretdense","title","BD Forêt V2 IGN — forêt fermée à essence haute (chênes, hêtre, châtaignier, pins laricio/maritime, sapin…), hors classes de feuillus indifférenciés qui recouvrent surtout le maquis-forêt corse (~28 % de la Corse). Couche de contexte. Jusqu'au 28/09/2026, l'activer ajoutait l'atténuation RF de la canopée (modèle ITU-R P.833-6) à la valeur du bloc Radiofréquence ; ce bloc n'affiche plus de valeur calculée, et la couche ne modifie plus aucune valeur affichée.","","IGN BD Forêt V2 — closed forest of tall species (oaks, beech, chestnut, laricio/maritime pine, fir…), excluding undifferentiated broadleaf classes that mostly map to Corsican maquis-forest (~28% of Corsica). Context layer. Until 2026-09-28, enabling it added canopy RF attenuation (ITU-R P.833-6 model) to the value in the Radiofrequency block; that block no longer shows a computed value, and the layer no longer changes any displayed value."],
 ["lyr_foretouverte","#b-foretouverte","","Forêt ouverte (2016-2017)","Fureste aperta (2016-2017)","Open forest (2016-2017)"],
 ["lyr_foretouverte_tt","#b-foretouverte","title","BD Forêt V2 IGN — forêt ouverte (couvert arboré 10-40 %, feuillus FO1/conifères FO2/mélange FO3 — codes nomenclature IGN §4.1.2). Couche de contexte, millésimes 2016 (2B) / 2017 (2A) — incendies possibles depuis, ne pas lire comme un état actuel. N'entre dans AUCUN calcul directement (contrairement à Forêt dense) ; une seule couche de végétation affichée à la fois — activer ce bouton désactive Forêt dense s'il était actif, ce qui retire alors l'atténuation RF du prochain calcul au clic.","BD Fureste V2 IGN — fureste aperta (cupertura arburata 10-40 %, latifogli FO1/cunifere FO2/mischju FO3 — codici nomenclatura IGN §4.1.2). Stratu di cuntestu, millesimi 2016 (2B) / 2017 (2A) — pussibuli scindi dapoi, ùn hè da leghje micca cum'è un statu attuale. Ùn entre in NISUN calculu (à u cuntrariu di a Fureste densa) ; una sola stratu di vegetazione affissata à u listessu tempu.","IGN BD Forêt V2 — open forest (canopy cover 10-40%, broadleaf FO1/conifer FO2/mixed FO3 — IGN nomenclature codes §4.1.2). Context layer, vintages 2016 (2B) / 2017 (2A) — wildfires possible since; not to be read as a current state. Enters NO calculation directly (unlike Dense forest); only one vegetation layer shown at a time — enabling this button disables Dense forest if it was active, which then removes RF attenuation from the next on-click calculation."],
 ["lyr_landemaquis","#b-landemaquis","","Lande / maquis (2016-2017)","Landa / machja (2016-2017)","Heathland / scrub (2016-2017)"],
