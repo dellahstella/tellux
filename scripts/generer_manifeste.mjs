@@ -237,7 +237,8 @@ async function main() {
   let poids = null, domaines = [];
   if (appJs) {
     const mw = appJs.match(/const\s+EXPERT_WEIGHTS_DEFAULT\s*=\s*\{([^}]*)\}/);
-    if (mw) { poids = {}; for (const m of mw[1].matchAll(/(\w+)\s*:\s*([\d.]+)/g)) poids[m[1]] = +m[2]; }
+    // Fractions acceptées (2026-09-29 : { M: 2/3, RF: 0, I: 1/3 }) — l'ancien motif lisait « 2/3 » comme 2.
+    if (mw) { poids = {}; for (const m of mw[1].matchAll(/(\w+)\s*:\s*([\d.]+)(?:\s*\/\s*([\d.]+))?/g)) poids[m[1]] = +(m[3] ? (+m[2] / +m[3]).toFixed(4) : m[2]); }
     domaines = [
       { nom: 'Magnétique (ELF)', cle: 'M', fonctionCalc: /function\s+calcMagneticELF/ },
       { nom: 'Radiofréquences', cle: 'RF', fonctionCalc: /function\s+calcRF\b/ },

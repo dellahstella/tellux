@@ -677,26 +677,25 @@ Dose_terrestre (nSv/h)  = Dose_terrestre (nGy/h) × 1,2</code></pre>
 <section id="mode-expertise">
   <h2 data-i18n-key="s8_h2">8. Mode Expertise — Indice Expert <span class="meta-ref">(Doc 1 §4)</span></h2>
   <p data-i18n-key="s8_p1">Le mode Expertise propose un Indice Expert adimensionnel pour comparer la composition du paysage électromagnétique entre zones corses. L'indice est une <strong>convention calculatoire, sans signification physique ni sanitaire directe</strong> (Doc 1 §4.1).</p>
+  <p data-i18n-key="s8_p1b"><strong>Depuis le 2026-09-29, la radiofréquence n'entre plus dans l'Indice Expert</strong>, comme elle est sortie de l'Indice Tellux le 2026-09-28 (§9). Confronté aux 142 mesures certifiées d'extérieur, le modèle RF classait mal les points les plus exposés, et aucune grandeur calculée ne prédit la valeur mesurée en un point. Le poids qu'elle portait (0,4) a été réparti en gardant le rapport 2:1 des deux autres composantes (0,4 et 0,2). L'export du mode Expertise donne, pour la radiofréquence, la distance au support de téléphonie mobile le plus proche.</p>
   <p data-i18n-key="s8_p2"><strong>Formule générale :</strong></p>
   <pre><code data-i18n-key="s8_code1">indice_composite = w_M · normalize(ELF_nT, bornes_ELF)
-                 + w_RF · normalize(RF_densite_ponderee, bornes_RF)
                  + w_I · normalize(gamma_nSv/h, bornes_GAMMA)</code></pre>
   <p data-i18n-key="s8_p3"><strong>Pondérations par défaut (Doc 1 §4.2) — zone gelée GELÉ-001a :</strong></p>
-  <pre><code data-i18n-key="s8_code2">w_M  = 0,4   (ELF 50 Hz anthropique)
-w_RF = 0,4   (radiofréquence)
-w_I  = 0,2   (gamma ambiant)</code></pre>
+  <pre><code data-i18n-key="s8_code2">w_M  = 2/3   (ELF 50 Hz anthropique)
+w_RF = 0     (radiofréquence — hors composite depuis le 2026-09-29 ; 0,4 avant)
+w_I  = 1/3   (gamma ambiant)</code></pre>
   <p data-i18n-key="s8_p4"><strong>Bornes de normalisation (Doc 1 §4.3) — zone gelée GELÉ-001b :</strong></p>
   <pre><code data-i18n-key="s8_code3">ELF        : [0, 1 000] nT
-RF         : [0, 1 500]  (sans unité — densité d'émetteurs pondérée, cf. §2)
 GAMMA      : [50, 250] nSv/h</code></pre>
   <p data-i18n-key="s8_p5"><strong>Justification des pondérations (Doc 1 §4.2) :</strong></p>
   <ul>
     <li data-i18n-key="s8_j_li1">ELF 50 Hz : méta-analyse Amoon-Kheifets 2022 (OR 1,01), Brabant et al. 2022 (OR 1,26).</li>
-    <li data-i18n-key="s8_j_li2">RF : avis SCHEER 2024 (classification IARC 2B maintenue).</li>
+    <li data-i18n-key="s8_j_li2">RF : pondérée à 0,4 jusqu'au 2026-09-28 sur la base de l'avis SCHEER 2024 (classification IARC 2B maintenue) ; retirée du composite depuis, pour la raison donnée plus haut, qui tient au modèle et non à la littérature.</li>
     <li data-i18n-key="s8_j_li3">Gamma : position « C documentée » UNSCEAR 2012 — l'Indice Expert ne doit pas être indûment pondéré par une composante dont l'interprétation reste ouverte.</li>
   </ul>
   <p data-i18n-key="s8_p6"><strong>Note épistémique permanente (Doc 1 §4.4) :</strong></p>
-  <blockquote><p data-i18n-key="s8_note">Indice composite conventionnel, sans signification physique ni sanitaire directe. Usage exploratoire pour comparer la composition du paysage physique entre zones. Pondérations provisoires, à valider.</p></blockquote>
+  <blockquote><p data-i18n-key="s8_note">Indice composite conventionnel, sans signification physique ni sanitaire directe. Usage exploratoire pour comparer la composition du paysage physique entre zones. Pondérations provisoires, à valider. La radiofréquence n'y entre plus depuis le 2026-09-29.</p></blockquote>
 </section>
 
 <section id="objets-composites">
@@ -705,7 +704,7 @@ GAMMA      : [50, 250] nSv/h</code></pre>
   <ol>
     <li data-i18n-key="s9_li1"><strong>Carte de densité magnétique</strong> (heatmap, publique) — visualisation du champ géomagnétique corrigé des anomalies crustales (EMAG2v3, depuis le 2026-09-19).</li>
     <li data-i18n-key="s9_li2"><strong>Indice Tellux</strong> (public, par défaut) — affiché en popup au clic. Depuis le 2026-09-28, il ne porte plus que sur le champ ELF anthropique du réseau électrique, de 0 à 4, avec des <strong>seuils fixés par convention</strong> (<code>min(4,round(human/100))</code>). La composante RF en a été retirée : sa classe, un rang du modèle par rapport aux lieux mesurés, plaçait les plus fortes mesures certifiées de Corse en classe 0 ou 1 (74 % des mesures au-dessus de 3 V/m), et elle additionnait deux grandeurs sans commune mesure. La RF est présentée à part, par la distance au support de téléphonie mobile le plus proche et par les mesures certifiées. Ce score est une <strong>convention d'affichage pratique, sans base épidémiologique validée</strong>. Jusqu'au 2026-09-03 (brief H, ADR-064), le popup affichait un second sous-score « Naturel » (susceptibilité géologique locale, seuil également non sourcé) — retiré : l'information sous-jacente (susceptibilité, substrat) reste affichée en popup, non scorée.</li>
-    <li data-i18n-key="s9_li3"><strong>Indice Expert</strong> (masqué de l'interface depuis le 2026-09-03, brief Q — nomenclature posée le même jour, brief H/ADR-064) — variante avec des pondérations fixes <strong>0,4 / 0,4 / 0,2</strong>, dérivée de la littérature scientifique :
+    <li data-i18n-key="s9_li3"><strong>Indice Expert</strong> (masqué de l'interface depuis le 2026-09-03, brief Q — nomenclature posée le même jour, brief H/ADR-064) — variante avec des pondérations fixes, <strong>2/3 (ELF) et 1/3 (gamma)</strong> depuis le 2026-09-29 — la radiofréquence en est sortie, comme de l'Indice Tellux ; avant, <strong>0,4 / 0,4 / 0,2</strong>, RF comprise —, dérivée de la littérature scientifique :
       <ul>
         <li data-i18n-key="s9_li3_1"><strong>Amoon-Kheifets 2022</strong> (<em>Int. J. Epidemiology</em>) — RF.</li>
         <li data-i18n-key="s9_li3_2"><strong>Brabant et al. 2022</strong> (<em>Environment International</em>) — ELF.</li>
