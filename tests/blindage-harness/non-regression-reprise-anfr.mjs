@@ -69,7 +69,8 @@ const assistant = js.slice(debut, fin);
 // ─── Témoin sur la donnée : ce que calibrateRF() doit retenir du vrai fichier ─────────────────────
 // Recalculé depuis le fichier (pas écrit en dur) : si la donnée change, l'attendu suit.
 const mesures = (JSON.parse(texteCarto).mesures || []).filter((m) =>
-  m.calib_eligible !== false && m.conforme !== false && m.valeur_max_vm != null && m.lat != null && m.lon != null
+  // valeur_max_vm > 0 (2026-09-28) : même exclusion des valeurs nulles que calibrateRF().
+  m.calib_eligible !== false && m.conforme !== false && m.valeur_max_vm > 0 && m.lat != null && m.lon != null
   && m.type_environnement === 'exterieur_public');
 const N_ATTENDU = mesures.length;
 const trie = mesures.map((m) => m.valeur_max_vm / 2.0).sort((a, b) => a - b);
