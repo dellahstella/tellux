@@ -3800,7 +3800,7 @@ var JS_STRINGS_EN = {
   myplace_loading: "Calculating…",
   myplace_calc_error: "Could not compute this point.",
   myplace_ant_unavailable: "Antenna registry not loaded.",
-  myplace_ant_500_suffix: " mobile-antenna mast(s) within 500 m (",
+  myplace_ant_500_suffix: " mobile-antenna site(s) within 500 m (",
   myplace_ant_1000_suffix: " within 1 km).",
   myplace_ant_title: "ANFR antennas nearby",
   pill_declaratif: "Declarative — ANFR registry",
@@ -8760,7 +8760,7 @@ function supportMobileLePlusProche(lat,lon,rayonMaxKm){
 // 50–150 m et au-delà (test T2 : médianes 1,62 / 0,73 / 0,32 V/m). Mais la bande « 150 m et plus » était faite de
 // mesures prises pour l'essentiel sous 500 m (distance médiane 236 m) : 3 seulement au-delà de 1 km, là où vivent
 // près de la moitié des lieux habités. D'où une quatrième bande, au-delà de 1 km, qui n'a PAS de repère : on y dit
-// combien de mesures existent, sans en tirer une distribution. RF_BANDES_STATS : n, quartiles et médiane des
+// combien de mesures existent, sans en tirer ni distribution ni plage. RF_BANDES_STATS : n, quartiles et médiane des
 // mesures du pool de calibration, bande par bande — dérivés par calibrateRF() sur les données servies.
 const RF_BANDES_DISTANCE_M=[50,150,1000];   // < 50 m · 50–150 m · 150 m–1 km · ≥ 1 km (sans repère)
 let RF_BANDES_STATS=null;
@@ -8771,13 +8771,18 @@ const RF_BANDES_LIB={fr:['moins de 50 m','50 à 150 m','150 m à 1 km','au-delà
 // rfBandeTexte(i, en) : ce que les mesures disent dans la bande i — la moitié centrale (quartiles) et la médiane, plutôt
 // que le 90e centile : l'intervalle central décrit l'échantillon, le haut de distribution invite à une comparaison
 // aux valeurs limites que Tellux ne fait pas (revue Fable, constat E2). Bande 3 : un compte, pas de distribution.
+// Au-delà de 1 km, ou sous RF_BANDE_N_MIN mesures, un compte seul, sans plage de valeurs : une plage tirée de 3
+// mesures se lirait comme ce qu'on peut attendre chez soi (revue du 28/09).
+const RF_BANDE_N_MIN=10;
 function rfBandeTexte(i,en){
   const b=Array.isArray(RF_BANDES_STATS)?RF_BANDES_STATS[i]:null;
-  if(!b||!b.n) return en?'no measurement':'aucune mesure';
-  if(i===3) return (en?b.n+' measurement'+(b.n>1?'s':'')+' only (':b.n+' mesure'+(b.n>1?'s':'')+' seulement (')+rfFormatVm(b.min,en)+(en?' to ':' à ')+rfFormatVm(b.max,en)+' V/m)'+(en?', no reliable reference':', pas de repère fiable');
+  if(!b||!b.n) return en?'no measurement, no reference':'aucune mesure, pas de repère';
+  if(i===3||b.n<RF_BANDE_N_MIN) return en?'only '+b.n+' measurement'+(b.n>1?'s':'')+', no reference':b.n+' mesure'+(b.n>1?'s':'')+' seulement, pas de repère';
   return (en?'half between ':'la moitié entre ')+rfFormatVm(b.q1,en)+(en?' and ':' et ')+rfFormatVm(b.q3,en)+' V/m'+(en?' (median ':' (médiane ')+rfFormatVm(b.med,en)+', '+b.n+(en?' measurements)':' mesures)');
 }
-const RF_MESURES_A_LA_DEMANDE={fr:'Ces mesures sont faites à la demande de riverains ou de mairies, souvent là où une inquiétude existait.',en:'These measurements are made at the request of residents or town halls, often where there was a concern.'};
+// Nature de l'échantillon (revue Fable, E2) : aucune fiche ne dit qui a demandé la mesure, et le pool mêle demandes
+// locales, stations revisitées et campagnes groupées ; on dit seulement ce qui est sûr — elles ne sont pas tirées au hasard.
+const RF_MESURES_A_LA_DEMANDE={fr:'Ces mesures ne sont pas prises au hasard : elles sont faites là où quelqu’un les a demandées.',en:'These measurements are not taken at random: they are made where someone requested them.'};
 function rfBandesTexte(en){
   if(!Array.isArray(RF_BANDES_STATS)) return '—';
   const lib=RF_BANDES_LIB[en?'en':'fr'];
@@ -12396,16 +12401,18 @@ function rfClasseDistance(d_m){ for(const c of RF_DIST_CLASSES) if(d_m<c.max) re
 // lignes sont observables ou mesurées, aucune valeur du modèle :
 //   1. distance au support de téléphonie mobile ANFR le plus proche (parcours complet des 656 supports) ;
 //   2. ce que les mesures certifiées du pool montrent dans la même bande de distance (moitié centrale et médiane ;
-//      au-delà de 1 km, un simple compte : pas de repère), avec la nature de l'échantillon — des mesures faites à la
-//      demande — et le rappel que ce n'est pas une mesure au point ;
-//   3. les fiches certifiées voisines à coordonnées exactes (extérieur public, valeur non nulle, moins de 2 km, trois
-//      lieux au plus). Un « lieu » regroupe les fiches à moins de 50 m de sa fiche la plus récente (revisites d'une
-//      même station : à Monticello, la mesure non conforme du 20/03/2025 et le contrôle du 01/04/2025 sont à 30 m) ;
-//      on affiche la plus récente. Si elle est non conforme, elle est dite telle ; si une fiche plus ancienne du même
-//      lieu l'était, on le dit aussi (contrôle après non-conformité). Une fiche d'avant 2013 est marquée « avant la
-//      4G ». Les fiches résidentielles, placées au centroïde communal, sont exclues.
-//      Rayon : 50 m regroupe 1 lieu de plus que 25 m (Monticello) sans fusionner de points distincts mesurés le même
-//      jour ; 100 m en fusionne (relevé du 28/09 sur mesures_anfr_corse.json).
+//      au-delà de 1 km, ou sous RF_BANDE_N_MIN mesures, un simple compte : pas de repère), avec la nature de
+//      l'échantillon — des mesures qui ne sont pas prises au hasard — et le rappel que ce n'est pas une mesure au point ;
+//   3. les fiches certifiées voisines à coordonnées exactes (extérieur public, moins de 2 km, trois lieux au plus). Un
+//      « lieu » regroupe les fiches à moins de 50 m de sa fiche la plus récente (revisites d'une même station : à
+//      Monticello, la mesure non conforme du 20/03/2025 et le contrôle du 01/04/2025 sont à 30 m). On affiche la plus
+//      récente qui porte une valeur (> 0 V/m ; 0 V/m n'est pas un champ mesuré, cf. calibrateRF) ; à même date, la plus
+//      haute, pour que l'ordre du fichier ne décide pas. Si la fiche affichée est non conforme, elle est dite telle ; si
+//      une autre fiche du lieu l'était, on le dit aussi ; si une visite plus récente n'a pas de valeur chiffrée, on le
+//      dit. Une fiche d'avant 2013 est marquée « avant la 4G ». Les fiches résidentielles, placées au centroïde
+//      communal, sont exclues ; un lieu sans aucune valeur chiffrée n'est pas listé.
+//      Rayon : 50 m regroupe 1 lieu de plus que 25 m (Monticello) sans fusionner de coordonnées distinctes mesurées le
+//      même jour ; 100 m en fusionne (relevé du 28/09 sur mesures_anfr_corse.json).
 // La ligne des valeurs limites réglementaires a été retirée (revue Fable, M1) : 28 V/m ne vaut pas pour la téléphonie
 // mobile (36 à 61 V/m selon la bande), et sa présence transformait le bloc en comparaison à une limite.
 function rfPopupHTML(lat,lng){
@@ -12429,21 +12436,29 @@ function rfPopupHTML(lat,lng){
     }
   }
   if(typeof MESURES_CERTIFIEES!=='undefined'&&Array.isArray(MESURES_CERTIFIEES)&&MESURES_CERTIFIEES.length){
-    // Lieux : regroupement à 50 m, du plus récent au plus ancien — une fiche rejoint le premier lieu dont la fiche la
-    // plus récente est à moins de 50 m, sinon elle en ouvre un ; chaque lieu garde ainsi sa visite la plus récente.
-    const fiches=MESURES_CERTIFIEES.filter(m=>m&&m.precision_coord==='exacte'&&m.type_environnement==='exterieur_public'&&(+m.valeur_max_vm)>0&&m.lat!=null&&m.lon!=null)
-      .slice().sort((a,b)=>String(b.date_mesure||'').localeCompare(String(a.date_mesure||'')));
+    // Lieux : regroupement à 50 m, du plus récent au plus ancien (à même date, du plus haut au plus bas) — une fiche
+    // rejoint le premier lieu dont la fiche la plus récente est à moins de 50 m, sinon elle en ouvre un.
+    const vm=m=>+(m&&m.valeur_max_vm)||0, dt=m=>String(m.date_mesure||'');
+    const fiches=MESURES_CERTIFIEES.filter(m=>m&&m.precision_coord==='exacte'&&m.type_environnement==='exterieur_public'&&m.lat!=null&&m.lon!=null)
+      .slice().sort((a,b)=>dt(b).localeCompare(dt(a))||vm(b)-vm(a));
     const lieux=[];
-    fiches.forEach(m=>{ const l=lieux.find(g=>dist(+g.m.lat,+g.m.lon,+m.lat,+m.lon)*1000<50); if(l) l.anciennes.push(m); else lieux.push({m,anciennes:[]}); });
-    const voisines=lieux.map(g=>({m:g.m,anciennes:g.anciennes,d:dist(lat,lng,+g.m.lat,+g.m.lon)*1000})).filter(x=>x.d<2000).sort((a,b)=>a.d-b.d).slice(0,3);
-    const annee=m=>String(m.date_mesure||'').slice(0,4);
+    fiches.forEach(m=>{ const l=lieux.find(g=>dist(+g[0].lat,+g[0].lon,+m.lat,+m.lon)*1000<50); if(l) l.push(m); else lieux.push([m]); });
+    const voisines=[];
+    lieux.forEach(g=>{ const k=g.findIndex(m=>vm(m)>0); if(k<0) return;
+      voisines.push({m:g[k],autres:g.filter((_,i)=>i!==k),plusRecenteSansValeur:k>0?g[0]:null,d:dist(lat,lng,+g[k].lat,+g[k].lon)*1000}); });
+    voisines.sort((a,b)=>a.d-b.d); voisines.splice(3); while(voisines.length&&voisines[voisines.length-1].d>=2000) voisines.pop();
+    const annee=m=>dt(m).slice(0,4);
+    const en_=(txt,a)=>a?txt+' '+esc(a):txt;   // « … en 2025 », ou rien si la fiche n'est pas datée
     const note=x=>{ const n=[], m=x.m;
+      if(annee(m)) n.push(esc(annee(m)));
       if(m.conforme===false) n.push(en?'non-compliant':'non conforme');
-      else { const nc=x.anciennes.find(a=>a.conforme===false); if(nc) n.push((en?'check after a non-compliance in ':'contrôle après une non-conformité en ')+esc(annee(nc))); }
+      const nc=x.autres.find(a=>a.conforme===false);
+      if(nc) n.push(dt(nc)<dt(m)?en_(en?'check after a non-compliance in':'contrôle après une non-conformité en',annee(nc)):en_(en?'non-compliance recorded in':'non-conformité relevée en',annee(nc)));
+      if(x.plusRecenteSansValeur) n.push(en_(en?'revisited without a value in':'revisité sans valeur chiffrée en',annee(x.plusRecenteSansValeur)));
       if(+annee(m)&&+annee(m)<2013) n.push(en?'before 4G':'avant la 4G');
-      return n.length?', '+n.join(', '):''; };
+      return n.length?' ('+n.join(', ')+')':''; };
     const t= voisines.length
-      ? (en?'Certified outdoor measurements within 2 km (latest visit per site): ':'Mesures certifiées d’extérieur à moins de 2 km (dernière visite de chaque lieu) : ')+voisines.map(x=>rfFormatVm(+x.m.valeur_max_vm,en)+' V/m '+(en?'at ':'à ')+fmtD(x.d)+' ('+esc(annee(x.m))+note(x)+')').join(' · ')
+      ? (en?'Certified outdoor measurements within 2 km (latest visit per site): ':'Mesures certifiées d’extérieur à moins de 2 km (dernière visite de chaque lieu) : ')+voisines.map(x=>rfFormatVm(vm(x.m),en)+' V/m '+(en?'at ':'à ')+fmtD(x.d)+note(x)).join(' · ')
       : (en?'No certified outdoor measurement with an exact position within 2 km. A free measurement can be requested from ANFR through the town hall (mesures.anfr.fr).':'Aucune mesure certifiée d’extérieur, à position exacte, à moins de 2 km. Une mesure gratuite peut être demandée à l’ANFR par l’intermédiaire de la mairie (mesures.anfr.fr).');
     lignes.push('<div style="font-size:9px;color:#4a4f5e;line-height:1.35;margin-top:2px">'+t+'</div>');
   }
@@ -12530,7 +12545,7 @@ function _interpSites(mesures) {
   });
   return Object.values(groups).map(function(g) {
     const sorted = g.slice().sort(function(a, b) { return a.date_mesure < b.date_mesure ? 1 : -1; });
-    return { lat: g[0].lat, lon: g[0].lon, valeur: sorted[0].valeur_max_vm, date: sorted[0].date_mesure, id: sorted[0].id, n_mesures: g.length };
+    return { lat: g[0].lat, lon: g[0].lon, valeur: sorted[0].valeur_max_vm, date: sorted[0].date_mesure, id: sorted[0].id, n_mesures: g.length, conforme: sorted[0].conforme };
   });
 }
 
@@ -12568,7 +12583,7 @@ function buildHotMesures() {
       .forEach(function(s) {
         L.circleMarker([s.lat, s.lon], {
           radius: 4, color: '#F5F0E7', weight: 1.5, fillColor: '#1F2329', fillOpacity: 1, interactive: true
-        }).bindTooltip('#' + s.id + ' · ' + s.valeur + ' V/m · ' + s.date, { direction: 'top' })
+        }).bindTooltip(function() { return '#' + s.id + ' · ' + s.valeur + ' V/m · ' + s.date + (s.conforme === false ? (document.documentElement.lang === 'en' ? ' · non-compliant' : ' · non conforme') : ''); }, { direction: 'top' })
           .addTo(lHotMesures);
       });
   });
@@ -14429,7 +14444,7 @@ function myPlaceRenderSummary(d){
   // Antennes ANFR à proximité — déclaratif (positions publiées par les opérateurs, registre CartoRadio)
   var antHtml=(d.n500===null)
     ? jt('myplace_ant_unavailable','Registre des antennes non chargé.')
-    : (d.n500+jt('myplace_ant_500_suffix',' support(s) d’antennes mobiles dans un rayon de 500 m (')+d.n1000+jt('myplace_ant_1000_suffix',' dans 1 km).'));
+    : (d.n500+jt('myplace_ant_500_suffix',' site(s) d’antennes mobiles dans un rayon de 500 m (')+d.n1000+jt('myplace_ant_1000_suffix',' dans 1 km).'));
   var antRow=myPlaceRow(jt('myplace_ant_title','Antennes ANFR à proximité'),antHtml,jt('pill_declaratif','Déclaratif — registre ANFR'),'declaratif');
 
   // Ligne HTA la plus proche — position déclarée EDF SEI, distance calculée.
