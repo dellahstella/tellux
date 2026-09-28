@@ -8029,7 +8029,15 @@ function calcBiotSavartSegmentVec(segLat1, segLon1, segLat2, segLon2, obsLat, ob
   else closestDist = h;
   if (closestDist > 2000) return { bx: 0, by: 0 };
   const h_eff = Math.max(5, h);
-  const d1 = -t, d2 = segLen - t;
+  // CORRIGÉ le 2026-09-28 (décision de Soleil, « corriger maintenant ») : `d1 = -t` inversait le signe
+  // de la première distance, ce qui détruisait la décomposition angulaire. Chaque segment comptait
+  // alors comme la ligne entière (0 nT au droit du milieu d'un segment isolé ; B proportionnel au
+  // nombre de segments de la tuile — ×147 à la médiane du terme HTA sur les 236 points certifiés).
+  // Établi par exécution le 2026-09-20 (rapport privé « nature du terme HTA »). Avec `d1 = t`, le
+  // champ est invariant au découpage et égale le fil infini au droit d'un segment long : les « tests
+  // mentaux » de l'en-tête deviennent vrais. Ce qui reste hors de ce correctif, et non validé : le
+  // courant de 225 A, la « correction triphasée » (20/h)^0,5 et la géométrie monofilaire.
+  const d1 = t, d2 = segLen - t;
   const sinTheta1 = d1 / Math.sqrt(d1*d1 + h_eff*h_eff);
   const sinTheta2 = d2 / Math.sqrt(d2*d2 + h_eff*h_eff);
   let B_pic_nT = 200 * currentA / h_eff * (sinTheta1 + sinTheta2) / 2;
