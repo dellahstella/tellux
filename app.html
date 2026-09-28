@@ -1884,7 +1884,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
     <div class="d-grid">
       <div class="d-block">
         <div class="d-block-title">Champs électromagnétiques</div>
-        <div class="d-block-text">Antennes ANFR et réseau EDF SEI haute et basse tension alimentent l'Indice Tellux (perturbation humaine), un score comparatif <strong>indicatif</strong> — il ne remplace pas une mesure certifiée. Le modèle géomagnétique IGRF-14 et les anomalies crustales EMAG2v3 sont affichés comme repères, hors score.</div>
+        <div class="d-block-text">Le réseau EDF SEI haute et basse tension alimente l'Indice Tellux (perturbation humaine, de 0 à 4), un score comparatif <strong>indicatif</strong> — il ne remplace pas une mesure certifiée. Les antennes ANFR sont présentées à part, par la distance au support le plus proche. Le modèle géomagnétique IGRF-14 et les anomalies crustales EMAG2v3 sont affichés comme repères, hors score.</div>
       </div>
       <div class="d-block">
         <div class="d-block-title">Contribuer</div>
@@ -2195,9 +2195,9 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
   <li style="margin-bottom:4px"><strong>Proximité faille</strong> = +1.5 max si faille tectonique active à &lt;3 km (décroissance linéaire, BRGM 1/50k + Ghilardi 2017)</li>
 </ul>
 
-<p style="margin:10px 0 8px 0;"><strong>Score Indice Tellux — Perturbation humaine (0-5) :</strong></p>
+<p style="margin:10px 0 8px 0;"><strong>Score Indice Tellux — Perturbation humaine (0-4) :</strong></p>
 <ul style="margin:6px 0 6px 16px;padding:0">
-  <li style="margin-bottom:4px"><strong>Composantes</strong> : Antennes ANFR (656 supports de téléphonie mobile, export ANFR du 31/05/2026), ligne HTA (modèle Biot-Savart, courants nominaux ±50 %) et BT (forfait par paliers), densité d'émetteurs RF pondérée par la distance (téléphonie mobile et télévision numérique, la radio FM n'est pas modélisée ; classement relatif, facteur d'échelle ajusté sur 142 mesures certifiées prises en extérieur — ajusté ne veut pas dire validé par la mesure ; relecture physicien sollicitée depuis le 2026-07-01, ADR-027)</li>
+  <li style="margin-bottom:4px"><strong>Composantes</strong> : ligne HTA (modèle Biot-Savart, courants nominaux ±50 %) et BT (forfait par paliers), soit le champ ELF du réseau électrique, en classes de 100 nT. Depuis le 28/09/2026, la RF n'entre plus dans l'Indice : sa classe, calculée par le modèle, rangeait les plus fortes mesures certifiées de Corse parmi les plus basses. Elle est présentée à part : couche « Distance aux antennes mobiles » (656 supports ANFR, export du 31/05/2026) et bloc Radiofréquence du popup.</li>
   <li><strong>Ancien second score « Naturel »</strong> (IGRF-14, anomalie crustale grille LCS-1, susceptibilité magnétique, failles) retiré de l'affichage public le 2026-09-03 (ADR-064) — seuils jamais sourcés. Les données sous-jacentes (susceptibilité, type de sous-sol) restent affichées séparément, hors registre scoré.</li>
 </ul>
 
@@ -2659,7 +2659,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
       <!-- Couche « Interpolation des mesures » (b-interp), LOT D, BRIEF_CODE_TEMPS2_CD_MESURES_INTERPOLATION_2026-09-20 :
            surface dérivée des SITES MESURÉS (buildHotMesures, jamais du modèle RF), restreinte
            aux zones qui remplissent le critère de couverture (2026-09-28) — cf. commentaire à
-           INTERP_ZONES. Hors calcul : rfScore/Indice Tellux intouchés. -->
+           INTERP_ZONES. Hors calcul : Indice Tellux intouchés. -->
       <button class="lbtn" id="b-interp" data-domains="rf" title="Interpolation d'une surface à partir des sites mesurés (jamais du modèle), restreinte aux 5 zones dont au moins la moitié du disque de 5 km est à 2,5 km ou moins d'un site mesuré : Ajaccio (42 sites), Bastia (20), L'Île-Rousse – Monticello (9), Porto-Vecchio (5), Bonifacio (5). Plafond interne de 2,5 km : arrêt net au bord, sans dégradé — une cellule sans site assez proche reste vide, y compris à l'intérieur d'une zone. Sites sources toujours visibles (points sombres)." onclick="tog('interp','on-cert',this)"><span class="dot" style="background:#0f766e"></span>Interpolation des mesures (5 zones)<span class="layer-badge layer-badge--hors">Hors calcul</span><span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-interp"></div>
       <!-- Couche « Sites U/Th à mesurer » retirée de la carte publique le 2026-08-19 (décision
@@ -3535,8 +3535,8 @@ var JS_STRINGS_EN = {
   detail_crustal_label: "large-scale crustal anomaly, EMAG2v3 (NOAA/NCEI, extracted 2026-09-19) — exploratory reference point, not integrated into the score. Value at the product's reference altitude (4 km), not continued to ground.",
   detail_local_label: "local geological susceptibility, same value as susc_nT above — feeds axesTotal internally, unscored in this popup since ADR-064",
   detail_human_label: "total anthropic ELF field, same value shown above — feeds the Disturbance score",
-  detail_rf_label: "weighted transmitter density — relative value, no unit; computed separately from the value above (never forest-attenuated) — feeds the displayed score",
-  detail_rf_label_noncal: "weighted transmitter density — scale factor NOT adjusted at the moment (waiting for its data); relative value, no unit; computed separately from the value above (never forest-attenuated) — feeds the displayed score",
+  detail_rf_label: "weighted transmitter density — relative value, no unit; computed separately from the value above (never forest-attenuated) — no longer feeds the displayed score since 2026-09-28",
+  detail_rf_label_noncal: "weighted transmitter density — scale factor NOT adjusted at the moment (waiting for its data); relative value, no unit; computed separately from the value above (never forest-attenuated) — no longer feeds the displayed score since 2026-09-28",
   detail_alt_label: "Altitude (IGN RGE Alti, ~1 m resolution)",
   mp_igrf_ref_msg: "Expected Tellux composite value here (IGRF-14 + crustal anomaly [EMAG2v3, extracted 2026-09-19] + external correction + ELF disturbance) : ",
   mp_igrf_delta_msg: " Difference from your measurement : ",
@@ -5382,7 +5382,7 @@ const LEGEND_HTML={
     '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#991b1b;vertical-align:middle;margin-right:4px"></span> Élevé 2–8 V/m</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c0000;vertical-align:middle;margin-right:4px"></span> Très élevé ≥ 8 V/m</div>'+
     '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Plafond interne 2,5 km : arrêt net au bord, sans dégradé — une cellule sans site assez proche reste vide, y compris à l\'intérieur d\'une zone. Valeur d\'un site revisité = sa mesure la plus récente (jamais une moyenne).</div>'+
-    '<div class="leg-src">Sites : jeu ANFR/CartoRadio du 19/09/2026 (117 sites distincts), hors calcul — rfScore/Indice Tellux intouchés</div>'+
+    '<div class="leg-src">Sites : jeu ANFR/CartoRadio du 19/09/2026 (117 sites distincts), hors calcul — Indice Tellux intouchés</div>'+
     '</div>',
   contrib:'<div class="leg-block"><b class="leg-title">Contributions smartphone</b>'+
     '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">Relevés terrain des contributeurs Tellux</div>'+
@@ -5473,7 +5473,7 @@ const LEGEND_HTML_EN={
     '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#991b1b;vertical-align:middle;margin-right:4px"></span> High 2–8 V/m</div>'+
     '<div class="leg-row"><span style="display:inline-block;width:11px;height:11px;background:#5c0000;vertical-align:middle;margin-right:4px"></span> Very high ≥ 8 V/m</div>'+
     '<div class="leg-row" style="font-size:9px;color:var(--tx3);margin-top:3px;font-style:italic">Internal cutoff 2.5 km: hard stop at the edge, no gradient — a cell without a close enough site stays empty, even inside a zone. A revisited site\'s value = its most recent measurement (never an average).</div>'+
-    '<div class="leg-src">Sites: ANFR/CartoRadio dataset of 2026-09-19 (117 distinct sites), outside the calculation — rfScore/Indice Tellux untouched</div>'+
+    '<div class="leg-src">Sites: ANFR/CartoRadio dataset of 2026-09-19 (117 distinct sites), outside the calculation — Indice Tellux untouched</div>'+
     '</div>',
   contrib:'<div class="leg-block"><b class="leg-title">Smartphone contributions</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);margin:2px 0 4px">Field readings from Tellux contributors</div><div class="leg-row"><span style="display:inline-block;width:12px;height:12px;background:#5c3a9b;border-radius:50%;border:1.5px solid #F5F0E7;vertical-align:middle;margin-right:4px"></span> Citizen contribution (cluster)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4">Magnetometer (nT), network/WiFi signal (dBm), external sensor. <b>Display only, outside the calculation.</b></div><div class="leg-src">Tellux crowdsourced · Supabase</div></div>',
   openrad:'<div class="leg-block"><b class="leg-title">Citizen gamma (OpenRadiation)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Ambient gamma/X dose rate · citizen measurements · Geiger tubes</div><div class="leg-row"><span style="display:inline-block;width:8px;height:8px;background:#4a8a7a;border-radius:50%;opacity:0.55;vertical-align:middle;margin-right:4px"></span>Citizen measurement point (µSv/h)</div><div class="leg-row" style="font-size:9px;color:var(--tx3);line-height:1.4"><b>Gamma/X, not radon.</b> Independent display layer — not fed into the index or the gamma calculation.</div><div class="leg-row" style="margin-top:5px;padding:5px 7px;background:#eef3f0;border:1px solid #cfe0da;border-radius:4px;font-size:8.5px;color:#2f5f54;line-height:1.4"><b>Indicative measurements, not certified.</b> Heterogeneous sensors. The dataset includes <b>continuous tracks</b> (a single walking session accounts for several hundred points) → displayed density <b>≠ number of measurement sites</b>.</div><div class="leg-src">OpenRadiation contributors — ODbL</div></div>',
@@ -8683,13 +8683,7 @@ function loadPointsChaudsRadio() { return loadSitesApp(); }
 let ANFR_GRID = null;        // { "gi_gj": [ {lat,lon,generation}, ... ] } — index spatial grille 0.05°
 let _anfrLoadPromise = null; // partage le fetch entre appels concurrents (boot + toggle couche)
 let RF_CALIB_K = 1;          // calibration interne Tellux : facteur scalaire E_cal = k·E_raw (défaut 1 = non calibré)
-// RF_INDICE_SEUILS_RAW (2026-09-28, décision de Soleil) : seuils de la composante RF de l'Indice
-// Tellux, dans l'échelle BRUTE du modèle (k = 1). Posés par calibrateRF() : médiane, 90e et 99e
-// centile du modèle aux lieux de mesure certifiés retenus (extérieur, conformes, valeur non nulle).
-// La classe RF d'un point dit donc où il se range, dans le modèle, par rapport aux lieux mesurés
-// en Corse — pas un niveau. Indépendants de k par construction. null tant que la calibration n'a
-// pas réussi : rfScoreDe() reprend alors les anciens seuils fixes.
-let RF_INDICE_SEUILS_RAW = null;
+// RF_INDICE_SEUILS_RAW retiré le 2026-09-28, avec la composante RF de l'Indice (rfScoreDe()).
 let RF_CALIB_STATS = null;   // {k_med,k_geo,disp_geo,iqr,n_used,n_excl_nonconf,n_excl_oor,n_excl_indoor,
                               //  n_excl_ineligible,n_excl_bande,k_res,pen_dB,n_total,n_fichier_total,
                               //  bands} — commentaire complété 2026-09-04 (brief AG), manquait 5 champs
@@ -9216,7 +9210,7 @@ async function calibrateRF(){
     RF_CALIB_K=1; // IDEMPOTENCE : calibrer sur le champ BRUT (E_pred non calibré, indépendant
                   // d'un k antérieur). Bloc synchrone jusqu'au RF_CALIB_K=k_med (aucun await → pas de fenêtre).
     const poolDist=[]; // pool de calibration, pour les statistiques par bande de distance (2026-09-28)
-    const ratios=[]; const predExt=[]; const resRatios=[]; let nNC=0,nOOR=0,nIndoor=0,nIneligible=0,nHorsBande=0,nZero=0; const bandE2={};
+    const ratios=[]; const resRatios=[]; let nNC=0,nOOR=0,nIndoor=0,nIneligible=0,nHorsBande=0,nZero=0; const bandE2={};
     mes.forEach(m=>{
       // GARDE-FOU (2026-09-02, ingestion élargie Cartoradio) : calib_eligible===false exclut EN
       // PREMIER, avant tout autre filtre. Absence du champ (les 30 fiches d'origine, jamais
@@ -9245,7 +9239,7 @@ async function calibrateRF(){
       // pénétration (~12 dB) que le modèle champ-libre n'a pas → les inclure sous-prédit le
       // champ extérieur affiché. On calibre sur extérieurs seuls ; résidentiels = validation (k_res).
       if(m.type_environnement!=='exterieur_public'){ nIndoor++; resRatios.push(ratio); return; }
-      ratios.push(ratio); predExt.push(Epred);
+      ratios.push(ratio);
       poolDist.push({lat:m.lat,lon:m.lon,v:meas});
       if(m.valeurs_par_bande){ for(const b in m.valeurs_par_bande){ const v=+m.valeurs_par_bande[b]; if(v>0) bandE2[b]=(bandE2[b]||0)+v*v; } }
     });
@@ -9260,8 +9254,6 @@ async function calibrateRF(){
     const totE2=Object.values(bandE2).reduce((a,b)=>a+b,0)||1;
     const bands=Object.fromEntries(Object.entries(bandE2).map(([b,v])=>[b,+(v/totE2).toFixed(3)]).sort((a,b)=>b[1]-a[1]));
     RF_CALIB_K=k_med;                                           // méthodo : médiane (robuste), extérieurs seuls (S2)
-    { const p=predExt.slice().sort((a,b)=>a-b); const qq=f=>{const i=(p.length-1)*f,lo=Math.floor(i),hi=Math.ceil(i);return p[lo]+(p[hi]-p[lo])*(i-lo);};
-      RF_INDICE_SEUILS_RAW=[qq(0.5),qq(0.9),qq(0.99)]; }        // classe RF de l'Indice, cf. déclaration
     // RF_BANDES_STATS (2026-09-28) : mesures du pool rangées par bande de distance au support mobile le plus
     // proche — n, médiane, 90e centile (interpolation linéaire, même convention que qq ci-dessus).
     { const par=[[],[],[]];
@@ -9279,7 +9271,7 @@ async function calibrateRF(){
     // depuis l'élargissement du pool, il vaut 236. n_fichier_total expose la taille brute du fichier
     // séparément, pour audit.
     const nCalibCorpus=mes.length-nIneligible;
-    RF_CALIB_STATS={k_med:+k_med.toFixed(3),k_geo:+k_geo.toFixed(3),disp_geo:+disp_geo.toFixed(2),iqr:[+q(0.25).toFixed(3),+q(0.75).toFixed(3)],n_used:ratios.length,n_excl_nonconf:nNC,n_excl_oor:nOOR,n_excl_indoor:nIndoor,n_excl_ineligible:nIneligible,n_excl_bande:nHorsBande,n_excl_zero:nZero,indice_seuils:RF_INDICE_SEUILS_RAW.map(v=>+(v*k_med).toFixed(3)),k_res:k_res!=null?+k_res.toFixed(3):null,pen_dB,n_total:nCalibCorpus,n_fichier_total:mes.length,bands};
+    RF_CALIB_STATS={k_med:+k_med.toFixed(3),k_geo:+k_geo.toFixed(3),disp_geo:+disp_geo.toFixed(2),iqr:[+q(0.25).toFixed(3),+q(0.75).toFixed(3)],n_used:ratios.length,n_excl_nonconf:nNC,n_excl_oor:nOOR,n_excl_indoor:nIndoor,n_excl_ineligible:nIneligible,n_excl_bande:nHorsBande,n_excl_zero:nZero,k_res:k_res!=null?+k_res.toFixed(3):null,pen_dB,n_total:nCalibCorpus,n_fichier_total:mes.length,bands};
     console.log('[Tellux] calibration RF : k='+k_med.toFixed(3)+' (méd) / '+k_geo.toFixed(3)+' (géo) · dispersion ×÷'+disp_geo.toFixed(2)+' · IQR ['+q(0.25).toFixed(2)+'–'+q(0.75).toFixed(2)+'] · n='+ratios.length+'/'+nCalibCorpus+(nIneligible?' (+'+nIneligible+' hors pool, fichier='+mes.length+')':'')+' (exclus : '+nNC+' non-conf, '+nOOR+' hors-portée, '+nIndoor+' résidentiel, '+nHorsBande+' hors-bande, '+nZero+' valeur nulle) · pénétration intérieur ≈'+(pen_dB!=null?pen_dB:'?')+' dB');
     if(disp_geo>5) console.warn('[Tellux] calibration RF : dispersion large (×÷'+disp_geo.toFixed(1)+') — k médian = compromis central, incertitude locale élevée (constat qualité modèle, non masqué).');
     // Carte RF : reconstruite si elle est allumée ; ÉTEINTE, vidée — tog() ne reconstruit qu'une couche
@@ -10398,7 +10390,11 @@ map.on('click',async e=>{
   const delta=real!==null?Math.round(real-predicted):null;
   const nRFcalib=calcN_RF_calib(lat,lng);
 
-  // ═══ INDICE TELLUX ═══ (classe RF : rfScoreDe(), 2026-09-28)
+  // ═══ INDICE TELLUX ═══ ELF seul, 0 à 4, depuis le 2026-09-28 (décision de Soleil)
+  // La classe RF (rfScoreDe(), un rang du modèle par rapport aux lieux mesurés) en est retirée : elle rangeait
+  // les plus fortes mesures de Corse en classe 0 ou 1 (74 % des mesures au-dessus de 3 V/m, test T7 de la
+  // session Fable, dossier privé recherche/classe-rf-2026-09-28/), et additionnait deux grandeurs sans
+  // commune mesure. La RF est présentée à part : couche « Distance aux antennes mobiles » et bloc RF du popup.
   // Correctif 2026-09-03 (ADR-064, brief H phase 3/4, recadré par arbitrage Soleil du 2026-09-03
   // — brief T) : n'affiche plus qu'un seul score, Perturbation humaine (0-5). L'ancien second
   // score « Activité naturelle » (activNat, ci-dessous) reposait sur des seuils écrits en dur
@@ -10416,10 +10412,9 @@ map.on('click',async e=>{
   // le 2026-09-04 (brief W) — l'ancien nom collisionnait avec le nom public posé par ADR-064,
   // ce que ce renommage élimine. À ne pas confondre avec « Indice Expert »
   // (computeExpertComposite(), gelé/masqué) ni la « Carte de densité magnétique » (heatmap b-hot).
-  const rfScore=rfScoreDe(nRFcalib);
   const humanScore=Math.min(4,Math.round(human/100));
   const geoScore=Math.min(3,Math.round(Math.abs(geo)/15));
-  const perturbHumain=Math.min(5,humanScore+rfScore);
+  const perturbHumain=humanScore; // 0 à 4 ; plus de terme RF depuis le 2026-09-28
   // DIFFÉRENCE LÉGITIME, DOCUMENTÉE (brief BW, registre 2026-09-06) : cette formule (ELF+RF,
   // 0-5, « Indice Tellux ») mesure autre chose que la heatmap b-hot (ELF+susceptibilité
   // substrat, dans buildHot()) et que champLvl de la fiche « Mon lieu » (ELF seul) — trois
@@ -10476,7 +10471,7 @@ map.on('click',async e=>{
   // avec confiance). 'failed' : chiffre v1 affiché, marqué ≈ (repli assumé, jamais silencieux).
   const phHeaderHTML = elfState === 'loading'
     ? '<div style="font-weight:700;font-size:13px;color:#626774;font-style:italic">'+jt('ph_state_loading','Calcul en préparation…')+'</div>'
-    : '<div style="font-weight:700;font-size:14px;color:'+phColor+'">'+phEmoji+' '+perturbHumain+'/5'+(elfState==='failed'?' <span style="font-size:9px;font-weight:400;color:#8A5E22" title="'+elfV1Note()+'">'+elfV1Badge()+'</span>':'')+'</div>';
+    : '<div style="font-weight:700;font-size:14px;color:'+phColor+'">'+phEmoji+' '+perturbHumain+'/4'+(elfState==='failed'?' <span style="font-size:9px;font-weight:400;color:#8A5E22" title="'+elfV1Note()+'">'+elfV1Badge()+'</span>':'')+'</div>';
   // anEmoji/anLabel/anColor RETIRÉES le 2026-09-03 (ADR-064, décision 1) : habillaient le score
   // « Naturel » (activNat/5) désormais retiré de ce popup, cf. commentaire plus haut. Le repro tofu
   // rock->mont-fuji (brief H phase 1, PR #1203) concernait précisément anEmoji — devenu sans objet
@@ -10732,7 +10727,7 @@ map.on('click',async e=>{
           : '<div>H ('+jt('detail_human_label','champ ELF anthropique total, valeur identique à celle affichée plus haut — alimente le score Perturbation')+') : +'+human+' nT'+(elfState==='failed'?' <span style="color:#8A5E22">('+elfV1Badge()+')</span>':'')+'</div>')+
         // Libellé conditionnel à l'état de calibration (2026-09-10, lot B) : « calibré » n'est dit que si k
         // l'est (rfCalibre()) — sinon le même chiffre porte « NON calibré pour l'instant ».
-        (nRFcalib>0.01?'<div>RF ('+(rfCalibre()?jt('detail_rf_label','densité d’émetteurs pondérée — valeur relative, sans unité ; calcul distinct de la valeur ci-dessus (jamais atténué par la forêt) — alimente le score affiché'):jt('detail_rf_label_noncal','densité d’émetteurs pondérée — facteur d’échelle NON ajusté pour l’instant (la calibration interne attend ses données) ; valeur relative, sans unité ; calcul distinct de la valeur ci-dessus (jamais atténué par la forêt) — alimente le score affiché'))+') : '+nRFcalib.toFixed(1)+'</div>':'')+
+        (nRFcalib>0.01?'<div>RF ('+(rfCalibre()?jt('detail_rf_label','densité d’émetteurs pondérée — valeur relative, sans unité ; calcul distinct de la valeur ci-dessus (jamais atténué par la forêt) — n’entre plus dans le score affiché depuis le 28/09/2026'):jt('detail_rf_label_noncal','densité d’émetteurs pondérée — facteur d’échelle NON ajusté pour l’instant (la calibration interne attend ses données) ; valeur relative, sans unité ; calcul distinct de la valeur ci-dessus (jamais atténué par la forêt) — n’entre plus dans le score affiché depuis le 28/09/2026'))+') : '+nRFcalib.toFixed(1)+'</div>':'')+
         (typeof altitude_m==='number' && isFinite(altitude_m)?'<div>'+jt('detail_alt_label','Altitude (IGN RGE Alti, résolution ~1 m)')+' : '+altitude_m+' m</div>':'')+
       '</div>'+
       elfContribsFullHTML+
@@ -12266,16 +12261,8 @@ function scoreColor(sc){
 // il trompe le prochain lecteur du code, et c'est lui qui réintroduit l'unité ailleurs.
 // `E_total_V_m` reste le nom du champ rendu par RF_field() (renommage hors périmètre de ce lot,
 // aucun calcul touché ici) — la valeur, elle, ne se présente plus nulle part comme un champ.
-// Classe RF de l'Indice Tellux (0-3). Depuis le 2026-09-28 : rang du point, dans le modèle, par rapport
-// aux lieux de mesure certifiés (au-dessus de la médiane, du 90e, du 99e centile du modèle à ces lieux),
-// cf. RF_INDICE_SEUILS_RAW. Les anciens seuils fixes (0,5 / 2 / 6) ne servent plus qu'avant calibration.
-function rfScoreDe(nRFcalib){
-  if(Array.isArray(RF_INDICE_SEUILS_RAW) && typeof RF_CALIB_K==='number' && RF_CALIB_K>0){
-    const raw=nRFcalib/RF_CALIB_K, t=RF_INDICE_SEUILS_RAW;
-    return raw>t[2]?3:raw>t[1]?2:raw>t[0]?1:0;
-  }
-  return nRFcalib>6?3:nRFcalib>2?2:nRFcalib>0.5?1:0;
-}
+// rfScoreDe() (classe RF de l'Indice, 0-3) retirée le 2026-09-28 avec la composante RF de l'Indice (décision de
+// Soleil) : l'Indice est désormais ELF seul, cf. le bloc INDICE TELLUX du popup.
 function calcN_RF_calib(lat,lon){ return RF_field(lat,lon).E_total_V_m; } // sans unité — plus de ×25
 
 // HEAT_CLIP_ZOOM (2026-09-28, notes de Soleil : « la grille RF ne s'affiche que sur une partie de la
@@ -12377,10 +12364,8 @@ function buildHot(){
       // aucune option, même raison de coût que la heatmap ci-dessus (survol continu, throttlé à
       // 80ms). Cf. rapport brief BU, 2026-09-06, section 2.A.
       const {human:h}=calcAll(lt,ln);
-      const rf=calcN_RF_calib(lt,ln);
-      const rfS=rfScoreDe(rf);
       const hS=Math.min(4,Math.round(h/100));
-      const pH=Math.min(5,hS+rfS);
+      const pH=hS; // Indice ELF seul, 0 à 4, depuis le 2026-09-28 — même formule que le popup
       const em=pH<=1?'\ud83d\udfe2':pH<=2?'\ud83d\udfe1':pH<=3?'\ud83d\udfe0':'\ud83d\udd34';
       const col=pH<=1?'#1a6b5c':pH<=2?'#2d9b87':pH<=3?'#b85c00':'#dc2626';
       el.innerHTML=em+' <span style="color:'+col+';font-weight:600">P'+pH+'</span>';
@@ -16423,14 +16408,14 @@ function capCleanup(){
            scores qui n'existe plus depuis le 2026-09-03 (ADR-064/brief T) — l'entrée
            « Perturbation humaine » ci-dessous suffit désormais à elle seule, sans « double »
            à expliquer. -->
-      <div class="glossary-entry" data-search="perturbation humaine score anthropique antennes lignes ht radiofrequences rf">
-        <div class="glossary-entry-title">Perturbation humaine (0–5)</div>
+      <div class="glossary-entry" data-search="perturbation humaine score anthropique lignes ht bt reseau electrique elf indice">
+        <div class="glossary-entry-title">Perturbation humaine (0–4)</div>
         <div class="glossary-entry-body">
-          Influence mesurée des antennes, lignes HT et radiofréquences.<br>
+          Influence estimée du réseau électrique (lignes haute et basse tension), d'après le modèle.<br>
           <span class="glossary-swatch glossary-swatch-circle" style="background:#3F5B3A"></span> 0–1 très calme &middot;
           <span class="glossary-swatch glossary-swatch-circle" style="background:#EDD59A"></span> 2 calme &middot;
           <span class="glossary-swatch glossary-swatch-circle" style="background:#C28533"></span> 3 modéré &middot;
-          <span class="glossary-swatch glossary-swatch-circle" style="background:#8E2F1F"></span> 4–5 perturbé
+          <span class="glossary-swatch glossary-swatch-circle" style="background:#8E2F1F"></span> 4 perturbé
         </div>
       </div>
       <div class="glossary-entry" data-search="heatmap elf 50 hz zones ocre composite carte composition">
@@ -16931,7 +16916,7 @@ function capCleanup(){
 ["gloss_t1",".glossary-entry-title@1","","Champ N+H — naturel + humain","","N+H field — natural + human"],
 ["gloss_t2",".glossary-entry-title@2","","Delta (Δ) — anomalie","","Delta (Δ) — anomaly"],
 ["gloss_t3",".glossary-entry-title@3","","nT — nanoTesla","","nT — nanotesla"],
-["gloss_t4",".glossary-entry-title@4","","Perturbation humaine (0–5)","","Human disturbance (0–5)"],
+["gloss_t4",".glossary-entry-title@4","","Perturbation humaine (0–4)","","Human disturbance (0–4)"],
 ["gloss_t5",".glossary-entry-title@5","","Heatmap ELF","","ELF heatmap"],
 ["gloss_t6",".glossary-entry-title@6","","Indice Kp","","Kp index"],
 ["gloss_t7",".glossary-entry-title@7","","Bz — composante du vent solaire","","Bz — solar wind component"],
@@ -17098,8 +17083,8 @@ function capCleanup(){
       // paire EN n'existait pas avant ce brief. Même mécanisme RICH_HTML_EN que le
       // panneau méthodologie car le texte porte un <strong> inline.
       [".d-block-text@0",
-        "Antennes ANFR et réseau EDF SEI haute et basse tension alimentent l'Indice Tellux (perturbation humaine), un score comparatif indicatif — il ne remplace pas une mesure certifiée. Le modèle géomagnétique IGRF-14 et les anomalies crustales EMAG2v3 sont affichés comme repères, hors score.",
-        "ANFR antennas and the EDF SEI high- and low-voltage network feed the Tellux Index (human disturbance), an <strong>indicative</strong> comparative score — it does not replace a certified measurement. The IGRF-14 geomagnetic model and EMAG2v3 crustal anomalies are shown as reference layers, outside the score."],
+        "Le réseau EDF SEI haute et basse tension alimente l'Indice Tellux (perturbation humaine, de 0 à 4), un score comparatif indicatif — il ne remplace pas une mesure certifiée. Les antennes ANFR sont présentées à part, par la distance au support le plus proche. Le modèle géomagnétique IGRF-14 et les anomalies crustales EMAG2v3 sont affichés comme repères, hors score.",
+        "The EDF SEI high- and low-voltage network feeds the Tellux Index (human disturbance, 0 to 4), an <strong>indicative</strong> comparative score — it does not replace a certified measurement. ANFR antennas are shown separately, by the distance to the nearest mast. The IGRF-14 geomagnetic model and EMAG2v3 crustal anomalies are shown as reference layers, outside the score."],
       // Contexte substrat géologique
       ["#methodology-panel p@0",
         "Contexte substrat géologique — proximité faille : [indicateur de contexte structural, pas d'indicateur EM]",
@@ -17109,11 +17094,11 @@ function capCleanup(){
         "<strong>Fault proximity</strong> = +1.5 max if an active tectonic fault is within &lt;3 km (linear decay, BRGM 1:50k + Ghilardi 2017)"],
       // Score Indice Tellux
       ["#methodology-panel p@1",
-        "Score Indice Tellux — Perturbation humaine (0-5) :",
-        "<strong>Tellux Index Score — Human disturbance (0-5):</strong>"],
+        "Score Indice Tellux — Perturbation humaine (0-4) :",
+        "<strong>Tellux Index Score — Human disturbance (0-4):</strong>"],
       ["#methodology-panel li@1",
-        "Composantes : Antennes ANFR (656 supports de téléphonie mobile, export ANFR du 31/05/2026), ligne HTA (modèle Biot-Savart, courants nominaux ±50 %) et BT (forfait par paliers), densité d'émetteurs RF pondérée par la distance (téléphonie mobile et télévision numérique, la radio FM n'est pas modélisée ; classement relatif, facteur d'échelle ajusté sur 142 mesures certifiées prises en extérieur — ajusté ne veut pas dire validé par la mesure ; relecture physicien sollicitée depuis le 2026-07-01, ADR-027)",
-        "<strong>Components</strong>: ANFR antennas (656 mobile-phone masts, ANFR export of 2026-05-31), HTA line (Biot-Savart model, nominal currents ±50%) and low-voltage (flat-rate tiers), distance-weighted RF transmitter density (mobile telephony and digital television, FM radio is not modelled; relative ranking, scale factor adjusted on 142 certified outdoor measurements — adjusted does not mean validated by measurement; physicist review requested since 2026-07-01, ADR-027)"],
+        "Composantes : ligne HTA (modèle Biot-Savart, courants nominaux ±50 %) et BT (forfait par paliers), soit le champ ELF du réseau électrique, en classes de 100 nT. Depuis le 28/09/2026, la RF n'entre plus dans l'Indice : sa classe, calculée par le modèle, rangeait les plus fortes mesures certifiées de Corse parmi les plus basses. Elle est présentée à part : couche « Distance aux antennes mobiles » (656 supports ANFR, export du 31/05/2026) et bloc Radiofréquence du popup.",
+        "<strong>Components</strong>: HTA line (Biot-Savart model, nominal currents ±50%) and low-voltage (flat-rate tiers), i.e. the ELF field of the electrical grid, in 100 nT classes. Since 2026-09-28 RF no longer feeds the Index: its class, computed by the model, ranked the highest certified measurements in Corsica among the lowest. It is shown separately: the “Distance to mobile masts” layer (656 ANFR masts, export of 2026-05-31) and the Radiofrequency block of the popup."],
       ["#methodology-panel li@2",
         "Ancien second score « Naturel » (IGRF-14, anomalie crustale grille LCS-1, susceptibilité magnétique, failles) retiré de l'affichage public le 2026-09-03 (ADR-064) — seuils jamais sourcés. Les données sous-jacentes (susceptibilité, type de sous-sol) restent affichées séparément, hors registre scoré.",
         "<strong>Former second \"Natural\" score</strong> (IGRF-14, LCS-1 grid crustal anomaly, magnetic susceptibility, faults) removed from public display on 2026-09-03 (ADR-064) — thresholds never sourced. The underlying data (susceptibility, subsoil type) is still shown separately, outside the scored register."],
@@ -17208,8 +17193,8 @@ function capCleanup(){
       // I18N_ENTRIES (gloss_t*/gloss_b*, sélecteurs .glossary-entry-title@N
       // / .glossary-entry-body@N).
       ["#glossary-drawer .glossary-entry-body@4",
-        "Influence mesurée des antennes, lignes HT et radiofréquences. 0–1 très calme · 2 calme · 3 modéré · 4–5 perturbé",
-        "Measured influence of antennas, HV lines, and radiofrequencies.<br>\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#3F5B3A\"></span> 0–1 very calm &middot;\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#EDD59A\"></span> 2 calm &middot;\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#C28533\"></span> 3 moderate &middot;\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#8E2F1F\"></span> 4–5 disturbed"],
+        "Influence estimée du réseau électrique (lignes haute et basse tension), d'après le modèle. 0–1 très calme · 2 calme · 3 modéré · 4 perturbé",
+        "Estimated influence of the electrical grid (high- and low-voltage lines), from the model.<br>\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#3F5B3A\"></span> 0–1 very calm &middot;\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#EDD59A\"></span> 2 calm &middot;\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#C28533\"></span> 3 moderate &middot;\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#8E2F1F\"></span> 4 disturbed"],
       ["#glossary-drawer .glossary-entry-body@8",
         "Mesures officielles certifiées en V/m (champ radio). faible · modéré · élevé · dépassement légal",
         "Official certified measurements in V/m (radio field).<br>\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#3F5B3A\"></span> low &middot;\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#C28533\"></span> moderate &middot;\n          <span class=\"glossary-swatch glossary-swatch-circle\" style=\"background:#8E2F1F\"></span> high &middot;\n          <span class=\"glossary-swatch glossary-swatch-diamond\" style=\"background:#8E2F1F;border:1.5px solid #D4A84C\"></span> legal exceedance"],
