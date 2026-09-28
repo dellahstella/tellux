@@ -8338,9 +8338,12 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
   // « padded », halo de recherche spatiale ~2km, aucune nouvelle indexation
   // — cf. _drafts/RECONTROLE_CALIBRATION_BT_3.3_2026-08.md §2 et §4) :
   //   0 segment        → hors périmètre BT, 0 nT
-  //   1-152 segments   → palier bas,   70 nT plafond
-  //   153-517 segments → palier moyen, 115 nT plafond
-  //   518+ segments    → palier haut,  180 nT plafond
+  //   1-95 segments    → palier bas,   70 nT plafond
+  //   96-289 segments  → palier moyen, 115 nT plafond
+  //   290+ segments    → palier haut,  180 nT plafond
+  // Seuils RECALÉS le 2026-09-28 (décision de Soleil) : 153 et 518 étaient les terciles des tuiles non
+  // vides en comptant les lignes en double (rejoué : 155 et 513) ; sans doublons (#1632), les terciles
+  // sont 96 et 290. Même définition, donnée corrigée.
   // Choix éditorial à l'intérieur de la fourchette instruite 50-200 nT
   // (ambiant de zone, distincte du champ proche 500-5000 nT) — PAS une
   // calibration statistique. Ne dépasse jamais 200 nT (borne haute de la
@@ -8348,8 +8351,8 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
   if (USE_BT_SEGMENTS && BT_SEGMENT_GRID) {
     const nBtZone = getBTSegmentsNear(lat, lon).length;
     let btZoneIntensity = 0;
-    if (nBtZone >= 518) btZoneIntensity = 180;
-    else if (nBtZone >= 153) btZoneIntensity = 115;
+    if (nBtZone >= 290) btZoneIntensity = 180;
+    else if (nBtZone >= 96) btZoneIntensity = 115;
     else if (nBtZone >= 1) btZoneIntensity = 70;
     if (btZoneIntensity > 0) {
       B_total_nT += btZoneIntensity;
@@ -8721,6 +8724,13 @@ function loadPointsChaudsRadio() { return loadSitesApp(); }
 let ANFR_GRID = null;        // { "gi_gj": [ {lat,lon,generation}, ... ] } — index spatial grille 0.05°
 let _anfrLoadPromise = null; // partage le fetch entre appels concurrents (boot + toggle couche)
 let RF_CALIB_K = 1;          // calibration interne Tellux : facteur scalaire E_cal = k·E_raw (défaut 1 = non calibré)
+// RF_INDICE_SEUILS_RAW (2026-09-28, décision de Soleil) : seuils de la composante RF de l'Indice
+// Tellux, dans l'échelle BRUTE du modèle (k = 1). Posés par calibrateRF() : médiane, 90e et 99e
+// centile du modèle aux lieux de mesure certifiés retenus (extérieur, conformes, valeur non nulle).
+// La classe RF d'un point dit donc où il se range, dans le modèle, par rapport aux lieux mesurés
+// en Corse — pas un niveau. Indépendants de k par construction. null tant que la calibration n'a
+// pas réussi : rfScoreDe() reprend alors les anciens seuils fixes.
+let RF_INDICE_SEUILS_RAW = null;
 let RF_CALIB_STATS = null;   // {k_med,k_geo,disp_geo,iqr,n_used,n_excl_nonconf,n_excl_oor,n_excl_indoor,
                               //  n_excl_ineligible,n_excl_bande,k_res,pen_dB,n_total,n_fichier_total,
                               //  bands} — commentaire complété 2026-09-04 (brief AG), manquait 5 champs
@@ -9204,7 +9214,7 @@ async function calibrateRF(){
     const d=await r.json(); const mes=d.mesures||[];
     RF_CALIB_K=1; // IDEMPOTENCE : calibrer sur le champ BRUT (E_pred non calibré, indépendant
                   // d'un k antérieur). Bloc synchrone jusqu'au RF_CALIB_K=k_med (aucun await → pas de fenêtre).
-    const ratios=[]; const resRatios=[]; let nNC=0,nOOR=0,nIndoor=0,nIneligible=0,nHorsBande=0,nZero=0; const bandE2={};
+    const ratios=[]; const predExt=[]; const resRatios=[]; let nNC=0,nOOR=0,nIndoor=0,nIneligible=0,nHorsBande=0,nZero=0; const bandE2={};
     mes.forEach(m=>{
       // GARDE-FOU (2026-09-02, ingestion élargie Cartoradio) : calib_eligible===false exclut EN
       // PREMIER, avant tout autre filtre. Absence du champ (les 30 fiches d'origine, jamais
@@ -9233,7 +9243,7 @@ async function calibrateRF(){
       // pénétration (~12 dB) que le modèle champ-libre n'a pas → les inclure sous-prédit le
       // champ extérieur affiché. On calibre sur extérieurs seuls ; résidentiels = validation (k_res).
       if(m.type_environnement!=='exterieur_public'){ nIndoor++; resRatios.push(ratio); return; }
-      ratios.push(ratio);
+      ratios.push(ratio); predExt.push(Epred);
       if(m.valeurs_par_bande){ for(const b in m.valeurs_par_bande){ const v=+m.valeurs_par_bande[b]; if(v>0) bandE2[b]=(bandE2[b]||0)+v*v; } }
     });
     if(!ratios.length){ RF_CALIB_K=kAvant; console.warn('[Tellux] calibration RF : 0 point exploitable — k inchangé ('+kAvant+')'); return; }
@@ -9247,6 +9257,8 @@ async function calibrateRF(){
     const totE2=Object.values(bandE2).reduce((a,b)=>a+b,0)||1;
     const bands=Object.fromEntries(Object.entries(bandE2).map(([b,v])=>[b,+(v/totE2).toFixed(3)]).sort((a,b)=>b[1]-a[1]));
     RF_CALIB_K=k_med;                                           // méthodo : médiane (robuste), extérieurs seuls (S2)
+    { const p=predExt.slice().sort((a,b)=>a-b); const qq=f=>{const i=(p.length-1)*f,lo=Math.floor(i),hi=Math.ceil(i);return p[lo]+(p[hi]-p[lo])*(i-lo);};
+      RF_INDICE_SEUILS_RAW=[qq(0.5),qq(0.9),qq(0.99)]; }        // classe RF de l'Indice, cf. déclaration
     // S2 validation (non appliquée au champ) : perte de pénétration intérieur estimée
     // pen_dB = 20·log10(k_ext/k_res). k_res = médiane des ratios résidentiels.
     const medArr=a=>{const t=a.slice().sort((x,y)=>x-y);return t.length?(t.length%2?t[(t.length-1)/2]:(t[t.length/2-1]+t[t.length/2])/2):null;};
@@ -9257,7 +9269,7 @@ async function calibrateRF(){
     // depuis l'élargissement du pool, il vaut 236. n_fichier_total expose la taille brute du fichier
     // séparément, pour audit.
     const nCalibCorpus=mes.length-nIneligible;
-    RF_CALIB_STATS={k_med:+k_med.toFixed(3),k_geo:+k_geo.toFixed(3),disp_geo:+disp_geo.toFixed(2),iqr:[+q(0.25).toFixed(3),+q(0.75).toFixed(3)],n_used:ratios.length,n_excl_nonconf:nNC,n_excl_oor:nOOR,n_excl_indoor:nIndoor,n_excl_ineligible:nIneligible,n_excl_bande:nHorsBande,n_excl_zero:nZero,k_res:k_res!=null?+k_res.toFixed(3):null,pen_dB,n_total:nCalibCorpus,n_fichier_total:mes.length,bands};
+    RF_CALIB_STATS={k_med:+k_med.toFixed(3),k_geo:+k_geo.toFixed(3),disp_geo:+disp_geo.toFixed(2),iqr:[+q(0.25).toFixed(3),+q(0.75).toFixed(3)],n_used:ratios.length,n_excl_nonconf:nNC,n_excl_oor:nOOR,n_excl_indoor:nIndoor,n_excl_ineligible:nIneligible,n_excl_bande:nHorsBande,n_excl_zero:nZero,indice_seuils:RF_INDICE_SEUILS_RAW.map(v=>+(v*k_med).toFixed(3)),k_res:k_res!=null?+k_res.toFixed(3):null,pen_dB,n_total:nCalibCorpus,n_fichier_total:mes.length,bands};
     console.log('[Tellux] calibration RF : k='+k_med.toFixed(3)+' (méd) / '+k_geo.toFixed(3)+' (géo) · dispersion ×÷'+disp_geo.toFixed(2)+' · IQR ['+q(0.25).toFixed(2)+'–'+q(0.75).toFixed(2)+'] · n='+ratios.length+'/'+nCalibCorpus+(nIneligible?' (+'+nIneligible+' hors pool, fichier='+mes.length+')':'')+' (exclus : '+nNC+' non-conf, '+nOOR+' hors-portée, '+nIndoor+' résidentiel, '+nHorsBande+' hors-bande, '+nZero+' valeur nulle) · pénétration intérieur ≈'+(pen_dB!=null?pen_dB:'?')+' dB');
     if(disp_geo>5) console.warn('[Tellux] calibration RF : dispersion large (×÷'+disp_geo.toFixed(1)+') — k médian = compromis central, incertitude locale élevée (constat qualité modèle, non masqué).');
     // Carte RF : reconstruite si elle est allumée ; ÉTEINTE, vidée — tog() ne reconstruit qu'une couche
@@ -10376,7 +10388,7 @@ map.on('click',async e=>{
   const delta=real!==null?Math.round(real-predicted):null;
   const nRFcalib=calcN_RF_calib(lat,lng);
 
-  // ═══ INDICE TELLUX ═══
+  // ═══ INDICE TELLUX ═══ (classe RF : rfScoreDe(), 2026-09-28)
   // Correctif 2026-09-03 (ADR-064, brief H phase 3/4, recadré par arbitrage Soleil du 2026-09-03
   // — brief T) : n'affiche plus qu'un seul score, Perturbation humaine (0-5). L'ancien second
   // score « Activité naturelle » (activNat, ci-dessous) reposait sur des seuils écrits en dur
@@ -10394,7 +10406,7 @@ map.on('click',async e=>{
   // le 2026-09-04 (brief W) — l'ancien nom collisionnait avec le nom public posé par ADR-064,
   // ce que ce renommage élimine. À ne pas confondre avec « Indice Expert »
   // (computeExpertComposite(), gelé/masqué) ni la « Carte de densité magnétique » (heatmap b-hot).
-  const rfScore=nRFcalib>6?3:nRFcalib>2?2:nRFcalib>0.5?1:0;
+  const rfScore=rfScoreDe(nRFcalib);
   const humanScore=Math.min(4,Math.round(human/100));
   const geoScore=Math.min(3,Math.round(Math.abs(geo)/15));
   const perturbHumain=Math.min(5,humanScore+rfScore);
@@ -12241,6 +12253,16 @@ function scoreColor(sc){
 // il trompe le prochain lecteur du code, et c'est lui qui réintroduit l'unité ailleurs.
 // `E_total_V_m` reste le nom du champ rendu par RF_field() (renommage hors périmètre de ce lot,
 // aucun calcul touché ici) — la valeur, elle, ne se présente plus nulle part comme un champ.
+// Classe RF de l'Indice Tellux (0-3). Depuis le 2026-09-28 : rang du point, dans le modèle, par rapport
+// aux lieux de mesure certifiés (au-dessus de la médiane, du 90e, du 99e centile du modèle à ces lieux),
+// cf. RF_INDICE_SEUILS_RAW. Les anciens seuils fixes (0,5 / 2 / 6) ne servent plus qu'avant calibration.
+function rfScoreDe(nRFcalib){
+  if(Array.isArray(RF_INDICE_SEUILS_RAW) && typeof RF_CALIB_K==='number' && RF_CALIB_K>0){
+    const raw=nRFcalib/RF_CALIB_K, t=RF_INDICE_SEUILS_RAW;
+    return raw>t[2]?3:raw>t[1]?2:raw>t[0]?1:0;
+  }
+  return nRFcalib>6?3:nRFcalib>2?2:nRFcalib>0.5?1:0;
+}
 function calcN_RF_calib(lat,lon){ return RF_field(lat,lon).E_total_V_m; } // sans unité — plus de ×25
 
 // HEAT_CLIP_ZOOM (2026-09-28, notes de Soleil : « la grille RF ne s'affiche que sur une partie de la
@@ -12343,7 +12365,7 @@ function buildHot(){
       // 80ms). Cf. rapport brief BU, 2026-09-06, section 2.A.
       const {human:h}=calcAll(lt,ln);
       const rf=calcN_RF_calib(lt,ln);
-      const rfS=rf>6?3:rf>2?2:rf>0.5?1:0;
+      const rfS=rfScoreDe(rf);
       const hS=Math.min(4,Math.round(h/100));
       const pH=Math.min(5,hS+rfS);
       const em=pH<=1?'\ud83d\udfe2':pH<=2?'\ud83d\udfe1':pH<=3?'\ud83d\udfe0':'\ud83d\udd34';
