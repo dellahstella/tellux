@@ -1107,7 +1107,8 @@ h3,h4,h5{font-family:var(--font);font-weight:600;}
    brief Soleil §1.3). Remplace l'ancien layout desktop "push-flow" (flex:0 0 420px,
    repli à 48px via .collapsed) ET l'ancien tiroir mobile "descend du haut"
    (max-height 0→55vh). Un seul mécanisme (transform:translateX, ancré à droite,
-   pleine hauteur) réutilisé aux deux breakpoints, fermé par défaut.
+   pleine hauteur) réutilisé aux deux breakpoints, fermé en CSS — ouvert au chargement par
+   le JS depuis le 2026-09-28 (cf. init() du bloc « Phase 2 JS », notes de Soleil).
    z-index:1160 (2026-08-26, repro Soleil mobile x3 : contrôles Leaflet natifs zoom
    +/− + bouton recentrer 📍 visibles PAR-DESSUS le tiroir plein écran mobile,
    recouvrant "Champ magnétique composite"/"Champ électrique RF" — confirmé par
@@ -2343,7 +2344,12 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            de lyr_hotrf_tt, I18N_ENTRIES) invalidée par ce changement de texte FR source — VIDÉE, pas
            réécrite (aucune autorité linguistique corse ici) : affichage FR de repli tant qu'elle
            n'est pas retraduite par un locuteur natif. -->
-      <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Densité d'émetteurs pondérée par la distance — modèle Tellux. Compte les antennes de téléphonie mobile ANFR et les émetteurs de télévision numérique TDF déclarés autour du point, en pondérant par la distance (décompte dans la légende Antennes ANFR et émetteurs TDF). La radio FM n'est pas modélisée : aucun émetteur FM n'entre dans ce calcul. Classe les lieux entre eux ; n'indique pas un niveau d'exposition et ne remplace pas une mesure. Le facteur d'échelle est ajusté sur 21 mesures certifiées ANFR/EXEM — ajusté ne veut pas dire validé par la mesure. Relecture physicien sollicitée depuis le 2026-07-01 (ADR-027). Pour un niveau mesuré, voir la couche Mesures certifiées ANFR." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Densité d'émetteurs pondérée<span class="layer-badge layer-badge--domain">RF</span></button>
+      <!-- 2026-09-28 (notes de Soleil) : la phrase « Relecture physicien sollicitée depuis le
+           2026-07-01 (ADR-027) » est retirée de ce title= et de la ligne lyr_hotrf_tt (FR, EN) :
+           un état de procédure n'a pas sa place dans le libellé d'une couche de la carte. Le
+           statut reste écrit dans le panneau Méthodologie (#methodology-panel, liste des
+           composantes, FR et EN). -->
+      <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Densité d'émetteurs pondérée par la distance — modèle Tellux. Compte les antennes de téléphonie mobile ANFR et les émetteurs de télévision numérique TDF déclarés autour du point, en pondérant par la distance (décompte dans la légende Antennes ANFR et émetteurs TDF). La radio FM n'est pas modélisée : aucun émetteur FM n'entre dans ce calcul. Classe les lieux entre eux ; n'indique pas un niveau d'exposition et ne remplace pas une mesure. Le facteur d'échelle est ajusté sur 21 mesures certifiées ANFR/EXEM — ajusté ne veut pas dire validé par la mesure. Pour un niveau mesuré, voir la couche Mesures certifiées ANFR." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Densité d'émetteurs pondérée<span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-hotrf"></div>
       <!-- Champ ELF (nT) — brief BH, 2026-09-05 : couche ELF PURE (data-domains="elf" seul),
            distincte de b-hot (composite human+geo, cf. brief BF — conservé, non touché ici).
@@ -12212,15 +12218,25 @@ function scoreColor(sc){
 // aucun calcul touché ici) — la valeur, elle, ne se présente plus nulle part comme un champ.
 function calcN_RF_calib(lat,lon){ return RF_field(lat,lon).E_total_V_m; } // sans unité — plus de ×25
 
+// HEAT_CLIP_ZOOM (2026-09-28, notes de Soleil : « la grille RF ne s'affiche que sur une partie de la
+// carte, le nord ou le sud reste blanc, même en se déplaçant ; seul un zoom la fait revenir »).
+// À partir de ce zoom, les trois grilles (buildHot, buildHotRF, buildElf) ne calculent que la vue
+// courante plus une marge de 0,1° ; en dessous, toute l'île. Le recalcul au déplacement était
+// réservé aux zooms ≥ 12 : aux zooms 10 et 11, la grille restait bornée à la vue d'avant le
+// déplacement, et ce qui entrait dans la vue restait vide jusqu'au prochain zoom. Une seule
+// constante gouverne désormais le bornage ET le recalcul au déplacement (écouteur moveend,
+// plus bas), pour qu'ils ne puissent plus diverger. Coût au déplacement à z10–11 : celui du
+// recalcul déjà fait à chaque changement de zoom (même pas de grille, 0,02°).
+const HEAT_CLIP_ZOOM=10;
 function buildHot(){
   lHot.clearLayers();
   const z=map.getZoom();
   const step=z>=16?0.001:z>=14?0.003:z>=12?0.008:z>=10?0.02:0.04;
   const bnds=map.getBounds();
-  const latMin=z>=10?Math.max(41.35,bnds.getSouth()-0.1):41.35;
-  const latMax=z>=10?Math.min(43.05,bnds.getNorth()+0.1):43.05;
-  const lonMin=z>=10?Math.max(8.55,bnds.getWest()-0.1):8.55;
-  const lonMax=z>=10?Math.min(9.65,bnds.getEast()+0.1):9.65;
+  const latMin=z>=HEAT_CLIP_ZOOM?Math.max(41.35,bnds.getSouth()-0.1):41.35;
+  const latMax=z>=HEAT_CLIP_ZOOM?Math.min(43.05,bnds.getNorth()+0.1):43.05;
+  const lonMin=z>=HEAT_CLIP_ZOOM?Math.max(8.55,bnds.getWest()-0.1):8.55;
+  const lonMax=z>=HEAT_CLIP_ZOOM?Math.min(9.65,bnds.getEast()+0.1):9.65;
   for(let a=latMin;a<latMax;a+=step){
     for(let o=lonMin;o<lonMax;o+=step){
       // Couche magnétique : grandeur HOMOGÈNE en nT = ELF 50 Hz (human) + susceptibilité
@@ -12363,10 +12379,10 @@ function buildHotRF(){
   const z=map.getZoom();
   const step=z>=16?0.001:z>=14?0.003:z>=12?0.008:z>=10?0.02:0.04;
   const bnds=map.getBounds();
-  const latMin=z>=10?Math.max(41.35,bnds.getSouth()-0.1):41.35;
-  const latMax=z>=10?Math.min(43.05,bnds.getNorth()+0.1):43.05;
-  const lonMin=z>=10?Math.max(8.55,bnds.getWest()-0.1):8.55;
-  const lonMax=z>=10?Math.min(9.65,bnds.getEast()+0.1):9.65;
+  const latMin=z>=HEAT_CLIP_ZOOM?Math.max(41.35,bnds.getSouth()-0.1):41.35;
+  const latMax=z>=HEAT_CLIP_ZOOM?Math.min(43.05,bnds.getNorth()+0.1):43.05;
+  const lonMin=z>=HEAT_CLIP_ZOOM?Math.max(8.55,bnds.getWest()-0.1):8.55;
+  const lonMax=z>=HEAT_CLIP_ZOOM?Math.min(9.65,bnds.getEast()+0.1):9.65;
   for(let a=latMin;a<latMax;a+=step){
     for(let o=lonMin;o<lonMax;o+=step){
       const score=calcN_RF_calib(a,o); // densité pondérée, calibrée en interne (pas de bucket) — sans unité, cf. rfColor()
@@ -12546,10 +12562,10 @@ async function buildElf(){
   const z=map.getZoom();
   const step=z>=16?0.001:z>=14?0.003:z>=12?0.008:z>=10?0.02:0.04;
   const bnds=map.getBounds();
-  const latMin=z>=10?Math.max(41.35,bnds.getSouth()-0.1):41.35;
-  const latMax=z>=10?Math.min(43.05,bnds.getNorth()+0.1):43.05;
-  const lonMin=z>=10?Math.max(8.55,bnds.getWest()-0.1):8.55;
-  const lonMax=z>=10?Math.min(9.65,bnds.getEast()+0.1):9.65;
+  const latMin=z>=HEAT_CLIP_ZOOM?Math.max(41.35,bnds.getSouth()-0.1):41.35;
+  const latMax=z>=HEAT_CLIP_ZOOM?Math.min(43.05,bnds.getNorth()+0.1):43.05;
+  const lonMin=z>=HEAT_CLIP_ZOOM?Math.max(8.55,bnds.getWest()-0.1):8.55;
+  const lonMax=z>=HEAT_CLIP_ZOOM?Math.min(9.65,bnds.getEast()+0.1):9.65;
   for(let a=latMin;a<latMax;a+=step){
     for(let o=lonMin;o<lonMax;o+=step){
       const nt=calcMagneticELFAuto(a,o).B_total_nT;
@@ -14000,7 +14016,7 @@ showLegend('hotrf',true);
 let _hotDebounce=null;
 function rebuildHotDebounced(){clearTimeout(_hotDebounce);_hotDebounce=setTimeout(()=>{if(ACTIVE.hot){lHot.clearLayers();buildHot();}if(ACTIVE.hotrf){lHotRF.clearLayers();buildHotRF();}if(ACTIVE.elf)buildElf();},300);}
 map.on('zoomend',rebuildHotDebounced);
-map.on('moveend',function(){if(map.getZoom()>=12)rebuildHotDebounced();});
+map.on('moveend',function(){if(map.getZoom()>=HEAT_CLIP_ZOOM)rebuildHotDebounced();}); // même seuil que le bornage des grilles, cf. HEAT_CLIP_ZOOM
 // Zoom-gate visuel de la couche forêt dense (décision Soleil 2026-08-30) — cf. _syncForetDenseZoom.
 map.on('zoomend',function(){ _syncForetDenseZoom(false); });
 map.on('zoomend',function(){ _syncBTZoom(false); });
@@ -16208,6 +16224,13 @@ function capCleanup(){
   try{ if(typeof map!=='undefined') window.map = map; }catch(e){}
 
   function init(){
+    // Tiroir couches OUVERT au chargement (2026-09-28, notes de Soleil : « mettre actif le menu
+    // couche par défaut »). Desktop : même chemin que le bouton ☰ (setLayersPanelOpen). Mobile :
+    // même chemin que l'onglet « Couches » de la barre du bas (switchMobileTab), pour que l'onglet
+    // actif, le glyphe du bouton et le décalage de la carte restent cohérents avec le tiroir.
+    // Rien n'est mémorisé : un visiteur qui le ferme le retrouve ouvert au rechargement.
+    if(LAYOUT_MQ.matches) setLayersPanelOpen(true);
+    else if(typeof window.switchMobileTab === 'function') window.switchMobileTab('couches');
     openFirstAccordionDesktop();
   }
 
@@ -16270,6 +16293,10 @@ function capCleanup(){
     var btn = document.getElementById('layers-toggle');
     if(!la || !la.classList.contains('open')) return;
     if(la.contains(e.target) || (btn && btn.contains(e.target))) return;
+    // Le clic qui ferme la modale de premier accès (« Accéder à la carte ») n'est pas un clic
+    // sur la carte : sans cette exception, il refermerait le tiroir ouvert par défaut (init)
+    // au moment même où le visiteur le découvre.
+    if(e.target && e.target.closest && e.target.closest('#disclaimer-overlay')) return;
     window.closeLayersPanel();
   });
 
@@ -16639,7 +16666,7 @@ function capCleanup(){
 ["lyr_hot_tt","#b-hot","title","Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. N'inclut pas le champ géomagnétique terrestre total (~46 000-47 500 nT en Corse, l'ordre de grandeur qu'un magnétomètre de smartphone mesure) : ce sont deux grandeurs physiques distinctes, jamais additionnées ici — le champ géomagnétique n'entre dans ce nombre à aucun titre. Estimation du modèle Tellux, pas une mesure. La composante ELF entre dans le score Indice Tellux affiché ; la composante substrat reste une donnée de contexte, sans consommateur dans ce score.","","Composite magnetic field — ELF 50 Hz (electrical grid) + substrate susceptibility, expressed in nT. Does not include the total terrestrial geomagnetic field (~46,000-47,500 nT in Corsica, the order of magnitude a smartphone magnetometer measures): these are two distinct physical quantities, never added together here — the geomagnetic field plays no part whatsoever in this number. Tellux model estimate, not a measurement. The ELF component feeds the displayed Indice Tellux score; the substrate component remains contextual data, with no consumer in that score."],
 ["lyr_hotrf","#b-hot-rf","","Densité d'émetteurs pondérée","Densità d'emettitori ponderata","Weighted transmitter density"],
 ["lyr_elf","#b-elf","","Champ ELF (nT)","","ELF field (nT)"],
-["lyr_hotrf_tt","#b-hot-rf","title","Densité d'émetteurs pondérée par la distance — modèle Tellux. Compte les antennes de téléphonie mobile ANFR et les émetteurs de télévision numérique TDF déclarés autour du point, en pondérant par la distance (décompte dans la légende Antennes ANFR et émetteurs TDF). La radio FM n'est pas modélisée : aucun émetteur FM n'entre dans ce calcul. Classe les lieux entre eux ; n'indique pas un niveau d'exposition et ne remplace pas une mesure. Le facteur d'échelle est ajusté sur 21 mesures certifiées ANFR/EXEM — ajusté ne veut pas dire validé par la mesure. Relecture physicien sollicitée depuis le 2026-07-01 (ADR-027). Pour un niveau mesuré, voir la couche Mesures certifiées ANFR.","","Distance-weighted transmitter density — Tellux model. Counts the declared ANFR mobile-phone antennas and TDF digital television transmitters around the point, weighted by distance. FM radio is not modelled: no FM transmitter enters this calculation. Ranks locations relative to one another; does not indicate an exposure level and does not replace a measurement. The scale factor is adjusted on 21 certified ANFR/EXEM measurements — adjusted does not mean validated by measurement. Physicist review requested since 2026-07-01 (ADR-027). For a measured level, see the Certified ANFR measurements layer."],
+["lyr_hotrf_tt","#b-hot-rf","title","Densité d'émetteurs pondérée par la distance — modèle Tellux. Compte les antennes de téléphonie mobile ANFR et les émetteurs de télévision numérique TDF déclarés autour du point, en pondérant par la distance (décompte dans la légende Antennes ANFR et émetteurs TDF). La radio FM n'est pas modélisée : aucun émetteur FM n'entre dans ce calcul. Classe les lieux entre eux ; n'indique pas un niveau d'exposition et ne remplace pas une mesure. Le facteur d'échelle est ajusté sur 21 mesures certifiées ANFR/EXEM — ajusté ne veut pas dire validé par la mesure. Pour un niveau mesuré, voir la couche Mesures certifiées ANFR.","","Distance-weighted transmitter density — Tellux model. Counts the declared ANFR mobile-phone antennas and TDF digital television transmitters around the point, weighted by distance. FM radio is not modelled: no FM transmitter enters this calculation. Ranks locations relative to one another; does not indicate an exposure level and does not replace a measurement. The scale factor is adjusted on 21 certified ANFR/EXEM measurements — adjusted does not mean validated by measurement. For a measured level, see the Certified ANFR measurements layer."],
 // lyr_elf_tt (brief BH, 2026-09-05) : CO laissée vide à dessein — pas de traduction improvisée
 // sans validation locuteur natif (même discipline que chip_label_tt/brief AV, dom_hot/brief BA).
 ["lyr_elf_tt","#b-elf","title","Champ magnétique ELF 50 Hz (réseau électrique), exprimé en nT — composante anthropique seule du modèle Tellux, sans la susceptibilité du substrat (distincte de « Champ magnétique composite », qui combine les deux). Estimation, pas une mesure. N'affiche rien sous 300 nT : seuil réutilisant le repère documentaire IARC classe 2B, une classification épidémiologique de long terme — un choix éditorial d'affichage, pas une évaluation du risque à ce niveau précis.","","ELF magnetic field 50 Hz (electrical grid), expressed in nT — anthropic component only of the Tellux model, without substrate susceptibility (distinct from \"Composite magnetic field\", which combines both). Estimate, not a measurement. Shows nothing below 300 nT: a threshold reusing the IARC class 2B documentary reference point, a long-term epidemiological classification — an editorial display choice, not a risk evaluation at this precise level."],
