@@ -4862,7 +4862,12 @@ const CALC_GROUP=['hot','hotrf','elf'];
 const LAYERS={bt:lBT,ant:lAnt,res:lRes,prod:lProd,hot:lHot,hotrf:lHotRF,elf:lElf,cert:lCert,interp:lHotMesures,fmtv:lFMTV,pmr:lPMR,fh:lFH,contrib:lCon,foretdense:lForetDense,foretouverte:lForetOuverte,landemaquis:lLandeMaquis,crustal:lCrustal,openrad:lOpenRad};
 // Relief ombré IGN (2026-09-28) : WMTS Géoplateforme, sans clé ; ombrage gdal du RGE ALTI (hillshade alt 80, az 315, z 2,
 // d'après les métadonnées du service). Tuiles natives jusqu'au zoom 17, rien sous le zoom 6.
-const wmtsRelief=L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=IGNF_ELEVATION.ELEVATIONGRIDCOVERAGE.SHADOW&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',{opacity:0.45,minZoom:6,maxNativeZoom:17,zIndex:2,attribution:'Relief : IGN, RGE ALTI'});
+// Lisibilité (2026-09-29, retour de Soleil : « illisible ») : l'estompage IGN est fait de gris très clairs ; posé à 0,45
+// sur le fond gris clair, il disparaissait. Il est maintenant multiplié sur le fond (mix-blend-mode sur le conteneur de la
+// couche, pas sur les tuiles, que le conteneur isolerait) à 0,85 : les ombres foncent le fond, les zones plates le
+// laissent intact, et les libellés du fond restent lisibles. Vérifié en production aux zooms 8 et 10.
+const wmtsRelief=L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=IGNF_ELEVATION.ELEVATIONGRIDCOVERAGE.SHADOW&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',{opacity:0.85,minZoom:6,maxNativeZoom:17,zIndex:2,attribution:'Relief : IGN, RGE ALTI'});
+wmtsRelief.on('add',function(){ var c=wmtsRelief.getContainer(); if(c) c.style.mixBlendMode='multiply'; });
 const WMS={hyd:wmsHyd,emag:wmsEmag,relief:wmtsRelief};
 // hot:false/hotrf:true — modèle RF activé par défaut à la place du champ magnétique
 // composite (arbitrage Soleil 2026-08-23). Swap symétrique avec la déclaration lHot/lHotRF
@@ -16400,6 +16405,11 @@ function capCleanup(){
     var btn = document.getElementById('layers-toggle');
     if(!la || !la.classList.contains('open')) return;
     if(la.contains(e.target) || (btn && btn.contains(e.target))) return;
+    // La carte ne ferme plus le tiroir (2026-09-29, retour de Soleil : « sur desktop la navigation sur la carte ferme le
+    // menu couche, il faut le rouvrir à chaque fois »). Un glisser de la carte se termine par un clic DOM, que ce
+    // gestionnaire prenait pour un « clic extérieur » : chaque déplacement refermait le tiroir. On le ferme désormais par
+    // son bouton, par Échap ou par le bouton « ? » de la légende, pas en manipulant la carte.
+    if(e.target && e.target.closest && e.target.closest('#map')) return;
     // Le clic qui ferme la modale de premier accès (« Accéder à la carte ») n'est pas un clic
     // sur la carte : sans cette exception, il refermerait le tiroir ouvert par défaut (init)
     // au moment même où le visiteur le découvre.
