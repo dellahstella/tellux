@@ -3747,14 +3747,14 @@ var JS_STRINGS_EN = {
   cert_srv_tv: "Television",
   cert_srv_autres: "Other services",
   cert_srv_sous_seuil: "below the reporting threshold",
-  cert_srv_non_mesure: "not measured; ",
+  cert_srv_non_mesure: "measured value not published; ",
   cert_srv_extrapole: "extrapolated to maximum traffic: ",
   cert_srv_detail: "Detail by band (V/m)",
   cert_srv_col_mesure: "measured",
   cert_srv_col_extra: "max. traffic",
   cert_srv_note: "Values measured by the laboratory, service by service. A service not listed is below the report's reporting threshold.",
   cert_point_maximum: "Measurement point: at the highest field found on site (laboratory report).",
-  cert_point_demande: "Measurement point: chosen at the requester's request (laboratory report).",
+  cert_point_demande: "Measurement point: chosen by the person who requested the measurement (laboratory report).",
   cert_point_inconnu: "Measurement point: the report does not say how it was chosen.",
   cert_rapport_lien: "Laboratory report (PDF, ANFR) ↗",
   // 3 clés supplémentaires ajoutées le même lot, pour du contenu neuf introduit par ce lot (pas
@@ -15540,7 +15540,7 @@ function _certServicesHtml(m) {
       const ext = e.filter(function (s) { return typeof s.extrapolation_vm === 'number'; }).map(function (s) { return s.extrapolation_vm; });
       let v;
       if (mes.length) v = '<b>' + rfFormatVm(q(mes), en) + ' V/m</b>';
-      else if (ext.length) v = jt('cert_srv_non_mesure', 'non mesurée ; ') + jt('cert_srv_extrapole', 'extrapolée au trafic maximal : ') + rfFormatVm(q(ext), en) + ' V/m';
+      else if (ext.length) v = jt('cert_srv_non_mesure', 'mesure non publiée ; ') + jt('cert_srv_extrapole', 'valeur extrapolée au trafic maximal : ') + rfFormatVm(q(ext), en) + ' V/m';
       else v = '<span style="color:var(--tx3)">' + jt('cert_srv_sous_seuil', 'sous le seuil de mention') + '</span>';
       return '<tr><td>' + c[1] + '</td><td>' + v + '</td></tr>';
     }).join('');
@@ -15556,7 +15556,7 @@ function _certServicesHtml(m) {
   }
   if (Object.prototype.hasOwnProperty.call(m, 'choix_point')) {
     const t = m.choix_point === 'maximum' ? jt('cert_point_maximum', 'Point de mesure : au maximum du champ relevé sur place (rapport du laboratoire).')
-      : m.choix_point === 'demande' ? jt('cert_point_demande', 'Point de mesure : choisi à la demande du demandeur (rapport du laboratoire).')
+      : m.choix_point === 'demande' ? jt('cert_point_demande', 'Point de mesure : choisi par la personne qui a demandé la mesure (rapport du laboratoire).')
       : jt('cert_point_inconnu', 'Point de mesure : le rapport ne dit pas comment il a été choisi.');
     h += '<div style="font-size:10px;margin-top:4px">' + t + '</div>';
   }
