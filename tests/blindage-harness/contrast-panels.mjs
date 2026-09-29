@@ -120,6 +120,20 @@ const PANELS = [
   { sel: '#cform', nom: 'Contribution terrain', requis: true, min_noeuds: 8 },
 ];
 
+// Légendes des couches de calcul (2026-09-29, dette CONTRASTE-CHECK-LEGENDES-RF-ELF-ETEINTES-001). Depuis le 2026-09-16,
+// 'hot', 'hotrf' et 'elf' s'excluent mutuellement (CALC_GROUP d'app.html) : le clic sur #b-hot plus bas, qui fait
+// entrer la légende 'hot' dans la mesure, éteint 'hotrf', et 'elf' n'est jamais allumée. Du 16 au 29/09, ni la légende
+// RF ni la légende ELF n'étaient mesurées, sans que rien ne le signale. Chaque couche reçoit donc sa propre passe, en
+// fin de séquence (après le popup et la barre de conditions, pour ne rien changer à ce qu'ils mesurent) : on l'allume
+// par son bouton, on ouvre le « ? », et on ne mesure QUE son accordéon, repéré par son libellé (coreLegLabel d'app.html)
+// — aucun nœud n'est compté deux fois. Requises, avec un plancher : une légende qui sortirait de la mesure fait échouer
+// le check au lieu de disparaître en silence. Planchers : la moitié environ de l'effectif mesuré le 2026-09-29 sur main
+// (RF : 13 nœuds, légende de la couche « Distance aux antennes mobiles » ; celle du lot A en porte 17 ; ELF : 12).
+const CALC_LEGENDS = [
+  { id: 'hotrf', bouton: 'b-hot-rf', nom: 'Panneau « ? » — légende de la couche RF', min_noeuds: 7 },
+  { id: 'elf', bouton: 'b-elf', nom: 'Panneau « ? » — légende de la couche ELF', min_noeuds: 6 },
+];
+
 // Couches à activer pour que les panneaux existent réellement dans le DOM.
 // Sans ça le script vérifierait des conteneurs vides et passerait à tort.
 const LAYER_BUTTONS = ['b-crustal', 'b-ant', 'b-res'];
@@ -564,6 +578,9 @@ async function main() {
       // On force TOUS les accordéons ouverts pour la mesure : diffère légèrement de l'usage réel
       // (un seul ouvert à la fois) mais teste chaque contenu qui DOIT être lisible quand il
       // l'est — même logique que les 4 points du popup plus bas.
+      // (2026-09-29) Ce qui précède n'est plus vrai pour 'hotrf' : depuis le 2026-09-16, le clic sur #b-hot l'éteint
+      // (exclusion mutuelle hot / hotrf / elf), et sa légende n'est plus dans ce panneau à ce stade. Elle est mesurée à
+      // part, comme celle de 'elf', en fin de séquence (cf. CALC_LEGENDS).
       document.querySelectorAll('#legende-content details.leg-acc').forEach((d) => { d.open = true; });
     });
     await page.waitForTimeout(200);
@@ -880,6 +897,31 @@ async function main() {
       noeuds_par_scenario: scansCond.map((s) => s.noeuds || 0),
       violations: violationsCond,
     });
+    // ─── Légendes des couches de calcul : une passe chacune (2026-09-29, cf. CALC_LEGENDS) ─────────
+    for (const cl of CALC_LEGENDS) {
+      const allume = await page.evaluate(({ id, bouton }) => {
+        const b = document.getElementById(bouton);
+        if (!b) return { erreur: 'bouton ' + bouton + ' absent' };
+        if (!(typeof ACTIVE !== 'undefined' && ACTIVE[id])) b.click();
+        return { actif: typeof ACTIVE !== 'undefined' && !!ACTIVE[id] };
+      }, cl);
+      await page.waitForTimeout(1500);
+      const marque = await page.evaluate(({ id }) => {
+        const t = document.getElementById('legende-toggle'), c = document.getElementById('legende-content');
+        if (t && c && getComputedStyle(c).display === 'none') t.click();
+        document.querySelectorAll('[data-contraste-couche]').forEach((e) => e.removeAttribute('data-contraste-couche'));
+        const lib = typeof coreLegLabel === 'function' ? String(coreLegLabel(id)).trim() : null;
+        const acc = [...document.querySelectorAll('#legende-content details.leg-acc')]
+          .find((d) => { const s = d.querySelector('.leg-acc-sum'); return s && lib && s.textContent.trim() === lib; });
+        if (!acc) return { trouve: false, lib };
+        acc.open = true;
+        acc.setAttribute('data-contraste-couche', id);
+        return { trouve: true, lib };
+      }, cl);
+      await page.waitForTimeout(300);
+      const r = await page.evaluate(PROBE_CONTRAST, [[{ sel: `[data-contraste-couche="${cl.id}"]`, nom: cl.nom }], BASE_TONE]);
+      rapport.panneaux.push({ ...r[0], couche: cl.id, couche_allumee: !!allume.actif, libelle: marque.lib, accordeon_trouve: marque.trouve });
+    }
   } finally {
     await browser.close();
     if (server) server.close();
@@ -939,6 +981,15 @@ async function main() {
       // calcule. L'état et le compte suffisent ; l'hypothèse appartient au lecteur.
       depassements.push(`surface requise sous son plancher : « ${nom} » (état : ${p ? p.etat : 'introuvable'}`
         + `${p && p.etat === 'mesuré' ? `, ${noeuds} nœud(s) mesuré(s) < ${seuil} attendus` : ''})`);
+    }
+  }
+  // Légendes des couches de calcul (CALC_LEGENDS) : requises au même titre, même message.
+  for (const cl of CALC_LEGENDS) {
+    const p = rapport.panneaux.find((x) => x.panel === cl.nom);
+    const noeuds = p && p.etat === 'mesuré' ? (p.noeuds || 0) : 0;
+    if (!p || p.etat !== 'mesuré' || noeuds < cl.min_noeuds) {
+      depassements.push(`surface requise sous son plancher : « ${cl.nom} » (état : ${p ? p.etat : 'introuvable'}`
+        + `${p && p.etat === 'mesuré' ? `, ${noeuds} nœud(s) mesuré(s) < ${cl.min_noeuds} attendus` : ''})`);
     }
   }
   // Plancher de couverture — AVANT les cliquets, et pour la même raison qu'axe-core a été

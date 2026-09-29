@@ -3741,6 +3741,22 @@ var JS_STRINGS_EN = {
   cert_precision_exact: "Exact position — source ANFR/CartoRadio.fr",
   cert_provenance_label: "Source: ",
   cert_provenance_value: "Public CartoRadio API, no authentication",
+  cert_services_titre: "By service (laboratory)",
+  cert_srv_mobile: "Mobile telephony",
+  cert_srv_fm: "FM radio",
+  cert_srv_tv: "Television",
+  cert_srv_autres: "Other services",
+  cert_srv_sous_seuil: "below the reporting threshold",
+  cert_srv_non_mesure: "measured value not published; ",
+  cert_srv_extrapole: "extrapolated to maximum traffic: ",
+  cert_srv_detail: "Detail by band (V/m)",
+  cert_srv_col_mesure: "measured",
+  cert_srv_col_extra: "max. traffic",
+  cert_srv_note: "Values measured by the laboratory, service by service. A service not listed is below the report's reporting threshold.",
+  cert_point_maximum: "Measurement point: at the highest field found on site (laboratory report).",
+  cert_point_demande: "Measurement point: chosen by the person who requested the measurement (laboratory report).",
+  cert_point_inconnu: "Measurement point: the report does not say how it was chosen.",
+  cert_rapport_lien: "Laboratory report (PDF, ANFR) ↗",
   // 3 clés supplémentaires ajoutées le même lot, pour du contenu neuf introduit par ce lot (pas
   // une dette préexistante) : repli du badge non-conforme quand seuil_legal_vm est absent de la
   // base versionnée, et traçabilité de la collecte (étape j du brief).
@@ -12896,6 +12912,13 @@ function rfPopupHTML(lat,lng){
       : (en?'No certified outdoor measurement with an exact position within 2 km. A free measurement can be requested from ANFR through the town hall (mesures.anfr.fr).':'Aucune mesure certifiée d’extérieur, à position exacte, à moins de 2 km. Une mesure gratuite peut être demandée à l’ANFR par l’intermédiaire de la mairie (mesures.anfr.fr).');
     lignes.push('<div style="font-size:9px;color:#4a4f5e;line-height:1.35;margin-top:2px">'+t+'</div>');
   }
+  // Lien vers Cartoradio à l'endroit cliqué (cadrage du 2026-09-29 ; ADR-073, dépôt privé) : la carte de l'ANFR montre
+  // les antennes, les mesures et sa simulation de l'exposition au mobile. Un lien, pas une reproduction : rien de la
+  // simulation n'entre dans Tellux.
+  const urlCR='https://www.cartoradio.fr/index.html#/cartographie/lonlat/'+(+lng).toFixed(5)+'/'+(+lat).toFixed(5);
+  lignes.push('<div style="font-size:9px;line-height:1.35;margin-top:3px"><a href="'+urlCR+'" target="_blank" rel="noopener" style="color:#1F3A5F">'+(en
+    ?'This spot on Cartoradio, the ANFR map: masts, measurements and a theoretical simulation of mobile exposure'
+    :'Cet endroit sur Cartoradio, la carte de l’ANFR : antennes, mesures et simulation théorique de l’exposition au mobile')+'</a></div>');
   return '<div style="margin-top:3px;font-size:9px;font-weight:600;color:#1F2329;margin-bottom:1px">'+jt('v2_title_rf','Radiofréquence — téléphonie mobile')+'</div>'+lignes.join('');
 }
 function buildHotRF(){
@@ -15418,6 +15441,7 @@ let SITES_REMARQUABLES = [];
 // (k inchangé). Cf. rapport RAPPORT_UNIFICATION_JEUX_MESURES_2026-09-20.md (privé) pour la
 // relation exacte entre les jeux mesures/calibration (sur-ensemble strict, mêmes id, mêmes
 // coordonnées, jamais recalé par ce chargeur).
+let MESURES_SERVICES_META = null; // {rapports_url_prefixe} — détail par service et choix du point (2026-09-29)
 let MESURES_COLLECTE_META = null; // {genere_le_utc, derniere_collecte_id, empreinte_sha256, n_collectes_dans_la_base} — cf. étape j du brief
 // Traçabilité (étape j du brief) : date de collecte + empreinte de la collecte source, dans le
 // popup ET la légende — jamais présents avant ce lot (absents de l'ancien dérivé). Empreinte
@@ -15718,6 +15742,25 @@ function loadMesuresCertifiees() {
       syncCertMeta();
       console.log('[Tellux] Mesures certifiees chargees : ' + MESURES_CERTIFIEES.length);
       MESURES_CERTIFIEES = _certCheckResidentialSafety(MESURES_CERTIFIEES);
+      // Détail par service et choix du point (2026-09-29, « les mesures au centre de la couche RF ») : fichier
+      // compagnon, même collecte. Son échec ne touche pas la couche : les fiches restent affichées sans ce détail.
+      try {
+        const rs = await fetch('public/data/mesures_anfr_corse_services_2026-09-29.json', { signal: AbortSignal.timeout(5000) });
+        if (!rs.ok) throw new Error('HTTP ' + rs.status);
+        const ds = await rs.json();
+        if (!ds.collecte_source || !MESURES_COLLECTE_META || ds.collecte_source.empreinte_sha256 !== MESURES_COLLECTE_META.empreinte_sha256) throw new Error('collecte différente de la base');
+        const F = ds.fiches || {};
+        MESURES_SERVICES_META = { rapports_url_prefixe: ds.rapports_url_prefixe || null };
+        MESURES_CERTIFIEES.forEach(function (m) {
+          const x = F[String(m.id)]; if (!x) return;
+          if (Array.isArray(x.services)) { m.services_detail = x.services; m.n_services_listes = x.n_services_listes || 0; }
+          if (Object.prototype.hasOwnProperty.call(x, 'choix_point')) m.choix_point = x.choix_point;
+          if (x.rapport) m.rapport = x.rapport;
+        });
+      } catch (es) {
+        MESURES_SERVICES_META = null;
+        console.warn('[Tellux] Détail par service indisponible : ' + es.message);
+      }
       // Jeu vide (2026-09-10, revue de la suite du lot contexte) : traité comme un échec, pour que le mémo
       // soit relâché. Sinon une réponse 200 sans fiche restait en mémoire : la bascule du bouton comme la
       // reprise la rendaient sans refaire la requête, alors que le message invite à réessayer.
@@ -15889,6 +15932,52 @@ function _certIconHtml(m) {
   return '<div style="width:12px;height:12px;' + shapeStyle + 'background:' + color + ';border:2px solid #F5F0E7;box-shadow:0 1px 3px rgba(0,0,0,.35);"></div>';
 }
 
+// Détail par service (2026-09-29) : ce que le laboratoire a mesuré, service par service (cas B), regroupé en
+// téléphonie mobile / FM / TV / autres. Somme en quadrature des bandes mesurées d'une même classe (champs de
+// services distincts). Une classe sans valeur mesurée : « sous le seuil de mention » ; si seule une valeur
+// extrapolée au trafic maximal existe (formulaires anciens), elle est dite comme telle, jamais comme une mesure.
+// Suivent le motif du choix du point (écrit dans le rapport) et le lien vers le rapport PDF de l'ANFR.
+function _certServicesHtml(m) {
+  const en = document.documentElement.lang === 'en';
+  const S = Array.isArray(m.services_detail) ? m.services_detail : null;
+  let h = '';
+  if (S && m.n_services_listes > 0) {
+    const CL = [['mobile', jt('cert_srv_mobile', 'Téléphonie mobile')], ['fm', jt('cert_srv_fm', 'Radio FM')],
+                ['tv', jt('cert_srv_tv', 'Télévision')], ['autres', jt('cert_srv_autres', 'Autres services')]];
+    const q = function (a) { return Math.sqrt(a.reduce(function (t, v) { return t + v * v; }, 0)); };
+    const lignes = CL.map(function (c) {
+      const e = S.filter(function (s) { return s.classe === c[0]; });
+      const mes = e.filter(function (s) { return typeof s.mesure_vm === 'number'; }).map(function (s) { return s.mesure_vm; });
+      const ext = e.filter(function (s) { return typeof s.extrapolation_vm === 'number'; }).map(function (s) { return s.extrapolation_vm; });
+      let v;
+      if (mes.length) v = '<b>' + rfFormatVm(q(mes), en) + ' V/m</b>';
+      else if (ext.length) v = jt('cert_srv_non_mesure', 'mesure non publiée ; ') + jt('cert_srv_extrapole', 'valeur extrapolée au trafic maximal : ') + rfFormatVm(q(ext), en) + ' V/m';
+      else v = '<span style="color:var(--tx3)">' + jt('cert_srv_sous_seuil', 'sous le seuil de mention') + '</span>';
+      return '<tr><td>' + c[1] + '</td><td>' + v + '</td></tr>';
+    }).join('');
+    const detail = S.map(function (s) {
+      return '<tr><td>' + s.libelle + '</td><td>' + (typeof s.mesure_vm === 'number' ? rfFormatVm(s.mesure_vm, en) : '—')
+        + '</td><td>' + (typeof s.extrapolation_vm === 'number' ? rfFormatVm(s.extrapolation_vm, en) : '—') + '</td></tr>';
+    }).join('');
+    h += '<div style="font-size:11px;margin-top:6px"><b>' + jt('cert_services_titre', 'Par service (laboratoire)') + '</b></div>'
+      + '<table style="font-size:11px">' + lignes + '</table>'
+      + (detail ? '<details><summary>' + jt('cert_srv_detail', 'Détail par bande (V/m)') + '</summary><table><tr><td></td><td>'
+          + jt('cert_srv_col_mesure', 'mesuré') + '</td><td>' + jt('cert_srv_col_extra', 'trafic max.') + '</td></tr>' + detail + '</table></details>' : '')
+      + '<div style="font-size:10px;color:var(--tx3)">' + jt('cert_srv_note', 'Valeurs mesurées par le laboratoire, service par service. Un service absent est sous le seuil de mention du rapport.') + '</div>';
+  }
+  if (Object.prototype.hasOwnProperty.call(m, 'choix_point')) {
+    const t = m.choix_point === 'maximum' ? jt('cert_point_maximum', 'Point de mesure : au maximum du champ relevé sur place (rapport du laboratoire).')
+      : m.choix_point === 'demande' ? jt('cert_point_demande', 'Point de mesure : choisi par la personne qui a demandé la mesure (rapport du laboratoire).')
+      : jt('cert_point_inconnu', 'Point de mesure : le rapport ne dit pas comment il a été choisi.');
+    h += '<div style="font-size:10px;margin-top:4px">' + t + '</div>';
+  }
+  if (m.rapport && MESURES_SERVICES_META && MESURES_SERVICES_META.rapports_url_prefixe) {
+    h += '<div style="font-size:10px;margin-top:2px"><a href="' + MESURES_SERVICES_META.rapports_url_prefixe + encodeURIComponent(m.rapport)
+      + '" target="_blank" rel="noopener">' + jt('cert_rapport_lien', 'Rapport du laboratoire (PDF, ANFR) ↗') + '</a></div>';
+  }
+  return h;
+}
+
 // Formatter popup certifiee
 function _certFormatPopup(m) {
   const badgeHtml = m.conforme
@@ -15911,6 +16000,7 @@ function _certFormatPopup(m) {
           .join('')
       + '</table></details>'
     : '';
+  const servicesHtml = _certServicesHtml(m);
   var linkCrossHtml = '';
   if (m.id === '192990') {
     linkCrossHtml = '<div style="margin-top:6px"><span class="cert-popup-link-cross" data-cross-id="193102">'+jt('cert_link_reinspection','\u21AA Voir re-inspection du 01/04/2025 (retour conformité)')+'</span></div>';
@@ -15951,7 +16041,7 @@ function _certFormatPopup(m) {
     + protocoleHtml
     + '<div style="font-size:11px;margin-top:4px"><b>'+jt('cert_date_label','Date :')+'</b> ' + m.date_mesure + jt('cert_infix_dot',' \u00B7 ')+'<b>'+jt('cert_labo_label','Labo :')+'</b> ' + m.laboratoire + '</div>'
     + '<div style="font-size:11px"><b>'+jt('cert_protocole_label','Protocole :')+'</b> ' + m.protocole + jt('cert_infix_dot',' \u00B7 ')+'<b>'+jt('cert_ref_label','Réf. :')+'</b> #' + m.id + '</div>'
-    + bandesHtml
+    + (servicesHtml || bandesHtml)
     + linkCrossHtml
     + precisionHtml
     + provenanceHtml
