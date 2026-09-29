@@ -77,7 +77,7 @@ function runNonRegressionPhase3() {
   const i3 = assert(comp && comp.index >= 0 && comp.index <= 1, `comp.index dans [0,1] (${comp?.index})`);
   const i4 = assert(comp && typeof comp.normalized === 'object', 'comp.normalized est un objet');
   const i5 = assert(comp && isFiniteNum(comp.normalized?.M),  `comp.normalized.M fini (${comp?.normalized?.M})`);
-  const i6 = assert(comp && isFiniteNum(comp.normalized?.RF), `comp.normalized.RF fini (${comp?.normalized?.RF})`);
+  const i6 = assert(comp && comp.normalized?.RF === undefined && comp.weights?.RF === 0, `RF hors composite depuis le 2026-09-29 (normalized.RF absent, weights.RF = 0)`);
   const i7 = assert(comp && isFiniteNum(comp.normalized?.I),  `comp.normalized.I fini (${comp?.normalized?.I})`);
   const i8 = assert(comp && comp.under_review === true, 'comp.under_review === true');
   const i9 = assert(comp && typeof comp.epistemic_note === 'string', 'comp.epistemic_note est une chaîne');
@@ -96,8 +96,8 @@ function runNonRegressionPhase3() {
   const j2 = assert(!!document.getElementById('expert-panel'),   '#expert-panel existe dans le DOM');
   const j3 = assert(!!document.getElementById('expert-bandeau'), '#expert-bandeau existe dans le DOM');
   const j4 = assert(!!document.getElementById('sl-wM'),          'input#sl-wM (curseur w_M) existe');
-  const j5 = assert(!!document.getElementById('sl-wRF'),         'input#sl-wRF (curseur w_RF) existe');
-  const j6 = assert(!!document.getElementById('sl-wI'),          'input#sl-wI (curseur w_I) existe');
+  const j5 = assert(!document.getElementById('sl-wRF') && !!document.getElementById('v-wRF'), 'w_RF en lecture seule (#v-wRF, pas de curseur) depuis le 2026-09-29');
+  const j6 = assert(!document.getElementById('sl-wI') && !!document.getElementById('v-wI'),   'w_I en lecture seule (#v-wI, pas de curseur) depuis le 2026-09-01');
   const j7 = assert(!!document.getElementById('expert-index-val'),'#expert-index-val existe');
   const j8 = assert(!!document.getElementById('btn-expert'),     '#btn-expert (bouton Outils experts) existe');
   [j1,j2,j3,j4,j5,j6,j7,j8].forEach(r => { r.pass ? results.pass++ : (results.fail++, results.errors.push(r)); });

@@ -237,7 +237,8 @@ async function main() {
   let poids = null, domaines = [];
   if (appJs) {
     const mw = appJs.match(/const\s+EXPERT_WEIGHTS_DEFAULT\s*=\s*\{([^}]*)\}/);
-    if (mw) { poids = {}; for (const m of mw[1].matchAll(/(\w+)\s*:\s*([\d.]+)/g)) poids[m[1]] = +m[2]; }
+    // Fractions acceptées (2026-09-29 : { M: 2/3, RF: 0, I: 1/3 }) — l'ancien motif lisait « 2/3 » comme 2.
+    if (mw) { poids = {}; for (const m of mw[1].matchAll(/(\w+)\s*:\s*([\d.]+)(?:\s*\/\s*([\d.]+))?/g)) poids[m[1]] = +(m[3] ? (+m[2] / +m[3]).toFixed(4) : m[2]); }
     domaines = [
       { nom: 'Magnétique (ELF)', cle: 'M', fonctionCalc: /function\s+calcMagneticELF/ },
       { nom: 'Radiofréquences', cle: 'RF', fonctionCalc: /function\s+calcRF\b/ },
@@ -264,7 +265,7 @@ async function main() {
   if (appJs) {
     const mb = appJs.match(/const\s+EXPERT_BOUNDS_DEFAULT\s*=\s*(\{[^;]*?\})\s*;/);
     if (poids) s(`- **Poids composite** : M=${poids.M ?? '?'} · RF=${poids.RF ?? '?'} · I=${poids.I ?? '?'} (GELÉ-001a).`);
-    if (mb) s(`- **Bornes de normalisation** : \`${mb[1].replace(/\s+/g, ' ')}\` (GELÉ-001b, ELF/RF re-dérivables, gamma re-dérivable).`);
+    if (mb) s(`- **Bornes de normalisation** : \`${mb[1].replace(/\s+/g, ' ')}\` (GELÉ-001b, ELF et gamma re-dérivables ; borne RF retirée le 2026-09-29 avec la composante).`);
   }
   const calib = nav?.page ? await lireCalibrationLive(nav.page) : null;
   if (calib?.k != null) s(`- **k RF calibré (live)** : **${calib.k}** · dispersion ×÷${calib.disp ?? '?'} · n=${calib.n ?? '?'} points. <sub>lu sur l'identifiant \`RF_CALIB_STATS\` dans le contexte JS de ${PROD}/app (pas \`window.\` — variable \`let\`, cf. code)</sub>`);
