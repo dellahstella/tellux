@@ -8828,9 +8828,12 @@ function rfBandesTexte(en){
 // écartée). Test à rejouer si le fichier des mesures change (outil du lot rf-champ-empirique-2026-09-28, dépôt privé).
 // sigma : écart type des résidus en log, divisé par n − 2. p25, p75, p90 : quantiles d'une loi log-normale autour de la
 // médiane — la dispersion des mesures comparables à cette distance, pas une incertitude sur la médiane.
-// Classes : entre deux bandes de mesure voisines (RF_BANDES_STATS, bandes d'au moins RF_BANDE_N_MIN mesures), la borne
-// est la moyenne géométrique de leurs médianes, à un chiffre significatif ; une médiane estimée tombe ainsi dans la
-// classe de la bande dont la médiane lui est la plus proche en échelle log. Au 2026-09-29 : 1 et 0,5 V/m.
+// Classes : deux, séparées par une seule borne (décision du 2026-09-29, après la lecture de Fable du deuxième état) :
+// la moyenne géométrique des médianes des bandes 50–150 m et 150 m–1 km (RF_EMPIRIQUE_BANDES_DE_LA_BORNE, bandes d'au
+// moins RF_BANDE_N_MIN mesures de RF_BANDES_STATS), à un chiffre significatif — 0,5 V/m au 2026-09-29. Avec une seconde
+// borne entre les bandes < 50 m et 50–150 m (1 V/m), les mesures comparables faites depuis 2021 donnaient la même
+// médiane aux deux classes du haut (1,05 et 1,14 V/m) : une frontière que les mesures ne distinguent pas. calibrateRF()
+// le revérifie à chaque démarrage et le dit en console si deux classes voisines ne se séparent plus.
 // Extinction : au-delà de la distance où il reste moins de RF_EMPIRIQUE_N_EXTINCTION mesures du pool (1 681 m au
 // 2026-09-29), pas de repère : rien n'est dessiné, et le popup le dit. Ancrée sur la distance, pas sur une valeur en
 // V/m : une même valeur tombe à des distances très différentes selon la référence (0,25 V/m : 1,5 km sur tout le pool,
@@ -8838,6 +8841,7 @@ function rfBandesTexte(en){
 const RF_EMPIRIQUE_REFERENCE='depuis2021';   // 'pool' ou 'depuis2021'
 const RF_EMPIRIQUE_DEPUIS='2021-01-01';
 const RF_EMPIRIQUE_N_EXTINCTION=3;
+const RF_EMPIRIQUE_BANDES_DE_LA_BORNE=[1,2];   // indices des bandes de RF_BANDES_DISTANCE_M : 50–150 m et 150 m–1 km
 const RF_EMPIRIQUE_Z={p25:-0.6745,p75:0.6745,p90:1.2816};
 let RF_EMPIRIQUE=null;
 function rfEmpiriqueAjuste(pts){   // pts : [{x: ln d, y: ln E}] → moindres carrés {a, b, sigma, n}, ou null
@@ -8855,7 +8859,14 @@ function rfChampEmpirique(d_m){
   const l=R.ar+R.br*Math.log(Math.max(d_m,1));
   return {med:Math.exp(l),p25:Math.exp(l+RF_EMPIRIQUE_Z.p25*R.sr),p75:Math.exp(l+RF_EMPIRIQUE_Z.p75*R.sr),p90:Math.exp(l+RF_EMPIRIQUE_Z.p90*R.sr)};
 }
-// rfEmpiriqueClasse(med) → 0 pour la classe la plus haute, puis 1, 2… selon RF_EMPIRIQUE.bornes_vm ; null sans valeur.
+// rfEmpiriqueNonSeparees(classes) → [[k, k + 1], …] : les paires de classes voisines (chacune avec au moins une mesure)
+// dont la médiane mesurée ne décroît pas — une frontière que les mesures comparables ne distinguent pas. C'est ce qui a
+// fait passer la couche à deux classes le 2026-09-29 (1,05 puis 1,14 V/m) ; calibrateRF() le dit en console.
+function rfEmpiriqueNonSeparees(cl){
+  const out=[]; (cl||[]).forEach((c,k)=>{ const d=cl[k+1]; if(d&&c&&c.n&&d.n&&!(c.med>d.med)) out.push([k,k+1]); }); return out;
+}
+// rfEmpiriqueClasse(med) → 0 au-dessus de la borne, 1 en dessous (générique : 0, 1, 2… pour des bornes décroissantes,
+// RF_EMPIRIQUE.bornes_vm) ; null sans valeur.
 function rfEmpiriqueClasse(med){
   const R=RF_EMPIRIQUE; if(!R||!(med>0)) return null;
   for(let i=0;i<R.bornes_vm.length;i++) if(med>=R.bornes_vm[i]) return i;
@@ -8883,8 +8894,8 @@ function rfLegendeEmpirique(){
       const teinte=RF_EMPIRIQUE_PALETTE[Math.min(k,RF_EMPIRIQUE_PALETTE.length-1)], c=R.classes_mesures&&R.classes_mesures[k];
       let mes;
       if(!c||!c.n) mes=en?'no comparable measurement':'aucune mesure comparable';
-      else if(c.n<RF_BANDE_N_MIN) mes=en?'only '+c.n+' comparable measurement'+(c.n>1?'s':'')+': no range':c.n+' mesure'+(c.n>1?'s comparables':' comparable')+' seulement : pas de plage';
-      else mes=(en?'half of comparable measurements between ':'la moitié des mesures comparables entre ')+rfFormatVm(c.q1,en)+(en?' and ':' et ')+rfFormatVm(c.q3,en)+' V/m'+(en?' (median ':' (médiane ')+rfFormatVm(c.med,en)+(en?'; ':' ; ')+c.n+(en?' measurements)':' mesures)');
+      else if(c.n<RF_BANDE_N_MIN) mes=en?c.n+' comparable measurement'+(c.n>1?'s':'')+', no range':c.n+' mesure'+(c.n>1?'s comparables':' comparable')+', pas de plage';
+      else mes=(en?'half of comparable measurements between ':'la moitié des mesures comparables entre ')+rfFormatVm(c.q1,en)+(en?' and ':' et ')+rfFormatVm(c.q3,en)+' V/m ('+c.n+(en?' measurements)':' mesures)');
       lignes.push('<div class="leg-row" style="display:block">'+pastille(teinte,true)+pastille(teinte,false)+' <b>'+intervalle+'</b> — '+mes+'</div>');
     }
     lignes.push('<div class="leg-row" style="display:block;color:#626774">'+(en
@@ -9397,9 +9408,9 @@ async function calibrateRF(){
       { const avecD=poolDist.filter(x=>isFinite(x.d_m)), pt=x=>({x:Math.log(Math.max(x.d_m,1)),y:Math.log(x.v)});
         const f=rfEmpiriqueAjuste(avecD.map(pt)), f21=rfEmpiriqueAjuste(avecD.filter(x=>x.date>=RF_EMPIRIQUE_DEPUIS).map(pt));
         const ref=RF_EMPIRIQUE_REFERENCE==='depuis2021'?f21:f;
-        const bandes=RF_BANDES_STATS.map((b,i)=>({i,b})).filter(o=>o.b&&o.b.n>=RF_BANDE_N_MIN&&o.b.med>0);
+        const bandes=RF_EMPIRIQUE_BANDES_DE_LA_BORNE.map(i=>({i,b:RF_BANDES_STATS[i]})).filter(o=>o.b&&o.b.n>=RF_BANDE_N_MIN&&o.b.med>0);
         const unChiffre=x=>{ const e=Math.floor(Math.log10(x)); return Math.round(x/Math.pow(10,e))*Math.pow(10,e); };
-        const bornes=bandes.slice(0,-1).map((o,k)=>unChiffre(Math.sqrt(o.b.med*bandes[k+1].b.med)));
+        const bornes=bandes.length===2?[unChiffre(Math.sqrt(bandes[0].b.med*bandes[1].b.med))]:[];
         const ds=avecD.map(x=>x.d_m).sort((a,b)=>b-a), dExt=ds[RF_EMPIRIQUE_N_EXTINCTION-1];
         RF_EMPIRIQUE=(f&&ref&&ref.b<0&&bornes.length&&dExt>0)?{a:f.a,b:f.b,sigma:f.sigma,n:f.n,
           a21:f21?f21.a:null,b21:f21?f21.b:null,sigma21:f21?f21.sigma:null,n21:f21?f21.n:0,
@@ -9407,13 +9418,18 @@ async function calibrateRF(){
           bornes_vm:bornes,bandes_des_classes:bandes.map(o=>o.i),d_extinction_m:dExt,n_au_dela:avecD.filter(x=>x.d_m>dExt).length}:null;
         // Mesures comparables PAR CLASSE DE VALEUR ESTIMÉE (lecture de l'évaluateur, 2026-09-29) : les mesures de la
         // référence dont la médiane estimée tombe dans la classe — pas une bande de distance, qu'une personne à 80 m
-        // lirait comme ses mesures comparables alors que la classe haute s'étend à 103 m. Quartiles comme ci-dessus.
+        // lirait comme ses mesures comparables alors que la classe haute s'étend à 242 m (2026-09-29). Quartiles comme
+        // ci-dessus.
         if(RF_EMPIRIQUE){ const R=RF_EMPIRIQUE, parC=bornes.concat([0]).map(()=>[]);
           avecD.forEach(x=>{ if(R.reference==='depuis2021'&&!(x.date>=RF_EMPIRIQUE_DEPUIS)) return; if(x.d_m>dExt) return;
             const k=rfEmpiriqueClasse(Math.exp(R.ar+R.br*Math.log(Math.max(x.d_m,1)))); if(k!=null) parC[k].push(x.v); });
           R.classes_mesures=parC.map(v=>{ const t=v.slice().sort((a,b)=>a-b); const qv=q=>{ if(!t.length) return null; const i=(t.length-1)*q,lo=Math.floor(i),hi=Math.ceil(i); return t[lo]+(t[hi]-t[lo])*(i-lo); };
-            return {n:t.length,q1:qv(0.25),med:qv(0.5),q3:qv(0.75)}; }); }
-        if(RF_EMPIRIQUE) console.log('[Tellux] champ RF empirique : ln E = '+RF_EMPIRIQUE.ar.toFixed(3)+' '+RF_EMPIRIQUE.br.toFixed(3)+'·ln d (référence '+RF_EMPIRIQUE.reference+', n='+RF_EMPIRIQUE.nr+', σ='+RF_EMPIRIQUE.sr.toFixed(3)+') · tout le pool '+f.a.toFixed(3)+' '+f.b.toFixed(3)+' (n='+f.n+') · bornes '+bornes.join(' / ')+' V/m · extinction au-delà de '+Math.round(dExt)+' m');
+            return {n:t.length,q1:qv(0.25),med:qv(0.5),q3:qv(0.75)}; });
+          // Garde (décision du 2026-09-29) : deux classes voisines dont la médiane mesurée ne décroît pas ne se séparent
+          // pas — une gradation affichée que les mesures comparables ne portent pas. Dit en console, jamais à l'écran.
+          rfEmpiriqueNonSeparees(R.classes_mesures).forEach(([k,j])=>{ const c=R.classes_mesures[k], d=R.classes_mesures[j];
+            console.warn('[Tellux] champ RF empirique : les classes '+k+' et '+j+' ne se séparent pas par la médiane mesurée ('+c.med.toFixed(2)+' V/m sur '+c.n+' mesures, '+d.med.toFixed(2)+' V/m sur '+d.n+') — frontière à revoir'); }); }
+        if(RF_EMPIRIQUE) console.log('[Tellux] champ RF empirique : ln E = '+RF_EMPIRIQUE.ar.toFixed(3)+' '+RF_EMPIRIQUE.br.toFixed(3)+'·ln d (référence '+RF_EMPIRIQUE.reference+', n='+RF_EMPIRIQUE.nr+', σ='+RF_EMPIRIQUE.sr.toFixed(3)+') · tout le pool '+f.a.toFixed(3)+' '+f.b.toFixed(3)+' (n='+f.n+') · borne '+bornes.join(' / ')+' V/m · médianes mesurées par classe '+(RF_EMPIRIQUE.classes_mesures||[]).map(c=>c.n?c.med.toFixed(2)+' (n='+c.n+')':'—').join(' / ')+' · extinction au-delà de '+Math.round(dExt)+' m');
         else console.warn('[Tellux] champ RF empirique : relation non établie — couche RF vide');
       }
       if(typeof syncAntCount==='function') syncAntCount(); }
@@ -12538,10 +12554,11 @@ function buildHot(){
 //    rien d'estimé : avec la référence retenue, le champ estimé passe sous 0,5 V/m à 242 m d'un support et un pixel du
 //    zoom 8 fait environ 450 m — lissé sur l'île, tout tombait dans la classe la plus basse (mesuré le 2026-09-29 :
 //    100 % des cellules d'une grille lissée sur 1,5 km, médianes de 0,16 à 0,33 V/m), une carte de présence.
-//    Pas sur une grille de 0,0022° non plus : ses cellules (≈ 200 m) sont plus larges que le rayon de la classe haute.
-//  · Au-delà de RF_EMPIRIQUE.d_extinction_m du support le plus proche, rien d'estimé : moins de 3 mesures au-delà.
+//    Pas sur une grille de 0,0022° non plus : ses cellules (≈ 200 m) sont de l'ordre du rayon de la classe haute (242 m).
+//  · Au-delà de RF_EMPIRIQUE.d_extinction_m du support le plus proche, rien d'estimé : RF_EMPIRIQUE.n_au_dela mesures
+//    au-delà (2 au 2026-09-29).
 // Rendu : tuiles canevas (L.GridLayer) dans le volet 'rfDistance' ; la transparence est portée par le volet.
-const RF_EMPIRIQUE_PALETTE=['#08306b','#2171b5','#9ecae1'];   // classe 0 (la plus haute) → 2 : teintes de l'ancienne couche
+const RF_EMPIRIQUE_PALETTE=['#08306b','#9ecae1'];   // classe haute, classe basse : la plus foncée et la plus claire des trois teintes de l'ancienne couche
 const RF_EMPIRIQUE_RGB=RF_EMPIRIQUE_PALETTE.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
 const RF_EMPIRIQUE_OPACITE=0.35;
 const RF_EMPIRIQUE_ZOOM_CLASSES=11;
@@ -12705,14 +12722,14 @@ function rfPopupHTML(lat,lng){
     }
     // Champ estimé (2026-09-29, brief RF_CHAMP_EMPIRIQUE) : ce que la couche dessine ici, avec la moitié centrale des
     // mesures comparables (p25–p75) ; le p90 n'est pas affiché (revue Fable, E2). Au-delà de la distance d'extinction,
-    // pas d'estimation, et on le dit.
+    // pas d'estimation, et on le dit avec le compte lu dans les données, comme la légende (décision du 2026-09-29).
     const ch=rfChampEmpirique(p.d_m);
     if(ch) lignes.push('<div style="font-size:9px;color:#1F2329;line-height:1.35;margin-top:2px">'+(en
       ?'Field estimated here from the distance: median '+rfFormatVm(ch.med,en)+' V/m, half of comparable measurements between '+rfFormatVm(ch.p25,en)+' and '+rfFormatVm(ch.p75,en)+' V/m. An estimate, not a measurement.'
       :'Champ estimé ici d’après la distance : médiane '+rfFormatVm(ch.med,en)+' V/m, la moitié des mesures comparables entre '+rfFormatVm(ch.p25,en)+' et '+rfFormatVm(ch.p75,en)+' V/m. Estimation, pas une mesure.')+'</div>');
     else if(RF_EMPIRIQUE&&p.d_m>RF_EMPIRIQUE.d_extinction_m) lignes.push('<div style="font-size:9px;color:#626774;line-height:1.35;margin-top:2px">'+(en
-      ?'Beyond '+fmtD(RF_EMPIRIQUE.d_extinction_m)+' from a mast, fewer than '+RF_EMPIRIQUE_N_EXTINCTION+' certified measurements: no estimate.'
-      :'Au-delà de '+fmtD(RF_EMPIRIQUE.d_extinction_m)+' d’un support, moins de '+RF_EMPIRIQUE_N_EXTINCTION+' mesures certifiées : pas d’estimation.')+'</div>');
+      ?'Beyond '+fmtD(RF_EMPIRIQUE.d_extinction_m)+' from a mast, only '+RF_EMPIRIQUE.n_au_dela+' certified measurement'+(RF_EMPIRIQUE.n_au_dela>1?'s':'')+': no estimate.'
+      :'Au-delà de '+fmtD(RF_EMPIRIQUE.d_extinction_m)+' d’un support, '+RF_EMPIRIQUE.n_au_dela+' mesure'+(RF_EMPIRIQUE.n_au_dela>1?'s certifiées':' certifiée')+' seulement : pas d’estimation.')+'</div>');
   }
   if(typeof MESURES_CERTIFIEES!=='undefined'&&Array.isArray(MESURES_CERTIFIEES)&&MESURES_CERTIFIEES.length){
     // Lieux : regroupement à 50 m, du plus récent au plus ancien (à même date, du plus haut au plus bas) — une fiche

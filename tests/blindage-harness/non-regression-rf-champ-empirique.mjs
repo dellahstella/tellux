@@ -4,13 +4,17 @@
 //      relation REDÉRIVÉE ICI, dans Node, depuis les deux fichiers servis (mesures certifiées, supports mobiles), avec le
 //      filtre de calibrateRF() — pas lue dans la page. Seul écart déclaré : le filtre « hors portée » (champ du modèle sous
 //      0,02 V/m) n'est pas rejoué ; il exclut 0 fiche au 2026-09-29, et le test échoue si la page en exclut une.
-//  (b) Aucune chaîne « 28 à 61 V/m » dans les surfaces de la couche RF : popup aux trois points fixes et légende RF, FR et
-//      EN. (La légende d'une AUTRE couche, « Antennes ANFR et émetteurs TDF », porte encore cette ligne au 2026-09-29 :
-//      hors du périmètre du brief, signalée à part, pas masquée ici.)
+//      Même chose pour la borne unique des deux classes (décision du 2026-09-29) : redérivée ici — moyenne géométrique
+//      des médianes des bandes 50–150 m et 150 m–1 km du pool, à un chiffre significatif — et comparée à la page.
+//  (b) Aucune valeur limite « 28 à 61 V/m » (ou 28–61) nulle part dans le document rendu, en français puis en anglais
+//      (page rechargée avec ?lang=en) : nœuds de texte et attributs visibles, hors scripts — depuis #1648 et #1650, plus
+//      aucune ne s'affiche. Et, dans les surfaces de la couche RF (popup aux trois points fixes, légende, FR et EN) : la
+//      même chaîne, et ni « exposition » ni « exposure ».
 //  (c) Aux trois points fixes du brief, la classe RENDUE (pixel lu dans la tuile du canevas, zoom 15) et la médiane
 //      annoncée par le popup concordent ; au-delà de la distance d'extinction, ni pixel ni estimation.
 //  (d) Répartition des 4 004 points BT (échantillon de bandes_habitees.py : un tronçon sur `pas`, milieu des deux
-//      premiers points) entre les classes : imprimée pour le digest, pas un critère.
+//      premiers points) entre les deux classes et l'extinction : imprimée pour le digest ; le critère est qu'il n'y ait
+//      que ces trois cas.
 //  (e) Sous le zoom des classes (lecture de l'évaluateur du 2026-09-29 : l'île montre ce qu'on sait, le bourg ce qu'on
 //      estime), seulement le mesuré : au zoom 9, rien sur un support loin de toute mesure ; un point de la teinte de sa
 //      classe sur un lieu mesuré (Piana, fiche du 15/01/2026) ; une cellule pleine dans une zone d'interpolation.
@@ -27,8 +31,9 @@ import { createHarness } from './harness.mjs';
 const ICI = dirname(fileURLToPath(import.meta.url));
 const RACINE = join(ICI, '..', '..');
 const POINTS = { Monticello: [42.6177, 8.9536], Asco: [42.4386, 8.9924], Ajaccio: [41.9263, 8.7375] };
-// Zoom 15 (≈ 3,5 m par pixel en Corse) : au zoom 13 (≈ 14 m), une fenêtre de quelques pixels déborde déjà la frontière
-// de classe quand le point en est à 20 m (Ajaccio : 86 m du support, borne à 103 m) — le test lirait sa propre fenêtre.
+// Zoom 15 (≈ 3,5 m par pixel en Corse) : au zoom 13 (≈ 14 m), une fenêtre de quelques pixels déborde déjà une frontière
+// de classe quand le point en est à 20 m — le test lirait sa propre fenêtre. (Au premier état, Ajaccio était à 86 m du
+// support pour une borne à 103 m ; à deux classes, la borne est à 242 m, 2026-09-29.)
 const ZOOM_CLASSES_TEST = 15;
 let echecs = 0;
 const ok = (cond, msg) => { console.log((cond ? '  ✔ ' : '  ✘ ') + msg); if (!cond) echecs++; };
@@ -45,9 +50,16 @@ for (const m of mesures) {
   const bm = bandeMhz(m.protocole); if (bm != null && bm < 87.5) continue;
   if (m.valeur_max_vm == null || m.lat == null || m.lon == null || !(m.valeur_max_vm > 0) || m.type_environnement !== 'exterieur_public') continue;
   let d = Infinity; for (const s of supports) { const k = dist(m.lat, m.lon, s.lat, s.lon); if (k < d) d = k; }
-  pool.push({ x: Math.log(Math.max(d * 1000, 1)), y: Math.log(m.valeur_max_vm), recente: String(m.date_mesure || '') >= '2021-01-01' });
+  pool.push({ x: Math.log(Math.max(d * 1000, 1)), y: Math.log(m.valeur_max_vm), d_m: d * 1000, v: m.valeur_max_vm, recente: String(m.date_mesure || '') >= '2021-01-01' });
 }
 const node = { pool: ajuste(pool), depuis2021: ajuste(pool.filter((p) => p.recente)) };
+// Borne unique (décision du 2026-09-29) : bandes 50–150 m et 150 m–1 km de TOUT le pool, comme RF_BANDES_STATS ; médiane
+// par interpolation linéaire des quantiles ; chacune d'au moins 10 mesures (RF_BANDE_N_MIN).
+const medianeInterp = (v) => { const s = v.slice().sort((a, b) => a - b), i = (s.length - 1) * 0.5, lo = Math.floor(i), hi = Math.ceil(i); return s[lo] + (s[hi] - s[lo]) * (i - lo); };
+const unChiffre = (x) => { const e = Math.floor(Math.log10(x)); return Math.round(x / Math.pow(10, e)) * Math.pow(10, e); };
+const b1 = pool.filter((p) => p.d_m >= 50 && p.d_m < 150).map((p) => p.v), b2 = pool.filter((p) => p.d_m >= 150 && p.d_m < 1000).map((p) => p.v);
+node.borne = b1.length >= 10 && b2.length >= 10 ? unChiffre(Math.sqrt(medianeInterp(b1) * medianeInterp(b2))) : null;
+node.medianes_bandes = [medianeInterp(b1), medianeInterp(b2)];
 
 const h = await createHarness({ bootTimeoutMs: 60000 });
 const page = h._internal.page;
@@ -60,8 +72,30 @@ try {
   ok(R.oor === 0, `aucune fiche exclue « hors portée » par la page (n_excl_oor = ${R.oor}) — sinon la redérivation ne rejoue plus le filtre`);
   ok(R.n === node.pool.n && R.n21 === node.depuis2021.n, `effectifs : page ${R.n} / ${R.n21}, Node ${node.pool.n} / ${node.depuis2021.n}`);
   for (const [cle, v, w] of [['a', R.ar, ref.a], ['b', R.br, ref.b], ['σ', R.sr, ref.sigma]]) ok(Math.abs(v - w) <= 0.05, `${cle} (référence ${R.reference}) : page ${v.toFixed(3)}, Node ${w.toFixed(3)}`);
+  ok(Array.isArray(R.bornes_vm) && R.bornes_vm.length === 1 && node.borne != null && Math.abs(R.bornes_vm[0] - node.borne) < 1e-9,
+    `une seule borne, redérivée : page ${JSON.stringify(R.bornes_vm)} V/m, Node ${node.borne} V/m (√(${node.medianes_bandes.map((x) => x.toFixed(3)).join(' × ')}), un chiffre significatif)`);
+  // La garde de séparation : elle doit signaler le cas qui a décidé des deux classes (trois classes au 2026-09-29, mesures
+  // comparables depuis 2021 : 36 à 1,05 V/m, 19 à 1,14, 5 à 0,32), et rester muette sur les deux classes servies.
+  const garde = await page.evaluate(() => ({
+    troisClasses: rfEmpiriqueNonSeparees([{ n: 36, med: 1.05 }, { n: 19, med: 1.14 }, { n: 5, med: 0.32 }]),
+    servies: rfEmpiriqueNonSeparees(RF_EMPIRIQUE.classes_mesures),
+    medianes: RF_EMPIRIQUE.classes_mesures.map((c) => (c.n ? +c.med.toFixed(3) : null)), effectifs: RF_EMPIRIQUE.classes_mesures.map((c) => c.n) }));
+  ok(JSON.stringify(garde.troisClasses) === '[[0,1]]', `la garde signale le cas des trois classes (1,05 puis 1,14 V/m) : ${JSON.stringify(garde.troisClasses)}`);
+  ok(garde.servies.length === 0, `deux classes servies : médianes mesurées ${garde.medianes.join(' / ')} V/m (${garde.effectifs.join(' / ')} mesures), séparées`);
 
-  console.log('(b) pas de ligne des valeurs limites dans les surfaces RF');
+  console.log('(b) pas de valeur limite 28–61 V/m affichée ; surfaces RF sans « exposition »');
+  // Texte du document tel qu'une personne peut le rencontrer : nœuds de texte et attributs visibles, hors scripts et
+  // styles (un commentaire de code cite encore « ICNIRP 28-61 V/m » : ce n'est pas de l'affichage).
+  const LIMITE = /(?<![\d.,])28\s*(?:à|to|–|-)\s*61(?!\d)/;
+  const texteDom = () => page.evaluate(() => {
+    const out = [document.title], w = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+      { acceptNode: (n) => (n.nodeType === 1 && /^(SCRIPT|STYLE|TEMPLATE|NOSCRIPT)$/.test(n.tagName) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
+    for (let n = w.nextNode(); n; n = w.nextNode()) { if (n.nodeType === 3) out.push(n.nodeValue); else for (const a of ['title', 'aria-label', 'alt', 'placeholder']) { const v = n.getAttribute(a); if (v) out.push(v); } }
+    return { lang: document.documentElement.lang, texte: out.join(' ') };
+  });
+  const domFr = await texteDom();
+  const mFr = domFr.texte.match(LIMITE);
+  ok(!mFr, `document rendu (${domFr.lang || 'fr'}, ${domFr.texte.length} caractères) : aucune valeur limite 28–61 V/m${mFr ? ' — trouvé « ' + domFr.texte.slice(Math.max(0, mFr.index - 40), mFr.index + 40) + ' »' : ''}`);
   const surfaces = await page.evaluate((pts) => {
     const out = [];
     for (const [la, lo] of Object.values(pts)) out.push(rfPopupHTML(la, lo));
@@ -158,6 +192,17 @@ try {
   });
   console.log('  ' + JSON.stringify(rep));
   ok(rep.n === 4004, `échantillon de ${rep.n} points (attendu 4 004 avec le fichier du 2026-09-28)`);
+  const cas = Object.keys(rep.comptes).sort().join(', ');
+  ok(cas === 'classe 0, classe 1, éteint' || cas === 'classe 0, classe 1', `deux classes et l'extinction, rien d'autre : ${cas}`);
+
+  console.log('(b, suite) le document rendu en anglais (?lang=en)');
+  const url = new URL(page.url()); url.searchParams.set('lang', 'en');
+  await page.goto(url.href, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.waitForFunction(() => document.documentElement.lang === 'en' && typeof RF_EMPIRIQUE !== 'undefined' && RF_EMPIRIQUE !== null, undefined, { timeout: 60000, polling: 500 });
+  await page.waitForTimeout(1500);
+  const domEn = await texteDom();
+  const mEn = domEn.texte.match(LIMITE);
+  ok(domEn.lang === 'en' && !mEn, `document rendu (${domEn.lang}, ${domEn.texte.length} caractères) : aucune valeur limite 28–61 V/m${mEn ? ' — trouvé « ' + domEn.texte.slice(Math.max(0, mEn.index - 40), mEn.index + 40) + ' »' : ''}`);
 
   const diag = h.diagnostics();
   const erreursRF = diag.consoleErrors.filter((e) => /RF|tuile|rf[A-Z]/i.test(e));
