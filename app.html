@@ -2351,7 +2351,7 @@ body.has-ctx-legends #crustal-gauge-panel{max-height:calc(100vh - 452px);}
            un état de procédure n'a pas sa place dans le libellé d'une couche de la carte. Le
            statut reste écrit dans le panneau Méthodologie (#methodology-panel, liste des
            composantes, FR et EN). -->
-      <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Champ radiofréquence estimé d'après la distance au support de téléphonie mobile le plus proche (2G à 5G, registre ANFR, export du 31/05/2026) et les mesures certifiées ANFR faites en Corse. Une estimation, pas une mesure : hachurée partout où rien n'est mesuré. Pour un niveau mesuré, voir les couches Mesures certifiées ANFR et Interpolation des mesures." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ RF estimé (mobile)<span class="layer-badge layer-badge--domain">RF</span></button>
+      <button class="lbtn on-hot-rf" id="b-hot-rf" data-domains="rf" title="Champ radiofréquence de la téléphonie mobile. En vue d'ensemble, ce qui est mesuré, en plein (mesures certifiées ANFR) ; à partir du zoom 11, une estimation d'après la distance au support le plus proche (2G à 5G, registre ANFR, export du 31/05/2026), hachurée. Une estimation n'est pas une mesure. Pour les fiches elles-mêmes, voir la couche Mesures certifiées ANFR." onclick="tog('hotrf','on-hot-rf',this)"><span class="dot" style="background:#2171b5"></span>Champ RF estimé (mobile)<span class="layer-badge layer-badge--domain">RF</span></button>
       <div class="mlegend-inline" id="mleg-hotrf"></div>
       <!-- Champ ELF (nT) — brief BH, 2026-09-05 : couche ELF PURE (data-domains="elf" seul),
            distincte de b-hot (composite human+geo, cf. brief BF — conservé, non touché ici).
@@ -3849,7 +3849,7 @@ var JS_STRINGS_EN = {
   // commentaire à updateInlineLegendMobile().
   leg_group_anthropique: "Human-made sources",
   mleg_sub_hot: "Tellux model combining the electrical grid and substrate, in nT — excludes the total geomagnetic field (~46,000-47,500 nT in Corsica), not a measurement. Only the electrical-grid component feeds the displayed score.",
-  mleg_sub_hotrf: "RF field estimated from the distance to the nearest mobile mast and certified ANFR measurements. An estimate, not a measurement.",
+  mleg_sub_hotrf: "RF field: zoomed out, what is measured, solid; from zoom 11, the estimate from the distance to the mobile mast, hatched.",
   mleg_sub_elf: "Tellux model, 50 Hz electrical grid only — no substrate, no total geomagnetic field. Shows nothing below 300 nT (IARC class 2B reference point — a display choice, not a risk threshold).",
   mleg_sub_emag: "Deep Corsican basement anomalies (NOAA EMAG2v3, display) — the internal grid actually used (distinct, computed permanently as the badge indicates) is not part of any publicly displayed score.",
   mleg_sub_relief: "Shaded relief (IGN, RGE ALTI), outside the calculation. Terrain can hide an antenna; the distance to masts is given as the crow flies.",
@@ -5120,7 +5120,7 @@ const LAYER_SUBTITLE_FR={
   // cité dans la légende de hot, réserve explicite reprise ici (arbitrage Soleil : ne jamais
   // laisser lire ce seuil comme une évaluation du risque à ce niveau précis).
   elf:  'Modèle Tellux, réseau électrique 50 Hz seul — sans le substrat, sans le champ géomagnétique total. N\'affiche rien sous 300 nT (repère IARC classe 2B — un choix d\'affichage, pas un seuil de risque).',
-  hotrf:'Champ RF estimé d’après la distance au support mobile le plus proche et les mesures certifiées ANFR. Une estimation, pas une mesure.',
+  hotrf:'Champ RF : en vue d’ensemble, le mesuré en plein ; à partir du zoom 11, l’estimation d’après la distance au support mobile, hachurée.',
   // emag (2026-09-03, brief AB) : corrigé — la donnée NOAA EMAG2v3 VISIBLE (ce bouton) n'est pas
   // celle qui pèse sur le calcul. Le calcul (calcLCS1 ~L4798/calcMagneticStatic ~L5641) lit une
   // grille interne figée LCS1_GRID (24 points), chemin de fuite EMAG2_CACHE→score fermé le
@@ -5220,9 +5220,9 @@ const LEGEND_HTML={
   // de l'interpolation sont posés au rendu par rfLegendeEmpirique() (appelée par syncAntCount()), depuis RF_EMPIRIQUE et
   // RF_BANDES_STATS : aucune borne ni aucun chiffre recopié ici.
   hotrf:'<div class="leg-block"><b class="leg-title">Champ RF estimé — téléphonie mobile</b>'+
-    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">D’après la distance au support mobile le plus proche (registre ANFR) et les mesures certifiées ANFR faites en Corse — une estimation, pas une mesure</div>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">En vue d’ensemble, ce qui est mesuré, en plein ; en zoomant, une estimation d’après la distance au support mobile le plus proche (registre ANFR) et les mesures certifiées ANFR faites en Corse</div>'+
     '<div id="leg-rf-classes" style="font-size:8.5px;color:#4a4f5e;line-height:1.4">—</div>'+
-    '<div class="leg-row" style="display:block;margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><span style="display:inline-block;width:14px;height:9px;background:repeating-linear-gradient(-45deg,#2171b5 0 1.5px,transparent 1.5px 3px);opacity:0.7;vertical-align:middle;margin-right:4px"></span>hachuré : estimé d’après la distance au support · <span style="display:inline-block;width:14px;height:9px;background:linear-gradient(90deg,#0f766e,#b85c00,#991b1b);opacity:0.42;vertical-align:middle;margin:0 4px"></span>plein : mesuré (couche « Interpolation des mesures », <span id="leg-rf-sites-interp">—</span> sites) — là où elle est allumée, l’estimé s’efface.</div>'+
+    '<div class="leg-row" style="display:block;margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><span style="display:inline-block;width:14px;height:9px;background:#2171b5;opacity:0.7;vertical-align:middle;margin-right:4px"></span>plein : mesuré (surface d’interpolation, <span id="leg-rf-sites-interp">—</span> sites en 5 zones ; lieux mesurés en points) · <span style="display:inline-block;width:14px;height:9px;background:repeating-linear-gradient(-45deg,#2171b5 0 1.5px,transparent 1.5px 3px);opacity:0.7;vertical-align:middle;margin:0 4px"></span>hachuré : estimé d’après la distance au support. Quand la couche « Interpolation des mesures » est allumée, elle dessine elle-même la surface mesurée, dans ses couleurs.</div>'+
     '<div class="leg-row" style="display:block;margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><span id="leg-rf-reference">—</span> Ces mesures ne sont pas prises au hasard : elles sont faites là où quelqu’un les a demandées. La surface est empirique : la distance et les mesures certifiées, rien d’autre.</div>'+
     '<div class="leg-row" style="margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4">Seuls les supports de téléphonie mobile comptent ici : ni la télévision, ni la radio FM, ni les faisceaux hertziens.</div>'+
     '<div class="leg-src">Estimation d’après les mesures certifiées ANFR, relecture externe en cours · ANFR, export du 31/05/2026 · <span id="leg-hotrf-count">—</span> supports mobiles — <a href="/cadre-scientifique.html#radiofrequences" target="_blank" rel="noopener" style="color:var(--maquis-clair)">méthode &amp; repères de lecture ↗</a></div>'+
@@ -5442,9 +5442,9 @@ const LEGEND_HTML_EN={
   hot:'<div class="leg-block"><b class="leg-title">Composite magnetic field (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">ELF 50 Hz (grid) + substrate susceptibility — excludes the total geomagnetic field (~46,000 nT)</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#C28533,#8A5E22,#5C3D10);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#4a4f5e;width:140px;margin-bottom:4px"><span>200</span><span>500</span><span>1000 nT</span></div><div class="leg-row" style="font-size:8px;color:var(--tx3)">No cell shown below 200 nT (fully transparent)</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #C28533;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ 300 nT: IARC class 2B documentary reference point.<br><span style="font-size:8px;color:#626774">Not an alert threshold</span></div><div class="leg-src">Biot-Savart (HTA) · flat-rate tiers (low-voltage) · EDF SEI · BRGM susceptibility</div></div>',
   elf:'<div class="leg-block"><b class="leg-title">ELF field (nT)</b><div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">50 Hz electrical grid — anthropic component only, no substrate</div><div style="height:12px;width:140px;background:linear-gradient(90deg,#c9b8e8,#8f6bc4,#5c3a9b,#3d2569);border-radius:3px;margin-bottom:4px"></div><div style="display:flex;justify-content:space-between;font-size:8px;color:#4a4f5e;width:140px;margin-bottom:4px"><span>300</span><span>600</span><span>1200</span><span>2400 nT</span></div><div class="leg-row" style="font-size:8px;color:var(--tx3)">No cell shown below 300 nT (fully transparent)</div><div class="leg-row" style="position:relative;padding-left:8px;border-left:2px solid #5c3a9b;margin-top:2px;font-size:9px;color:#4a4f5e;font-style:italic">▸ Threshold reuses the IARC class 2B documentary reference point<br><span style="font-size:8px;color:#626774">Long-term epidemiological classification — not a cartographic threshold recommendation, not a risk evaluation at this level</span></div><div class="leg-src">Biot-Savart (HTA) · flat-rate tiers (low-voltage) · EDF SEI</div></div>',
   hotrf:'<div class="leg-block"><b class="leg-title">Estimated RF field — mobile phones</b>'+
-    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">From the distance to the nearest mobile mast (ANFR register) and certified ANFR measurements taken in Corsica — an estimate, not a measurement</div>'+
+    '<div class="leg-subtitle" style="font-size:10px;color:var(--tx3);font-style:italic;margin-bottom:4px">Zoomed out, what is measured, solid; zooming in, an estimate from the distance to the nearest mobile mast (ANFR register) and certified ANFR measurements taken in Corsica</div>'+
     '<div id="leg-rf-classes" data-lang="en" style="font-size:8.5px;color:#4a4f5e;line-height:1.4">—</div>'+
-    '<div class="leg-row" style="display:block;margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><span style="display:inline-block;width:14px;height:9px;background:repeating-linear-gradient(-45deg,#2171b5 0 1.5px,transparent 1.5px 3px);opacity:0.7;vertical-align:middle;margin-right:4px"></span>hatched: estimated from the distance to the mast · <span style="display:inline-block;width:14px;height:9px;background:linear-gradient(90deg,#0f766e,#b85c00,#991b1b);opacity:0.42;vertical-align:middle;margin:0 4px"></span>solid: measured (“Measured interpolation” layer, <span id="leg-rf-sites-interp" data-lang="en">—</span> sites) — where it is on, the estimate steps aside.</div>'+
+    '<div class="leg-row" style="display:block;margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><span style="display:inline-block;width:14px;height:9px;background:#2171b5;opacity:0.7;vertical-align:middle;margin-right:4px"></span>solid: measured (interpolated surface, <span id="leg-rf-sites-interp" data-lang="en">—</span> sites in 5 zones; measured sites as dots) · <span style="display:inline-block;width:14px;height:9px;background:repeating-linear-gradient(-45deg,#2171b5 0 1.5px,transparent 1.5px 3px);opacity:0.7;vertical-align:middle;margin:0 4px"></span>hatched: estimated from the distance to the mast. When the “Measured interpolation” layer is on, it draws the measured surface itself, in its own colours.</div>'+
     '<div class="leg-row" style="display:block;margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4"><span id="leg-rf-reference" data-lang="en">—</span> These measurements are not taken at random: they are made where someone requested them. The surface is empirical: distance and certified measurements, nothing else.</div>'+
     '<div class="leg-row" style="margin-top:5px;font-size:8.5px;color:#4a4f5e;line-height:1.4">Only mobile-phone masts count here: not television, FM radio or microwave links.</div>'+
     '<div class="leg-src">Estimate from certified ANFR measurements, external review in progress · ANFR, export of 2026-05-31 · <span id="leg-hotrf-count">—</span> mobile masts — <a href="/cadre-scientifique.html#radiofrequences" target="_blank" rel="noopener" style="color:var(--maquis-clair)">method &amp; reading references ↗</a></div>'+
@@ -8861,29 +8861,38 @@ function rfEmpiriqueClasse(med){
   for(let i=0;i<R.bornes_vm.length;i++) if(med>=R.bornes_vm[i]) return i;
   return R.bornes_vm.length;
 }
-// rfLegendeEmpirique() : pose dans la légende de la couche RF les classes (bornes, teinte, mesures de la bande associée),
-// la distance d'extinction, la référence de la relation et le nombre de sites de l'interpolation — tout depuis
-// RF_EMPIRIQUE, RF_BANDES_STATS, RF_BANDES_DISTANCE_M et les mesures chargées, rien de recopié. Appelée par syncAntCount().
+// rfLegendeEmpirique() : pose dans la légende de la couche RF les classes (bornes, teinte) et, pour chacune, les
+// mesures de la référence dont la médiane estimée y tombe (RF_EMPIRIQUE.classes_mesures) — par valeur estimée, pas par
+// bande de distance, qui reste au popup (lecture de l'évaluateur, 2026-09-29). Puis l'extinction avec le nombre de
+// mesures au-delà, le régime des zooms, la référence de la relation et le nombre de lieux mesurés. Tout depuis
+// RF_EMPIRIQUE et les mesures chargées, rien de recopié ; sous RF_BANDE_N_MIN mesures, un compte seul, sans plage (même
+// règle que les bandes). Appelée par syncAntCount() et au chargement des mesures certifiées.
 function rfLegendeEmpirique(){
-  const R=RF_EMPIRIQUE, D=RF_BANDES_DISTANCE_M;
+  const R=RF_EMPIRIQUE;
   const fb=(v,en)=>{ const t=String(+v.toPrecision(2)); return en?t:t.replace('.',','); };
-  const fd=(m,en)=>m<1000?m+' m':(en?String(m/1000):String(m/1000).replace('.',','))+' km';
-  const bande=(i,en)=>i===0?(en?'under ':'à moins de ')+fd(D[0],en):i>=D.length?(en?'beyond ':'au-delà de ')+fd(D[D.length-1],en):(en?'between ':'entre ')+fd(D[i-1],en)+(en?' and ':' et ')+fd(D[i],en);
+  const km=(m,en)=>{ const t=(Math.round(m/100)/10).toFixed(1); return (en?t:t.replace('.',','))+' km'; };
+  const depuis=en=>R&&R.reference==='depuis2021'?(en?' since 2021':' depuis 2021'):'';
+  const nLieux=rfSitesMesures().length;
+  const pastille=(teinte,pleine)=>'<span style="display:inline-block;width:10px;height:9px;background:'+(pleine?teinte:'repeating-linear-gradient(-45deg,'+teinte+' 0 1.5px,transparent 1.5px 3px)')+';opacity:0.7;vertical-align:middle;margin-right:2px"></span>';
   document.querySelectorAll('#leg-rf-classes').forEach(el=>{
     const en=el.dataset.lang==='en';
-    if(!R||!Array.isArray(RF_BANDES_STATS)){ el.textContent=en?'Estimate unavailable for now.':'Estimation indisponible pour l’instant.'; return; }
+    if(!R){ el.textContent=en?'Estimate unavailable for now.':'Estimation indisponible pour l’instant.'; return; }
     const b=R.bornes_vm, lignes=[];
     for(let k=0;k<=b.length;k++){
       const intervalle=k===0?fb(b[0],en)+(en?' V/m and above':' V/m et plus'):k===b.length?(en?'under ':'moins de ')+fb(b[k-1],en)+' V/m':fb(b[k],en)+(en?' to ':' à ')+fb(b[k-1],en)+' V/m';
-      const bi=R.bandes_des_classes[k], teinte=RF_EMPIRIQUE_PALETTE[Math.min(k,RF_EMPIRIQUE_PALETTE.length-1)];
-      lignes.push('<div class="leg-row" style="display:block"><span style="display:inline-block;width:14px;height:9px;background:repeating-linear-gradient(-45deg,'+teinte+' 0 1.5px,transparent 1.5px 3px);opacity:0.7;vertical-align:middle;margin-right:4px"></span><b>'+intervalle+'</b>'+(en?' — comparable to measurements taken ':' — comparable aux mesures faites ')+bande(bi,en)+(en?': ':' : ')+rfBandeTexte(bi,en)+'</div>');
+      const teinte=RF_EMPIRIQUE_PALETTE[Math.min(k,RF_EMPIRIQUE_PALETTE.length-1)], c=R.classes_mesures&&R.classes_mesures[k];
+      let mes;
+      if(!c||!c.n) mes=en?'no measurement'+depuis(en)+' where the estimate falls in this class':'aucune mesure'+depuis(en)+' là où l’estimation tombe dans cette classe';
+      else if(c.n<RF_BANDE_N_MIN) mes=en?'only '+c.n+' measurement'+(c.n>1?'s':'')+depuis(en)+' where the estimate falls in this class: no range':c.n+' mesure'+(c.n>1?'s':'')+depuis(en)+' seulement là où l’estimation tombe dans cette classe : pas de plage';
+      else mes=(en?'measurements'+depuis(en)+' where the estimate falls in this class: half between ':'mesures'+depuis(en)+' là où l’estimation tombe dans cette classe : la moitié entre ')+rfFormatVm(c.q1,en)+(en?' and ':' et ')+rfFormatVm(c.q3,en)+' V/m'+(en?' (median ':' (médiane ')+rfFormatVm(c.med,en)+', '+c.n+(en?' measurements)':' mesures)');
+      lignes.push('<div class="leg-row" style="display:block">'+pastille(teinte,true)+pastille(teinte,false)+' <b>'+intervalle+'</b> — '+mes+'</div>');
     }
     lignes.push('<div class="leg-row" style="display:block;color:#626774">'+(en
-      ?'Beyond '+fd(Math.round(R.d_extinction_m/100)*100,en)+' from a mast: fewer than '+RF_EMPIRIQUE_N_EXTINCTION+' measurements, no reference — nothing is drawn.'
-      :'Au-delà de '+fd(Math.round(R.d_extinction_m/100)*100,en)+' d’un support : moins de '+RF_EMPIRIQUE_N_EXTINCTION+' mesures, pas de repère — rien n’est dessiné.')+'</div>');
+      ?'Beyond '+km(R.d_extinction_m,en)+' from a mast: only '+R.n_au_dela+' measurement'+(R.n_au_dela>1?'s':'')+', no reference — nothing is estimated.'
+      :'Au-delà de '+km(R.d_extinction_m,en)+' d’un support : '+R.n_au_dela+' mesure'+(R.n_au_dela>1?'s':'')+' seulement, pas de repère — rien n’est estimé.')+'</div>');
     lignes.push('<div class="leg-row" style="display:block;color:#626774">'+(en
-      ?'Zoomed out (below zoom '+RF_EMPIRIQUE_ZOOM_CLASSES+'): the same estimate, smoothed over '+RF_EMPIRIQUE_NOYAU_KM+' km, as a continuous gradient; the classes appear when zooming in.'
-      :'En vue d’ensemble (sous le zoom '+RF_EMPIRIQUE_ZOOM_CLASSES+') : la même estimation, lissée sur '+String(RF_EMPIRIQUE_NOYAU_KM).replace('.',',')+' km, en dégradé continu ; les classes apparaissent en zoomant.')+'</div>');
+      ?'Below zoom '+RF_EMPIRIQUE_ZOOM_CLASSES+', only what is measured: the interpolated surface (5 zones) and the '+nLieux+' measured sites, as dots in the colour of their class. The hatched estimate appears from zoom '+RF_EMPIRIQUE_ZOOM_CLASSES+'.'
+      :'Sous le zoom '+RF_EMPIRIQUE_ZOOM_CLASSES+', seulement ce qui est mesuré : la surface d’interpolation (5 zones) et les '+nLieux+' lieux mesurés, en points dans la teinte de leur classe. L’estimation, hachurée, apparaît à partir du zoom '+RF_EMPIRIQUE_ZOOM_CLASSES+'.')+'</div>');
     el.innerHTML=lignes.join('');
   });
   document.querySelectorAll('#leg-rf-reference').forEach(el=>{
@@ -9393,6 +9402,14 @@ async function calibrateRF(){
           a21:f21?f21.a:null,b21:f21?f21.b:null,sigma21:f21?f21.sigma:null,n21:f21?f21.n:0,
           reference:RF_EMPIRIQUE_REFERENCE,ar:ref.a,br:ref.b,sr:ref.sigma,nr:ref.n,
           bornes_vm:bornes,bandes_des_classes:bandes.map(o=>o.i),d_extinction_m:dExt,n_au_dela:avecD.filter(x=>x.d_m>dExt).length}:null;
+        // Mesures comparables PAR CLASSE DE VALEUR ESTIMÉE (lecture de l'évaluateur, 2026-09-29) : les mesures de la
+        // référence dont la médiane estimée tombe dans la classe — pas une bande de distance, qu'une personne à 80 m
+        // lirait comme ses mesures comparables alors que la classe haute s'étend à 103 m. Quartiles comme ci-dessus.
+        if(RF_EMPIRIQUE){ const R=RF_EMPIRIQUE, parC=bornes.concat([0]).map(()=>[]);
+          avecD.forEach(x=>{ if(R.reference==='depuis2021'&&!(x.date>=RF_EMPIRIQUE_DEPUIS)) return; if(x.d_m>dExt) return;
+            const k=rfEmpiriqueClasse(Math.exp(R.ar+R.br*Math.log(Math.max(x.d_m,1)))); if(k!=null) parC[k].push(x.v); });
+          R.classes_mesures=parC.map(v=>{ const t=v.slice().sort((a,b)=>a-b); const qv=q=>{ if(!t.length) return null; const i=(t.length-1)*q,lo=Math.floor(i),hi=Math.ceil(i); return t[lo]+(t[hi]-t[lo])*(i-lo); };
+            return {n:t.length,q1:qv(0.25),med:qv(0.5),q3:qv(0.75)}; }); }
         if(RF_EMPIRIQUE) console.log('[Tellux] champ RF empirique : ln E = '+RF_EMPIRIQUE.ar.toFixed(3)+' '+RF_EMPIRIQUE.br.toFixed(3)+'·ln d (référence '+RF_EMPIRIQUE.reference+', n='+RF_EMPIRIQUE.nr+', σ='+RF_EMPIRIQUE.sr.toFixed(3)+') · tout le pool '+f.a.toFixed(3)+' '+f.b.toFixed(3)+' (n='+f.n+') · bornes '+bornes.join(' / ')+' V/m · extinction au-delà de '+Math.round(dExt)+' m');
         else console.warn('[Tellux] champ RF empirique : relation non établie — couche RF vide');
       }
@@ -12507,27 +12524,25 @@ function buildHot(){
 
 // ═══ Couche RF — champ estimé d'après les mesures (2026-09-29, brief RF_CHAMP_EMPIRIQUE du 2026-09-28) ═══
 // Remplace la distance au support en disques (2026-09-28) : à l'échelle de l'île, ces disques dessinaient la présence
-// des antennes, et les classes les plus lointaines ne portaient aucune mesure (revue Fable, constats E1, M6, F1). La
-// couche porte désormais un champ ESTIMÉ, en V/m, d'après la distance au support le plus proche et la relation ajustée
-// sur les mesures certifiées (RF_EMPIRIQUE, rfChampEmpirique) — aucune valeur du modèle.
-//  · À partir du zoom RF_EMPIRIQUE_ZOOM_CLASSES : les classes de RF_EMPIRIQUE.bornes_vm, nettes, calculées par blocs de
-//    2 px depuis la distance au support. Pas sur la grille de 0,0022° : ses cellules (≈ 200 m) sont plus larges que le
-//    rayon de la classe la plus haute autour d'un support (≈ 100 m au 2026-09-29), qu'elles effaceraient.
-//  · En dessous : la médiane estimée, lissée par un noyau gaussien d'écart type RF_EMPIRIQUE_NOYAU_KM sur une grille de
-//    RF_EMPIRIQUE_PAS_DEG (celui de l'interpolation mesurée), rendue en dégradé continu des trois teintes, sans contour.
-//    Le lissage porte aussi la part éclairée du voisinage : rien n'est dessiné là où elle passe sous la moitié, pour que
-//    le lissage n'étale pas la surface au-delà de la distance d'extinction.
-//  · Au-delà de RF_EMPIRIQUE.d_extinction_m du support le plus proche, rien : moins de 3 mesures, pas de repère.
-//  · Hachure (4 px, 45°) = estimé. Là où la couche « Interpolation des mesures » est allumée et a une valeur, la surface
-//    estimée ne dessine rien et laisse voir la surface mesurée, pleine ; interpolation éteinte, l'estimé couvre tout.
-// Rendu : tuiles canevas (L.GridLayer) dans le volet 'rfDistance' ; la transparence est portée par le volet. Chaque tuile
-// prend le régime de son zoom ; la grille lissée est calculée une fois par relation, pas à chaque tuile.
+// des antennes, et les classes les plus lointaines ne portaient aucune mesure (revue Fable, constats E1, M6, F1).
+// Principe, repris de la lecture de l'évaluateur du 2026-09-29 : l'île montre ce qu'on sait, le bourg ce qu'on estime.
+//  · Sous le zoom RF_EMPIRIQUE_ZOOM_CLASSES, seulement le mesuré, en plein : les cellules de la surface d'interpolation
+//    (mêmes zones, même grille, mêmes valeurs que buildHotMesures()) et les lieux mesurés en points, dans la teinte de la
+//    classe de leur valeur mesurée. Quand la couche « Interpolation des mesures » est allumée, c'est elle qui dessine
+//    ses cellules, dans sa propre palette ; la couche RF les laisse vides, à tous les zooms.
+//  · Estimé, hachuré (4 px, 45°), seulement à partir du zoom RF_EMPIRIQUE_ZOOM_CLASSES, partout (brief, étape 7) : les classes de
+//    RF_EMPIRIQUE.bornes_vm, calculées par blocs de 2 px depuis la distance au support (rfChampEmpirique). Sous ce zoom,
+//    rien d'estimé : avec la référence retenue, le champ estimé passe sous 0,5 V/m à 242 m d'un support et un pixel du
+//    zoom 8 fait environ 450 m — lissé sur l'île, tout tombait dans la classe la plus basse (mesuré le 2026-09-29 :
+//    100 % des cellules d'une grille lissée sur 1,5 km, médianes de 0,16 à 0,33 V/m), une carte de présence.
+//    Pas sur une grille de 0,0022° non plus : ses cellules (≈ 200 m) sont plus larges que le rayon de la classe haute.
+//  · Au-delà de RF_EMPIRIQUE.d_extinction_m du support le plus proche, rien d'estimé : moins de 3 mesures au-delà.
+// Rendu : tuiles canevas (L.GridLayer) dans le volet 'rfDistance' ; la transparence est portée par le volet.
 const RF_EMPIRIQUE_PALETTE=['#08306b','#2171b5','#9ecae1'];   // classe 0 (la plus haute) → 2 : teintes de l'ancienne couche
 const RF_EMPIRIQUE_RGB=RF_EMPIRIQUE_PALETTE.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
 const RF_EMPIRIQUE_OPACITE=0.35;
 const RF_EMPIRIQUE_ZOOM_CLASSES=11;
-const RF_EMPIRIQUE_NOYAU_KM=1.5;
-const RF_EMPIRIQUE_PAS_DEG=0.0022;
+const RF_EMPIRIQUE_RAYON_SITE_PX=3.5;
 // rfDistanceParmi : distance (m) au support le plus proche parmi des candidats, cherché en approximation
 // équirectangulaire (écart à la haversine sous 0,1 % à ces distances), puis mesurée exactement (dist) sur le retenu.
 function rfDistanceParmi(lat,lon,cands,cosLat){
@@ -12540,26 +12555,27 @@ function rfSupportsAutour(s,w,n,e,dMax){
   const dLat=dMax/110574*1.01, dLon=dMax/(111320*Math.cos(Math.max(Math.abs(s),Math.abs(n))*Math.PI/180))*1.01;
   return SUPPORTS_MOBILES.filter(x=>x.lat>=s-dLat&&x.lat<=n+dLat&&x.lon>=w-dLon&&x.lon<=e+dLon);
 }
-// rfChampEmpiriqueEn(lat, lon) → {d_m, champ, classe} : ce que la couche dessine en ce point au zoom des classes (même
-// recherche de support que les tuiles) ; classe null au-delà de l'extinction. Lu par les tests de non-régression.
+// rfChampEmpiriqueEn(lat, lon) → {d_m, champ, classe} : l'estimé en ce point au zoom des classes (même recherche de
+// support que les tuiles) ; classe null au-delà de l'extinction. Lu par les tests de non-régression.
 function rfChampEmpiriqueEn(lat,lon){
   if(!RF_EMPIRIQUE||!Array.isArray(SUPPORTS_MOBILES)) return null;
   const cands=rfSupportsAutour(lat,lon,lat,lon,RF_EMPIRIQUE.d_extinction_m);
   const d=rfDistanceParmi(lat,lon,cands,Math.cos(lat*Math.PI/180)), champ=rfChampEmpirique(d);
   return {d_m:d,champ,classe:champ?rfEmpiriqueClasse(champ.med):null};
 }
-// rfMasqueMesure() → (lat, lon) → vrai si la couche « Interpolation des mesures » dessine une cellule ici ; null si
-// elle est éteinte. Mêmes zones, même grille, mêmes conditions que buildHotMesures() (disque de INTERP_RADIUS_KM, site
-// mesuré à moins de INTERP_CUTOFF_KM), mémorisées par cellule.
-let _rfMasqueCache=null;
-function rfMasqueMesure(){
-  if(typeof ACTIVE==='undefined'||!ACTIVE.interp||!Array.isArray(MESURES_CERTIFIEES)||!MESURES_CERTIFIEES.length) return null;
-  if(!_rfMasqueCache||_rfMasqueCache.src!==MESURES_CERTIFIEES){
+// rfSurfaceMesuree() → (lat, lon) → valeur mesurée (V/m) de la cellule d'interpolation qui couvre ce point, ou
+// undefined hors de toute cellule ; null tant que les mesures certifiées ne sont pas chargées. Mêmes zones, même
+// grille, mêmes conditions et même valeur que buildHotMesures() (disque de INTERP_RADIUS_KM, site à moins de
+// INTERP_CUTOFF_KM, valeur du site le plus proche selon _interpSites()), mémorisées par cellule.
+let _rfMesureCache=null;
+function rfSurfaceMesuree(){
+  if(typeof MESURES_CERTIFIEES==='undefined'||!Array.isArray(MESURES_CERTIFIEES)||!MESURES_CERTIFIEES.length) return null;
+  if(!_rfMesureCache||_rfMesureCache.src!==MESURES_CERTIFIEES){
     const zones=Object.keys(INTERP_ZONES).map(nom=>{ const c=INTERP_ZONES[nom], latSpan=INTERP_RADIUS_KM/110.57, lonSpan=INTERP_RADIUS_KM/(111.32*Math.cos(c.lat*Math.PI/180));
       return {c,a0:c.lat-latSpan,o0:c.lon-lonSpan,ni:Math.floor(2*latSpan/INTERP_STEP_DEG+1e-9),nj:Math.floor(2*lonSpan/INTERP_STEP_DEG+1e-9),memo:new Map()}; });
-    _rfMasqueCache={src:MESURES_CERTIFIEES,sites:_interpSites(MESURES_CERTIFIEES),zones};
+    _rfMesureCache={src:MESURES_CERTIFIEES,sites:_interpSites(MESURES_CERTIFIEES),zones};
   }
-  const {sites,zones}=_rfMasqueCache;
+  const {sites,zones}=_rfMesureCache;
   return function(lat,lon){
     for(const z of zones){
       const i=Math.floor((lat-z.a0)/INTERP_STEP_DEG), j=Math.floor((lon-z.o0)/INTERP_STEP_DEG);
@@ -12567,67 +12583,31 @@ function rfMasqueMesure(){
       const k=i*100000+j; let v=z.memo.get(k);
       if(v===undefined){
         const cLat=z.a0+i*INTERP_STEP_DEG+INTERP_STEP_DEG/2, cLon=z.o0+j*INTERP_STEP_DEG+INTERP_STEP_DEG/2;
-        v=false;
-        if(dist(z.c.lat,z.c.lon,cLat,cLon)<=INTERP_RADIUS_KM){ let bd=Infinity; for(const s of sites){ const d=dist(cLat,cLon,s.lat,s.lon); if(d<bd) bd=d; } v=bd<=INTERP_CUTOFF_KM; }
+        v=null;
+        if(dist(z.c.lat,z.c.lon,cLat,cLon)<=INTERP_RADIUS_KM){ let bd=Infinity,best=null; for(const s of sites){ const d=dist(cLat,cLon,s.lat,s.lon); if(d<bd){ bd=d; best=s; } } if(best&&bd<=INTERP_CUTOFF_KM) v=+best.valeur; }
         z.memo.set(k,v);
       }
-      if(v) return true;
+      if(v!==null) return v;
     }
-    return false;
+    return undefined;
   };
 }
-// rfGrilleLissee() : grille de la vue île, calculée une fois par relation — ln(médiane estimée) et part éclairée,
-// lissées par un noyau gaussien séparable, tronqué à trois écarts types. Emprise : celle des supports, plus 0,1°.
-let _rfLisse=null;
-function rfGrilleLissee(){
-  const R=RF_EMPIRIQUE; if(!R||!Array.isArray(SUPPORTS_MOBILES)||!SUPPORTS_MOBILES.length) return null;
-  if(_rfLisse&&_rfLisse.src===R&&_rfLisse.sup===SUPPORTS_MOBILES) return _rfLisse;
-  const P=RF_EMPIRIQUE_PAS_DEG;
-  let s=Infinity,n=-Infinity,w=Infinity,e=-Infinity;
-  for(const x of SUPPORTS_MOBILES){ if(x.lat<s)s=x.lat; if(x.lat>n)n=x.lat; if(x.lon<w)w=x.lon; if(x.lon>e)e=x.lon; }
-  s-=0.1; n+=0.1; w-=0.1; e+=0.1;
-  const NI=Math.ceil((n-s)/P), NJ=Math.ceil((e-w)/P), N=NI*NJ, dExt=R.d_extinction_m;
-  const dmin=new Float64Array(N).fill(Infinity);
-  const ri=Math.ceil(dExt/110574/P)+1, rj=Math.ceil(dExt/(111320*Math.cos(Math.max(Math.abs(s),Math.abs(n))*Math.PI/180))/P)+1;
-  for(const x of SUPPORTS_MOBILES){
-    const i0=Math.floor((x.lat-s)/P), j0=Math.floor((x.lon-w)/P);
-    for(let i=Math.max(0,i0-ri);i<=Math.min(NI-1,i0+ri);i++){ const la=s+(i+0.5)*P;
-      for(let j=Math.max(0,j0-rj);j<=Math.min(NJ-1,j0+rj);j++){ const d=dist(la,w+(j+0.5)*P,x.lat,x.lon)*1000, k=i*NJ+j; if(d<dmin[k]) dmin[k]=d; } }
-  }
-  const V=new Float64Array(N), W=new Float64Array(N);
-  for(let k=0;k<N;k++){ const c=rfChampEmpirique(dmin[k]); if(c){ V[k]=Math.log(c.med); W[k]=1; } }
-  const noyau=sg=>{ const r=Math.ceil(3*sg), k=new Float64Array(2*r+1); let t=0; for(let u=-r;u<=r;u++){ k[u+r]=Math.exp(-u*u/(2*sg*sg)); t+=k[u+r]; } for(let u=0;u<k.length;u++) k[u]/=t; return {r,k}; };
-  const conv=(src,ker,enLigne)=>{ const out=new Float64Array(N), r=ker.r, kk=ker.k;
-    for(let i=0;i<NI;i++) for(let j=0;j<NJ;j++){ let acc=0;
-      if(enLigne){ const u0=Math.max(-r,-j), u1=Math.min(r,NJ-1-j), base=i*NJ+j; for(let u=u0;u<=u1;u++) acc+=kk[u+r]*src[base+u]; }
-      else { const u0=Math.max(-r,-i), u1=Math.min(r,NI-1-i); for(let u=u0;u<=u1;u++) acc+=kk[u+r]*src[(i+u)*NJ+j]; }
-      out[i*NJ+j]=acc; }
-    return out; };
-  const cosM=Math.cos(((s+n)/2)*Math.PI/180);
-  const kI=noyau(RF_EMPIRIQUE_NOYAU_KM/(110.574*P)), kJ=noyau(RF_EMPIRIQUE_NOYAU_KM/(111.320*cosM*P));
-  const VW=new Float64Array(N); for(let k=0;k<N;k++) VW[k]=V[k]*W[k];
-  _rfLisse={src:R,sup:SUPPORTS_MOBILES,s,w,NI,NJ,P,Wl:conv(conv(W,kJ,true),kI,false),VWl:conv(conv(VW,kJ,true),kI,false)};
-  return _rfLisse;
-}
-// rfLisseEn(g, lat, lon) → ln(médiane) lissée, interpolée bilinéairement ; null là où la part éclairée passe sous 0,5.
-function rfLisseEn(g,lat,lon){
-  const fi=(lat-g.s)/g.P-0.5, fj=(lon-g.w)/g.P-0.5, i0=Math.floor(fi), j0=Math.floor(fj);
-  if(i0<0||j0<0||i0+1>=g.NI||j0+1>=g.NJ) return null;
-  const ti=fi-i0, tj=fj-j0, k=i0*g.NJ+j0, NJ=g.NJ;
-  const bil=A=>(1-ti)*((1-tj)*A[k]+tj*A[k+1])+ti*((1-tj)*A[k+NJ]+tj*A[k+NJ+1]);
-  const w=bil(g.Wl); return w<0.5?null:bil(g.VWl)/w;
-}
-// rfCouleurContinue(lnMed) → [r, g, b] : dégradé des teintes de classe, chacune placée au centre (en log) de sa classe ;
-// la classe la plus basse va de la dernière borne à la médiane estimée à la distance d'extinction.
-function rfCouleurContinue(lnMed){
-  const b=RF_EMPIRIQUE.bornes_vm.map(Math.log), bas=Math.log(rfChampEmpirique(RF_EMPIRIQUE.d_extinction_m).med), m=b.length;
-  const c=[b[0]+(m>1?(b[0]-b[1])/2:0.35)];
-  for(let k=1;k<m;k++) c.push((b[k-1]+b[k])/2);
-  c.push((b[m-1]+bas)/2);
-  const RGB=RF_EMPIRIQUE_RGB, last=Math.min(c.length,RGB.length)-1;
-  if(lnMed>=c[0]) return RGB[0];
-  for(let k=1;k<=last;k++) if(lnMed>=c[k]){ const t=(lnMed-c[k])/(c[k-1]-c[k]); return [0,1,2].map(q=>Math.round(RGB[k][q]+t*(RGB[k-1][q]-RGB[k][q]))); }
-  return RGB[last];
+// rfSitesMesures() → [{lat, lon, v}] : un point par lieu mesuré, comme les fiches voisines du popup — fiches
+// certifiées d'extérieur public à position exacte, regroupées à 50 m autour de la plus récente, valeur de la plus
+// récente qui en porte une (> 0 V/m). Mémorisé par jeu de mesures.
+let _rfSitesCache=null;
+function rfSitesMesures(){
+  if(typeof MESURES_CERTIFIEES==='undefined'||!Array.isArray(MESURES_CERTIFIEES)||!MESURES_CERTIFIEES.length) return [];
+  if(_rfSitesCache&&_rfSitesCache.src===MESURES_CERTIFIEES) return _rfSitesCache.pts;
+  const vm=m=>+(m&&m.valeur_max_vm)||0, dt=m=>String(m.date_mesure||'');
+  const fiches=MESURES_CERTIFIEES.filter(m=>m&&m.precision_coord==='exacte'&&m.type_environnement==='exterieur_public'&&m.lat!=null&&m.lon!=null)
+    .slice().sort((a,b)=>dt(b).localeCompare(dt(a))||vm(b)-vm(a));
+  const lieux=[];
+  fiches.forEach(m=>{ const l=lieux.find(g=>dist(+g[0].lat,+g[0].lon,+m.lat,+m.lon)*1000<50); if(l) l.push(m); else lieux.push([m]); });
+  const pts=[];
+  lieux.forEach(g=>{ const m=g.find(x=>vm(x)>0); if(m) pts.push({lat:+m.lat,lon:+m.lon,v:vm(m)}); });
+  _rfSitesCache={src:MESURES_CERTIFIEES,pts};
+  return pts;
 }
 // rfDessinerTuile(canvas, coords) : une tuile de la couche. Coordonnées Web Mercator de la tuile (EPSG:3857, CRS par
 // défaut de la carte) ; blocs de 2 px ; hachure en coordonnées de pixels globales, continue d'une tuile à l'autre.
@@ -12636,27 +12616,44 @@ function rfDessinerTuile(cv,coords){
   const W=cv.width, H=cv.height, z=coords.z, n=W*Math.pow(2,z), x0=coords.x*W, y0=coords.y*H;
   const lonDe=x=>x/n*360-180, latDe=y=>Math.atan(Math.sinh(Math.PI*(1-2*y/n)))*180/Math.PI;
   const nord=latDe(y0), sud=latDe(y0+H), ouest=lonDe(x0), est=lonDe(x0+W);
-  const masque=rfMasqueMesure();
-  const lisse=z<RF_EMPIRIQUE_ZOOM_CLASSES?rfGrilleLissee():null;
-  const cands=lisse?null:rfSupportsAutour(sud,ouest,nord,est,R.d_extinction_m);
-  if(cands&&!cands.length) return;
+  const estime=z>=RF_EMPIRIQUE_ZOOM_CLASSES, interpAllumee=typeof ACTIVE!=='undefined'&&!!ACTIVE.interp;
+  const mesure=rfSurfaceMesuree();
+  const cands=estime?rfSupportsAutour(sud,ouest,nord,est,R.d_extinction_m):null;
   const ctx=cv.getContext('2d'), img=ctx.createImageData(W,H), px=img.data, B=2, NCL=RF_EMPIRIQUE_RGB.length;
   let dessine=false;
   for(let by=0;by<H;by+=B){ const lat=latDe(y0+by+B/2), cosLat=Math.cos(lat*Math.PI/180);
     for(let bx=0;bx<W;bx+=B){ const lon=lonDe(x0+bx+B/2);
-      if(masque&&masque(lat,lon)) continue;
-      let rgb=null;
-      if(lisse){ const l=rfLisseEn(lisse,lat,lon); if(l!=null) rgb=rfCouleurContinue(l); }
-      else { const c=rfChampEmpirique(rfDistanceParmi(lat,lon,cands,cosLat)); if(c) rgb=RF_EMPIRIQUE_RGB[Math.min(rfEmpiriqueClasse(c.med),NCL-1)]; }
-      if(!rgb) continue;
+      let rgb=null, hachure=false;
+      const vm=mesure?mesure(lat,lon):undefined;
+      if(vm!==undefined&&interpAllumee) continue;   // la couche d'interpolation dessine elle-même la surface mesurée
+      if(!estime){   // sous le zoom des classes : seulement le mesuré, en plein
+        if(vm===undefined) continue;
+        const k=rfEmpiriqueClasse(vm); if(k==null) continue;
+        rgb=RF_EMPIRIQUE_RGB[Math.min(k,NCL-1)];
+      } else {       // à partir du zoom des classes : l'estimé, hachuré (brief, étape 7)
+        if(!cands.length) continue;
+        const c=rfChampEmpirique(rfDistanceParmi(lat,lon,cands,cosLat)); if(!c) continue;
+        rgb=RF_EMPIRIQUE_RGB[Math.min(rfEmpiriqueClasse(c.med),NCL-1)]; hachure=true;
+      }
       dessine=true;
       for(let yy=by;yy<by+B&&yy<H;yy++) for(let xx=bx;xx<bx+B&&xx<W;xx++){
-        if(((x0+xx)+(y0+yy))%4>=2) continue;   // hachure : estimé
+        if(hachure&&((x0+xx)+(y0+yy))%4>=2) continue;   // hachure : estimé
         const o=(yy*W+xx)*4; px[o]=rgb[0]; px[o+1]=rgb[1]; px[o+2]=rgb[2]; px[o+3]=255;
       }
     }
   }
   if(dessine) ctx.putImageData(img,0,0);
+  if(!estime){   // sous le zoom des classes : les sites mesurés, en points de la teinte de leur classe
+    const marge=(RF_EMPIRIQUE_RAYON_SITE_PX+2)/W*(est-ouest);
+    for(const s of rfSitesMesures()){
+      if(s.lat<sud-marge||s.lat>nord+marge||s.lon<ouest-marge||s.lon>est+marge) continue;
+      const k=rfEmpiriqueClasse(s.v); if(k==null) continue;
+      const xs=(s.lon+180)/360*n-x0, ys=(1-Math.log(Math.tan(Math.PI/4+s.lat*Math.PI/360))/Math.PI)/2*n-y0;
+      ctx.beginPath(); ctx.arc(xs,ys,RF_EMPIRIQUE_RAYON_SITE_PX,0,2*Math.PI);
+      ctx.fillStyle=RF_EMPIRIQUE_PALETTE[Math.min(k,NCL-1)]; ctx.fill();
+      ctx.lineWidth=1; ctx.strokeStyle='#ffffff'; ctx.stroke();
+    }
+  }
 }
 const RFChampLayer=L.GridLayer.extend({
   createTile:function(coords){
@@ -15568,6 +15565,9 @@ function loadMesuresCertifiees() {
       if (MESURES_CERTIFIEES.length === 0) throw new Error('aucune fiche dans la réponse');
       const blk = document.getElementById('cert-download-block');
       if (blk && MESURES_CERTIFIEES.length > 0) blk.style.display = 'block';
+      // Couche RF (2026-09-29) : elle dessine le mesuré (zones d'interpolation, sites) à partir de ces fiches.
+      if (typeof rfRedessiner === 'function') rfRedessiner();
+      if (typeof rfLegendeEmpirique === 'function') rfLegendeEmpirique();
     } catch (e) {
       console.warn('[Tellux] Mesures certifiees indisponibles : ' + e.message);
       MESURES_CERTIFIEES = [];
@@ -17030,7 +17030,7 @@ function capCleanup(){
 ["lyr_hot_tt","#b-hot","title","Champ magnétique composite — ELF 50 Hz (réseau électrique) + susceptibilité du substrat, exprimé en nT. N'inclut pas le champ géomagnétique terrestre total (~46 000-47 500 nT en Corse, l'ordre de grandeur qu'un magnétomètre de smartphone mesure) : ce sont deux grandeurs physiques distinctes, jamais additionnées ici — le champ géomagnétique n'entre dans ce nombre à aucun titre. Estimation du modèle Tellux, pas une mesure. La composante ELF entre dans le score Indice Tellux affiché ; la composante substrat reste une donnée de contexte, sans consommateur dans ce score.","","Composite magnetic field — ELF 50 Hz (electrical grid) + substrate susceptibility, expressed in nT. Does not include the total terrestrial geomagnetic field (~46,000-47,500 nT in Corsica, the order of magnitude a smartphone magnetometer measures): these are two distinct physical quantities, never added together here — the geomagnetic field plays no part whatsoever in this number. Tellux model estimate, not a measurement. The ELF component feeds the displayed Indice Tellux score; the substrate component remains contextual data, with no consumer in that score."],
 ["lyr_hotrf","#b-hot-rf","","Champ RF estimé (mobile)","","Estimated RF field (mobile)"],
 ["lyr_elf","#b-elf","","Champ ELF (nT)","","ELF field (nT)"],
-["lyr_hotrf_tt","#b-hot-rf","title","Champ radiofréquence estimé d'après la distance au support de téléphonie mobile le plus proche (2G à 5G, registre ANFR, export du 31/05/2026) et les mesures certifiées ANFR faites en Corse. Une estimation, pas une mesure : hachurée partout où rien n'est mesuré. Pour un niveau mesuré, voir les couches Mesures certifiées ANFR et Interpolation des mesures.","","Radio-frequency field estimated from the distance to the nearest mobile-phone mast (2G to 5G, ANFR register, export of 2026-05-31) and certified ANFR measurements taken in Corsica. An estimate, not a measurement: hatched wherever nothing is measured. For a measured level, see the Certified ANFR measurements and Measured interpolation layers."],
+["lyr_hotrf_tt","#b-hot-rf","title","Champ radiofréquence de la téléphonie mobile. En vue d'ensemble, ce qui est mesuré, en plein (mesures certifiées ANFR) ; à partir du zoom 11, une estimation d'après la distance au support le plus proche (2G à 5G, registre ANFR, export du 31/05/2026), hachurée. Une estimation n'est pas une mesure. Pour les fiches elles-mêmes, voir la couche Mesures certifiées ANFR.","","Mobile-phone radio-frequency field. Zoomed out, what is measured, solid (certified ANFR measurements); from zoom 11, an estimate from the distance to the nearest mast (2G to 5G, ANFR register, export of 2026-05-31), hatched. An estimate is not a measurement. For the measurement records themselves, see the Certified ANFR measurements layer."],
 // lyr_elf_tt (brief BH, 2026-09-05) : CO laissée vide à dessein — pas de traduction improvisée
 // sans validation locuteur natif (même discipline que chip_label_tt/brief AV, dom_hot/brief BA).
 ["lyr_elf_tt","#b-elf","title","Champ magnétique ELF 50 Hz (réseau électrique), exprimé en nT — composante anthropique seule du modèle Tellux, sans la susceptibilité du substrat (distincte de « Champ magnétique composite », qui combine les deux). Estimation, pas une mesure. N'affiche rien sous 300 nT : seuil réutilisant le repère documentaire IARC classe 2B, une classification épidémiologique de long terme — un choix éditorial d'affichage, pas une évaluation du risque à ce niveau précis.","","ELF magnetic field 50 Hz (electrical grid), expressed in nT — anthropic component only of the Tellux model, without substrate susceptibility (distinct from \"Composite magnetic field\", which combines both). Estimate, not a measurement. Shows nothing below 300 nT: a threshold reusing the IARC class 2B documentary reference point, a long-term epidemiological classification — an editorial display choice, not a risk evaluation at this precise level."],

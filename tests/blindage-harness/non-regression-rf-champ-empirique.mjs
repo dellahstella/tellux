@@ -11,6 +11,9 @@
 //      annoncée par le popup concordent ; au-delà de la distance d'extinction, ni pixel ni estimation.
 //  (d) Répartition des 4 004 points BT (échantillon de bandes_habitees.py : un tronçon sur `pas`, milieu des deux
 //      premiers points) entre les classes : imprimée pour le digest, pas un critère.
+//  (e) Sous le zoom des classes (lecture de l'évaluateur du 2026-09-29 : l'île montre ce qu'on sait, le bourg ce qu'on
+//      estime), seulement le mesuré : au zoom 9, rien sur un support loin de toute mesure ; un point de la teinte de sa
+//      classe sur un lieu mesuré (Piana, fiche du 15/01/2026) ; une cellule pleine dans une zone d'interpolation.
 // Ce qui ferait échouer ce fichier : une relation absente ou dérivée d'autres données, une ligne de popup qui ne
 // correspond pas à la couleur dessinée, une classe dessinée au-delà de l'extinction, la ligne des valeurs limites revenue.
 //
@@ -100,6 +103,42 @@ try {
       const c = r.palette[Math.min(r.attendue, r.palette.length - 1)];
       ok(r.rgb && r.rgb.join(',') === c.join(','), `${nom} : popup médiane ${r.med} V/m → classe ${r.attendue} (${c.join(',')}), pixel dessiné ${r.rgb ? r.rgb.join(',') : 'aucun'}`);
     }
+  }
+
+  console.log('(e) sous le zoom des classes (zoom 9) : seulement le mesuré');
+  const lirePixel = async (la, lo, z, rayon) => {
+    await page.evaluate(([la, lo, z]) => map.setView([la, lo], z, { animate: false }), [la, lo, z]);
+    return await page.evaluate(async ([la, lo, rayon]) => {
+      const couche = lHotRF.getLayers()[0]; if (!couche) return { erreur: 'couche RF absente' };
+      const z = map.getZoom(), p = map.project([la, lo], z), tx = Math.floor(p.x / 256), ty = Math.floor(p.y / 256), cle = tx + ':' + ty + ':' + z;
+      for (let k = 0; k < 60 && !(couche._tiles[cle] && couche._tiles[cle].loaded); k++) await new Promise((r) => setTimeout(r, 250));
+      const t = couche._tiles[cle]; if (!t) return { erreur: 'tuile ' + cle + ' absente' };
+      const px = Math.floor(p.x - tx * 256), py = Math.floor(p.y - ty * 256), x0 = Math.max(0, px - rayon), y0 = Math.max(0, py - rayon), w = 2 * rayon + 1;
+      const d = t.el.getContext('2d').getImageData(x0, y0, w, w).data;
+      let rgb = null, best = Infinity;
+      for (let yy = 0; yy < w; yy++) for (let xx = 0; xx < w; xx++) { const i = (yy * w + xx) * 4, q = (x0 + xx - px) ** 2 + (y0 + yy - py) ** 2; if (d[i + 3] > 0 && q < best) { best = q; rgb = [d[i], d[i + 1], d[i + 2]]; } }
+      return { rgb };
+    }, [la, lo, rayon]);
+  };
+  const cibles = await page.evaluate(() => {
+    const sites = rfSitesMesures(), mesure = rfSurfaceMesuree();
+    const loin = SUPPORTS_MOBILES.find((s) => mesure(s.lat, s.lon) === undefined && sites.every((x) => dist(s.lat, s.lon, x.lat, x.lon) > 5));
+    const piana = sites.find((x) => Math.abs(x.lat - 42.217259) < 1e-4 && Math.abs(x.lon - 8.64197) < 1e-4);
+    const c = INTERP_ZONES['Bonifacio']; let cellule = null;
+    for (let i = -20; i <= 20 && !cellule; i++) for (let j = -20; j <= 20 && !cellule; j++) {
+      const la = c.lat + i * 0.004, lo = c.lon + j * 0.005, v = mesure(la, lo);
+      if (v !== undefined && rfEmpiriqueClasse(v) != null && sites.every((x) => dist(la, lo, x.lat, x.lon) > 2.5)) cellule = { la, lo, v, classe: rfEmpiriqueClasse(v) };
+    }
+    return { loin: loin && { la: loin.lat, lo: loin.lon }, piana: piana && { la: piana.lat, lo: piana.lon, classe: rfEmpiriqueClasse(piana.v) }, cellule, palette: RF_EMPIRIQUE_RGB };
+  });
+  if (!cibles.loin || !cibles.piana || !cibles.cellule) ok(false, '(e) cibles introuvables : ' + JSON.stringify(cibles));
+  else {
+    const r1 = await lirePixel(cibles.loin.la, cibles.loin.lo, 9, 2);
+    ok(!r1.erreur && r1.rgb == null, `support loin de toute mesure (${cibles.loin.la.toFixed(4)}, ${cibles.loin.lo.toFixed(4)}) : rien d'estimé au zoom 9 (${r1.erreur || (r1.rgb ? 'pixel ' + r1.rgb.join(',') : 'aucun pixel')})`);
+    const r2 = await lirePixel(cibles.piana.la, cibles.piana.lo, 9, 1), c2 = cibles.palette[cibles.piana.classe];
+    ok(!r2.erreur && r2.rgb && r2.rgb.join(',') === c2.join(','), `lieu mesuré de Piana (10,32 V/m) : point de la classe ${cibles.piana.classe} (${c2.join(',')}) — lu ${r2.erreur || (r2.rgb ? r2.rgb.join(',') : 'aucun pixel')}`);
+    const r3 = await lirePixel(cibles.cellule.la, cibles.cellule.lo, 9, 1), c3 = cibles.palette[cibles.cellule.classe];
+    ok(!r3.erreur && r3.rgb && r3.rgb.join(',') === c3.join(','), `cellule mesurée (zone Bonifacio, ${cibles.cellule.v} V/m) : pleine, classe ${cibles.cellule.classe} (${c3.join(',')}) — lue ${r3.erreur || (r3.rgb ? r3.rgb.join(',') : 'aucun pixel')}`);
   }
 
   console.log('(d) répartition des 4 004 points BT (pour le digest)');
