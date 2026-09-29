@@ -37,7 +37,7 @@ Sources publiques intégrées :
 - **Altitude** : IGN RGE Alti (Géoplateforme)
 - **Couvert forestier** : BD Forêt V2 (IGN), couche « Forêt dense » (couche de contexte ; jusqu'au 28/09/2026, elle atténuait par la végétation la valeur radiofréquence calculée du point cliqué, que le popup n'affiche plus)
 - **Relief** : ombrage IGN calculé sur le RGE ALTI (Géoplateforme, WMTS), couche de contexte hors calcul (depuis le 28/09/2026)
-- **Trait de côte** : contours des communes de Corse (IGN AdminExpress via gregoiredavid/france-geojson, Licence Ouverte), fondus et élargis de 160 m : la surface estimée de la couche RF s'arrête à la côte (depuis le 29/09/2026)
+- **Trait de côte** : contours des communes de Corse (IGN Admin Express COG 2018 via gregoiredavid/france-geojson, Licence Ouverte), fondus et élargis de 160 m : la surface estimée de la couche RF s'arrête à la côte (depuis le 29/09/2026)
 - **Radon et rayonnement gamma** : zonage réglementaire du potentiel radon de l'ASNR (arrêté du 27 juin 2018), fond gamma terrestre du JRC
 - **Qualité de l'air** : Qualitair Corse (particules fines PM2,5, moyenne annuelle modélisée 2024, sur `radon.html`)
 - **Établissements sensibles** : annuaire de l'Éducation nationale, FINESS (DREES) et OpenStreetMap pour la petite enfance (sur `mairies.html`)
