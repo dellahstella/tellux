@@ -8861,9 +8861,10 @@ function rfEmpiriqueClasse(med){
   for(let i=0;i<R.bornes_vm.length;i++) if(med>=R.bornes_vm[i]) return i;
   return R.bornes_vm.length;
 }
-// rfLegendeEmpirique() : pose dans la légende de la couche RF les classes (bornes, teinte) et, pour chacune, les
-// mesures de la référence dont la médiane estimée y tombe (RF_EMPIRIQUE.classes_mesures) — par valeur estimée, pas par
-// bande de distance, qui reste au popup (lecture de l'évaluateur, 2026-09-29). Puis l'extinction avec le nombre de
+// rfLegendeEmpirique() : pose dans la légende de la couche RF les classes de médiane estimée (bornes, teinte) et, pour
+// chacune, la moitié centrale des mesures comparables — les mesures de la référence dont la médiane estimée y tombe
+// (RF_EMPIRIQUE.classes_mesures) : par valeur estimée, pas par bande de distance, qui reste au popup (lecture de
+// l'évaluateur, 2026-09-29 : « médiane estimée ≥ 1 V/m, la moitié des mesures comparables entre p25 et p75 »). Puis l'extinction avec le nombre de
 // mesures au-delà, le régime des zooms, la référence de la relation et le nombre de lieux mesurés. Tout depuis
 // RF_EMPIRIQUE et les mesures chargées, rien de recopié ; sous RF_BANDE_N_MIN mesures, un compte seul, sans plage (même
 // règle que les bandes). Appelée par syncAntCount() et au chargement des mesures certifiées.
@@ -8871,7 +8872,6 @@ function rfLegendeEmpirique(){
   const R=RF_EMPIRIQUE;
   const fb=(v,en)=>{ const t=String(+v.toPrecision(2)); return en?t:t.replace('.',','); };
   const km=(m,en)=>{ const t=(Math.round(m/100)/10).toFixed(1); return (en?t:t.replace('.',','))+' km'; };
-  const depuis=en=>R&&R.reference==='depuis2021'?(en?' since 2021':' depuis 2021'):'';
   const nLieux=rfSitesMesures().length;
   const pastille=(teinte,pleine)=>'<span style="display:inline-block;width:10px;height:9px;background:'+(pleine?teinte:'repeating-linear-gradient(-45deg,'+teinte+' 0 1.5px,transparent 1.5px 3px)')+';opacity:0.7;vertical-align:middle;margin-right:2px"></span>';
   document.querySelectorAll('#leg-rf-classes').forEach(el=>{
@@ -8879,20 +8879,23 @@ function rfLegendeEmpirique(){
     if(!R){ el.textContent=en?'Estimate unavailable for now.':'Estimation indisponible pour l’instant.'; return; }
     const b=R.bornes_vm, lignes=[];
     for(let k=0;k<=b.length;k++){
-      const intervalle=k===0?fb(b[0],en)+(en?' V/m and above':' V/m et plus'):k===b.length?(en?'under ':'moins de ')+fb(b[k-1],en)+' V/m':fb(b[k],en)+(en?' to ':' à ')+fb(b[k-1],en)+' V/m';
+      const intervalle=(en?'estimated median ':'médiane estimée ')+(k===0?'≥ '+fb(b[0],en)+' V/m':k===b.length?'< '+fb(b[k-1],en)+' V/m':(en?'':'de ')+fb(b[k],en)+(en?' to ':' à ')+fb(b[k-1],en)+' V/m');
       const teinte=RF_EMPIRIQUE_PALETTE[Math.min(k,RF_EMPIRIQUE_PALETTE.length-1)], c=R.classes_mesures&&R.classes_mesures[k];
       let mes;
-      if(!c||!c.n) mes=en?'no measurement'+depuis(en)+' where the estimate falls in this class':'aucune mesure'+depuis(en)+' là où l’estimation tombe dans cette classe';
-      else if(c.n<RF_BANDE_N_MIN) mes=en?'only '+c.n+' measurement'+(c.n>1?'s':'')+depuis(en)+' where the estimate falls in this class: no range':c.n+' mesure'+(c.n>1?'s':'')+depuis(en)+' seulement là où l’estimation tombe dans cette classe : pas de plage';
-      else mes=(en?'measurements'+depuis(en)+' where the estimate falls in this class: half between ':'mesures'+depuis(en)+' là où l’estimation tombe dans cette classe : la moitié entre ')+rfFormatVm(c.q1,en)+(en?' and ':' et ')+rfFormatVm(c.q3,en)+' V/m'+(en?' (median ':' (médiane ')+rfFormatVm(c.med,en)+', '+c.n+(en?' measurements)':' mesures)');
+      if(!c||!c.n) mes=en?'no comparable measurement':'aucune mesure comparable';
+      else if(c.n<RF_BANDE_N_MIN) mes=en?'only '+c.n+' comparable measurement'+(c.n>1?'s':'')+': no range':c.n+' mesure'+(c.n>1?'s comparables':' comparable')+' seulement : pas de plage';
+      else mes=(en?'half of comparable measurements between ':'la moitié des mesures comparables entre ')+rfFormatVm(c.q1,en)+(en?' and ':' et ')+rfFormatVm(c.q3,en)+' V/m'+(en?' (median ':' (médiane ')+rfFormatVm(c.med,en)+(en?'; ':' ; ')+c.n+(en?' measurements)':' mesures)');
       lignes.push('<div class="leg-row" style="display:block">'+pastille(teinte,true)+pastille(teinte,false)+' <b>'+intervalle+'</b> — '+mes+'</div>');
     }
+    lignes.push('<div class="leg-row" style="display:block;color:#626774">'+(en
+      ?'Comparable measurements: the certified measurements '+(R.reference==='depuis2021'?'taken since 2021':'of the calibration pool')+' where the estimate falls in the same class.'
+      :'Mesures comparables : les mesures certifiées '+(R.reference==='depuis2021'?'faites depuis 2021':'du pool de calibration')+' là où l’estimation tombe dans la même classe.')+'</div>');
     lignes.push('<div class="leg-row" style="display:block;color:#626774">'+(en
       ?'Beyond '+km(R.d_extinction_m,en)+' from a mast: only '+R.n_au_dela+' measurement'+(R.n_au_dela>1?'s':'')+', no reference — nothing is estimated.'
       :'Au-delà de '+km(R.d_extinction_m,en)+' d’un support : '+R.n_au_dela+' mesure'+(R.n_au_dela>1?'s':'')+' seulement, pas de repère — rien n’est estimé.')+'</div>');
     lignes.push('<div class="leg-row" style="display:block;color:#626774">'+(en
-      ?'Below zoom '+RF_EMPIRIQUE_ZOOM_CLASSES+', only what is measured: the interpolated surface (5 zones) and the '+nLieux+' measured sites, as dots in the colour of their class. The hatched estimate appears from zoom '+RF_EMPIRIQUE_ZOOM_CLASSES+'.'
-      :'Sous le zoom '+RF_EMPIRIQUE_ZOOM_CLASSES+', seulement ce qui est mesuré : la surface d’interpolation (5 zones) et les '+nLieux+' lieux mesurés, en points dans la teinte de leur classe. L’estimation, hachurée, apparaît à partir du zoom '+RF_EMPIRIQUE_ZOOM_CLASSES+'.')+'</div>');
+      ?'Below zoom '+RF_EMPIRIQUE_ZOOM_CLASSES+', only what is measured: the interpolated surface (5 zones) and the '+nLieux+' measured sites, as dots in the colour of their class. From zoom '+RF_EMPIRIQUE_ZOOM_CLASSES+', the hatched estimate everywhere; the measured surface is then drawn only by the “Measured interpolation” layer.'
+      :'Sous le zoom '+RF_EMPIRIQUE_ZOOM_CLASSES+', seulement ce qui est mesuré : la surface d’interpolation (5 zones) et les '+nLieux+' lieux mesurés, en points dans la teinte de leur classe. À partir du zoom '+RF_EMPIRIQUE_ZOOM_CLASSES+', l’estimation, hachurée, partout ; la surface mesurée n’est alors dessinée que par la couche « Interpolation des mesures ».')+'</div>');
     el.innerHTML=lignes.join('');
   });
   document.querySelectorAll('#leg-rf-reference').forEach(el=>{
