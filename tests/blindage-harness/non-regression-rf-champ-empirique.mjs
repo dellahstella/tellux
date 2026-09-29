@@ -18,6 +18,12 @@
 //  (e) Sous le zoom des classes (lecture de l'évaluateur du 2026-09-29 : l'île montre ce qu'on sait, le bourg ce qu'on
 //      estime), seulement le mesuré : au zoom 9, rien sur un support loin de toute mesure ; un point de la teinte de sa
 //      classe sur un lieu mesuré (Piana, fiche du 15/01/2026) ; une cellule pleine dans une zone d'interpolation.
+//  (f) Masque terre (décision du 2026-09-29) : la surface estimée s'arrête à la côte. Deux points fixes, choisis hors
+//      ligne sur les contours communaux BRUTS (sans tampon ni simplification), à plus de 400 m de la côte : en mer, dans
+//      le golfe d'Ajaccio, à 1 199 m du support le plus proche ; à terre, à 1 185 m du sien. Sans masque, les deux
+//      porteraient une estimation (en deçà de l'extinction). Au zoom 15 : rien en mer, une estimation à terre ; le popup
+//      en mer le dit. Et : les petites îles (Lavezzi, Grande Sanguinaire) comptent comme terre ; aucun support mobile ni
+//      lieu mesuré ne tombe en mer.
 // Ce qui ferait échouer ce fichier : une relation absente ou dérivée d'autres données, une ligne de popup qui ne
 // correspond pas à la couleur dessinée, une classe dessinée au-delà de l'extinction, la ligne des valeurs limites revenue.
 //
@@ -65,6 +71,8 @@ const h = await createHarness({ bootTimeoutMs: 60000 });
 const page = h._internal.page;
 try {
   await page.waitForFunction(() => typeof RF_EMPIRIQUE !== 'undefined' && RF_EMPIRIQUE !== null, undefined, { timeout: 60000, polling: 500 });
+  // Le masque terre se charge avec la couche : tant qu'il est attendu, aucune tuile ne dessine d'estimé (cf. app.html).
+  await page.waitForFunction(() => typeof TERRE_CORSE_ETAT !== 'undefined' && TERRE_CORSE_ETAT !== 'attente', undefined, { timeout: 60000, polling: 500 });
 
   console.log('(a) relation au boot, contre la relation redérivée dans Node');
   const R = await page.evaluate(() => ({ ...RF_EMPIRIQUE, oor: RF_CALIB_STATS && RF_CALIB_STATS.n_excl_oor }));
@@ -175,6 +183,32 @@ try {
     ok(!r3.erreur && r3.rgb && r3.rgb.join(',') === c3.join(','), `cellule mesurée (zone Bonifacio, ${cibles.cellule.v} V/m) : pleine, classe ${cibles.cellule.classe} (${c3.join(',')}) — lue ${r3.erreur || (r3.rgb ? r3.rgb.join(',') : 'aucun pixel')}`);
   }
 
+  console.log('(f) masque terre : la surface estimée s\'arrête à la côte');
+  const MER = [41.906, 8.741], TERRE = [41.94, 8.701];   // points fixes, cf. l'en-tête (contours communaux bruts)
+  const ile = await page.evaluate(([mer, terre]) => ({
+    etat: TERRE_CORSE_ETAT, lavezzi: rfATerre(41.3375, 9.256), sanguinaire: rfATerre(41.8772, 8.593),
+    mer: rfATerre(mer[0], mer[1]), terre: rfATerre(terre[0], terre[1]),
+    dMer: rfChampEmpiriqueEn(mer[0], mer[1]).d_m, dTerre: rfChampEmpiriqueEn(terre[0], terre[1]).d_m, extinction: RF_EMPIRIQUE.d_extinction_m,
+    supportsEnMer: SUPPORTS_MOBILES.filter((s) => rfATerre(s.lat, s.lon) === false).length,
+    lieuxEnMer: rfSitesMesures().filter((s) => rfATerre(s.lat, s.lon) === false).length, nLieux: rfSitesMesures().length,
+    popupMer: rfPopupHTML(mer[0], mer[1]).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '),
+  }), [MER, TERRE]);
+  ok(ile.etat === 'ok', `masque terre chargé (${ile.etat})`);
+  ok(ile.lavezzi === true && ile.sanguinaire === true, `les petites îles comptent comme terre : Lavezzi ${ile.lavezzi}, Grande Sanguinaire ${ile.sanguinaire}`);
+  ok(ile.supportsEnMer === 0 && ile.lieuxEnMer === 0, `aucun support mobile en mer (${ile.supportsEnMer}), aucun lieu mesuré en mer (${ile.lieuxEnMer} sur ${ile.nLieux})`);
+  ok(ile.mer === false && ile.terre === true && ile.dMer < ile.extinction && ile.dTerre < ile.extinction && Math.abs(ile.dMer - ile.dTerre) <= 20,
+    `points fixes : en mer à ${Math.round(ile.dMer)} m d'un support, à terre à ${Math.round(ile.dTerre)} m, tous deux en deçà de l'extinction (${Math.round(ile.extinction)} m)`);
+  const pMer = await lirePixel(MER[0], MER[1], 15, 3), pTerre = await lirePixel(TERRE[0], TERRE[1], 15, 3);
+  ok(!pMer.erreur && pMer.rgb == null, `en mer (golfe d'Ajaccio), zoom 15 : aucune estimation dessinée (${pMer.erreur || (pMer.rgb ? 'pixel ' + pMer.rgb.join(',') : 'aucun pixel')})`);
+  ok(!pTerre.erreur && pTerre.rgb != null, `à terre, même distance, zoom 15 : estimation dessinée (${pTerre.erreur || (pTerre.rgb ? 'pixel ' + pTerre.rgb.join(',') : 'aucun pixel')})`);
+  ok(/En mer : pas d’estimation/.test(ile.popupMer) && !/Champ estimé ici/.test(ile.popupMer), 'popup en mer : « En mer : pas d’estimation », aucun champ estimé');
+  // Contre-épreuve : masque retiré le temps d'une lecture, le même point en mer porte une estimation — ce test mesure
+  // bien le masque, pas une tuile vide pour une autre raison. Puis le masque est remis.
+  await page.evaluate(() => { window.__terreTest = TERRE_CORSE; TERRE_CORSE = null; TERRE_CORSE_ETAT = 'echec'; rfRedessiner(); });
+  const pSans = await lirePixel(MER[0], MER[1], 15, 3);
+  await page.evaluate(() => { TERRE_CORSE = window.__terreTest; TERRE_CORSE_ETAT = 'ok'; delete window.__terreTest; rfRedessiner(); });
+  ok(!pSans.erreur && pSans.rgb != null, `contre-épreuve : sans masque, le même point en mer porte une estimation (${pSans.erreur || (pSans.rgb ? 'pixel ' + pSans.rgb.join(',') : 'aucun pixel')})`);
+
   console.log('(d) répartition des 4 004 points BT (pour le digest)');
   const rep = await page.evaluate(async () => {
     const bt = await (await fetch('public/data/bt_lines_agregat.json')).json();
@@ -185,7 +219,7 @@ try {
       let la, lo; const [a, b] = p;
       if (!Array.isArray(a)) { la = (a.lat + b.lat) / 2; lo = (a.lon + b.lon) / 2; } else { la = (a[0] + b[0]) / 2; lo = (a[1] + b[1]) / 2; }
       if (la < 20) [la, lo] = [lo, la];
-      const e = rfChampEmpiriqueEn(la, lo), k = e && e.classe != null ? 'classe ' + e.classe : 'éteint';
+      const e = rfChampEmpiriqueEn(la, lo), k = e && e.terre === false ? 'en mer' : e && e.classe != null ? 'classe ' + e.classe : 'éteint';
       c[k] = (c[k] || 0) + 1; n++;
     }
     return { n, pas, comptes: c, reference: RF_EMPIRIQUE.reference, bornes: RF_EMPIRIQUE.bornes_vm, d_extinction_m: Math.round(RF_EMPIRIQUE.d_extinction_m) };
@@ -193,7 +227,7 @@ try {
   console.log('  ' + JSON.stringify(rep));
   ok(rep.n === 4004, `échantillon de ${rep.n} points (attendu 4 004 avec le fichier du 2026-09-28)`);
   const cas = Object.keys(rep.comptes).sort().join(', ');
-  ok(cas === 'classe 0, classe 1, éteint' || cas === 'classe 0, classe 1', `deux classes et l'extinction, rien d'autre : ${cas}`);
+  ok(cas === 'classe 0, classe 1, éteint' || cas === 'classe 0, classe 1', `deux classes et l'extinction, rien d'autre (aucun point BT en mer) : ${cas}`);
 
   console.log('(b, suite) le document rendu en anglais (?lang=en)');
   const url = new URL(page.url()); url.searchParams.set('lang', 'en');
