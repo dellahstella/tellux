@@ -6,7 +6,7 @@ build_pieves_polygons.py — Pipeline build polygones pieves médiévales (Brief
 Génère `docs/data/pieves_polygons.json` à partir de :
   - `_drafts/pieves_communes_mapping.json` (mapping commune INSEE -> pieve, livré Cowork)
   - `_drafts/PIEVE_OVERRIDES.json` (overrides manuels Soleil, appliqués AVANT l'union)
-  - GeoJSON communes 2A + 2B (cache local, source : github.com/gregoiredavid/france-geojson)
+  - GeoJSON communes 2A + 2B (cache local, source : github.com/gregoiredavid/france-geojson, IGN Admin Express COG 2018)
 
 Pour chaque pieve, fait l'union polygonale des communes via shapely.unary_union,
 simplifie selon `--tolerance` (défaut 0.0005° ≈ 55m, plus fin que doyennés vu la
@@ -843,7 +843,7 @@ def main():
             " + _drafts/pieves_communes_mapping_v11_declare_pieve_patrimonio.json (Cowork v11 declare pieve_patrimonio meta)"
             if mapping_v11 else ""
         ),
-        "source_communes": "github.com/gregoiredavid/france-geojson (departements 2A + 2B)",
+        "source_communes": "github.com/gregoiredavid/france-geojson (departements 2A + 2B ; IGN Admin Express COG 2018, tracés simplifiés à 25 % par mapshaper)",
         "tolerance_degrees": args.tolerance,
         "overrides_applied": overrides_applied,
         "transferts_v2_appliques": transferts_appliques,
