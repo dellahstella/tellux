@@ -174,7 +174,7 @@ Sparkline : SVG 180×40 px, `PROFIL_HORAIRE_CORSE` (24 valeurs MW), marqueur rou
 |---------|---------|--------|-----------|
 | `radon_zones_corse.geojson` | Zonage radon officiel communes (zones 2/3, arrêté du 27 juin 2018) | ASNR / BRGM RP-50200-FR | `buildRadonLayer()` + `indexRadonZonesOfficial()` |
 | `tdf_emitters_corse.json` | 10 émetteurs radiodiffusion (PAR kW estimées) | ANFR observatoire + CSA | `loadTDFEmitters()` premier click |
-| `supports_mobiles_anfr_corse_2026-09-28.json` | 656 supports de téléphonie mobile (2G à 5G), secteurs par génération, opérateurs déduits (depuis le 2026-09-28, remplace la table Supabase `antennas_corse`) | ANFR, export du 31 mai 2026 (tables `anfr_supports`/`anfr_secteurs`) | `fetchSupportsMobilesRaw()` au boot : modèle RF, couche « Distance aux antennes mobiles », marqueurs |
+| `supports_mobiles_anfr_corse_2026-09-28.json` | 656 supports de téléphonie mobile (2G à 5G), secteurs par génération, opérateurs déduits (depuis le 2026-09-28, remplace la table Supabase `antennas_corse`) | ANFR, export du 31 mai 2026 (tables `anfr_supports`/`anfr_secteurs`) | `fetchSupportsMobilesRaw()` au boot : modèle RF, couche « Champ RF estimé (mobile) », marqueurs |
 | `wmm_2025_grid_corse.json` | Grille précalculée WMM 2025 pour cross-check magnétique | NOAA WMM 2025 | Chargement asynchrone |
 | `postes_sources_corse.json` | Postes sources HTA/HTB | EDF SEI (enrichissement manuel) | `calcMagneticELF_v2` |
 | `eoliennes_corse.json` | Parcs éoliens | Observatoire éolien / ANFR | `calcMagneticELF_v2` |
