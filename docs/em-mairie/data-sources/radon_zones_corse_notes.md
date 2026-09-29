@@ -65,13 +65,13 @@ API Géorisques (consultation par commune) : https://www.georisques.gouv.fr/minf
 
 | Élément | Valeur |
 |---|---|
-| **Source originale** | IGN AdminExpress COG |
+| **Source originale** | IGN Admin Express COG, édition 2018 (codes et noms INSEE 2018), selon le README du dépôt source (relevé le 2026-09-29) |
 | **Vecteur d'accès** | `gregoiredavid/france-geojson` (GitHub) |
 | **URL 2A** | https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements/2a-corse-du-sud/communes-2a-corse-du-sud.geojson |
 | **URL 2B** | https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements/2b-haute-corse/communes-2b-haute-corse.geojson |
 | **Projection** | WGS84 / EPSG:4326 (natif Leaflet) |
 | **Licence** | Licence Ouverte IGN (redistribution libre avec mention de source) |
-| **Simplification** | Appliquée par le repo (mapshaper) — précision suffisante à l'échelle 1:50 000 |
+| **Simplification** | Appliquée par le repo (mapshaper, tracés simplifiés à 25 %) — précision suffisante à l'échelle 1:50 000 |
 
 ---
 
@@ -140,7 +140,7 @@ Le classement date de 2018 (entrée en vigueur au 1er juillet 2018). Aucune rév
 
 ### Géométries simplifiées
 
-Les géométries IGN utilisées via `gregoiredavid/france-geojson` sont simplifiées (mapshaper). Elles sont suffisantes pour la visualisation dans Tellux mais ne conviennent pas à des usages cadastraux ou réglementaires. Les géométries exactes sont disponibles sur le Géoportail IGN (geoservices.ign.fr/adminexpress).
+Les géométries IGN utilisées via `gregoiredavid/france-geojson` (Admin Express COG, édition 2018) sont simplifiées à 25 % (mapshaper). Elles sont suffisantes pour la visualisation dans Tellux mais ne conviennent pas à des usages cadastraux ou réglementaires. Les géométries exactes sont disponibles sur le Géoportail IGN (geoservices.ign.fr/adminexpress).
 
 ### Taille du fichier
 

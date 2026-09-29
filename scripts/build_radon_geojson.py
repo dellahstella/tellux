@@ -15,7 +15,7 @@ Usage :
 
 Auteur   : Cowork / Tellux (2026-04-24)
 Sources  : ASNR/IRSN - arrêté du 27 juin 2018
-           IGN AdminExpress via gregoiredavid/france-geojson (GitHub)
+           IGN Admin Express COG 2018 via gregoiredavid/france-geojson (GitHub), tracés simplifiés à 25 % (mapshaper)
 Licence  : données radon sous Licence Ouverte 2.0 (Etalab)
            géométries IGN sous Licence Ouverte IGN
 """
@@ -280,7 +280,7 @@ def build_geojson(commune_features, classification):
         "metadata": {
             "description": "Zones de potentiel radon cat. 2 et 3 en Corse",
             "source_classification": "ASNR/IRSN - Arrete du 27 juin 2018 (JORFTEXT000037131346)",
-            "source_geometries": "IGN AdminExpress via gregoiredavid/france-geojson (GitHub)",
+            "source_geometries": "IGN Admin Express COG 2018 via gregoiredavid/france-geojson (GitHub), tracés simplifiés à 25 % (mapshaper)",
             "licence": "Licence Ouverte 2.0 - Etalab",
             "date_production": "2026-04-24",
             "features_total": len(output_features),

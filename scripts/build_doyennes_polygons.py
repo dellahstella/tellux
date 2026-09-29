@@ -5,7 +5,7 @@ build_doyennes_polygons.py — Pipeline build polygones doyennés (Brief 8 Avena
 
 Génère `docs/data/doyennes_polygons.json` à partir de :
   - `_drafts/doyennes_communes_mapping.json` (mapping commune INSEE -> doyenné, livré Cowork 2026-05-04)
-  - GeoJSON communes 2A + 2B (cache local, source : github.com/gregoiredavid/france-geojson)
+  - GeoJSON communes 2A + 2B (cache local, source : github.com/gregoiredavid/france-geojson, IGN Admin Express COG 2018)
 
 Pour chaque doyenné, fait l'union polygonale des communes via shapely.unary_union,
 simplifie selon `--tolerance` (défaut 0.001° ≈ 100m), et écrit au format Brief 8
@@ -303,7 +303,7 @@ def main():
         "version": "v3-stratA-multipolygon-preserved",
         "generated_by": "scripts/build_doyennes_polygons.py",
         "source_mapping": "_drafts/doyennes_communes_mapping.json (Cowork 2026-05-04)",
-        "source_communes": "github.com/gregoiredavid/france-geojson (departements 2A + 2B)",
+        "source_communes": "github.com/gregoiredavid/france-geojson (departements 2A + 2B ; IGN Admin Express COG 2018, tracés simplifiés à 25 % par mapshaper)",
         "tolerance_degrees": args.tolerance,
         "schema_note": (
             "Op B audit géométrie 22-23/05/2026 + re-vérif 24/05 : champ `polygon` "
