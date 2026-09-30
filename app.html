@@ -7562,6 +7562,11 @@ let SEGMENT_GRID = null;
 // Grille BT (chargement asynchrone, dette BT-ELF-001)
 let BT_SEGMENTS_DATA = null;
 let BT_SEGMENT_GRID  = null;
+// Longueur de ligne BT par tuile et seuils du forfait BT (2026-09-29) : le forfait se fonde sur la LONGUEUR de réseau
+// BT dans la zone, et non plus sur le nombre de segments, qui dépendait du découpage des tracés (cf. le commentaire du
+// forfait dans calcMagneticELF_v2). Construits par construireLongueursBT(), à la fin de buildBTSegmentGrid().
+let BT_LONGUEUR_TUILES = null;   // { 'iLat,iLon' : mètres de ligne BT coupés aux bords de la tuile }
+let BT_ZONE_SEUILS_M = null;     // [bas, haut] : terciles de btLongueurZone() sur les zones non vides
 // _btPaginationComplete — prédicat de succès pour la politique de reprise (2026-09-09, lot 2).
 // `BT_SEGMENT_GRID !== null` NE SUFFIT PAS : si une page revient vide en cours de pagination
 // (HTTP 200, tableau vide — ce que produit un RLS ou un incident partiel), la boucle sort, le
@@ -7774,15 +7779,73 @@ function buildBTSegmentGrid(polylines) {
       }
     }
   });
+  construireLongueursBT();
   const elapsed = performance.now() - t0;
   const nTiles = Object.keys(BT_SEGMENT_GRID).length;
   console.log('[Tellux] Grille BT construite en ' + elapsed.toFixed(0) + ' ms : '
-    + BT_SEGMENTS_DATA.length + ' segments, ' + nTiles + ' tuiles, ' + _btDoublons + ' lignes en double ignorées.');
+    + BT_SEGMENTS_DATA.length + ' segments, ' + nTiles + ' tuiles, ' + _btDoublons + ' lignes en double ignorées ; '
+    + 'seuils du forfait BT : ' + (BT_ZONE_SEUILS_M ? BT_ZONE_SEUILS_M.map(x => Math.round(x) + ' m').join(' / ') : 'aucun') + '.');
 }
 
-function getBTSegmentsNear(lat, lon) {
-  if (!BT_SEGMENT_GRID) return [];
-  return BT_SEGMENT_GRID[tileKey(lat, lon)] || [];
+// Longueur de ligne BT par tuile, puis seuils du forfait BT (2026-09-29). Les segments en double (même paire
+// d'extrémités, dans un sens ou l'autre) et de longueur nulle sont écartés : une longueur les compterait. Chaque segment
+// est coupé aux bords des tuiles qu'il traverse ; sa longueur est prise à la latitude de son milieu.
+function construireLongueursBT() {
+  const L = {}, vus = new Set();
+  for (const s of BT_SEGMENTS_DATA) {
+    if (s.lat1 === s.lat2 && s.lon1 === s.lon2) continue;
+    const a = s.lat1 + ',' + s.lon1, b = s.lat2 + ',' + s.lon2, cle = a < b ? a + '|' + b : b + '|' + a;
+    if (vus.has(cle)) continue;
+    vus.add(cle);
+    const longueur = Math.hypot((s.lat2 - s.lat1) * 111320,
+      (s.lon2 - s.lon1) * 111320 * Math.cos((s.lat1 + s.lat2) / 2 * Math.PI / 180));
+    const i0 = Math.floor(Math.min(s.lat1, s.lat2) / TILE_SIZE_DEG), i1 = Math.floor(Math.max(s.lat1, s.lat2) / TILE_SIZE_DEG);
+    const j0 = Math.floor(Math.min(s.lon1, s.lon2) / TILE_SIZE_DEG), j1 = Math.floor(Math.max(s.lon1, s.lon2) / TILE_SIZE_DEG);
+    for (let i = i0; i <= i1; i++) {
+      for (let j = j0; j <= j1; j++) {
+        const f = btFractionDansTuile(s, i, j);
+        if (f > 0) L[i + ',' + j] = (L[i + ',' + j] || 0) + f * longueur;
+      }
+    }
+  }
+  BT_LONGUEUR_TUILES = L;
+  // Seuils : terciles (au rang) de la longueur par zone, sur les zones non vides. C'est la définition des seuils 96 et
+  // 290 du compte de segments (#1636, décision de Soleil du 2026-09-28), appliquée à la longueur. Les zones sont les
+  // tuiles de la grille BT.
+  const v = [];
+  for (const cle in BT_SEGMENT_GRID) {
+    const [i, j] = cle.split(',').map(Number);
+    const x = btLongueurBloc(i, j);
+    if (x > 0) v.push(x);
+  }
+  v.sort((x, y) => x - y);
+  BT_ZONE_SEUILS_M = v.length ? [v[Math.floor(v.length / 3)], v[Math.floor(2 * v.length / 3)]] : null;
+}
+// Fraction du segment comprise dans la tuile (i, j), par Liang-Barsky en degrés : la fraction est la même en mètres.
+function btFractionDansTuile(s, i, j) {
+  const a0 = i * TILE_SIZE_DEG, a1 = (i + 1) * TILE_SIZE_DEG, o0 = j * TILE_SIZE_DEG, o1 = (j + 1) * TILE_SIZE_DEG;
+  const dA = s.lat2 - s.lat1, dO = s.lon2 - s.lon1;
+  let t0 = 0, t1 = 1;
+  for (const [p, q] of [[-dA, s.lat1 - a0], [dA, a1 - s.lat1], [-dO, s.lon1 - o0], [dO, o1 - s.lon1]]) {
+    if (p === 0) { if (q < 0) return 0; continue; }
+    const r = q / p;
+    if (p < 0) { if (r > t1) return 0; if (r > t0) t0 = r; }
+    else { if (r < t0) return 0; if (r < t1) t1 = r; }
+  }
+  return Math.max(0, t1 - t0);
+}
+function btLongueurBloc(i, j) {
+  let s = 0;
+  for (let di = -2; di <= 2; di++) for (let dj = -2; dj <= 2; dj++) s += BT_LONGUEUR_TUILES[(i + di) + ',' + (j + dj)] || 0;
+  return s;
+}
+
+// Longueur (m) de ligne BT dans la zone du point : les 5 × 5 tuiles centrées sur la sienne, environ 5 km sur 4. C'est la
+// zone du compte de segments qu'elle remplace (getBTSegmentsNear, retirée le 2026-09-29) : chaque segment y était rangé
+// dans les tuiles de sa boîte élargie de 2 tuiles.
+function btLongueurZone(lat, lon) {
+  if (!BT_LONGUEUR_TUILES) return 0;
+  return btLongueurBloc(Math.floor(lat / TILE_SIZE_DEG), Math.floor(lon / TILE_SIZE_DEG));
 }
 
 // Chargement asynchrone bt_lines sur bbox Corse complète (Option C)
@@ -8274,13 +8337,13 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
   // l'audit — _drafts/RECONTROLE_CALIBRATION_BT_2026-08.md). Remplacée par
   // un schéma à paliers sur la densité de segments BT réels dans la zone
   // (approche 3.3, cf. bloc « RÉSEAU BT URBAIN » plus bas) — pas de calcul
-  // vectoriel par segment ici, `nBtContrib` renseigné plus bas.
+  // vectoriel par segment ici, `btLongueurContrib` renseigné plus bas.
   if (!USE_BT_SEGMENTS && !window._btDisabledWarned) {
     console.warn('[Tellux] USE_BT_SEGMENTS désactivé manuellement : contribution BT nulle '
       + '(proxy BT_ZONES retiré, cf. BT-CALIBRATION-001 approche 3.3).');
     window._btDisabledWarned = true;
   }
-  let nBtContrib = 0;
+  let btLongueurContrib = 0;
 
   // Norme du champ vectoriel résultant lignes HTA (BT désormais scalaire, cf. plus bas)
   const B_lines = Math.sqrt(totalBx * totalBx + totalBy * totalBy);
@@ -8321,7 +8384,7 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
     }
   });
 
-  // === RÉSEAU BT URBAIN — densité de zone (BT-CALIBRATION-001, approche 3.3) ===
+  // === RÉSEAU BT URBAIN — longueur de réseau dans la zone (BT-CALIBRATION-001, approche 3.3) ===
   // Remplace le proxy BT_ZONES (9 valeurs sans source connue, posées au
   // commit fondateur du projet 2026-04-03 `51fd6d0`, jamais retouchées
   // depuis — historique git complet dans
@@ -8334,31 +8397,39 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
   //   // décroissance radiale : intensité pleine dégressive jusqu'à 200m,
   //   // 30% dégressif de 200 à 500m, zéro au-delà.
   //
-  // Schéma à 3 paliers calé sur les terciles réels de la densité de segments
-  // BT (Option A : réutilise `getBTSegmentsNear` tel quel — comptage
-  // « padded », halo de recherche spatiale ~2km, aucune nouvelle indexation
-  // — cf. _drafts/RECONTROLE_CALIBRATION_BT_3.3_2026-08.md §2 et §4) :
-  //   0 segment        → hors périmètre BT, 0 nT
-  //   1-95 segments    → palier bas,   70 nT plafond
-  //   96-289 segments  → palier moyen, 115 nT plafond
-  //   290+ segments    → palier haut,  180 nT plafond
-  // Seuils RECALÉS le 2026-09-28 (décision de Soleil) : 153 et 518 étaient les terciles des tuiles non
-  // vides en comptant les lignes en double (rejoué : 155 et 513) ; sans doublons (#1632), les terciles
-  // sont 96 et 290. Même définition, donnée corrigée.
+  // Schéma à 3 paliers calé sur les terciles réels de la LONGUEUR de ligne BT dans la zone (btLongueurZone : les
+  // 5 × 5 tuiles centrées sur celle du point, environ 5 km sur 4) :
+  //   0 m                          → hors périmètre BT, 0 nT
+  //   sous le tercile bas          → palier bas,   70 nT plafond
+  //   entre les deux terciles      → palier moyen, 115 nT plafond
+  //   au-delà du tercile haut      → palier haut,  180 nT plafond
+  // Seuils dérivés au chargement (construireLongueursBT) : terciles de la longueur sur les zones non vides. C'est la
+  // définition des seuils 96 et 290 du compte de segments (décision de Soleil du 2026-09-28, #1636), appliquée à la
+  // longueur. Avec l'agrégat BT du 2026-09-28 : 3 697 m et 10 551 m.
+  // POURQUOI LA LONGUEUR (2026-09-29). Jusque-là, le forfait comptait des segments (getBTSegmentsNear, avec les
+  // seuils 96 et 290). Or ce nombre dépend de la façon dont les tracés sont découpés en segments, pas du réseau.
+  // Mesuré sur 1 340 points (les 141 lieux de mesure certifiés et une grille terrestre au 1/12) :
+  //   - couper chaque segment en deux changeait le palier de l'Indice en 217 points ;
+  //   - déplacer de 1 cm le premier sommet d'une ligne sur dix, en 4 ;
+  //   - ajouter un segment nul et un segment en double pour une ligne sur dix, en 35.
+  // Avec la longueur : 0 dans les trois cas, et 0 en inversant l'ordre de stockage.
+  // Par rapport au compte, le forfait change en 1 243 des 14 387 points de la grille terrestre et le palier de
+  // l'Indice en 504 (3,5 %), dans les deux sens ; aux 141 lieux de mesure, en 2 (115 → 180 nT).
   // Choix éditorial à l'intérieur de la fourchette instruite 50-200 nT
   // (ambiant de zone, distincte du champ proche 500-5000 nT) — PAS une
   // calibration statistique. Ne dépasse jamais 200 nT (borne haute de la
-  // fourchette instruite), quelle que soit la densité de segments observée.
-  if (USE_BT_SEGMENTS && BT_SEGMENT_GRID) {
-    const nBtZone = getBTSegmentsNear(lat, lon).length;
+  // fourchette instruite), quelle que soit la longueur de réseau observée.
+  if (USE_BT_SEGMENTS && BT_SEGMENT_GRID && BT_ZONE_SEUILS_M) {
+    const lBtZone = btLongueurZone(lat, lon);
     let btZoneIntensity = 0;
-    if (nBtZone >= 290) btZoneIntensity = 180;
-    else if (nBtZone >= 96) btZoneIntensity = 115;
-    else if (nBtZone >= 1) btZoneIntensity = 70;
+    if (lBtZone >= BT_ZONE_SEUILS_M[1]) btZoneIntensity = 180;
+    else if (lBtZone >= BT_ZONE_SEUILS_M[0]) btZoneIntensity = 115;
+    else if (lBtZone > 0) btZoneIntensity = 70;
     if (btZoneIntensity > 0) {
       B_total_nT += btZoneIntensity;
-      nBtContrib = nBtZone;
-      contributions.push({ source_type: 'BT_zone_densite', B_nT: btZoneIntensity, distance_m: null, identifier: nBtZone + ' segments BT dans la zone (~2km)' });
+      btLongueurContrib = lBtZone;
+      contributions.push({ source_type: 'BT_zone_densite', B_nT: btZoneIntensity, distance_m: null,
+        identifier: (lBtZone / 1000).toFixed(1).replace('.', ',') + ' km de ligne BT dans la zone (~5 × 4 km)' });
     }
   }
 
@@ -8393,18 +8464,18 @@ function calcMagneticELF_v2(lat, lon, chargeFactor) {
     });
   }
 
-  const btSrc = BT_SEGMENT_GRID ? (nBtContrib + ' segments BT dans la zone (densité, ~2km)') : 'grille BT non chargée';
+  const btSrc = BT_SEGMENT_GRID ? ((btLongueurContrib / 1000).toFixed(1).replace('.', ',') + ' km de ligne BT dans la zone, ~5 × 4 km') : 'grille BT non chargée';
   return {
     B_total_nT: Math.round(B_total_nT),
     contributions,
     // note_ICNIRP RETIRÉ (2026-09-09) : champ sans lecteur (vérifié par grep), et son contenu
     // (limite ICNIRP ELF 50 Hz = 200 µT) est déjà public — guide-et-glossaire.html:531.
-    epistemic_note: 'Composante BT : estimation par densité de zone, structure de calage définie (terciles réels), fonction segments→intensité non calibrée statistiquement — choix éditorial à l\'intérieur d\'une fourchette instruite (50-200 nT, ambiant de zone). Ne constitue pas une mesure certifiée. Relecture externe non encore sollicitée.',
-    source: 'Biot-Savart vectoriel 2D — ' + HTA_SEGMENTS_DATA.length + ' seg HTA + BT densité de zone (' + btSrc + ') + PROD_ELECTRIQUE + postes + éoliennes',
+    epistemic_note: 'Composante BT : estimation par la longueur de réseau BT dans la zone, structure de calage définie (terciles réels), fonction longueur→intensité non calibrée statistiquement — choix éditorial à l\'intérieur d\'une fourchette instruite (50-200 nT, ambiant de zone). Ne constitue pas une mesure certifiée. Relecture externe non encore sollicitée.',
+    source: 'Biot-Savart vectoriel 2D — ' + HTA_SEGMENTS_DATA.length + ' seg HTA + BT longueur de zone (' + btSrc + ') + PROD_ELECTRIQUE + postes + éoliennes',
     confidence: 'medium',
     chargeFactorSource: htFactorSource,
     n_hta_contributing: nHtaContrib,
-    n_bt_contributing: nBtContrib,
+    bt_longueur_zone_m: Math.round(btLongueurContrib),
     // Métadonnée d'étiquetage (2026-09-07, brief CJ) — condition de déblocage nommée par
     // BT-ZONE-CHARGEMENT-ASYNC-SILENCIEUX-001 : « champ de métadonnée explicite dans le retour de
     // calcMagneticELF_v2 ». false ⇒ le terme BT est ABSENT du B_total_nT ci-dessus, valeur minorée.
@@ -9582,7 +9653,7 @@ function elfV1Badge() {
 // Pourquoi ce signal existe (mesuré en production le 2026-09-07) : bt_lines se télécharge au boot
 // en 157 requêtes paginées, ≈12 Mo, dernière requête terminée à t+136 s. Or le terme BT de
 // calcMagneticELF_v2 est gardé par `USE_BT_SEGMENTS && BT_SEGMENT_GRID`, et cette grille n'est
-// construite qu'À LA FIN de ce téléchargement. Avant, getBTSegmentsNear() renvoie [] et le terme
+// construite qu'À LA FIN de ce téléchargement. Avant, le forfait BT n'est pas calculé (garde) et le terme
 // vaut EXACTEMENT 0 — il n'y a pas de repli : le calcul n'estime pas moins bien, il OMET.
 // Mesure au point Ajaccio (41,919 / 8,738) : BT_zone_densite = 180 nT sur 841 nT au total, soit
 // −21,4 % pendant la fenêtre ; propagé à l'indice composite (w_M = 0,40, bornes ELF [0,1000]),
